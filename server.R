@@ -1,13 +1,19 @@
-# Rely on the 'WorldPhones' dataset in the datasets
-# package (which generally comes preloaded).
-library(datasets)
+library(ggplot2)
+library(DT)
+# choose columns to display
 
-# Define a server for the Shiny app
-function(input, output) {
+function(input, output, session) {
   
-  # Fill in the spot we created for a plot
-  output$mzPlot <- renderPlot({
-    # Render a plot
-    PlotCmpdSummary(input$mz)
-  })
+output$x1 <- DT::renderDataTable({
+  datatable(asca.table, selection = 'single')
+})
+
+observeEvent(input$x1_rows_selected, {
+  curr.row = input$x1_rows_selected
+  # do nothing if not clicked yet, or the clicked cell is not in the 1st column
+  if (is.null(curr.row)) return()
+  curr.mz <- asca.table[curr.row,'X']
+  output$plot1 <- renderPlot(PlotCmpdSummary(curr.mz))
+})
+
 }
