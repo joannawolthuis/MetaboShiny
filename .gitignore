@@ -1,8 +1,9 @@
-.Rproj.user
-.Rhistory
-.RData
-.Ruserdata
-.csv
-.sql
-.db
-
+*.Rproj.user
+*.Rhistory
+*.RData
+*.Ruserdata
+*.csv
+*.sql
+*.db
+*.xml
+*.zip
