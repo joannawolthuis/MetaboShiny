@@ -101,7 +101,7 @@ get.csv <- function(patdb,
   # --- measure file size ---
   size <- object.size(small.set)
   cat("Resulting file will be approximately ")
-  print(size, units = "MB")
+  print(size, units = "Mb")
   # ------- return -------
   return(small.set)
 }

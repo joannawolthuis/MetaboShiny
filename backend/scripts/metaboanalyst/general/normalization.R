@@ -39,13 +39,13 @@ GetPrenormClsNms <- function(){
             dataSet$prenorm.cls <- dataSet$proc.cls;
             if(substring(dataSet$format,4,5)=="ts"){
                 dataSet$prenorm.facA <- dataSet$proc.facA;
-                dataSet$prenorm.facB <- dataSet$proc.facB;;
+                dataSet$prenorm.facB <- dataSet$proc.facB;
             }
         }else{
             dataSet$prenorm.cls <- dataSet$filt.cls;
             if(substring(dataSet$format,4,5)=="ts"){
                 dataSet$prenorm.facA <- dataSet$filt.facA;
-                dataSet$prenorm.facB <- dataSet$filt.facB;;
+                dataSet$prenorm.facB <- dataSet$filt.facB;
             }
         }
         dataSet <<- dataSet;
@@ -411,7 +411,7 @@ RangeNorm<-function(x){
 
 # plot two summary plot, one b4 normalization, one after
 # for each plot top is box plot, bottom is a density plot
-PlotNormSummary<-function(imgName, format="png", dpi=72, width=NA){
+PlotNormSummary<-function(imgName=NA, format="png", dpi=72, width=NA){
 
     imgName = paste(imgName, "dpi", dpi, ".", format, sep="");
     if(is.na(width)){
@@ -449,18 +449,18 @@ PlotNormSummary<-function(imgName, format="png", dpi=72, width=NA){
 
     # fig 1
     op<-par(mar=c(4,7,4,0), xaxt="s");
-    plot(density(apply(dataSet$proc, 2, mean, na.rm=TRUE)), col='darkblue', las =2, lwd=2, main="", xlab="", ylab="");
+    plot(density(apply(dataSet$proc, 2, mean, na.rm=TRUE)), col='black',lty=3,las =2, lwd=2, main="", xlab="", ylab="");
     mtext("Density", 2, 5);
     mtext("Before Normalization",3, 1)
 
     # fig 2
     op<-par(mar=c(7,7,0,0), xaxt="s");
-    boxplot(dataSet$proc[,pre.inx], names= namesVec, ylim=rangex.pre, las = 2, col="pink", horizontal=T);
+    boxplot(dataSet$proc[,pre.inx], names= namesVec, ylim=rangex.pre,las = 2, col="pink", horizontal=T);
     mtext(x.label, 1, 5);
 
     # fig 3
     op<-par(mar=c(4,7,4,2), xaxt="s");
-    plot(density(apply(dataSet$norm, 2, mean, na.rm=TRUE)), col='darkblue', las=2, lwd =2, main="", xlab="", ylab="");
+    plot(density(apply(dataSet$norm, 2, mean, na.rm=TRUE)), col='black',lty=3, las=2, lwd =2, main="", xlab="", ylab="");
     mtext("After Normalization",3, 1);
 
     # fig 4
@@ -471,7 +471,7 @@ PlotNormSummary<-function(imgName, format="png", dpi=72, width=NA){
     #dev.off();
 }
 
-PlotSampleNormSummary<-function(imgName, format="png", dpi=72, width=NA){
+PlotSampleNormSummary<-function(imgName=NA, format="png", dpi=72, width=NA){
     imgName = paste(imgName, "dpi", dpi, ".", format, sep="");
     if(is.na(width)){
         w <- 10.5; h <- 12;
@@ -513,7 +513,7 @@ PlotSampleNormSummary<-function(imgName, format="png", dpi=72, width=NA){
 
     # fig 2
     op<-par(mar=c(7,7,0,0), xaxt="s");
-    plot(density(apply(dataSet$proc, 1, mean, na.rm=TRUE)), col='darkblue', las =2, lwd=2, main="", xlab="", ylab="");
+    plot(density(apply(dataSet$proc, 1, mean, na.rm=TRUE)),col='black',lty=3, las =2, lwd=2, main="", xlab="", ylab="");
     mtext("Density", 2, 5);
     mtext(x.label, 1, 5);
 
@@ -524,7 +524,7 @@ PlotSampleNormSummary<-function(imgName, format="png", dpi=72, width=NA){
 
     # fig 4
     op<-par(mar=c(7,7,0,2), xaxt="s");
-    plot(density(apply(dataSet$norm, 1, mean, na.rm=TRUE)), col='darkblue', las=2, lwd =2, main="", xlab="", ylab="");
+    plot(density(apply(dataSet$norm, 1, mean, na.rm=TRUE)),col='black',lty=3, las=2, lwd =2, main="", xlab="", ylab="");
     mtext(paste("Normalized",x.label),1, 5);
 
     #dev.off();

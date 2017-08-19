@@ -7,3 +7,4 @@
 *.db
 *.xml
 *.zip
+.Rproj.user

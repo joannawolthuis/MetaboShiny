@@ -513,7 +513,7 @@ build.pat.db <- function(db.name,
   # ----------------
   dbDisconnect(conn)
   print("Made!")}
-  
+
 #' @export
 load.excel <- function(path.to.xlsx, 
                        path.to.patdb = patdb,
@@ -582,4 +582,5 @@ load.excel <- function(path.to.xlsx,
   dbWriteTable(conn, "admin", admin, overwrite=TRUE) # insert into
   # --- disconnect ---
   dbDisconnect(conn)
+  return(colnames(setup))
 }

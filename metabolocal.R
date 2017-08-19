@@ -3,7 +3,7 @@ options(stringsAsFactors = F)
 # This script should be called by server to load actual scripts
 # based on the modules user selected
 
-SourceAll <- function(where, 
+sourceAll <- function(where, 
                       which=c("general", "stats", "time", "enrich_path", "power_roc", "utils")){
   library(compiler)
   print("sourcing R code ... ");
