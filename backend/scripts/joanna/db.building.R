@@ -166,7 +166,7 @@ build.base.db <- function(dbname=NA,
                                  db.full <- as.data.table(downloadChEBI(release = "latest", woAssociations = FALSE))
                                  db.formatted <- unique(db.full[, list(compoundname = ChEBI, 
                                                                        baseformula = FORMULA,
-                                                                       identifier = paste("CID",ID, sep=""), 
+                                                                       identifier = ID, 
                                                                        charge = gsub(CHARGE,pattern = "$\\+\\d", replacement = ""))])
                                  # --- check formulae ---
                                  checked <- as.data.table(check.chemform.joanna(isotopes,

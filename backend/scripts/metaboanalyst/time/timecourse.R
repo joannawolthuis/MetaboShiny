@@ -14,7 +14,7 @@
 # for time-series not for general case
 # two/multiple factor analysis
 
-performMB<-function(topPerc = 10){
+performMB<-function(topPerc = 10, dir="."){
     time.fac <- dataSet$time.fac;
     exp.fac <- dataSet$exp.fac;
     sbj <- vector(mode="character", length=nrow(dataSet$norm));
@@ -63,7 +63,7 @@ performMB<-function(topPerc = 10){
         analSet$MB <- NULL;
         return(0);
     }
-    write.csv(signif(MB.stats, 5), file="meba_sig_features.csv");
+    write.csv(signif(MB.stats, 5), file=file.path(dir, "meba_sig_features.csv"));
     analSet$MB <-list(stats=MB.stats);
     analSet <<- analSet;
     return(1);
@@ -85,24 +85,8 @@ GetSigTable.MB<-function(){
     GetSigTable(analSet$MB$stats, "MEBA");
 }
 
-PlotMBTimeProfile <- function(cmpdNm,  format="png", dpi=72, width=NA){
-    imgName <- gsub("\\/", "_",  cmpdNm);
-    imgName <- paste(imgName, "_dpi", dpi, ".png", sep="");
-    if(is.na(width)){
-        w <- 5.6;
-    }else if(width == 0){
-        w <- 5;
-        imgSet$mb <- imgName;
-    }else{
-        w <- width;
-    }
-    h <- w;
-
-    Cairo(file = imgName,  unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
-    plotProfile(cmpdNm);
-    dev.off();
-    imgSet <<- imgSet;
-    return(imgName);
+PlotMBTimeProfile <- function(cmpdNm){
+    plotProfile(cmpdNm)
 }
 
 

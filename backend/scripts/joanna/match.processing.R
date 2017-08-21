@@ -1,25 +1,4 @@
 #' @export
-get.conservative.adducts <- function(matches,
-                                     source.db,
-                                     min.frac=0){
-  conn <- dbConnect(RSQLite::SQLite(), source.db)
-  # --- subset internal database ---
-  internal.standards <- dbGetQuery(conn, 'SELECT DISTINCT compoundname, baseformula FROM base WHERE compoundname LIKE "%(IS)%"')
-  # --- find them in matches ---
-  standard.tabs <- pblapply(1:nrow(internal.standards), FUN=function(x){
-    row <- internal.standards[x,]
-    standard.matches <- matches[BaseFormula == row$BaseFormula,
-                                nomatch = 0L]
-    return(standard.matches)
-  })
-  counts <- adduct.counter(rbindlist(standard.tabs))
-  print(counts)
-  to.keep.adducts <- counts[Occurence >= (min.frac * max(Occurence)), Adduct]
-  # --- return ---
-  to.keep.adducts
-}
-
-#' @export
 iden.code.binned <- function(outlist.path,
                              db.path,
                              isofilt=FALSE,
@@ -33,6 +12,9 @@ iden.code.binned <- function(outlist.path,
   library(RSQLite)
   # - connect -
   conn <- dbConnect(RSQLite::SQLite(), outlist.path)
+  # --- skip if already exists ---
+  result.table <- paste("matches", gsub("\\.db|\\.|full", "", basename(db.path)), sep="_")
+  if(dbExistsTable(conn, result.table)) return("Already exists!")
   # --- attach patient outlist and get mzmed pgrp values ---
   prep.query <- strwrap(fn$paste("ATTACH '$db.path' AS db"),width=10000, simplify=TRUE)
   print(prep.query)
@@ -86,8 +68,7 @@ iden.code.binned <- function(outlist.path,
   matches <- as.data.table(dbGetQuery(conn, match.sql))
   nomatches <- as.data.table(dbGetQuery(conn, nomatch.sql))
   # --- create result table
-  result.table <- paste("matches", gsub("\\.db|\\.|full", "", basename(db.path)), sep="_")
-  dbExecute(conn, fn$paste("DROP TABLE IF EXISTS $result.table"))
+#  dbExecute(conn, fn$paste("DROP TABLE IF EXISTS $result.table"))
   dbExecute(conn, fn$paste("CREATE TABLE $result.table(compoundname text, identifier text, baseformula text, adduct text, [mzmed.pgrp] float, isoprevalence float, basecharge int, totalcharge int)"))
   # --- return ---
   results <- unique(rbind(matches, nomatches, fill=TRUE))

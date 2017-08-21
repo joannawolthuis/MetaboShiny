@@ -8,3 +8,4 @@
 *.xml
 *.zip
 .Rproj.user
+/backend/appdata/*

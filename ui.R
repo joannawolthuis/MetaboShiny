@@ -2,6 +2,20 @@
 # package (which generally comes preloaded).
 
 navbarPage("MetaboShiny", id="nav_general",
+           tabPanel("",  icon = icon("cog"), 
+                    h2("General settings for this application"),
+                    hr(),
+                    shinyDirButton("get_work_dir", "Choose a working directory" ,
+                                   title = "Browse",
+                                   buttonType = "default", class = NULL),
+                    helpText("Your results will be stored here for later access."),
+                    textOutput("exp_dir"),
+                    hr(),
+                    textInput(inputId="proj_name", label="Project name", value = ''),
+                    actionButton("set_proj_name", label="Apply"),
+                    helpText("This name will be used in all save files."),
+                    textOutput("proj_name")
+           ),
            # --------------------------------------------------------------------------------------------------------------------------------
            tabPanel("Databases" , icon = icon("database"),
                     # -- header row ---
@@ -42,16 +56,7 @@ navbarPage("MetaboShiny", id="nav_general",
                                     br(),br(),
                                     imageOutput("chebi_check",inline = T)
                                     )
-                             ),
-                    fluidRow(column(11, align="center",
-                                    br(),br(),hr(),
-                                    imageOutput("db_icon2",inline = T),
-                                    br(),br(),
-                                    fileInput("own_db", "Build your own",
-                                              multiple = F,
-                                              accept = c(".csv")),
-                                    actionButton("import_files", "Import", icon = icon("hand-peace-o"))
-                    ))
+                             )
                     )
                     ),
            # --------------------------------------------------------------------------------------------------------------------------------
@@ -77,40 +82,43 @@ navbarPage("MetaboShiny", id="nav_general",
                                                   accept = c(".RData")))
                              ),
                     fluidRow(column(9, align="center",
-                                    actionButton("import_files", "Create database", icon = icon("magic")),
+                                    actionButton("create_db", "Create database", icon = icon("magic")),
                                     br(),br(),hr(),
                                     imageOutput("db_icon",inline = T),
                                     br(),br(),
-                                    fileInput("pat_db", "Import experiment database",
+                                    fileInput("pat_db", "Import previous experiment",
                                               multiple = F,
                                               accept = c(".db")),
-                                    actionButton("import_files", "Import", icon = icon("hand-peace-o"))
+                                    actionButton("import_db", "Import", icon = icon("hand-peace-o")),
+                                    imageOutput("db_upload_check",inline = T)
                                     ))
                     ),
+           tabPanel("Document", icon=icon("file-text-o"),
+                    fluidRow(column(4, align="center",
+                                    selectInput('exp_var', 'Which experimental variable do you want to look at?', choices = c("")),
+                                    actionButton("check_excel", "Get variables", icon=icon("refresh")),
+                                    br(),br(),
+                                    selectInput('exp_type', 'What type of analysis do you want to do?', choices = c("Time series", 
+                                                                                                                    "Bivariate comparison",
+                                                                                                                    "Multivariate comparison")),
+                                    actionButton("create_csv", "Create CSV", icon=icon("file-text-o")),
+                                    br(),hr(),
+                                    imageOutput("csv_icon",inline = T),
+                                    br(),br(),
+                                    fileInput("pat_csv", "Import CSV",
+                                              multiple = F,
+                                              accept = c(".csv")),
+                                    actionButton("import_csv", "Import", icon = icon("hand-peace-o")),
+                                    imageOutput("csv_upload_check",inline = T)
+                                    ),
+                             column(7, 
+                                    fluidRow(div(DT::dataTableOutput('csv_tab'),style='font-size:80%'))
+                                    )
+                             )
+                    ),
            # --------------------------------------------------------------------------------------------------------------------------------
-           tabPanel("Match", icon = icon("search"), 
-                    fluidRow(
-                      column(3, align="center",
-                             checkboxGroupInput("match_group",
-                                                label = h4("Match m/z values with..."),
-                                                choices = list("Internal DB" = "Internal", 
-                                                               "Noise DB" = "Noise",
-                                                               "HMDB" = "HMDB",
-                                                               "ChEBI" = "ChEBI"),
-                                                selected = 1),
-                             actionButton("match_start", "Let's match!", icon = icon("search"))),
-                      column(7, helpText("statistics on matches here"))
-                      )
-           ),
-           tabPanel("Setup",  icon = icon("sliders"),
+           tabPanel("Clean",  icon = icon("filter"),
                     column(3, aligh="center",
-                           helpText("Use this window to setup your experiment."),
-                           selectInput('exp_var', 'Which experimental variable do you want to look at?', choices = c("")),
-                           actionButton("check_excel", "Get variables", icon=icon("refresh")),
-                           br(),br(),
-                           selectInput('exp_type', 'What type of analysis do you want to do?', choices = c("Time series", 
-                                                                                                           "Bivariate comparison",
-                                                                                                           "Multivariate comparison")), 
                            selectInput('filt_type', 'How will you filter your m/z values?', choices = c("Interquantile range")),
                            selectInput('norm_type', 'What type of normalization do you want to do?', choices = c("Quantile normalization")),
                            selectInput('trans_type', 'How will you transform your data?', choices = c("Log transform")),
@@ -127,27 +135,35 @@ navbarPage("MetaboShiny", id="nav_general",
            ),
            # --------------------------------------------------------------------------------------------------------------------------------
            tabPanel("Analysis",  icon = icon("bar-chart"),# multiple options here :-)
-                    column(7, 
+                    column(8, 
                     if(mode == "time"){
                                         navbarPage("Time Series", id="nav_time",
-                                                   tabPanel("iPCA", helpText("placeholder")),
+                                                   tabPanel("iPCA", 
+                                                            plotlyOutput("plot_ipca" ),
+                                                            selectInput("ipca_factor", label = "Color based on:", choices =list("Time"="facA",
+                                                                                                                                "Experimental group"="facB"))
+                                                            ),
                                                    # =================================================================================
-                                                   tabPanel("Heatmap", helpText("placeholder")),
+                                                   #tabPanel("Heatmap",
+                                                   #         plotOutput("time_heat_plot", height='600px', width='600px')
+                                                   #        ),
                                                    # =================================================================================
-                                                   tabPanel("MEBA", helpText("placeholder")),
+                                                   tabPanel("MEBA", 
+                                                            fluidRow(plotOutput('meba_plot')),
+                                                            fluidRow(div(DT::dataTableOutput('meba_tab'),style='font-size:80%'))),
                                                    # =================================================================================
                                                    tabPanel("ASCA",
                                                             navbarPage("Explore", 
                                                               tabPanel("Overview", icon=icon("eye"), helpText("...")),
                                                               tabPanel("Plots", icon=icon("bar-chart-o"),
-                                                                     fluidRow(plotOutput('asca_plot',height = '300px', width='700px')),
+                                                                     fluidRow(plotOutput('asca_plot')),
                                                                      fluidRow(div(DT::dataTableOutput('asca_tab'),style='font-size:80%'))
                                                               )
                                                           )
                                                           )
                                                    # =================================================================================
                                                    )
-                                      }), column(4, align="center",
+                                      }), column(3, align="center",
                                                  imageOutput("find_mol_icon",inline = T),
                                                  div(checkboxGroupInput("checkGroup", 
                                                                               label = h4("Find selected m/z in:"), 
@@ -162,8 +178,5 @@ navbarPage("MetaboShiny", id="nav_general",
                                                  hr()
                                                  )
            # --------------------------------------------------------------------------------------------------------------------------------
-           ),
-           tabPanel("",  icon = icon("cog"), 
-                    helpText("placeholder"))# multiple options here :-))
-                    
+           )     
            )

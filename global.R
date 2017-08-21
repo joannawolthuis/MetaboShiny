@@ -14,6 +14,27 @@ library(data.table)
 library(parallel)
 library(pbapply)
 library(enviPat)
+library(plotly)
+library(jsonlite)
+library(shinyFiles)
+library(stringr)
+
+# === GET OPTIONS ===
+
+setwd("/Users/jwolthuis/Google Drive/MetaboShiny")
+# --- laod adduct table for general use ---
+load("./backend/db/NeededFiles/AdductTable/AdductTableWKZ.RData")
+sourceDir("./backend/scripts/joanna")
+data(isotopes)
+dbDir <<- file.path("./backend/db")
+# --- beta stuff ---
+session_cl <<- NA
+mode <- "time"
+opt_conn <- file(".conf")
+options_raw <<- readLines(opt_conn)
+exp_dir <<- str_match(options_raw[[1]], "(?<=')(.*)(?=')")[1,1]
+proj_name <<- str_match(options_raw[[2]], "(?<=')(.*)(?=')")[1,1]
+close(opt_conn)
 
 # === SOURCE OWN CODE ===
 
@@ -41,21 +62,8 @@ sourceAll <- function(where,
   }
   return("TRUE");
 }
-# --- laod adduct table for general use ---
-load("backend/db/NeededFiles/AdductTable/AdductTableWKZ.RData")
-sourceDir("backend/scripts/joanna")
-data(isotopes)
-dbDir <<- file.path("./backend/db")
-
-# --- beta stuff ---
-asca.table <- read.csv("backend/appdata/asca_sigAB.csv")
-mode <- "time"
-exp_vars <<- "Click 'get variables'"
 
 ############ BUILD DATABASES ###############
-
-cl <- makeCluster(4, type="FORK")
-cl
 
 # === SOURCE METABOANALST CODE ===
 
@@ -68,6 +76,7 @@ get_exp_vars <- function(){
 
 get_matches <- function(mz, table){
   # --- connect to db ---
+  req("patdb")
   conn <- dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
   # --- attach patient outlist and get mzmed pgrp values ---
   dbGetQuery(conn, fn$paste("select distinct compoundname as Compound, identifier as Identifier, Adduct as Adduct from $table where [mzmed.pgrp] like $mz"))

@@ -90,7 +90,7 @@ Perform.ASCA<-function(a=1, b=2, x=2, res=2){
 # Calculate the reference distribution of leverages
 # note, leverage.perm is a list with each member is a 3 column matrix
 
-CalculateImpVarCutoff <- function(spe.thresh = 0.05, lev.thresh = 0.95){
+CalculateImpVarCutoff <- function(spe.thresh = 0.05, lev.thresh = 0.95, dir="."){
 
     asca.models <- analSet$asca$models;
     spe.lims  <-  lev.lims <- numeric(3);
@@ -178,8 +178,8 @@ CalculateImpVarCutoff <- function(spe.thresh = 0.05, lev.thresh = 0.95){
             out.list[[nm]]<- out.mat;
 
             nm <- gsub("\\.", "_",  nm);
-            write.csv(sig.mat, file=paste("Sig_features_", nm, ".csv", sep=""));
-            write.csv(out.mat, file=paste("Outliers_", nm, ".csv", sep=""));
+            write.csv(sig.mat, file=file.path(dir, paste("Sig_features_", nm, ".csv", sep="")));
+            write.csv(out.mat, file=file.path(dir, paste("Outliers_", nm, ".csv", sep="")));
       }
       analSet$asca$sig.list <- sig.list;
       analSet$asca$out.list <- out.list;
@@ -351,7 +351,7 @@ ASCAfun.res<-function (X,Fac) {
 # this will get the null distribution for all effects
 # in one go
 
-Perform.ASCA.permute<-function(perm.num=20){
+Perform.ASCA.permute<-function(perm.num=20, dir="."){
 
     # since there are three factors a, b, ab, it is easier
     # to permute the data, and let factors fixed, we can pre-calculate
@@ -398,7 +398,7 @@ Perform.ASCA.permute<-function(perm.num=20){
     p.res[p.vec > 0] <- paste("p =", signif(p.vec[p.vec > 0], digits=5));
 
     ## added for test
-    write.csv(perm.res, file="perm.res.csv");
+    write.csv(perm.res, file=file.path(dir, "perm.res.csv"));
 
     analSet$asca$perm.p <- p.res;
     analSet$asca$perm.mat <- perm.res;
@@ -942,7 +942,7 @@ GetAscaSigFileName <-function(){
     analSet$asca$sig.nm
 }
 
-PlotHeatMap2<-function(imgName, format="png", dpi=72, width=NA, smplDist='pearson', clstDist='average', colors="bwm", viewOpt="overview", hiRes=FALSE, sortInx = 1, useSigFeature, drawBorder, var.inx=1:ncol(dataSet$norm)){
+PlotHeatMap2<-function(smplDist='pearson', clstDist='average', colors="bwm", viewOpt="overview", hiRes=FALSE, sortInx = 1, useSigFeature, drawBorder, var.inx=1:ncol(dataSet$norm)){
 
     if(sortInx == 1){
         ordInx <- order(dataSet$facA, dataSet$facB);
@@ -967,57 +967,8 @@ PlotHeatMap2<-function(imgName, format="png", dpi=72, width=NA, smplDist='pearso
 
     # set up parameter for heatmap
     suppressMessages(require(RColorBrewer));
-    if(colors=="gbr"){
-        colors <- colorRampPalette(c("green", "black", "red"), space="rgb")(256);
-    }else if(colors == "heat"){
-        colors <- heat.colors(256);
-    }else if(colors == "topo"){
-        colors <- topo.colors(256);
-    }else if(colors == "gray"){
-        colors <- colorRampPalette(c("grey90", "grey10"), space="rgb")(256);
-    }else{
-        colors <- rev(colorRampPalette(brewer.pal(10, "RdBu"))(256));
-    }
-    if(drawBorder){
-        border.col<-"grey60";
-    }else{
-        border.col <- NA;
-    }
-    imgName = paste(imgName, "dpi", dpi, ".", format, sep="");
-    if(viewOpt == "overview"){
-        if(is.na(width)){
-            w <- 9;
-        }else if(width == 0){
-            w <- 7.2;
-            imgSet$heatmap<-imgName;
-        }else{
-            w <- 7.2;
-        }
-        h <- w;
-    }else{
-        if(is.na(width)){
-            minW <- 650;
-            myW <- nrow(hc.dat)*11 + 150;
-            if(myW < minW){
-                myW <- minW;
-            }   
-            w <- round(myW/72,2);
-        }else if(width == 0){
-            w <- 7.2;
-            imgSet$heatmap<-imgName;
-        }else{
-            w <- 7.2;
-        }
-        if(ncol(hc.dat) >100){
-            myH <- ncol(hc.dat)*12 + 120;
-        }else if(ncol(hc.dat) > 50){
-            myH <- ncol(hc.dat)*12 + 60;
-        }else{
-            myH <- ncol(hc.dat)*12 + 20;
-        }
-        h <- round(myH/72,2);
-    }
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
+
+    #Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     require(pheatmap);
 
     annotation <- data.frame(new.facB, new.facA);
@@ -1034,8 +985,8 @@ PlotHeatMap2<-function(imgName, format="png", dpi=72, width=NA, smplDist='pearso
             cluster_rows = T, 
             cluster_cols = F,
             scale = 'row', 
-            color = colors);
-    dev.off();
+            color = rainbow(3));
+    #dev.off();
     imgSet <<- imgSet;
     analSet$htmap2 <-list(dist.par=smplDist, clust.par=clstDist);
     analSet <<- analSet;
