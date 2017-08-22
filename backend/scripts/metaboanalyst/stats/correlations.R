@@ -143,17 +143,13 @@ PlotCorr <- function(imgName, format="png", dpi=72, width=NA){
     }else{
         w <- h <- width;
     }
-
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     par(mar=c(5,6,4,3))
     rownames(cor.res)<-substr(rownames(cor.res), 1, 18);
     cols <- ifelse(cor.res[,1] >0, "mistyrose","lightblue");
 
     dotchart(cor.res[,1], pch="", xlim=c(-1,1), xlab="Correlation coefficients", main=title);
     rownames(cor.res) <- NULL;
-    barplot(cor.res[,1], space=c(0.5, rep(0, nrow(cor.res)-1)), xlim=c(-1,1), xaxt="n", col = cols, add=T,horiz=T);
-    dev.off();
-}
+    barplot(cor.res[,1], space=c(0.5, rep(0, nrow(cor.res)-1)), xlim=c(-1,1), xaxt="n", col = cols, add=T,horiz=T);}
 
 
 GetCorrSigFileName <- function(){
@@ -250,7 +246,6 @@ PlotCorrHeatMap<-function(imgName, format="png", dpi=72, width=NA, target, cor.m
         }
     }
     imgSet <<- imgSet;
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     if(no.clst){
         rowv=FALSE;
         colv=FALSE;
@@ -280,9 +275,8 @@ PlotCorrHeatMap<-function(imgName, format="png", dpi=72, width=NA, target, cor.m
             );
       }
 
-     dev.off();
      # need to re-order according to the clusters
      new.ord <- res$tree_row$order;
      corr.mat <- corr.mat[new.ord, new.ord];
-     write.csv(signif(corr.mat,5), file="correlation_table.csv")
+     write.csv(signif(corr.mat,5), file=file.path(exp_dir, "correlation_table.csv"))
 }

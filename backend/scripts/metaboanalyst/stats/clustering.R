@@ -47,7 +47,6 @@ PlotHCTree<-function(imgName, format="png", dpi=72, width=NA, smplDist, clstDist
         w <- h <- 7.2;
     }
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     par(cex=0.8, mar=c(4,2,2,8));
     if(dataSet$cls.type == "disc"){
         clusDendro<-as.dendrogram(hc_tree);
@@ -72,7 +71,6 @@ PlotHCTree<-function(imgName, format="png", dpi=72, width=NA, smplDist, clstDist
      }else{
         plot(as.dendrogram(hc_tree), hang=-1, main=paste("Cluster with", clstDist, "method"), xlab=NULL, sub=NULL, horiz=TRUE);
      }
-     dev.off();
 }
 
 # inx has to be 1 or 2
@@ -153,7 +151,7 @@ PlotSOM <- function(imgName, format="png", dpi=72, width=NA){
     }
     h <- w*8/9;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
+    
     par(mfrow = GetXYCluster(total), mar=c(5,4,2,2));
 	for (i in 0:(xdim-1)) {
             xTrue<-clust$x == i;
@@ -172,7 +170,7 @@ PlotSOM <- function(imgName, format="png", dpi=72, width=NA){
                 axis(1, 1:ncol(dataSet$norm), substr(colnames(dataSet$norm), 1, 7), las=2);
             }
 	}
-    dev.off();
+    
 }
 
 ##################################
@@ -203,7 +201,6 @@ PlotKmeans<-function(imgName, format="png", dpi=72, width=NA){
     }
     h <- w*8/9;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     par(mfrow = GetXYCluster(clust.num), mar=c(5,4,2,2));
 	for (loop in 1:clust.num) {
 	    matplot(t(dataSet$norm[analSet$kmeans$cluster==loop,]), type="l", col='grey', ylab=ylabel, axes=F,
@@ -212,7 +209,6 @@ PlotKmeans<-function(imgName, format="png", dpi=72, width=NA){
         axis(2);
         axis(1, 1:ncol(dataSet$norm), substr(colnames(dataSet$norm), 1, 7), las=2);
 	}
-    dev.off();
 }
 
 # get cluster member for give index
@@ -394,7 +390,6 @@ PlotHeatMap<-function(imgName, format="png", dpi=72, width=NA, dataOpt, scaleOpt
         border.col <- NA;
     }
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     if(dataSet$cls.type == "disc"){
         library(pheatmap);
         annotation <- data.frame(class= hc.cls);
@@ -427,6 +422,5 @@ PlotHeatMap<-function(imgName, format="png", dpi=72, width=NA, dataOpt, scaleOpt
     }else{
         heatmap(hc.dat, Rowv = rowTree, Colv=colTree, col = colors, scale="column");
     }
-    dev.off();
 }
 

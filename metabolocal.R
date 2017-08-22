@@ -124,6 +124,9 @@ FilterVariable("iqr", "F", 25)
 Normalization("QuantileNorm", "LogNorm", "AutoNorm", "ko15", ratio=FALSE, ratioNum=20)
 PlotNormSummary("norm_1_", "png", 72, width=NA)
 PlotSampleNormSummary("snorm_1_", "png", 72, width=NA)
+
+# --- pretty much identical until here ---
+
 FC.Anal.unpaired(2.0, 0)
 PlotFC("fc_0_", "png", 72, width=NA)
 FC.Anal.unpaired(2.0, 1)

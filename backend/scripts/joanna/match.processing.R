@@ -14,15 +14,13 @@ iden.code.binned <- function(outlist.path,
   conn <- dbConnect(RSQLite::SQLite(), outlist.path)
   # --- skip if already exists ---
   result.table <- paste("matches", gsub("\\.db|\\.|full", "", basename(db.path)), sep="_")
-  if(dbExistsTable(conn, result.table)) return("Already exists!")
+  #if(dbExistsTable(conn, result.table)) return("Already exists!")
   # --- attach patient outlist and get mzmed pgrp values ---
   prep.query <- strwrap(fn$paste("ATTACH '$db.path' AS db"),width=10000, simplify=TRUE)
-  print(prep.query)
   dbExecute(conn, prep.query)
-  print("here")
   # --------------------
   get.query <- strwrap(fn$paste("CREATE TEMPORARY TABLE patresults AS
-                                SELECT DISTINCT base.compoundname, base.identifier, 
+                                SELECT DISTINCT base.compoundname, base.identifier, base.description, 
 			                          cpd.baseformula, cpd.adduct, cpd.isoprevalence, mz.[mzmed.pgrp],
                                 cpd.basemz, cpd.fullmz, cpd.basecharge, cpd.totalcharge
                                 FROM mzvals mz INDEXED BY valindex
@@ -34,10 +32,9 @@ iden.code.binned <- function(outlist.path,
                                 base.charge = cpd.basecharge
                                 ORDER BY mz.'mzmed.pgrp' ASC"),width=10000, simplify=TRUE)
   dbExecute(conn, get.query)
-  print('here')
   print(dbGetQuery(conn, "select * from base limit 10"))
   dbExecute(conn, "DROP INDEX IF EXISTS pat_idx")
-  dbExecute(conn, "CREATE INDEX pat_idx ON patresults(isoprevalence, adduct, baseformula, compoundname, identifier)")
+  dbExecute(conn, "CREATE INDEX pat_idx ON patresults(isoprevalence, adduct)")
   # --- isofilt? ---
   adduct.string <- gsub(" ", "", paste("'", excl.adducts, "'", collapse=","))
   filt.query <- strwrap(fn$paste("CREATE TEMPORARY TABLE isocount AS
@@ -48,7 +45,7 @@ iden.code.binned <- function(outlist.path,
   dbExecute(conn, filt.query)
   dbExecute(conn, "DROP INDEX IF EXISTS iso_idx")
   dbExecute(conn, "CREATE INDEX iso_idx ON isocount(baseformula, adduct)")
-  match.sql <- strwrap(fn$paste("SELECT DISTINCT pat.compoundname, pat.identifier, 
+  match.sql <- strwrap(fn$paste("SELECT DISTINCT pat.compoundname, pat.identifier, pat.description, 
                                                 pat.baseformula, pat.adduct, 
                                                 pat.[mzmed.pgrp], pat.isoprevalence, 
                                                 pat.basecharge, pat.totalcharge 
@@ -58,7 +55,7 @@ iden.code.binned <- function(outlist.path,
                                       pat.adduct = iso.adduct"), width=10000, simplify=TRUE)
   dbExecute(conn, "DROP INDEX IF EXISTS pat_idx2")
   dbExecute(conn, "CREATE INDEX pat_idx2 ON patresults(baseformula)")
-  nomatch.sql <- strwrap("SELECT DISTINCT compoundname, identifier, 
+  nomatch.sql <- strwrap("SELECT DISTINCT compoundname, identifier, description,
                                           baseformula, adduct, 
                                           [mzmed.pgrp], isoprevalence, 
                                           basecharge, totalcharge
@@ -68,8 +65,8 @@ iden.code.binned <- function(outlist.path,
   matches <- as.data.table(dbGetQuery(conn, match.sql))
   nomatches <- as.data.table(dbGetQuery(conn, nomatch.sql))
   # --- create result table
-#  dbExecute(conn, fn$paste("DROP TABLE IF EXISTS $result.table"))
-  dbExecute(conn, fn$paste("CREATE TABLE $result.table(compoundname text, identifier text, baseformula text, adduct text, [mzmed.pgrp] float, isoprevalence float, basecharge int, totalcharge int)"))
+  dbExecute(conn, fn$paste("DROP TABLE IF EXISTS $result.table"))
+  dbExecute(conn, fn$paste("CREATE TABLE $result.table(compoundname text, identifier text, description text, baseformula text, adduct text, [mzmed.pgrp] float, isoprevalence float, basecharge int, totalcharge int)"))
   # --- return ---
   results <- unique(rbind(matches, nomatches, fill=TRUE))
   # --- write to table ---
@@ -84,7 +81,7 @@ iden.code.binned <- function(outlist.path,
   # --- disconnect ---
   dbDisconnect(conn)
   # --- AND return to R (can remove later) ---
-  return(results)
+  return(nrow(matches))
 }
 
 #' @export

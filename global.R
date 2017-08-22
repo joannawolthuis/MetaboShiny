@@ -19,6 +19,14 @@ library(jsonlite)
 library(shinyFiles)
 library(stringr)
 
+sourceDir <- function(path, trace = TRUE, ...) {
+  for (nm in list.files(path, pattern = "\\.[RrSsQq]$")) {
+    if(trace) cat(nm,":")           
+    source(file.path(path, nm), ...)
+    if(trace) cat("\n")
+  }
+}
+
 # === GET OPTIONS ===
 
 setwd("/Users/jwolthuis/Google Drive/MetaboShiny")
@@ -34,17 +42,11 @@ opt_conn <- file(".conf")
 options_raw <<- readLines(opt_conn)
 exp_dir <<- str_match(options_raw[[1]], "(?<=')(.*)(?=')")[1,1]
 proj_name <<- str_match(options_raw[[2]], "(?<=')(.*)(?=')")[1,1]
+patdb <<- file.path(exp_dir, paste0(proj_name, ".db"))
+
 close(opt_conn)
 
 # === SOURCE OWN CODE ===
-
-sourceDir <- function(path, trace = TRUE, ...) {
-  for (nm in list.files(path, pattern = "\\.[RrSsQq]$")) {
-    if(trace) cat(nm,":")           
-    source(file.path(path, nm), ...)
-    if(trace) cat("\n")
-  }
-}
 
 sourceAll <- function(where, 
                       which=c("general", "stats", "time", "enrich_path", "power_roc", "utils")){
@@ -79,5 +81,5 @@ get_matches <- function(mz, table){
   req("patdb")
   conn <- dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
   # --- attach patient outlist and get mzmed pgrp values ---
-  dbGetQuery(conn, fn$paste("select distinct compoundname as Compound, identifier as Identifier, Adduct as Adduct from $table where [mzmed.pgrp] like $mz"))
-}
+  dbGetQuery(conn, fn$paste("select distinct compoundname as Compound, identifier as Identifier, Adduct as Adduct, description as Description from $table where [mzmed.pgrp] like $mz"))
+  }

@@ -112,8 +112,6 @@ PlotFC<-function(imgName, format="png", dpi=72, width=NA){
     }
     h <- w*6/8;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
-
     par(mar=c(5,5,2,3));
 
     fc = analSet$fc;
@@ -177,7 +175,6 @@ PlotFC<-function(imgName, format="png", dpi=72, width=NA){
             axis(1, at=1:length(new.mns), labels=c(1:length(mns1),rep(NA, 5),1:length(mns2)));
         }
     }
-    dev.off();
 }
 
 GetSigTable.FC<-function(){
@@ -333,12 +330,12 @@ PlotTT<-function(imgName, format="png", dpi=72, width=NA){
         w <- width;
     }
     h <- w*6/8;
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
+    
     plot(analSet$tt$p.log, ylab="-log10(p)", xlab=GetVariableLabel(), main=analSet$tt$tt.nm, pch=19,
                  col= ifelse(analSet$tt$inx.imp, "magenta", "darkgrey"));
     abline (h=analSet$tt$thresh, lty=3);
     axis(4); 
-    dev.off();
+    
 }
 
 GetSigTable.TT<-function(){
@@ -665,7 +662,7 @@ PlotVolcano<-function(imgName, format="png", dpi=72, width=NA){
     }
     h <- w*6/10;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
+    
     par(mar=c(5,5,3,4));
     vcn<-analSet$volcano;
     MyGray <- rgb(t(col2rgb("black")), alpha=40, maxColorValue=255);
@@ -727,7 +724,7 @@ PlotVolcano<-function(imgName, format="png", dpi=72, width=NA){
     abline (v = vcn$min.xthresh, lty=3);
     abline (h = vcn$thresh.y, lty=3);
     axis(4); # added by Beomsoo
-    dev.off();
+    
 }
 
 GetVolcanoDnMat<- function(){
@@ -986,14 +983,12 @@ PlotANOVA<-function(imgName, format="png", dpi=72, width=NA){
     }
     h <- w*6/9;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     plot(lod, ylab="-log10(p)", xlab = GetVariableLabel(), main=analSet$aov$aov.nm, type="n");
     red.inx<- which(analSet$aov$inx.imp);
     blue.inx <- which(!analSet$aov$inx.imp);
     points(red.inx, lod[red.inx], bg="red", cex=1.2, pch=21);
     points(blue.inx, lod[blue.inx], bg="green", pch=21);
     abline (h=analSet$aov$thresh, lty=3);
-    dev.off();
 }
 
 GetAovSigMat<-function(){
@@ -1059,11 +1054,9 @@ GetAnovaSigFileName <- function(){
 PlotCmpdView<-function(cmpdNm, format="png", dpi=72, width=NA){
    imgName <- gsub("\\/", "_",  cmpdNm);
    imgName <- paste(imgName, "_dpi", dpi, ".", format, sep="");
-   Cairo(file = imgName, dpi=dpi, width=240, height=240, type=format, bg="transparent");
    par(mar=c(4,3,1,2), oma=c(0,0,1,0));
    boxplot(dataSet$norm[, cmpdNm]~dataSet$cls,las=2, col= unique(GetColorSchema()));
    title(main=cmpdNm, out=T);
-   dev.off();
    return(imgName);
 }
 

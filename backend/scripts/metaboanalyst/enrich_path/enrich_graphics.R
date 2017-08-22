@@ -7,7 +7,7 @@
 ###################################################
 
 # view individual compounds related to a given metabolite set
-PlotQEA.MetSet<-function(msetInx, format="png", dpi=72, width=NA){
+PlotQEA.MetSet<-function(msetInx){
 
     setNM <- rownames(analSet$qea.mat)[msetInx];
     # clean the name, some contains space and special characters, will
@@ -18,18 +18,8 @@ PlotQEA.MetSet<-function(msetInx, format="png", dpi=72, width=NA){
     if(nchar(imgNM) > 18){
         imgNM <-substr(imgNM, 0, 18);
     }
-    imgName <- paste(imgNM, "dpi", dpi, ".", format, sep="");
-    if(is.na(width)){
-        w <- 7;
-    }else if(width == 0){
-        w <- 7;
-        imgSet$qea.mset<-imgName;
-    }else{
-        w <- width;
-    }
-    h <- w;
-
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
+    #imgName <- paste(imgNM, "dpi", dpi, ".", format, sep="");
+    #
     gt.obj<-analSet$qea.msea;
     inx <- which (names(gt.obj) == setNM);
     if(is.factor(dataSet$cls)){
@@ -38,14 +28,14 @@ PlotQEA.MetSet<-function(msetInx, format="png", dpi=72, width=NA){
     }else{
         features(gt.obj[inx], cex=0.8, cluster=F);
     }
-    dev.off();
+    #
     current.img <<- imgName;
     imgSet <<- imgSet;
     return(imgName);
 }
 
 # plot the compound concentration data compared to the reference concentration range
-PlotConcRange<-function(inx, format="png", dpi=72, width=NA){
+PlotConcRange<-function(inx){#, format="png", dpi=72, width=NA){
 
     lows<-analSet$ssp.lows[[inx]];
 
@@ -60,15 +50,6 @@ PlotConcRange<-function(inx, format="png", dpi=72, width=NA){
     cmpdNm <- analSet$ssp.mat[inx,1];
     conc <- as.numeric(analSet$ssp.mat[inx,2]);
     hmdbID <- analSet$ssp.mat[inx,3];
-    imgName <<- paste(hmdbID, "dpi", dpi, ".png", sep="");
-    if(is.na(width)){
-        w <- h <- 7;
-    }else if(width == 0){
-        w <- 7;
-        imgSet$conc.range<-imgName;
-    }else{
-        w <- h <- width;
-    }
 
     rng<-range(lows, highs, conc);
     ext <- (rng[2]-rng[1])/8;
@@ -79,7 +60,6 @@ PlotConcRange<-function(inx, format="png", dpi=72, width=NA){
         unit <- "(umol/mmol_creatine)"
     }
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     concplot(means, lows, highs, xlim=c(min.rg, max.rg), labels = paste("Study ", 1:length(lows)),
               main=cmpdNm, xlab=paste("Concentration Range", unit), ylab="Study Reference")
     abline(v=c(range(lows, highs), conc), col=c("lightgrey", "lightgrey", "orange"), lty=c(5, 5, 5), lwd=c(1,1,2));
@@ -89,75 +69,40 @@ PlotConcRange<-function(inx, format="png", dpi=72, width=NA){
     # extend the left end of axis to look natural without labeling
     axis(1, at=c(min.rg-ext, min.rg), label=F, lwd.tick=0);
 
-    dev.off();
     current.img <<- imgName;
     imgSet <<- imgSet;
     return(imgName);
 }
 
-PlotORA<-function(imgName, imgOpt, format="png", dpi=72, width=NA){
+PlotORA<-function(imgOpt){
     #calculate the enrichment fold change
     folds <- analSet$ora.mat[,3]/analSet$ora.mat[,2];
     names(folds)<-GetShortNames(rownames(analSet$ora.mat));
     pvals <- analSet$ora.mat[,4];
 
-    imgName = paste(imgName, "dpi", dpi, ".", format, sep="");
-    if(is.na(width)){
-        w <- 9;
-    }else if(width == 0){
-        w <- 7;
-        imgSet$ora<-imgName;
-    }else{
-        w <-width;
-    }
-    h <- w;
-
-    if(format == "png"){
-        bg = "transparent";
-    }else{
-        bg="white";
-    }
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg=bg);
+    bg = "transparent";
     if(imgOpt == "net"){
         PlotEnrichNet.Overview(folds, pvals);
     }else{
         PlotMSEA.Overview(folds, pvals);
     }
-    dev.off();
     current.img <<- imgName;
     imgSet <<- imgSet;
 }
 
-PlotQEA.Overview <-function(imgName, imgOpt, format="png", dpi=72, width=NA){
+PlotQEA.Overview <-function(imgOpt){
     #calculate the enrichment fold change
     folds <- analSet$qea.mat[,3]/analSet$qea.mat[,4];
     names(folds)<-GetShortNames(rownames(analSet$qea.mat));
     pvals <- analSet$qea.mat[,6];
-    imgName = paste(imgName, "dpi", dpi, ".", format, sep="");
+   
+    bg = "transparent";
 
-    if(is.na(width)){
-        w <- 9;
-    }else if(width == 0){
-        w <- 7;
-        imgSet$qea <-imgName;
-    }else{
-        w <- width;
-    }
-    h <- w;
-
-    if(format == "png"){
-        bg = "transparent";
-    }else{
-        bg="white";
-    }
-
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg=bg);
     if(imgOpt == "net"){
         PlotEnrichNet.Overview(folds, pvals);
     }else{
         PlotMSEA.Overview(folds, pvals);
     }
-    dev.off();
     current.img <<- imgName;
     imgSet <<- imgSet;
 }

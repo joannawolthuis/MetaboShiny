@@ -67,7 +67,6 @@ PlotRF.Classify<-function(imgName, format="png", dpi=72, width=NA){
     }
     h <- w*5/8;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     #par(mfrow=c(2,1));
     par(mar=c(4,4,3,2));
     cols <- rainbow(length(levels(dataSet$cls))+1);
@@ -76,7 +75,6 @@ PlotRF.Classify<-function(imgName, format="png", dpi=72, width=NA){
 
     #PlotConfusion(analSet$rf$confusion);
     
-    dev.off();
 
 }
 
@@ -95,9 +93,7 @@ PlotRF.VIP<-function(imgName, format="png", dpi=72, width=NA){
     }
     h <- w*7/8;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     PlotImpVar(vip.score,"MeanDecreaseAccuracy");
-	dev.off();
 }
 
 PlotRF.Outlier<-function(imgName, format="png", dpi=72, width=NA){
@@ -119,7 +115,6 @@ PlotRF.Outlier<-function(imgName, format="png", dpi=72, width=NA){
     }
     h <- w*7/9;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     layout(matrix(c(1,2), 1, 2, byrow = TRUE), width=c(4,1));
 
     op<-par(mar=c(5,5,4,0));
@@ -138,7 +133,6 @@ PlotRF.Outlier<-function(imgName, format="png", dpi=72, width=NA){
 
     legend("center", legend =legend.nm, pch=15, col=uniq.cols);
 
-    dev.off();
 }
 
 # get the OOB error for the last signif
@@ -231,7 +225,6 @@ PlotRSVM.Classification<-function(imgName, format="png", dpi=72, width=NA){
     }
     h <- w*6/8;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     plot(res,type='l',xlab='Number of variables (levels)',ylab='Error Rate',
                 ylim = c(min(res)-5*edge, max(res)+18*edge), axes=F,
                 main="Recursive SVM classification")
@@ -240,7 +233,6 @@ PlotRSVM.Classification<-function(imgName, format="png", dpi=72, width=NA){
     points(res, col=ifelse(1:length(res)==analSet$svm$best.inx,"red","blue"));
     axis(2);
     axis(1, 1:length(res), names(res));
-    dev.off();
 }
 
 # if too many, plot top 15
@@ -259,9 +251,7 @@ PlotRSVM.Cmpd<-function(imgName, format="png", dpi=72, width=NA){
     }
     h <- w*7/8;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     PlotImpVar(data,"Frequency");
-    dev.off();
 }
 
 GetSigTable.SVM<-function(){

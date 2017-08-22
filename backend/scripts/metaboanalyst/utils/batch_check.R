@@ -214,7 +214,6 @@ PlotPCA.overview <- function(imgName, format="png", dpi=72, width=NA){
         w <- width;
     }
     h <- 6;
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     par(mfrow=c(1,2));
 
     nlbls <- dataSet$batch.lbls;
@@ -258,5 +257,4 @@ PlotPCA.overview <- function(imgName, format="png", dpi=72, width=NA){
         points(pc1[qcInx], pc2[qcInx], pch=3, cex=2, lwd=2);
     }
 
-    dev.off();
 }

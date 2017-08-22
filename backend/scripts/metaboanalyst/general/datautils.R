@@ -650,11 +650,11 @@ PlotCmpdSummary<-function(cmpdNm, format="png", dpi=72, width=NA){
         boxplot(dataSet$norm[, cmpdNm]~dataSet$cls,las=2, col= unique(GetColorSchema()));
         mtext("Normalized Conc.", line=1);
         title(main=cmpdNm, out=T);
-        #dev.off();
+        #
    }else if(dataSet$design.type =="time0"){
-        #Cairo(file = imgName, unit="in", dpi=dpi, width=8, height= 6, type=format, bg="white");
+        #
         plotProfile(cmpdNm);
-        #dev.off();
+        #
    }else{
         if(dataSet$design.type =="time"){ # time trend within phenotype
             out.fac <- dataSet$exp.fac;
@@ -675,7 +675,7 @@ PlotCmpdSummary<-function(cmpdNm, format="png", dpi=72, width=NA){
         }else{
             h <- w*0.5*row.num;
         }
-        #Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
+        #
         par(mar=c(3,4,4,2), mfrow=c(row.num, 2));
         # make sure all at the same range
         ylim.ext <-  GetExtendRange (dataSet$norm[, cmpdNm], 12);
@@ -686,7 +686,7 @@ PlotCmpdSummary<-function(cmpdNm, format="png", dpi=72, width=NA){
             boxplot(dat ~ cls, col="#0000ff22", ylim=ylim.ext, outline=FALSE, boxwex=c(0.5, 0.5), xlab=xlab, ylab="Abundance", main=lv);
             stripchart(dat ~ cls, method = "jitter", ylim=ylim.ext, vertical=T, add = T, pch=19, cex=0.7);
         }
-        #dev.off();
+        #
    }
    return(imgName);
 }

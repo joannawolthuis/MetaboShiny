@@ -16,7 +16,7 @@ build.base.db <- function(dbname=NA,
   db <- file.path(outfolder, paste0(dbname, ".base.db"))
   if(file.exists(db)) file.remove(db)
   conn <- dbConnect(RSQLite::SQLite(), db)
-  dbExecute(conn, statement = "create table base(compoundname text, baseformula text, identifier text, charge text)")
+  dbExecute(conn, statement = "create table base(compoundname text, description text, baseformula text, identifier text, charge text)")
   # --- create base ---
   function.of.choice <- switch(tolower(dbname),
                                internal = function(dbname){ # BOTH NOISE AND NORMAL
@@ -27,6 +27,7 @@ build.base.db <- function(dbname=NA,
                                                                      "TheoreticalMZ_NegPos_noNoise.txt"),
                                                            sep="\t")
                                  db.formatted <- data.table(compoundname = internal.base.db[,1],
+                                                            description = c("Internal"),
                                                             baseformula = internal.base.db[,2], 
                                                             identifier=c("Internal"),
                                                             charge=c(0))
@@ -49,8 +50,9 @@ build.base.db <- function(dbname=NA,
                                                                   "TheoreticalMZ_NegPos_yesNoise.txt"), 
                                                         sep="\t")
                                  db.formatted <- data.table(compoundname = noise.base.db[,1],
+                                                            description = str_match(noise.base.db[,1], "(?<=\\().+?(?=\\))"),
                                                             baseformula = noise.base.db[,2], 
-                                                            identifier=c("noise"),
+                                                            identifier=c("Noise"),
                                                             charge=c(0))
                                  dbWriteTable(conn, "base", db.formatted, append=TRUE)
                                  ### do extended table and write to additional db (exception...)
@@ -58,7 +60,7 @@ build.base.db <- function(dbname=NA,
                                 if(file.exists(db.full)) file.remove(db.full)
                                 full.conn <- dbConnect(RSQLite::SQLite(), db.full)
                                 # --- create base table here too ---
-                                dbExecute(full.conn, statement = "create table base(compoundname text, baseformula text, identifier text, charge text)")
+                                dbExecute(full.conn, statement = "create table base(compoundname text, description text, baseformula text, identifier text, charge text)")
                                 # --- create extended table ---
                                 sql.make.meta <- strwrap("create table extended(
                                                          baseformula text,
@@ -126,8 +128,8 @@ build.base.db <- function(dbname=NA,
                                  base.loc <- file.path(outfolder,"NeededFiles", "HMDB")
                                  if(!dir.exists(base.loc)) dir.create(base.loc)
                                  zip.file <- file.path(base.loc, "HMDB.zip")
-                                 download.file(file.url, zip.file)
-                                 unzip(zip.file, exdir = base.loc)
+                                 #download.file(file.url, zip.file)
+                                 #unzip(zip.file, exdir = base.loc)
                                  # --- go through xml ---
                                  print("Parsing XML...")
                                  data <- xmlParse(file.path(base.loc,"hmdb_metabolites.xml"), useInternalNodes = T)
@@ -144,9 +146,13 @@ build.base.db <- function(dbname=NA,
                                  charges <- getNodeSet(data, 
                                                        "/*/pf:metabolite/pf:predicted_properties/pf:property[pf:kind='formal_charge']/pf:value", 
                                                        c(pf = "http://www.hmdb.ca"))
+                                 description <- getNodeSet(data, 
+                                                           "/*/pf:metabolite[pf:predicted_properties/pf:property[pf:kind='formal_charge']]/pf:description", 
+                                                           c(pf = "http://www.hmdb.ca"))
                                  # --- make nice big table ---
                                  db.formatted <- data.table(
                                    compoundname = sapply(compoundnames, xmlValue),
+                                   description = sapply(description, xmlValue),
                                    baseformula = sapply(formulae, xmlValue),
                                    identifier = sapply(identifiers, xmlValue),
                                    charge = sapply(charges, xmlValue)
@@ -163,11 +169,15 @@ build.base.db <- function(dbname=NA,
                                chebi = function(dbname){
                                  library(minval)
                                  print("you chose chebi")
-                                 db.full <- as.data.table(downloadChEBI(release = "latest", woAssociations = FALSE))
+                                 db.full <- as.data.table(download.chebi.joanna(release = "latest", woAssociations = FALSE))
                                  db.formatted <- unique(db.full[, list(compoundname = ChEBI, 
+                                                                       description = DEFINITION,
                                                                        baseformula = FORMULA,
                                                                        identifier = ID, 
-                                                                       charge = gsub(CHARGE,pattern = "$\\+\\d", replacement = ""))])
+                                                                       charge = gsub(CHARGE,pattern = "$\\+\\d", replacement = "")
+                                                                       )
+                                                                ]
+                                                        )
                                  # --- check formulae ---
                                  checked <- as.data.table(check.chemform.joanna(isotopes,
                                                                                 db.formatted$baseformula))

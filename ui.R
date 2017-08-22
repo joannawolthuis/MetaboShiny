@@ -1,21 +1,7 @@
 # Rely on the 'WorldPhones' dataset in the datasets
 # package (which generally comes preloaded).
 
-navbarPage("MetaboShiny", id="nav_general",
-           tabPanel("",  icon = icon("cog"), 
-                    h2("General settings for this application"),
-                    hr(),
-                    shinyDirButton("get_work_dir", "Choose a working directory" ,
-                                   title = "Browse",
-                                   buttonType = "default", class = NULL),
-                    helpText("Your results will be stored here for later access."),
-                    textOutput("exp_dir"),
-                    hr(),
-                    textInput(inputId="proj_name", label="Project name", value = ''),
-                    actionButton("set_proj_name", label="Apply"),
-                    helpText("This name will be used in all save files."),
-                    textOutput("proj_name")
-           ),
+navbarPage("MetaboShiny", id="nav_general",windowTitle = "MetaboShiny",
            # --------------------------------------------------------------------------------------------------------------------------------
            tabPanel("Databases" , icon = icon("database"),
                     # -- header row ---
@@ -163,7 +149,7 @@ navbarPage("MetaboShiny", id="nav_general",
                                                           )
                                                    # =================================================================================
                                                    )
-                                      }), column(3, align="center",
+                                      }), column(4, align="center",
                                                  imageOutput("find_mol_icon",inline = T),
                                                  div(checkboxGroupInput("checkGroup", 
                                                                               label = h4("Find selected m/z in:"), 
@@ -175,8 +161,22 @@ navbarPage("MetaboShiny", id="nav_general",
                                                      actionButton("search_mz", "Search", icon=icon("search")),
                                                  hr(),
                                                    div(DT::dataTableOutput('match_tab'),style='font-size:80%'),
-                                                 hr()
+                                                 hr(),
+                                                   div(textOutput("curr_definition"))
                                                  )
            # --------------------------------------------------------------------------------------------------------------------------------
-           )     
+           ),tabPanel("",  icon = icon("cog"), 
+                    h2("General settings for this application"),
+                    hr(),
+                    shinyDirButton("get_work_dir", "Choose a working directory" ,
+                                   title = "Browse",
+                                   buttonType = "default", class = NULL),
+                    helpText("Your results will be stored here for later access."),
+                    textOutput("exp_dir"),
+                    hr(),
+                    textInput(inputId="proj_name", label="Project name", value = ''),
+                    actionButton("set_proj_name", label="Apply"),
+                    helpText("This name will be used in all save files."),
+                    textOutput("proj_name")
+           )
            )

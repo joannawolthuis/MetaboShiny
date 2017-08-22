@@ -508,9 +508,7 @@ PlotMS.RT<-function(imgName, format="png", dpi=72, width=NA){
     }
     h <- w*7/9;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     plotrt(dataSet$xset.rt);
-    dev.off();
 }
 
 # fill in missing peaks

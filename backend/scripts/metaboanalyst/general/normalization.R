@@ -424,7 +424,7 @@ PlotNormSummary<-function(imgName=NA, format="png", dpi=72, width=NA){
         w <- 7.2; h <- 9;
     }
 
-    #Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
+    #
     layout(matrix(c(1,2,2,2,3,4,4,4), 4, 2, byrow = FALSE))
 
     # since there may be too many compounds, only plot a subsets (50) in box plot
@@ -468,7 +468,7 @@ PlotNormSummary<-function(imgName=NA, format="png", dpi=72, width=NA){
     boxplot(dataSet$norm[,norm.inx], names=namesVec, ylim=rangex.norm, las = 2, col="pink", horizontal=T);
     mtext(paste("Normalized",x.label),1, 5);
 
-    #dev.off();
+    #
 }
 
 PlotSampleNormSummary<-function(imgName=NA, format="png", dpi=72, width=NA){
@@ -483,7 +483,7 @@ PlotSampleNormSummary<-function(imgName=NA, format="png", dpi=72, width=NA){
         w <- 7.2; h <- 9;
     }
 
-    #Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
+    #
     layout(matrix(c(1,1,1,2,3,3,3,4), 4, 2, byrow = FALSE))
 
     # since there may be too many samples, only plot a subsets (50) in box plot
@@ -527,5 +527,5 @@ PlotSampleNormSummary<-function(imgName=NA, format="png", dpi=72, width=NA){
     plot(density(apply(dataSet$norm, 1, mean, na.rm=TRUE)),col='black',lty=3, las=2, lwd =2, main="", xlab="", ylab="");
     mtext(paste("Normalized",x.label),1, 5);
 
-    #dev.off();
+    #
 }

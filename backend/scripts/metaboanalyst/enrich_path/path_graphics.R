@@ -5,7 +5,7 @@
 ## McGill University, Canada
 #################################################################
 
-PlotMetPath<-function(pathName, width, height){
+PlotMetPath<-function(pathName, width=5, height){
 
     require('KEGGgraph');
     require('Rgraphviz');
@@ -34,7 +34,6 @@ PlotMetPath<-function(pathName, width, height){
                     cmpd <- hit.cmpds[i];
                     histvec[cmpd] <- cmpd;
                     cmpd.name <- paste(cmpd, ".png", sep="");
-                    Cairo(file=cmpd.name, width=180, height=180, bg = "transparent", type="png");
                     # remember to change jscode for image size when the change the size above
                     par(mar=c(4,4,1,1));
 
@@ -49,7 +48,6 @@ PlotMetPath<-function(pathName, width, height){
                         plot(dataSet$norm.path[, cmpd], dataSet$cls, pch=19, col="forestgreen", xlab="Index", ylab=y.label);
                         abline(lm(dataSet$cls~dataSet$norm.path[, cmpd]), col="red")
                     }
-                    dev.off();
                     nm.vec <- c(nm.vec, cmpd.name);
                 }
 
@@ -77,11 +75,9 @@ PlotMetPath<-function(pathName, width, height){
     imgName <- paste(pathName, ".png", sep="");
 
     ## Open plot device
-    Cairo(file=imgName, width=width, height=height, type="png", bg="white");
     par(mai=rep(0,4));
     g.obj <- plot(g, nodeAttrs = setRendAttrs(g, fillcolor=fillcolvec));
     nodeInfo <- GetMetPANodeInfo(pathName, g.obj, tooltip, histvec, pvec, impvec, width, height);
-    dev.off();
     current.metpa.graph <<- g.obj;
     return(nodeInfo);
 }
@@ -136,15 +132,13 @@ PlotKEGGPath<-function(pathName, format="png", width=NA, dpi=72){
     }
     w <- h <- width;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     par(mai=rep(0,4));
     g.obj <- plot(g, nodeAttrs = setRendAttrs(g, fillcolor=fillcolvec));
-    dev.off();
 
     return(imgName);
 }
 
-GetMetPANodeInfo<-function(pathName, object, tags, histvec, pvec, impvec, width, height, usr = par("usr")){
+GetMetPANodeInfo<-function(pathName, object, tags, histvec, pvec, impvec, width=5, height=5, usr = par("usr")){
 
     nn = sapply(AgNode(object), function(x) x@name);
 
@@ -209,10 +203,10 @@ setRendAttrs = function(g, AllBorder="transparent",
 }
 
 # redraw current graph for zooming or clipping then return a value
-RerenderMetPAGraph <- function(imgName, width, height){
-    Cairo(file=imgName, width=width, height=height,type="png", bg="white");
+RerenderMetPAGraph <- function(){
+    
     plot(current.metpa.graph);
-    dev.off();
+    
     return(1);
 }
 
@@ -264,7 +258,6 @@ PlotPathSummary<-function(imgName, format="png", dpi=72, width=NA, x, y){
         w <- width;
     }
     h <- w;
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg=bg);
     op<-par(mar=c(6,5,2,3));
     plot(x, y, type="n", axes=F, xlab="Pathway Impact", ylab="-log(p)");
     axis(1);
@@ -276,11 +269,10 @@ PlotPathSummary<-function(imgName, format="png", dpi=72, width=NA, x, y){
     width.px <- height.px <- w*dpi;
     imgSet$circleInfo <- CalculateCircleInfo(x, y, radi.vec, width.px, height.px, names(metpa$path.ids)[match(names(x),metpa$path.ids)]);
     par(op);
-    dev.off();
     imgSet <<- imgSet;
 }
 
-CalculateCircleInfo <- function(x, y, r, width, height, lbls){
+CalculateCircleInfo <- function(x, y, r, width=5, height=5, lbls){
     jscode <- paste("leftImgWidth = ", width, "\n", "leftImgHeight = ", height, sep="");
     dot.len <- length(r);
     for(i in 1:dot.len){

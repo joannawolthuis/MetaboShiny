@@ -584,7 +584,7 @@ PCA.GENES<-function(X){
 
 PlotModelScree <- function(imgName, format="png", dpi=72, width=NA){
 
-    imgName = paste(imgName, "dpi", dpi, ".", format, sep="");
+    #imgName = paste(imgName, "dpi", dpi, ".", format, sep="");
 
     if(is.na(width)){
         w <- 9;
@@ -597,7 +597,7 @@ PlotModelScree <- function(imgName, format="png", dpi=72, width=NA){
     }
     h <- w;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, type=format, width=w, height=h,  bg="white");
+    #
 
     models <- analSet$asca$models;
     # note four plots, model a, b, ab and res
@@ -616,7 +616,7 @@ PlotModelScree <- function(imgName, format="png", dpi=72, width=NA){
         box();
    }
    title("Scree plots of each model", outer=TRUE)
-   dev.off();
+   #
 }
 
 
@@ -639,7 +639,7 @@ PlotASCAModel<-function(imgName, format="png", dpi=72, width=NA, type, colorBW=F
     if(pcNum > 3){
         pcNum <- 3;
     }
-    imgName = paste(imgName, "dpi", dpi, ".", format, sep="");
+    #imgName = paste(imgName, "dpi", dpi, ".", format, sep="");
     h.adj <- ifelse(md$facNum > 1, 5/6, 1)
     if(is.na(width)){
          w <- ifelse(md$facNum > 1, 6, 5);
@@ -656,7 +656,7 @@ PlotASCAModel<-function(imgName, format="png", dpi=72, width=NA, type, colorBW=F
     }
     h <- w*h.adj;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
+    #
     par(mfrow = c(1, pcNum), cex=1.0);
     for(j in 1:pcNum){
         ## add 'xlab=fac.lbl' & replace ylab as "Scores Component #1 (XX% of variation explained)"
@@ -677,7 +677,7 @@ PlotASCAModel<-function(imgName, format="png", dpi=72, width=NA, type, colorBW=F
         box();
     }
 
-    dev.off();
+    #
 }
 
 # BHan: add paramter colorBW for Black/White color
@@ -690,7 +690,7 @@ PlotInteraction<-function(imgName, format="png", dpi=72, colorBW=FALSE, width=NA
         pcNum <- 3;
     }
 
-    imgName = paste(imgName, "dpi", dpi, ".", format, sep="");
+    #imgName = paste(imgName, "dpi", dpi, ".", format, sep="");
     if(is.na(width)){
          w <- ifelse(md$facNum > 1, 8, 5)
     }else if(width == 0){
@@ -702,7 +702,7 @@ PlotInteraction<-function(imgName, format="png", dpi=72, colorBW=FALSE, width=NA
     }
     h <- 8;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=9, type=format, bg="white");
+    #
     lmat<-matrix(1:(4*pcNum), nrow=4, byrow=F);
     lwid<-rep(4.0, pcNum);
     lhei<-rep(c(4.0, 0.4), 2);
@@ -767,7 +767,7 @@ PlotInteraction<-function(imgName, format="png", dpi=72, colorBW=FALSE, width=NA
          # legend("center", horiz=T, legend = as.character(ab.lbls), pch=pchstyle, col=(1:length(ab.lbls))+1, lty=1, bty="n");
         legend("center", horiz=T, legend = as.character(ab.lbls), pch=pchstyle, col=cols, lty=linestyle, bty="n");
     }
-    dev.off();
+    #
 }
 
 # plot the important var for each factor
@@ -812,9 +812,7 @@ PlotAscaImpVar <- function(imgName, format, dpi, width=NA, type){
     }
     h <- w*6/7;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     PlotSigVar(lvg, spe, lv.cutoff, spe.cutoff,lbl);
-    dev.off();
 }
 
 # note, by control xpd to plot legend outside the plotting area
@@ -865,7 +863,6 @@ PlotASCA.Permutation<-function(imgName, format="png", dpi=72, width=NA){
     }
     h <-2*w;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     par(mfrow=c(3,1), cex=1.0);
     nms <- colnames(perm.mat);
     for(i in 1:3){
@@ -881,7 +878,6 @@ PlotASCA.Permutation<-function(imgName, format="png", dpi=72, width=NA){
         arrows(perm.mat[1,i], h/5, perm.mat[1,i], 0, col="red", lwd=2);
         text(perm.mat[1,i], h/2, paste('Observed \n statistic \n', perm.p[i]), xpd=T);
     }
-    dev.off();
 }
 
 GetAscaSigMat<-function(type){
@@ -906,7 +902,7 @@ GetAscaSigMat<-function(type){
     }
 
     fileNm <- paste("asca_",type, ".csv", sep="");
-    write.csv(signif(sig.mat,5), file=fileNm);
+    write.csv(signif(sig.mat,5), file=file.path(exp_dir, fileNm));
     analSet$asca$sig.nm <- fileNm;
     analSet <<- analSet;
     return(sig.mat);
@@ -968,7 +964,7 @@ PlotHeatMap2<-function(smplDist='pearson', clstDist='average', colors="bwm", vie
     # set up parameter for heatmap
     suppressMessages(require(RColorBrewer));
 
-    #Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
+    #
     require(pheatmap);
 
     annotation <- data.frame(new.facB, new.facA);
@@ -986,7 +982,7 @@ PlotHeatMap2<-function(smplDist='pearson', clstDist='average', colors="bwm", vie
             cluster_cols = F,
             scale = 'row', 
             color = rainbow(3));
-    #dev.off();
+    #
     imgSet <<- imgSet;
     analSet$htmap2 <-list(dist.par=smplDist, clust.par=clstDist);
     analSet <<- analSet;

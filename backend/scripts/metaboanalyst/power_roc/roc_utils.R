@@ -185,7 +185,7 @@ CalculateFeatureRanking <- function(){
     ord.inx <- order(auc, decreasing=T);
     rank.mat <- rank.mat[ord.inx,];
 
-    write.csv(rank.mat[,1:3],file="metaboanalyst_roc_univ.csv");
+    write.csv(rank.mat[,1:3],file=file.path(exp_dir, "metaboanalyst_roc_univ.csv"));
     # how to format pretty, and still keep numeric
     my.mat <- format(rank.mat, scientific = TRUE, digits = 5);
     class(my.mat) <- "numeric";
@@ -879,7 +879,6 @@ PlotROC.LRmodel <- function(imgName, format="png", dpi=72, show.conf=FALSE, sp.b
      y.origin <- LR.y.origin;
      y.pred <- LR.y.pred;
 
-     Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
      op <- par(mar=c(5,4,3,3));
 
      # auc.ci <- ci.auc(roc.object, method="bootstrap", boot.n=500, progress="none");
@@ -904,8 +903,6 @@ PlotROC.LRmodel <- function(imgName, format="png", dpi=72, show.conf=FALSE, sp.b
                  cex.axis=1.0, cex.lab=1.0, lwd=2, lty=1 );
          text(0.7, 0.4, perform.lbl, adj=c(0,1), col="black", cex=1.0);
      }
-
-     dev.off();
  }
 
 GetLRConvergence <- function(){
@@ -1050,7 +1047,6 @@ Perform.UnivROC <- function(feat.nm, imgName, format="png", dpi=72, isAUC, isOpt
     w <- 9; h <- 6;
     imgSet$roc.univ <- imgName;
     imgSet <<- imgSet;
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     lmat<-cbind(1,2);
     layout(lmat, widths = c(2,1));
     par(oma = c(0,0,2,0));
@@ -1098,7 +1094,6 @@ Perform.UnivROC <- function(feat.nm, imgName, format="png", dpi=72, isAUC, isOpt
     }
 
     mtext(feat.nm, outer = TRUE);
-    dev.off();
 }
 
 # compute data points on the ROC curve
@@ -1185,7 +1180,7 @@ PlotProbView <- function(imgName, format="png", dpi=72, mdl.inx, show, showPred)
             test.cls <- as.numeric(dataSet$test.cls)-1;
 
             test.df <- data.frame(Prob_HoldOut=analSet$test.res, Predicted_HoldOut=test.pred, Actual_HoldOut=test.cls);
-            write.table(test.df, file="roc_pred_prob.csv", sep=",", append=TRUE);
+            write.table(test.df, file=file.path(exp_dir, "roc_pred_prob.csv"), sep=",", append=TRUE);
 
             test.res <- table(test.pred, test.cls);
             conf.mat.test <<- print(xtable(test.res, 
@@ -1200,8 +1195,6 @@ PlotProbView <- function(imgName, format="png", dpi=72, mdl.inx, show, showPred)
     imgSet$roc.prob <- imgName;
     imgSet <<- imgSet;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
-	
     set.seed(123);
     y <- rnorm(length(prob.vec));
     max.y <- max(abs(y));
@@ -1273,7 +1266,6 @@ PlotProbView <- function(imgName, format="png", dpi=72, mdl.inx, show, showPred)
          }
     }
     par(op)
-    dev.off();
 }
 
 
@@ -1292,7 +1284,6 @@ PlotROC<-function(imgName, format="png", dpi=72, mdl.inx, avg.method, show.conf,
     w <- 8; h <- 8;
     imgSet$roc.univ <- imgName;
     imgSet <<- imgSet;
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
 
     op <- par(mar=c(5,4,3,3));
 
@@ -1438,18 +1429,15 @@ PlotROC<-function(imgName, format="png", dpi=72, mdl.inx, avg.method, show.conf,
             legend("center", legend = lgd,  bty="n");
         }       
     }
-    dev.off();
 }
 
 
 # Plot classification performance using different features
 # use bar graph with error bars
-PlotAccuracy<-function(imgName, format="png", dpi=72){
-    imgName = paste(imgName, "dpi", dpi, ".", format, sep="");
+PlotAccuracy<-function(){
     w <- 9; h <- 7;
     imgSet$roc.pred <- imgName;
     imgSet <<- imgSet;
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     if(anal.type == "explore"){
         accu.mat <- analSet$accu.mat;
         mn.accu <- apply (accu.mat, 2, mean);
@@ -1487,17 +1475,15 @@ PlotAccuracy<-function(imgName, format="png", dpi=72){
         analSet$accu.info <- accu.info;
         analSet <<- analSet;
     }
-    dev.off();
 }
 
 # plot selected cmpd by their % frequency
-PlotImpVars <- function(imgName, format="png", dpi=72, mdl.inx, measure = "freq", feat.num = 15){
+PlotImpVars <- function(mdl.inx, measure = "freq", feat.num = 15){
 
     imgName = paste(imgName, "dpi", dpi, ".", format, sep="");
     w <- 8; h <- 8;
     imgSet$roc.imp <- imgName;
     imgSet <<- imgSet;
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
 
     data <- dataSet$norm;
     cls <- dataSet$cls;
@@ -1539,7 +1525,7 @@ PlotImpVars <- function(imgName, format="png", dpi=72, mdl.inx, measure = "freq"
 
     temp.dat <- data.frame(imp.mat, lowhigh);
     colnames(temp.dat) <- c(colnames(imp.mat), levels(cls));
-    write.csv(temp.dat, file="imp_features_cv.csv");
+    write.csv(temp.dat, file=file.path(exp_dir, "imp_features_cv.csv"));
     temp.dat <- NULL;
 
     # record the imp.mat for table show
@@ -1618,7 +1604,6 @@ PlotImpVars <- function(imgName, format="png", dpi=72, mdl.inx, measure = "freq"
     text(x[1], endy+shifty/8, "High");
     text(x[1], starty-shifty/8, "Low");
     par(op);
-    dev.off();
 }
 
 GetImpValues <- function(){
@@ -1747,8 +1732,6 @@ Plot.Permutation<-function(imgName, format="png", dpi=72){
     imgSet$roc.perm <- imgName;
     imgSet <<- imgSet;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
-
     if(analSet$perm.res$perf.measure == "auroc"){
         plot(analSet$perm.res$perf.obj, col="grey", lwd=1, lty=2,
                     xlab="1-Specificity (False Positive rate)",
@@ -1788,7 +1771,6 @@ Plot.Permutation<-function(imgName, format="png", dpi=72){
         text(perm.vec[1], h/3.5, paste('Observed \n statistic \n', perm.p), xpd=T);
         par(op);
     }
-    dev.off();
 }
 
 # calculate partial area under ROC curve
@@ -2108,7 +2090,7 @@ PrepareROCDetails <- function(feat.nm){
                   ));
 
     filename <- paste(gsub("\\/", "_",  feat.nm), "_roc.csv", sep="");
-    write.csv(signif(roc.mat,4), file=filename, row.names=F);
+    write.csv(signif(roc.mat,4), file=file.path(exp_dir, filename), row.names=F);
     # need to clean NA/Inf/-Inf
     #analSet$roc.mat <- ClearNumerics(roc.mat);
     analSet$roc.mat <- signif(roc.mat, 6);
@@ -2201,7 +2183,6 @@ PlotDetailROC <- function(imgName, thresh, sp, se, dpi=72, format="png"){
     w <- 9; h <- 6;
     imgSet$roc.univ <- imgName;
     imgSet <<- imgSet;
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     lmat<-cbind(1,2);
     layout(lmat, widths = c(2,1));
     par(oma = c(0,0,2,0));
@@ -2226,5 +2207,4 @@ PlotDetailROC <- function(imgName, thresh, sp, se, dpi=72, format="png"){
         abline(h=thresh, lty=2, col="red", lwd=1);
     }
     mtext(current.feat.nm, outer = TRUE);
-    dev.off();
 }

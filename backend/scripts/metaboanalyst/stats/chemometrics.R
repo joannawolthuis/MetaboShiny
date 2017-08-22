@@ -64,13 +64,13 @@ PlotPCAPairSummary<-function(imgName, format="png", dpi=72, width=NA, pc.num){
         w <- width;
     }
     h <- w;
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
+    
     if(dataSet$cls.type == "disc"){
         pairs(analSet$pca$x[,1:pc.num], col=GetColorSchema(), pch=as.numeric(dataSet$cls)+1, labels=pclabels);
     }else{
         pairs(analSet$pca$x[,1:pc.num], labels=pclabels);
     }
-    dev.off();
+    
 }
 
 # scree plot
@@ -95,7 +95,7 @@ PlotPCAScree<-function(imgName, format="png", dpi=72, width=NA, scree.num){
         w <- width;
     }
     h <- w*2/3;
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
+    
     par(mar=c(5,5,6,3));
     plot(pcvars, type='l', col='blue', main='Scree plot', xlab='PC index', ylab='Variance explained', ylim=c(miny, maxy), axes=F)
     text(pcvars, labels =paste(100*round(pcvars,3),'%'), adj=c(-0.3, -0.5), srt=45, xpd=T)
@@ -108,7 +108,7 @@ PlotPCAScree<-function(imgName, format="png", dpi=72, width=NA, scree.num){
     abline(v=1:scree.num, lty=3);
     axis(2);
     axis(1, 1:length(pcvars), 1:length(pcvars));
-    dev.off();
+    
 }
 
 # 2D score plot
@@ -132,7 +132,6 @@ PlotPCA2DScore <- function(imgName, format="png", dpi=72, width=NA, pcx, pcy, re
     }
     h <- w;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     suppressMessages(require('ellipse'));
     op<-par(mar=c(5,5,3,3));
 
@@ -211,7 +210,6 @@ PlotPCA2DScore <- function(imgName, format="png", dpi=72, width=NA, pcx, pcy, re
         text(pc1, pc2, label=text.lbls, pos=4, col ="blue", xpd=T, cex=0.8);
     }
     par(op);
-    dev.off();
 }
 
 
@@ -260,7 +258,6 @@ PlotPCA3DScore_orig <- function(imgName, format="png", dpi=72, width=NA, inx1, i
         w <- width;
     }
     h <- w;
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
 
     ## BHAN: changed pch=17 --> as.numeric(dataSet$cls)+1 to matched same symbols
     pchs <- as.numeric(dataSet$cls)+1;
@@ -277,7 +274,6 @@ PlotPCA3DScore_orig <- function(imgName, format="png", dpi=72, width=NA, inx1, i
         Plot3D(analSet$pca$x[, inx1], analSet$pca$x[, inx2], analSet$pca$x[, inx3], xlab= xlabel, ylab=ylabel,
                zlab=zlabel, angle =angl, pch=pchs, box=F);
     }
-    dev.off();
 }
 
 GetPCALoadAxesSpec<-function(){
@@ -320,7 +316,6 @@ PlotPCALoading<-function(imgName, format="png", dpi=72, width=NA, inx1, inx2, pl
     }
     h <- w;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     if(plotType=="scatter"){
         par(mar=c(6,5,2,6));
         plot(loadings[,1],loadings[,2], las=2, xlab=ldName1, ylab=ldName2);
@@ -343,7 +338,6 @@ PlotPCALoading<-function(imgName, format="png", dpi=72, width=NA, inx1, inx2, pl
         par(mar=c(10,4,3,1));
         barplot(loadings[,2], names.arg=cmpd.nms, las=2, cex.names=1.0, ylim=hlims, main =ldName2);
     }
-    dev.off();
 }
 
 # Biplot, set xpd = T to plot outside margin
@@ -364,9 +358,7 @@ PlotPCABiplot<-function(imgName, format="png", dpi=72, width=NA, inx1, inx2){
         w <- width;
     }
     h <- w;
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     biplot(t(t(scores[, choices]) / lam), t(t(analSet$pca$rotation[, choices]) * lam), xpd =T, cex=0.9);
-    dev.off();
 }
 
 # for plotting, max top 9
@@ -392,8 +384,8 @@ PLSR.Anal<-function(){
     datmat<-as.matrix(dataSet$norm);
     analSet$plsr<-plsr(cls~datmat,method='oscorespls', ncomp=comp.num);
     analSet <<- analSet;
-    write.csv(signif(analSet$plsr$scores,5), row.names=rownames(dataSet$norm), file="plsda_score.csv");
-    write.csv(signif(analSet$plsr$loadings,5), file="plsda_loadings.csv");
+    write.csv(signif(analSet$plsr$scores,5), row.names=rownames(dataSet$norm), file=file.path(exp_dir, "plsda_score.csv"));
+    write.csv(signif(analSet$plsr$loadings,5), file=file.path(exp_dir, "plsda_loadings.csv"));
 }
 
 # plot pairwise summary
@@ -413,10 +405,8 @@ PlotPLSPairSummary<-function(imgName, format="png", dpi=72, width=NA, pc.num){
     vars <- round(100*analSet$plsr$Xvar[1:pc.num]/analSet$plsr$Xtotvar,1);
     my.data <- analSet$plsr$scores[,1:pc.num];
     
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     pclabels <- paste("Component", 1:pc.num, "\n", vars, "%");
     pairs(my.data, col=GetColorSchema(), pch=as.numeric(dataSet$cls)+1, labels=pclabels)
-    dev.off();
 }
 
 # score plot
@@ -440,7 +430,6 @@ PlotPLS2DScore<-function(imgName, format="png", dpi=72, width=NA, inx1, inx2, re
     xlabel <- paste("Component", inx1, "(", round(100*analSet$plsr$Xvar[inx1]/analSet$plsr$Xtotvar,1), "%)");
     ylabel <- paste("Component", inx2, "(", round(100*analSet$plsr$Xvar[inx2]/analSet$plsr$Xtotvar,1), "%)");
     
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
 	par(mar=c(5,5,3,3));
     text.lbls<-substr(rownames(dataSet$norm),1,12) # some names may be too long
 
@@ -513,8 +502,6 @@ PlotPLS2DScore<-function(imgName, format="png", dpi=72, width=NA, inx1, inx2, re
         uniq.cols <- "black";
      }
      legend("topright", legend = legend.nm, pch=uniq.pchs, col=uniq.cols);
-
-     dev.off();
 }
 
 # 3D score plot
@@ -540,7 +527,7 @@ PlotPLS3DScore<-function(imgName, format="json", inx1, inx2, inx3){
     imgName = paste(imgName, ".", format, sep="");
     require(RJSONIO);
     json.obj <- toJSON(pls3d, .na='null');
-    sink(imgName);
+    sink(file.path(exp_dir, imgName));
     cat(json.obj);
     sink();
 }
@@ -558,7 +545,6 @@ PlotPLS3DScore_orig<-function(imgName, format="png", dpi=72, width=NA, inx1, inx
     }
     h <- w;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
 	par(mar=c(5,5,3,3));
 
 	xlabel <- paste("Component", inx1, "(", round(100*analSet$plsr$Xvar[inx1]/analSet$plsr$Xtotvar,1), "%)");
@@ -573,7 +559,6 @@ PlotPLS3DScore_orig<-function(imgName, format="png", dpi=72, width=NA, inx1, inx
 	Plot3D(analSet$plsr$score[,inx1], analSet$plsr$score[,inx2], analSet$plsr$score[,inx3], xlab= xlabel, ylab=ylabel,
 		zlab=zlabel, angle =angl, color=cols, pch=pchs, box=F);
         legend("topleft", legend = legend.nm, pch=uniq.pchs, col=uniq.cols);
-    dev.off();
 }
 
 GetPLSLoadAxesSpec<-function(){
@@ -620,7 +605,6 @@ PlotPLSLoading<-function(imgName, format="png", dpi=72, width=NA, inx1, inx2, pl
     }
     h <- w;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     if(plotType == "scatter"){
         par(mar=c(6,4,4,5));
         plot(loadings[,1],loadings[,2], las=2, xlab=ldName1, ylab=ldName2);
@@ -642,7 +626,6 @@ PlotPLSLoading<-function(imgName, format="png", dpi=72, width=NA, inx1, inx2, pl
         par(mar=c(10,4,3,1));
         barplot(loadings[,2], names.arg=cmpd.nms, cex.names=1.0, las=2, ylim=hlims, main = ldName2);
     }
-    dev.off();
 }
 
 # classification and feature selection
@@ -686,7 +669,7 @@ PLSDA.CV<-function(methodName="T", compNum=GetDefaultPLSCVComp(), choice="Q2"){
         # rearange in decreasing order, keep as matrix, prevent dimesion dropping if only 1 col
         inx.ord<- order(coef.mat[,1], decreasing=T);
         coef.mat <- data.matrix(coef.mat[inx.ord, ,drop=FALSE]);
-        write.csv(signif(coef.mat,5), file="plsda_coef.csv"); # added 27 Jan 2014
+        write.csv(signif(coef.mat,5), file=file.path(exp_dir, "plsda_coef.csv")); # added 27 Jan 2014
     }
     # calculate VIP http://mevik.net/work/software/VIP.R
     pls<-analSet$plsr;
@@ -703,7 +686,7 @@ PLSDA.CV<-function(methodName="T", compNum=GetDefaultPLSCVComp(), choice="Q2"){
         vip.mat <- as.matrix(vips);
     }
     colnames(vip.mat) <- paste("Comp.", 1:ncol(vip.mat));
-    write.csv(signif(vip.mat,5),file="plsda_vip.csv");
+    write.csv(signif(vip.mat,5),file=file.path(exp_dir, "plsda_vip.csv"));
 
     analSet$plsda<-list(best.num=best.num, choice=choice, coef.mat=coef.mat, vip.mat=vip.mat, fit.info=all.info);
     analSet <<- analSet;
@@ -792,7 +775,6 @@ PlotPLS.Imp<-function(imgName, format="png", dpi=72, width=NA, type, feat.nm, fe
         w <- width;
     }
     h <- w;
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     if(type=="vip"){
         analSet$plsda$imp.type<-"vip";
         vips<-analSet$plsda$vip.mat[,feat.nm];
@@ -803,7 +785,6 @@ PlotPLS.Imp<-function(imgName, format="png", dpi=72, width=NA, type, feat.nm, fe
         PlotImpVar(data, "Coefficients", feat.num, color.BW);
     }
     analSet <<- analSet;
-    dev.off();
 }
 
 # BHan: added bgcolor parameter for B/W color
@@ -929,7 +910,6 @@ PlotPLS.Classification<-function(imgName, format="png", dpi=72, width=NA){
     }
     h <- w*5/7;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     par(mar=c(5,5,2,7)); # put legend on the right outside
     barplot(res, beside = TRUE, col = c("lightblue", "mistyrose","lightcyan"), ylim= c(0,1.05), xlab="Number of components", ylab="Performance");
 
@@ -944,7 +924,6 @@ PlotPLS.Classification<-function(imgName, format="png", dpi=72, width=NA){
     # calculate the maximum y position, each bar is 1, place one space between the group
     xpos <- ncol(res)*3 + ncol(res) + 1;
     legend(xpos, 1.0, rownames(res), fill = c("lightblue", "mistyrose","lightcyan"), xpd=T);
-    dev.off();
 }
 
 
@@ -965,7 +944,6 @@ PlotPLS.Permutation<-function(imgName, format="png", dpi=72, width=NA){
     }
     h <- w*6/8;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     par(mar=c(5,5,2,4));
     hst <- hist(bw.vec, breaks = "FD", freq=T,
             ylab="Frequency", xlab= 'Permutation test statistics', col="lightblue", main="");
@@ -974,7 +952,6 @@ PlotPLS.Permutation<-function(imgName, format="png", dpi=72, width=NA){
     h <- max(hst$counts)
     arrows(bw.vec[1], h/5, bw.vec[1], 0, col="red", lwd=2);
     text(bw.vec[1], h/3.5, paste('Observed \n statistic \n', analSet$plsda$permut.p), xpd=T);
-    dev.off();
 }
 
 # get which number of components give best performance
@@ -1081,7 +1058,6 @@ PlotOPLS2DScore<-function(imgName, format="png", dpi=72, width=NA, inx1, inx2, r
     }
     h <- w;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
 	par(mar=c(5,5,3,3));
         lv1 <- analSet$oplsda$scoreMN[,1];
         lv2 <- analSet$oplsda$orthoScoreMN[,1];
@@ -1157,8 +1133,6 @@ PlotOPLS2DScore<-function(imgName, format="png", dpi=72, width=NA, inx1, inx2, r
         uniq.cols <- "black";
      }
      legend("topright", legend = legend.nm, pch=uniq.pchs, col=uniq.cols);
-
-     dev.off();
 }
 
 ResetCustomCmpds <- function(){
@@ -1190,7 +1164,6 @@ PlotOPLS.Splot<-function(imgName, format="png", dpi=72, width=NA, plotType){
     }else{
         w <- h <- width;
     }
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     par(mar=c(5,5,4,7))
     plot(p1, pcorr1, pch=19, xlab="p[1]", ylab ="p(corr)[1]", main = "Feature Importance", col="magenta");
     opls.axis.lims <<- par("usr");
@@ -1204,11 +1177,10 @@ PlotOPLS.Splot<-function(imgName, format="png", dpi=72, width=NA, plotType){
     }else{
         # do nothing
     }
-    dev.off();
     splot.mat <- cbind(jitter(p1),p1, pcorr1);
     rownames(splot.mat) <- colnames(s); 
     colnames(splot.mat) <- c("jitter", "p[1]","p(corr)[1]");
-    write.csv(signif(splot.mat[,2:3],5), file="oplsda_splot.csv"); 
+    write.csv(signif(splot.mat[,2:3],5), file=file.path(exp_dir, "oplsda_splot.csv")); 
     analSet$oplsda$splot.mat <- splot.mat;
     analSet <<- analSet;
 }
@@ -1233,7 +1205,6 @@ PlotOPLS.MDL <- function(imgName, format="png", dpi=72, width=NA){
     }
     h <- w*6/9;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     # the model R2Y and Q2Y
     par(mar=c(5,5,4,8)); # put legend on the right outside
     modBarDF <- analSet$oplsda$modelDF[!(rownames(analSet$oplsda$modelDF) %in% c("rot")), ];
@@ -1246,9 +1217,8 @@ PlotOPLS.MDL <- function(imgName, format="png", dpi=72, width=NA){
     xpos <- nrow(mod.dat)*ncol(mod.dat) + ncol(mod.dat) + 0.5
     ypos <- max(mod.dat)/2;
     legend(xpos, ypos, legend = c("R2X", "R2Y", "Q2"), pch=15, col=c("lightblue", "mistyrose", "lavender"), xpd=T, bty="n");
-    dev.off();
 
-    write.csv(mod.dat, file="oplsda_model.csv");
+    write.csv(mod.dat, file=file.path(exp_dir, "oplsda_model.csv"));
 }
 
 GetOPLSLoadAxesSpec<-function(){
@@ -1297,7 +1267,6 @@ PlotOPLS.Permutation<-function(imgName, format="png", dpi=72, num=100, width=NA)
     }
     h <- w*6/8;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     par(mar=c(5,5,2,7));
     rhst <- hist(r.vec[-1], plot=FALSE);
     qhst <- hist(q.vec[-1], plot=FALSE);
@@ -1316,8 +1285,6 @@ PlotOPLS.Permutation<-function(imgName, format="png", dpi=72, num=100, width=NA)
     text(q.vec[1], h/1.8, paste('Observed \n Q2:', q.vec[1]), xpd=TRUE);
 
     legend(1, h/3, legend = c("Perm R2Y", "Perm Q2"), pch=15, col=c("lightblue", "mistyrose"), xpd=T, bty="n");
-
-    dev.off();
 
     better.rhits <- sum(r.vec[-1]>=r.vec[1]);
     if(better.rhits == 0) {
@@ -1360,9 +1327,9 @@ SPLSR.Anal<-function(comp.num, var.num, compVarOpt){
     cv.num <- min(7, dim(dataSet$norm)[1]-1); 
     analSet$splsr<-splsda(datmat,cls, ncomp=comp.num, keepX=comp.var.nums);
     score.mat <- analSet$splsr$variates$X;
-    write.csv(signif(score.mat,5), row.names=rownames(dataSet$norm), file="splsda_score.csv");
+    write.csv(signif(score.mat,5), row.names=rownames(dataSet$norm), file=file.path(exp_dir, "splsda_score.csv"));
     load.mat <- score.mat <- analSet$splsr$loadings$X;
-    write.csv(signif(load.mat,5), file="splsda_loadings.csv");
+    write.csv(signif(load.mat,5), file=file.path(exp_dir, "splsda_loadings.csv"));
     analSet <<- analSet;
 }
 
@@ -1394,10 +1361,8 @@ PlotSPLSPairSummary<-function(imgName, format="png", dpi=72, width=NA, pc.num){
     vars <- round(100*analSet$splsr$explained_variance$X,1);
     my.data <- analSet$splsr$variates$X[,1:pc.num];
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     pclabels <- paste("Component", 1:pc.num, "\n", vars, "%");
     pairs(my.data, col=GetColorSchema(), pch=as.numeric(dataSet$cls)+1, labels=pclabels)
-    dev.off();
 }
 
 # score plot
@@ -1421,7 +1386,6 @@ PlotSPLS2DScore<-function(imgName, format="png", dpi=72, width=NA, inx1, inx2, r
     xlabel <- paste("Component", inx1, "(", round(100*analSet$splsr$explained_variance$X[inx1],1), "%)");
     ylabel <- paste("Component", inx2, "(", round(100*analSet$splsr$explained_variance$X[inx2],1), "%)");
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
 	par(mar=c(5,5,3,3));
     text.lbls<-substr(rownames(dataSet$norm),1,12) # some names may be too long
 
@@ -1494,8 +1458,6 @@ PlotSPLS2DScore<-function(imgName, format="png", dpi=72, width=NA, inx1, inx2, r
         uniq.cols <- "black";
      }
      legend("topright", legend = legend.nm, pch=uniq.pchs, col=uniq.cols);
-
-     dev.off();
 }
 
 # 3D score plot
@@ -1550,9 +1512,7 @@ PlotSPLSLoading<-function(imgName, format="png", dpi=72, width=NA, inx, viewOpt=
     }
     
     h <- w;
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     PlotImpVar(imp.vec, paste ("Loadings", inx), 999, FALSE);
-    dev.off();
 }
 
 GetSPLS_CVRowNames <- function(){
@@ -1613,12 +1573,10 @@ PlotSPLSDA.Classification<-function(imgName, validOpt="Mfold", format="png", dpi
     }
     h <- w*6/8;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
     plot(res,type='l',xlab='Number of Components',ylab='Error Rate',
                 ylim = c(min(res)-5*edge, max(res)+18*edge), axes=F,
                 main="Sparse PLS-DA Classification Error Rates")
     text(res,labels =paste(100*round(res,3),'%'), adj=c(-0.3, -0.5), srt=45, xpd=T)
     axis(2);
     axis(1, 1:length(res), names(res));
-    dev.off();
 }

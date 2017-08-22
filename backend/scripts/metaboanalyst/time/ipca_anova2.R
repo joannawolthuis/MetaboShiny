@@ -164,21 +164,17 @@ PlotANOVA2<-function(imgName, format="png", dpi=72, width=NA){
         w <- 9;
         h <- w*6/9;
         lod <- analSet$aov2$p.log;
-        Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
         plot(lod, ylab="-log10(p)", xlab = "Index", main="One-way repeated measures ANOVA", type="n");
         red.inx<- which(analSet$aov2$inx.imp);
         blue.inx <- which(!analSet$aov2$inx.imp);
         points(red.inx, lod[red.inx], bg="red", cex=1.2, pch=21);
         points(blue.inx, lod[blue.inx], bg="green", pch=21);
         abline (h=analSet$aov2$thresh, lty=3);
-        dev.off();
     }else{
         h <- w;
         title <- ifelse(analSet$aov2$type == "g2", "Two-way ANOVA (between subjects)", "Two-way ANOVA (within subject)");
-        Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
         plotVennDiagram(analSet$aov2$vennC, circle.col=c("red", "blue", "green"), mar=c(0,0,2,0));
         mtext(title, NORTH<-3, line=0.25, cex=1.5);
-        dev.off();
     }
 }
 

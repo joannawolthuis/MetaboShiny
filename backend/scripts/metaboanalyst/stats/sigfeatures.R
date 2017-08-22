@@ -44,7 +44,7 @@ PlotSAM.FDR<-function(delta, imgName, format="png", dpi=72, width=NA){
         imgSet <<- imgSet;
     }
     h <- w*3/5;
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
+    
 	par(mfrow=c(1,2), mar=c(5,6,4,1));
 	mat.fdr<-analSet$sam@mat.fdr;
 	plot(mat.fdr[,"Delta"],mat.fdr[,"FDR"],xlab='Delta',ylab=NA,type="b", col='blue', las=2);
@@ -58,7 +58,7 @@ PlotSAM.FDR<-function(delta, imgName, format="png", dpi=72, width=NA){
         my.fdr <- signif(min(mat.fdr[,"FDR"][hit.inx]), 3);
         my.sigs <- min(mat.fdr[,"Called"][hit.inx]);
         mtext(paste("Delta:", delta, " FDR:", my.fdr, " Sig. cmpds:", my.sigs), line=-2, side = 3, outer = TRUE, font=2)
-    dev.off();
+    
 }
 
 SetSAMSigMat<-function(delta){
@@ -101,9 +101,9 @@ PlotSAM.Cmpd<-function(imgName, format="png", dpi=72, width=NA){
     }
     h <- w;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
+    
 	plot(analSet$sam, analSet$sam.delta);
-    dev.off();
+    
 }
 
 # obtain a default delta with reasonable number
@@ -165,9 +165,7 @@ PlotEBAM.A0<-function(imgName, format="png", dpi=72, width=NA){
         imgSet <<- imgSet;
     }
     h <- 3*w/4;
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
 	plot(analSet$ebam.a0);
-    dev.off();
 }
 
 # note: if method is wilcoxon, the A0 and var equal will be ignored
@@ -226,7 +224,5 @@ PlotEBAM.Cmpd<-function(imgName, format="png", dpi=72, width=NA){
     }else{
         w <- h <- width;
     }
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
 	plot(analSet$ebam, analSet$ebam.delta);
-    dev.off();
 }

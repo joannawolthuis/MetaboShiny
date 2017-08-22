@@ -25,8 +25,10 @@ factorize <- function(vector){
   items
 }
 
+#' @export
 `%not in%` <- function (x, table) is.na(match(x, table, nomatch=NA_integer_))
 
+#' @export
 ppm_range <- function(mz, ppm) c((mz - (ppm/1000000 * mz)), (mz + (ppm/1000000 * mz)))
 
 # --- isotopey testing stuff ---
@@ -55,6 +57,210 @@ ppm_range <- function(mz, ppm) c((mz - (ppm/1000000 * mz)), (mz + (ppm/1000000 *
 #       ylab = "Relative abundance", col='red')
 # 
 # lact.isos[[1]]
+
+#' @export
+download.chebi.joanna <- function (release = "latest", woAssociations = FALSE) {
+  chebi_download <- tempdir()
+  download.file("ftp://ftp.ebi.ac.uk/pub/databases/chebi/archive/", 
+                paste0(chebi_download, "releases.txt"), quiet = TRUE)
+  releases <- gsub("rel", "", read.table(paste0(chebi_download, 
+                                                "releases.txt"), quote = "\"", comment.char = "")[, 
+                                                                                                  9])
+  message("Validating ChEBI release number ... ", appendLF = FALSE)
+  if (release == "latest") {
+    release <- max(releases)
+  }
+  else {
+    release <- releases[match(release, releases)]
+  }
+  message("OK")
+  ftp <- paste0("ftp://ftp.ebi.ac.uk/pub/databases/chebi/archive/rel", 
+                release, "/Flat_file_tab_delimited/")
+  message("Downloading compounds ... ", appendLF = FALSE)
+  download.file(paste0(ftp, "compounds.tsv.gz"), paste0(chebi_download, 
+                                                        "compounds.tsv"), quiet = TRUE)
+  compounds <- as.data.frame.array(read.delim2(paste0(chebi_download, 
+                                                      "compounds.tsv")))
+  message("DONE", appendLF = TRUE)
+  message("Downloading synonyms ... ", appendLF = FALSE)
+  download.file(paste0(ftp, "names.tsv.gz"), paste0(chebi_download, 
+                                                    "names.tsv"), quiet = TRUE)
+  names <- suppressWarnings(as.data.frame.array(read.delim2(paste0(chebi_download, 
+                                                                   "names.tsv"))))
+  message("DONE", appendLF = TRUE)
+  message("Downloading formulas ... ", appendLF = FALSE)
+  download.file(paste0(ftp, "chemical_data.tsv"), paste0(chebi_download, 
+                                                         "formulas.tsv"), quiet = TRUE)
+  formulas <- suppressWarnings(as.data.frame.array(read.delim2(paste0(chebi_download, 
+                                                                      "formulas.tsv"))))
+  message("DONE", appendLF = TRUE)
+  message("Building ChEBI ... ", appendLF = TRUE)
+  compounds <- compounds[compounds[, "STAR"] >= 3, ]
+  latest <- compounds[, c("ID", "NAME", "DEFINITION")]
+  old <- compounds[, c("ID", "PARENT_ID")]
+  old <- merge(x = old, y = latest, by.x = "PARENT_ID", by.y = "ID")
+  compounds <- rbind(latest, old[, c("ID", "NAME", "DEFINITION")])
+  compounds[compounds[, "NAME"] == "null", "NAME"] <- NA
+  compounds <- compounds[complete.cases(compounds), ]
+  DB <- suppressWarnings((merge(compounds[, c("ID", "NAME", "DEFINITION")], 
+                                names[, c("COMPOUND_ID", "SOURCE", "NAME")], by.x = "ID", 
+                                by.y = "COMPOUND_ID", all.x = TRUE)))
+  ChEBI <- unique(DB[, c("ID", "NAME.x", "DEFINITION")])
+  colnames(ChEBI) <- c("ID", "ChEBI", "DEFINITION")
+  message(" KEGG Associations ... ", appendLF = FALSE)
+  KEGG <- unique(DB[DB[, "SOURCE"] == "KEGG COMPOUND", c("ID", 
+                                                         "NAME.y")])
+  KEGG <- KEGG[complete.cases(KEGG), ]
+  colnames(KEGG) <- c("ID", "KEGG")
+  message("DONE", appendLF = TRUE)
+  message(" IUPAC Associations ... ", appendLF = FALSE)
+  IUPAC <- unique(DB[DB[, "SOURCE"] == "IUPAC", c("ID", "NAME.y")])
+  IUPAC <- IUPAC[complete.cases(IUPAC), ]
+  colnames(IUPAC) <- c("ID", "IUPAC")
+  message("DONE", appendLF = TRUE)
+  message(" MetaCyc Associations ... ", appendLF = FALSE)
+  MetaCyc <- unique(DB[DB[, "SOURCE"] == "MetaCyc", c("ID", 
+                                                      "NAME.y")])
+  MetaCyc <- MetaCyc[complete.cases(MetaCyc), ]
+  colnames(MetaCyc) <- c("ID", "MetaCyc")
+  message("DONE", appendLF = TRUE)
+  message(" ChEMBL Associations ... ", appendLF = FALSE)
+  ChEMBL <- unique(DB[DB[, "SOURCE"] == "ChEMBL", c("ID", 
+                                                    "NAME.y")])
+  ChEMBL <- ChEMBL[complete.cases(ChEMBL), ]
+  colnames(ChEMBL) <- c("ID", "ChEMBL")
+  message("DONE", appendLF = TRUE)
+  DB <- unique(merge(DB["ID"], ChEBI, by = "ID", all.x = TRUE))
+  DB <- unique(merge(DB, KEGG, by = "ID", all.x = TRUE))
+  DB <- unique(merge(DB, IUPAC, by = "ID", all.x = TRUE))
+  DB <- unique(merge(DB, MetaCyc, by = "ID", all.x = TRUE))
+  DB <- unique(merge(DB, ChEMBL, by = "ID", all.x = TRUE))
+  rm(ChEBI, ChEMBL, compounds, IUPAC, KEGG, latest, MetaCyc, 
+     names, old)
+  if ("FORMULA" %in% unique(formulas[, "TYPE"])) {
+    message(" Formula Associations ... ", appendLF = FALSE)
+    formula <- formulas[formulas[, "TYPE"] == "FORMULA", 
+                        c("COMPOUND_ID", "CHEMICAL_DATA")]
+    colnames(formula) <- c("ID", "FORMULA")
+    DB <- merge(DB, formula, by = "ID", all.x = TRUE)
+    DB <- merge(DB, DB[, c("ChEBI", "FORMULA")], by = "ChEBI", 
+                all.x = TRUE)
+    DB[is.na(DB[, "FORMULA.x"]), "FORMULA.x"] <- "null"
+    DB[is.na(DB[, "FORMULA.y"]), "FORMULA.y"] <- "null"
+    DB[DB[, "FORMULA.x"] != "null" & DB[, "FORMULA.y"] == 
+         "null", "FORMULA.y"] <- DB[DB[, "FORMULA.x"] != 
+                                      "null" & DB[, "FORMULA.y"] == "null", "FORMULA.x"]
+    DB[DB[, "FORMULA.y"] != "null" & DB[, "FORMULA.x"] == 
+         "null", "FORMULA.x"] <- DB[DB[, "FORMULA.y"] != 
+                                      "null" & DB[, "FORMULA.x"] == "null", "FORMULA.y"]
+    DB <- unique(DB[DB[, "FORMULA.x"] != "null" & DB[, "FORMULA.y"] != 
+                      "null", c("ID", "DEFINITION","ChEBI", "KEGG", "IUPAC", "MetaCyc", 
+                                "ChEMBL", "FORMULA.x")])
+    rm(formula)
+    message("DONE", appendLF = TRUE)
+  }
+  else {
+    message("NOT AVAILABLE FOR THIS RELEASE")
+  }
+  message("Downloading molecular weights ... ", appendLF = FALSE)
+  if ("MASS" %in% unique(formulas[, "TYPE"])) {
+    mass <- formulas[formulas[, "TYPE"] == "MASS", c("COMPOUND_ID", 
+                                                     "CHEMICAL_DATA")]
+    colnames(mass) <- c("ID", "MASS")
+    DB <- merge(DB, mass, by = "ID", all.x = TRUE)
+    DB <- merge(DB, DB[, c("ChEBI", "MASS")], by = "ChEBI", 
+                all.x = TRUE)
+    DB[is.na(DB[, "MASS.x"]), "MASS.x"] <- "null"
+    DB[is.na(DB[, "MASS.y"]), "MASS.y"] <- "null"
+    DB[DB[, "MASS.x"] != "null" & DB[, "MASS.y"] == "null", 
+       "MASS.y"] <- DB[DB[, "MASS.x"] != "null" & DB[, 
+                                                     "MASS.y"] == "null", "MASS.x"]
+    DB[DB[, "MASS.y"] != "null" & DB[, "MASS.x"] == "null", 
+       "MASS.x"] <- DB[DB[, "MASS.y"] != "null" & DB[, 
+                                                     "MASS.x"] == "null", "MASS.y"]
+    DB <- unique(DB[, c("ID", "DEFINITION", "ChEBI", "KEGG", "IUPAC", 
+                        "MetaCyc", "ChEMBL", "FORMULA.x", "MASS.x")])
+    rm(mass)
+    message("DONE", appendLF = TRUE)
+  }
+  else {
+    message("NOT AVAILABLE FOR THIS RELEASE")
+  }
+  message("Downloading monoisotopic molecular weights ... ", 
+          appendLF = FALSE)
+  if ("MONOISOTOPIC MASS" %in% unique(formulas[, "TYPE"])) {
+    mmass <- formulas[formulas[, "TYPE"] == "MONOISOTOPIC MASS", 
+                      c("COMPOUND_ID", "CHEMICAL_DATA")]
+    colnames(mmass) <- c("ID", "MONOISOTOPIC")
+    DB <- merge(DB, mmass, by = "ID", all.x = TRUE)
+    DB <- merge(DB, DB[, c("ChEBI", "MONOISOTOPIC")], by = "ChEBI", 
+                all.x = TRUE)
+    DB[is.na(DB[, "MONOISOTOPIC.x"]), "MONOISOTOPIC.x"] <- "null"
+    DB[is.na(DB[, "MONOISOTOPIC.y"]), "MONOISOTOPIC.y"] <- "null"
+    DB[DB[, "MONOISOTOPIC.x"] != "null" & DB[, "MONOISOTOPIC.y"] == 
+         "null", "MONOISOTOPIC.y"] <- DB[DB[, "MONOISOTOPIC.x"] != 
+                                           "null" & DB[, "MONOISOTOPIC.y"] == "null", "MONOISOTOPIC.x"]
+    DB[DB[, "MONOISOTOPIC.y"] != "null" & DB[, "MONOISOTOPIC.x"] == 
+         "null", "MONOISOTOPIC.x"] <- DB[DB[, "MONOISOTOPIC.y"] != 
+                                           "null" & DB[, "MONOISOTOPIC.x"] == "null", "MONOISOTOPIC.y"]
+    DB <- unique(DB[, c("ID","DEFINITION", "ChEBI", "KEGG", "IUPAC", 
+                        "MetaCyc", "ChEMBL", "FORMULA.x", "MASS.x", "MONOISOTOPIC.x")])
+    rm(mmass)
+    message("DONE", appendLF = TRUE)
+  }
+  else {
+    message("NOT AVAILABLE FOR THIS RELEASE")
+  }
+  message("Downloading molecular charges ... ", appendLF = FALSE)
+  if ("CHARGE" %in% unique(formulas[, "TYPE"])) {
+    charge <- formulas[formulas[, "TYPE"] == "CHARGE", c("COMPOUND_ID", 
+                                                         "CHEMICAL_DATA")]
+    colnames(charge) <- c("ID", "CHARGE")
+    DB <- merge(DB, charge, by = "ID", all.x = TRUE)
+    DB <- merge(DB, DB[, c("ChEBI", "CHARGE")], by = "ChEBI", 
+                all.x = TRUE)
+    DB[is.na(DB[, "CHARGE.x"]), "CHARGE.x"] <- "null"
+    DB[is.na(DB[, "CHARGE.y"]), "CHARGE.y"] <- "null"
+    DB[DB[, "CHARGE.x"] != "null" & DB[, "CHARGE.y"] == 
+         "null", "CHARGE.y"] <- DB[DB[, "CHARGE.x"] != "null" & 
+                                     DB[, "CHARGE.y"] == "null", "CHARGE.x"]
+    DB[DB[, "CHARGE.y"] != "null" & DB[, "CHARGE.x"] == 
+         "null", "CHARGE.x"] <- DB[DB[, "CHARGE.y"] != "null" & 
+                                     DB[, "CHARGE.x"] == "null", "CHARGE.y"]
+    DB <- unique(DB[, c("ID", "DEFINITION", "ChEBI", "KEGG", "IUPAC", 
+                        "MetaCyc", "ChEMBL", "FORMULA.x", "MASS.x", "MONOISOTOPIC.x", 
+                        "CHARGE.x")])
+    message("DONE", appendLF = TRUE)
+  }
+  else {
+    message("NOT AVAILABLE FOR THIS RELEASE")
+  }
+  DB[DB == "null"] <- NA
+  DB <- unique(DB[complete.cases(DB[, c("ID", "DEFINITION","ChEBI", "FORMULA.x", 
+                                        "MASS.x", "MONOISOTOPIC.x", "CHARGE.x")]), ])
+  colnames(DB) <- c("ID", "DEFINITION","ChEBI", "KEGG", "IUPAC", "MetaCyc", 
+                    "ChEMBL", "FORMULA", "MASS", "MONOISOTOPIC", "CHARGE")
+  if (woAssociations == TRUE) {
+    compounds <- unique(rbind(setNames(DB[, c("ChEBI", "DEFINITION","FORMULA", 
+                                              "MASS", "MONOISOTOPIC", "CHARGE")], c("NAME","DEFINITION","FORMULA", 
+                                                                                    "MASS", "MONOISOTOPIC", "CHARGE")), setNames(DB[, 
+                                                                                                                                    c("KEGG","DEFINITION", "FORMULA", "MASS", "MONOISOTOPIC", "CHARGE")], 
+                                                                                                                                 c("NAME", "DEFINITION","FORMULA", "MASS", "MONOISOTOPIC", "CHARGE")), 
+                              setNames(DB[, c("IUPAC", "DEFINITION","FORMULA", "MASS", "MONOISOTOPIC", 
+                                              "CHARGE")], c("NAME", "DEFINITION","FORMULA", "MASS", "MONOISOTOPIC", 
+                                                            "CHARGE")), setNames(DB[, c("MetaCyc", "DEFINITION","FORMULA", 
+                                                                                        "MASS", "MONOISOTOPIC", "CHARGE")], c("NAME", "DEFINITION",
+                                                                                                                              "FORMULA", "MASS", "MONOISOTOPIC", "CHARGE")), 
+                              setNames(DB[, c("ChEMBL","DEFINITION", "FORMULA", "MASS", "MONOISOTOPIC", 
+                                              "CHARGE")], c("NAME", "DEFINITION","FORMULA", "MASS", "MONOISOTOPIC", 
+                                                            "CHARGE"))))
+    compounds <- compounds[complete.cases(compounds), ]
+    return(compounds)
+  }
+  else {
+    return(DB)
+  }
+}
 
 # --- UNMATCHED FRACTION ---
 "select(

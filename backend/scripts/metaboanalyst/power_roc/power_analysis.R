@@ -43,10 +43,10 @@ PlotPowerStat<-function(imgName, format="png", dpi=72, width=NA){
         w <- width;
     }
     h <- w;
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
+    
     require(lattice);
     print(plot(analSet$power$pdD));
-    dev.off();
+    
 }
 
 GetSampleSizeLadder <- function(maxNum){
@@ -88,9 +88,9 @@ PlotPowerEffectSize<-function(imgName, format="png", dpi=72, width=NA){
     }
     h <- w*7/9;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
+    
     print(plot(analSet$power$ssD));
-    dev.off();
+    
 }
 
 PlotPowerProfile<-function(fdr.lvl, smplSize, imgName, format="png", dpi=72, width=NA){
@@ -111,12 +111,12 @@ PlotPowerProfile<-function(fdr.lvl, smplSize, imgName, format="png", dpi=72, wid
     }
     h <- w*6/9;
 
-    Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
+    
     plot(Jpred, pwrD, type="n", ylim=c(0,1), ylab="Predicted power", xlab="Sample Size (per group)");
     grid(col = "lightgray", lty = "dotted", lwd = 1);
     lines(Jpred, pwrD, lwd=4, col="orange");
     points(Jpred, pwrD, pch=17);
-    dev.off();
+    
 
     analSet$power$pwrD <- pwrD;
     analSet$power$Jpred <- Jpred;

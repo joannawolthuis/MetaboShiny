@@ -38,7 +38,7 @@ GetIntegHTMLPathSet<-function(pathName){
 }
 
 # only update the background info for matched node
-PlotInmexPath<-function(path.id, width, height){
+PlotInmexPath<-function(path.id, width=5, height=5){
 
     g <- inmexpa$graph.list[[path.id]];
     g <- upgrade_graph(g); # to fix warning
@@ -87,7 +87,7 @@ PlotInmexPath<-function(path.id, width, height){
 }
 
 # plot an igraph object and return the node information (position and labels)
-PlotinmexGraph<-function(path.id, g, width, height, bg.color=NULL, line.color=NULL){
+PlotinmexGraph<-function(path.id, g, width=5, height=5, bg.color=NULL, line.color=NULL){
 
     # first clean up the graph (only show connected structure, specific compounds, not isolated cmpd)
     # NO, cannot change g object after it is set up, all colors and node info will be shifted
@@ -103,11 +103,9 @@ PlotinmexGraph<-function(path.id, g, width, height, bg.color=NULL, line.color=NU
     imgName <- paste(path.id, ".png", sep="");
 
     ## Open plot device
-    Cairo(file=imgName, width=width, height=height, type="png", bg="transparent");
     par(mai=rep(0,4));
     plotGraph(g, vertex.label=V(g)$plot_name, vertex.color=bg.color, vertex.frame.color=line.color);
     nodeInfo <- GetKEGGNodeInfo(path.id, g, width, height);
-    dev.off();
 
     current.kegg <<- list(graph=g, bg.color=bg.color, line.color=line.color);
     # remember the current graph
@@ -116,7 +114,7 @@ PlotinmexGraph<-function(path.id, g, width, height, bg.color=NULL, line.color=NU
 
 # redraw current graph for zooming or clipping then return a value
 RerenderKEGGGraph <- function(imgName, width, height, zoom.factor){
-    Cairo(file=imgName, width=width, height=height,type="png", bg="transparent");
+    
     font.cex <- 0.6*zoom.factor/150;
     if(font.cex < 0.6){
         font.cex=0.6;
@@ -129,11 +127,11 @@ RerenderKEGGGraph <- function(imgName, width, height, zoom.factor){
             vertex.label=V(current.kegg$graph)$plot_name,
             vertex.label.cex=font.cex
             );
-    dev.off();
+    
     return(1);
 }
 
-GetKEGGNodeInfo<-function(path.id, g, width, height, usr = par("usr")){
+GetKEGGNodeInfo<-function(path.id, g, width=5, height=5, usr = par("usr")){
 
     ## transform user to pixel coordinates
     #x.u2p = function(x) { rx=(x-usr[1])/diff(usr[1:2]); stopifnot(all(rx>=0&rx<=1)); return(rx*width)  }

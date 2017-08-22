@@ -111,7 +111,7 @@ observeEvent(input$build_umc,{
   # ---------------------------
   withProgress({
     setProgress(message = "Working...")
-    #build.base.db("internal", outfolder=dbDir)
+    build.base.db("internal", outfolder=dbDir)
     setProgress(0.5,message = "Halfway there...")
     build.extended.db("internal", 
                       outfolder=dbDir,
@@ -127,7 +127,7 @@ observeEvent(input$build_hmdb,{
   session_cl <<- if(is.na(session_cl)) makeCluster(4, type="FORK") else session_cl
   withProgress({
     setProgress(message = "Working...")
-    #build.base.db("hmdb", outfolder=dbDir)
+    build.base.db("hmdb", outfolder=dbDir)
     setProgress(0.5,message = "Halfway there...")
     build.extended.db("hmdb", 
                       outfolder=dbDir, 
@@ -224,7 +224,8 @@ observeEvent(input$import_csv, {
     list(src = filename, width = 20,
          height = 20)
   }, deleteFile = FALSE)
-  mz <<- fread(csv_loc, sep="\t",)
+  mz <<- fread(csv_loc, sep="\t", header = T)
+  print(head(mz[,1:5]))
   overview_tab <- t(data.table(
     Mz = ncol(mz) - 3,
     Samples = nrow(mz),
@@ -252,12 +253,15 @@ observeEvent(input$create_csv, {
   req(exp_dir)
   # ---------
   withProgress({
-    setProgress(1/3, "Finding matches for mz values...") # move somewhere else later??
+    setProgress(1/5, "Finding and filtering matches for mz values...") # move somewhere else later??
+    total.matches <- 0
     for(db in c("internal", "noise", "hmdb", "chebi")){
       dbfile <- paste0(tolower(db), ".full.db")
-      iden.code.binned(patdb, file.path("./backend/db", dbfile), isofilt=T)
+      match.count <- iden.code.binned(patdb, file.path("./backend/db", dbfile), isofilt=T)
+      print(match.count)
+      total.matches <- total.matches + match.count
     }
-    setProgress(2/3, "Creating csv file for MetaboAnalyst...")
+    setProgress(2/5, "Creating csv file for MetaboAnalyst...")
     # create csv
     mz = get.csv(patdb,
                  time.series = T,
@@ -265,14 +269,17 @@ observeEvent(input$create_csv, {
                  exp.condition = input$exp_var,
                  chosen.display = "mz")
     # save csv
+    setProgress(3/5, "Writing csv file...")
     csv_loc <<- file.path(exp_dir, paste0(proj_name,".csv"))
     fwrite(mz, csv_loc, sep="\t")
     # --- overview table ---
-    overview_tab <- t(data.table(
+    setProgress(4/5, "Creating overview table...")
+    overview_tab <- t(data.table(keep.rownames = F,
       Mz = ncol(mz) - 3,
       Samples = nrow(mz),
-      if(mode == "time") Timepoints = length(unique(mz$Time)),
-      Groups = length(unique(mz$Label)) 
+      Timepoints = length(unique(mz$Time)),
+      Groups = length(unique(mz$Label)),
+      Matches = total.matches
     ))
     output$csv_tab <- DT::renderDataTable({
       datatable(overview_tab, 
@@ -293,8 +300,6 @@ observeEvent(input$check_excel, {
 })
 
 observeEvent(input$initialize,{
-  # requirements
-  req(output$csv_tab)
   # match
   withProgress({
   # get curr values from: input$ exp_type, filt_type, norm_type, scale_type, trans_type (later)
@@ -346,7 +351,7 @@ observeEvent(input$initialize,{
   updateSelectInput(session, "ipca_factor",
                     choices = grep(names(json_pca$score), pattern = "^fac[A-Z]", value = T))
   setProgress(.9, "Saving results to R-loadable file...")
-  save(dataSet, analSet, file=file.path(expdir, paste0(proj_name, "analysed.RDATA")))
+  save(dataSet, analSet, file=file.path(exp_dir, paste0(proj_name, "analysed.RData")))
   })
 })
 
@@ -386,7 +391,7 @@ output$meba_tab <- DT::renderDataTable({
             selection = 'single',
             colnames = c("Mass/charge", "Hotelling/T2 score"),
             autoHideNavigation = T,
-            options = list(lengthMenu = c(10, 30, 50), pageLength = 10))
+            options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
 })
 
 observeEvent(input$meba_tab_rows_selected,{
@@ -407,7 +412,7 @@ output$asca_tab <- DT::renderDataTable({
             selection = 'single',
             colnames = c("Mass/charge", "Leverage", "SPE"),
             autoHideNavigation = T,
-            options = list(lengthMenu = c(10, 30, 50), pageLength = 10))
+            options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
 })
 
 # check for selected mz row
@@ -437,14 +442,22 @@ observeEvent(input$search_mz,{
   # -------------------
   match_list <- lapply(input$checkGroup, FUN=function(match.table){
     get_matches(curr_mz, match.table)})
-  result_table <- as.data.table(rbindlist(match_list))
+  result_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
   output$match_tab <- DT::renderDataTable({
-    datatable(unique(result_table[Compound != "",]),
+    datatable(result_table[,-"Description"],
               selection = 'single',
               autoHideNavigation = T,
-              options = list(lengthMenu = c(5, 30, 50), pageLength = 5))
+              options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
   })
 })
+
+observeEvent(input$match_tab_rows_selected,{
+  curr_row = input$match_tab_rows_selected
+  if (is.null(curr_row)) return()
+  # -----------------------------
+  curr_def <<- result_table[curr_row,'Description']
+  output$curr_definition <- renderText(curr_def$Description)
+  })
 
 # --- ON CLOSE ---
 session$onSessionEnded(function() {
