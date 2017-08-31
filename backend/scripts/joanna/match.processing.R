@@ -18,59 +18,51 @@ iden.code.binned <- function(outlist.path,
   # --- attach patient outlist and get mzmed pgrp values ---
   prep.query <- strwrap(fn$paste("ATTACH '$db.path' AS db"),width=10000, simplify=TRUE)
   dbExecute(conn, prep.query)
+  print(prep.query)
   # --------------------
-  get.query <- strwrap(fn$paste("CREATE TEMPORARY TABLE patresults AS
+  get.query <- strwrap(fn$paste("CREATE TEMP TABLE patresults AS
                                 SELECT DISTINCT base.compoundname, base.identifier, base.description, 
 			                          cpd.baseformula, cpd.adduct, cpd.isoprevalence, mz.[mzmed.pgrp],
                                 cpd.basemz, cpd.fullmz, cpd.basecharge, cpd.totalcharge
-                                FROM mzvals mz INDEXED BY valindex
-                                JOIN mzranges rng ON rng.ID = mz.ID  
-                                LEFT JOIN db.extended cpd INDEXED BY cpdindex
+                                FROM mzvals mz indexed by mzfind
+                                JOIN mzranges rng ON rng.ID = mz.ID
+                                LEFT JOIN db.extended cpd indexed by e_idx1
                                 ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
-                                LEFT JOIN db.base base
+                                AND mz.foundinmode = cpd.foundinmode
+                                LEFT JOIN db.base base indexed by b_idx1
                                 ON base.baseformula = cpd.baseformula AND
-                                base.charge = cpd.basecharge
-                                ORDER BY mz.'mzmed.pgrp' ASC"),width=10000, simplify=TRUE)
+                                base.charge = cpd.basecharge"),width=10000, simplify=TRUE)
   dbExecute(conn, get.query)
-  print(dbGetQuery(conn, "select * from base limit 10"))
   dbExecute(conn, "DROP INDEX IF EXISTS pat_idx")
-  dbExecute(conn, "CREATE INDEX pat_idx ON patresults(isoprevalence, adduct)")
+  dbExecute(conn, "CREATE INDEX pat_idx ON patresults(baseformula, adduct, isoprevalence)")
   # --- isofilt? ---
   adduct.string <- gsub(" ", "", paste("'", excl.adducts, "'", collapse=","))
-  filt.query <- strwrap(fn$paste("CREATE TEMPORARY TABLE isocount AS
+  filt.query <- strwrap(fn$paste("CREATE TEMP TABLE isocount AS
                                   SELECT DISTINCT *
-                                  FROM patresults INDEXED BY pat_idx
+                                  FROM patresults indexed by pat_idx
                                   WHERE (isoprevalence = 100
                                   AND adduct NOT IN ($adduct.string))"), width=10000, simplify=TRUE)
+  print(filt.query)
   dbExecute(conn, filt.query)
   dbExecute(conn, "DROP INDEX IF EXISTS iso_idx")
   dbExecute(conn, "CREATE INDEX iso_idx ON isocount(baseformula, adduct)")
-  match.sql <- strwrap(fn$paste("SELECT DISTINCT pat.compoundname, pat.identifier, pat.description, 
-                                                pat.baseformula, pat.adduct, 
-                                                pat.[mzmed.pgrp], pat.isoprevalence, 
-                                                pat.basecharge, pat.totalcharge 
-                                      FROM patresults pat INDEXED BY pat_idx
-                                      JOIN isocount iso INDEXED BY iso_idx
+  match.sql <- strwrap(fn$paste("SELECT DISTINCT pat.* 
+                                      FROM patresults pat indexed by pat_idx
+                                      JOIN isocount iso indexed by iso_idx
                                       ON pat.baseformula = iso.baseformula AND
                                       pat.adduct = iso.adduct"), width=10000, simplify=TRUE)
-  dbExecute(conn, "DROP INDEX IF EXISTS pat_idx2")
-  dbExecute(conn, "CREATE INDEX pat_idx2 ON patresults(baseformula)")
-  nomatch.sql <- strwrap("SELECT DISTINCT compoundname, identifier, description,
-                                          baseformula, adduct, 
-                                          [mzmed.pgrp], isoprevalence, 
-                                          basecharge, totalcharge
-                         FROM patresults pat INDEXED BY pat_idx2
+  print(match.sql)
+  nomatch.sql <- strwrap("SELECT DISTINCT *
+                         FROM patresults pat indexed by pat_idx
                          WHERE pat.baseformula ISNULL", width=10000, simplify=TRUE)
   # --- getto!! ---
   matches <- as.data.table(dbGetQuery(conn, match.sql))
   nomatches <- as.data.table(dbGetQuery(conn, nomatch.sql))
-  # --- create result table
-  dbExecute(conn, fn$paste("DROP TABLE IF EXISTS $result.table"))
-  dbExecute(conn, fn$paste("CREATE TABLE $result.table(compoundname text, identifier text, description text, baseformula text, adduct text, [mzmed.pgrp] float, isoprevalence float, basecharge int, totalcharge int)"))
-  # --- return ---
+  print("here...")
+ # --- return ---
   results <- unique(rbind(matches, nomatches, fill=TRUE))
   # --- write to table ---
-  dbWriteTable(conn, result.table, results, append=TRUE)
+  dbWriteTable(conn, result.table, results, overwrite=TRUE)
   # --- index ---
   dbExecute(conn, fn$paste("DROP INDEX IF EXISTS $result.table_idx1"))
   dbExecute(conn, fn$paste("CREATE INDEX $result.table_idx1 ON $result.table([mzmed.pgrp], baseformula, adduct)"))

@@ -1,12 +1,14 @@
 function(input, output, session) {
   
 # ===== defaults =====
+
 output$exp_dir <- renderText(exp_dir)
 output$proj_name <- renderText(proj_name)
   
 # ====================== SETTINGS =================
 
 volumes = getVolumes()
+
 observe({  
   shinyDirChoose(input, "get_work_dir", roots = volumes, session = session)
   given_dir <- input$get_work_dir$path
@@ -66,9 +68,9 @@ output$chebi_logo <- renderImage({
 
 # --- check for db files ---
 
-db_folder_files <- list.files("./backend/db")
 
 observeEvent(input$check_umc,{
+  db_folder_files <- list.files("./backend/db")
   is.present <- "internal.full.db" %in% db_folder_files | "noise.full.db" %in% db_folder_files
   check_pic <- if(is.present) "yes.png" else "no.png"
   output$umc_check <- renderImage({
@@ -81,6 +83,7 @@ observeEvent(input$check_umc,{
 })
 
 observeEvent(input$check_hmdb,{
+  db_folder_files <- list.files("./backend/db")
   is.present <- "hmdb.full.db" %in% db_folder_files
   check_pic <- if(is.present) "yes.png" else "no.png"
   output$hmdb_check <- renderImage({
@@ -93,6 +96,7 @@ observeEvent(input$check_hmdb,{
 })
 
 observeEvent(input$check_chebi,{
+  db_folder_files <- list.files("./backend/db")
   is.present <- "chebi.full.db" %in% db_folder_files
   check_pic <- if(is.present) "yes.png" else "no.png"
   output$chebi_check <- renderImage({
@@ -253,34 +257,24 @@ observeEvent(input$create_csv, {
   req(exp_dir)
   # ---------
   withProgress({
-    setProgress(1/5, "Finding and filtering matches for mz values...") # move somewhere else later??
-    total.matches <- 0
-    for(db in c("internal", "noise", "hmdb", "chebi")){
-      dbfile <- paste0(tolower(db), ".full.db")
-      match.count <- iden.code.binned(patdb, file.path("./backend/db", dbfile), isofilt=T)
-      print(match.count)
-      total.matches <- total.matches + match.count
-    }
-    setProgress(2/5, "Creating csv file for MetaboAnalyst...")
+    setProgress(1/4, "Creating csv file for MetaboAnalyst...")
     # create csv
     mz = get.csv(patdb,
                  time.series = T,
-                 group.by.adduct = F,
-                 exp.condition = input$exp_var,
-                 chosen.display = "mz")
+                 exp.condition = input$exp_var)
     # save csv
-    setProgress(3/5, "Writing csv file...")
+    setProgress(2/4, "Writing csv file...")
     csv_loc <<- file.path(exp_dir, paste0(proj_name,".csv"))
     fwrite(mz, csv_loc, sep="\t")
     # --- overview table ---
-    setProgress(4/5, "Creating overview table...")
+    setProgress(3/4, "Creating overview table...")
     overview_tab <- t(data.table(keep.rownames = F,
       Mz = ncol(mz) - 3,
       Samples = nrow(mz),
       Timepoints = length(unique(mz$Time)),
-      Groups = length(unique(mz$Label)),
-      Matches = total.matches
-    ))
+      Groups = length(unique(mz$Label))
+      )
+      )
     output$csv_tab <- DT::renderDataTable({
       datatable(overview_tab, 
                 selection = 'single',
@@ -330,34 +324,36 @@ observeEvent(input$initialize,{
   output$var_norm_plot <- renderPlot(PlotNormSummary())
   setProgress(.4, "Plotting sample overview...")
   output$samp_norm_plot <- renderPlot(PlotSampleNormSummary())
-  # ------ start matching analyses ---------
-  setProgress(.5, "Starting analyses...")
-  if(mode == "time"){
-    setProgress(.6, "Running iPCA...")
-    iPCA.Anal(file.path(exp_dir, "ipca_3d_0_.json"))
-    # --- asca stuff ---
-    setProgress(.7, "Running ASCA")
-    Perform.ASCA(1, 1, 2, 2)
-    CalculateImpVarCutoff(0.05, 0.9, dir=exp_dir)
-    asca.table <<- read.csv(file.path(exp_dir,'Sig_features_Model_ab.csv'))
-    # --- do anova only if balanced ---
-    NULL
-    # --- meba stuff ---
-    setProgress(.8, "Running MEBA...")
-    performMB(10, dir=exp_dir)
-    meba.table <<- read.csv(file.path(exp_dir, 'meba_sig_features.csv'))
-  } else{NULL}
-  json_pca <<- fromJSON(file.path(exp_dir, "ipca_3d_0_.json")) # but perform first...
-  updateSelectInput(session, "ipca_factor",
-                    choices = grep(names(json_pca$score), pattern = "^fac[A-Z]", value = T))
-  setProgress(.9, "Saving results to R-loadable file...")
-  save(dataSet, analSet, file=file.path(exp_dir, paste0(proj_name, "analysed.RData")))
-  })
+})
 })
 
+observeEvent(input$tab_time, {
+  if(input$nav_general != "analysis") return(NULL)
+  # get excel table stuff.
+  switch(input$tab_time,
+         ipca = {
+           iPCA.Anal(file.path(exp_dir, "ipca_3d_0_.json"))
+           json_pca <<- fromJSON(file.path(exp_dir, "ipca_3d_0_.json")) # but perform first...
+           updateSelectInput(session, "ipca_factor",
+                             choices = grep(names(json_pca$score), pattern = "^fac[A-Z]", value = T))
+         },
+         meba = {
+           if("MB" %in% names(analSet)) return(NULL)
+           performMB(10, dir=exp_dir)
+           meba.table <<- read.csv(file.path(exp_dir, 'meba_sig_features.csv'))
+         },
+         asca = {
+           if("asca" %in% names(analSet)) return(NULL)
+           Perform.ASCA(1, 1, 2, 2)
+           CalculateImpVarCutoff(0.05, 0.9, dir=exp_dir)
+           asca.table <<- read.csv(file.path(exp_dir,'Sig_features_Model_ab.csv'))
+         })
+  })
+
+names(analSet)
 # ======================== IPCA ==========================
 
-  output$plot_ipca <- renderPlotly({
+output$plot_ipca <- renderPlotly({
     req(json_pca)
     # ---------------
     df <- t(as.data.frame(json_pca$score$xyz))

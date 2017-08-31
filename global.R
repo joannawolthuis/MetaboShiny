@@ -34,7 +34,7 @@ setwd("/Users/jwolthuis/Google Drive/MetaboShiny")
 load("./backend/db/NeededFiles/AdductTable/AdductTableWKZ.RData")
 sourceDir("./backend/scripts/joanna")
 data(isotopes)
-dbDir <<- file.path("./backend/db")
+dbDir <<- tools:::file_path_as_absolute("./backend/db")
 # --- beta stuff ---
 session_cl <<- NA
 mode <- "time"
@@ -76,10 +76,51 @@ get_exp_vars <- function(){
   dbGetQuery(conn, "PRAGMA table_info(setup)")$name
 }
 
-get_matches <- function(mz, table){
+get_matches <- function(mz, chosen.db){
   # --- connect to db ---
   req("patdb")
   conn <- dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
-  # --- attach patient outlist and get mzmed pgrp values ---
-  dbGetQuery(conn, fn$paste("select distinct compoundname as Compound, identifier as Identifier, Adduct as Adduct, description as Description from $table where [mzmed.pgrp] like $mz"))
+  # 0. Attach db
+  query.zero <- fn$paste("ATTACH '$chosen.db' AS db")
+
+  dbExecute(conn, query.zero)
+  query.one <- fn$paste(strwrap(
+    "CREATE TEMP TABLE unfiltered AS
+    SELECT cpd.baseformula, cpd.adduct
+    FROM mzvals mz
+    JOIN mzranges rng ON rng.ID = mz.ID
+    JOIN db.extended cpd indexed by e_idx2
+    ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
+    AND mz.foundinmode = cpd.foundinmode
+    WHERE ABS(mz.[mzmed.pgrp] - $mz) < 0.000000000001",width=10000, simplify=TRUE))
+  print(query.one)
+  # 1. Find matches in range (reasonably fast <3)
+  dbExecute(conn, query.one)
+  
+  #  2. get isotopes for these matchies (reverse search)
+  query.two <- fn$paste(strwrap(
+    "CREATE TEMP TABLE isotopes AS
+    SELECT cpd.baseformula, cpd.adduct, cpd.isoprevalence, cpd.basecharge 
+    FROM db.extended cpd indexed by e_idx1
+    JOIN unfiltered u
+    ON u.baseformula = cpd.baseformula
+    AND u.adduct = cpd.adduct
+    JOIN mzranges rng
+    ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax"
+    , width=10000, simplify=TRUE))
+  print(query.two)
+  dbExecute(conn, query.two)
+  
+  query.three <-  strwrap(
+    "SELECT DISTINCT base.compoundname as Compound, base.identifier as Identifier, iso.adduct as Adduct, base.description as Description 
+    FROM isotopes iso
+    JOIN db.base base indexed by b_idx1
+    ON base.baseformula = iso.baseformula AND
+    base.charge = iso.basecharge
+    GROUP BY iso.baseformula, iso.adduct
+    HAVING COUNT(iso.isoprevalence > 99.99999999999) > 0"
+    , width=10000, simplify=TRUE)
+  # 3. get the info you want
+  results <- dbGetQuery(conn,query.three)
+  print(results)
   }

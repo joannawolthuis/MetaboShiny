@@ -65,8 +65,8 @@ build.base.db <- function(dbname=NA,
                                 sql.make.meta <- strwrap("create table extended(
                                                          baseformula text,
                                                          fullformula text, 
-                                                         basemz float, 
-                                                         fullmz float, 
+                                                         basemz decimal(30,13), 
+                                                         fullmz decimal(30,13), 
                                                          adduct text,
                                                          basecharge int,
                                                          totalcharge int,
@@ -113,10 +113,9 @@ build.base.db <- function(dbname=NA,
                                              db.formatted.full, 
                                              append=TRUE)
                                 # --- index ---
-                                dbExecute(full.conn, "CREATE INDEX nameindex on base(compoundname, baseformula)")
-                                dbExecute(full.conn, "CREATE INDEX cpdindex on extended(fullmz)")
-                                dbExecute(full.conn, "CREATE INDEX baseindex on extended(adduct, baseformula)")
-                                # -------------
+                                dbExecute(full.conn, "create index b_idx1 on base(baseformula, charge)")
+                                dbExecute(full.conn, "create index e_idx1 on extended(baseformula, basecharge)")
+                                dbExecute(full.conn, "create index e_idx2 on extended(fullmz, foundinmode)")# -------------
                                 dbDisconnect(full.conn)
                                 },
                                hmdb = function(dbname){
@@ -293,7 +292,8 @@ build.extended.db <- function(dbname,
                               reset.base=FALSE, 
                               cl=FALSE, 
                               fetch.limit=-1, 
-                              test.mode="OFF"){
+                              test.mode="OFF",
+                              cpd.limit=-1){
   # --- GET BASE DATA ---
   library(enviPat)
   library(pbapply)
@@ -313,8 +313,8 @@ build.extended.db <- function(dbname,
   sql.make.meta <- strwrap("CREATE TABLE IF NOT EXISTS extended(
                            baseformula text,
                            fullformula text, 
-                           basemz float, 
-                           fullmz float, 
+                           basemz decimal(30,13), 
+                           fullmz decimal(30,13), 
                            adduct text,
                            basecharge int,
                            totalcharge int,
@@ -322,11 +322,14 @@ build.extended.db <- function(dbname,
                            foundinmode text)", width=10000, simplify=TRUE)
   dbExecute(full.conn, sql.make.meta)
   # ------------------------
+  limit.query <- if(cpd.limit == -1) "" else fn$paste("LIMIT $cpd.limit")
+  # ------------------------
   total.formulae <- dbGetQuery(base.conn, fn$paste("SELECT Count(*)
                                FROM (SELECT DISTINCT
                                baseformula, charge
-                               FROM base) AS distinctified"))
-  results <- dbSendQuery(base.conn, "SELECT DISTINCT baseformula, charge FROM base")
+                               FROM base $limit.query)"))
+  print(total.formulae)
+  results <- dbSendQuery(base.conn, fn$paste("SELECT DISTINCT baseformula, charge FROM base $limit.query"))
   formula.count <- total.formulae[1,]
   # --- start pb ---
   pb <- startpb(0, formula.count)
@@ -438,9 +441,9 @@ build.extended.db <- function(dbname,
   dbExecute(full.conn, fn$paste("ATTACH '$base.db' AS tmp"))
   dbExecute(full.conn, fn$paste("CREATE TABLE base AS SELECT * FROM tmp.base"))
   # --- indexy ---
-  dbExecute(full.conn, "CREATE INDEX nameindex on base(compoundname, baseformula)")
-  dbExecute(full.conn, "CREATE INDEX cpdindex on extended(fullmz)")
-  dbExecute(full.conn, "CREATE INDEX baseindex on extended(adduct, baseformula)")
+  dbExecute(full.conn, "create index b_idx1 on base(baseformula, charge)")
+  dbExecute(full.conn, "create index e_idx1 on extended(baseformula, basecharge)")
+  dbExecute(full.conn, "create index e_idx2 on extended(fullmz, foundinmode)")
   # --- vacuum --- !! needs altered settings
   dbGetQuery(full.conn, "VACUUM")
   # --------------
@@ -455,7 +458,7 @@ build.pat.db <- function(db.name,
                       poslist, 
                       neglist, 
                       overwrite=FALSE,
-                      rtree=FALSE,
+                      rtree=TRUE,
                       rmv.cols=c("mzmin.pgrp", 
                                  "mzmax.pgrp",
                                  "fq.best", 
@@ -470,12 +473,14 @@ build.pat.db <- function(db.name,
                        foundinmode = c(rep("positive", nrow(poslist)), rep("negative", nrow(neglist))))
   mzranges <- data.table(mzmin = c(poslist$mzmin.pgrp, neglist$mzmin.pgrp),
                          mzmax = c(poslist$mzmax.pgrp, neglist$mzmax.pgrp))
-  mzintensities <- melt(as.data.table(rbind(poslist, neglist))[,-rmv.cols, with=F], 
+  mzintensities <- melt(as.data.table(rbind(poslist, neglist))[,(rmv.cols) := NULL], 
                         id="mzmed.pgrp", 
                         variable="filename",
                         value="intensity")
+  print("here")
   filenames <- gsub(x=as.character(mzintensities$filename), "", pattern="-\\d*$", perl=T)
   replicates <- gsub(x=as.character(mzintensities$filename), "", pattern=".*-(?=\\d*$)", perl=T)
+  print("here")
   # ------------------------
   mzintensities$filename <- filenames
   mzintensities$replicate <- replicates
@@ -488,33 +493,33 @@ build.pat.db <- function(db.name,
   # ------------------------
   sql.make.int <- strwrap("CREATE TABLE mzintensities(
                            ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                           'mzmed.pgrp' float,
+                           'mzmed.pgrp' decimal(30,13),
                            filename text,
                            intensity float,
                             replicate int)", width=10000, simplify=TRUE)
   dbExecute(conn, sql.make.int)
   # --- write intensities to table and index ---
   dbWriteTable(conn, "mzintensities", mzintensities, append=TRUE) # insert into
-  dbExecute(conn, "CREATE INDEX intindex ON mzintensities('mzmed.pgrp')")
+  dbExecute(conn, "CREATE INDEX intindex ON mzintensities(filename,'mzmed.pgrp',intensity)")
   # ------------------------
   sql.make.meta <- strwrap("CREATE TABLE mzvals(
                            ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                           'mzmed.pgrp' float,
+                           'mzmed.pgrp' decimal(30,13),
                            foundinmode text)", width=10000, simplify=TRUE)
   dbExecute(conn, sql.make.meta)
-  dbExecute(conn, "CREATE INDEX valindex ON mzvals('mzmed.pgrp')")
+  dbExecute(conn, "create index mzfind on mzvals([mzmed.pgrp], foundinmode);")
   # --- write vals to table ---
   dbWriteTable(conn, "mzvals", mzvals, append=TRUE) # insert into
   # --- make range table (choose if R*tree or not) ---
   sql.make.rtree <- strwrap("CREATE VIRTUAL TABLE mzranges USING rtree(
                             ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                            mzmin float,
-                            mzmax float);"
+                            mzmin decimal(30,13),
+                            mzmax decimal(30,13));"
                             , width=10000, simplify=TRUE)
   sql.make.normal <- strwrap("CREATE TABLE mzranges(
                              ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                             mzmin float,
-                             mzmax float);", width=10000, simplify=TRUE)
+                             mzmin decimal(30,13),
+                             mzmax decimal(30,13));", width=10000, simplify=TRUE)
   dbExecute(conn, if(rtree) sql.make.rtree else sql.make.normal)
   # --- write ranges to table ---
   dbWriteTable(conn, "mzranges", mzranges, append=TRUE) # insert into
