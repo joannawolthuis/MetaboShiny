@@ -13,6 +13,7 @@ library(plotly)
 library(jsonlite)
 library(shinyFiles)
 library(stringr)
+library(ChemmineR)
 
 # clone metaboshiny first...
 
@@ -44,7 +45,7 @@ data(isotopes)
 nslots <- Sys.getenv( "NSLOTS" )
 print( nslots )
 
-session_cl <<- if(is.na(session_cl)) makeCluster(nslots, type="FORK")
+session_cl <- makeCluster(nslots, type="FORK")
 
 build.base.db("pubchem", outfolder=dbDir, cl = session_cl)
 build.extended.db("pubchem", outfolder=dbDir, adduct.table = wkz.adduct.confirmed, cl=session_cl, fetch.limit=100)
