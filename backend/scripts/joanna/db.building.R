@@ -228,11 +228,7 @@ build.base.db <- function(dbname=NA,
                                    curl_fetch_multi(url, done = cb, pool = pool)
                                  })
                                  # lotsa files, need tiem.
-                                 out <- multi_run(pool=pool)
-                                 # --- wait until nothing is pending? ---
-                                 while(out$pending > 0){
-                                   print(out)
-                                 }
+                                 out <- multi_run(pool=pool,timeout = Inf)
                                  # ------------------------------
                                  print("Converting SDF files to tab delimited matrices...")
                                  sdf.files <- list.files(path = sdf.loc, pattern = "\\.sdf\\.gz$")
