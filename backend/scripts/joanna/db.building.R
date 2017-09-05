@@ -229,7 +229,9 @@ build.base.db <- function(dbname=NA,
                                  })
                                  # lotsa files, need tiem.
                                  out <- multi_run(pool = pool,timeout = Inf)
-                                 while(out$pending > 0) print(out)
+                                 
+                                 print(out)
+                                 
                                  # ------------------------------
                                  print("Converting SDF files to tab delimited matrices...")
                                  sdf.files <- list.files(path = sdf.loc, pattern = "\\.sdf\\.gz$")
