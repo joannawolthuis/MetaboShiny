@@ -214,7 +214,7 @@ build.base.db <- function(dbname=NA,
                                  max_counter = length(file.urls)
                                  # --- start downloady ---
                                  pool <- new_pool()
-                                 sapply(file.urls, FUN=function(url){
+                                 pbsapply(file.urls, cl=cl, FUN=function(url){
                                    print(url)
                                    counter <<- counter + 1
                                    print(paste(counter, length(file.urls), sep=" of "))
