@@ -29,19 +29,27 @@ sourceDir <- function(path, trace = TRUE, ...) {
 
 # === GET OPTIONS ===
 
-setwd("/Users/jwolthuis/Google Drive/MetaboShiny")
+wd <- "/Users/jwolthuis/Google Drive/MetaboShiny"
+
 # --- laod adduct table for general use ---
-load("./backend/db/NeededFiles/AdductTable/AdductTableWKZ.RData")
-sourceDir("./backend/scripts/joanna")
+
+load(file.path(wd, "backend/umcfiles/adducts/AdductTableWKZ.RData"))
+sourceDir(file.path(wd, "backend/scripts/joanna"))
 data(isotopes)
-dbDir <<- tools:::file_path_as_absolute("./backend/db")
+
 # --- beta stuff ---
 session_cl <<- NA
 mode <- "time"
+
+# --- check options ---
+
 opt_conn <- file(".conf")
 options_raw <<- readLines(opt_conn)
-exp_dir <<- str_match(options_raw[[1]], "(?<=')(.*)(?=')")[1,1]
-proj_name <<- str_match(options_raw[[2]], "(?<=')(.*)(?=')")[1,1]
+print(options_raw)
+dbDir <<- str_match(options_raw[[1]], "(?<=')(.*)(?=')")[1,1]
+exp_dir <<- str_match(options_raw[[2]], "(?<=')(.*)(?=')")[1,1]
+proj_name <<- str_match(options_raw[[3]], "(?<=')(.*)(?=')")[1,1]
+
 patdb <<- file.path(exp_dir, paste0(proj_name, ".db"))
 
 close(opt_conn)

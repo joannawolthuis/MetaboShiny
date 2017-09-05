@@ -4,10 +4,27 @@ function(input, output, session) {
 
 output$exp_dir <- renderText(exp_dir)
 output$proj_name <- renderText(proj_name)
+output$curr_db_dir <- renderText(dbDir)
+
   
 # ====================== SETTINGS =================
 
 volumes = getVolumes()
+
+observe({  
+  shinyDirChoose(input, "get_db_dir", roots = volumes, session = session)
+  given_dir <- input$get_db_dir$path
+  if(is.null(given_dir)) return()
+  dbDir <<- paste(c(given_dir), collapse="/")
+  output$curr_db_dir <- renderText(dbDir)
+  # --- connect ---
+  opt_conn <- file(".conf")
+  options_raw <<- readLines(opt_conn)
+  options_raw[[1]] <- paste("db_dir = '",dbDir,"'", sep="")
+  print(options_raw)
+  writeLines(opt_conn, text = options_raw)
+  close(opt_conn)
+})
 
 observe({  
   shinyDirChoose(input, "get_work_dir", roots = volumes, session = session)
@@ -16,21 +33,22 @@ observe({
   exp_dir <<- paste(c(given_dir), collapse="/")
   output$exp_dir <- renderText(exp_dir)
   if(!dir.exists(exp_dir)) dir.create(exp_dir)
-  options_raw[[1]] <- paste("work_dir = '",exp_dir,"'", sep="")
   # --- connect ---
   opt_conn <- file(".conf")
+  options_raw <<- readLines(opt_conn)
+  options_raw[[2]] <- paste("work_dir = '",exp_dir,"'", sep="")
   writeLines(opt_conn, text = options_raw)
   close(opt_conn)
 })
 
 observeEvent(input$set_proj_name, {
   patdb <<- file.path(exp_dir, paste0(input$proj_name,".db", sep=""))
-  print(patdb)
-  output$proj_name <- renderText(proj_name)
-  options_raw[[2]] <- paste("proj_name = '", exp_dir,"'", sep="")
+  output$proj_name <<- renderText(input$proj_name)
   # --- connect ---
   opt_conn <- file(".conf")
-  writeLines(opt_conn)
+  options_raw <<- readLines(opt_conn)
+  options_raw[[3]] <- paste("proj_name = '", input$proj_name,"'", sep="")
+  writeLines(opt_conn,text = options_raw)
   close(opt_conn)
 })
 
@@ -66,11 +84,21 @@ output$chebi_logo <- renderImage({
   
 }, deleteFile = FALSE)
 
+output$pubchem_logo <- renderImage({
+  # When input$n is 3, filename is ./images/image3.jpeg
+  filename <- normalizePath(file.path('./backend/img/pubchemlogo.png'))
+  # Return a list containing the filename and alt text
+  list(src = filename,
+       alt = "PubChem",
+       width=140,
+       height=100)
+}, deleteFile = FALSE)
+
 # --- check for db files ---
 
 
 observeEvent(input$check_umc,{
-  db_folder_files <- list.files("./backend/db")
+  db_folder_files <- list.files(dbDir)
   is.present <- "internal.full.db" %in% db_folder_files | "noise.full.db" %in% db_folder_files
   check_pic <- if(is.present) "yes.png" else "no.png"
   output$umc_check <- renderImage({
@@ -83,7 +111,7 @@ observeEvent(input$check_umc,{
 })
 
 observeEvent(input$check_hmdb,{
-  db_folder_files <- list.files("./backend/db")
+  db_folder_files <- list.files(dbDir)
   is.present <- "hmdb.full.db" %in% db_folder_files
   check_pic <- if(is.present) "yes.png" else "no.png"
   output$hmdb_check <- renderImage({
@@ -96,7 +124,7 @@ observeEvent(input$check_hmdb,{
 })
 
 observeEvent(input$check_chebi,{
-  db_folder_files <- list.files("./backend/db")
+  db_folder_files <- list.files(dbDir)
   is.present <- "chebi.full.db" %in% db_folder_files
   check_pic <- if(is.present) "yes.png" else "no.png"
   output$chebi_check <- renderImage({
@@ -108,10 +136,23 @@ observeEvent(input$check_chebi,{
   }, deleteFile = FALSE)
 })
 
+observeEvent(input$check_pubchem,{
+  db_folder_files <- list.files(dbDir)
+  is.present <- "pubchem.full.db" %in% db_folder_files
+  check_pic <- if(is.present) "yes.png" else "no.png"
+  output$pubchem_check <- renderImage({
+    # When input$n is 3, filename is ./images/image3.jpeg
+    filename <- normalizePath(file.path('backend/img', check_pic))
+    # Return a list containing the filename and alt text
+    list(src = filename, width = 70,
+         height = 70)
+  }, deleteFile = FALSE)
+})
+
 # --- build db ---
 
 observeEvent(input$build_umc,{
-  session_cl <<- if(is.na(session_cl)) makeCluster(4, type="FORK") else session_cl
+  session_cl <<- if(is.na(session_cl)) makeCluster(4, type="FORK", outfile="session.txt") else session_cl
   # ---------------------------
   withProgress({
     setProgress(message = "Working...")
@@ -128,7 +169,7 @@ observeEvent(input$build_umc,{
 })
 
 observeEvent(input$build_hmdb,{
-  session_cl <<- if(is.na(session_cl)) makeCluster(4, type="FORK") else session_cl
+  session_cl <<- if(is.na(session_cl)) makeCluster(4, type="FORK", outfile="session.txt") else session_cl
   withProgress({
     setProgress(message = "Working...")
     build.base.db("hmdb", outfolder=dbDir)
@@ -143,12 +184,23 @@ observeEvent(input$build_hmdb,{
 })
 
 observeEvent(input$build_chebi,{
-  session_cl <<- if(is.na(session_cl)) makeCluster(4, type="FORK") else session_cl
+  session_cl <<- if(is.na(session_cl)) makeCluster(4, type="FORK", outfile="session.txt") else session_cl
   withProgress({
     setProgress(message = "Working...")
     build.base.db("chebi", outfolder=dbDir)
     setProgress(0.5,message = "Halfway there...")
     build.extended.db("chebi", outfolder=dbDir, adduct.table = wkz.adduct.confirmed, cl=session_cl, fetch.limit=100)
+    setProgress(message = "Ok!")
+  })
+})
+
+observeEvent(input$build_pubchem,{
+  session_cl <<- if(is.na(session_cl)) makeCluster(4, type="FORK",outfile="session.txt") else session_cl
+  withProgress({
+    setProgress(message = "Working...")
+    build.base.db("pubchem", outfolder=dbDir, cl = session_cl)
+    setProgress(0.5,message = "Halfway there...")
+    build.extended.db("pubchem", outfolder=dbDir, adduct.table = wkz.adduct.confirmed, cl=session_cl, fetch.limit=100)
     setProgress(message = "Ok!")
   })
 })
@@ -302,9 +354,16 @@ observeEvent(input$initialize,{
                       "metaboanalyst"))
   setProgress(.1, "Applying your settings...")
   #Below is your R command history: 
-  InitDataObjects("pktable", "ts", FALSE)
-  SetDesignType("time")
-  Read.TextData(csv_loc, "rowts", "disc")
+  switch(input$exp_type,
+         time = {
+           InitDataObjects("pktable", "ts", FALSE)
+           SetDesignType("time")
+           Read.TextData(csv_loc, "rowts", "disc")
+         },
+         normal = {
+           InitDataObjects("pktable", "stat", FALSE)
+           Read.TextData(csv_loc, "row", "disc")
+         })
   SanityCheckData()
   RemoveMissingPercent(percent=0.5)
   ImputeVar(method="min")
@@ -329,28 +388,43 @@ observeEvent(input$initialize,{
 
 observeEvent(input$tab_time, {
   if(input$nav_general != "analysis") return(NULL)
-  # get excel table stuff.
+    # get excel table stuff.
   switch(input$tab_time,
          ipca = {
            iPCA.Anal(file.path(exp_dir, "ipca_3d_0_.json"))
-           json_pca <<- fromJSON(file.path(exp_dir, "ipca_3d_0_.json")) # but perform first...
+           json_pca <<- fromJSON(file.path(exp_dir, "ipca_3d_0_.json"))
+           req(json_pca)
+           # but perform first...
            updateSelectInput(session, "ipca_factor",
                              choices = grep(names(json_pca$score), pattern = "^fac[A-Z]", value = T))
          },
          meba = {
-           if("MB" %in% names(analSet)) return(NULL)
+           if(!exists("analSet")){
+             if("MB" %in% names(analSet)) return(NULL)
+           }
            performMB(10, dir=exp_dir)
            meba.table <<- read.csv(file.path(exp_dir, 'meba_sig_features.csv'))
          },
          asca = {
-           if("asca" %in% names(analSet)) return(NULL)
+           if(!exists("analSet")){
+            if("asca" %in% names(analSet)) return(NULL)
+           }
            Perform.ASCA(1, 1, 2, 2)
            CalculateImpVarCutoff(0.05, 0.9, dir=exp_dir)
            asca.table <<- read.csv(file.path(exp_dir,'Sig_features_Model_ab.csv'))
          })
   })
 
-names(analSet)
+observeEvent(input$tab_stat, {
+  if(input$nav_general != "analysis") return(NULL)
+  # get excel table stuff.
+  switch(input$tab_stat,
+         pca = {PCA.Anal()},
+         heatmap = {NULL},
+         tt = {Ttests.Anal(F, 0.05, FALSE, TRUE)},
+         fc = {FC.Anal.unpaired(2.0, 1)})
+})
+
 # ======================== IPCA ==========================
 
 output$plot_ipca <- renderPlotly({
@@ -457,6 +531,6 @@ observeEvent(input$match_tab_rows_selected,{
 
 # --- ON CLOSE ---
 session$onSessionEnded(function() {
-  if(!is.na(session_cl)) stopCluster(session_cl)
+  if(any(!is.na(session_cl))) stopCluster(session_cl)
 })
 }

@@ -21,7 +21,7 @@ build.base.db <- function(dbname=NA,
   function.of.choice <- switch(tolower(dbname),
                                internal = function(dbname){ # BOTH NOISE AND NORMAL
                                  # --- uses csv package ---
-                                 int.loc <- file.path(outfolder, "NeededFiles", "InternalDB")
+                                 int.loc <- file.path(wd, "backend","umcfiles", "internal")
                                  # --- non-noise ---
                                  internal.base.db <- read.csv(file.path(int.loc, 
                                                                      "TheoreticalMZ_NegPos_noNoise.txt"),
@@ -44,7 +44,7 @@ build.base.db <- function(dbname=NA,
                                  # --- write ---
                                  dbWriteTable(conn, "base", db.formatted, append=TRUE)},
                                noise = function(dbname){
-                                 int.loc <- file.path(outfolder, "NeededFiles", "InternalDB")
+                                 int.loc <- file.path(wd, "backend","umcfiles", "internal")
                                  # --- noise ---
                                  noise.base.db <- read.csv(file.path(int.loc, 
                                                                   "TheoreticalMZ_NegPos_yesNoise.txt"), 
@@ -124,11 +124,11 @@ build.base.db <- function(dbname=NA,
                                  print("Downloading XML database...")
                                  file.url <- "http://www.hmdb.ca/system/downloads/current/hmdb_metabolites.zip"
                                  # ----
-                                 base.loc <- file.path(outfolder,"NeededFiles", "HMDB")
+                                 base.loc <- file.path(dbDir, "hmdb_source")
                                  if(!dir.exists(base.loc)) dir.create(base.loc)
                                  zip.file <- file.path(base.loc, "HMDB.zip")
-                                 #download.file(file.url, zip.file)
-                                 #unzip(zip.file, exdir = base.loc)
+                                 download.file(file.url, zip.file)
+                                 unzip(zip.file, exdir = base.loc)
                                  # --- go through xml ---
                                  print("Parsing XML...")
                                  data <- xmlParse(file.path(base.loc,"hmdb_metabolites.xml"), useInternalNodes = T)
@@ -193,16 +193,15 @@ build.base.db <- function(dbname=NA,
                                  library(curl)
                                  library(httr)
                                  # --- create working space ---
-                                 baseLoc <- file.path(outfolder,"NeededFiles", "PubChem")
-                                 sdf.loc <- file.path(baseLoc, "SDF")
-                                 csv.loc <- file.path(baseLoc, "CSV")
+                                 baseLoc <- file.path(dbDir, "pubchem_source")
+                                 sdf.loc <- file.path(baseLoc, "sdf")
+                                 csv.loc <- file.path(baseLoc, "csv")
                                  # --- check the user's determination ---
                                  # continue <- readline("You chose PubChem, this will take a while and requires at least 30gb of space.Continue? (yes/no): ")
                                  # if(continue == "no" | continue == "n") return(NA)
                                  # --- download the 1 million sdf files ---
                                  if(!dir.exists(sdf.loc)) dir.create(sdf.loc)
                                  if(!dir.exists(csv.loc)) dir.create(csv.loc)
-                                 setwd(sdf.loc) # move to download directory
                                  print("Downloading SDF files...")
                                  folder.url = "ftp://ftp.ncbi.nlm.nih.gov/pubchem/Compound/CURRENT-Full/SDF/"
                                  ftp.handle = new_handle(dirlistonly=TRUE)
@@ -229,49 +228,49 @@ build.base.db <- function(dbname=NA,
                                  # ------------------------------
                                  print("Converting SDF files to tab delimited matrices...")
                                  sdf.files <- list.files(path = sdf.loc, pattern = "\\.sdf\\.gz$")
-                                 # --- move to csv dir ---
-                                 setwd(csv.loc) # move to download directory
                                  # -----------------------
-                                 pbsapply(cl=cl, sdf.files, FUN=function(file){
-                                   input <- file.path(sdf.loc, file)
-                                   output <- file.path(csv.loc, gsub("\\.sdf.gz$", ".csv", x = file))
-                                   if(file.exists(output)) return(NA)
-                                   sdfStream(input=input,
+                                 pbsapply(cl=cl, sdf.files, FUN=function(sdf.file){
+                                   input <- file.path(sdf.loc, sdf.file)
+                                   print("input")
+                                   output <- file.path(csv.loc, gsub("\\.sdf.gz$", "\\.csv", sdf.file))
+                                   print("output")
+                                   sdfStream.joanna(input=input,
                                              output=output,
-                                             fct=function(sdfset, test){
+                                             fct = function(sdfset, test){
                                                valid <- validSDF(sdfset)
                                                sdfset <- sdfset[valid]
-                                               blockmatrix <- datablock2ma(datablocklist=datablock(sdfset)) # Converts data block to matrix
-                                               name.col <- if("PUBCHEM_IUPAC_TRADITIONAL_NAME" %not in% colnames(blockmatrix)) "PUBCHEM_MOLECULAR_FORMULA" else("PUBCHEM_IUPAC_TRADITIONAL_NAME")
+                                               print(head(datablock(sdfset)))
+                                               blockmatrix <- datablock2ma(datablock(sdfset)) # Converts data block to matrix
                                                # --------------
                                                db.formatted <- data.table(
-                                                 compoundname = blockmatrix[, name.col],
+                                                 compoundname = blockmatrix[, if("PUBCHEM_IUPAC_TRADITIONAL_NAME" %not in% colnames(blockmatrix)) "PUBCHEM_MOLECULAR_FORMULA" else("PUBCHEM_IUPAC_TRADITIONAL_NAME")],
+                                                 description = c("PubChem"),
                                                  baseformula = gsub(x = blockmatrix[, "PUBCHEM_MOLECULAR_FORMULA"], 
                                                                     pattern="[\\+\\-]\\d*$", 
                                                                     replacement=""),
                                                  identifier = as.numeric(blockmatrix[, "PUBCHEM_COMPOUND_CID"]),
                                                  charge = blockmatrix[,"PUBCHEM_TOTAL_CHARGE"]
-                                               )
+                                                )
                                                # --- check formulae ---
                                                checked <- as.data.table(check.chemform.joanna(isotopes,
                                                                                               db.formatted$baseformula))
                                                db.formatted$baseformula <- checked$new_formula
                                                keep <- checked[warning == FALSE, which = TRUE]
                                                db.keep <- db.formatted[keep]
-                                               # --- return ---
                                                db.keep},
                                              append = FALSE,
-                                             silent = TRUE,
+                                             silent = FALSE,
                                              Nlines = 100000 )
                                  })
+                                 print("shouldnt be here fast")
                                  # --- assemble ---
                                  csv.files <- list.files(path = csv.loc, pattern = "\\.csv$", full.names = TRUE)
                                  print("Assembling and putting in db file...")
-                                 pbsapply(csv.files, FUN=function(file){
+                                 pbsapply(cl=cl, csv.files, FUN=function(file){
                                    print(file)
                                    first.row <- read.csv(file, nrows=3, header=TRUE, sep="\t")
-                                   #if("compoundname" %not in% colnames(first.row)){print("NOPE!"); file.remove(file)}
-                                   read.csv.sql(file, sep="\t", sql = c(fn$paste("insert into base select compoundname, baseformula, identifier, charge from file")), dbname = db)
+                                   if("description" %not in% colnames(first.row)){print("NOPE!"); file.remove(file); return(NULL)}
+                                   read.csv.sql(file, sep="\t", sql = c(fn$paste("insert into base select compoundname, description, baseformula, identifier, charge from file")), dbname = db)
                                  })
                                  dbDisconnect(conn)
                                  print("Done!")
