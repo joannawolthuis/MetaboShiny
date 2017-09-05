@@ -1,6 +1,22 @@
+# libraries
+
+library(ggplot2)
+library(DT)
+library(DBI)
+library(RSQLite)
+library(gsubfn)
+library(data.table)
+library(parallel)
+library(pbapply)
+library(enviPat)
+library(plotly)
+library(jsonlite)
+library(shinyFiles)
+library(stringr)
+
 # clone metaboshiny first...
 
-dbDir <- "/hpc/cog_bioinf/ridder/users/jwolthuis/shinyDB"
+dbDir <- "/hpc/cog_bioinf/ridder/users/jwolthuis/MetaboShiny/backend/db"
 
 if(!dir.exists(dbDir)) dir.create(dbDir)
 
@@ -16,7 +32,7 @@ sourceDir <- function(path, trace = TRUE, ...) {
 
 # === GET OPTIONS ===
 
-wd <- "/Users/jwolthuis/Google Drive/MetaboShiny"
+wd <- "/hpc/cog_bioinf/ridder/users/jwolthuis/MetaboShiny"
 
 # --- laod adduct table for general use ---
 
@@ -25,10 +41,10 @@ sourceDir(file.path(wd, "backend/scripts/joanna"))
 data(isotopes)
 
 # get amount of cores
-session_cl <<- if(is.na(session_cl)) makeCluster(4, type="FORK")
+nslots <- Sys.getenv( "NSLOTS" )
+print( nslots )
 
-
-
+session_cl <<- if(is.na(session_cl)) makeCluster(nslots, type="FORK")
 
 build.base.db("pubchem", outfolder=dbDir, cl = session_cl)
 build.extended.db("pubchem", outfolder=dbDir, adduct.table = wkz.adduct.confirmed, cl=session_cl, fetch.limit=100)
