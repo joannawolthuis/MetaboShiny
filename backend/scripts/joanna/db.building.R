@@ -213,17 +213,22 @@ build.base.db <- function(dbname=NA,
                                  cb <- function(req){
                                    cat("done:", req$url, ": HTTP:", req$status, "\n")
                                    file.handle <- file(file.path(sdf.loc,basename(req$url)), open = "wb")
+                                   counter <<- counter + 1
+                                   print(paste(counter, max_counter, sep="//"))
                                    writeBin(req$content, file.handle)
                                    close(file.handle)
                                    # --- download ---
                                  }
+                                 counter  = 0
+                                 max_counter = length(file.urls)
                                  # --- start downloady ---
-                                 pool <- new_pool(total_con = length(cl))
+                                 pool <- new_pool(host_con = length(cl))
                                  sapply(file.urls, FUN=function(url){
-                                   if(file.exists(file.path(sdf.loc, basename(url)))) return(NA)
+                                   #if(file.exists(file.path(sdf.loc, basename(url)))) return(NA)
                                    curl_fetch_multi(url, done = cb, pool = pool)
                                  })
                                  # lotsa files, need tiem.
+                                 
                                  out <- multi_run(pool=pool)
                                  # ------------------------------
                                  print("Converting SDF files to tab delimited matrices...")
@@ -231,9 +236,7 @@ build.base.db <- function(dbname=NA,
                                  # -----------------------
                                  pbsapply(cl=cl, sdf.files, FUN=function(sdf.file){
                                    input <- file.path(sdf.loc, sdf.file)
-                                   print("input")
                                    output <- file.path(csv.loc, gsub("\\.sdf.gz$", "\\.csv", sdf.file))
-                                   print("output")
                                    sdfStream.joanna(input=input,
                                              output=output,
                                              fct = function(sdfset, test){
@@ -262,7 +265,6 @@ build.base.db <- function(dbname=NA,
                                              silent = FALSE,
                                              Nlines = 100000 )
                                  })
-                                 print("shouldnt be here fast")
                                  # --- assemble ---
                                  csv.files <- list.files(path = csv.loc, pattern = "\\.csv$", full.names = TRUE)
                                  print("Assembling and putting in db file...")
