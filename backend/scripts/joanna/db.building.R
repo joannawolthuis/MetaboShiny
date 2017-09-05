@@ -210,26 +210,19 @@ build.base.db <- function(dbname=NA,
                                  close(ftp.conn)
                                  file.urls <- paste0(folder.url, file.table[,1])
                                  # ---------------------------------------
-                                 cb <- function(req){
-                                   cat("done:", req$url, ": HTTP:", req$status, "\n")
-                                   file.handle <- file(file.path(sdf.loc, basename(req$url)), open = "wb")
-                                   counter <<- counter + 1
-                                   print(paste(counter, max_counter, sep="/"))
-                                   writeBin(req$content, file.handle)
-                                   close(file.handle)
-                                   # --- download ---
-                                 }
                                  counter  = 0
                                  max_counter = length(file.urls)
                                  # --- start downloady ---
                                  pool <- new_pool()
                                  sapply(file.urls, FUN=function(url){
                                    print(url)
-                                   if(file.exists(file.path(sdf.loc, basename(url)))) return(NA)
-                                   curl_fetch_multi(url, done = cb, pool = pool, fail=print)
+                                   counter <<- counter + 1
+                                   print(paste(counter, length(file.urls), sep=" of "))
+                                   fn <- file.path(sdf.loc, basename(req$url))
+                                   curl_download(url, fn)
+                                   unlink(fn)
                                  })
                                  # lotsa files, need tiem.
-                                 out -> multi_run(pool = pool)
                                  # ------------------------------
                                  print("Converting SDF files to tab delimited matrices...")
                                  sdf.files <- list.files(path = sdf.loc, pattern = "\\.sdf\\.gz$")
