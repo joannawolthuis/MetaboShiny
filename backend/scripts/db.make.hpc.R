@@ -14,7 +14,8 @@ library(jsonlite)
 library(shinyFiles)
 library(stringr)
 library(ChemmineR)
-library(RCurl)
+library(curl)
+library(httr)
 
 # clone metaboshiny first...
 
