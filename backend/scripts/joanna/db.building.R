@@ -218,7 +218,7 @@ build.base.db <- function(dbname=NA,
                                    print(url)
                                    counter <<- counter + 1
                                    print(paste(counter, length(file.urls), sep=" of "))
-                                   fn <- file.path(sdf.loc, basename(req$url))
+                                   fn <- file.path(sdf.loc, basename(url))
                                    curl_download(url, fn)
                                    unlink(fn)
                                  })
