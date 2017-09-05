@@ -219,8 +219,11 @@ build.base.db <- function(dbname=NA,
                                    counter <<- counter + 1
                                    print(paste(counter, length(file.urls), sep=" of "))
                                    fn <- file.path(sdf.loc, basename(url))
+                                   # -------------------------------
+                                   if(file.exists(fn)) return(NA)
+                                   # -------------------------------
                                    print(fn)
-                                   download.file(url = url, destfile = fn,method = "auto")
+                                   download.file(url = url, destfile = fn, method = "auto")
                                  })
                                  # lotsa files, need tiem.
                                  # ------------------------------
@@ -230,6 +233,9 @@ build.base.db <- function(dbname=NA,
                                  pbsapply(cl=cl, sdf.files, FUN=function(sdf.file){
                                    input <- file.path(sdf.loc, sdf.file)
                                    output <- file.path(csv.loc, gsub("\\.sdf.gz$", "\\.csv", sdf.file))
+                                   # -------------------------------
+                                   if(file.exists(output)) return(NA)
+                                   # -------------------------------
                                    sdfStream.joanna(input=input,
                                              output=output,
                                              fct = function(sdfset, test){
