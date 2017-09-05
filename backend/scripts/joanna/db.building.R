@@ -218,7 +218,7 @@ build.base.db <- function(dbname=NA,
                                    # --- download ---
                                  }
                                  # --- start downloady ---
-                                 pool <- new_pool()
+                                 pool <- new_pool(total_con = length(cl))
                                  sapply(file.urls, FUN=function(url){
                                    if(file.exists(file.path(sdf.loc, basename(url)))) return(NA)
                                    curl_fetch_multi(url, done = cb, pool = pool)
