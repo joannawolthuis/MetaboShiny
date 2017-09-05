@@ -1,3 +1,9 @@
+# example commands
+
+# echo "/home/cog/jwolthuis/R-3.4.0/bin/Rscript --no-save < /hpc/cog_bioinf/ridder/users/jwolthuis/MetaboShiny/backend/scripts/db.make.hpc.R" | qsub -N make_pubchem -l h_vmem=20g -l h_rt=06:00:00 -pe threaded 40
+# /home/cog/jwolthuis/R-3.4.0/bin/Rscript --vanilla < /hpc/cog_bioinf/ridder/users/jwolthuis/MetaboShiny/backend/scripts/db.make.hpc.R" | qsub -l h_vmem=20g -l h_rt=12:00:00 -pe threaded 80
+
+
 # libraries
 
 library(ggplot2)
