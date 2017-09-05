@@ -14,6 +14,7 @@ library(jsonlite)
 library(shinyFiles)
 library(stringr)
 library(ChemmineR)
+library(RCurl)
 
 # clone metaboshiny first...
 
@@ -42,6 +43,7 @@ sourceDir(file.path(wd, "backend/scripts/joanna"))
 data(isotopes)
 
 # get amount of cores
+
 nslots <- Sys.getenv( "NSLOTS" )
 print(nslots)
 
