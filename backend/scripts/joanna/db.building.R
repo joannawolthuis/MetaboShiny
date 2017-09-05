@@ -226,10 +226,13 @@ build.base.db <- function(dbname=NA,
                                  sapply(file.urls, FUN=function(url){
                                    if(file.exists(file.path(sdf.loc, basename(url)))) return(NA)
                                    curl_fetch_multi(url, done = cb, pool = pool)
-                                   Sys.sleep(0.1)
                                  })
                                  # lotsa files, need tiem.
                                  out <- multi_run(pool=pool)
+                                 # --- wait until nothing is pending? ---
+                                 while(out$pending > 0){
+                                   print(out)
+                                 }
                                  # ------------------------------
                                  print("Converting SDF files to tab delimited matrices...")
                                  sdf.files <- list.files(path = sdf.loc, pattern = "\\.sdf\\.gz$")
