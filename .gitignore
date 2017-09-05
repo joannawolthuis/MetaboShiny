@@ -1,7 +1,8 @@
-*.Rproj.user
-*.Rhistory
-*.RData
-*.Ruserdata
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+/backend
 *.csv
 *.sql
 *.db
@@ -9,3 +10,4 @@
 *.zip
 .Rproj.user
 /backend/appdata/*
+!/backend/umcfiles/*
