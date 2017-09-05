@@ -220,7 +220,7 @@ build.base.db <- function(dbname=NA,
                                    print(paste(counter, length(file.urls), sep=" of "))
                                    fn <- file.path(sdf.loc, basename(url))
                                    print(fn)
-                                   curl_download(url, fn)
+                                   download.file(url = url, destfile = fn,method = "auto", timeout=300)
                                  })
                                  # lotsa files, need tiem.
                                  # ------------------------------
