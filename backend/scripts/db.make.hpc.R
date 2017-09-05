@@ -45,7 +45,7 @@ data(isotopes)
 nslots <- Sys.getenv( "NSLOTS" )
 print( nslots )
 
-session_cl <- makeCluster(nslots, type="FORK")
+session_cl <- makeCluster(nslots, type="FORK", outfile="/home/cog/jwolthuis/shinyClusterLog.txt")
 
 build.base.db("pubchem", outfolder=dbDir, cl = session_cl)
 build.extended.db("pubchem", outfolder=dbDir, adduct.table = wkz.adduct.confirmed, cl=session_cl, fetch.limit=100)

@@ -6,7 +6,6 @@ output$exp_dir <- renderText(exp_dir)
 output$proj_name <- renderText(proj_name)
 output$curr_db_dir <- renderText(dbDir)
 
-  
 # ====================== SETTINGS =================
 
 volumes = getVolumes()

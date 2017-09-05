@@ -212,7 +212,7 @@ build.base.db <- function(dbname=NA,
                                  # ---------------------------------------
                                  cb <- function(req){
                                    cat("done:", req$url, ": HTTP:", req$status, "\n")
-                                   file.handle <- file(file.path(sdf.loc,basename(req$url)), open = "wb")
+                                   file.handle <- file(file.path(sdf.loc, basename(req$url)), open = "wb")
                                    counter <<- counter + 1
                                    print(paste(counter, max_counter, sep="/"))
                                    writeBin(req$content, file.handle)
@@ -222,16 +222,14 @@ build.base.db <- function(dbname=NA,
                                  counter  = 0
                                  max_counter = length(file.urls)
                                  # --- start downloady ---
-                                 pool <- new_pool()
+                                 pool <- new_pool(total_con = length(cl))
                                  sapply(file.urls, FUN=function(url){
+                                   print(url)
                                    if(file.exists(file.path(sdf.loc, basename(url)))) return(NA)
                                    curl_fetch_multi(url, done = cb, pool = pool)
                                  })
                                  # lotsa files, need tiem.
-                                 out <- multi_run(pool = pool,timeout = Inf)
-                                 
-                                 print(out)
-                                 
+                                 out <- multi_run(pool = pool)
                                  # ------------------------------
                                  print("Converting SDF files to tab delimited matrices...")
                                  sdf.files <- list.files(path = sdf.loc, pattern = "\\.sdf\\.gz$")
