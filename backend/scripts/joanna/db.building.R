@@ -267,8 +267,7 @@ build.base.db <- function(dbname=NA,
                                  # --- assemble ---
                                  csv.files <- list.files(path = csv.loc, pattern = "\\.csv$", full.names = TRUE)
                                  print("Assembling and putting in db file...")
-                                 pbsapply(cl=cl, csv.files, FUN=function(file){
-                                   print(file)
+                                 sapply(csv.files, FUN=function(file){
                                    first.row <- read.csv(file, nrows=3, header=TRUE, sep="\t")
                                    if("description" %not in% colnames(first.row)){print("NOPE!"); file.remove(file); return(NULL)}
                                    read.csv.sql(file, sep="\t", sql = c(fn$paste("insert into base select compoundname, description, baseformula, identifier, charge from file")), dbname = db)
