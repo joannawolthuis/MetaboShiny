@@ -8,5 +8,6 @@
 *.xml
 *.zip
 .Rproj.user
+/backend/db
 /backend/appdata/*
 !/backend/umcfiles/*
