@@ -41,12 +41,13 @@ observe({
 })
 
 observeEvent(input$set_proj_name, {
-  patdb <<- file.path(exp_dir, paste0(input$proj_name,".db", sep=""))
-  output$proj_name <<- renderText(input$proj_name)
+  proj_name <<- input$proj_name
+  patdb <<- file.path(exp_dir, paste0(proj_name,".db", sep=""))
+  output$proj_name <<- renderText(proj_name)
   # --- connect ---
   opt_conn <- file(".conf")
   options_raw <<- readLines(opt_conn)
-  options_raw[[3]] <- paste("proj_name = '", input$proj_name,"'", sep="")
+  options_raw[[3]] <- paste("proj_name = '", proj_name,"'", sep="")
   writeLines(opt_conn,text = options_raw)
   close(opt_conn)
 })
@@ -311,7 +312,7 @@ observeEvent(input$create_csv, {
     setProgress(1/4, "Creating csv file for MetaboAnalyst...")
     # create csv
     mz = get.csv(patdb,
-                 time.series = T,
+                 time.series = if(input$exp_type == "time") T else F,
                  exp.condition = input$exp_var)
     # save csv
     setProgress(2/4, "Writing csv file...")
@@ -319,13 +320,21 @@ observeEvent(input$create_csv, {
     fwrite(mz, csv_loc, sep="\t")
     # --- overview table ---
     setProgress(3/4, "Creating overview table...")
-    overview_tab <- t(data.table(keep.rownames = F,
-      Mz = ncol(mz) - 3,
-      Samples = nrow(mz),
-      Timepoints = length(unique(mz$Time)),
-      Groups = length(unique(mz$Label))
-      )
-      )
+    
+    overview_tab <- if(input$exp_type == "time"){
+      t(data.table(keep.rownames = F,
+                   Mz = ncol(mz) - 3,
+                   Samples = nrow(mz),
+                   Times = length(unique(mz$Time)),
+                   Groups = length(unique(mz$Label))
+      ))
+    } else{
+      t(data.table(keep.rownames = F,
+                   Mz = ncol(mz) - 3,
+                   Samples = nrow(mz),
+                   Groups = length(unique(mz$Label))
+      )) 
+      }
     output$csv_tab <- DT::renderDataTable({
       datatable(overview_tab, 
                 selection = 'single',
@@ -361,7 +370,7 @@ observeEvent(input$initialize,{
          },
          normal = {
            InitDataObjects("pktable", "stat", FALSE)
-           Read.TextData(csv_loc, "row", "disc")
+           Read.TextData(csv_loc, "rows", "disc")
          })
   SanityCheckData()
   RemoveMissingPercent(percent=0.5)
@@ -391,7 +400,7 @@ observeEvent(input$tab_time, {
   switch(input$tab_time,
          ipca = {
            iPCA.Anal(file.path(exp_dir, "ipca_3d_0_.json"))
-           json_pca <<- fromJSON(file.path(exp_dir, "ipca_3d_0_.json"))
+           json_pca <- fromJSON(file.path(exp_dir, "ipca_3d_0_.json"))
            req(json_pca)
            # but perform first...
            updateSelectInput(session, "ipca_factor",
@@ -429,6 +438,7 @@ observeEvent(input$tab_stat, {
 output$plot_ipca <- renderPlotly({
     req(json_pca)
     # ---------------
+  print(json_pca$score)
     df <- t(as.data.frame(json_pca$score$xyz))
     plot_ly() %>%
         add_trace(
@@ -504,7 +514,6 @@ output$find_mol_icon <- renderImage({
        height=70)
 }, deleteFile = FALSE)
 
-
 observeEvent(input$search_mz,{
   req(input$checkGroup)
   req(curr_mz)
@@ -527,6 +536,31 @@ observeEvent(input$match_tab_rows_selected,{
   curr_def <<- result_table[curr_row,'Description']
   output$curr_definition <- renderText(curr_def$Description)
   })
+
+
+observeEvent(input$browse_db,{
+  req(input$checkGroup)
+  print("hierr")
+  # -------------------
+  cpd_list <- lapply(input$checkGroup, FUN=function(match.table){
+   browse_db(match.table)})
+  # ------------------
+  result_table <<- unique(as.data.table(rbindlist(cpd_list)))
+  output$browse_tab <- DT::renderDataTable({
+    datatable(result_table[,-"Description"],
+              selection = 'single',
+              autoHideNavigation = T,
+              options = list(lengthMenu = c(5, 10, 20), pageLength = 5))
+  })
+})
+
+observeEvent(input$browse_tab_rows_selected,{
+  curr_row = input$browse_tab_rows_selected
+  if (is.null(curr_row)) return()
+  # -----------------------------
+  curr_def <<- result_table[curr_row,'Description']
+  output$browse_definition <- renderText(curr_def$Description)
+})
 
 # --- ON CLOSE ---
 session$onSessionEnded(function() {

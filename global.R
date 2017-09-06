@@ -84,6 +84,14 @@ get_exp_vars <- function(){
   dbGetQuery(conn, "PRAGMA table_info(setup)")$name
 }
 
+browse_db <- function(chosen.db){
+  conn <- dbConnect(RSQLite::SQLite(), chosen.db) # change this to proper var later
+  # --- browse ---
+  result <- dbGetQuery(conn, "SELECT DISTINCT compoundname as Compound, baseformula as Formula, description as Description FROM base")
+  # --- result ---
+  result
+}
+
 get_matches <- function(mz, chosen.db){
   # --- connect to db ---
   req("patdb")

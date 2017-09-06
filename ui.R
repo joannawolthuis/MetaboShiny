@@ -196,21 +196,32 @@ navbarPage("MetaboShiny", id="nav_general",windowTitle = "MetaboShiny",
                                  }
 
                     ), column(4, align="center",
-                                                 imageOutput("find_mol_icon",inline = T),
-                                                 div(checkboxGroupInput("checkGroup", 
-                                                                              label = h4("Find selected m/z in:"),
-                                                                              choices = list("Internal DB" = file.path(dbDir,"internal.full.db"), 
-                                                                                              "Noise DB" = file.path(dbDir,"noise.full.db"), 
-                                                                                              "HMDB" = file.path(dbDir,"hmdb.full.db"),
-                                                                                              "ChEBI" = file.path(dbDir,"chebi.full.db")),
-                                                                              selected = 1, inline = T),style='font-size:90%'),
-                                                     actionButton("search_mz", "Search", icon=icon("search")),
+                                         fluidRow(imageOutput("find_mol_icon",inline = T),
+                                                  div(checkboxGroupInput("checkGroup", 
+                                                                         label = h4("Selected database:"),
+                                                                         choices = list("Internal DB" = file.path(dbDir,"internal.full.db"), 
+                                                                                        "Noise DB" = file.path(dbDir,"noise.full.db"), 
+                                                                                        "HMDB" = file.path(dbDir,"hmdb.full.db"),
+                                                                                        "ChEBI" = file.path(dbDir,"chebi.full.db")),
+                                                                         selected = 1, inline = T),style='font-size:90%')),
+                                         fluidRow(navbarPage("", id="tab_iden",
+                                                             tabPanel("Mz - Compound",
+                                                     actionButton("search_mz", "Find hits", icon=icon("search")),
                                                  hr(),
                                                    div(DT::dataTableOutput('match_tab'),style='font-size:80%'),
                                                  hr(),
                                                    div(textOutput("curr_definition"))
-                                                 )
+                                                 ),
+                                           tabPanel("Compound - Mz",
+                                                           div(DT::dataTableOutput('browse_tab'),style='font-size:80%'),
+                                                           hr(),
+                                                           fluidRow(actionButton("browse_db", "Browse compounds", icon=icon("eye")),
+                                                                    actionButton("search_cpd", "Find hits", icon=icon("search"))),
+                                                           hr(),
+                                                           div(textOutput("browse_definition"))
+                                                    ))
            # --------------------------------------------------------------------------------------------------------------------------------
+           ))
            ),tabPanel("",  icon = icon("cog"), 
                     h2("General settings for this application"),
                     hr(),
