@@ -225,7 +225,7 @@ navbarPage("MetaboShiny", id="nav_general",windowTitle = "MetaboShiny",
                                                     ))
            # --------------------------------------------------------------------------------------------------------------------------------
            ))
-           ),tabPanel("",  icon = icon("cog"), 
+           ),tabPanel("",  icon = icon("cog"), value="options", 
                     h2("General settings for this application"),
                     hr(),
                     shinyDirButton("get_db_dir", "Choose a database directory" ,
@@ -243,6 +243,8 @@ navbarPage("MetaboShiny", id="nav_general",windowTitle = "MetaboShiny",
                     textInput(inputId="proj_name", label="Project name", value = ''),
                     actionButton("set_proj_name", label="Apply"),
                     helpText("This name will be used in all save files."),
-                    textOutput("proj_name")
+                    textOutput("proj_name"),
+                    hr(),
+                    uiOutput("colourPickers")
            )
            )

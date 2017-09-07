@@ -269,7 +269,7 @@ mb.MANOVA <- function (object, times, D, size, nu = NULL, Lambda = NULL, beta.d 
 
 # plot the variable across time points (x)
 # colored by experimental conditions
-plotProfile <-function (varName, title=varName) {
+getProfile <-function (varName, title=varName) {
     
     require(ggplot2)
   

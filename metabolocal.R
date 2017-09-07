@@ -117,7 +117,9 @@ PlotMBTimeProfile("4.0289/873", "png", 72, width=NA)
 #Below is your R command history: 
 InitDataObjects("pktable", "stat", FALSE)
 Read.TextData("/Users/jwolthuis/brew/Cellar/glassfish/4.1.2_1/libexec/glassfish/domains/domain1/applications/MetaboAnalyst/resources/data/lcms_table.csv", "colu", "disc");
+Read.TextData("/Users/jwolthuis/Google Drive/MetaboShiny/backend/appdata/euronutrition/euronutrition_aug2017.csv", "rowu", "disc");
 SanityCheckData();
+colnames(dataSet$orig)
 RemoveMissingPercent(percent=0.5)
 ImputeVar(method="min")
 FilterVariable("iqr", "F", 25)

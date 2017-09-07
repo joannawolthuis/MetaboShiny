@@ -52,7 +52,36 @@ observeEvent(input$set_proj_name, {
   close(opt_conn)
 })
 
+color.pickers <- reactive({
+  req(dataSet)
+  # -------------
+  if("facA" %not in% names(dataSet) & "facB" %not in% names(dataSet)){print('aah')}
+  lbl.fac <- if(dataSet$facA.lbl == "Time") "facB" else "facA"
+  default.colours <- rainbow(length(levels(dataSet[[lbl.fac]])))
+  facs <- levels(dataSet[[lbl.fac]])
+  # -------------
+  lapply(seq_along(facs), function(i) {
+    colourInput(inputId = paste("col", i, sep="_"), label = paste("Choose colour for", facs[i]), value = default.colours[i]) 
+  })
+})
+
+output$colourPickers <- renderUI({color.pickers()})
+
+color.vec <- reactive({
+  req(dataSet)
+  # ----------
+  if("facA" %not in% names(dataSet) & "facB" %not in% names(dataSet)) return(c("Red", "Green"))
+  lbl.fac <- if(dataSet$facA.lbl == "Time") "facB" else "facA"
+  default.colours <- rainbow(length(levels(dataSet[[lbl.fac]])))
+  facs <- levels(dataSet[[lbl.fac]])
+  # -------------
+  unlist(lapply(seq_along(facs), function(i) {
+    input[[paste("col", i, sep="_")]]
+  }))
+})
+
 # ======================== DB CHECK ============================
+
 output$umc_logo <- renderImage({
   # When input$n is 3, filename is ./images/image3.jpeg
   filename <- normalizePath(file.path('./backend/img/umclogo.jpg'))
@@ -423,6 +452,7 @@ observeEvent(input$nav_time, {
          })
   })
 
+
 observeEvent(input$tab_stat, {
   if(input$nav_general != "analysis") return(NULL)
   # get excel table stuff.
@@ -482,25 +512,10 @@ observeEvent(input$meba_tab_rows_selected,{
   # do nothing if not clicked yet, or the clicked cell is not in the 1st column
   if (is.null(curr_row)) return()
   curr_mz <<- meba.table[curr_row,'X']
-  profile <- PlotMBTimeProfile(curr_mz)
-  print(as.numeric(levels(profile$Time)))
   output$meba_plot <- renderPlotly({
     # --- ggplot ---
-    plot <- if(draw.average){
-      ggplot(data=profile) +
-        geom_line(size=0.5, aes(x=Time, y=Abundance, group=Sample, color=Group, text=Sample), alpha=0.5) +
-        stat_summary(fun.y="mean", size=2, geom="line", aes(x=Time, y=Abundance, color=Group, group=Group)) +
-        scale_x_discrete(expand = c(0, 0)) +
-        theme_minimal(base_size = 12)
-    } else{
-      ggplot(data=profile) +
-        geom_line(size=0.7, aes(x=Time, y=Abundance, group=Sample, color=Group)) +
-        scale_x_discrete(expand = c(0, 0))
-    }
-    # ---------------
-    ggplotly(plot)
+    ggplotMeba(curr_mz, draw.average, cols = color.vec())
   })
-  print("here...")
 })
 
 # ======================== ASCA ============================
@@ -609,8 +624,10 @@ observeEvent(input$hits_tab_rows_selected,{
   if (is.null(curr_row)) return()
   # -----------------------------
   curr_mz <<- hits_table[curr_row, mzmed.pgrp]
-  print(curr_mz)
-  output$meba_plot <- renderPlot(PlotMBTimeProfile(curr_mz))
+  output$meba_plot <- renderPlotly({
+    # --- ggplot ---
+    ggplotMeba(mz, draw.average)
+})
   output$asca_plot <- renderPlot(PlotCmpdSummary(curr_mz))
 })
 

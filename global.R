@@ -18,6 +18,7 @@ library(plotly)
 library(jsonlite)
 library(shinyFiles)
 library(stringr)
+library(colourpicker)
 
 sourceDir <- function(path, trace = TRUE, ...) {
   for (nm in list.files(path, pattern = "\\.[RrSsQq]$")) {
@@ -187,4 +188,96 @@ get_mzs <- function(baseformula, charge, chosen.db){
   
   results <- dbGetQuery(conn,query.three)
   print(results)
+}
+
+ggplotMeba <- function(mz, draw.average, cols=c("Red", "Green")){
+  cols <- if(is.null(cols)) c("Red", "Green") else(cols)
+  profile <- getProfile(mz)
+  plot <- if(draw.average){
+    ggplot(data=profile) +
+      geom_line(size=0.3, aes(x=Time, y=Abundance, group=Sample, color=Group), alpha=0.4) +
+      stat_summary(fun.y="mean", size=1.5, geom="line", aes(x=Time, y=Abundance, color=Group, group=Group)) +
+      scale_x_discrete(expand = c(0, 0)) +
+      theme_minimal(base_size = 10) +
+      scale_color_manual(values=cols)
+  } else{
+    ggplot(data=profile) +
+      geom_line(size=0.7, aes(x=Time, y=Abundance, group=Sample, color=Group)) +
+      scale_x_discrete(expand = c(0, 0)) +
+      theme_minimal(base_size = 10) +
+      scale_color_manual(values=cols)
+  }
+  # ---------------
+  ggplotly(plot, tooltip="Sample")
+}
+
+ggplotSummary <- function(mz, cols){
+
+    if(substring(dataSet$format,4,5)!="ts"){
+      
+      par(mar=c(4,4,2,2), mfrow = c(1,2), oma=c(0,0,2,0));
+      
+      mns <- by(as.numeric(dataSet$proc[, cmpdNm]), dataSet$proc.cls, mean, na.rm=T);
+      sds <- by(as.numeric(dataSet$proc[, cmpdNm]), dataSet$proc.cls, sd, na.rm=T);
+      
+      ups <- mns + sds;
+      dns <- mns - sds;
+      
+      # all concentration need start from 0
+      y <- c(0, dns, mns, ups);
+      
+      rg <- range(y) + 0.05 * diff(range(y)) * c(-1, 1)
+      pt <- pretty(y)
+      
+      axp=c(min(pt), max(pt[pt <= max(rg)]),length(pt[pt <= max(rg)]) - 1);
+      
+      # ymk <- pretty(c(0,ymax));
+      x <- barplot(mns, col= unique(GetColorSchema()), las=2, yaxp=axp, ylim=range(pt));
+      arrows(x, dns, x, ups, code=3, angle=90, length=.1);
+      axis(1, at=x, col="white", col.tick="black", labels=F);
+      box();
+      mtext("Original Conc.", line=1);
+      
+      boxplot(dataSet$norm[, cmpdNm]~dataSet$cls,las=2, col= unique(GetColorSchema()));
+      mtext("Normalized Conc.", line=1);
+      title(main=cmpdNm, out=T);
+      #
+    }else if(dataSet$design.type =="time0"){
+      #
+      plotProfile(cmpdNm);
+      #
+    }else{
+      if(dataSet$design.type =="time"){ # time trend within phenotype
+        out.fac <- dataSet$exp.fac;
+        in.fac <- dataSet$time.fac;
+        xlab="Time";
+      }else{ # factor a split within factor b
+        out.fac <- dataSet$facB;
+        in.fac <- dataSet$facA;
+        xlab=dataSet$facA.lbl;
+      }
+      
+      # two images per row
+      img.num <- length(levels(out.fac));
+      row.num <- ceiling(img.num/2)
+      
+      if(row.num == 1){
+        h <- w*5/9;
+      }else{
+        h <- w*0.5*row.num;
+      }
+      #
+      par(mar=c(3,4,4,2), mfrow=c(row.num, 2));
+      # make sure all at the same range
+      ylim.ext <-  GetExtendRange (dataSet$norm[, cmpdNm], 12);
+      for(lv in levels(out.fac)){
+        inx <- out.fac == lv;
+        dat <- dataSet$norm[inx, cmpdNm];
+        cls <- in.fac[inx];
+        boxplot(dat ~ cls, col="#0000ff22", ylim=ylim.ext, outline=FALSE, boxwex=c(0.5, 0.5), xlab=xlab, ylab="Abundance", main=lv);
+        stripchart(dat ~ cls, method = "jitter", ylim=ylim.ext, vertical=T, add = T, pch=19, cex=0.7);
+        # ggplot
+      }
+      #
+    }
 }
