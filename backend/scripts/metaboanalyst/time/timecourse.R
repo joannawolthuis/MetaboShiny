@@ -271,7 +271,8 @@ mb.MANOVA <- function (object, times, D, size, nu = NULL, Lambda = NULL, beta.d 
 # colored by experimental conditions
 plotProfile <-function (varName, title=varName) {
     
-    
+    require(ggplot2)
+  
     varInx <- colnames(dataSet$norm) == varName;
     var <- as.data.table(dataSet$norm, keep.rownames = T)[,varInx, with=FALSE];
     print(var)
@@ -282,21 +283,13 @@ plotProfile <-function (varName, title=varName) {
     
     translator <- data.table(
       index = 1:length(samp.names),
-      sample = gsub(x = samp.names, pattern = "T\\d$", replacement=""),
-      group = exp.fac,
-      time = time.fac,
-      abundance = dataSet$norm[,varInx]
+      Sample = gsub(x = samp.names, pattern = "T\\d$", replacement=""),
+      Group = exp.fac,
+      Time = time.fac,
+      Abundance = dataSet$norm[,varInx]
     )
     
-    print(translator)
-
-    plot <- ggplot(data=test.matr) +
-      geom_line(size=0.2, aes(x=time, y=abundance, group=sample, color=group))
-    
-    plot <- if(draw.average){ plot + stat_summary(fun.y="mean", size=2, geom="line", aes(x=time, y=abundance, color=group, group=group))}
-    # --- return ---
-    plot
-    
+    return(translator)
 }
 
 matrix.cov <- function(x, k, trans=TRUE, c.grp=NULL, use="complete.obs")

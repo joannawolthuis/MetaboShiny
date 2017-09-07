@@ -147,7 +147,7 @@ navbarPage("MetaboShiny", id="nav_general",windowTitle = "MetaboShiny",
                                                    #        ),
                                                    # =================================================================================
                                                    tabPanel("MEBA", value="meba", 
-                                                            fluidRow(plotOutput('meba_plot')),
+                                                            fluidRow(plotlyOutput('meba_plot')),
                                                             fluidRow(div(DT::dataTableOutput('meba_tab'),style='font-size:80%'))),
                                                    # =================================================================================
                                                    tabPanel("ASCA", value="asca",

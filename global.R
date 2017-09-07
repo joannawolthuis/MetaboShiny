@@ -27,18 +27,7 @@ sourceDir <- function(path, trace = TRUE, ...) {
   }
 }
 
-
-test.matr <- PlotMBTimeProfile(cmpdNm = 125.986182503113)
-test.matr
-
-ggplot(data=test.matr) +
-  geom_line(size=0.2, aes(x=time, y=abundance, group=sample, color=group)) +
-  stat_summary(fun.y="mean", size=2, geom="line", aes(x=time, y=abundance, color=group, group=group))
-  
-
 # - make ggplot? -
-
-
 
 # === GET OPTIONS ===
 
@@ -181,7 +170,7 @@ get_mzs <- function(baseformula, charge, chosen.db){
     JOIN mzranges rng
     ON o.fullmz BETWEEN rng.mzmin AND rng.mzmax
     JOIN mzvals mz
-    ON rng.ID = mz.ID"))
+    ON rng.ID = mz.ID", width=10000, simplify=TRUE))
   print(query.two)
   
   dbExecute(conn, query.two)
