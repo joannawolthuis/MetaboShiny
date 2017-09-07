@@ -483,29 +483,21 @@ observeEvent(input$meba_tab_rows_selected,{
   if (is.null(curr_row)) return()
   curr_mz <<- meba.table[curr_row,'X']
   profile <- PlotMBTimeProfile(curr_mz)
-  # --- ggplot ---
-  # plot <- if(draw.average){
-  #   ggplot(data=profile) +
-  #     geom_line(size=0.5, aes(x=Time, y=Abundance, group=Sample, color=Group), alpha=0.5) + 
-  #     stat_summary(fun.y="mean", size=2, geom="line", aes(x=Time, y=Abundance, color=Group, group=Group)) +
-  #     scale_x_discrete(expand = c(0, 0)) +
-  #     theme_minimal(base_size = 16)
-  # } else{
-  #   ggplot(data=profile) +
-  #     geom_line(size=0.7, aes(x=Time, y=Abundance, group=Sample, color=Group)) +
-  #     scale_x_discrete(expand = c(0, 0))
-  # }
-  # output$meba_plot <- renderPlot(plot)
-  # 
-  # --- plotly ---
-  
+  print(as.numeric(levels(profile$Time)))
   output$meba_plot <- renderPlotly({
     # ---------------
     plot_ly(profile, x = ~Time, 
             y = ~Abundance, 
             color = ~Group,
             type = "scatter",
-            mode = "lines")
+            mode = "lines",
+            hoverinfo = 'text',
+            text = ~Sample,
+            colors=c("pink","skyblue"),
+            line=list(width = 1)) %>% 
+      layout(xaxis = list(range = c(min(as.numeric(profile$Time)),
+                                    max(as.numeric(profile$Time))
+                                    )))
   })
   print("here...")
 })
