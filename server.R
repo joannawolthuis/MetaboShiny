@@ -394,10 +394,10 @@ observeEvent(input$initialize,{
 })
 })
 
-observeEvent(input$tab_time, {
+observeEvent(input$nav_time, {
   if(input$nav_general != "analysis") return(NULL)
     # get excel table stuff.
-  switch(input$tab_time,
+  switch(input$nav_time,
          ipca = {
            iPCA.Anal(file.path(exp_dir, "ipca_3d_0_.json"))
            json_pca <- fromJSON(file.path(exp_dir, "ipca_3d_0_.json"))
@@ -408,17 +408,17 @@ observeEvent(input$tab_time, {
          },
          meba = {
            if(!exists("analSet")){
-             if("MB" %in% names(analSet)) return(NULL)
+             if("MB" %not in% names(analSet)) performMB(10, dir=exp_dir)
            }
-           performMB(10, dir=exp_dir)
            meba.table <<- read.csv(file.path(exp_dir, 'meba_sig_features.csv'))
          },
          asca = {
            if(!exists("analSet")){
-            if("asca" %in% names(analSet)) return(NULL)
+            if("asca" %in% names(analSet)){
+              Perform.ASCA(1, 1, 2, 2)
+              CalculateImpVarCutoff(0.05, 0.9, dir=exp_dir)
+            }
            }
-           Perform.ASCA(1, 1, 2, 2)
-           CalculateImpVarCutoff(0.05, 0.9, dir=exp_dir)
            asca.table <<- read.csv(file.path(exp_dir,'Sig_features_Model_ab.csv'))
          })
   })
@@ -440,19 +440,22 @@ output$plot_ipca <- renderPlotly({
     # ---------------
   print(json_pca$score)
     df <- t(as.data.frame(json_pca$score$xyz))
-    plot_ly() %>%
+    plot_ly(hoverinfo = 'text',
+            text = json_pca$score$name ) %>%
         add_trace(
           x = df[,1], 
           y = df[,2], 
           z = df[,3], 
           type = "scatter3d",
           color= json_pca$score[[input$ipca_factor]], colors=c("pink", "skyblue")
-        ) %>%  layout(scene = list(xaxis = list(
-          title = json_pca$score$axis[1]),
+        ) %>%  layout(scene = list(
+          xaxis = list(
+            title = json_pca$score$axis[1]),
           yaxis = list(
             title = json_pca$score$axis[2]),
           zaxis = list(
             title = json_pca$score$axis[3])))
+    
     })
   
 # =================== HEATMAP =====================
@@ -520,9 +523,9 @@ observeEvent(input$search_mz,{
   # -------------------
   match_list <- lapply(input$checkGroup, FUN=function(match.table){
     get_matches(curr_mz, match.table)})
-  result_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
+  match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
   output$match_tab <- DT::renderDataTable({
-    datatable(result_table[,-"Description"],
+    datatable(match_table[,-"Description"],
               selection = 'single',
               autoHideNavigation = T,
               options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -531,23 +534,42 @@ observeEvent(input$search_mz,{
 
 observeEvent(input$match_tab_rows_selected,{
   curr_row = input$match_tab_rows_selected
+  curr_row <<- input$match_tab_rows_selected
   if (is.null(curr_row)) return()
   # -----------------------------
-  curr_def <<- result_table[curr_row,'Description']
+  curr_def <<- match_table[curr_row,'Description']
   output$curr_definition <- renderText(curr_def$Description)
   })
 
 
 observeEvent(input$browse_db,{
   req(input$checkGroup)
-  print("hierr")
   # -------------------
   cpd_list <- lapply(input$checkGroup, FUN=function(match.table){
-   browse_db(match.table)})
+  browse_db(match.table)})
   # ------------------
-  result_table <<- unique(as.data.table(rbindlist(cpd_list)))
+  browse_table <<- unique(as.data.table(rbindlist(cpd_list)))
   output$browse_tab <- DT::renderDataTable({
-    datatable(result_table[,-"Description"],
+    datatable(browse_table[,-c("Description", "Charge")],
+              selection = 'single',
+              autoHideNavigation = T,
+              options = list(lengthMenu = c(5, 10, 20), pageLength = 5))
+  })
+})
+
+observeEvent(input$search_cpd,{
+  req(input$checkGroup)
+  req(input$browse_tab_rows_selected)
+  # -------------------
+  search_cmd <- browse_table[curr_row,c('Formula', 'Charge')]
+  print(search_cmd)
+  # -------------------
+  cpd_list <- lapply(input$checkGroup, FUN=function(match.table){
+    get_mzs(search_cmd$Formula, search_cmd$Charge, match.table)})
+  # ------------------
+  hits_table <<- unique(as.data.table(rbindlist(cpd_list)))
+  output$hits_tab <- DT::renderDataTable({
+    datatable(hits_table,
               selection = 'single',
               autoHideNavigation = T,
               options = list(lengthMenu = c(5, 10, 20), pageLength = 5))
@@ -556,10 +578,22 @@ observeEvent(input$browse_db,{
 
 observeEvent(input$browse_tab_rows_selected,{
   curr_row = input$browse_tab_rows_selected
+  curr_row <<- input$browse_tab_rows_selected
   if (is.null(curr_row)) return()
   # -----------------------------
-  curr_def <<- result_table[curr_row,'Description']
+  curr_def <<- browse_table[curr_row,'Description']
   output$browse_definition <- renderText(curr_def$Description)
+})
+
+observeEvent(input$hits_tab_rows_selected,{
+  curr_row = input$hits_tab_rows_selected
+  curr_row <<- input$hits_tab_rows_selected
+  if (is.null(curr_row)) return()
+  # -----------------------------
+  curr_mz <<- hits_table[curr_row, mzmed.pgrp]
+  print(curr_mz)
+  output$meba_plot <- renderPlot(PlotMBTimeProfile(curr_mz))
+  output$asca_plot <- renderPlot(PlotCmpdSummary(curr_mz))
 })
 
 # --- ON CLOSE ---

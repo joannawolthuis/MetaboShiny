@@ -85,8 +85,8 @@ GetSigTable.MB<-function(){
     GetSigTable(analSet$MB$stats, "MEBA");
 }
 
-PlotMBTimeProfile <- function(cmpdNm){
-    plotProfile(cmpdNm)
+PlotMBTimeProfile <- function(cmpdNm, title=cmpdNm){
+    plotProfile(cmpdNm, title)
 }
 
 
@@ -269,57 +269,34 @@ mb.MANOVA <- function (object, times, D, size, nu = NULL, Lambda = NULL, beta.d 
 
 # plot the variable across time points (x)
 # colored by experimental conditions
-plotProfile <-function (varName) {
-
+plotProfile <-function (varName, title=varName) {
+    
+    
     varInx <- colnames(dataSet$norm) == varName;
-    var <- dataSet$norm[,varInx];
+    var <- as.data.table(dataSet$norm, keep.rownames = T)[,varInx, with=FALSE];
+    print(var)
 
     time.fac <- dataSet$time.fac;
     exp.fac <- dataSet$exp.fac;
-
-    cols <- (1:length(levels(exp.fac))) + 1;
-
-        # fold the var into a matrix with
-        # each row contains values for one time poinst
-        tpNum <- length(levels(time.fac));
-        colVec <- NULL;
-        lvlVec <- NULL;
-        varMat <- NULL;
-        for(m in 1:length(levels(exp.fac))){
-            lv1 <- levels(exp.fac)[m];
-            expInx <- exp.fac == lv1;
-            expLen <- sum(expInx);
-            colNum <- expLen/tpNum;
-            subMat <- matrix(0, nrow=tpNum, ncol=colNum);
-            subCol <- rep(cols[m], colNum);
-            subLvl <- rep(lv1, colNum);
-            for(i in 1:length(levels(time.fac))){
-                lv2 <- levels(time.fac)[i];
-                timeInx <- time.fac == lv2;
-                hitInx <- expInx & timeInx;
-                subMat[i,] <- var[hitInx];
-            }
-            varMat <- cbind(varMat, subMat);
-            colVec <- c(colVec, subCol);
-            lvlVec <- c(lvlVec, subLvl);
-    }
+    samp.names <- rownames(dataSet$norm)
     
-    # increase y lim for legend
-    ylim <- GetExtendRange(range(varMat));
-
-    # note, matplot plot each col, need to transpose
-    matplot(varMat, type="b", pch=19, lty=1, col=colVec,ylim=ylim,
-            xlab="Time", ylab="Abundance",
-            main=varName,axes=FALSE);
+    translator <- data.table(
+      index = 1:length(samp.names),
+      sample = gsub(x = samp.names, pattern = "T\\d$", replacement=""),
+      group = exp.fac,
+      time = time.fac,
+      abundance = dataSet$norm[,varInx]
+    )
     
-    #time.lbl <- unique(as.character(time.fac));
-    time.lbl <- unique(levels(time.fac));
+    print(translator)
 
-    legend("top", legend=unique(lvlVec), horiz=TRUE, lty=1, bty="n", col=unique(colVec));
+    plot <- ggplot(data=test.matr) +
+      geom_line(size=0.2, aes(x=time, y=abundance, group=sample, color=group))
     
-    axis(1, label=time.lbl, at=1:length(time.lbl));
-    axis(2);
-    box();
+    plot <- if(draw.average){ plot + stat_summary(fun.y="mean", size=2, geom="line", aes(x=time, y=abundance, color=group, group=group))}
+    # --- return ---
+    plot
+    
 }
 
 matrix.cov <- function(x, k, trans=TRUE, c.grp=NULL, use="complete.obs")

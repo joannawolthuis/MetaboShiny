@@ -27,6 +27,19 @@ sourceDir <- function(path, trace = TRUE, ...) {
   }
 }
 
+
+test.matr <- PlotMBTimeProfile(cmpdNm = 125.986182503113)
+test.matr
+
+ggplot(data=test.matr) +
+  geom_line(size=0.2, aes(x=time, y=abundance, group=sample, color=group)) +
+  stat_summary(fun.y="mean", size=2, geom="line", aes(x=time, y=abundance, color=group, group=group))
+  
+
+# - make ggplot? -
+
+
+
 # === GET OPTIONS ===
 
 wd <- "/Users/jwolthuis/Google Drive/MetaboShiny"
@@ -87,7 +100,7 @@ get_exp_vars <- function(){
 browse_db <- function(chosen.db){
   conn <- dbConnect(RSQLite::SQLite(), chosen.db) # change this to proper var later
   # --- browse ---
-  result <- dbGetQuery(conn, "SELECT DISTINCT compoundname as Compound, baseformula as Formula, description as Description FROM base")
+  result <- dbGetQuery(conn, "SELECT DISTINCT compoundname as Compound, baseformula as Formula, description as Description, charge as Charge FROM base")
   # --- result ---
   result
 }
@@ -109,10 +122,8 @@ get_matches <- function(mz, chosen.db){
     ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
     AND mz.foundinmode = cpd.foundinmode
     WHERE ABS(mz.[mzmed.pgrp] - $mz) < 0.000000000001",width=10000, simplify=TRUE))
-  print(query.one)
   # 1. Find matches in range (reasonably fast <3)
   dbExecute(conn, query.one)
-  
   #  2. get isotopes for these matchies (reverse search)
   query.two <- fn$paste(strwrap(
     "CREATE TEMP TABLE isotopes AS
@@ -124,9 +135,7 @@ get_matches <- function(mz, chosen.db){
     JOIN mzranges rng
     ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax"
     , width=10000, simplify=TRUE))
-  print(query.two)
   dbExecute(conn, query.two)
-  
   query.three <-  strwrap(
     "SELECT DISTINCT base.compoundname as Compound, base.identifier as Identifier, iso.adduct as Adduct, base.description as Description 
     FROM isotopes iso
@@ -138,5 +147,55 @@ get_matches <- function(mz, chosen.db){
     , width=10000, simplify=TRUE)
   # 3. get the info you want
   results <- dbGetQuery(conn,query.three)
-  print(results)
+  # --- results ---
+  results
   }
+
+
+get_mzs <- function(baseformula, charge, chosen.db){
+  # --- connect to db ---
+  req("patdb")
+  conn <- dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
+  print(baseformula)
+  print(charge)
+  query.zero <- fn$paste("ATTACH '$chosen.db' AS db")
+  print(query.zero)
+  dbExecute(conn, query.zero)
+  # search combo of baseformula and charge matching your choice and find all possible mzvals and adducts
+  query.one <-  fn$paste(strwrap(
+    "CREATE TEMP TABLE possible_options AS
+    SELECT DISTINCT e.fullmz, e.adduct, e.isoprevalence
+    FROM db.extended e
+    WHERE e.baseformula = '$baseformula' 
+    AND e.basecharge = $charge"
+    , width=10000, simplify=TRUE))
+  print(query.one)
+  
+  dbExecute(conn, query.one)
+  
+  # join with patdb
+  query.two <- fn$paste(strwrap(
+    "CREATE TEMP TABLE isotopes AS
+    SELECT DISTINCT mz.[mzmed.pgrp], o.*
+    FROM possible_options o
+    JOIN mzranges rng
+    ON o.fullmz BETWEEN rng.mzmin AND rng.mzmax
+    JOIN mzvals mz
+    ON rng.ID = mz.ID"))
+  print(query.two)
+  
+  dbExecute(conn, query.two)
+  
+  # isofilter and only in
+  
+  query.three <-  strwrap(
+    "SELECT DISTINCT iso.[mzmed.pgrp], adduct
+    FROM isotopes iso
+    GROUP BY iso.adduct
+    HAVING COUNT(iso.isoprevalence > 99.99999999999) > 0"
+    , width=10000, simplify=TRUE)
+  print(query.three)
+  
+  results <- dbGetQuery(conn,query.three)
+  print(results)
+}
