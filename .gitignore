@@ -11,3 +11,4 @@
 /backend/db
 /backend/appdata/*
 !/backend/umcfiles/*
+session.txt

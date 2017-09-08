@@ -2,7 +2,7 @@
 ggplotMeba <- function(mz, draw.average, cols=c("Red", "Green")){
   cols <- if(is.null(cols)) c("Red", "Green") else(cols)
   print(cols)
-  profile <- getProfile(mz)
+  profile <- getProfile(mz, mode="time")
   plot <- if(draw.average){
     ggplot(data=profile) +
       geom_line(size=0.3, aes(x=Time, y=Abundance, group=Sample, color=Group, text=Sample), alpha=0.4) +
@@ -54,13 +54,8 @@ ggplotSummary <- function(mz, cols=c("Red", "Green")){
     mtext("Normalized Conc.", line=1);
     title(main=cmpdNm, out=T);
     #
-  }else if(dataSet$design.type =="time0"){
-    #
-    plotProfile(mz);
-    #
-  }else{
-    if(dataSet$design.type =="time"){ # time trend within phenotype
-      profile <- getProfile(mz)
+  }else if(dataSet$design.type =="time"){ # time trend within phenotype
+      profile <- getProfile(mz, mode="time")
       # -----------
       print(profile)
       # ggplot
@@ -72,7 +67,6 @@ ggplotSummary <- function(mz, cols=c("Red", "Green")){
         scale_color_manual(values=cols) + facet_wrap(~Group)
       # ---------------
       ggplotly(plot, tooltip="Sample")
-    }
-    #
   }
+  #
 }

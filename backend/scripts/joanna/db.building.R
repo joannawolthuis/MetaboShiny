@@ -340,7 +340,10 @@ build.extended.db <- function(dbname,
     # -----------------------
     checked.formulae <- as.data.table(check.chemform.joanna(isotopes, 
                                                             partial.results$baseformula))
-    keep.rows <- checked.formulae[warning == FALSE & monoisotopic_mass %between% c(60, 600), which=TRUE]
+    # -----------------------------
+    # keep.rows <- checked.formulae[warning == FALSE & monoisotopic_mass %between% c(60, 600), which=TRUE]
+    # -----------------------------
+    keep.rows <- checked.formulae[warning == FALSE, which=TRUE]
     # -----------------------------
     if(length(keep.rows) == 0) next
     backtrack <- data.table(baseformula = checked.formulae[keep.rows, new_formula],
@@ -433,6 +436,7 @@ build.extended.db <- function(dbname,
     # --- progress bar... ---
     setpb(pb, dbGetRowCount(results))
     total.table <- rbindlist(tab.list[!is.na(tab.list)])
+    # --- filter on m/z ===
     dbWriteTable(full.conn, "extended", total.table, append=TRUE)
   }
   dbClearResult(results)
