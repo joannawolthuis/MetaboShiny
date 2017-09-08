@@ -322,13 +322,15 @@ build.extended.db <- function(dbname,
   dbExecute(full.conn, sql.make.meta)
   # ------------------------
   limit.query <- if(cpd.limit == -1) "" else fn$paste("LIMIT $cpd.limit")
-  # ------------------------
+  limit.query <- if(cpd.limit == -1) "" else fn$paste("LIMIT $cpd.limit")
+  
+    # ------------------------
   total.formulae <- dbGetQuery(base.conn, fn$paste("SELECT Count(*)
                                FROM (SELECT DISTINCT
                                baseformula, charge
-                               FROM base $limit.query)"))
+                               FROM base $limit.query) $continue.query"))
   print(total.formulae)
-  results <- dbSendQuery(base.conn, fn$paste("SELECT DISTINCT baseformula, charge FROM base $limit.query"))
+  results <- dbSendQuery(base.conn, fn$paste("SELECT DISTINCT baseformula, charge FROM base $continue.query $limit.query"))
   formula.count <- total.formulae[1,]
   # --- start pb ---
   pb <- startpb(0, formula.count)

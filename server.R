@@ -466,9 +466,12 @@ observeEvent(input$tab_stat, {
 # ======================== IPCA ==========================
 
 output$plot_ipca <- renderPlotly({
-    req(json_pca)
+  req(json_pca)
+
+  fac.lvls <- unique(json_pca$score[[input$ipca_factor]])
+  chosen.colors <- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
+  print(chosen.colors)
     # ---------------
-  print(json_pca$score)
     df <- t(as.data.frame(json_pca$score$xyz))
     plot_ly(hoverinfo = 'text',
             text = json_pca$score$name ) %>%
@@ -477,7 +480,7 @@ output$plot_ipca <- renderPlotly({
           y = df[,2], 
           z = df[,3], 
           type = "scatter3d",
-          color= json_pca$score[[input$ipca_factor]], colors=c("pink", "skyblue")
+          color= json_pca$score[[input$ipca_factor]], colors=chosen.colors
         ) %>%  layout(scene = list(
           xaxis = list(
             title = json_pca$score$axis[1]),
@@ -536,8 +539,7 @@ observeEvent(input$asca_tab_rows_selected,{
   # do nothing if not clicked yet, or the clicked cell is not in the 1st column
   if (is.null(curr_row)) return()
   curr_mz <<- asca.table[curr_row,'X']
-  output$asca_plot <- renderPlot(PlotCmpdSummary(curr_mz))
-})
+  output$asca_plot <- renderPlotly({ggplotSummary(curr_mz, cols = color.vec())})})
 
 # --- find matches ---
 
@@ -624,12 +626,9 @@ observeEvent(input$hits_tab_rows_selected,{
   if (is.null(curr_row)) return()
   # -----------------------------
   curr_mz <<- hits_table[curr_row, mzmed.pgrp]
-  output$meba_plot <- renderPlotly({
-    # --- ggplot ---
-    ggplotMeba(mz, draw.average)
-})
-  output$asca_plot <- renderPlot(PlotCmpdSummary(curr_mz))
-})
+  output$meba_plot <- renderPlotly({ggplotMeba(curr_mz, draw.average, cols = color.vec() )})
+  output$asca_plot <- renderPlotly({ggplotSummary(curr_mz, cols = color.vec())})
+  })
 
 # --- ON CLOSE ---
 session$onSessionEnded(function() {

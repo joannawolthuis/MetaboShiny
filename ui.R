@@ -154,7 +154,7 @@ navbarPage("MetaboShiny", id="nav_general",windowTitle = "MetaboShiny",
                                                             navbarPage("Explore", 
                                                               tabPanel("Overview", icon=icon("eye"), helpText("...")),
                                                               tabPanel("Plots", icon=icon("bar-chart-o"),
-                                                                     fluidRow(plotOutput('asca_plot')),
+                                                                     fluidRow(plotlyOutput('asca_plot')),
                                                                      fluidRow(div(DT::dataTableOutput('asca_tab'),style='font-size:80%'))
                                                               )
                                                           )
