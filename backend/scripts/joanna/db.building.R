@@ -286,7 +286,7 @@ build.base.db <- function(dbname=NA,
 build.extended.db <- function(dbname, 
                               outfolder, 
                               adduct.table, 
-                              continue=T, 
+                              continue=F, 
                               cl=FALSE, 
                               fetch.limit=-1,
                               cpd.limit=-1){
