@@ -286,12 +286,9 @@ build.base.db <- function(dbname=NA,
 build.extended.db <- function(dbname, 
                               outfolder, 
                               adduct.table, 
-                              charge.mode, 
-                              continue=FALSE, 
-                              reset.base=FALSE, 
+                              continue=T, 
                               cl=FALSE, 
-                              fetch.limit=-1, 
-                              test.mode="OFF",
+                              fetch.limit=-1,
                               cpd.limit=-1){
   # --- GET BASE DATA ---
   library(enviPat)
@@ -305,9 +302,15 @@ build.extended.db <- function(dbname,
   base.db <- file.path(outfolder, paste0(dbname, ".base.db"))
   full.db <- file.path(outfolder, paste0(dbname, ".full.db"))
   # ------------------------
-  if(file.exists(full.db)) file.remove(full.db)
+  if(!continue & file.exists(full.db)) file.remove(full.db)
   full.conn <- dbConnect(RSQLite::SQLite(), full.db)
   base.conn <- dbConnect(RSQLite::SQLite(), base.db)
+  print("Attaching base...")
+  # --- add base db to the new one ---
+  dbExecute(full.conn, fn$paste("ATTACH '$base.db' AS tmp"))
+  dbExecute(full.conn, fn$paste("CREATE TABLE IF NOT EXISTS base AS SELECT * FROM tmp.base"))
+  print("Indexing base...")
+  dbExecute(full.conn, "CREATE INDEX IF NOT EXISTS b_idx1 on base(baseformula, charge)")
   # ------------------------
   sql.make.meta <- strwrap("CREATE TABLE IF NOT EXISTS extended(
                            baseformula text,
@@ -321,22 +324,36 @@ build.extended.db <- function(dbname,
                            foundinmode text)", width=10000, simplify=TRUE)
   dbExecute(full.conn, sql.make.meta)
   # ------------------------
-  limit.query <- if(cpd.limit == -1) "" else fn$paste("LIMIT $cpd.limit")
+  if(!dbExistsTable(full.conn, "extended")){continue <- FALSE}
   # ------------------------
-  total.formulae <- dbGetQuery(base.conn, fn$paste("SELECT Count(*)
-                               FROM (SELECT DISTINCT
-                               baseformula, charge
-                               FROM base $limit.query)"))
-  print(total.formulae)
-  results <- dbSendQuery(base.conn, fn$paste("SELECT DISTINCT baseformula, charge FROM base $limit.query"))
-  formula.count <- total.formulae[1,]
+  limit.query <- if(cpd.limit == -1) "" else fn$paste("LIMIT $cpd.limit")
+  if(continue){
+  continue.query <- strwrap("WHERE NOT EXISTS(SELECT DISTINCT baseformula, basecharge FROM extended e WHERE e.baseformula = b.baseformula AND e.basecharge = b.charge)", width=10000, simplify=TRUE)
+  
+  todo.from.base <- dbGetQuery(full.conn, fn$paste("SELECT DISTINCT b.baseformula, b.charge FROM base b $continue.query $limit.query"))
+  formula.count <- nrow(todo.from.base)
+  # ----------------
+  dbWriteTable(base.conn, overwrite=T, name="base_todo", value=todo.from.base)
+  get.query <- fn$paste("SELECT DISTINCT b.baseformula, b.charge FROM base_todo b $limit.query")
+  } else{
+    get.query <- fn$paste("SELECT DISTINCT b.baseformula, b.charge FROM base b $limit.query")
+    total.formulae <- dbGetQuery(base.conn, fn$paste("SELECT Count(*)
+                                                    FROM ($get.query)"))
+    formula.count <- total.formulae[1,]
+  }
+  # ------------------------
+  results <- dbSendQuery(base.conn, get.query)
   # --- start pb ---
   pb <- startpb(0, formula.count)
+  print("Starting DB generation.")
+  print(paste("Approximate batches:", formula.count / fetch.limit ))
   # --- waow, my first while in R ---
   while(!dbHasCompleted(results)){
     # --- fetch part of results ---
     partial.results <- as.data.table(dbFetch(results, fetch.limit))
     if(length(partial.results$baseformula) == 0) next
+    # -----------------------
+    print(paste(dbGetRowCount(results), formula.count, sep=" / "))
     # -----------------------
     checked.formulae <- as.data.table(check.chemform.joanna(isotopes, 
                                                             partial.results$baseformula))
@@ -353,7 +370,6 @@ build.extended.db <- function(dbname,
     do.calc <- function(x){
       row <- adduct.table[x,]
       name <- row$Name
-      if(test.mode == "ON") print(name)
       adduct <- row$Formula_add
       deduct <- row$Formula_ded
       # --- fix booleans ---
@@ -401,7 +417,6 @@ build.extended.db <- function(dbname,
       )
       # -------------------------
       isolist <- lapply(isotopes, function(isotable){
-        if(test.mode == "ON") print(isotable[[1]])
         if(isotable[[1]] == "error") return(NA)
         iso.dt <- data.table(isotable, fill=TRUE)
         result <- iso.dt[,1:2]
@@ -429,25 +444,20 @@ build.extended.db <- function(dbname,
       # --- return ---
       meta.table
     }
-    tab.list <- switch(test.mode,
-                       ON = pblapply(cl=FALSE, 1:nrow(adduct.table), FUN=function(x) do.calc(x)),
-                       OFF = parLapply(cl=cl, 1:nrow(adduct.table), fun=function(x) do.calc(x))
-    )
+    tab.list <- parLapply(cl=cl, 1:nrow(adduct.table), fun=function(x) do.calc(x))
     # --- progress bar... ---
     setpb(pb, dbGetRowCount(results))
     total.table <- rbindlist(tab.list[!is.na(tab.list)])
     # --- filter on m/z ===
-    dbWriteTable(full.conn, "extended", total.table, append=TRUE)
-  }
+    dbWriteTable(full.conn, "extended", total.table, append=T)
+    }
   dbClearResult(results)
-  # --- add base db to the new one ---
-  dbExecute(full.conn, fn$paste("ATTACH '$base.db' AS tmp"))
-  dbExecute(full.conn, fn$paste("CREATE TABLE base AS SELECT * FROM tmp.base"))
   # --- indexy ---
-  dbExecute(full.conn, "create index b_idx1 on base(baseformula, charge)")
+  print("Indexing extended table...")
   dbExecute(full.conn, "create index e_idx1 on extended(baseformula, basecharge)")
   dbExecute(full.conn, "create index e_idx2 on extended(fullmz, foundinmode)")
   # --- vacuum --- !! needs altered settings
+  print("Vacuum...")
   dbGetQuery(full.conn, "VACUUM")
   # --------------
   dbDisconnect(base.conn)
