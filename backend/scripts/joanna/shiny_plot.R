@@ -5,14 +5,14 @@ ggplotMeba <- function(mz, draw.average, cols=c("Red", "Green")){
   profile <- getProfile(mz)
   plot <- if(draw.average){
     ggplot(data=profile) +
-      geom_line(size=0.3, aes(x=Time, y=Abundance, group=Sample, color=Group), alpha=0.4) +
+      geom_line(size=0.3, aes(x=Time, y=Abundance, group=Sample, color=Group, text=Sample), alpha=0.4) +
       stat_summary(fun.y="mean", size=1.5, geom="line", aes(x=Time, y=Abundance, color=Group, group=Group)) +
       scale_x_discrete(expand = c(0, 0)) +
       theme_minimal(base_size = 10) +
       scale_color_manual(values=cols)
   } else{
     ggplot(data=profile) +
-      geom_line(size=0.7, aes(x=Time, y=Abundance, group=Sample, color=Group)) +
+      geom_line(size=0.7, aes(x=Time, y=Abundance, group=Sample, color=Group, text=Sample)) +
       scale_x_discrete(expand = c(0, 0)) +
       theme_minimal(base_size = 10) +
       scale_color_manual(values=cols)
@@ -66,7 +66,7 @@ ggplotSummary <- function(mz, cols=c("Red", "Green")){
       # ggplot
       plot <- ggplot(data=profile, aes(x=Time, y=Abundance, fill=Group, color=Group)) +
         geom_boxplot(alpha=0.4, aes(group=Group)) +
-        geom_point(aes(group=Sample),alpha=0.4, size = 2, shape = 1, position = position_dodge(width=0.1)) +
+        geom_point(aes(text=Sample),alpha=0.4, size = 2, shape = 1, position = position_dodge(width=0.1)) +
         theme_minimal(base_size = 10) +
         scale_fill_manual(values=cols) +
         scale_color_manual(values=cols) + facet_wrap(~Group)

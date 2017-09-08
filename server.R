@@ -5,6 +5,7 @@ function(input, output, session) {
 output$exp_dir <- renderText(exp_dir)
 output$proj_name <- renderText(proj_name)
 output$curr_db_dir <- renderText(dbDir)
+output$ppm <- renderText(ppm)
 
 # ====================== SETTINGS =================
 
@@ -52,6 +53,17 @@ observeEvent(input$set_proj_name, {
   close(opt_conn)
 })
 
+observeEvent(input$set_ppm, {
+  ppm <<- input$ppm
+  output$ppm <<- renderText(ppm)
+  # --- connect ---
+  opt_conn <- file(".conf")
+  options_raw <<- readLines(opt_conn)
+  options_raw[[4]] <- paste("ppm = '", ppm,"'", sep="")
+  writeLines(opt_conn,text = options_raw)
+  close(opt_conn)
+})
+
 color.pickers <- reactive({
   req(dataSet)
   # -------------
@@ -61,7 +73,9 @@ color.pickers <- reactive({
   facs <- levels(dataSet[[lbl.fac]])
   # -------------
   lapply(seq_along(facs), function(i) {
-    colourInput(inputId = paste("col", i, sep="_"), label = paste("Choose colour for", facs[i]), value = default.colours[i]) 
+    colourInput(inputId = paste("col", i, sep="_"), 
+                label = paste("Choose colour for", facs[i]), 
+                value = default.colours[i]) 
   })
 })
 
@@ -263,6 +277,15 @@ output$excel_icon <- renderImage({
        height=120)
 }, deleteFile = FALSE)
 
+output$db_icon <- renderImage({
+  # When input$n is 3, filename is ./images/image3.jpeg
+  filename <- normalizePath(file.path('./backend/img/office.png'))
+  # Return a list containing the filename and alt text
+  list(src = filename,
+       width=100,
+       height=100)
+}, deleteFile = FALSE)
+
 observeEvent(input$create_db,{
   # --------------------
   print(exp_dir)
@@ -276,6 +299,7 @@ observeEvent(input$create_db,{
     load(input$outlist_pos$datapath, verbose=T)
     setProgress(.50,message = "Creating experiment database file...")
     build.pat.db(patdb,
+                 ppm = ppm,
                  poslist = outlist_pos_renamed,
                  neglist = outlist_neg_renamed,
                  overwrite = T)

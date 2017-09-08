@@ -5,6 +5,7 @@ if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
 # === LOAD LIBRARIES ===
 
+library(shiny)
 library(ggplot2)
 library(DT)
 library(DBI)
@@ -33,7 +34,7 @@ sourceDir <- function(path, trace = TRUE, ...) {
 # === GET OPTIONS ===
 
 wd <- "/Users/jwolthuis/Google Drive/MetaboShiny"
-
+setwd(wd)
 # --- laod adduct table for general use ---
 
 load(file.path(wd, "backend/umcfiles/adducts/AdductTableWKZ.RData"))
@@ -52,6 +53,7 @@ print(options_raw)
 dbDir <<- str_match(options_raw[[1]], "(?<=')(.*)(?=')")[1,1]
 exp_dir <<- str_match(options_raw[[2]], "(?<=')(.*)(?=')")[1,1]
 proj_name <<- str_match(options_raw[[3]], "(?<=')(.*)(?=')")[1,1]
+ppm <<- as.numeric(str_match(options_raw[[4]], "(?<=')(.*)(?=')")[1,1])
 
 patdb <<- file.path(exp_dir, paste0(proj_name, ".db"))
 

@@ -322,15 +322,13 @@ build.extended.db <- function(dbname,
   dbExecute(full.conn, sql.make.meta)
   # ------------------------
   limit.query <- if(cpd.limit == -1) "" else fn$paste("LIMIT $cpd.limit")
-  limit.query <- if(cpd.limit == -1) "" else fn$paste("LIMIT $cpd.limit")
-  
-    # ------------------------
+  # ------------------------
   total.formulae <- dbGetQuery(base.conn, fn$paste("SELECT Count(*)
                                FROM (SELECT DISTINCT
                                baseformula, charge
-                               FROM base $limit.query) $continue.query"))
+                               FROM base $limit.query)"))
   print(total.formulae)
-  results <- dbSendQuery(base.conn, fn$paste("SELECT DISTINCT baseformula, charge FROM base $continue.query $limit.query"))
+  results <- dbSendQuery(base.conn, fn$paste("SELECT DISTINCT baseformula, charge FROM base $limit.query"))
   formula.count <- total.formulae[1,]
   # --- start pb ---
   pb <- startpb(0, formula.count)
@@ -460,6 +458,7 @@ build.pat.db <- function(db.name,
                       neglist, 
                       overwrite=FALSE,
                       rtree=TRUE,
+                      ppm=3,
                       rmv.cols=c("mzmin.pgrp", 
                                  "mzmax.pgrp",
                                  "fq.best", 
@@ -470,10 +469,16 @@ build.pat.db <- function(db.name,
   library(DBI)
   library(RSQLite)
   # ------------------------
+  ppm = as.numeric(ppm)
+  # ------------------------
   mzvals <- data.table(mzmed.pgrp = c(poslist$mzmed.pgrp, neglist$mzmed.pgrp),
                        foundinmode = c(rep("positive", nrow(poslist)), rep("negative", nrow(neglist))))
-  mzranges <- data.table(mzmin = c(poslist$mzmin.pgrp, neglist$mzmin.pgrp),
-                         mzmax = c(poslist$mzmax.pgrp, neglist$mzmax.pgrp))
+  mzranges <- data.table(mzmin = sapply(c(poslist$mzmed.pgrp, neglist$mzmed.pgrp), 
+                                        FUN=function(mz, ppm){
+                                          mz - mz * (ppm / 1E6)}, ppm=ppm),
+                         mzmax = sapply(c(poslist$mzmed.pgrp, neglist$mzmed.pgrp), 
+                                        FUN=function(mz, ppm){
+                                          mz + mz * (ppm / 1E6)}, ppm=ppm))
   mzintensities <- melt(as.data.table(rbind(poslist, neglist))[,(rmv.cols) := NULL], 
                         id="mzmed.pgrp", 
                         variable="filename",
