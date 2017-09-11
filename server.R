@@ -19,7 +19,6 @@ output$cute_package <- renderImage({
          height = 80)
   }, deleteFile = FALSE)
 
-
 observeEvent(input$nav_general, {
   if(input$nav_general == "setup"){
     packages <<- c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",

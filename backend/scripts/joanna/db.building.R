@@ -283,47 +283,47 @@ build.extended.db <- function(dbname,
   base.db <- file.path(outfolder, paste0(dbname, ".base.db"))
   full.db <- file.path(outfolder, paste0(dbname, ".full.db"))
   # ------------------------
-  if(!continue & file.exists(full.db)) file.remove(full.db)
+  # if(!continue & file.exists(full.db)) file.remove(full.db)
   full.conn <- dbConnect(RSQLite::SQLite(), full.db)
   base.conn <- dbConnect(RSQLite::SQLite(), base.db)
-  print("Attaching base...")
-  # --- add base db to the new one ---
-  dbExecute(full.conn, fn$paste("ATTACH '$base.db' AS tmp"))
-  dbExecute(full.conn, fn$paste("CREATE TABLE IF NOT EXISTS base AS SELECT * FROM tmp.base"))
-  print("Indexing base...")
-  dbExecute(full.conn, "CREATE INDEX IF NOT EXISTS b_idx1 on base(baseformula, charge)")
-  # ------------------------
-  sql.make.meta <- strwrap("CREATE TABLE IF NOT EXISTS extended(
-                           baseformula text,
-                           fullformula text, 
-                           basemz decimal(30,13), 
-                           fullmz decimal(30,13), 
-                           adduct text,
-                           basecharge int,
-                           totalcharge int,
-                           isoprevalence float,
-                           foundinmode text)", width=10000, simplify=TRUE)
-  dbExecute(full.conn, sql.make.meta)
-  # ------------------------
+ # ------------------------
   if(!dbExistsTable(full.conn, "extended")){continue <- FALSE}
   # ------------------------
   limit.query <- if(cpd.limit == -1) "" else fn$paste("LIMIT $cpd.limit")
   if(continue){
-      continue.query <- strwrap("WHERE NOT EXISTS(SELECT DISTINCT baseformula, basecharge FROM extended e WHERE e.baseformula = b.baseformula AND e.basecharge = b.charge)", width=10000, simplify=TRUE)
-      
-      todo.from.base <- dbGetQuery(full.conn, fn$paste("SELECT DISTINCT b.baseformula, b.charge FROM base b $continue.query $limit.query"))
-      formula.count <- nrow(todo.from.base)
-      # ----------------
-      dbWriteTable(base.conn, "base_todo", todo.from.base, overwrite=T)
-      get.query <- fn$paste("SELECT DISTINCT b.baseformula, b.charge FROM base_todo b $limit.query")
+      continue.query <- strwrap("SELECT DISTINCT baseformula, charge FROM base
+                                WHERE NOT EXISTS(SELECT DISTINCT baseformula, basecharge 
+                                FROM extended)", width=10000, simplify=TRUE)
+      total.formulae <- dbGetQuery(full.conn, fn$paste("SELECT Count(*)
+                                                    FROM ($continue.query)"))
+      formula.count <- total.formulae[1,]
+      results <- dbGetQuery(full.conn, continue.query)
     } else{
+      # --- add base db to the new one ---
+      print("Attaching base...")
+      dbExecute(full.conn, fn$paste("ATTACH '$base.db' AS tmp"))
+      dbExecute(full.conn, fn$paste("CREATE TABLE IF NOT EXISTS base AS SELECT * FROM tmp.base"))
+      print("Indexing base...")
+      dbExecute(full.conn, "CREATE INDEX IF NOT EXISTS b_idx1 on base(baseformula, charge)")
+      # ----------------------
+      sql.make.meta <- strwrap("CREATE TABLE IF NOT EXISTS extended(
+                           baseformula text,
+                               fullformula text, 
+                               basemz decimal(30,13), 
+                               fullmz decimal(30,13), 
+                               adduct text,
+                               basecharge int,
+                               totalcharge int,
+                               isoprevalence float,
+                               foundinmode text)", width=10000, simplify=TRUE)
+      dbExecute(full.conn, sql.make.meta)
+      # --------------------
       get.query <- fn$paste("SELECT DISTINCT b.baseformula, b.charge FROM base b $limit.query")
       total.formulae <- dbGetQuery(base.conn, fn$paste("SELECT Count(*)
                                                     FROM ($get.query)"))
       formula.count <- total.formulae[1,]
+      results <- dbSendQuery(base.conn, get.query)
   }
-  # ------------------------
-  results <- dbSendQuery(base.conn, get.query)
   # --- start pb ---
   pb <- startpb(0, formula.count)
   print("Starting DB generation.")

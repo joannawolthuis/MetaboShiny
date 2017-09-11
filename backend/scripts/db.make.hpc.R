@@ -59,4 +59,8 @@ session_cl <- makeCluster(nslots, type="FORK")
 
 #build.base.db("pubchem", outfolder=dbDir, cl = session_cl)
 
-build.extended.db("pubchem", continue=F, outfolder=dbDir, adduct.table = wkz.adduct.confirmed, cl=session_cl, fetch.limit=1000)
+build.extended.db("pubchem", 
+                  continue=TRUE, 
+                  outfolder=dbDir, 
+                  adduct.table = wkz.adduct.confirmed, 
+                  cl=session_cl, fetch.limit=1000)

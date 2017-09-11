@@ -12,7 +12,7 @@ install.if.not <- function(package){
 
 # ----------------------------------
 
-base.packs <- c("pacman", "shiny", "Bioconductor")
+base.packs <- c("pacman", "shiny")
 
 for(package in base.packs){
   install.if.not(package)
