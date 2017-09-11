@@ -6,7 +6,85 @@ output$exp_dir <- renderText(exp_dir)
 output$proj_name <- renderText(proj_name)
 output$curr_db_dir <- renderText(dbDir)
 output$ppm <- renderText(ppm)
+session_cl <<- NA
+patdb <<- file.path(exp_dir, paste0(proj_name, ".db"))
 
+# =================================================
+
+output$cute_package <- renderImage({
+    # When input$n is 3, filename is ./images/image3.jpeg
+    filename <- normalizePath(file.path('backend/img/new-product.png'))
+    # Return a list containing the filename and alt text
+    list(src = filename, width = 80,
+         height = 80)
+  }, deleteFile = FALSE)
+
+
+observeEvent(input$nav_general, {
+  if(input$nav_general == "setup"){
+    packages <<- c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
+                  "plotly", "parallel", "shinyFiles", "curl", "httr", "pbapply", "sqldf", "plyr", "ChemmineR", "gsubfn", 
+                  "stringr", "plotly", "reshape2", "XML", "xlsx", "colourpicker", "DT","Rserve", "ellipse", 
+                  "scatterplot3d","pls", "caret", "lattice",
+                  "Cairo", "randomForest", "e1071","gplots", "som", "xtable",
+                  "RColorBrewer", "xcms","impute", "pcaMethods","siggenes",
+                  "globaltest", "GlobalAncova", "Rgraphviz","KEGGgraph",
+                  "preprocessCore", "genefilter", "pheatmap", "igraph",
+                  "RJSONIO", "SSPA", "caTools", "ROCR", "pROC", "sva")
+    status <- sapply(packages, FUN=function(package){
+      if(package %in% rownames(installed.packages())) "Yes" else "No"
+    })
+    version <- sapply(packages, FUN=function(package){
+      if(package %in% rownames(installed.packages())){packageDescription(package)$Version} else "Not installed"
+    })
+    # --------
+    output$package_tab <- DT::renderDataTable({
+      # -------------
+      datatable(data.table(
+        Package = packages,
+        Installed = status,
+        Version = version
+      ),
+      selection = 'none',
+      autoHideNavigation = T,
+      options = list(lengthMenu = c(10, 20, 30), pageLength = 10)
+      , rownames = F)
+    })
+  }
+})
+
+observeEvent(input$install_packages, {
+  req(packages)
+  # ----------
+  p_load(char = packages, character.only = T)
+  # ---------- 
+  firstRun <<- F
+  changeOptions(".conf", "packages_installed", "Y")
+  output$package_check <- renderImage({
+    # When input$n is 3, filename is ./images/image3.jpeg
+    filename <- normalizePath(file.path('backend/img/yes.png'))
+    # Return a list containing the filename and alt text
+    list(src = filename, width = 70,
+         height = 70)
+  }, deleteFile = FALSE)
+})
+
+observeEvent(input$update_packages, {
+  req(packages)
+  # ----------
+  p_load(char = packages, update = T, character.only = T)
+  # ---------- 
+  firstRun <<- F
+  setOption(".conf", "packages_installed", "Y")
+  output$package_check <- renderImage({
+    # When input$n is 3, filename is ./images/image3.jpeg
+    filename <- normalizePath(file.path('backend/img/yes.png'))
+    # Return a list containing the filename and alt text
+    list(src = filename, width = 70,
+         height = 70)
+  }, deleteFile = FALSE)
+})
+  
 # ====================== SETTINGS =================
 
 volumes = getVolumes()
@@ -18,12 +96,7 @@ observe({
   dbDir <<- paste(c(given_dir), collapse="/")
   output$curr_db_dir <- renderText(dbDir)
   # --- connect ---
-  opt_conn <- file(".conf")
-  options_raw <<- readLines(opt_conn)
-  options_raw[[1]] <- paste("db_dir = '",dbDir,"'", sep="")
-  print(options_raw)
-  writeLines(opt_conn, text = options_raw)
-  close(opt_conn)
+  setOption(".conf", "db_dir", dbDir)
 })
 
 observe({  
@@ -34,11 +107,7 @@ observe({
   output$exp_dir <- renderText(exp_dir)
   if(!dir.exists(exp_dir)) dir.create(exp_dir)
   # --- connect ---
-  opt_conn <- file(".conf")
-  options_raw <<- readLines(opt_conn)
-  options_raw[[2]] <- paste("work_dir = '",exp_dir,"'", sep="")
-  writeLines(opt_conn, text = options_raw)
-  close(opt_conn)
+  setOption(".conf", "work_dir", exp_dir)
 })
 
 observeEvent(input$set_proj_name, {
@@ -46,22 +115,15 @@ observeEvent(input$set_proj_name, {
   patdb <<- file.path(exp_dir, paste0(proj_name,".db", sep=""))
   output$proj_name <<- renderText(proj_name)
   # --- connect ---
-  opt_conn <- file(".conf")
-  options_raw <<- readLines(opt_conn)
-  options_raw[[3]] <- paste("proj_name = '", proj_name,"'", sep="")
-  writeLines(opt_conn,text = options_raw)
-  close(opt_conn)
+  setOption(".conf", "proj_name", proj_name)
+  
 })
 
 observeEvent(input$set_ppm, {
   ppm <<- input$ppm
   output$ppm <<- renderText(ppm)
   # --- connect ---
-  opt_conn <- file(".conf")
-  options_raw <<- readLines(opt_conn)
-  options_raw[[4]] <- paste("ppm = '", ppm,"'", sep="")
-  writeLines(opt_conn,text = options_raw)
-  close(opt_conn)
+  setOption(".conf", "ppm", ppm)
 })
 
 color.pickers <- reactive({
@@ -491,10 +553,8 @@ observeEvent(input$tab_stat, {
 
 output$plot_ipca <- renderPlotly({
   req(json_pca)
-
   fac.lvls <- unique(json_pca$score[[input$ipca_factor]])
   chosen.colors <- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
-  print(chosen.colors)
     # ---------------
     df <- t(as.data.frame(json_pca$score$xyz))
     plot_ly(hoverinfo = 'text',

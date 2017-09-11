@@ -1,35 +1,12 @@
 #' @export
-wrapper.makedb <- function(source.db){
-  
-}
-
-#' @export
-wrapper.identify <- function(db.loc,
-                             outlist.loc,
-                             sources=c("internal", "hmdb", "chebi"),
-                             isofilt=TRUE,
-                             excl.adducts=c("PLACEHOLDER")){
-  print(paste("Matching outlist peaks with", paste(sources, collapse=","), "databases...", sep=" "))
-  # --- init ---
-  identified.list <- pblapply(sources, FUN=function(source){
-    results <- iden.code.binned(outlist.loc, 
-                     file.path(db.loc, paste(source, ".full.db", sep="")), 
-                     isofilt=isofilt,
-                     excl.adducts=excl.adducts)
-    results
-  })
-  # I would like a summed table too with all results (for later csv creation)
-  # --- get results ---
-  identified <- as.data.table(rbindlist(identified.list))
-  # --- return ---
-  unique(identified)
-}
-
-#' @export
 get.csv <- function(patdb, 
                     time.series = F, 
                     exp.condition = "diet",
                     max.vals = -1){
+  library(reshape2)
+  library(DBI)
+  library(RSQLite)
+  library(data.table)
   # --- announce some stuff ---
   max.cols <- if(max.vals == -1) "unlimited" else max.vals + 3
   cat(fn$paste("Creating csv for metabolomics analysis with max $max.cols columns.

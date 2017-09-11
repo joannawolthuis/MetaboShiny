@@ -5,11 +5,7 @@ build.base.db <- function(dbname=NA,
   # --- check if user chose something ---
   if(is.na(dbname)) return("~ Please choose one of the following options: HMDB, ChEBI, PubChem! d(>..w.<)b ~")
   # -------------------------------------
-  library(data.table)
-  library(pbapply)
-  library(RSQLite)
-  library(DBI)
-  library(sqldf)
+
   # --- make dir if not exists ---
   if(!dir.exists(outfolder)) dir.create(outfolder)
   # --- create .db file ---
@@ -119,8 +115,6 @@ build.base.db <- function(dbname=NA,
                                 dbDisconnect(full.conn)
                                 },
                                hmdb = function(dbname){
-                                 library(XML)
-                                 library(plyr)
                                  print("Downloading XML database...")
                                  file.url <- "http://www.hmdb.ca/system/downloads/current/hmdb_metabolites.zip"
                                  # ----
@@ -166,8 +160,6 @@ build.base.db <- function(dbname=NA,
                                  dbWriteTable(conn, "base", db.formatted, append=TRUE)
                                },
                                chebi = function(dbname){
-                                 library(minval)
-                                 print("you chose chebi")
                                  db.full <- as.data.table(download.chebi.joanna(release = "latest", woAssociations = FALSE))
                                  db.formatted <- unique(db.full[, list(compoundname = ChEBI, 
                                                                        description = DEFINITION,
@@ -187,11 +179,7 @@ build.base.db <- function(dbname=NA,
                                  dbWriteTable(conn, "base", db.formatted, append=TRUE)
                                },
                                pubchem = function(dbname, ...){
-                                 library(stringr)
-                                 library(ChemmineR)
-                                 library(parallel)
-                                 library(curl)
-                                 library(httr)
+
                                  # --- create working space ---
                                  baseLoc <- file.path(dbDir, "pubchem_source")
                                  sdf.loc <- file.path(baseLoc, "sdf")
@@ -290,15 +278,8 @@ build.extended.db <- function(dbname,
                               cl=FALSE, 
                               fetch.limit=-1,
                               cpd.limit=-1){
-  # --- GET BASE DATA ---
-  library(enviPat)
-  library(pbapply)
-  library(data.table)
-  library(RSQLite)
-  library(DBI)
-  library(sqldf)
   # ------------------------
-  data(isotopes)
+  data(isotopes, package = "enviPat")
   base.db <- file.path(outfolder, paste0(dbname, ".base.db"))
   full.db <- file.path(outfolder, paste0(dbname, ".full.db"))
   # ------------------------
@@ -328,18 +309,18 @@ build.extended.db <- function(dbname,
   # ------------------------
   limit.query <- if(cpd.limit == -1) "" else fn$paste("LIMIT $cpd.limit")
   if(continue){
-  continue.query <- strwrap("WHERE NOT EXISTS(SELECT DISTINCT baseformula, basecharge FROM extended e WHERE e.baseformula = b.baseformula AND e.basecharge = b.charge)", width=10000, simplify=TRUE)
-  
-  todo.from.base <- dbGetQuery(full.conn, fn$paste("SELECT DISTINCT b.baseformula, b.charge FROM base b $continue.query $limit.query"))
-  formula.count <- nrow(todo.from.base)
-  # ----------------
-  dbWriteTable(base.conn, overwrite=T, name="base_todo", value=todo.from.base)
-  get.query <- fn$paste("SELECT DISTINCT b.baseformula, b.charge FROM base_todo b $limit.query")
-  } else{
-    get.query <- fn$paste("SELECT DISTINCT b.baseformula, b.charge FROM base b $limit.query")
-    total.formulae <- dbGetQuery(base.conn, fn$paste("SELECT Count(*)
+      continue.query <- strwrap("WHERE NOT EXISTS(SELECT DISTINCT baseformula, basecharge FROM extended e WHERE e.baseformula = b.baseformula AND e.basecharge = b.charge)", width=10000, simplify=TRUE)
+      
+      todo.from.base <- dbGetQuery(full.conn, fn$paste("SELECT DISTINCT b.baseformula, b.charge FROM base b $continue.query $limit.query"))
+      formula.count <- nrow(todo.from.base)
+      # ----------------
+      dbWriteTable(base.conn, "base_todo", todo.from.base, overwrite=T)
+      get.query <- fn$paste("SELECT DISTINCT b.baseformula, b.charge FROM base_todo b $limit.query")
+    } else{
+      get.query <- fn$paste("SELECT DISTINCT b.baseformula, b.charge FROM base b $limit.query")
+      total.formulae <- dbGetQuery(base.conn, fn$paste("SELECT Count(*)
                                                     FROM ($get.query)"))
-    formula.count <- total.formulae[1,]
+      formula.count <- total.formulae[1,]
   }
   # ------------------------
   results <- dbSendQuery(base.conn, get.query)
@@ -479,9 +460,6 @@ build.pat.db <- function(db.name,
                                  "fq.worst",
                                  "nrsamples",
                                  "avg.int")){
-  library(reshape2)
-  library(DBI)
-  library(RSQLite)
   # ------------------------
   ppm = as.numeric(ppm)
   # ------------------------
@@ -557,10 +535,6 @@ load.excel <- function(path.to.xlsx,
                                         "Individual Data",
                                         "Pen Data",
                                         "Admin")){
-  # --- should put in patdb sql file ---
-  library(xlsx)
-  library(DBI)
-  library(RSQLite)
   # --- connect to sqlite db ---
   conn <- dbConnect(RSQLite::SQLite(), path.to.patdb)
   # -------------------------------
@@ -602,7 +576,6 @@ load.excel <- function(path.to.xlsx,
   #individual.data$sampling_date <- as.numeric(as.factor(as.Date(individual.data$sampling_date, format = "%d-%m-%y")))
   pen.data <- data.store[[4]]
   admin <- data.store[[5]]
-  print("here")
   print(individual.data)
   # --- import to patient sql file ---
   #dbWriteTable(conn, "general", general, overwrite=TRUE) # insert into BUGGED FIX LATER
@@ -617,5 +590,4 @@ load.excel <- function(path.to.xlsx,
   dbWriteTable(conn, "admin", admin, overwrite=TRUE) # insert into
   # --- disconnect ---
   dbDisconnect(conn)
-  return(colnames(setup))
 }

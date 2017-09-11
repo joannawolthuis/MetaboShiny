@@ -1,8 +1,22 @@
 # Rely on the 'WorldPhones' dataset in the datasets
 # package (which generally comes preloaded).
-
 navbarPage("MetaboShiny", id="nav_general",windowTitle = "MetaboShiny",
-           # --------------------------------------------------------------------------------------------------------------------------------
+               tabPanel("", icon = icon("download"), value="setup",
+                        # --- db check cols ---
+                        fluidRow(column(width=2),column(width=5, align="center",
+                                        h2("Setup"),
+                                        br(),
+                                        imageOutput("cute_package",inline = T),
+                                        hr(),
+                                        helpText("Needed packages:"),
+                                        div(DT::dataTableOutput('package_tab'),style='font-size:80%'),
+                                        br(),                                  
+                                        actionButton("install_packages", "Install", icon = icon("wrench")),
+                                        actionButton("update_packages", "Update", icon = icon("star")),
+                                        br(),br(),
+                                        imageOutput("package_check")
+             ))),
+          # --------------------------------------------------------------------------------------------------------------------------------
            tabPanel("Databases" , icon = icon("database"), value="database",
                     # -- header row ---
                     fluidRow(column(12, align="center",
@@ -261,3 +275,4 @@ navbarPage("MetaboShiny", id="nav_general",windowTitle = "MetaboShiny",
                                       
            )
            )
+
