@@ -55,10 +55,8 @@ nslots <- Sys.getenv( "NSLOTS" )
 print(nslots)
 
 # --- wipe session log to save file size ---
-if(file.exists("/home/cog/jwolthuis/shinyClusterLog.txt")) file.remove("/home/cog/jwolthuis/shinyClusterLog.txt")
-
 session_cl <- makeCluster(nslots, type="FORK")
 
 #build.base.db("pubchem", outfolder=dbDir, cl = session_cl)
 
-build.extended.db("pubchem", outfolder=dbDir, adduct.table = wkz.adduct.confirmed, cl=session_cl, fetch.limit=1000)
+build.extended.db("pubchem", continue=F, outfolder=dbDir, adduct.table = wkz.adduct.confirmed, cl=session_cl, fetch.limit=1000)
