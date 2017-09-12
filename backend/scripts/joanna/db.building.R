@@ -283,13 +283,13 @@ build.extended.db <- function(dbname,
   base.db <- file.path(outfolder, paste0(dbname, ".base.db"))
   full.db <- file.path(outfolder, paste0(dbname, ".full.db"))
   # ------------------------
+  if(!dbExistsTable(full.conn, "done")){continue <- FALSE}
   if(!continue & file.exists(full.db)) file.remove(full.db)
   full.conn <- dbConnect(RSQLite::SQLite(), full.db)
   base.conn <- dbConnect(RSQLite::SQLite(), base.db)
   # ------------------------
   dbExecute(full.conn, "pragma journal_mode=wal")
   # ------------------------
-  if(!dbExistsTable(full.conn, "done")){continue <- FALSE}
   # ------------------------
   limit.query <- if(cpd.limit == -1) "" else fn$paste("LIMIT $cpd.limit")
   if(continue){
