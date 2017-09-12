@@ -291,9 +291,11 @@ build.extended.db <- function(dbname,
   # ------------------------
   limit.query <- if(cpd.limit == -1) "" else fn$paste("LIMIT $cpd.limit")
   if(continue){
-      continue.query <- strwrap("SELECT DISTINCT baseformula, charge FROM base
+      continue.query <- strwrap("SELECT DISTINCT baseformula, charge FROM base b
                                 WHERE NOT EXISTS(SELECT DISTINCT baseformula, basecharge 
-                                FROM extended)", width=10000, simplify=TRUE)
+                                FROM extended e
+                                WHERE  b.baseformula = e.baseformula
+                                AND b.charge = e.basecharge)", width=10000, simplify=TRUE)
       total.formulae <- dbGetQuery(full.conn, fn$paste("SELECT Count(*)
                                                     FROM ($continue.query)"))
       formula.count <- total.formulae[1,]
