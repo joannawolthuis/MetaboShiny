@@ -283,13 +283,20 @@ build.extended.db <- function(dbname,
   base.db <- file.path(outfolder, paste0(dbname, ".base.db"))
   full.db <- file.path(outfolder, paste0(dbname, ".full.db"))
   # ------------------------
-  if(!dbExistsTable(full.conn, "done")){continue <- FALSE}
-  if(!continue & file.exists(full.db)) file.remove(full.db)
+
   full.conn <- dbConnect(RSQLite::SQLite(), full.db)
   base.conn <- dbConnect(RSQLite::SQLite(), base.db)
+  
+  if(!dbExistsTable(full.conn, "done") | continue == FALSE){
+    continue <- FALSE
+    dbDisconnect(full.conn)
+    file.remove(full.db)
+    full.conn <- dbConnect(RSQLite::SQLite(), full.db)
+    # boot.null(boot.null(boot.null(boot.null(boot.null(boot.null(boot.null(boot)))))))  
+  } 
+
   # ------------------------
-  dbExecute(full.conn, "pragma journal_mode=wal")
-  # ------------------------
+  dbExecute(full.conn, "PRAGMA journal_mode=wal") # THIS SHOULD HELP DB LOCKING if continue = ON
   # ------------------------
   limit.query <- if(cpd.limit == -1) "" else fn$paste("LIMIT $cpd.limit")
   if(continue){
