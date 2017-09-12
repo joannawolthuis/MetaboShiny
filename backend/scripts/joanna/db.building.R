@@ -291,11 +291,9 @@ build.extended.db <- function(dbname,
   # ------------------------
   limit.query <- if(cpd.limit == -1) "" else fn$paste("LIMIT $cpd.limit")
   if(continue){
-      dbExecute(full.conn, "DROP INDEX IF EXISTS e_idx_b")
-      dbExecute(full.conn, "CREATE INDEX e_idx_b on extended(baseformula, basecharge)")
       continue.query <- strwrap("SELECT DISTINCT baseformula, charge FROM base b INDEXED BY b_idx1
                                 WHERE NOT EXISTS(SELECT DISTINCT baseformula, basecharge 
-                                FROM extended e INDEXED BY e_idx_b
+                                FROM extended e
                                 WHERE  b.baseformula = e.baseformula
                                 AND b.charge = e.basecharge)", width=10000, simplify=TRUE)
       total.formulae <- dbGetQuery(full.conn, fn$paste("SELECT Count(*)
