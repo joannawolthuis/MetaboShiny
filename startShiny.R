@@ -1,4 +1,5 @@
 library(devtools)
+library(shiny)
 
 # --- install base base packages ---
 
@@ -12,19 +13,19 @@ install.if.not <- function(package){
 
 # ----------------------------------
 
-base.packs <- c("pacman", "shiny")
+base.packs <- c("pacman", "shiny", "DT", "data.table", "shinyFiles")
 
 for(package in base.packs){
   install.if.not(package)
 }
 
-library(pacman)
-library(shiny)
-
 # bioconductor 
 
 source("https://bioconductor.org/biocLite.R")
-biocLite()
+biocLite(suppressUpdates = T)
+
+wdir <<- "/Users/jwolthuis/Google Drive/MetaboShiny"
+setwd(wdir)
 
 # ---------------------------------
 

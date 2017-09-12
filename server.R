@@ -21,20 +21,11 @@ output$cute_package <- renderImage({
 
 observeEvent(input$nav_general, {
   if(input$nav_general == "setup"){
-    packages <<- c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
-                  "plotly", "parallel", "shinyFiles", "curl", "httr", "pbapply", "sqldf", "plyr", "ChemmineR", "gsubfn", 
-                  "stringr", "plotly", "reshape2", "XML", "xlsx", "colourpicker", "DT","Rserve", "ellipse", 
-                  "scatterplot3d","pls", "caret", "lattice",
-                  "Cairo", "randomForest", "e1071","gplots", "som", "xtable",
-                  "RColorBrewer", "xcms","impute", "pcaMethods","siggenes",
-                  "globaltest", "GlobalAncova", "Rgraphviz","KEGGgraph",
-                  "preprocessCore", "genefilter", "pheatmap", "igraph",
-                  "RJSONIO", "SSPA", "caTools", "ROCR", "pROC", "sva")
     status <- sapply(packages, FUN=function(package){
       if(package %in% rownames(installed.packages())) "Yes" else "No"
     })
     version <- sapply(packages, FUN=function(package){
-      if(package %in% rownames(installed.packages())){packageDescription(package)$Version} else "Not installed"
+      if(package %in% rownames(installed.packages())){packageDescription(package)$Version} else ""
     })
     # --------
     output$package_tab <- DT::renderDataTable({
@@ -58,7 +49,7 @@ observeEvent(input$install_packages, {
   p_load(char = packages, character.only = T)
   # ---------- 
   firstRun <<- F
-  changeOptions(".conf", "packages_installed", "Y")
+  setOption(".conf", "packages_installed", "Y")
   output$package_check <- renderImage({
     # When input$n is 3, filename is ./images/image3.jpeg
     filename <- normalizePath(file.path('backend/img/yes.png'))
@@ -82,14 +73,18 @@ observeEvent(input$update_packages, {
     list(src = filename, width = 70,
          height = 70)
   }, deleteFile = FALSE)
+  # --- restart ---
+  stopApp()
+  runApp(".")
 })
+  
+
+if(packages_installed == "Y"){
   
 # ====================== SETTINGS =================
 
-volumes = getVolumes()
-
 observe({  
-  shinyDirChoose(input, "get_db_dir", roots = volumes, session = session)
+  shinyDirChoose(input, "get_db_dir", roots = getVolumes(), session = session)
   given_dir <- input$get_db_dir$path
   if(is.null(given_dir)) return()
   dbDir <<- paste(c(given_dir), collapse="/")
@@ -99,7 +94,7 @@ observe({
 })
 
 observe({  
-  shinyDirChoose(input, "get_work_dir", roots = volumes, session = session)
+  shinyDirChoose(input, "get_work_dir", roots = getVolumes(), session = session)
   given_dir <- input$get_work_dir$path
   if(is.null(given_dir)) return()
   exp_dir <<- paste(c(given_dir), collapse="/")
@@ -115,7 +110,6 @@ observeEvent(input$set_proj_name, {
   output$proj_name <<- renderText(proj_name)
   # --- connect ---
   setOption(".conf", "proj_name", proj_name)
-  
 })
 
 observeEvent(input$set_ppm, {
@@ -516,6 +510,30 @@ observeEvent(input$nav_time, {
            iPCA.Anal(file.path(exp_dir, "ipca_3d_0_.json"))
            json_pca <- fromJSON(file.path(exp_dir, "ipca_3d_0_.json"))
            req(json_pca)
+           # --------------------
+           output$plot_ipca <- renderPlotly({
+             req(json_pca)
+             fac.lvls <- unique(json_pca$score[[input$ipca_factor]])
+             chosen.colors <- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
+             # ---------------
+             df <- t(as.data.frame(json_pca$score$xyz))
+             plot_ly(hoverinfo = 'text',
+                     text = json_pca$score$name ) %>%
+               add_trace(
+                 x = df[,1], 
+                 y = df[,2], 
+                 z = df[,3], 
+                 type = "scatter3d",
+                 color= json_pca$score[[input$ipca_factor]], colors=chosen.colors
+               ) %>%  layout(scene = list(
+                 xaxis = list(
+                   title = json_pca$score$axis[1]),
+                 yaxis = list(
+                   title = json_pca$score$axis[2]),
+                 zaxis = list(
+                   title = json_pca$score$axis[3])))
+             
+           })
            # but perform first...
            updateSelectInput(session, "ipca_factor",
                              choices = grep(names(json_pca$score), pattern = "^fac[A-Z]", value = T))
@@ -525,6 +543,15 @@ observeEvent(input$nav_time, {
              if("MB" %not in% names(analSet)) performMB(10, dir=exp_dir)
            }
            meba.table <<- read.csv(file.path(exp_dir, 'meba_sig_features.csv'))
+           output$meba_tab <- DT::renderDataTable({
+             req(meba.table)
+             # -------------
+             datatable(meba.table, 
+                       selection = 'single',
+                       colnames = c("Mass/charge", "Hotelling/T2 score"),
+                       autoHideNavigation = T,
+                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+           })
          },
          asca = {
            if(!exists("analSet")){
@@ -534,9 +561,17 @@ observeEvent(input$nav_time, {
             }
            }
            asca.table <<- read.csv(file.path(exp_dir,'Sig_features_Model_ab.csv'))
+           output$asca_tab <- DT::renderDataTable({
+             req(asca.table)
+             # -------------
+             datatable(asca.table, 
+                       selection = 'single',
+                       colnames = c("Mass/charge", "Leverage", "SPE"),
+                       autoHideNavigation = T,
+                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+           })
          })
   })
-
 
 observeEvent(input$tab_stat, {
   if(input$nav_general != "analysis") return(NULL)
@@ -548,49 +583,8 @@ observeEvent(input$tab_stat, {
          fc = {FC.Anal.unpaired(2.0, 1)})
 })
 
-# ======================== IPCA ==========================
 
-output$plot_ipca <- renderPlotly({
-  req(json_pca)
-  fac.lvls <- unique(json_pca$score[[input$ipca_factor]])
-  chosen.colors <- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
-    # ---------------
-    df <- t(as.data.frame(json_pca$score$xyz))
-    plot_ly(hoverinfo = 'text',
-            text = json_pca$score$name ) %>%
-        add_trace(
-          x = df[,1], 
-          y = df[,2], 
-          z = df[,3], 
-          type = "scatter3d",
-          color= json_pca$score[[input$ipca_factor]], colors=chosen.colors
-        ) %>%  layout(scene = list(
-          xaxis = list(
-            title = json_pca$score$axis[1]),
-          yaxis = list(
-            title = json_pca$score$axis[2]),
-          zaxis = list(
-            title = json_pca$score$axis[3])))
-    
-    })
-  
-# =================== HEATMAP =====================
-
-#output$time_heat_plot <- renderPlot(
-  #PlotHeatMap2("euclidean","ward.D","bwm","overview", F, 1, F, F)
-#)
-
-# =================== MEBA ========================
-
-output$meba_tab <- DT::renderDataTable({
-  req(meba.table)
-  # -------------
-  datatable(meba.table, 
-            selection = 'single',
-            colnames = c("Mass/charge", "Hotelling/T2 score"),
-            autoHideNavigation = T,
-            options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-})
+# ================ MEBA ========================
 
 observeEvent(input$meba_tab_rows_selected,{
   curr_row = input$meba_tab_rows_selected
@@ -602,18 +596,6 @@ observeEvent(input$meba_tab_rows_selected,{
     # --- ggplot ---
     ggplotMeba(curr_mz, draw.average, cols = color.vec())
   })
-})
-
-# ======================== ASCA ============================
-
-output$asca_tab <- DT::renderDataTable({
-  req(asca.table)
-  # -------------
-  datatable(asca.table, 
-            selection = 'single',
-            colnames = c("Mass/charge", "Leverage", "SPE"),
-            autoHideNavigation = T,
-            options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
 })
 
 # check for selected mz row
@@ -717,4 +699,5 @@ observeEvent(input$hits_tab_rows_selected,{
 session$onSessionEnded(function() {
   if(any(!is.na(session_cl))) stopCluster(session_cl)
 })
+}
 }

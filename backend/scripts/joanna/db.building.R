@@ -17,7 +17,7 @@ build.base.db <- function(dbname=NA,
   function.of.choice <- switch(tolower(dbname),
                                internal = function(dbname){ # BOTH NOISE AND NORMAL
                                  # --- uses csv package ---
-                                 int.loc <- file.path(wd, "backend","umcfiles", "internal")
+                                 int.loc <- file.path(wdir, "backend","umcfiles", "internal")
                                  # --- non-noise ---
                                  internal.base.db <- read.csv(file.path(int.loc, 
                                                                      "TheoreticalMZ_NegPos_noNoise.txt"),
@@ -40,7 +40,7 @@ build.base.db <- function(dbname=NA,
                                  # --- write ---
                                  dbWriteTable(conn, "base", db.formatted, append=TRUE)},
                                noise = function(dbname){
-                                 int.loc <- file.path(wd, "backend","umcfiles", "internal")
+                                 int.loc <- file.path(wdir, "backend","umcfiles", "internal")
                                  # --- noise ---
                                  noise.base.db <- read.csv(file.path(int.loc, 
                                                                   "TheoreticalMZ_NegPos_yesNoise.txt"), 
@@ -283,33 +283,37 @@ build.extended.db <- function(dbname,
   base.db <- file.path(outfolder, paste0(dbname, ".base.db"))
   full.db <- file.path(outfolder, paste0(dbname, ".full.db"))
   # ------------------------
-  # if(!continue & file.exists(full.db)) file.remove(full.db)
+  if(!continue & file.exists(full.db)) file.remove(full.db)
   full.conn <- dbConnect(RSQLite::SQLite(), full.db)
   base.conn <- dbConnect(RSQLite::SQLite(), base.db)
- # ------------------------
-  if(!dbExistsTable(full.conn, "extended")){continue <- FALSE}
+  # ------------------------
+  dbExecute(full.conn, "pragma journal_mode=wal")
+  # ------------------------
+  if(!dbExistsTable(full.conn, "done")){continue <- FALSE}
   # ------------------------
   limit.query <- if(cpd.limit == -1) "" else fn$paste("LIMIT $cpd.limit")
   if(continue){
-      continue.query <- strwrap("SELECT DISTINCT baseformula, charge FROM base b INDEXED BY b_idx1
-                                WHERE NOT EXISTS(SELECT DISTINCT baseformula, basecharge 
-                                FROM extended e
-                                WHERE  b.baseformula = e.baseformula
-                                AND b.charge = e.basecharge)", width=10000, simplify=TRUE)
-      total.formulae <- dbGetQuery(full.conn, fn$paste("SELECT Count(*)
+      dbExecute(base.conn, fn$paste("ATTACH '$full.db' as db"))
+      continue.query <- strwrap("SELECT DISTINCT baseformula, charge FROM base b
+                                WHERE NOT EXISTS(SELECT DISTINCT baseformula, charge 
+                                FROM db.done d
+                                WHERE  b.baseformula = d.baseformula
+                                AND b.charge = d.basecharge)", width=10000, simplify=TRUE)
+      total.formulae <- dbGetQuery(base.conn, fn$paste("SELECT Count(*)
                                                     FROM ($continue.query)"))
       formula.count <- total.formulae[1,]
-      results <- dbSendQuery(full.conn, continue.query)
+      results <- dbSendQuery(base.conn, continue.query)
     } else{
       # --- add base db to the new one ---
       print("Attaching base...")
       dbExecute(full.conn, fn$paste("ATTACH '$base.db' AS tmp"))
+      dbExecute(full.conn, fn$paste("CREATE TABLE IF NOT EXISTS done(baseformula text, basecharge text)"))
       dbExecute(full.conn, fn$paste("CREATE TABLE IF NOT EXISTS base AS SELECT * FROM tmp.base"))
       print("Indexing base...")
       dbExecute(full.conn, "CREATE INDEX IF NOT EXISTS b_idx1 on base(baseformula, charge)")
       # ----------------------
       sql.make.meta <- strwrap("CREATE TABLE IF NOT EXISTS extended(
-                           baseformula text,
+                               baseformula text,
                                fullformula text, 
                                basemz decimal(30,13), 
                                fullmz decimal(30,13), 
@@ -320,7 +324,7 @@ build.extended.db <- function(dbname,
                                foundinmode text)", width=10000, simplify=TRUE)
       dbExecute(full.conn, sql.make.meta)
       # --------------------
-      get.query <- fn$paste("SELECT DISTINCT b.baseformula, b.charge FROM base b INDEXED BY b_idx1 $limit.query")
+      get.query <- fn$paste("SELECT DISTINCT b.baseformula, b.charge FROM base b $limit.query")
       total.formulae <- dbGetQuery(base.conn, fn$paste("SELECT Count(*)
                                                     FROM ($get.query)"))
       formula.count <- total.formulae[1,]
@@ -431,22 +435,24 @@ build.extended.db <- function(dbname,
     # --- progress bar... ---
     setpb(pb, dbGetRowCount(results))
     total.table <- rbindlist(tab.list[!is.na(tab.list)])
+    done.table <- unique(total.table[,c("baseformula", "basecharge")])
     # --- filter on m/z ===
     dbWriteTable(full.conn, "extended", total.table, append=T)
+    print("here...")
+    dbWriteTable(full.conn, "done", done.table, append=T)
+    print("here2...")
     }
   dbClearResult(results)
   # --- indexy ---
   print("Indexing extended table...")
   dbExecute(full.conn, "create index e_idx1 on extended(baseformula, basecharge)")
   dbExecute(full.conn, "create index e_idx2 on extended(fullmz, foundinmode)")
-  # --- vacuum --- !! needs altered settings
-  print("Vacuum...")
-  dbGetQuery(full.conn, "VACUUM")
+  print("Disconnecting...")
   # --------------
   dbDisconnect(base.conn)
   dbDisconnect(full.conn)
   on.exit(closepb(pb))
-  return("Done! :-)")
+  print("Done! :-)")
 }
 
 #' @export

@@ -7,6 +7,9 @@ if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
 library(pacman)
 library(shiny)
+library(DT)
+library(data.table)
+library(shinyFiles)
 # library(ggplot2)
 # library(DBI)
 # library(RSQLite)
@@ -81,11 +84,34 @@ sourceAll <- function(where,
   return("TRUE");
 }
 
-# --------------------------
+packages <<- c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
+               "plotly", "parallel", "shinyFiles", "curl", "httr", "pbapply", "sqldf", "plyr", "ChemmineR", "gsubfn", 
+               "stringr", "plotly", "reshape2", "XML", "xlsx", "colourpicker", "DT","Rserve", "ellipse", 
+               "scatterplot3d","pls", "caret", "lattice",
+               "Cairo", "randomForest", "e1071","gplots", "som", "xtable",
+               "RColorBrewer", "xcms","impute", "pcaMethods","siggenes",
+               "globaltest", "GlobalAncova", "Rgraphviz","KEGGgraph",
+               "preprocessCore", "genefilter", "pheatmap", "igraph",
+               "RJSONIO", "SSPA", "caTools", "ROCR", "pROC", "sva")
 
+# --------------------------
+wdir <<- "/Users/jwolthuis/Google Drive/MetaboShiny"
+setwd(wdir)
 options <- getOptions(".conf")
 dbDir <<- options$db_dir
 exp_dir <<- options$work_dir
 proj_name <<- options$proj_name
 ppm <<- options$ppm
 packages_installed <<- options$packages_installed
+
+if(packages_installed == "Y"){
+  
+  p_load(char = packages, character.only = T)
+  load(file.path(wdir, "backend/umcfiles/adducts/AdductTableWKZ.RData"))
+  sourceDir(file.path(wdir, "backend/scripts/joanna"))
+  data(isotopes, package = "enviPat")
+  
+}
+
+
+print("loaded global settings")
