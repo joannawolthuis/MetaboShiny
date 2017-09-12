@@ -297,7 +297,7 @@ build.extended.db <- function(dbname,
       total.formulae <- dbGetQuery(full.conn, fn$paste("SELECT Count(*)
                                                     FROM ($continue.query)"))
       formula.count <- total.formulae[1,]
-      results <- dbGetQuery(full.conn, continue.query)
+      results <- dbSendQuery(full.conn, continue.query)
     } else{
       # --- add base db to the new one ---
       print("Attaching base...")
