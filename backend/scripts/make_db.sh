@@ -1,6 +1,6 @@
 #!/bin/bash
-#$ -N makedb_cont
-#$ -l h_rt=72:00:00
+#$ -N makedb_lc
+#$ -l h_rt=120:00:00
 #$ -l h_vmem=40G
 #$ -pe threaded 39
 #$ -m beas
