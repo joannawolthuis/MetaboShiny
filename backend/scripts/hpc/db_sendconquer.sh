@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -N db_conquer
-#$ -l h_rt=05:00:00
+#$ -l h_rt=12:00:00
 #$ -l h_vmem=40G
 #$ -M j.c.wolthuis-2@umcutrecht.nl
 #$ -m beas
