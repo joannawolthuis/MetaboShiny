@@ -229,6 +229,3 @@ build.extended.db.collect <- function(dbname,
   print("Done! :-)")
 }
 
-build.extended.db.collect("pubchem", "/hpc/cog_bioinf/ridder/users/jwolthuis/MetaboShiny/backend/db")
-
-

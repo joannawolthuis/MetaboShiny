@@ -34,11 +34,11 @@ build.extended.db.collect <- function(dbname,
                            foundinmode text)", width=10000, simplify=TRUE)
   dbExecute(full.conn, sql.make.meta)
   # --- progress bar... ---
-  sapply(files, FUN=function(f){
+  for(f in files){
     print(f)
     res <- fread(f, sep = " ", quote = '"')
     dbWriteTable(full.conn, "extended", res, append=T)
-  })
+  }
   # --- indexy ---
   print("Indexing extended table...")
   dbExecute(full.conn, "CREATE INDEX IF NOT EXISTS b_idx1 on base(baseformula, charge)")
