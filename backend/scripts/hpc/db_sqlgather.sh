@@ -8,7 +8,7 @@
 # -----
 
 cd /hpc/cog_bioinf/ridder/users/jwolthuis/MetaboShiny/backend/db
-TMPSPACE=/hpc/cog_bioinf/ridder/users/jwolthuis/MetaboShiny/backend/tmp
+TMPDIR=/hpc/cog_bioinf/ridder/users/jwolthuis/MetaboShiny/backend/tmp
 
 # OTHER OPTION - not really faster but more direct
 echo "ATTACH '/hpc/cog_bioinf/ridder/users/jwolthuis/MetaboShiny/backend/db/pubchem.base.db' AS tmp;" >> imports.sqlite
