@@ -1,13 +1,14 @@
 #!/bin/bash
 #$ -N db_sqlgather
 #$ -l h_rt=24:00:00
-#$ -l h_vmem=40G
+#$ -l h_vmem=20G
 #$ -M j.c.wolthuis-2@umcutrecht.nl
 #$ -m beas
 
 # -----
 
 cd /hpc/cog_bioinf/ridder/users/jwolthuis/MetaboShiny/backend/db
+TMPSPACE=/hpc/cog_bioinf/ridder/users/jwolthuis/MetaboShiny/backend/tmp
 
 # OTHER OPTION - not really faster but more direct
 echo "ATTACH '/hpc/cog_bioinf/ridder/users/jwolthuis/MetaboShiny/backend/db/pubchem.base.db' AS tmp;" >> imports.sqlite
