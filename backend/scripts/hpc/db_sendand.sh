@@ -1,4 +1,4 @@
-#$ -S /home/cog/jwolthuis/R-3.4.0/bin/Rscript --no-save
+#!/home/cog/jwolthuis/R-3.4.0/bin/Rscript --no-save
 #$ -M J.C.Wolthuis-2@umcutrecht.nl
 #$ -m beas
 

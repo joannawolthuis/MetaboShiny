@@ -4,7 +4,7 @@
 
 # ---------
 
-dividejob="qsub db_senddivide.sh -cwd"
+dividejob="qsub -N db_divide db_senddivide.sh -cwd"
 
 $dividejob
 
