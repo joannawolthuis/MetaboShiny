@@ -129,7 +129,6 @@ build.extended.db.batch <- function(dbname,
   write.table(total.table, file.path(csv_out, csv_name), row.names = F)
   print("done!")
   # --- return ---
-  # write result table to folder
 }
 
 build.extended.db.batch(dbname, dbdir, batchnum = i, script_dir = script_dir, wkz.adduct.confirmed)

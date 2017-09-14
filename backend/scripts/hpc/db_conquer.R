@@ -16,11 +16,11 @@ build.extended.db.collect <- function(dbname,
   full.conn <- dbConnect(RSQLite::SQLite(), full.db)
   
   print("Attaching base...")
-  #dbExecute(full.conn, fn$paste("ATTACH '$base.db' AS tmp"))
-  #dbExecute(full.conn, fn$paste("CREATE TABLE IF NOT EXISTS done(baseformula text, basecharge text)"))
-  #dbExecute(full.conn, fn$paste("CREATE TABLE IF NOT EXISTS base AS SELECT * FROM tmp.base"))
+  dbExecute(full.conn, fn$paste("ATTACH '$base.db' AS tmp"))
+  dbExecute(full.conn, fn$paste("CREATE TABLE IF NOT EXISTS done(baseformula text, basecharge text)"))
+  dbExecute(full.conn, fn$paste("CREATE TABLE IF NOT EXISTS base AS SELECT * FROM tmp.base"))
   print("Indexing base...")
-  #dbExecute(full.conn, "CREATE INDEX IF NOT EXISTS b_idx1 on base(baseformula, charge)")
+  dbExecute(full.conn, "CREATE INDEX IF NOT EXISTS b_idx1 on base(baseformula, charge)")
   sql.make.meta <- strwrap("DROP TABLE IF EXISTS extended")
   sql.make.meta <- strwrap("CREATE TABLE IF NOT EXISTS extended(
                            baseformula text,
