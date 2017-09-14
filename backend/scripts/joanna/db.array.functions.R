@@ -177,7 +177,6 @@ build.extended.db.batch <- function(dbname,
   # write result table to folder
 }
 
-
 build.extended.db.collect <- function(dbname,
                                       out_folder){
   library(RSQLite)
