@@ -131,4 +131,4 @@ build.extended.db.batch <- function(dbname,
   # write result table to folder
 }
 
-build.extended.db.batch(dbname, dbdir, batchnum = i, script_dir = scriptdir, wkz.adduct.confirmed)
+build.extended.db.batch(dbname, dbdir, batchnum = i, script_dir = script_dir, wkz.adduct.confirmed)

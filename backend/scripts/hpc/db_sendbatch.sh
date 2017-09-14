@@ -1,6 +1,5 @@
 #$ -S /bin/bash
 #$ -M J.C.Wolthuis-2@umcutrecht.nl
-#$ -m beas
 
 nfiles="$(find backend/db/pubchem_csv -type f -name '*.csv' | wc -l)"
 nfiles_nw="$(echo -e ${nfiles} | tr -d '[:space:]')"
