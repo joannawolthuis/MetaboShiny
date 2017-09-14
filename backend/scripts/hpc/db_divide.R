@@ -28,8 +28,6 @@ build.extended.db.send <- function(dbname,
   for(i in seq_along(split_res)){
     tab <- split_res[[i]]
     csv_name <- paste0(dbname, "_", i, ".csv")
-    print(csv_name)
-    print(tab)
     # ---
     write.csv(x = tab, file = file.path(csv_folder, csv_name))
   }

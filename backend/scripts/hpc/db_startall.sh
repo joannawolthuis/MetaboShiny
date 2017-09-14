@@ -16,7 +16,7 @@ $sendbatchjob
 
 # ------
 
-collectjob="qsub -N db_conquer -hold_jid db_and db_sendconquer.sh -cwd"
+collectjob="qsub -N db_conquer db_sendconquer.sh -cwd"
 
 $collectjob
 
