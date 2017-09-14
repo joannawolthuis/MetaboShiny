@@ -4,7 +4,7 @@
 
 # ---------
 
-dividejob="qsub -N db_divide db_senddivide.sh -l h_rt=03:00:00 -l h_vmem=10G -cwd"
+dividejob="qsub db_senddivide.sh -cwd"
 
 $dividejob
 
