@@ -127,6 +127,7 @@ build.extended.db.batch <- function(dbname,
   print(tab.list[[1]])
   total.table <- rbindlist(tab.list[!is.na(tab.list)])
   write.table(total.table, file.path(csv_out, csv_name), row.names = F)
+  print("done!")
   # --- return ---
   # write result table to folder
 }
