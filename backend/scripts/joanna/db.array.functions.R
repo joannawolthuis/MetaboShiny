@@ -229,13 +229,3 @@ build.extended.db.collect <- function(dbname,
   print("Done! :-)")
 }
 
-# --- examples ---
-
-build.extended.db.send("hmdb",out_folder = dbDir,fetch.limit = 100)
-
-for(i in 1:10){
-  build.extended.db.batch("hmdb", dbDir, batchnum = i, script_dir = "./backend/scripts/joanna", wkz.adduct.confirmed)
-}
-
-build.extended.db.collect("hmdb",dbDir)
-
