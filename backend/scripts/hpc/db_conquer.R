@@ -17,7 +17,6 @@ build.extended.db.collect <- function(dbname,
   
   print("Attaching base...")
   dbExecute(full.conn, fn$paste("ATTACH '$base.db' AS tmp"))
-  dbExecute(full.conn, fn$paste("CREATE TABLE IF NOT EXISTS done(baseformula text, basecharge text)"))
   dbExecute(full.conn, fn$paste("CREATE TABLE IF NOT EXISTS base AS SELECT * FROM tmp.base"))
   print("Indexing base...")
   dbExecute(full.conn, "CREATE INDEX IF NOT EXISTS b_idx1 on base(baseformula, charge)")
