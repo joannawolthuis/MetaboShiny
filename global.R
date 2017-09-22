@@ -104,14 +104,13 @@ exp_dir <<- options$work_dir
 proj_name <<- options$proj_name
 ppm <<- options$ppm
 packages_installed <<- options$packages_installed
+mz <- NULL
 
 if(packages_installed == "Y"){
-  
   p_load(char = packages, character.only = T)
   load(file.path(wdir, "backend/umcfiles/adducts/AdductTableWKZ.RData"))
   sourceDir(file.path(wdir, "backend/scripts/joanna"))
   data(isotopes, package = "enviPat")
-  
 }
 
 

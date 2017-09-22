@@ -302,7 +302,7 @@ Normalization<-function(rowNorm, transNorm, scaleNorm, ref=NULL, ratio=FALSE, ra
     }
 
     # scaling
-    if(scaleNorm=='MeanCenter'){
+    if(scaleNorm==''){
             data<-apply(data, 2, MeanCenter);
             scalenm<-"MeanCenter";
     }else if(scaleNorm=='AutoNorm'){

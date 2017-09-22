@@ -119,6 +119,7 @@ observeEvent(input$set_ppm, {
   setOption(".conf", "ppm", ppm)
 })
 
+
 color.pickers <- reactive({
   req(dataSet)
   # -------------
@@ -389,19 +390,27 @@ observeEvent(input$import_csv, {
          height = 20)
   }, deleteFile = FALSE)
   mz <<- fread(csv_loc, sep="\t", header = T)
-  print(head(mz[,1:5]))
-  overview_tab <- t(data.table(
-    Mz = ncol(mz) - 3,
-    Samples = nrow(mz),
-    Groups = length(unique(mz$Label)),
-    Timepoints = length(unique(mz$Time))
-  ))
+  overview_tab <- if(input$exp_type == "time"){
+    t(data.table(keep.rownames = F,
+                 Mz = ncol(mz) - 3,
+                 Samples = nrow(mz),
+                 Times = length(unique(mz$Time)),
+                 Groups = length(unique(mz$Label))
+    ))
+  } else{
+    t(data.table(keep.rownames = F,
+                 Mz = ncol(mz) - 3,
+                 Samples = nrow(mz),
+                 Groups = length(unique(mz$Label))
+    )) 
+  }
   output$csv_tab <- DT::renderDataTable({
     datatable(overview_tab, 
               selection = 'single',
               autoHideNavigation = T,
               options = list(lengthMenu = c(10, 30, 50), pageLength = 30,scrollX=TRUE, scrollY=TRUE))
-  })  })
+    })
+  })
 
 output$csv_icon <- renderImage({
   # When input$n is 3, filename is ./images/image3.jpeg
@@ -461,7 +470,33 @@ observeEvent(input$check_excel, {
   )
 })
 
+ref.selector <- reactive({
+  # -------------
+  if(input$norm_type == "CompNorm"){
+      fluidRow(hr(),
+      selectInput('ref_var', 
+                  'What is your reference condition?', 
+                  choices = c("")),
+      actionButton("check_csv", 
+                   "Get options", 
+                   icon=icon("search")),
+      hr())
+  }
+})
+
+observeEvent(input$check_csv, {
+  # get excel table stuff.
+  updateSelectInput(session, "ref_var",
+                    choices = get_ref_vars(input$exp_var)
+  )
+})
+output$ref_select <- renderUI({ref.selector()})
+
 observeEvent(input$initialize,{
+  req(input$filt_type)
+  req(input$norm_type)
+  req(input$trans_type)
+  req(input$scale_type)
   # match
   withProgress({
   # get curr values from: input$ exp_type, filt_type, norm_type, scale_type, trans_type (later)
@@ -484,7 +519,7 @@ observeEvent(input$initialize,{
   RemoveMissingPercent(percent=0.5)
   ImputeVar(method="min")
   ReplaceMin()
-  FilterVariable("iqr", "F", 25)
+  FilterVariable(input$filt_type, "F", 25)
   # # ---- here facA/facB disappears?? ---
   GetPrenormSmplNms()
   GetPrenormFeatureNms()
@@ -494,7 +529,10 @@ observeEvent(input$initialize,{
   UpdateFeatureItems()
   # # ------------------------------------
   setProgress(.2, "Normalizing data...")
-  Normalization("QuantileNorm", "LogNorm", "AutoNorm", ratio=FALSE, ratioNum=20)
+  Normalization(rowNorm = input$norm_type,
+                transNorm = input$trans_type,
+                scaleNorm = input$scale_type,
+                ref = input$ref_var,ratio = F,ratioNum = 20)
   setProgress(.3, "Plotting variable overview...")
   output$var_norm_plot <- renderPlot(PlotNormSummary())
   setProgress(.4, "Plotting sample overview...")
@@ -539,8 +577,8 @@ observeEvent(input$nav_time, {
                              choices = grep(names(json_pca$score), pattern = "^fac[A-Z]", value = T))
          },
          meba = {
-           if(!exists("analSet")){
-             if("MB" %not in% names(analSet)) performMB(10, dir=exp_dir)
+           if(!exists("analSet$MB")){
+            performMB(10, dir=exp_dir)
            }
            meba.table <<- read.csv(file.path(exp_dir, 'meba_sig_features.csv'))
            output$meba_tab <- DT::renderDataTable({
@@ -554,12 +592,10 @@ observeEvent(input$nav_time, {
            })
          },
          asca = {
-           if(!exists("analSet")){
-            if("asca" %in% names(analSet)){
+           if(!exists("analSet$asca")){
               Perform.ASCA(1, 1, 2, 2)
               CalculateImpVarCutoff(0.05, 0.9, dir=exp_dir)
             }
-           }
            asca.table <<- read.csv(file.path(exp_dir,'Sig_features_Model_ab.csv'))
            output$asca_tab <- DT::renderDataTable({
              req(asca.table)

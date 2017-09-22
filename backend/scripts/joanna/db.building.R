@@ -45,9 +45,9 @@ build.base.db <- function(dbname=NA,
                                  noise.base.db <- read.csv(file.path(int.loc, 
                                                                   "TheoreticalMZ_NegPos_yesNoise.txt"), 
                                                         sep="\t")
-                                 db.formatted <- data.table(compoundname = noise.base.db[,1],
-                                                            description = str_match(noise.base.db[,1], "(?<=\\().+?(?=\\))"),
-                                                            baseformula = noise.base.db[,2], 
+                                 db.formatted <- data.table(compoundname = as.character(noise.base.db[,1]),
+                                                            description = as.character(str_match(noise.base.db[,1], "(?<=\\().+?(?=\\))")),
+                                                            baseformula = as.character(noise.base.db[,2]), 
                                                             identifier=c("Noise"),
                                                             charge=c(0))
                                  dbWriteTable(conn, "base", db.formatted, append=TRUE)
@@ -58,7 +58,7 @@ build.base.db <- function(dbname=NA,
                                 # --- create base table here too ---
                                 dbExecute(full.conn, statement = "create table base(compoundname text, description text, baseformula text, identifier text, charge text)")
                                 # --- create extended table ---
-                                sql.make.meta <- strwrap("create table extended(
+                                sql.make.meta <- strwrap("CREATE TABLE IF NOT EXISTS extended(
                                                          baseformula text,
                                                          fullformula text, 
                                                          basemz decimal(30,13), 
@@ -87,7 +87,7 @@ build.base.db <- function(dbname=NA,
                                       fullformula = as.character(row[2]), 
                                       basemz = c(mz.pos, mz.neg), 
                                       fullmz = c(mz.pos, mz.neg), 
-                                      adduct = if(is.na(adduct)) c("M+H", "M-H") else c(adduct),
+                                      adduct = if(is.na(adduct)) c("M+H", "M-H") else c(as.character(adduct)),
                                       basecharge = c(0),
                                       totalcharge = c(1, -1),
                                       isoprevalence = c(100),
@@ -104,10 +104,13 @@ build.base.db <- function(dbname=NA,
                                              "base", 
                                              db.formatted, 
                                              append=TRUE)
+                                print("heree")
+                                
                                 dbWriteTable(full.conn, 
                                              "extended", 
                                              db.formatted.full, 
                                              append=TRUE)
+                                print("heree")
                                 # --- index ---
                                 dbExecute(full.conn, "create index b_idx1 on base(baseformula, charge)")
                                 dbExecute(full.conn, "create index e_idx1 on extended(baseformula, basecharge)")

@@ -4,6 +4,13 @@ get_exp_vars <- function(){
   dbGetQuery(conn, "PRAGMA table_info(setup)")$name
 }
 
+get_ref_vars <- function(fac="Label"){
+  req(csv_loc)
+  csv <- fread(csv_loc, sep="\t", header = T)
+  # --- return ---
+  unique(csv$Label)
+  }
+
 #' @export
 browse_db <- function(chosen.db){
   conn <- dbConnect(RSQLite::SQLite(), chosen.db) # change this to proper var later
