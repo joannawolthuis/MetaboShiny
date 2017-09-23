@@ -10,14 +10,6 @@ library(shiny)
 library(DT)
 library(data.table)
 library(shinyFiles)
-# library(ggplot2)
-# library(DBI)
-# library(RSQLite)
-# library(gsubfn)
-# library(data.table)
-# library(pbapply)
-# library(enviPat)
-# library(jsonlite)
 
 
 # ------------------------

@@ -532,7 +532,7 @@ observeEvent(input$initialize,{
   Normalization(rowNorm = input$norm_type,
                 transNorm = input$trans_type,
                 scaleNorm = input$scale_type,
-                ref = input$ref_var,ratio = F,ratioNum = 20)
+                ref = input$ref_var)
   setProgress(.3, "Plotting variable overview...")
   output$var_norm_plot <- renderPlot(PlotNormSummary())
   setProgress(.4, "Plotting sample overview...")

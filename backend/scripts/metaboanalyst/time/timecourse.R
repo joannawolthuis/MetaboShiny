@@ -18,7 +18,6 @@ performMB<-function(topPerc = 10, dir="."){
     time.fac <- dataSet$time.fac;
     exp.fac <- dataSet$exp.fac;
     sbj <- vector(mode="character", length=nrow(dataSet$norm));
-
     time.len <- length(levels(time.fac));
     exp.len <- numeric(length(levels(exp.fac)));
     # to record the replicates in each exp condition
