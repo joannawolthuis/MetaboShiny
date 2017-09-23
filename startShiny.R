@@ -1,5 +1,3 @@
-library(devtools)
-library(shiny)
 
 # --- install base base packages ---
 
@@ -19,14 +17,17 @@ for(package in base.packs){
   install.if.not(package)
 }
 
+library(devtools)
+library(shiny)
+
 # bioconductor 
 
 source("https://bioconductor.org/biocLite.R")
 biocLite(suppressUpdates = T)
 
-wdir <<- "/Users/jwolthuis/Google Drive/MetaboShiny"
+wdir <<- "C:/Users/joby/Software/MetaboShiny"
 setwd(wdir)
-
+wdir
 # ---------------------------------
 
-runApp(".")
+runApp(".",launch.browser = T)

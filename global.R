@@ -10,14 +10,6 @@ library(shiny)
 library(DT)
 library(data.table)
 library(shinyFiles)
-# library(ggplot2)
-# library(DBI)
-# library(RSQLite)
-# library(gsubfn)
-# library(data.table)
-# library(pbapply)
-# library(enviPat)
-# library(jsonlite)
 
 
 # ------------------------
@@ -93,11 +85,11 @@ packages <<- c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
                "RColorBrewer", "xcms","impute", "pcaMethods","siggenes",
                "globaltest", "GlobalAncova", "Rgraphviz","KEGGgraph",
                "preprocessCore", "genefilter", "pheatmap", "igraph",
-               "RJSONIO", "SSPA", "caTools", "ROCR", "pROC", "sva")
+               "RJSONIO", "SSPA", "caTools", "ROCR", "pROC", "sva", "rJava")
 
 # --------------------------
-wdir <<- "/Users/jwolthuis/Google Drive/MetaboShiny"
-setwd(wdir)
+#wdir <<- "/Users/jwolthuis/Google Drive/MetaboShiny"
+#setwd(wdir)
 options <- getOptions(".conf")
 dbDir <<- options$db_dir
 exp_dir <<- options$work_dir
@@ -106,12 +98,12 @@ ppm <<- options$ppm
 packages_installed <<- options$packages_installed
 mz <- NULL
 
-if(packages_installed == "Y"){
-  p_load(char = packages, character.only = T)
-  load(file.path(wdir, "backend/umcfiles/adducts/AdductTableWKZ.RData"))
-  sourceDir(file.path(wdir, "backend/scripts/joanna"))
-  data(isotopes, package = "enviPat")
-}
+# if(packages_installed == "Y"){
+#   p_load(char = packages, character.only = T)
+#   load(file.path(wdir, "backend/umcfiles/adducts/AdductTableWKZ.RData"))
+#   sourceDir(file.path(wdir, "backend/scripts/joanna"))
+#   data(isotopes, package = "enviPat")
+# }
 
 
 print("loaded global settings")

@@ -40,6 +40,7 @@ build.base.db <- function(dbname=NA,
                                  # --- write ---
                                  dbWriteTable(conn, "base", db.formatted, append=TRUE)},
                                noise = function(dbname){
+                                 print("noisee")
                                  int.loc <- file.path(wdir, "backend","umcfiles", "internal")
                                  # --- noise ---
                                  noise.base.db <- read.csv(file.path(int.loc, 
