@@ -264,7 +264,10 @@ UnzipUploadedFile<-function(inPath, outPath, rmFile=T){
 }
 
 # clean data and remove -Inf, Inf, NA, negative and 0
-CleanData <-function(bdata, removeNA=T, removeNeg=T, removeConst=T){
+CleanData <-function(bdata, 
+                     removeNA=T, 
+                     removeNeg=T, 
+                     removeConst=T){
 
     if(sum(bdata==Inf, na.rm=TRUE)>0){
         inx <- bdata == Inf;

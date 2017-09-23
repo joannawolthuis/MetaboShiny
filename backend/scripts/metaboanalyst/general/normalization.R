@@ -166,7 +166,12 @@ UpdateFeatureItems<-function(){
 }
 
 
-Normalization<-function(rowNorm, transNorm, scaleNorm, ref=NULL, ratio=FALSE, ratioNum=20){
+Normalization<-function(rowNorm, 
+                        transNorm, 
+                        scaleNorm, 
+                        ref=NULL, 
+                        ratio=FALSE, 
+                        ratioNum=20){
 
     data <- dataSet$proc;
     print(names(dataSet))
@@ -199,13 +204,11 @@ Normalization<-function(rowNorm, transNorm, scaleNorm, ref=NULL, ratio=FALSE, ra
 
     colNames <- colnames(data);
     rowNames <- rownames(data);
-    print(names(dataSet))
-    # row-wise normalization
+
+        # row-wise normalization
     if(rowNorm=="QuantileNorm"){
         data<-QuantileNormalize(data);
-        # this can introduce constant variables if a variable is 
-        # at the same rank across all samples (replaced by its average across all)
-
+        # this can introduce constant variables if a variable is at the same rank across all samples (replaced by its average across all)
         varCol <- apply(data, 2, var, na.rm=T);
         constCol <- (varCol == 0 | is.na(varCol));
         constNum <- sum(constCol, na.rm=T);
@@ -324,7 +327,7 @@ Normalization<-function(rowNorm, transNorm, scaleNorm, ref=NULL, ratio=FALSE, ra
 
     # need to do some sanity check, for log there may be Inf values introduced
     data <- CleanData(data, T, F);
-
+    View(head(data))
     dataSet$norm <- as.data.frame(data);
     dataSet$cls <- cls;
 
