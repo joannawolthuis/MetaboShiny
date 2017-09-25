@@ -9,8 +9,77 @@ output$exp_dir <- renderText(exp_dir)
 output$proj_name <- renderText(proj_name)
 output$curr_db_dir <- renderText(dbDir)
 output$ppm <- renderText(ppm)
+output$analUI <- renderUI({helpText("Please choose a mode")})
 session_cl <<- NA
 patdb <<- file.path(exp_dir, paste0(proj_name, ".db"))
+
+
+time.anal.ui <- reactive({
+  # -------------
+  navbarPage("Time Series", id="nav_time",
+             tabPanel("iPCA", value = "ipca", 
+                      plotlyOutput("plot_ipca" ),
+                      selectInput("ipca_factor", label = "Color based on:", choices =list("Time"="facA",
+                                                                                          "Experimental group"="facB"))
+             ),
+             # =================================================================================
+             #tabPanel("Heatmap",
+             #         plotOutput("time_heat_plot", height='600px', width='600px')
+             #        ),
+             #tabPanel("MANOVA",
+             #        ),
+             # =================================================================================
+             tabPanel("MEBA", value="meba", 
+                      fluidRow(plotlyOutput('meba_plot')),
+                      fluidRow(div(DT::dataTableOutput('meba_tab'),style='font-size:80%'))),
+             # =================================================================================
+             tabPanel("ASCA", value="asca",
+                      fluidRow(plotlyOutput('asca_plot')),
+                      fluidRow(div(DT::dataTableOutput('asca_tab'),style='font-size:80%'))
+             )
+             # =================================================================================
+  )
+})
+
+stat.anal.ui <- reactive({
+  navbarPage("Standard analysis", id="tab_stat",
+             tabPanel("PCA", value = "pca", 
+                      navbarPage("Explore", id="tab_pca",
+                                 tabPanel("Overview", icon=icon("eye"), helpText(plotlyOutput("plot_pca"),
+                                                                                 selectInput("pca_x", label = "X axis:", choices = c("PC1", "PC2", "PC3", "PC4", "PC5")),
+                                                                                 selectInput("pca_y", label = "Y axis:", choices =c("PC1", "PC2", "PC3", "PC4", "PC5")),
+                                                                                 selectInput("pca_z", label = "Z axis:", choices =c("PC1", "PC2", "PC3", "PC4", "PC5")))),
+                                 
+                                 tabPanel("PLS-DA", icon=icon("bar-chart-o"),
+                                          helpText("placeholder")
+                                 )
+                      )
+             ),
+             # =================================================================================
+             tabPanel("Heatmap",
+                      plotOutput("heatmap", height='600px', width='600px')
+             ),
+             # =================================================================================
+             tabPanel("T-test", value="tt", 
+                      fluidRow(plotOutput('tt_plot')),
+                      fluidRow(div(DT::dataTableOutput('tt_tab'),style='font-size:80%'))),
+             tabPanel("Fold-change", value="fc",
+                      fluidRow(plotOutput('fc_plot')),
+                      fluidRow(div(DT::dataTableOutput('fc_tab'),style='font-size:80%'))),
+             # =================================================================================
+             tabPanel("Volcano", value="volc",
+                      fluidRow(plotOutput('volc_plot')),
+                      fluidRow(div(DT::dataTableOutput('volc_tab'),style='font-size:80%')))
+  )
+})
+
+observeEvent(input$exp_type,{
+  whichUI <- switch(input$exp_type,
+                       time={time.anal.ui()},
+                       stat={stat.anal.ui()})
+  print(whichUI)
+  output$analUI <- renderUI({whichUI})
+})
 
 # ===== PACKAGE LOADING ====
 
@@ -30,25 +99,36 @@ observeEvent(input$nav_general, {
            library(curl)
            library(enviPat)
            data(isotopes, package = "enviPat")
-           session_cl <<- if(is.na(session_cl)) makeCluster(detectCores()) else session_cl
-           clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
-             "isotopes",
-             "subform.joanna", 
-             "mergeform.joanna",
-             "multiform.joanna",
-             "check.ded.joanna",
-             "data.table",
-             "rbindlist",
-             "isopattern"
-           ))
+           if(any(is.na(session_cl))){
+             session_cl <<- makeCluster(detectCores())
+             clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
+               "isotopes",
+               "subform.joanna", 
+               "mergeform.joanna",
+               "multiform.joanna",
+               "check.ded.joanna",
+               "data.table",
+               "rbindlist",
+               "isopattern"
+             ))
+             }
          },
-         upload = {},
+         upload = {
+           library(RSQLite)
+           library(DBI)
+           library(reshape2)
+           library(data.table)
+           library(xlsx)
+         },
          document = {
            library(plotly)
-           library(data.table)},
+           library(data.table)
+           library(reshape2)},
          filter = {
            library(plotly)
-           library(data.table)},
+           library(data.table)
+           library(Cairo)
+           library(preprocessCore)},
          analysis = {
            library(plotly)
            library(data.table)},
@@ -437,7 +517,10 @@ observeEvent(input$import_csv, {
          height = 20)
   }, deleteFile = FALSE)
   mz <<- fread(csv_loc, sep="\t", header = T)
-  overview_tab <- if(input$exp_type == "time"){
+  # --- detect mode from csv ---
+  mode <<- if("Time" %not in% names(mz)[1:5]) "stat" else "time"
+  # ----------------------------
+  overview_tab <- if(mode == "time"){
     t(data.table(keep.rownames = F,
                  Mz = ncol(mz) - 3,
                  Samples = nrow(mz),
@@ -592,7 +675,10 @@ observeEvent(input$nav_time, {
     # get excel table stuff.
   switch(input$nav_time,
          ipca = {
-           iPCA.Anal(file.path(exp_dir, "ipca_3d_0_.json"))
+           if("ipca" %not in% names(analSet)){
+             iPCA.Anal(file.path(exp_dir, "ipca_3d_0_.json"))
+             analSet[["ipca"]] <- "Done!"             
+           }
            json_pca <- fromJSON(file.path(exp_dir, "ipca_3d_0_.json"))
            req(json_pca)
            # --------------------
@@ -624,7 +710,7 @@ observeEvent(input$nav_time, {
                              choices = grep(names(json_pca$score), pattern = "^fac[A-Z]", value = T))
          },
          meba = {
-           if(!exists("analSet$MB")){
+           if("MB" %not in% names(analSet)){
             performMB(10, dir=exp_dir)
            }
            meba.table <<- read.csv(file.path(exp_dir, 'meba_sig_features.csv'))
@@ -639,8 +725,8 @@ observeEvent(input$nav_time, {
            })
          },
          asca = {
-           if(!exists("analSet$asca")){
-              Perform.ASCA(1, 1, 2, 2)
+           if("asca" %not in% names(analSet)){
+             Perform.ASCA(1, 1, 2, 2)
               CalculateImpVarCutoff(0.05, 0.9, dir=exp_dir)
             }
            asca.table <<- read.csv(file.path(exp_dir,'Sig_features_Model_ab.csv'))
