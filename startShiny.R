@@ -11,23 +11,22 @@ install.if.not <- function(package){
 
 # ----------------------------------
 
-base.packs <- c("pacman", "shiny", "DT", "data.table", "shinyFiles")
+install.if.not("pacman")
 
-for(package in base.packs){
-  install.if.not(package)
-}
+base.packs <- c("pacman", "shiny", "DT", "data.table", "shinyFiles", "plotly")
 
-library(devtools)
-library(shiny)
+p_load(char=base.packs)
 
 # bioconductor 
 
 source("https://bioconductor.org/biocLite.R")
 biocLite(suppressUpdates = T)
 
-wdir <<- "C:/Users/joby/Software/MetaboShiny"
-setwd(wdir)
-wdir
+#wdir <<- "C:/Users/joby/Software/MetaboShiny" #windows
+#wdir <<- "/Users/jwolthuis/Google Drive/MetaboShiny/" #mac
+
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #rstudio only...
+
 # ---------------------------------
 
-runApp(".",launch.browser = T)
+runApp(".")

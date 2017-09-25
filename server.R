@@ -4,6 +4,7 @@ library(shiny)
   
 # ===== defaults =====
 
+
 output$exp_dir <- renderText(exp_dir)
 output$proj_name <- renderText(proj_name)
 output$curr_db_dir <- renderText(dbDir)
@@ -27,12 +28,30 @@ observeEvent(input$nav_general, {
            library(XML)
            library(minval)
            library(curl)
+           library(enviPat)
+           data(isotopes, package = "enviPat")
+           session_cl <<- if(is.na(session_cl)) makeCluster(detectCores()) else session_cl
+           clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
+             "isotopes",
+             "subform.joanna", 
+             "mergeform.joanna",
+             "multiform.joanna",
+             "check.ded.joanna",
+             "data.table",
+             "rbindlist",
+             "isopattern"
+           ))
          },
          upload = {},
-         document = {library(plotly)
-                     library(data.table)},
-         filter = {},
-         analysis = {},
+         document = {
+           library(plotly)
+           library(data.table)},
+         filter = {
+           library(plotly)
+           library(data.table)},
+         analysis = {
+           library(plotly)
+           library(data.table)},
          options = {
            library(shinyFiles)
            library(colourpicker)
@@ -281,8 +300,8 @@ observeEvent(input$check_pubchem,{
 
 # --- build db ---
 
+
 observeEvent(input$build_umc,{
-  session_cl <<- if(is.na(session_cl)) makeCluster(4) else session_cl
   # ---------------------------
   withProgress({
     setProgress(message = "Working...")
@@ -299,7 +318,6 @@ observeEvent(input$build_umc,{
 })
 
 observeEvent(input$build_hmdb,{
-  session_cl <<- if(is.na(session_cl)) makeCluster(4, type="FORK") else session_cl
   withProgress({
     setProgress(message = "Working...")
     build.base.db("hmdb", outfolder=dbDir)
@@ -314,7 +332,6 @@ observeEvent(input$build_hmdb,{
 })
 
 observeEvent(input$build_chebi,{
-  session_cl <<- if(is.na(session_cl)) makeCluster(4, type="FORK") else session_cl
   withProgress({
     setProgress(message = "Working...")
     build.base.db("chebi", outfolder=dbDir)
@@ -325,7 +342,6 @@ observeEvent(input$build_chebi,{
 })
 
 observeEvent(input$build_pubchem,{
-  session_cl <<- if(is.na(session_cl)) makeCluster(4, type="FORK") else session_cl
   withProgress({
     setProgress(message = "Working...")
     build.base.db("pubchem", outfolder=dbDir, cl = session_cl)

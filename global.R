@@ -105,5 +105,6 @@ mz <- NULL
 #   data(isotopes, package = "enviPat")
 # }
 
+sourceDir(file.path(wdir, "backend/scripts/joanna"))
 
 print("loaded global settings")

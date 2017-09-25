@@ -283,7 +283,6 @@ build.extended.db <- function(dbname,
                               fetch.limit=-1,
                               cpd.limit=-1){
   # ------------------------
-  data(isotopes, package = "enviPat")
   base.db <- file.path(outfolder, paste0(dbname, ".base.db"))
   full.db <- file.path(outfolder, paste0(dbname, ".full.db"))
   # ------------------------
@@ -382,7 +381,7 @@ build.extended.db <- function(dbname,
       backtrack$adducted <- backtrack$multiform
       # --- is adduction necessary? ---
       if(adduct != FALSE){
-        formulae.add <- mergeform(formula1 = backtrack$baseformula, 
+        formulae.add <- mergeform.joanna(formula1 = backtrack$baseformula, 
                                   formula2 = adduct)
         backtrack$adducted <- formulae.add
       }
@@ -395,7 +394,7 @@ build.extended.db <- function(dbname,
                                               deduct = deduct))
         if(length(can.deduct) == 0) return(NA)
         deductibles <- formulae[can.deduct]
-        formulae.ded <- subform(deductibles, deduct)
+        formulae.ded <- subform.joanna(deductibles, deduct)
         backtrack$final[can.deduct] <- formulae.ded
         backtrack <- backtrack[can.deduct]
       }
