@@ -17,7 +17,7 @@ build.base.db <- function(dbname=NA,
   function.of.choice <- switch(tolower(dbname),
                                internal = function(dbname){ # BOTH NOISE AND NORMAL
                                  # --- uses csv package ---
-                                 int.loc <- file.path(wdir, "backend","umcfiles", "internal")
+                                 int.loc <- file.path(".", "backend","umcfiles", "internal")
                                  # --- non-noise ---
                                  internal.base.db <- read.csv(file.path(int.loc, 
                                                                      "TheoreticalMZ_NegPos_noNoise.txt"),
@@ -41,7 +41,7 @@ build.base.db <- function(dbname=NA,
                                  dbWriteTable(conn, "base", db.formatted, append=TRUE)},
                                noise = function(dbname){
                                  print("noisee")
-                                 int.loc <- file.path(wdir, "backend","umcfiles", "internal")
+                                 int.loc <- file.path(".", "backend","umcfiles", "internal")
                                  # --- noise ---
                                  noise.base.db <- read.csv(file.path(int.loc, 
                                                                   "TheoreticalMZ_NegPos_yesNoise.txt"), 
@@ -283,6 +283,7 @@ build.extended.db <- function(dbname,
                               fetch.limit=-1,
                               cpd.limit=-1){
   # ------------------------
+  data(isotopes, package = "enviPat")
   base.db <- file.path(outfolder, paste0(dbname, ".base.db"))
   full.db <- file.path(outfolder, paste0(dbname, ".full.db"))
   # ------------------------
