@@ -14,20 +14,22 @@
 
 # perform PCA analysis
 PCA.Anal<-function(){
-    pca<-prcomp(dataSet$norm, center=TRUE, scale=F);
-
+  # ---------------------------
+    pca<-prcomp(dataSet$norm, center=TRUE, scale=F)
     # obtain variance explained
-    sum.pca<-summary(pca);
-    imp.pca<-sum.pca$importance;
-    std.pca<-imp.pca[1,]; # standard devietation
-    var.pca<-imp.pca[2,]; # variance explained by each PC
-    cum.pca<-imp.pca[3,]; # cummulated variance explained
+    sum.pca<-summary(pca)
+    imp.pca<-sum.pca$importance
+    std.pca<-imp.pca[1,] # standard devietation
+    var.pca<-imp.pca[2,] # variance explained by each PC
+    cum.pca<-imp.pca[3,] # cummulated variance explained
 
     # store the item to the pca object
-    analSet$pca<-append(pca, list(std=std.pca, variance=var.pca, cum.var=cum.pca));
-    analSet <<- analSet;
-    write.csv(signif(analSet$pca$x,5), file="pca_score.csv");
-    write.csv(signif(analSet$pca$rotation,5), file="pca_loadings.csv");
+    analSet$pca <- append(pca, list(std=std.pca, 
+                                    variance=var.pca, 
+                                    cum.var=cum.pca))
+    analSet <<- analSet
+    write.csv(signif(analSet$pca$x,5), file="pca_score.csv")
+    write.csv(signif(analSet$pca$rotation,5), file="pca_loadings.csv")
 }
 
 # perform PCA analysis
@@ -35,79 +37,84 @@ PCA.Flip<-function(axisOpt){
     pca<-analSet$pca;
     # store the item to the pca object
     if(axisOpt == "x"){
-        pca$x[,1] <- -pca$x[,1];
-        pca$rotation[,1] <- -pca$rotation[,1];
+        pca$x[,1] <- -pca$x[,1]
+        pca$rotation[,1] <- -pca$rotation[,1]
     }else if(axisOpt == "y"){
-        pca$x[,2] <- -pca$x[,2];
-        pca$rotation[,2] <- -pca$rotation[,2];
+        pca$x[,2] <- -pca$x[,2]
+        pca$rotation[,2] <- -pca$rotation[,2]
     }else{ # all
         pca$x <- -pca$x;
-        pca$rotation <- -pca$rotation;
+        pca$rotation <- -pca$rotation
     }
-    write.csv(signif(pca$x,5), file="pca_score.csv");
-    write.csv(signif(pca$rotation,5), file="pca_loadings.csv");
-    analSet$pca<-pca;
-    analSet <<- analSet;
+    write.csv(signif(pca$x,5), file="pca_score.csv")
+    write.csv(signif(pca$rotation,5), file="pca_loadings.csv")
+    analSet$pca <- pca
+    analSet <<- analSet
 }
 
 # format: png, tiff, pdf, ps, svg
 PlotPCAPairSummary<-function(imgName, format="png", dpi=72, width=NA, pc.num){
-    pclabels <- paste("PC", 1:pc.num, "\n", round(100*analSet$pca$variance[1:pc.num],1), "%");
-    imgName = paste(imgName, "dpi", dpi, ".", format, sep="");
+    pclabels <- paste("PC", 1:pc.num, "\n", round(100*analSet$pca$variance[1:pc.num],1), "%")
+    imgName = paste(imgName, "dpi", dpi, ".", format, sep="")
     if(is.na(width)){
-        w <- 10;
+        w <- 10
     }else if(width == 0){
-        w <- 8;
-        imgSet$pca.pair <- imgName;
-        imgSet <<- imgSet;
+        w <- 8
+        imgSet$pca.pair <- imgName
+        imgSet <<- imgSet
     }else{
-        w <- width;
+        w <- width
     }
-    h <- w;
-    
+    h <- w
+    # ----------------------------
     if(dataSet$cls.type == "disc"){
-        pairs(analSet$pca$x[,1:pc.num], col=GetColorSchema(), pch=as.numeric(dataSet$cls)+1, labels=pclabels);
+        pairs(analSet$pca$x[,1:pc.num], 
+              col = GetColorSchema(), 
+              pch = as.numeric(dataSet$cls) + 1, 
+              labels = pclabels)
     }else{
         pairs(analSet$pca$x[,1:pc.num], labels=pclabels);
     }
-    
+    # ----------------------------
 }
 
 # scree plot
 PlotPCAScree<-function(imgName, format="png", dpi=72, width=NA, scree.num){
-    stds <-analSet$pca$std[1:scree.num];
-	pcvars<-analSet$pca$variance[1:scree.num];
-	cumvars<-analSet$pca$cum.var[1:scree.num];
-
-    ylims <- range(c(pcvars,cumvars));
-    extd<-(ylims[2]-ylims[1])/10
-    miny<- ifelse(ylims[1]-extd>0, ylims[1]-extd, 0);
-    maxy<- ifelse(ylims[2]+extd>1, 1.0, ylims[2]+extd);
-
-    imgName = paste(imgName, "dpi", dpi, ".", format, sep="");
+    stds <-analSet$pca$std[1:scree.num]
+	  pcvars<-analSet$pca$variance[1:scree.num]
+	  cumvars<-analSet$pca$cum.var[1:scree.num]
+	  # ----------------------------
+    ylims <- range(c(pcvars,cumvars))
+    extd <-(ylims[2] - ylims[1]) / 10
+    miny <- ifelse(ylims[1] - extd > 0, ylims[1] - extd, 0)
+    maxy <- ifelse(ylims[2] + extd > 1, 1.0, ylims[2] + extd)
+    # ----------------------------
+    imgName = paste(imgName, "dpi", dpi, ".", format, sep="")
     if(is.na(width)){
-        w <- 10;
+        w <- 10
     }else if(width == 0){
-        w <- 8;
-        imgSet$pca.scree<-imgName;
+        w <- 8
+        imgSet$pca.scree <- imgName;
         imgSet <<- imgSet;
     }else{
         w <- width;
     }
-    h <- w*2/3;
-    
+    h <- w * 2/3;
+    # ----------------------------
     par(mar=c(5,5,6,3));
     plot(pcvars, type='l', col='blue', main='Scree plot', xlab='PC index', ylab='Variance explained', ylim=c(miny, maxy), axes=F)
     text(pcvars, labels =paste(100*round(pcvars,3),'%'), adj=c(-0.3, -0.5), srt=45, xpd=T)
     points(pcvars, col='red');
-
+    # ----------------------------
     lines(cumvars, type='l', col='green')
     text(cumvars, labels =paste(100*round(cumvars,3),'%'), adj=c(-0.3, -0.5), srt=45, xpd=T)
     points(cumvars, col='red');
-
+    # ----------------------------
     abline(v=1:scree.num, lty=3);
     axis(2);
-    axis(1, 1:length(pcvars), 1:length(pcvars));
+    axis(1, 
+         1:length(pcvars), 
+         1:length(pcvars));
     
 }
 

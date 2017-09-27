@@ -11,7 +11,6 @@ library(DT)
 library(data.table)
 library(shinyFiles)
 
-
 # ------------------------
 
 sourceDir <- function(path, trace = TRUE, ...) {
@@ -80,7 +79,7 @@ sourceAll <- function(where,
 packages <<- c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
                "plotly", "parallel", "shinyFiles", "curl", "httr", "pbapply", "sqldf", "plyr", "ChemmineR", "gsubfn", 
                "stringr", "plotly", "reshape2", "XML", "xlsx", "colourpicker", "DT","Rserve", "ellipse", 
-               "scatterplot3d","pls", "caret", "lattice",
+               "scatterplot3d","pls", "caret", "lattice", "compiler",
                "Cairo", "randomForest", "e1071","gplots", "som", "xtable",
                "RColorBrewer", "xcms","impute", "pcaMethods","siggenes",
                "globaltest", "GlobalAncova", "Rgraphviz","KEGGgraph",
@@ -105,6 +104,6 @@ mz <- NULL
 #   data(isotopes, package = "enviPat")
 # }
 
-sourceDir(file.path(wdir, "backend/scripts/joanna"))
+sourceDir("backend/scripts/joanna")
 
 print("loaded global settings")

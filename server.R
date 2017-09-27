@@ -45,10 +45,10 @@ stat.anal.ui <- reactive({
   navbarPage("Standard analysis", id="tab_stat",
              tabPanel("PCA", value = "pca", 
                       navbarPage("Explore", id="tab_pca",
-                                 tabPanel("Overview", icon=icon("eye"), helpText(plotlyOutput("plot_pca"),
-                                                                                 selectInput("pca_x", label = "X axis:", choices = c("PC1", "PC2", "PC3", "PC4", "PC5")),
-                                                                                 selectInput("pca_y", label = "Y axis:", choices =c("PC1", "PC2", "PC3", "PC4", "PC5")),
-                                                                                 selectInput("pca_z", label = "Z axis:", choices =c("PC1", "PC2", "PC3", "PC4", "PC5")))),
+                                 tabPanel("PCA", icon=icon("eye"), helpText(plotlyOutput("plot_pca"),
+                                                                                 selectInput("pca_x", label = "X axis:", choices = c("PC1", "PC2", "PC3", "PC4", "PC5", "Other")),
+                                                                                 selectInput("pca_y", label = "Y axis:", choices =c("PC1", "PC2", "PC3", "PC4", "PC5","Other")),
+                                                                                 selectInput("pca_z", label = "Z axis:", choices =c("PC1", "PC2", "PC3", "PC4", "PC5","Other")))),
                                  
                                  tabPanel("PLS-DA", icon=icon("bar-chart-o"),
                                           helpText("placeholder")
@@ -325,7 +325,6 @@ output$pubchem_logo <- renderImage({
 
 # --- check for db files ---
 
-
 observeEvent(input$check_umc,{
   db_folder_files <- list.files(dbDir)
   is.present <- "internal.full.db" %in% db_folder_files | "noise.full.db" %in% db_folder_files
@@ -380,8 +379,7 @@ observeEvent(input$check_pubchem,{
 
 # --- build db ---
 
-
-observeEvent(input$build_umc,{
+observeEvent(input$build_umc, {
   # ---------------------------
   withProgress({
     setProgress(message = "Working...")
@@ -603,14 +601,16 @@ observeEvent(input$check_excel, {
 ref.selector <- reactive({
   # -------------
   if(input$norm_type == "CompNorm"){
-      fluidRow(hr(),
-      selectInput('ref_var', 
-                  'What is your reference condition?', 
-                  choices = c("")),
-      actionButton("check_csv", 
-                   "Get options", 
-                   icon=icon("search")),
-      hr())
+      fluidRow(
+        hr(),
+        selectInput('ref_var', 
+                    'What is your reference condition?', 
+                    choices = c("")),
+        actionButton("check_csv", 
+                     "Get options", 
+                     icon=icon("search")),
+        hr()
+        )
   }
 })
 
@@ -703,7 +703,6 @@ observeEvent(input$nav_time, {
                    title = json_pca$score$axis[2]),
                  zaxis = list(
                    title = json_pca$score$axis[3])))
-             
            })
            # but perform first...
            updateSelectInput(session, "ipca_factor",
@@ -746,7 +745,36 @@ observeEvent(input$tab_stat, {
   if(input$nav_general != "analysis") return(NULL)
   # get excel table stuff.
   switch(input$tab_stat,
-         pca = {PCA.Anal()},
+         pca = {
+           PCA.Anal()
+           output$plot_pca <- renderPlotly({
+             req(analSet$pca)
+             req(input$pcax)
+             req(input$pcay)
+             req(input$pcaz)
+             fac.lvls <- unique(dataSet$facB.lbl)
+             dataSet$facA.lbl
+             
+             chosen.colors <- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
+             # ---------------
+             df <- t(as.data.frame(json_pca$score$xyz))
+             plot_ly(hoverinfo = 'text',
+                     text = json_pca$score$name ) %>%
+               add_trace(
+                 x = df[,1], 
+                 y = df[,2], 
+                 z = df[,3], 
+                 type = "scatter3d",
+                 color= json_pca$score[[input$ipca_factor]], colors=chosen.colors
+               ) %>%  layout(scene = list(
+                 xaxis = list(
+                   title = json_pca$score$axis[1]),
+                 yaxis = list(
+                   title = json_pca$score$axis[2]),
+                 zaxis = list(
+                   title = json_pca$score$axis[3])))
+             
+           })},
          heatmap = {NULL},
          tt = {Ttests.Anal(F, 0.05, FALSE, TRUE)},
          fc = {FC.Anal.unpaired(2.0, 1)})
