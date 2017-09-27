@@ -13,6 +13,8 @@ install.if.not <- function(package){
 
 install.if.not("pacman")
 
+library(pacman)
+
 base.packs <- c("pacman", "shiny", "DT", "data.table", "shinyFiles", "plotly")
 
 p_load(char=base.packs)
@@ -26,7 +28,6 @@ biocLite(suppressUpdates = T)
 #wdir <<- "/Users/jwolthuis/Google Drive/MetaboShiny/" #mac
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) #rstudio only...
-
 # ---------------------------------
 
 runApp(".")

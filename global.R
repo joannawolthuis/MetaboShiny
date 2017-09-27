@@ -99,11 +99,12 @@ mz <- NULL
 
 # if(packages_installed == "Y"){
 #   p_load(char = packages, character.only = T)
-#   load(file.path(wdir, "backend/umcfiles/adducts/AdductTableWKZ.RData"))
+#   
 #   sourceDir(file.path(wdir, "backend/scripts/joanna"))
 #   data(isotopes, package = "enviPat")
 # }
 
 sourceDir("backend/scripts/joanna")
-
+load("backend/umcfiles/adducts/AdductTableWKZ.RData")
 print("loaded global settings")
+
