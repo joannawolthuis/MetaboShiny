@@ -74,17 +74,25 @@ stat.anal.ui <- reactive({
 })
 
 observeEvent(input$exp_type,{
-  whichUI <- switch(input$exp_type,
-                       time={time.anal.ui()},
-                       stat={stat.anal.ui()})
-  print(whichUI)
+  modes <- strsplit(x=input$exp_type, split = '\\.')[[1]]
+  print(modes)
+  mainmode <<- modes[[1]]
+  submode <<- modes[[2]]
+  whichUI <- switch(mainmode,
+                    time={time.anal.ui()},
+                    stat={stat.anal.ui()})
   output$analUI <- renderUI({whichUI})
+  optUI <- function(){
+    selectInput('your.time', 'What end time do you want to pick?', choices = get_times(patdb))
+  }
+  if(mainmode == "time" & submode != "standard"){
+    output$exp_opt <- renderUI({optUI()})
+  }
 })
 
 # ===== PACKAGE LOADING ====
 
 observeEvent(input$nav_general, {
-  print(input$nav_general)
   switch(input$nav_general,
          setup = {
            library(pacman)
@@ -516,9 +524,9 @@ observeEvent(input$import_csv, {
   }, deleteFile = FALSE)
   mz <<- fread(csv_loc, sep="\t", header = T)
   # --- detect mode from csv ---
-  mode <<- if("Time" %not in% names(mz)[1:5]) "stat" else "time"
+  mainmode <<- if("Time" %not in% names(mz)[1:5]) "stat" else "time"
   # ----------------------------
-  overview_tab <- if(mode == "time"){
+  overview_tab <- if(mainmode == "time"){
     t(data.table(keep.rownames = F,
                  Mz = ncol(mz) - 3,
                  Samples = nrow(mz),
@@ -548,66 +556,62 @@ output$csv_icon <- renderImage({
        width=100,
        height=100)
 }, deleteFile = FALSE)
-
-observeEvent(input$exp_type, {
- modes <- strsplit(input$exp_type, pattern = '//.')
- mainmode <<- modes[[1]]
- submode <<- modes[[2]]
- })
   
 observeEvent(input$create_csv, {
   req(proj_name)
   req(exp_dir)
+  req(mainmode)
+  req(submode)
+  req(input$your.time)
   # ---------
   withProgress({
     setProgress(1/4, "Creating csv file for MetaboAnalyst...")
     # create csv
     patdb
     mz = get.csv(patdb,
-                 time.series = if(input$exp_type == "time") T else F,
+                 time.series = if(mainmode == "time") T else F,
                  exp.condition = input$exp_var)
-    mz = get.csv(patdb,
-                 time.series = T,
-                 exp.condition = "diet")
     # --- experimental stuff ---
-    yourTime <- 3
-    submode="custom"
-    switch(submode, 
-           standard = { mz.adj <- mz }, 
-           custom = { mz.adj <- unique(mz[Time == yourTime, -"Time"])},
-           subtract = { 
-             uniq.samples <- unique(mz$Sample)
-             uniq.samples
-             table.base <- mz[Time == yourTime,c(1,3)][on=uniq.samples]
-             time.end <- mz[Time == yourTime,][,4:ncol(mz),on=uniq.samples]
-             time.begin <- mz[Time == min(as.numeric(mz$Time)),][,4:ncol(mz),on=uniq.samples]
-             mz.adj <- cbind(table.base, 
-                              time.end - time.begin) 
-           })
-    unique(mz[Sample %in% uniq.samples, 1:3])
-    View(unique(mz[,1:3]))
-    View(mz[Time == yourTime,4:ncol(mz)] -mz [Time == 1,4:ncol(mz)])
-    mz
-    # -------------------------
+    switch(mainmode,
+           time = {
+             switch(submode, 
+                    standard = { mz.adj <- mz }, #mode stays the same
+                    custom = { 
+                      mz.adj <- unique(mz[Time == input$your.time, -"Time"])
+                      mainmode <<- "stat"
+                    },
+                    subtract = { 
+                      uniq.samples <- unique(mz$Sample)
+                      table.base <- mz[Time == input$your.time,c(1,3)][on=uniq.samples]
+                      time.end <- mz[Time == input$your.time,][,4:ncol(mz),on=uniq.samples]
+                      time.begin <- mz[Time == min(as.numeric(mz$Time)),][,4:ncol(mz),on=uniq.samples]
+                      mz.adj <- cbind(table.base, 
+                                      time.end - time.begin) 
+                      # --- change mode ---
+                      mainmode <<- "stat"
+                    })
+             },
+           stat = print("nothing to do for now"))
+        # -------------------------
     # save csv
     setProgress(2/4, "Writing csv file...")
     csv_loc <<- file.path(exp_dir, paste0(proj_name,".csv"))
-    fwrite(mz, csv_loc, sep="\t")
+    fwrite(mz.adj, csv_loc, sep="\t")
     # --- overview table ---
     setProgress(3/4, "Creating overview table...")
     
-    overview_tab <- if(input$exp_type == "time"){
+    overview_tab <- if(mode == "time"){
       t(data.table(keep.rownames = F,
-                   Mz = ncol(mz) - 3,
-                   Samples = nrow(mz),
-                   Times = length(unique(mz$Time)),
-                   Groups = length(unique(mz$Label))
+                   Mz = ncol(mz.adj) - 3,
+                   Samples = nrow(mz.adj),
+                   Times = length(unique(mz.adj$Time)),
+                   Groups = length(unique(mz.adj$Label))
       ))
     } else{
       t(data.table(keep.rownames = F,
-                   Mz = ncol(mz) - 3,
-                   Samples = nrow(mz),
-                   Groups = length(unique(mz$Label))
+                   Mz = ncol(mz.adj) - 3,
+                   Samples = nrow(mz.adj),
+                   Groups = length(unique(mz.adj$Label))
       )) 
       }
     output$csv_tab <- DT::renderDataTable({
@@ -665,9 +669,8 @@ observeEvent(input$initialize,{
                       "metaboanalyst"))
   setProgress(.1, "Applying your settings...")
   # ------------------------------
-
   #Below is your R command history: 
-  switch(main_mode,
+  switch(mainmode,
          time = {
            InitDataObjects("pktable",
                            "ts",
@@ -681,7 +684,7 @@ observeEvent(input$initialize,{
            InitDataObjects("pktable",
                            "stat",
                            FALSE)
-           Read.TextData(csv_loc, "row", "disc")
+           Read.TextData(csv_loc, "rowu", "disc")
            print(names(dataSet))
            }
          )

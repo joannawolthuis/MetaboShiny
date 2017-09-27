@@ -58,11 +58,6 @@ mode <- "time"
 
 # === SOURCE OWN CODE ===
 
-setroworder <- function(x, neworder) {
-  .Call(data.table:::Creorder, x, as.integer(neworder), PACKAGE = "data.table")
-  invisible(x)
-}
-
 sourceAll <- function(where, 
                       which=c("general", "stats", "time", "enrich_path", "power_roc", "utils")){
   p_load(compiler)

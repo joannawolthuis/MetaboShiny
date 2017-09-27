@@ -31,12 +31,7 @@ InitDataObjects <- function(dataType, analType, paired=F){
     cachexia.set.used <<- FALSE;
     conc.db <<- NULL;
 
-    # record the current name(s) to be transferred to client
-    require('Cairo'); # plotting required by all
-
     # fix Mac font issue
-    CairoFonts("Arial:style=Regular","Arial:style=Bold","Arial:style=Italic","Helvetica","Symbol")
-
     print("R objects intialized ...");
 }
 
@@ -57,6 +52,7 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
     dat <- .readDataTable(filePath);
 
     print(head(dat)[,1:10])
+    
     # try to guess column numers and class labels (starts with #) from the top 20 rows
     if(class(dat) == "try-error") {
         AddErrMsg("Data format error. Failed to read in the data!");
@@ -77,7 +73,7 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
         AddErrMsg("Missing values should be blank or NA without quote.");
         return(0);
     }
-
+  print(format)
     msg <- NULL;
 
     if(substring(format,4,5)=="ts"){
@@ -116,10 +112,12 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
             }
         }
     }else{
+      print("Should be hereeee!!!")
         if(substring(format,1,3)=="row"){ # sample in row
             msg<-c(msg, "Samples are in rows and features in columns");
             smpl.nms <-dat[,1];
             dat[,1] <- NULL;
+            print(lbl.type)
             if(lbl.type == "qc"){
                 rownames(dat) <- smpl.nms;
                 dataSet$orig<-dat;
@@ -138,6 +136,8 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
             conc<-t(dat[-1,]);
         }
     }
+    
+    print(cls.lbl)
 
     # free memory
     dat <- NULL;
@@ -154,7 +154,7 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
           cls.lbl <-  cls.lbl[!empty.inx];
           conc <- conc[!empty.inx, ];
     }
-
+    
     # try to check & remove empty lines if class label is empty
     # Added by B. Han
     empty.inx <- is.na(cls.lbl) | cls.lbl == ""

@@ -8,8 +8,18 @@ get_ref_vars <- function(fac="Label"){
   req(csv_loc)
   csv <- fread(csv_loc, sep="\t", header = T)
   # --- return ---
-  unique(csv$Label)
-  }
+  unique(csv[,fac])
+}
+
+get_times <- function(chosen.db){
+  conn <- dbConnect(RSQLite::SQLite(), chosen.db) # change this to proper var later
+  # --- browse ---
+  result <- dbGetQuery(conn, "SELECT DISTINCT sampling_date as Date FROM individual_data WHERE sampling_date != ''")
+  print(result$Date)
+  times <- as.numeric(as.factor(as.Date(result$Date)))
+  # --- result ---
+  times
+}
 
 #' @export
 browse_db <- function(chosen.db){
