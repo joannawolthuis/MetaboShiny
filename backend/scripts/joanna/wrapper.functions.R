@@ -43,10 +43,6 @@ get.csv <- function(patdb,
   small.set <- if(!time.series) small.set[,-"Time", with=F] else small.set
   if(time.series){
     small.set$Time <- as.numeric(as.factor(as.Date(small.set$Time)))
-    small.set$Sample <-  paste(gsub(small.set$Sample,
-                                    pattern="\\.\\d",
-                                    replacement=""), 
-                               small.set$Time, sep="T") # give each time an unique name
   }
   # --- measure file size ---
   size <- object.size(small.set)

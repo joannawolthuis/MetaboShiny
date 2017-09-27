@@ -549,6 +549,12 @@ output$csv_icon <- renderImage({
        height=100)
 }, deleteFile = FALSE)
 
+observeEvent(input$exp_type, {
+ modes <- strsplit(input$exp_type, pattern = '//.')
+ mainmode <<- modes[[1]]
+ submode <<- modes[[2]]
+ })
+  
 observeEvent(input$create_csv, {
   req(proj_name)
   req(exp_dir)
@@ -556,9 +562,33 @@ observeEvent(input$create_csv, {
   withProgress({
     setProgress(1/4, "Creating csv file for MetaboAnalyst...")
     # create csv
+    patdb
     mz = get.csv(patdb,
                  time.series = if(input$exp_type == "time") T else F,
                  exp.condition = input$exp_var)
+    mz = get.csv(patdb,
+                 time.series = T,
+                 exp.condition = "diet")
+    # --- experimental stuff ---
+    yourTime <- 3
+    submode="custom"
+    switch(submode, 
+           standard = { mz.adj <- mz }, 
+           custom = { mz.adj <- unique(mz[Time == yourTime, -"Time"])},
+           subtract = { 
+             uniq.samples <- unique(mz$Sample)
+             uniq.samples
+             table.base <- mz[Time == yourTime,c(1,3)][on=uniq.samples]
+             time.end <- mz[Time == yourTime,][,4:ncol(mz),on=uniq.samples]
+             time.begin <- mz[Time == min(as.numeric(mz$Time)),][,4:ncol(mz),on=uniq.samples]
+             mz.adj <- cbind(table.base, 
+                              time.end - time.begin) 
+           })
+    unique(mz[Sample %in% uniq.samples, 1:3])
+    View(unique(mz[,1:3]))
+    View(mz[Time == yourTime,4:ncol(mz)] -mz [Time == 1,4:ncol(mz)])
+    mz
+    # -------------------------
     # save csv
     setProgress(2/4, "Writing csv file...")
     csv_loc <<- file.path(exp_dir, paste0(proj_name,".csv"))
@@ -634,22 +664,34 @@ observeEvent(input$initialize,{
                       "scripts", 
                       "metaboanalyst"))
   setProgress(.1, "Applying your settings...")
+  # ------------------------------
+
   #Below is your R command history: 
-  switch(input$exp_type,
+  switch(main_mode,
          time = {
-           InitDataObjects("pktable", "ts", FALSE)
+           InitDataObjects("pktable",
+                           "ts",
+                           FALSE)
            SetDesignType("time")
-           Read.TextData(csv_loc, "rowts", "disc")
-         },
-         normal = {
-           InitDataObjects("pktable", "stat", FALSE)
-           Read.TextData(csv_loc, "rows", "disc")
-         })
+           Read.TextData(csv_loc,
+                         "rowts",
+                         "disc")
+           },
+         stat = {
+           InitDataObjects("pktable",
+                           "stat",
+                           FALSE)
+           Read.TextData(csv_loc, "row", "disc")
+           print(names(dataSet))
+           }
+         )
   SanityCheckData()
-  RemoveMissingPercent(percent=0.5)
-  ImputeVar(method="min")
+  RemoveMissingPercent(percent = 0.5)
+  ImputeVar(method = "min")
   ReplaceMin()
-  FilterVariable(input$filt_type, "F", 25)
+  FilterVariable(input$filt_type, 
+                 "F", 
+                 25)
   # # ---- here facA/facB disappears?? ---
   GetPrenormSmplNms()
   GetPrenormFeatureNms()
@@ -749,12 +791,11 @@ observeEvent(input$tab_stat, {
            PCA.Anal()
            output$plot_pca <- renderPlotly({
              req(analSet$pca)
-             req(input$pcax)
-             req(input$pcay)
-             req(input$pcaz)
+             req(input$pca_x)
+             req(input$pca_y)
+             req(input$pca_z)
              fac.lvls <- unique(dataSet$facB.lbl)
              dataSet$facA.lbl
-             
              chosen.colors <- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
              # ---------------
              df <- t(as.data.frame(json_pca$score$xyz))

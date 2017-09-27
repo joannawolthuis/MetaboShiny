@@ -56,6 +56,7 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
 
     dat <- .readDataTable(filePath);
 
+    print(head(dat)[,1:10])
     # try to guess column numers and class labels (starts with #) from the top 20 rows
     if(class(dat) == "try-error") {
         AddErrMsg("Data format error. Failed to read in the data!");
@@ -105,6 +106,7 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
 
         facA <- as.factor(as.character(facA));
         facB <- as.factor(as.character(facB));
+        
         if(dataSet$design.type =="time" | dataSet$design.type =="time0"){
             # determine time factor
             if(!(tolower(facA.lbl) == "time" | tolower(facB.lbl) == "time")){
@@ -124,7 +126,6 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
                 dataSet$cmpd<-colnames(dat);
                 return(1);
             }
-
             cls.lbl <- dat[,1];
             conc <- dat[,-1];
             var.nms <- colnames(conc);
@@ -188,7 +189,7 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
 
     # check for uniqueness of dimension name
     if(length(unique(smpl.nms))!=length(smpl.nms)){
-            dup.nm <- paste(smpl.nms[duplicated(smpl.nms)], collapse=" ");;
+            dup.nm <- paste(smpl.nms[duplicated(smpl.nms)], collapse=" ");
             AddErrMsg("Duplicate sample names are not allowed!");
             AddErrMsg(dup.nm);
             return(0);
