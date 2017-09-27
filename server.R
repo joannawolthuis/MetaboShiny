@@ -78,10 +78,6 @@ observeEvent(input$exp_type,{
   print(modes)
   mainmode <<- modes[[1]]
   submode <<- modes[[2]]
-  whichUI <- switch(mainmode,
-                    time={time.anal.ui()},
-                    stat={stat.anal.ui()})
-  output$analUI <- renderUI({whichUI})
   optUI <- function(){
     selectInput('your.time', 'What end time do you want to pick?', choices = get_times(patdb))
   }
@@ -546,6 +542,10 @@ observeEvent(input$import_csv, {
               autoHideNavigation = T,
               options = list(lengthMenu = c(10, 30, 50), pageLength = 30,scrollX=TRUE, scrollY=TRUE))
     })
+  whichUI <- switch(mainmode,
+                    time={time.anal.ui()},
+                    stat={stat.anal.ui()})
+  output$analUI <- renderUI({whichUI})
   })
 
 output$csv_icon <- renderImage({
@@ -620,6 +620,10 @@ observeEvent(input$create_csv, {
                 autoHideNavigation = T,
                 options = list(lengthMenu = c(10, 30, 50), pageLength = 30,scrollX=TRUE, scrollY=TRUE))
     })
+    whichUI <- switch(mainmode,
+                      time={time.anal.ui()},
+                      stat={stat.anal.ui()})
+    output$analUI <- renderUI({whichUI})
   })
 })
 
