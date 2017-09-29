@@ -5,15 +5,38 @@ library(shiny)
 # ===== defaults =====
 
 
-output$exp_dir <- renderText(exp_dir)
-output$proj_name <- renderText(proj_name)
-output$curr_db_dir <- renderText(dbDir)
-output$ppm <- renderText(ppm)
-output$analUI <- renderUI({helpText("Please choose a mode")})
+mz <<- NA
 session_cl <<- NA
+packages_installed <<- options$packages_installed
 patdb <<- file.path(exp_dir, paste0(proj_name, ".db"))
 
+packages <<- c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
+               "plotly", "parallel", "shinyFiles", "curl", "httr", "pbapply", 
+               "sqldf", "plyr", "ChemmineR", "gsubfn", "stringr", "plotly", 
+               "reshape2", "XML", "xlsx", "colourpicker", "DT","Rserve", "ellipse", 
+               "scatterplot3d","pls", "caret", "lattice", "compiler",
+               "Cairo", "randomForest", "e1071","gplots", "som", "xtable",
+               "RColorBrewer", "xcms","impute", "pcaMethods","siggenes",
+               "globaltest", "GlobalAncova", "Rgraphviz","KEGGgraph",
+               "preprocessCore", "genefilter", "pheatmap", "igraph",
+               "RJSONIO", "SSPA", "caTools", "ROCR", "pROC", "sva", "rJava")
 
+options <- getOptions(".conf")
+
+default.text <- list(list(name='exp_dir',text=options$work_dir),
+                     list(name='curr_db_dir',text=options$db_dir),
+                     list(name='ppm',text=options$ppm),
+                     list(name='analUI',text="Please choose an analysis mode!"),
+                     list(name='proj_name',text=options$proj_name)
+                     )
+
+# --- render text ---
+
+lapply(default.text, FUN=function(default){
+  output[[default$name]] = renderText(default$text)
+})
+
+# -------------------
 time.anal.ui <- reactive({
   # -------------
   navbarPage("Time Series", id="nav_time",
@@ -22,12 +45,6 @@ time.anal.ui <- reactive({
                       selectInput("ipca_factor", label = "Color based on:", choices =list("Time"="facA",
                                                                                           "Experimental group"="facB"))
              ),
-             # =================================================================================
-             #tabPanel("Heatmap",
-             #         plotOutput("time_heat_plot", height='600px', width='600px')
-             #        ),
-             #tabPanel("MANOVA",
-             #        ),
              # =================================================================================
              tabPanel("MEBA", value="meba", 
                       fluidRow(plotlyOutput('meba_plot')),
@@ -78,6 +95,7 @@ observeEvent(input$exp_type,{
   print(modes)
   mainmode <<- modes[[1]]
   submode <<- modes[[2]]
+  # ---------------------
   optUI <- function(){
     selectInput('your.time', 'What end time do you want to pick?', choices = get_times(patdb))
   }
@@ -89,93 +107,45 @@ observeEvent(input$exp_type,{
 # ===== PACKAGE LOADING ====
 
 observeEvent(input$nav_general, {
-  switch(input$nav_general,
-         setup = {
-           library(pacman)
-           library(data.table)},
-         database = {
-           library(RSQLite)
-           library(gsubfn)
-           library(DBI)
-           library(parallel)
-           library(XML)
-           library(minval)
-           library(curl)
-           library(enviPat)
-           data(isotopes, package = "enviPat")
-           if(any(is.na(session_cl))){
-             session_cl <<- makeCluster(detectCores())
-             clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
-               "isotopes",
-               "subform.joanna", 
-               "mergeform.joanna",
-               "multiform.joanna",
-               "check.ded.joanna",
-               "data.table",
-               "rbindlist",
-               "isopattern"
-             ))
-             }
-         },
-         upload = {
-           library(RSQLite)
-           library(DBI)
-           library(reshape2)
-           library(data.table)
-           library(xlsx)
-         },
-         document = {
-           library(plotly)
-           library(data.table)
-           library(reshape2)},
-         filter = {
-           library(plotly)
-           library(data.table)
-           library(Cairo)
-           library(preprocessCore)},
-         analysis = {
-           library(plotly)
-           library(data.table)},
-         options = {
-           library(shinyFiles)
-           library(colourpicker)
-         })
+  load.necessarities(input$nav_general)
 })
-  
 
 # =================================================
 
-output$cute_package <- renderImage({
-    # When input$n is 3, filename is ./images/image3.jpeg
-    filename <- normalizePath(file.path('backend/img/new-product.png'))
+images <- list(list(name = 'cute_package', path = 'backend/img/new-product.png', dimensions = c(80, 80)),
+               list(name = 'umc_logo', path = 'backend/img/umclogo.jpg', dimensions = c(120, 100)),
+               list(name = 'hmdb_logo', path = 'backend/img/hmdblogo.png', dimensions = c(150, 100)),
+               list(name = 'chebi_logo', path = 'backend/img/chebilogo.png', dimensions = c(100, 100)),
+               list(name = 'pubchem_logo', path = 'backend/img/pubchemlogo.png', dimensions = c(140, 100)),
+               list(name = 'pos_icon', path = 'backend/img/handpos.png', dimensions = c(120, 120)),
+               list(name = 'neg_icon', path = 'backend/img/handneg.png', dimensions = c(120, 120)),
+               list(name = 'excel_icon', path = 'backend/img/excel.png', dimensions = c(120, 120)),
+               list(name = 'db_icon', path = 'backend/img/office.png', dimensions = c(100, 100))
+               )
+
+lapply(images, FUN=function(image){
+  output[[image$name]] <- renderImage({
+    filename <- normalizePath(image$path)
     # Return a list containing the filename and alt text
-    list(src = filename, width = 80,
-         height = 80)
+    list(src = filename, 
+         width = image$dimensions[1],
+         height = image$dimensions[2])
   }, deleteFile = FALSE)
+})
+
+# ========================================
 
 observeEvent(input$nav_general, {
-  if(input$nav_general == "setup"){
-    status <- sapply(packages, FUN=function(package){
-      if(package %in% rownames(installed.packages())) "Yes" else "No"
-    })
-    version <- sapply(packages, FUN=function(package){
-      if(package %in% rownames(installed.packages())){packageDescription(package)$Version} else ""
-    })
-    # --------
     output$package_tab <- DT::renderDataTable({
       # -------------
-      datatable(data.table(
-        Package = packages,
-        Installed = status,
-        Version = version
-      ),
+      datatable(get.package.table(input$nav_general),
       selection = 'none',
       autoHideNavigation = T,
       options = list(lengthMenu = c(10, 20, 30), pageLength = 10)
       , rownames = F)
     })
   }
-})
+)
 
 observeEvent(input$install_packages, {
   req(packages)
@@ -207,13 +177,13 @@ observeEvent(input$update_packages, {
     list(src = filename, width = 70,
          height = 70)
   }, deleteFile = FALSE)
-  # --- restart ---
+  # --- restart ---??
   stopApp()
   runApp(".")
 })
   
 
-if(packages_installed == "Y"){
+if(packages_installed == "N") return(NULL)
   
 # ====================== SETTINGS =================
 
@@ -286,46 +256,7 @@ color.vec <- reactive({
 
 # ======================== DB CHECK ============================
 
-output$umc_logo <- renderImage({
-  # When input$n is 3, filename is ./images/image3.jpeg
-  filename <- normalizePath(file.path('./backend/img/umclogo.jpg'))
-# Return a list containing the filename and alt text
-  list(src = filename,
-       alt = "UMC Utrecht",
-       width=120,
-       height=100)
-  }, deleteFile = FALSE)
 
-output$hmdb_logo <- renderImage({
-  # When input$n is 3, filename is ./images/image3.jpeg
-  filename <- normalizePath(file.path('./backend/img/hmdblogo.png'))
-  # Return a list containing the filename and alt text
-  list(src = filename,
-       alt = "The Human Metabolome DataBase",
-       width = 150,
-       height = 100)
-}, deleteFile = FALSE)
-
-output$chebi_logo <- renderImage({
-  # When input$n is 3, filename is ./images/image3.jpeg
-  filename <- normalizePath(file.path('./backend/img/chebilogo.png'))
-  # Return a list containing the filename and alt text
-  list(src = filename,
-       alt = "Chemical Entities of Biological Interest",
-       width=100,
-       height=100)
-  
-}, deleteFile = FALSE)
-
-output$pubchem_logo <- renderImage({
-  # When input$n is 3, filename is ./images/image3.jpeg
-  filename <- normalizePath(file.path('./backend/img/pubchemlogo.png'))
-  # Return a list containing the filename and alt text
-  list(src = filename,
-       alt = "PubChem",
-       width=140,
-       height=100)
-}, deleteFile = FALSE)
 
 # --- check for db files ---
 
@@ -434,42 +365,6 @@ observeEvent(input$build_pubchem,{
 })
 
 # ================== DATA IMPORT ===========================
-
-output$pos_icon <- renderImage({
-  # When input$n is 3, filename is ./images/image3.jpeg
-  filename <- normalizePath(file.path('./backend/img/handpos.png'))
-  # Return a list containing the filename and alt text
-  list(src = filename,
-       width=120,
-       height=120)
-}, deleteFile = FALSE)
-
-output$neg_icon <- renderImage({
-  # When input$n is 3, filename is ./images/image3.jpeg
-  filename <- normalizePath(file.path('./backend/img/handneg.png'))
-  # Return a list containing the filename and alt text
-  list(src = filename,
-       width=120,
-       height=120)
-}, deleteFile = FALSE)
-
-output$excel_icon <- renderImage({
-  # When input$n is 3, filename is ./images/image3.jpeg
-  filename <- normalizePath(file.path('./backend/img/excel.png'))
-  # Return a list containing the filename and alt text
-  list(src = filename,
-       width=120,
-       height=120)
-}, deleteFile = FALSE)
-
-output$db_icon <- renderImage({
-  # When input$n is 3, filename is ./images/image3.jpeg
-  filename <- normalizePath(file.path('./backend/img/office.png'))
-  # Return a list containing the filename and alt text
-  list(src = filename,
-       width=100,
-       height=100)
-}, deleteFile = FALSE)
 
 observeEvent(input$create_db,{
   # --------------------
@@ -944,5 +839,4 @@ observeEvent(input$hits_tab_rows_selected,{
 session$onSessionEnded(function() {
   if(any(!is.na(session_cl))) stopCluster(session_cl)
 })
-}
 }
