@@ -172,8 +172,8 @@ GetSigTable.Corr<-function(){
     GetSigTable(analSet$corr$cor.mat, "Pattern search using correlation analysis");
 }
 
-PlotCorrHeatMap<-function(imgName, format="png", dpi=72, width=NA, target, cor.method, 
-                colors, viewOpt, fix.col, no.clst, top, topNum){
+PlotCorrHeatMap<-function(target="col", cor.method="pearson", 
+                colors="bwm", fix.col=F, no.clst=F, top=F, topNum=50){
 
     main <- xlab <- ylab <- NULL;
     data <- dataSet$norm;
@@ -181,17 +181,13 @@ PlotCorrHeatMap<-function(imgName, format="png", dpi=72, width=NA, target, cor.m
         data <- t(data);
     }
 
-    if(ncol(data) > 1000){
+    if(ncol(data) > topNum){
         filter.val <- apply(data.matrix(data), 2, IQR, na.rm=T);
         rk <- rank(-filter.val, ties.method='random');
-        data <- as.data.frame(data[,rk <=1000]);
-
+        data <- as.data.frame(data[,rk <= topNum]);
         print("Data is reduced to 1000 vars ..");
     }
-
-    colnames(data)<-substr(colnames(data), 1, 18);
     corr.mat<-cor(data, method=cor.method);
-
     # use total abs(correlation) to select
     if(top){
         cor.sum <- apply(abs(corr.mat), 1, sum);
@@ -203,6 +199,7 @@ PlotCorrHeatMap<-function(imgName, format="png", dpi=72, width=NA, target, cor.m
     # set up parameter for heatmap
     suppressMessages(require(RColorBrewer));
     suppressMessages(require(gplots));
+    colors="heat"
     if(colors=="gbr"){
         colors <- colorRampPalette(c("green", "black", "red"), space="rgb")(256);
     }else if(colors == "heat"){
@@ -214,38 +211,6 @@ PlotCorrHeatMap<-function(imgName, format="png", dpi=72, width=NA, target, cor.m
     }else{
         colors <- rev(colorRampPalette(brewer.pal(10, "RdBu"))(256));
     }
-
-    imgName = paste(imgName, "dpi", dpi, ".", format, sep="");
-   if(viewOpt == "overview"){
-        if(is.na(width)){
-            w <- 9;
-        }else if(width == 0){
-            w <- 7.2;
-            imgSet$heatmap <-imgName;
-        }else{
-            w <- 7.2;
-        }
-        h <- w;
-    }else{
-        if(ncol(corr.mat) > 50){
-            myH <- ncol(corr.mat)*12 + 40;
-        }else if(ncol(corr.mat) > 20){
-            myH <- ncol(corr.mat)*12 + 60;
-        }else{
-            myH <- ncol(corr.mat)*12 + 120;
-        }
-        h <- round(myH/72,2);
-
-        if(is.na(width)){
-            w <- h;
-        }else if(width == 0){
-            w <- h <- 7.2;
-            imgSet$corr.heatmap <-imgName;
-        }else{
-            w <- h <- 7.2;
-        }
-    }
-    imgSet <<- imgSet;
     if(no.clst){
         rowv=FALSE;
         colv=FALSE;

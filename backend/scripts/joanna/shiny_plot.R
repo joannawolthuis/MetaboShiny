@@ -82,11 +82,7 @@ ggplotSummary <- function(mz = curr_mz, cols=c("Red", "Green")){
   #
 }
 
-ggPlotTT <- function(sig.col, nonsig.col, threshold){
-  plot(analSet$tt$p.log, ylab="-log10(p)", xlab=GetVariableLabel(), main=analSet$tt$tt.nm, pch=19,
-         col= ifelse(analSet$tt$inx.imp, "magenta", "darkgrey"));
-    abline (h=analSet$tt$thresh, lty=3);
-    axis(4); 
+ggPlotTT <- function(){
    profile <- as.data.table(analSet$tt$p.log[analSet$tt$inx.imp],keep.rownames = T)
    colnames(profile) <- c("mz", "p")
    profile$Peak <- c(1:nrow(profile)) 
@@ -97,4 +93,18 @@ ggPlotTT <- function(sig.col, nonsig.col, threshold){
      scale_colour_gradientn(colours = rainbow(5)) +
      scale_y_log10()
    ggplotly(plot, tooltip="mz")
+}
+
+ggPlotFC <- function(){
+  profile <- as.data.table(analSet$fc$fc.log[analSet$fc$inx.imp],keep.rownames = T)
+  profile
+  colnames(profile) <- c("mz", "log2fc")
+  profile$Peak <- c(1:nrow(profile)) 
+  # ---------------------------
+  plot <- ggplot(data=profile) +
+    geom_point(aes(x=Peak, y=log2fc, text=log2fc, color=log2fc, key=mz)) +
+    geom_abline(aes(intercept = 0, slope = 0)) +
+    theme_minimal(base_size = 10) +
+    scale_colour_gradientn(colours = rainbow(5))
+  ggplotly(plot, tooltip="log2fc")
 }

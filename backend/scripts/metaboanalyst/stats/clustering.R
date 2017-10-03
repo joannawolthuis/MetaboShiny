@@ -291,7 +291,17 @@ PlotSubHeatMap <- function(imgName, format="png", dpi=72, width=NA, dataOpt, sca
 }
 
 
-PlotHeatMap<-function(imgName, format="png", dpi=72, width=NA, dataOpt, scaleOpt, smplDist, clstDist, palette, viewOpt="detail", rowV=T, colV=T, var.inx=NA, border=T, grp.ave=F){
+PlotHeatMap<-function(dataOpt, 
+                      scaleOpt, 
+                      smplDist, 
+                      clstDist, 
+                      palette, 
+                      viewOpt="detail",
+                      rowV=T, 
+                      colV=T, 
+                      var.inx=NA, 
+                      border=T, 
+                      grp.ave=F){
 
     # record the paramters
     analSet$htmap<-list(dist.par=smplDist, clust.par=clstDist);
@@ -339,49 +349,7 @@ PlotHeatMap<-function(imgName, format="png", dpi=72, width=NA, dataOpt, scaleOpt
         colors <- rev(colorRampPalette(brewer.pal(10, "RdBu"))(256));
     }
 
-    imgName = paste(imgName, "dpi", dpi, ".", format, sep="");
- 
-    if(is.na(width)){
-        minW <- 630;
-        myW <- nrow(hc.dat)*18 + 150;
-        if(myW < minW){
-            myW <- minW;
-        }   
-        w <- round(myW/72,2);
-    }else if(width == 0){
-        w <- 7.2;
-        imgSet$heatmap<-imgName;
-    }else{
-        w <- 7.2;
-    }
-
-    myH <- ncol(hc.dat)*18 + 150;
-    h <- round(myH/72,2);
-
-   if(viewOpt == "overview"){
-        if(is.na(width)){
-            if(w > 9){
-                w <- 9;
-            }
-        }else if(width == 0){
-            if(w > 7.2){
-                w <- 7.2;
-            }
-            imgSet$heatmap<-imgName;
-        }else{
-            w <- 7.2;
-        }
-        if(h > w){
-            h <- w;
-        }
-    }
-
     # make the width smaller fro group average
-    if(grp.ave){
-        w <- nrow(hc.dat)*25 + 300;
-        w <- round(w/72,2);
-    }
-
     imgSet <<- imgSet;
 
     if(border){
@@ -405,7 +373,7 @@ PlotHeatMap<-function(imgName, format="png", dpi=72, width=NA, dataOpt, scaleOpt
         }
         names(uniq.cols) <- unique(as.character(dataSet$cls));
         ann_colors <- list(class= uniq.cols);
-
+        hc.dat
         pheatmap(t(hc.dat), 
             annotation=annotation, 
             fontsize=8, fontsize_row=8, 

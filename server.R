@@ -694,7 +694,6 @@ observeEvent(input$tab_stat, {
          pca = {
            PCA.Anal()
            output$plot_pca <- renderPlotly({
-             req(analSet$pca)
              df <- analSet$pca$x
              x <- input$pca_x
              y <- input$pca_y
@@ -755,17 +754,43 @@ observeEvent(input$tab_stat, {
            },
          fc = {
            FC.Anal.unpaired(2.0, 1)
+           fc.table <<- as.data.table(read.csv(file.path(options$work_dir,'fold_change.csv')),keep.rownames = F)
+           fc.table
+           output$fc_tab <- DT::renderDataTable({
+             # -------------
+             datatable(fc.table, 
+                       selection = 'single',
+                       colnames = c("Mass/charge", "FC", "log2(FC)"),
+                       autoHideNavigation = T,
+                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+             
+           })
+           output$fc_overview_plot <- renderPlotly({
+             # --- ggplot ---
+             ggPlotFC()
+           })
            })
 })
 
 observeEvent(input$tt_tab_rows_selected,{
   curr_row = input$tt_tab_rows_selected
-  draw.average = T
   # do nothing if not clicked yet, or the clicked cell is not in the 1st column
   if (is.null(curr_row)) return()
-  curr_mz <<- meba.table[curr_row,1]
+  curr_mz <<- tt.table[curr_row,X]
   print(curr_mz)
   output$tt_specific_plot <- renderPlotly({
+    # --- ggplot ---
+    ggplotSummary(curr_mz, cols = color.vec())
+  })
+})
+
+observeEvent(input$fc_tab_rows_selected,{
+  curr_row = input$fc_tab_rows_selected
+  # do nothing if not clicked yet, or the clicked cell is not in the 1st column
+  if (is.null(curr_row)) return()
+  curr_mz <<- fc.table[curr_row,X]
+  print(curr_mz)
+  output$fc_specific_plot <- renderPlotly({
     # --- ggplot ---
     ggplotSummary(curr_mz, cols = color.vec())
   })
@@ -775,9 +800,16 @@ observe({
   d <- event_data("plotly_click")
   if(length(d) == 0) return(NULL)
   print(d)
-  if(d$key %not in% names(analSet$tt$p.value)) return(NULL)
+  switch(input$tab_stat,
+         tt = if(d$key %not in% names(analSet$tt$p.value)) return(NULL),
+         fc =  if(d$key %not in% names(analSet$fc$fc.log)) return(NULL)
+         )
   curr_mz <<- d$key
   output$tt_specific_plot <- renderPlotly({
+    # --- ggplot ---
+    ggplotSummary(curr_mz, cols = color.vec())
+  })
+  output$fc_specific_plot <- renderPlotly({
     # --- ggplot ---
     ggplotSummary(curr_mz, cols = color.vec())
   })

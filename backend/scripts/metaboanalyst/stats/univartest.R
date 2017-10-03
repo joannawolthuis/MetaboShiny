@@ -36,7 +36,7 @@ FC.Anal.unpaired<-function(fc.thresh=2, cmp.type = 0){
     sig.mat <- sig.mat[inx.ord,,drop=F];
 
     fileName <- "fold_change.csv";
-    write.csv(sig.mat,file=fileName);
+    write.csv(sig.mat,file=file.path(options$work_dir,fileName));
 
     # create a list object to store fc
     analSet$fc<-list (
@@ -82,7 +82,7 @@ FC.Anal.paired<-function(fc.thresh=2, percent.thresh=0.75, cmp.type=0){
     sig.var<-sig.var[inx,,drop=F];
 
     fileName <- "fold_change.csv";
-    write.csv(signif(sig.var,5),file=fileName);
+    write.csv(signif(sig.var,5),file=file.path(options$work_dir,fileName));
 
     # create a list object to store fc
     analSet$fc <-list (

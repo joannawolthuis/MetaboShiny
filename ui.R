@@ -210,8 +210,11 @@ navbarPage("MetaboShiny", id="nav_general",windowTitle = "MetaboShiny",
                                                    # =================================================================================
                                                    )
                     } else{
-                      navbarPage("Standard analysis", id="tab_stat", selected = "pca",
-                                 tabPanel("PCA", value = "pca", icon=icon("cube"),
+                      navbarPage("Standard analysis", id="tab_stat",
+                                 tabPanel("", value = "intro", icon=icon("comment-o"),
+                                          helpText("Info text here")
+                                          ),
+                                 tabPanel("PCA", value = "pca", #icon=icon("cube"),
                                           plotlyOutput("plot_pca"),
                                           fluidRow(column(3,
                                                           selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:30),selected = "PC1"),
@@ -223,7 +226,7 @@ navbarPage("MetaboShiny", id="nav_general",windowTitle = "MetaboShiny",
                                                           )
                                                    )
                                           ),
-                                 tabPanel("PLS-DA", icon=icon("bar-chart-o"),
+                                 tabPanel("PLS-DA", #icon=icon("bar-chart-o"),
                                                               helpText("placeholder")
                                           ),
                                  # =================================================================================
@@ -241,8 +244,14 @@ navbarPage("MetaboShiny", id="nav_general",windowTitle = "MetaboShiny",
                                                      )
                                           )),
                                  tabPanel("Fold-change", value="fc",
-                                          fluidRow(plotOutput('fc_plot')),
-                                          fluidRow(div(DT::dataTableOutput('fc_tab'),style='font-size:80%'))),
+                                          fluidRow(plotlyOutput('fc_specific_plot')),
+                                          navbarPage("Selection",
+                                                     tabPanel("", icon=icon("table"),
+                                                              div(DT::dataTableOutput('fc_tab'),style='font-size:80%'))
+                                                     ,tabPanel("", icon=icon("area-chart"),
+                                                               plotlyOutput('fc_overview_plot',width = "600px", height="250px")
+                                                     )
+                                          )),
                                  # =================================================================================
                                  tabPanel("Volcano", value="volc",
                                           fluidRow(plotOutput('volc_plot')),
