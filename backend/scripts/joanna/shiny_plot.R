@@ -81,3 +81,20 @@ ggplotSummary <- function(mz = curr_mz, cols=c("Red", "Green")){
   }
   #
 }
+
+ggPlotTT <- function(sig.col, nonsig.col, threshold){
+  plot(analSet$tt$p.log, ylab="-log10(p)", xlab=GetVariableLabel(), main=analSet$tt$tt.nm, pch=19,
+         col= ifelse(analSet$tt$inx.imp, "magenta", "darkgrey"));
+    abline (h=analSet$tt$thresh, lty=3);
+    axis(4); 
+   profile <- as.data.table(analSet$tt$p.log[analSet$tt$inx.imp],keep.rownames = T)
+   colnames(profile) <- c("mz", "p")
+   profile$Peak <- c(1:nrow(profile)) 
+   # ---------------------------
+   plot <- ggplot(data=profile) +
+     geom_point(aes(x=Peak, y=p,text=mz, color=p, key=mz)) +
+     theme_minimal(base_size = 10) +
+     scale_colour_gradientn(colours = rainbow(5)) +
+     scale_y_log10()
+   ggplotly(plot, tooltip="mz")
+}

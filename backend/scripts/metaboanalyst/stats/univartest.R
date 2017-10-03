@@ -256,12 +256,12 @@ Ttests.Anal<-function(nonpar=F, threshp=0.05, paired=FALSE, equal.var=TRUE){
 
     p.log <- -log10(p.value);
     fdr.p <- p.adjust(p.value, "fdr");
-
     inx.imp <- fdr.p <= threshp;
     # if there is no sig cmpds, it will be errors, need to improve
     msg <- NULL;
-
+    inx.imp
     current.msg <<- paste(c(msg, "A total of", sum(inx.imp), "significant features were found."), collapse=" ");
+    current.msg
     sig.num <- sum(inx.imp);
     if(sig.num > 0){
         sig.t <- t.stat[inx.imp];
@@ -318,24 +318,11 @@ GetTTSigNum <- function(){
     return(analSet$tt$sig.num);
 }
 
-PlotTT<-function(imgName, format="png", dpi=72, width=NA){
-    imgName = paste(imgName, "dpi", dpi, ".", format, sep="");
-    if(is.na(width)){
-        w <- 8;
-    }else if(width == 0){
-        w <- 7;
-        imgSet$tt <-imgName;
-        imgSet <<- imgSet;
-    }else{
-        w <- width;
-    }
-    h <- w*6/8;
-    
+PlotTT<-function(){
     plot(analSet$tt$p.log, ylab="-log10(p)", xlab=GetVariableLabel(), main=analSet$tt$tt.nm, pch=19,
                  col= ifelse(analSet$tt$inx.imp, "magenta", "darkgrey"));
     abline (h=analSet$tt$thresh, lty=3);
     axis(4); 
-    
 }
 
 GetSigTable.TT<-function(){

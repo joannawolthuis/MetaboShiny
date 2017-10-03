@@ -720,6 +720,19 @@ observeEvent(input$tab_stat, {
                    title = fn$paste("$y ($y.var %)")),
                  zaxis = list(
                    title = fn$paste("$z ($z.var %)"))))
+           })
+           pca.table <- as.data.table(round(analSet$pca$variance * 100.00,
+                                            digits = 2),
+                                      keep.rownames = T)
+           colnames(pca.table) <- c("Principal Component", "% variance")
+           pca.table
+           output$pca_tab <- DT::renderDataTable({
+             req(pca.table)
+             # -------------
+             datatable(pca.table, 
+                       selection = 'single',
+                       autoHideNavigation = T,
+                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
            })},
          heatmap = {NULL},
          tt = {
@@ -733,6 +746,11 @@ observeEvent(input$tab_stat, {
                        colnames = c("Mass/charge", "p-value"),
                        autoHideNavigation = T,
                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+             
+           })
+           output$tt_overview_plot <- renderPlotly({
+             # --- ggplot ---
+             ggPlotTT()
            })
            },
          fc = {
@@ -747,7 +765,19 @@ observeEvent(input$tt_tab_rows_selected,{
   if (is.null(curr_row)) return()
   curr_mz <<- meba.table[curr_row,1]
   print(curr_mz)
-  output$tt_plot <- renderPlotly({
+  output$tt_specific_plot <- renderPlotly({
+    # --- ggplot ---
+    ggplotSummary(curr_mz, cols = color.vec())
+  })
+})
+
+observe({
+  d <- event_data("plotly_click")
+  if(length(d) == 0) return(NULL)
+  print(d)
+  if(d$key %not in% names(analSet$tt$p.value)) return(NULL)
+  curr_mz <<- d$key
+  output$tt_specific_plot <- renderPlotly({
     # --- ggplot ---
     ggplotSummary(curr_mz, cols = color.vec())
   })
