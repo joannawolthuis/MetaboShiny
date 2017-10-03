@@ -284,7 +284,7 @@ Ttests.Anal<-function(nonpar=F, threshp=0.05, paired=FALSE, equal.var=TRUE){
             file.nm <- "t_test.csv";
             colnames(sig.mat)<-c("t.stat", "p.value", "-log10(p)", "FDR");
         }
-        write.csv(sig.mat,file=file.nm);
+        write.csv(sig.mat,file=file.path(options$work_dir, file.nm));
 
         tt<-list (
             tt.nm = tt.nm,

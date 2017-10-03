@@ -722,10 +722,36 @@ observeEvent(input$tab_stat, {
                    title = fn$paste("$z ($z.var %)"))))
            })},
          heatmap = {NULL},
-         tt = {Ttests.Anal(F, 0.05, FALSE, TRUE)},
-         fc = {FC.Anal.unpaired(2.0, 1)})
+         tt = {
+           Ttests.Anal(F, 0.05, FALSE, TRUE)
+           tt.table <<- as.data.table(read.csv(file.path(options$work_dir,'t_test.csv')),keep.rownames = F)
+           output$tt_tab <- DT::renderDataTable({
+             req(tt.table)
+             # -------------
+             datatable(tt.table[,c(1,3)], 
+                       selection = 'single',
+                       colnames = c("Mass/charge", "p-value"),
+                       autoHideNavigation = T,
+                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+           })
+           },
+         fc = {
+           FC.Anal.unpaired(2.0, 1)
+           })
 })
 
+observeEvent(input$tt_tab_rows_selected,{
+  curr_row = input$tt_tab_rows_selected
+  draw.average = T
+  # do nothing if not clicked yet, or the clicked cell is not in the 1st column
+  if (is.null(curr_row)) return()
+  curr_mz <<- meba.table[curr_row,1]
+  print(curr_mz)
+  output$tt_plot <- renderPlotly({
+    # --- ggplot ---
+    ggplotSummary(curr_mz, cols = color.vec())
+  })
+})
 
 # ================ MEBA ========================
 

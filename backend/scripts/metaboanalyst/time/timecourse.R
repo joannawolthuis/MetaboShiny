@@ -268,13 +268,12 @@ mb.MANOVA <- function (object, times, D, size, nu = NULL, Lambda = NULL, beta.d 
 
 # plot the variable across time points (x)
 # colored by experimental conditions
-getProfile <-function (varName, title=varName, mode="normal") {
+getProfile <-function (varName, title=varName, mode="stat") {
     # ---------------
     require(ggplot2)
     # ---------------
     varInx <- colnames(dataSet$norm) == varName;
     var <- as.data.table(dataSet$norm, keep.rownames = T)[,varInx, with=FALSE];
-    exp.fac <- dataSet$exp.fac;
     samp.names <- rownames(dataSet$norm)
     # ---------------
     if(mode == "time"){
@@ -286,7 +285,8 @@ getProfile <-function (varName, title=varName, mode="normal") {
         Time = time.fac,
         Abundance = dataSet$norm[,varInx]
       )
-    }else if(mode == "normal"){
+    }else if(mode == "stat"){
+      exp.fac <- dataSet$filt.cls
       translator <- data.table(
         index = 1:length(samp.names),
         Sample = gsub(x = samp.names, pattern = "T\\d$", replacement=""),

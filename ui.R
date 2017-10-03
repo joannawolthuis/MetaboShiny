@@ -225,7 +225,7 @@ navbarPage("MetaboShiny", id="nav_general",windowTitle = "MetaboShiny",
                                          ),
                                  # =================================================================================
                                  tabPanel("T-test", value="tt", 
-                                          fluidRow(plotOutput('tt_plot')),
+                                          fluidRow(plotlyOutput('tt_plot')),
                                           fluidRow(div(DT::dataTableOutput('tt_tab'),style='font-size:80%'))),
                                  tabPanel("Fold-change", value="fc",
                                           fluidRow(plotOutput('fc_plot')),
