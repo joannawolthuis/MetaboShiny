@@ -1,6 +1,6 @@
 # Rely on the 'WorldPhones' dataset in the datasets
 # package (which generally comes preloaded).
-if(packages_installed != "Y"){
+if(options$packages_installed != "Y"){
   navbarPage("MetaboSetup", id="nav_general",windowTitle = "MetaboShiny",
              tabPanel("", icon = icon("wrench"), value="setup",
                       # --- db check cols ---
@@ -129,10 +129,10 @@ navbarPage("MetaboShiny", id="nav_general",windowTitle = "MetaboShiny",
                                     selectInput('exp_var', 'Which experimental variable do you want to look at?', choices = c("")),
                                     actionButton("check_excel", "Get variables", icon=icon("refresh")),
                                     br(),br(),
-                                    selectInput('exp_type', 'What type of analysis do you want to do?', choices = list("Time series - standard" = "time.standard",
-                                                                                                                       "Time series - one time" = "time.custom",
-                                                                                                                       "Time series - subtraction" = "time.subtract",
-                                                                                                                       "Standard" = "stat")),
+                                    selectInput('exp_type', 'What type of analysis do you want to do?', choices = list("Time series - standard" = "time.standard", 
+                                                                                                                       "Time series - custom end" = "time.custom",
+                                                                                                                       "Time series - subtract" = "time.subtract",
+                                                                                                                      "Standard" = "stat.standard")),
                                     uiOutput("exp_opt"),
                                     br(),br(),
                                     actionButton("create_csv", "Create CSV", icon=icon("file-text-o")),
@@ -185,16 +185,73 @@ navbarPage("MetaboShiny", id="nav_general",windowTitle = "MetaboShiny",
            ),
            # --------------------------------------------------------------------------------------------------------------------------------
            tabPanel("Analysis",  icon = icon("bar-chart"), value = "analysis",# multiple options here :-)
-                    column(8, uiOutput("analUI")
-                           ), column(4, align="center",
+                    column(8, 
+                    if(mode == "time"){
+                                        navbarPage("Time Series", id="nav_time",
+                                                   tabPanel("iPCA", value = "ipca", 
+                                                            plotlyOutput("plot_ipca" ),
+                                                            selectInput("ipca_factor", label = "Color based on:", choices =list("Time"="facA",
+                                                                                                                                "Experimental group"="facB"))
+                                                            ),
+                                                   # =================================================================================
+                                                   tabPanel("MEBA", value="meba", 
+                                                            fluidRow(plotlyOutput('meba_plot')),
+                                                            fluidRow(div(DT::dataTableOutput('meba_tab'),style='font-size:80%'))),
+                                                   # =================================================================================
+                                                   tabPanel("ASCA", value="asca",
+                                                            navbarPage("Explore", 
+                                                              tabPanel("Overview", icon=icon("eye"), helpText("...")),
+                                                              tabPanel("Plots", icon=icon("bar-chart-o"),
+                                                                     fluidRow(plotlyOutput('asca_plot')),
+                                                                     fluidRow(div(DT::dataTableOutput('asca_tab'),style='font-size:80%'))
+                                                              )
+                                                          )
+                                                          )
+                                                   # =================================================================================
+                                                   )
+                    } else{
+                      navbarPage("Standard analysis", id="tab_stat",
+                                 tabPanel("PCA", value = "pca", 
+                                          navbarPage("Explore", id="tab_pca",
+                                                     tabPanel("Overview", icon=icon("eye"), helpText(plotlyOutput("plot_pca"),
+                                                                                                     selectInput("pca_x", label = "X axis:", choices = c("PC1", "PC2", "PC3", "PC4", "PC5")),
+                                                                                                     selectInput("pca_y", label = "Y axis:", choices =c("PC1", "PC2", "PC3", "PC4", "PC5")),
+                                                                                                     selectInput("pca_z", label = "Z axis:", choices =c("PC1", "PC2", "PC3", "PC4", "PC5")))),
+                                          
+                                                     tabPanel("PLS-DA", icon=icon("bar-chart-o"),
+                                                              NULL
+                                                     )
+                                          )
+                                 ),
+                                 # =================================================================================
+                                 tabPanel("Heatmap",
+                                          plotOutput("heatmap", height='600px', width='600px')
+                                         ),
+                                 # =================================================================================
+                                 tabPanel("T-test", value="tt", 
+                                          fluidRow(plotOutput('tt_plot')),
+                                          fluidRow(div(DT::dataTableOutput('tt_tab'),style='font-size:80%'))),
+                                 tabPanel("Fold-change", value="fc",
+                                          fluidRow(plotOutput('fc_plot')),
+                                          fluidRow(div(DT::dataTableOutput('fc_tab'),style='font-size:80%'))),
+                                 # =================================================================================
+                                 tabPanel("Volcano", value="volc",
+                                          fluidRow(plotOutput('volc_plot')),
+                                          fluidRow(div(DT::dataTableOutput('volc_tab'),style='font-size:80%')))
+                                
+                                 )
+                                 # =================================================================================
+                                 }
+
+                    ), column(4, align="center",
                                          fluidRow(imageOutput("find_mol_icon",inline = T),
                                                   div(checkboxGroupInput("checkGroup", 
                                                                          label = h4("Selected database(s):"),
-                                                                         choices = list("Internal DB" = file.path(dbDir,"internal.full.db"), 
-                                                                                        "Noise DB" = file.path(dbDir,"noise.full.db"), 
-                                                                                        "HMDB" = file.path(dbDir,"hmdb.full.db"),
-                                                                                        "ChEBI" = file.path(dbDir,"chebi.full.db"),
-                                                                                        "PubChem" = file.path(dbDir,"pubchem.full.db")),
+                                                                         choices = list("Internal DB" = file.path(options$db_dir,"internal.full.db"), 
+                                                                                        "Noise DB" = file.path(options$db_dir,"noise.full.db"), 
+                                                                                        "HMDB" = file.path(options$db_dir,"hmdb.full.db"),
+                                                                                        "ChEBI" = file.path(options$db_dir,"chebi.full.db"),
+                                                                                        "PubChem" = file.path(options$db_dir,"pubchem.full.db")),
                                                                          selected = 1, inline = T),style='font-size:90%')),
                                          fluidRow(navbarPage("Search", id="tab_iden",
                                                              tabPanel("Current", icon=icon("sort-numeric-asc"),

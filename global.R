@@ -54,7 +54,7 @@ setOption <- function(file.loc, key, value){
 
 # --- beta stuff ---
 
-mode <- "time"
+mode <- "time.standard"
 
 # === SOURCE OWN CODE ===
 
@@ -77,6 +77,7 @@ sourceAll <- function(where,
 }
 
 # --------------------------
+options <- getOptions(".conf")
 
 sourceDir("backend/scripts/joanna")
 load("backend/umcfiles/adducts/AdductTableWKZ.RData")

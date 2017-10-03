@@ -7,8 +7,7 @@ library(shiny)
 
 mz <<- NA
 session_cl <<- NA
-packages_installed <<- options$packages_installed
-patdb <<- file.path(exp_dir, paste0(proj_name, ".db"))
+patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
 
 packages <<- c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
                "plotly", "parallel", "shinyFiles", "curl", "httr", "pbapply", 
@@ -30,6 +29,7 @@ default.text <- list(list(name='exp_dir',text=options$work_dir),
                      list(name='proj_name',text=options$proj_name)
                      )
 
+dbDir <<- options$db_dir
 # --- render text ---
 
 lapply(default.text, FUN=function(default){
@@ -91,6 +91,7 @@ stat.anal.ui <- reactive({
 })
 
 observeEvent(input$exp_type,{
+  req(input$exp_type)
   modes <- strsplit(x=input$exp_type, split = '\\.')[[1]]
   print(modes)
   mainmode <<- modes[[1]]
@@ -147,22 +148,6 @@ observeEvent(input$nav_general, {
   }
 )
 
-observeEvent(input$install_packages, {
-  req(packages)
-  # ----------
-  p_load(char = packages, character.only = T)
-  # ---------- 
-  firstRun <<- F
-  setOption(".conf", "packages_installed", "Y")
-  output$package_check <- renderImage({
-    # When input$n is 3, filename is ./images/image3.jpeg
-    filename <- normalizePath(file.path('backend/img/yes.png'))
-    # Return a list containing the filename and alt text
-    list(src = filename, width = 70,
-         height = 70)
-  }, deleteFile = FALSE)
-})
-
 observeEvent(input$update_packages, {
   req(packages)
   # ----------
@@ -183,9 +168,9 @@ observeEvent(input$update_packages, {
 })
   
 
-if(packages_installed == "N") return(NULL)
+if(options$packages_installed == "N") return(NULL) # BREAK!!
   
-# ====================== SETTINGS =================
+# ================ observers? =================
 
 observe({  
   shinyDirChoose(input, "get_db_dir", roots = getVolumes(), session = session)
@@ -195,6 +180,7 @@ observe({
   output$curr_db_dir <- renderText(dbDir)
   # --- connect ---
   setOption(".conf", "db_dir", dbDir)
+  options <<- getOptions(".conf")
 })
 
 observe({  
@@ -206,7 +192,9 @@ observe({
   if(!dir.exists(exp_dir)) dir.create(exp_dir)
   # --- connect ---
   setOption(".conf", "work_dir", exp_dir)
+  options <<- getOptions(".conf")
 })
+# ----------------------------------
 
 observeEvent(input$set_proj_name, {
   proj_name <<- input$proj_name
@@ -214,6 +202,7 @@ observeEvent(input$set_proj_name, {
   output$proj_name <<- renderText(proj_name)
   # --- connect ---
   setOption(".conf", "proj_name", proj_name)
+  options <<- getOptions(".conf")
 })
 
 observeEvent(input$set_ppm, {
@@ -221,8 +210,8 @@ observeEvent(input$set_ppm, {
   output$ppm <<- renderText(ppm)
   # --- connect ---
   setOption(".conf", "ppm", ppm)
+  options <<- getOptions(".conf")
 })
-
 
 color.pickers <- reactive({
   req(dataSet)
@@ -261,7 +250,7 @@ color.vec <- reactive({
 # --- check for db files ---
 
 observeEvent(input$check_umc,{
-  db_folder_files <- list.files(dbDir)
+  db_folder_files <- list.files(options$db_dir)
   is.present <- "internal.full.db" %in% db_folder_files | "noise.full.db" %in% db_folder_files
   check_pic <- if(is.present) "yes.png" else "no.png"
   output$umc_check <- renderImage({
@@ -274,7 +263,7 @@ observeEvent(input$check_umc,{
 })
 
 observeEvent(input$check_hmdb,{
-  db_folder_files <- list.files(dbDir)
+  db_folder_files <- list.files(options$db_dir)
   is.present <- "hmdb.full.db" %in% db_folder_files
   check_pic <- if(is.present) "yes.png" else "no.png"
   output$hmdb_check <- renderImage({
@@ -287,7 +276,7 @@ observeEvent(input$check_hmdb,{
 })
 
 observeEvent(input$check_chebi,{
-  db_folder_files <- list.files(dbDir)
+  db_folder_files <- list.files(options$db_dir)
   is.present <- "chebi.full.db" %in% db_folder_files
   check_pic <- if(is.present) "yes.png" else "no.png"
   output$chebi_check <- renderImage({
@@ -300,7 +289,7 @@ observeEvent(input$check_chebi,{
 })
 
 observeEvent(input$check_pubchem,{
-  db_folder_files <- list.files(dbDir)
+  db_folder_files <- list.files(options$db_dir)
   is.present <- "pubchem.full.db" %in% db_folder_files
   check_pic <- if(is.present) "yes.png" else "no.png"
   output$pubchem_check <- renderImage({
@@ -318,14 +307,14 @@ observeEvent(input$build_umc, {
   # ---------------------------
   withProgress({
     setProgress(message = "Working...")
-    build.base.db("internal", outfolder=dbDir)
+    build.base.db("internal", outfolder=options$db_dir)
     setProgress(0.5,message = "Halfway there...")
     build.extended.db("internal", 
-                      outfolder=dbDir,
+                      outfolder=options$db_dir,
                       adduct.table = wkz.adduct.confirmed, 
                       cl=session_cl, 
                       fetch.limit=10)
-    build.base.db("noise", outfolder=dbDir) # does both because its a special db
+    build.base.db("noise", outfolder=options$db_dir) # does both because its a special db
     setProgress(message = "Ok!")
   })
 })
@@ -369,7 +358,7 @@ observeEvent(input$build_pubchem,{
 observeEvent(input$create_db,{
   # --------------------
   print(exp_dir)
-  patdb <<- file.path(exp_dir, paste0(proj_name, ".db"))
+  patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
   print(patdb)
   # --------------------
   withProgress({
@@ -453,8 +442,8 @@ output$csv_icon <- renderImage({
 }, deleteFile = FALSE)
   
 observeEvent(input$create_csv, {
-  req(proj_name)
-  req(exp_dir)
+  req(options$proj_name)
+  req(options$work_dir)
   req(mainmode)
   req(submode)
   req(input$your.time)
@@ -490,7 +479,7 @@ observeEvent(input$create_csv, {
         # -------------------------
     # save csv
     setProgress(2/4, "Writing csv file...")
-    csv_loc <<- file.path(exp_dir, paste0(proj_name,".csv"))
+    csv_loc <<- file.path(options$work_dir, paste0(options$proj_name,".csv"))
     fwrite(mz.adj, csv_loc, sep="\t")
     # --- overview table ---
     setProgress(3/4, "Creating overview table...")
@@ -620,10 +609,10 @@ observeEvent(input$nav_time, {
   switch(input$nav_time,
          ipca = {
            if("ipca" %not in% names(analSet)){
-             iPCA.Anal(file.path(exp_dir, "ipca_3d_0_.json"))
+             iPCA.Anal(file.path(options$work_dir, "ipca_3d_0_.json"))
              analSet[["ipca"]] <- "Done!"             
            }
-           json_pca <- fromJSON(file.path(exp_dir, "ipca_3d_0_.json"))
+           json_pca <- fromJSON(file.path(options$work_dir, "ipca_3d_0_.json"))
            req(json_pca)
            # --------------------
            output$plot_ipca <- renderPlotly({
@@ -654,9 +643,9 @@ observeEvent(input$nav_time, {
          },
          meba = {
            if("MB" %not in% names(analSet)){
-            performMB(10, dir=exp_dir)
+            performMB(10, dir=options$work_dir)
            }
-           meba.table <<- read.csv(file.path(exp_dir, 'meba_sig_features.csv'))
+           meba.table <<- read.csv(file.path(options$work_dir, 'meba_sig_features.csv'))
            output$meba_tab <- DT::renderDataTable({
              req(meba.table)
              # -------------
@@ -670,9 +659,9 @@ observeEvent(input$nav_time, {
          asca = {
            if("asca" %not in% names(analSet)){
              Perform.ASCA(1, 1, 2, 2)
-              CalculateImpVarCutoff(0.05, 0.9, dir=exp_dir)
+              CalculateImpVarCutoff(0.05, 0.9, dir=options$work_dir)
             }
-           asca.table <<- read.csv(file.path(exp_dir,'Sig_features_Model_ab.csv'))
+           asca.table <<- read.csv(file.path(options$work_dir,'Sig_features_Model_ab.csv'))
            output$asca_tab <- DT::renderDataTable({
              req(asca.table)
              # -------------
