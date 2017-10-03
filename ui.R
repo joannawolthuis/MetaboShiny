@@ -211,18 +211,14 @@ navbarPage("MetaboShiny", id="nav_general",windowTitle = "MetaboShiny",
                                                    )
                     } else{
                       navbarPage("Standard analysis", id="tab_stat",
-                                 tabPanel("PCA", value = "pca", 
-                                          navbarPage("Explore", id="tab_pca",
-                                                     tabPanel("Overview", icon=icon("eye"), helpText(plotlyOutput("plot_pca"),
-                                                                                                     selectInput("pca_x", label = "X axis:", choices = c("PC1", "PC2", "PC3", "PC4", "PC5")),
-                                                                                                     selectInput("pca_y", label = "Y axis:", choices =c("PC1", "PC2", "PC3", "PC4", "PC5")),
-                                                                                                     selectInput("pca_z", label = "Z axis:", choices =c("PC1", "PC2", "PC3", "PC4", "PC5")))),
-                                          
-                                                     tabPanel("PLS-DA", icon=icon("bar-chart-o"),
-                                                              NULL
-                                                     )
-                                          )
-                                 ),
+                                 tabPanel("PCA", value = "pca", icon=icon("cube"),
+                                          plotlyOutput("plot_pca"),
+                                          selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:30),selected = "PC1"),
+                                          selectInput("pca_y", label = "Y axis:", choices = paste0("PC",1:30),selected = "PC2"),
+                                          selectInput("pca_z", label = "Z axis:", choices = paste0("PC",1:30),selected = "PC3")),
+                                 tabPanel("PLS-DA", icon=icon("bar-chart-o"),
+                                                              helpText("placeholder")
+                                          ),
                                  # =================================================================================
                                  tabPanel("Heatmap",
                                           plotOutput("heatmap", height='600px', width='600px')

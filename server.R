@@ -22,14 +22,14 @@ packages <<- c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
 
 options <- getOptions(".conf")
 
-default.text <- list(list(name='exp_dir',text=options$work_dir),
+default.text <- list(list(name='options$work_dir',text=options$work_dir),
                      list(name='curr_db_dir',text=options$db_dir),
                      list(name='ppm',text=options$ppm),
                      list(name='analUI',text="Please choose an analysis mode!"),
                      list(name='proj_name',text=options$proj_name)
                      )
 
-dbDir <<- options$db_dir
+options$db_dir <<- options$db_dir
 # --- render text ---
 
 lapply(default.text, FUN=function(default){
@@ -176,10 +176,10 @@ observe({
   shinyDirChoose(input, "get_db_dir", roots = getVolumes(), session = session)
   given_dir <- input$get_db_dir$path
   if(is.null(given_dir)) return()
-  dbDir <<- paste(c(given_dir), collapse="/")
-  output$curr_db_dir <- renderText(dbDir)
+  options$db_dir <<- paste(c(given_dir), collapse="/")
+  output$curr_db_dir <- renderText(options$db_dir)
   # --- connect ---
-  setOption(".conf", "db_dir", dbDir)
+  setOption(".conf", "db_dir", options$db_dir)
   options <<- getOptions(".conf")
 })
 
@@ -187,18 +187,18 @@ observe({
   shinyDirChoose(input, "get_work_dir", roots = getVolumes(), session = session)
   given_dir <- input$get_work_dir$path
   if(is.null(given_dir)) return()
-  exp_dir <<- paste(c(given_dir), collapse="/")
-  output$exp_dir <- renderText(exp_dir)
-  if(!dir.exists(exp_dir)) dir.create(exp_dir)
+  options$work_dir <<- paste(c(given_dir), collapse="/")
+  output$options$work_dir <- renderText(options$work_dir)
+  if(!dir.exists(options$work_dir)) dir.create(options$work_dir)
   # --- connect ---
-  setOption(".conf", "work_dir", exp_dir)
+  setOption(".conf", "work_dir", options$work_dir)
   options <<- getOptions(".conf")
 })
 # ----------------------------------
 
 observeEvent(input$set_proj_name, {
   proj_name <<- input$proj_name
-  patdb <<- file.path(exp_dir, paste0(proj_name,".db", sep=""))
+  patdb <<- file.path(options$work_dir, paste0(proj_name,".db", sep=""))
   output$proj_name <<- renderText(proj_name)
   # --- connect ---
   setOption(".conf", "proj_name", proj_name)
@@ -216,10 +216,15 @@ observeEvent(input$set_ppm, {
 color.pickers <- reactive({
   req(dataSet)
   # -------------
-  if("facA" %not in% names(dataSet) & "facB" %not in% names(dataSet)){print('aah')}
-  lbl.fac <- if(dataSet$facA.lbl == "Time") "facB" else "facA"
-  default.colours <- rainbow(length(levels(dataSet[[lbl.fac]])))
-  facs <- levels(dataSet[[lbl.fac]])
+  switch(mainmode,
+         time = {
+           lbl.fac <- if(dataSet$facA.lbl == "Time") "facB" else "facA"
+           facs <- levels(dataSet[[lbl.fac]])
+           },
+         stat = {
+           facs <- levels(dataSet$filt.cls)
+  })
+  default.colors <- rainbow(length(facs))
   # -------------
   lapply(seq_along(facs), function(i) {
     colourInput(inputId = paste("col", i, sep="_"), 
@@ -233,12 +238,19 @@ output$colourPickers <- renderUI({color.pickers()})
 color.vec <- reactive({
   req(dataSet)
   # ----------
-  if("facA" %not in% names(dataSet) & "facB" %not in% names(dataSet)) return(c("Red", "Green"))
-  lbl.fac <- if(dataSet$facA.lbl == "Time") "facB" else "facA"
-  default.colours <- rainbow(length(levels(dataSet[[lbl.fac]])))
-  facs <- levels(dataSet[[lbl.fac]])
+  switch(mainmode,
+         time = {
+           if("facA" %not in% names(dataSet) & "facB" %not in% names(dataSet)) return(c("Red", "Green"))
+           lbl.fac <- if(dataSet$facA.lbl == "Time") "facB" else "facA"
+           facs <- dataSet[[lbl.fac]]
+         },
+         stat = {
+           facs <- dataSet$filt.cls
+         })
+  default.colours <- rainbow(length(facs))
   # -------------
   unlist(lapply(seq_along(facs), function(i) {
+    print(i)
     input[[paste("col", i, sep="_")]]
   }))
 })
@@ -322,10 +334,10 @@ observeEvent(input$build_umc, {
 observeEvent(input$build_hmdb,{
   withProgress({
     setProgress(message = "Working...")
-    build.base.db("hmdb", outfolder=dbDir)
+    build.base.db("hmdb", outfolder=options$db_dir)
     setProgress(0.5,message = "Halfway there...")
     build.extended.db("hmdb", 
-                      outfolder=dbDir, 
+                      outfolder=options$db_dir, 
                       adduct.table = wkz.adduct.confirmed, 
                       cl=session_cl, 
                       fetch.limit=100)
@@ -336,9 +348,9 @@ observeEvent(input$build_hmdb,{
 observeEvent(input$build_chebi,{
   withProgress({
     setProgress(message = "Working...")
-    build.base.db("chebi", outfolder=dbDir)
+    build.base.db("chebi", outfolder=options$db_dir)
     setProgress(0.5,message = "Halfway there...")
-    build.extended.db("chebi", outfolder=dbDir, adduct.table = wkz.adduct.confirmed, cl=session_cl, fetch.limit=100)
+    build.extended.db("chebi", outfolder=options$db_dir, adduct.table = wkz.adduct.confirmed, cl=session_cl, fetch.limit=100)
     setProgress(message = "Ok!")
   })
 })
@@ -346,9 +358,9 @@ observeEvent(input$build_chebi,{
 observeEvent(input$build_pubchem,{
   withProgress({
     setProgress(message = "Working...")
-    build.base.db("pubchem", outfolder=dbDir, cl = session_cl)
+    build.base.db("pubchem", outfolder=options$db_dir, cl = session_cl)
     setProgress(0.5,message = "Halfway there...")
-    build.extended.db("pubchem", outfolder=dbDir, adduct.table = wkz.adduct.confirmed, cl=session_cl, fetch.limit=100)
+    build.extended.db("pubchem", outfolder=options$db_dir, adduct.table = wkz.adduct.confirmed, cl=session_cl, fetch.limit=100)
     setProgress(message = "Ok!")
   })
 })
@@ -357,7 +369,7 @@ observeEvent(input$build_pubchem,{
 
 observeEvent(input$create_db,{
   # --------------------
-  print(exp_dir)
+  print(options$work_dir)
   patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
   print(patdb)
   # --------------------
@@ -572,8 +584,9 @@ observeEvent(input$initialize,{
            InitDataObjects("pktable",
                            "stat",
                            FALSE)
-           Read.TextData(csv_loc, "rowu", "disc")
-           print(names(dataSet))
+           Read.TextData(csv_loc, 
+                         "rowu", 
+                         "disc")
            }
          )
   SanityCheckData()
@@ -682,30 +695,31 @@ observeEvent(input$tab_stat, {
            PCA.Anal()
            output$plot_pca <- renderPlotly({
              req(analSet$pca)
-             req(input$pca_x)
-             req(input$pca_y)
-             req(input$pca_z)
-             fac.lvls <- unique(dataSet$facB.lbl)
-             dataSet$facA.lbl
+             df <- analSet$pca$x
+             x <- input$pca_x
+             y <- input$pca_y
+             z <- input$pca_z
+             x.var <- round(analSet$pca$variance[x] * 100.00, digits=1)
+             y.var <- round(analSet$pca$variance[y] * 100.00, digits=1)
+             z.var <- round(analSet$pca$variance[z] * 100.00, digits=1)
+             fac.lvls <- unique(dataSet$filt.cls)
              chosen.colors <- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
              # ---------------
-             df <- t(as.data.frame(json_pca$score$xyz))
              plot_ly(hoverinfo = 'text',
-                     text = json_pca$score$name ) %>%
+                     text = rownames(df) ) %>%
                add_trace(
-                 x = df[,1], 
-                 y = df[,2], 
-                 z = df[,3], 
+                 x = analSet$pca$x[,x], 
+                 y = analSet$pca$x[,y], 
+                 z = analSet$pca$x[,z], 
                  type = "scatter3d",
-                 color= json_pca$score[[input$ipca_factor]], colors=chosen.colors
+                 color= dataSet$filt.cls, colors=chosen.colors
                ) %>%  layout(scene = list(
                  xaxis = list(
-                   title = json_pca$score$axis[1]),
+                   title = fn$paste("$x ($x.var %)")),
                  yaxis = list(
-                   title = json_pca$score$axis[2]),
+                   title = fn$paste("$y ($y.var %)")),
                  zaxis = list(
-                   title = json_pca$score$axis[3])))
-             
+                   title = fn$paste("$z ($z.var %)"))))
            })},
          heatmap = {NULL},
          tt = {Ttests.Anal(F, 0.05, FALSE, TRUE)},
