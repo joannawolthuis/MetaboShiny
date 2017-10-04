@@ -26,32 +26,6 @@ ggplotSummary <- function(mz = curr_mz, cols=c("Red", "Green")){
   cols <- if(is.null(cols)) c("Red", "Green") else(cols)
   print(cols)
   if(substring(dataSet$format,4,5)!="ts"){
-  #   
-  #   par(mar=c(4,4,2,2), mfrow = c(1,2), oma=c(0,0,2,0));
-  #   
-  #   mns <- by(as.numeric(dataSet$proc[, mz]), dataSet$proc.cls, mean, na.rm=T);
-  #   sds <- by(as.numeric(dataSet$proc[, mz]), dataSet$proc.cls, sd, na.rm=T);
-  #   
-  #   ups <- mns + sds;
-  #   dns <- mns - sds;
-        # all concentration need start from 0
-    # y <- c(0, dns, mns, ups);
-    # 
-    # rg <- range(y) + 0.05 * diff(range(y)) * c(-1, 1)
-    # pt <- pretty(y)
-    # 
-    # axp=c(min(pt), max(pt[pt <= max(rg)]),length(pt[pt <= max(rg)]) - 1);
-    # 
-    # # ymk <- pretty(c(0,ymax));
-    # x <- barplot(mns, col= cols, las=2, yaxp=axp, ylim=range(pt));
-    # arrows(x, dns, x, ups, code=3, angle=90, length=.1);
-    # axis(1, at=x, col="white", col.tick="black", labels=F);
-    # box();
-    # mtext("Original Conc.", line=1);
-    # 
-    # boxplot(dataSet$norm[, mz]~dataSet$cls,las=2, col=color.vec());
-    # mtext("Normalized Conc.", line=1);
-    # title(main=mz, out=T);
     # --- ggplot ---
     profile <- getProfile(mz, mode="stat")
     # -----------
@@ -66,33 +40,33 @@ ggplotSummary <- function(mz = curr_mz, cols=c("Red", "Green")){
     ggplotly(plot, tooltip="Sample")
     #
   }else if(dataSet$design.type =="time"){ # time trend within phenotype
-      profile <- getProfile(mz, mode="time")
-      # -----------
-      print(profile)
-      # ggplot
-      plot <- ggplot(data=profile, aes(x=Time, y=Abundance, fill=Group, color=Group)) +
-        geom_boxplot(alpha=0.4, aes(group=Group)) +
-        geom_point(aes(text=Sample),alpha=0.4, size = 2, shape = 1, position = position_dodge(width=0.1)) +
-        theme_minimal(base_size = 10) +
-        scale_fill_manual(values=cols) +
-        scale_color_manual(values=cols) + facet_wrap(~Group)
-      # ---------------
-      ggplotly(plot, tooltip="Sample")
+    profile <- getProfile(mz, mode="time")
+    # -----------
+    print(profile)
+    # ggplot
+    plot <- ggplot(data=profile, aes(x=Time, y=Abundance, fill=Group, color=Group)) +
+      geom_boxplot(alpha=0.4, aes(group=Group)) +
+      geom_point(aes(text=Sample),alpha=0.4, size = 2, shape = 1, position = position_dodge(width=0.1)) +
+      theme_minimal(base_size = 10) +
+      scale_fill_manual(values=cols) +
+      scale_color_manual(values=cols) + facet_wrap(~Group)
+    # ---------------
+    ggplotly(plot, tooltip="Sample")
   }
   #
 }
 
 ggPlotTT <- function(){
-   profile <- as.data.table(analSet$tt$p.log[analSet$tt$inx.imp],keep.rownames = T)
-   colnames(profile) <- c("mz", "p")
-   profile$Peak <- c(1:nrow(profile)) 
-   # ---------------------------
-   plot <- ggplot(data=profile) +
-     geom_point(aes(x=Peak, y=p,text=mz, color=p, key=mz)) +
-     theme_minimal(base_size = 10) +
-     scale_colour_gradientn(colours = rainbow(5)) +
-     scale_y_log10()
-   ggplotly(plot, tooltip="mz")
+  profile <- as.data.table(analSet$tt$p.log[analSet$tt$inx.imp],keep.rownames = T)
+  colnames(profile) <- c("mz", "p")
+  profile$Peak <- c(1:nrow(profile)) 
+  # ---------------------------
+  plot <- ggplot(data=profile) +
+    geom_point(aes(x=Peak, y=p,text=mz, color=p, key=mz)) +
+    theme_minimal(base_size = 10) +
+    scale_colour_gradientn(colours = rainbow(5)) +
+    scale_y_log10()
+  ggplotly(plot, tooltip="mz")
 }
 
 ggPlotFC <- function(){
@@ -108,3 +82,31 @@ ggPlotFC <- function(){
     scale_colour_gradientn(colours = rainbow(5))
   ggplotly(plot, tooltip="log2fc")
 }
+# 
+install.packages('heatmaply')
+library(heatmaply)
+
+
+dataSet$prenorm.cls
+data.table(dataSet$prenorm.cls, rownames(dataSet$prenorm))
+rc = sapply(dataSet$prenorm.cls, FUN=function(group){
+  rb <- rainbow(2)
+  switch(as.numeric(group),
+  '1' = rb[1],
+  '2' = rb[2])
+})
+#tt-based
+x <- dataSet$norm[,names(analSet$tt$inx.imp[analSet$tt$inx.imp == TRUE])]
+heatmaply(t(x), 
+          Colv=T, 
+          Rowv=T, 
+          ColSideColors = dataSet$prenorm.cls,
+          branches_lwd = 0.3,
+          k_row = NA,
+          colors = rainbow(256),
+          margins = c(60,0,NA,50),
+          subplot_heights = c(.07,.05,.85),
+          column_text_angle = 90
+)
+#fc-based
+heatmaply(dataSet$norm[,names(analSet$fc$inx.imp[analSet$fc$inx.imp == TRUE])])
