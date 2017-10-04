@@ -779,19 +779,30 @@ observeEvent(input$heatmode,{
               tt = dataSet$norm[,names(analSet$tt$inx.imp[analSet$tt$inx.imp == TRUE])],
               fc = dataSet$norm[,names(analSet$fc$inx.imp[analSet$fc$inx.imp == TRUE])]
   )
-  hm_matrix <<- heatmapr(t(x), 
+  final_matrix <- t(x)
+  translator <- data.table(Sample=rownames(dataSet$norm),Group=dataSet$prenorm.cls)
+  group_assignments <- translator[,"Group",on=colnames(final_matrix)]$Group
+  assigned_colours <- sapply(group_assignments, FUN=function(group){
+    rc = rainbow(2)
+    as.factor(switch(as.character(group),
+           Safe = rc[1],
+           Challenge = rc[2])
+           )
+  })
+  hm_matrix <<- heatmapr(final_matrix, 
                         Colv=T, 
                         Rowv=T,
-                        k_row = NA,
-                        ColSideColors = rc)
+                        col_side_colors = group_assignments,
+                        k_row = NA)
   output$heatmap <- renderPlotly({
     heatmaply(hm_matrix,
               Colv=F, Rowv=F,
               branches_lwd = 0.3,
               margins = c(60,0,NA,50),
               colors = rainbow(256),
+              col_side_palette = RdYlGn,
               subplot_widths = c(.9,.1),
-              subplot_heights =  c(.1,.9),
+              subplot_heights =  c(.1,.05,.85),
               column_text_angle = 90)
     
       })
