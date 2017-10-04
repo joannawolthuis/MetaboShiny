@@ -18,7 +18,8 @@ packages <<- c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
                "RColorBrewer", "xcms","impute", "pcaMethods","siggenes",
                "globaltest", "GlobalAncova", "Rgraphviz","KEGGgraph",
                "preprocessCore", "genefilter", "pheatmap", "igraph",
-               "RJSONIO", "SSPA", "caTools", "ROCR", "pROC", "sva", "rJava")
+               "RJSONIO", "SSPA", "caTools", "ROCR", "pROC", "sva", "rJava",
+               "colorRamps", "grDevices")
 
 options <- getOptions(".conf")
 
@@ -213,6 +214,41 @@ observeEvent(input$set_ppm, {
   options <<- getOptions(".conf")
 })
 
+observeEvent(input$color_ramp,{
+  print(input$color_ramp)
+  color.function <<- switch(input$color_ramp,
+                           "rb"=rainbow,
+                           "y2b"=ygobb,
+                           "ml1"=matlab.like2,
+                           "ml2"=matlab.like,
+                           "m2g"=magenta2green,
+                           "c2y"=cyan2yellow,
+                           "b2y"=blue2yellow,
+                           "g2r"=green2red,
+                           "b2g"=blue2green,
+                           "b2r"=blue2red,
+                           "b2p"=cm.colors,
+                           "bgy"=topo.colors,
+                           "gyw"=terrain.colors,
+                           "ryw"=heat.colors)
+  
+  ax <- list(
+    title = "",
+    zeroline = FALSE,
+    showline = FALSE,
+    showticklabels = FALSE,
+    showgrid = FALSE
+  )
+  output$ramp_plot <- renderPlotly({
+    plot_ly(z = volcano, 
+          colors = color.function(100), 
+          type = "heatmap",
+          showscale=FALSE)  %>%
+    layout(xaxis = ax, yaxis = ax)
+  })
+})
+
+
 color.pickers <- reactive({
   req(dataSet)
   # -------------
@@ -224,12 +260,13 @@ color.pickers <- reactive({
          stat = {
            facs <- levels(dataSet$filt.cls)
   })
-  default.colors <- rainbow(length(facs))
+  default.colours <- rainbow(length(facs))
   # -------------
   lapply(seq_along(facs), function(i) {
     colourInput(inputId = paste("col", i, sep="_"), 
                 label = paste("Choose colour for", facs[i]), 
-                value = default.colours[i]) 
+                value = default.colours[i],
+                allowTransparent = T) 
   })
 })
 
@@ -750,7 +787,7 @@ observeEvent(input$tab_stat, {
            })
            output$tt_overview_plot <- renderPlotly({
              # --- ggplot ---
-             ggPlotTT()
+             ggPlotTT(color.function, 20)
            })
            },
          fc = {
@@ -768,7 +805,7 @@ observeEvent(input$tab_stat, {
            })
            output$fc_overview_plot <- renderPlotly({
              # --- ggplot ---
-             ggPlotFC()
+             ggPlotFC(color.function, 20)
            })
            })
 })
@@ -782,13 +819,6 @@ observeEvent(input$heatmode,{
   final_matrix <- t(x)
   translator <- data.table(Sample=rownames(dataSet$norm),Group=dataSet$prenorm.cls)
   group_assignments <- translator[,"Group",on=colnames(final_matrix)]$Group
-  assigned_colours <- sapply(group_assignments, FUN=function(group){
-    rc = rainbow(2)
-    as.factor(switch(as.character(group),
-           Safe = rc[1],
-           Challenge = rc[2])
-           )
-  })
   hm_matrix <<- heatmapr(final_matrix, 
                         Colv=T, 
                         Rowv=T,
@@ -799,8 +829,10 @@ observeEvent(input$heatmode,{
               Colv=F, Rowv=F,
               branches_lwd = 0.3,
               margins = c(60,0,NA,50),
-              colors = rainbow(256),
-              col_side_palette = RdYlGn,
+              colors = color.function(256),
+              col_side_palette = function(n){
+                if(n == length(color.vec())) color.vec() else rainbow(n)
+              },
               subplot_widths = c(.9,.1),
               subplot_heights =  c(.1,.05,.85),
               column_text_angle = 90)

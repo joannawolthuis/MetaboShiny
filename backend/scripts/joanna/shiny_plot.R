@@ -56,7 +56,7 @@ ggplotSummary <- function(mz = curr_mz, cols=c("Red", "Green")){
   #
 }
 
-ggPlotTT <- function(){
+ggPlotTT <- function(cf, n){
   profile <- as.data.table(analSet$tt$p.log[analSet$tt$inx.imp],keep.rownames = T)
   colnames(profile) <- c("mz", "p")
   profile$Peak <- c(1:nrow(profile)) 
@@ -64,12 +64,12 @@ ggPlotTT <- function(){
   plot <- ggplot(data=profile) +
     geom_point(aes(x=Peak, y=p,text=mz, color=p, key=mz)) +
     theme_minimal(base_size = 10) +
-    scale_colour_gradientn(colours = rainbow(5)) +
+    scale_colour_gradientn(colours = cf(n)) +
     scale_y_log10()
   ggplotly(plot, tooltip="mz")
 }
 
-ggPlotFC <- function(){
+ggPlotFC <- function(cf, n){
   profile <- as.data.table(analSet$fc$fc.log[analSet$fc$inx.imp],keep.rownames = T)
   profile
   colnames(profile) <- c("mz", "log2fc")
@@ -79,7 +79,7 @@ ggPlotFC <- function(){
     geom_point(aes(x=Peak, y=log2fc, text=log2fc, color=log2fc, key=mz)) +
     geom_abline(aes(intercept = 0, slope = 0)) +
     theme_minimal(base_size = 10) +
-    scale_colour_gradientn(colours = rainbow(5))
+    scale_colour_gradientn(colours = cf(n))
   ggplotly(plot, tooltip="log2fc")
 }
 
