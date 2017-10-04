@@ -45,6 +45,7 @@ load.necessarities <- function(shiny.tab){
            library(preprocessCore)},
          analysis = {
            library(plotly)
+           library(heatmaply)
            library(data.table)},
          options = {
            library(shinyFiles)

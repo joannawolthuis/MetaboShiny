@@ -82,31 +82,4 @@ ggPlotFC <- function(){
     scale_colour_gradientn(colours = rainbow(5))
   ggplotly(plot, tooltip="log2fc")
 }
-# 
-install.packages('heatmaply')
-library(heatmaply)
 
-
-dataSet$prenorm.cls
-data.table(dataSet$prenorm.cls, rownames(dataSet$prenorm))
-rc = sapply(dataSet$prenorm.cls, FUN=function(group){
-  rb <- rainbow(2)
-  switch(as.numeric(group),
-  '1' = rb[1],
-  '2' = rb[2])
-})
-#tt-based
-x <- dataSet$norm[,names(analSet$tt$inx.imp[analSet$tt$inx.imp == TRUE])]
-heatmaply(t(x), 
-          Colv=T, 
-          Rowv=T, 
-          ColSideColors = dataSet$prenorm.cls,
-          branches_lwd = 0.3,
-          k_row = NA,
-          colors = rainbow(256),
-          margins = c(60,0,NA,50),
-          subplot_heights = c(.07,.05,.85),
-          column_text_angle = 90
-)
-#fc-based
-heatmaply(dataSet$norm[,names(analSet$fc$inx.imp[analSet$fc$inx.imp == TRUE])])

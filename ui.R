@@ -230,13 +230,9 @@ navbarPage("MetaboShiny", id="nav_general",windowTitle = "MetaboShiny",
                                                               helpText("placeholder")
                                           ),
                                  # =================================================================================
-                                 tabPanel("Heatmap",
-                                          plotOutput("heatmap", height='600px', width='600px')
-                                         ),
-                                 # =================================================================================
                                  tabPanel("T-test", value="tt", 
                                           fluidRow(plotlyOutput('tt_specific_plot')),
-                                          navbarPage("Selection",
+                                          navbarPage("",
                                                      tabPanel("", icon=icon("table"),
                                                               div(DT::dataTableOutput('tt_tab'),style='font-size:80%'))
                                                      ,tabPanel("", icon=icon("area-chart"),
@@ -245,13 +241,20 @@ navbarPage("MetaboShiny", id="nav_general",windowTitle = "MetaboShiny",
                                           )),
                                  tabPanel("Fold-change", value="fc",
                                           fluidRow(plotlyOutput('fc_specific_plot')),
-                                          navbarPage("Selection",
+                                          navbarPage("",
                                                      tabPanel("", icon=icon("table"),
                                                               div(DT::dataTableOutput('fc_tab'),style='font-size:80%'))
                                                      ,tabPanel("", icon=icon("area-chart"),
                                                                plotlyOutput('fc_overview_plot',width = "600px", height="250px")
                                                      )
                                           )),
+                                 tabPanel("Heatmap", value="heat",
+                                          plotlyOutput("heatmap", height='600px', width='750px'),
+                                          radioButtons("heatmode", "Use significant values from:", 
+                                                       choiceNames = c("T-test", "Fold-change"),
+                                                       choiceValues = c("tt", "fc"),
+                                                       selected = 1, inline=T)
+                                 ),
                                  # =================================================================================
                                  tabPanel("Volcano", value="volc",
                                           fluidRow(plotOutput('volc_plot')),

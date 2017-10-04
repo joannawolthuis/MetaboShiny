@@ -11,7 +11,7 @@ patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
 
 packages <<- c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
                "plotly", "parallel", "shinyFiles", "curl", "httr", "pbapply", 
-               "sqldf", "plyr", "ChemmineR", "gsubfn", "stringr", "plotly", 
+               "sqldf", "plyr", "ChemmineR", "gsubfn", "stringr", "plotly", "heatmaply",
                "reshape2", "XML", "xlsx", "colourpicker", "DT","Rserve", "ellipse", 
                "scatterplot3d","pls", "caret", "lattice", "compiler",
                "Cairo", "randomForest", "e1071","gplots", "som", "xtable",
@@ -74,7 +74,7 @@ stat.anal.ui <- reactive({
              ),
              # =================================================================================
              tabPanel("Heatmap",
-                      plotOutput("heatmap", height='600px', width='600px')
+                      plotlyOutput("heatmap", height='600px', width='900px')
              ),
              # =================================================================================
              tabPanel("T-test", value="tt", 
@@ -733,7 +733,8 @@ observeEvent(input$tab_stat, {
                        autoHideNavigation = T,
                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
            })},
-         heatmap = {NULL},
+         heatmap = {   NULL
+           },
          tt = {
            Ttests.Anal(F, 0.05, FALSE, TRUE)
            tt.table <<- as.data.table(read.csv(file.path(options$work_dir,'t_test.csv')),keep.rownames = F)
@@ -772,6 +773,31 @@ observeEvent(input$tab_stat, {
            })
 })
 
+observeEvent(input$heatmode,{
+  print(input$heatmode)
+  x <- switch(input$heatmode, 
+              tt = dataSet$norm[,names(analSet$tt$inx.imp[analSet$tt$inx.imp == TRUE])],
+              fc = dataSet$norm[,names(analSet$fc$inx.imp[analSet$fc$inx.imp == TRUE])]
+  )
+  hm_matrix <<- heatmapr(t(x), 
+                        Colv=T, 
+                        Rowv=T,
+                        k_row = NA,
+                        ColSideColors = rc)
+  output$heatmap <- renderPlotly({
+    heatmaply(hm_matrix,
+              Colv=F, Rowv=F,
+              branches_lwd = 0.3,
+              margins = c(60,0,NA,50),
+              colors = rainbow(256),
+              subplot_widths = c(.9,.1),
+              subplot_heights =  c(.1,.9),
+              column_text_angle = 90)
+    
+      })
+})
+
+
 observeEvent(input$tt_tab_rows_selected,{
   curr_row = input$tt_tab_rows_selected
   # do nothing if not clicked yet, or the clicked cell is not in the 1st column
@@ -799,21 +825,30 @@ observeEvent(input$fc_tab_rows_selected,{
 observe({
   d <- event_data("plotly_click")
   if(length(d) == 0) return(NULL)
-  print(d)
   switch(input$tab_stat,
-         tt = if(d$key %not in% names(analSet$tt$p.value)) return(NULL),
-         fc =  if(d$key %not in% names(analSet$fc$fc.log)) return(NULL)
-         )
-  curr_mz <<- d$key
-  output$tt_specific_plot <- renderPlotly({
-    # --- ggplot ---
-    ggplotSummary(curr_mz, cols = color.vec())
-  })
-  output$fc_specific_plot <- renderPlotly({
-    # --- ggplot ---
-    ggplotSummary(curr_mz, cols = color.vec())
-  })
+         tt = {
+           if(d$key %not in% names(analSet$tt$p.value)) return(NULL)
+           curr_mz <<- d$key
+           output$tt_specific_plot <- renderPlotly({
+             # --- ggplot ---
+             ggplotSummary(curr_mz, cols = color.vec())
+           })
+           },
+         fc = {
+           if(d$key %not in% names(analSet$fc$fc.log)) return(NULL)
+           curr_mz <<- d$key
+           output$fc_specific_plot <- renderPlotly({
+             # --- ggplot ---
+             ggplotSummary(curr_mz, cols = color.vec())
+           })
+         },
+         heat = {
+           if(d$y > length(hm_matrix$matrix$rows)) return(NULL)
+           curr_mz <<- hm_matrix$matrix$rows[d$y]
+             })
 })
+         
+
 
 # ================ MEBA ========================
 
