@@ -39,10 +39,10 @@ shinyUI(fluidPage(theme = "button.css",
                                                                         imageOutput("package_check")
                                         ))),
                                tabPanel("",  icon = icon("save"), value="save",
-                                        helpText("Save your dataset"),
-                                        fadeImageButton("test"),
-                                        fadeImageButton("test2"),
-                                        fadeImageButton("test3")
+                                        helpText("Save your dataset")
+                                        #fluidRow(column(width=1,fadeImageButton("test", img.path = "cutemolecule.png")),
+                                        #         column(width=1,fadeImageButton("test2", img.path = "cutemolecule.png"))
+                                        #         )
                                         ),
                                tabPanel("", value=""),
                                # --------------------------------------------------------------------------------------------------------------------------------
@@ -207,7 +207,15 @@ shinyUI(fluidPage(theme = "button.css",
                                                uiOutput("analUI")
                                         ),column(4, align="center",
                                                  fluidRow(imageOutput("find_mol_icon",inline = T),
-                                                          div(checkboxGroupInput("checkGroup", 
+                                                          h4("Selected database(s):"),
+                                                          fluidRow(
+                                                            column(align="center",width=2,fadeImageButton("search_internal", img.path = "umcinternal.png")),
+                                                            column(align="center",width=2,fadeImageButton("search_noise", img.path = "umcnoise.png")),
+                                                            column(align="center",width=2,fadeImageButton("search_hmdb", img.path = "hmdblogo.png")),
+                                                            column(align="center",width=2,fadeImageButton("search_chebi", img.path = "chebilogo.png")),
+                                                            column(align="center",width=1,fadeImageButton("search_pubchem", img.path = "pubchemlogo.png"))
+                                                          ),
+                                                          div(checkboxGroupInput("checkGroup",
                                                                                  label = h4("Selected database(s):"),
                                                                                  choices = list("Internal" = file.path(options$db_dir,"internal.full.db"), 
                                                                                                 "Noise" = file.path(options$db_dir,"noise.full.db"), 

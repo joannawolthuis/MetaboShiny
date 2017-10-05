@@ -148,12 +148,16 @@ body {
 
 /* -------------------- EXPERIMENTATION -------------------- */
 
-/* funky code */
+/* funky code that works */
 
-input.fadebox {
-    display: none;
+.fadebox {
+  display: none;
 }
 
-input.fadebox:checked + label > img {
-    opacity: 0.25;
+.fadebox + label > img {
+  height: 40px;
+}
+
+.fadebox:checked + label > img {
+  opacity: 0.25;
 }
