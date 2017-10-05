@@ -1,0 +1,148 @@
+body {
+  font-family:'Helvetica', sans-serif; 
+}
+
+/* ON-OFF switch button */
+/* Sébastien Rochette */
+/* http://sebrock.fr/en/ */
+/* CSS modified from : https://proto.io/freebies/onoff/ */
+/* All switch */
+.onoffswitch {
+  width: 100px;
+  position: relative;
+  -webkit-user-select:none; -moz-user-select:none; -ms-user-select: none;
+  font-family:'Helvetica', sans-serif; 
+}
+.onoffswitch-checkbox {
+  display: none;
+}
+.onoffswitch-label {
+  display: block; overflow: hidden; cursor: pointer;
+  border: 2px solid #999999; border-radius: 30px;
+}
+.onoffswitch-inner {
+  display: block; width: 200%; margin-left: -100%;
+  transition: margin 0.3s ease-in 0s;
+}
+.onoffswitch-inner:before, .onoffswitch-inner:after {
+  display: block; float: left; width: 50%; height: 40px; padding: 0; line-height: 40px;
+  font-size: 14px; color: white; font-family: Trebuchet, Arial, sans-serif; font-weight: bold;
+  box-sizing: border-box;
+}
+
+/* All switch - default div class */
+.onoffswitch-inner:before {
+  content: " ";
+  padding-left: 20px;
+  text-align: left;
+}
+
+.onoffswitch-inner:after {
+  content: " ";
+  padding-right: 20px;
+  text-align: right;
+}
+
+.onoffswitch-switch {
+  display: block; width: 30px; height: 30px; margin: 6.5px;
+  position: absolute; top: 0; bottom: 0;
+  border-radius: 30px;
+  right: 56px;
+  transition: all 0.3s ease-in 0s; 
+}
+.onoffswitch-checkbox:checked + .onoffswitch-label .onoffswitch-switch {
+  right: 0px;
+}
+.onoffswitch-checkbox:checked + .onoffswitch-label .onoffswitch-inner {
+  margin-left: 0;
+}
+
+/* Color change */
+/* RedGreen */
+.RedGreen .onoffswitch-inner:before {
+  background-color: #008A0C; color: #FFFFFF;
+}
+.RedGreen .onoffswitch-inner:after {
+  background-color: #D10000; color: #FFFFFF;
+}
+
+.RedGreen .onoffswitch-switch {
+  background: #FFFFFF;
+  border: 2px solid #FFFFFF;
+}
+
+/* Color change */
+/* BlackWhite */
+.BlackWhite .onoffswitch-inner:before {
+  background-color: #000000; color: #FFFFFF;
+}
+.BlackWhite .onoffswitch-inner:after {
+  background-color: #FFFFFF; color: #000000;
+}
+
+.BlackWhite .onoffswitch-switch {
+  background: #000000;
+  border: 2px solid #000000;
+}
+.BlackWhite .onoffswitch-checkbox:checked + .onoffswitch-label .onoffswitch-switch {
+  background-color: #FFFFFF;
+  border: 2px solid #FFFFFF;
+}
+
+/* GreyBlue */ 
+.GreyBlue .onoffswitch-inner:before {
+  background-color: #FFFFFF; color: #428bca;
+}
+.GreyBlue .onoffswitch-inner:after {
+  background-color: #FFFFFF; color: #AAA;
+}
+.GreyBlue .onoffswitch-switch {
+  background: #AAA;
+  border: 2px solid #AAA;
+}
+.GreyBlue .onoffswitch-checkbox:checked + .onoffswitch-label .onoffswitch-switch {
+  background-color: #428bca;
+}
+
+/* Text change */
+/* On / Off */
+.OnOff .onoffswitch-inner:before {
+  content: "ON";
+  font-size: 15px;
+}
+
+.OnOff .onoffswitch-inner:after {
+  content: "OFF";
+  font-size: 15px;
+}
+/* Yes / No */
+.YesNo .onoffswitch-inner:before {
+  content: "YES";
+  font-size: 15px;
+}
+
+.YesNo .onoffswitch-inner:after {
+  content: "NO";
+  font-size: 15px;
+}
+/* True / False */
+.TrueFalse .onoffswitch-inner:before {
+  content: "TRUE";
+  font-size: 15px;
+}
+
+.TrueFalse .onoffswitch-inner:after {
+  content: "FALSE";
+  font-size: 15px;
+}
+
+/* Tt / Fc */
+.TtFc .onoffswitch-inner:before {
+  content: "TT";
+  font-size: 15px;
+}
+
+.TtFc .onoffswitch-inner:after {
+  content: "FC";
+  font-size: 18px;
+}

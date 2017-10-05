@@ -1,6 +1,7 @@
-function(input, output, session) {
-
 library(shiny)
+
+shinyServer(function(input, output, session) {
+  
   
 # ===== defaults =====
 
@@ -52,8 +53,13 @@ time.anal.ui <- reactive({
                       fluidRow(div(DT::dataTableOutput('meba_tab'),style='font-size:80%'))),
              # =================================================================================
              tabPanel("ASCA", value="asca",
-                      fluidRow(plotlyOutput('asca_plot')),
-                      fluidRow(div(DT::dataTableOutput('asca_tab'),style='font-size:80%'))
+                      navbarPage("Explore", 
+                                 tabPanel("Overview", icon=icon("eye"), helpText("...")),
+                                 tabPanel("Plots", icon=icon("bar-chart-o"),
+                                          fluidRow(plotlyOutput('asca_plot')),
+                                          fluidRow(div(DT::dataTableOutput('asca_tab'),style='font-size:80%'))
+                                 )
+                      )
              )
              # =================================================================================
   )
@@ -61,40 +67,73 @@ time.anal.ui <- reactive({
 
 stat.anal.ui <- reactive({
   navbarPage("Standard analysis", id="tab_stat",
-             tabPanel("PCA", value = "pca", 
-                      navbarPage("Explore", id="tab_pca",
-                                 tabPanel("PCA", icon=icon("eye"), helpText(plotlyOutput("plot_pca"),
-                                                                                 selectInput("pca_x", label = "X axis:", choices = c("PC1", "PC2", "PC3", "PC4", "PC5", "Other")),
-                                                                                 selectInput("pca_y", label = "Y axis:", choices =c("PC1", "PC2", "PC3", "PC4", "PC5","Other")),
-                                                                                 selectInput("pca_z", label = "Z axis:", choices =c("PC1", "PC2", "PC3", "PC4", "PC5","Other")))),
-                                 
-                                 tabPanel("PLS-DA", icon=icon("bar-chart-o"),
-                                          helpText("placeholder")
-                                 )
+             tabPanel("", value = "intro", icon=icon("comment-o"),
+                      helpText("Info text here")
+             ),
+             tabPanel("PCA", value = "pca", #icon=icon("cube"),
+                      plotlyOutput("plot_pca"),
+                      fluidRow(column(3,
+                                      selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:30),selected = "PC1"),
+                                      selectInput("pca_y", label = "Y axis:", choices = paste0("PC",1:30),selected = "PC2"),
+                                      selectInput("pca_z", label = "Z axis:", choices = paste0("PC",1:30),selected = "PC3")
+                      ), 
+                      column(8, 
+                             div(DT::dataTableOutput('pca_tab'),style='font-size:80%')
+                      )
                       )
              ),
-             # =================================================================================
-             tabPanel("Heatmap",
-                      plotlyOutput("heatmap", height='600px', width='900px')
+             tabPanel("PLS-DA", #icon=icon("bar-chart-o"),
+                      helpText("placeholder")
              ),
              # =================================================================================
              tabPanel("T-test", value="tt", 
-                      fluidRow(plotOutput('tt_plot')),
-                      fluidRow(div(DT::dataTableOutput('tt_tab'),style='font-size:80%'))),
+                      fluidRow(plotlyOutput('tt_specific_plot')),
+                      navbarPage("",
+                                 tabPanel("", icon=icon("table"),
+                                          div(DT::dataTableOutput('tt_tab'),style='font-size:80%'))
+                                 ,tabPanel("", icon=icon("area-chart"),
+                                           plotlyOutput('tt_overview_plot',width = "600px", height="250px")
+                                 )
+                      )),
              tabPanel("Fold-change", value="fc",
-                      fluidRow(plotOutput('fc_plot')),
-                      fluidRow(div(DT::dataTableOutput('fc_tab'),style='font-size:80%'))),
+                      fluidRow(plotlyOutput('fc_specific_plot')),
+                      navbarPage("",
+                                 tabPanel("", icon=icon("table"),
+                                          div(DT::dataTableOutput('fc_tab'),style='font-size:80%'))
+                                 ,tabPanel("", icon=icon("area-chart"),
+                                           plotlyOutput('fc_overview_plot',width = "600px", height="250px")
+                                 )
+                      )),
+             tabPanel("Heatmap", value="heat",
+                      plotlyOutput("heatmap", height='600px', width='750px'),
+                      fluidRow(switchButton(inputId = "heatmode",
+                                            label = "Use data from:", 
+                                            value = TRUE, col = "BW", type = "TTFC"))
+             ),
              # =================================================================================
              tabPanel("Volcano", value="volc",
                       fluidRow(plotOutput('volc_plot')),
                       fluidRow(div(DT::dataTableOutput('volc_tab'),style='font-size:80%')))
-  )
+             
+)
 })
+
+observe({
+  curr_mode <- mainmode
+  if(exists("dataSet")){
+    if("shinymode" %in% names(dataSet)) curr_mode <- dataSet$shinymode
+  } 
+  whichUI <- switch(curr_mode,
+                    time={time.anal.ui()},
+                    stat={stat.anal.ui()})
+  output$analUI <- renderUI({whichUI})
+})
+
+# -----------------
 
 observeEvent(input$exp_type,{
   req(input$exp_type)
   modes <- strsplit(x=input$exp_type, split = '\\.')[[1]]
-  print(modes)
   mainmode <<- modes[[1]]
   submode <<- modes[[2]]
   # ---------------------
@@ -215,7 +254,6 @@ observeEvent(input$set_ppm, {
 })
 
 observeEvent(input$color_ramp,{
-  print(input$color_ramp)
   color.function <<- switch(input$color_ramp,
                            "rb"=rainbow,
                            "y2b"=ygobb,
@@ -287,7 +325,6 @@ color.vec <- reactive({
   default.colours <- rainbow(length(facs))
   # -------------
   unlist(lapply(seq_along(facs), function(i) {
-    print(i)
     input[[paste("col", i, sep="_")]]
   }))
 })
@@ -406,9 +443,7 @@ observeEvent(input$build_pubchem,{
 
 observeEvent(input$create_db,{
   # --------------------
-  print(options$work_dir)
   patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
-  print(patdb)
   # --------------------
   withProgress({
     setProgress(.25,message = "Loading outlists into memory...")
@@ -553,10 +588,6 @@ observeEvent(input$create_csv, {
                 autoHideNavigation = T,
                 options = list(lengthMenu = c(10, 30, 50), pageLength = 30,scrollX=TRUE, scrollY=TRUE))
     })
-    whichUI <- switch(mainmode,
-                      time={time.anal.ui()},
-                      stat={stat.anal.ui()})
-    output$analUI <- renderUI({whichUI})
   })
 })
 
@@ -650,8 +681,10 @@ observeEvent(input$initialize,{
   output$var_norm_plot <- renderPlot(PlotNormSummary())
   setProgress(.4, "Plotting sample overview...")
   output$samp_norm_plot <- renderPlot(PlotSampleNormSummary())
+  dataSet$shinymode <<- mainmode
 })
 })
+
 
 observeEvent(input$nav_time, {
   if(input$nav_general != "analysis") return(NULL)
@@ -811,11 +844,9 @@ observeEvent(input$tab_stat, {
 })
 
 observeEvent(input$heatmode,{
-  print(input$heatmode)
-  x <- switch(input$heatmode, 
-              tt = dataSet$norm[,names(analSet$tt$inx.imp[analSet$tt$inx.imp == TRUE])],
-              fc = dataSet$norm[,names(analSet$fc$inx.imp[analSet$fc$inx.imp == TRUE])]
-  )
+  x <- if(input$heatmode == TRUE){
+    dataSet$norm[,names(analSet$tt$inx.imp[analSet$tt$inx.imp == TRUE])]
+    } else{dataSet$norm[,names(analSet$fc$inx.imp[analSet$fc$inx.imp == TRUE])]}
   final_matrix <- t(x)
   translator <- data.table(Sample=rownames(dataSet$norm),Group=dataSet$prenorm.cls)
   group_assignments <- translator[,"Group",on=colnames(final_matrix)]$Group
@@ -846,23 +877,47 @@ observeEvent(input$tt_tab_rows_selected,{
   # do nothing if not clicked yet, or the clicked cell is not in the 1st column
   if (is.null(curr_row)) return()
   curr_mz <<- tt.table[curr_row,X]
-  print(curr_mz)
+  output$curr_mz <- renderText(curr_mz)
   output$tt_specific_plot <- renderPlotly({
     # --- ggplot ---
     ggplotSummary(curr_mz, cols = color.vec())
   })
+  if(input$autosearch){
+    match_list <- lapply(input$checkGroup, FUN=function(match.table){
+      get_matches(curr_mz, match.table)
+    })
+    match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
+    output$match_tab <- DT::renderDataTable({
+      datatable(match_table[,-"Description"],
+                selection = 'single',
+                autoHideNavigation = T,
+                options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+    })  
+  }
 })
 
 observeEvent(input$fc_tab_rows_selected,{
   curr_row = input$fc_tab_rows_selected
   # do nothing if not clicked yet, or the clicked cell is not in the 1st column
   if (is.null(curr_row)) return()
-  curr_mz <<- fc.table[curr_row,X]
-  print(curr_mz)
+  curr_mz <<- fc.table[curr_row, X]
+  output$curr_mz <- renderText(curr_mz)
   output$fc_specific_plot <- renderPlotly({
-    # --- ggplot ---
-    ggplotSummary(curr_mz, cols = color.vec())
+  # --- ggplot ---
+  ggplotSummary(curr_mz, cols = color.vec())
   })
+  if(input$autosearch){
+    match_list <- lapply(input$checkGroup, FUN=function(match.table){
+      get_matches(curr_mz, match.table)
+    })
+    match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
+    output$match_tab <- DT::renderDataTable({
+      datatable(match_table[,-"Description"],
+                selection = 'single',
+                autoHideNavigation = T,
+                options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+    })  
+  }
 })
 
 observe({
@@ -889,10 +944,21 @@ observe({
            if(d$y > length(hm_matrix$matrix$rows)) return(NULL)
            curr_mz <<- hm_matrix$matrix$rows[d$y]
              })
+  output$curr_mz <- renderText(curr_mz)
+  if(input$autosearch){
+    match_list <- lapply(input$checkGroup, FUN=function(match.table){
+      get_matches(curr_mz, match.table)
+    })
+    match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
+    output$match_tab <- DT::renderDataTable({
+      datatable(match_table[,-"Description"],
+                selection = 'single',
+                autoHideNavigation = T,
+                options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+    })  
+  }
 })
          
-
-
 # ================ MEBA ========================
 
 observeEvent(input$meba_tab_rows_selected,{
@@ -905,6 +971,20 @@ observeEvent(input$meba_tab_rows_selected,{
     # --- ggplot ---
     ggplotMeba(curr_mz, draw.average, cols = color.vec())
   })
+  output$curr_mz <- renderText(curr_mz)
+  
+  if(input$autosearch){
+    match_list <- lapply(input$checkGroup, FUN=function(match.table){
+      get_matches(curr_mz, match.table)
+    })
+    match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
+    output$match_tab <- DT::renderDataTable({
+      datatable(match_table[,-"Description"],
+                selection = 'single',
+                autoHideNavigation = T,
+                options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+    })  
+  }
 })
 
 # check for selected mz row
@@ -913,7 +993,22 @@ observeEvent(input$asca_tab_rows_selected,{
   # do nothing if not clicked yet, or the clicked cell is not in the 1st column
   if (is.null(curr_row)) return()
   curr_mz <<- asca.table[curr_row,'X']
-  output$asca_plot <- renderPlotly({ggplotSummary(curr_mz, cols = color.vec())})})
+  output$asca_plot <- renderPlotly({ggplotSummary(curr_mz, cols = color.vec())})
+  output$curr_mz <- renderText(curr_mz)
+  
+  if(input$autosearch){
+    match_list <- lapply(input$checkGroup, FUN=function(match.table){
+      get_matches(curr_mz, match.table)
+    })
+    match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
+    output$match_tab <- DT::renderDataTable({
+      datatable(match_table[,-"Description"],
+                selection = 'single',
+                autoHideNavigation = T,
+                options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+    })  
+  }
+  })
 
 # --- find matches ---
 
@@ -926,19 +1021,19 @@ output$find_mol_icon <- renderImage({
        height=70)
 }, deleteFile = FALSE)
 
-observeEvent(input$search_mz,{
+observeEvent(input$search_mz, {
   req(input$checkGroup)
-  req(curr_mz)
-  # -------------------
+  # ------------------
   match_list <- lapply(input$checkGroup, FUN=function(match.table){
-    get_matches(curr_mz, match.table)})
+    get_matches(curr_mz, match.table)
+  })
   match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
   output$match_tab <- DT::renderDataTable({
     datatable(match_table[,-"Description"],
               selection = 'single',
               autoHideNavigation = T,
               options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-  })
+  })  
 })
 
 observeEvent(input$match_tab_rows_selected,{
@@ -955,7 +1050,8 @@ observeEvent(input$browse_db,{
   req(input$checkGroup)
   # -------------------
   cpd_list <- lapply(input$checkGroup, FUN=function(match.table){
-  browse_db(match.table)})
+    browse_db(match.table)
+    })
   # ------------------
   browse_table <<- unique(as.data.table(rbindlist(cpd_list)))
   output$browse_tab <- DT::renderDataTable({
@@ -966,12 +1062,11 @@ observeEvent(input$browse_db,{
   })
 })
 
-observeEvent(input$search_cpd,{
+observeEvent(input$search_cpd, {
   req(input$checkGroup)
   req(input$browse_tab_rows_selected)
   # -------------------
   search_cmd <- browse_table[curr_row,c('Formula', 'Charge')]
-  print(search_cmd)
   # -------------------
   cpd_list <- lapply(input$checkGroup, FUN=function(match.table){
     get_mzs(search_cmd$Formula, search_cmd$Charge, match.table)})
@@ -1008,4 +1103,5 @@ observeEvent(input$hits_tab_rows_selected,{
 session$onSessionEnded(function() {
   if(any(!is.na(session_cl))) stopCluster(session_cl)
 })
-}
+
+})

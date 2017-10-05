@@ -14,9 +14,10 @@ getProfile <-function (varName, title=varName, mode="stat") {
   varInx <- colnames(dataSet$norm) == varName;
   var <- as.data.table(dataSet$norm, keep.rownames = T)[,varInx, with=FALSE];
   samp.names <- rownames(dataSet$norm)
+  exp.fac <<- dataSet$filt.cls
   # ---------------
   if(mainmode == "time"){
-    time.fac <- dataSet$time.fac;
+    time.fac <<- dataSet$time.fac;
     translator <- data.table(
       index = 1:length(samp.names),
       Sample = gsub(x = samp.names, pattern = "T\\d$", replacement=""),
@@ -25,7 +26,6 @@ getProfile <-function (varName, title=varName, mode="stat") {
       Abundance = dataSet$norm[,varInx]
     )
   }else if(mainmode == "stat"){
-    exp.fac <- dataSet$filt.cls
     translator <- data.table(
       index = 1:length(samp.names),
       Sample = gsub(x = samp.names, pattern = "T\\d$", replacement=""),
@@ -36,3 +36,4 @@ getProfile <-function (varName, title=varName, mode="stat") {
   # ---------------
   return(translator)
 }
+

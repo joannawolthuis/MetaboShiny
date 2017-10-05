@@ -54,7 +54,7 @@ setOption <- function(file.loc, key, value){
 
 # --- beta stuff ---
 
-mode <- "time.standard"
+mainmode <- if(exists("dataSet")) dataSet$shinymode else("stat")
 
 # === SOURCE OWN CODE ===
 
