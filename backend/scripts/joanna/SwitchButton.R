@@ -78,3 +78,31 @@ switchButton <- function(inputId, label, value=FALSE, col = "GB", type="TF") {
   }
 }
 
+# '<input type="checkbox" id="btnControl"/>
+#                                                        <label class="btn" for="btnControl">
+# <img src="http://placekitten.com.s3.amazonaws.com/homepage-samples/200/140.jpg" id="btnLeft"/>
+# </label>'
+# 
+# img = "hereisyourpicture"
+# tags$img(src="...")
+# tagList(
+#   tags$input(type="checkbox", id="btnControl"),
+#   tags$div(class="form-group shiny-input-container",
+#            tags$label(class="btn", "for"="btnControl", tags$img(src="http://placekitten.com.s3.amazonaws.com/homepage-samples/200/140.jpg", id="btnLeft"))
+#   )
+# )
+# 
+
+fadeImageButton <- function(inputId, img=NA) {
+  # ---------------
+  print(inputId)
+  #if(is.na(img)) stop("Please enter an image name (place in www folder please)")
+  # ---------------
+  tagList(
+    tags$div(class = "form-group shiny-input-container",
+    tags$input(type="checkbox", class="fadebox", id=inputId, checked=""),
+    tags$label(class="btn", "for"=inputId,
+               tags$img(src="http://placekitten.com.s3.amazonaws.com/homepage-samples/200/140.jpg", id="btnLeft"))
+    )
+  )
+}

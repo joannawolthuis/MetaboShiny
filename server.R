@@ -28,7 +28,8 @@ default.text <- list(list(name='options$work_dir',text=options$work_dir),
                      list(name='curr_db_dir',text=options$db_dir),
                      list(name='ppm',text=options$ppm),
                      list(name='analUI',text="Please choose an analysis mode!"),
-                     list(name='proj_name',text=options$proj_name)
+                     list(name='proj_name',text=options$proj_name),
+                     list(name="curr_mz", text="...")
                      )
 
 options$db_dir <<- options$db_dir
@@ -36,6 +37,10 @@ options$db_dir <<- options$db_dir
 
 lapply(default.text, FUN=function(default){
   output[[default$name]] = renderText(default$text)
+})
+
+observeEvent(input$test, {
+  print(input$test)
 })
 
 # -------------------
@@ -161,7 +166,9 @@ images <- list(list(name = 'cute_package', path = 'backend/img/new-product.png',
                list(name = 'pos_icon', path = 'backend/img/handpos.png', dimensions = c(120, 120)),
                list(name = 'neg_icon', path = 'backend/img/handneg.png', dimensions = c(120, 120)),
                list(name = 'excel_icon', path = 'backend/img/excel.png', dimensions = c(120, 120)),
-               list(name = 'db_icon', path = 'backend/img/office.png', dimensions = c(100, 100))
+               list(name = 'db_icon', path = 'backend/img/office.png', dimensions = c(100, 100)),
+               list(name = 'csv_icon', path = 'backend/img/office.png', dimensions = c(100, 100)),
+               list(name = 'dataset_icon', path = 'backend/img/office.png', dimensions = c(100, 100))
                )
 
 lapply(images, FUN=function(image){
@@ -516,14 +523,6 @@ observeEvent(input$import_csv, {
   output$analUI <- renderUI({whichUI})
   })
 
-output$csv_icon <- renderImage({
-  # When input$n is 3, filename is ./images/image3.jpeg
-  filename <- normalizePath(file.path('./backend/img/office.png'))
-  # Return a list containing the filename and alt text
-  list(src = filename,
-       width=100,
-       height=100)
-}, deleteFile = FALSE)
   
 observeEvent(input$create_csv, {
   req(options$proj_name)
@@ -567,7 +566,6 @@ observeEvent(input$create_csv, {
     fwrite(mz.adj, csv_loc, sep="\t")
     # --- overview table ---
     setProgress(3/4, "Creating overview table...")
-    
     overview_tab <- if(mode == "time"){
       t(data.table(keep.rownames = F,
                    Mz = ncol(mz.adj) - 3,
@@ -591,6 +589,26 @@ observeEvent(input$create_csv, {
   })
 })
 
+# load previous dataset
+
+observeEvent(input$import_dataset, {
+  req(input$pat_dataset)
+  # -----------------------------------
+  data_loc <<- input$pat_dataset$datapath
+  output$dataset_upload_check <- renderImage({
+    # When input$n is 3, filename is ./images/image3.jpeg
+    filename <- normalizePath('backend/img/yes.png')
+    # Return a list containing the filename and alt text
+    list(src = filename, width = 20,
+         height = 20)
+  }, deleteFile = FALSE)
+  # -----------
+  load(data_loc, envir = .GlobalEnv)
+  # -----------
+  output$var_norm_plot <- renderPlot(PlotNormSummary())
+  output$samp_norm_plot <- renderPlot(PlotSampleNormSummary())
+})
+  
 # ===================== METABOSTART ========================
 
 observeEvent(input$check_excel, {
@@ -632,9 +650,6 @@ observeEvent(input$initialize,{
   # match
   withProgress({
   # get curr values from: input$ exp_type, filt_type, norm_type, scale_type, trans_type (later)
-  sourceAll(file.path("backend", 
-                      "scripts", 
-                      "metaboanalyst"))
   setProgress(.1, "Applying your settings...")
   # ------------------------------
   #Below is your R command history: 
@@ -882,7 +897,7 @@ observeEvent(input$tt_tab_rows_selected,{
     # --- ggplot ---
     ggplotSummary(curr_mz, cols = color.vec())
   })
-  if(input$autosearch){
+  if(input$autosearch & length(input$checkGroup > 0)){
     match_list <- lapply(input$checkGroup, FUN=function(match.table){
       get_matches(curr_mz, match.table)
     })
@@ -906,7 +921,7 @@ observeEvent(input$fc_tab_rows_selected,{
   # --- ggplot ---
   ggplotSummary(curr_mz, cols = color.vec())
   })
-  if(input$autosearch){
+  if(input$autosearch & length(input$checkGroup > 0)){
     match_list <- lapply(input$checkGroup, FUN=function(match.table){
       get_matches(curr_mz, match.table)
     })
@@ -945,7 +960,7 @@ observe({
            curr_mz <<- hm_matrix$matrix$rows[d$y]
              })
   output$curr_mz <- renderText(curr_mz)
-  if(input$autosearch){
+  if(input$autosearch & length(input$checkGroup > 0)){
     match_list <- lapply(input$checkGroup, FUN=function(match.table){
       get_matches(curr_mz, match.table)
     })
@@ -973,8 +988,8 @@ observeEvent(input$meba_tab_rows_selected,{
   })
   output$curr_mz <- renderText(curr_mz)
   
-  if(input$autosearch){
-    match_list <- lapply(input$checkGroup, FUN=function(match.table){
+  if(input$autosearch & length(input$checkGroup > 0)){
+      match_list <- lapply(input$checkGroup, FUN=function(match.table){
       get_matches(curr_mz, match.table)
     })
     match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
@@ -996,7 +1011,7 @@ observeEvent(input$asca_tab_rows_selected,{
   output$asca_plot <- renderPlotly({ggplotSummary(curr_mz, cols = color.vec())})
   output$curr_mz <- renderText(curr_mz)
   
-  if(input$autosearch){
+  if(input$autosearch & length(input$checkGroup > 0)){
     match_list <- lapply(input$checkGroup, FUN=function(match.table){
       get_matches(curr_mz, match.table)
     })
@@ -1044,7 +1059,6 @@ observeEvent(input$match_tab_rows_selected,{
   curr_def <<- match_table[curr_row,'Description']
   output$curr_definition <- renderText(curr_def$Description)
   })
-
 
 observeEvent(input$browse_db,{
   req(input$checkGroup)
@@ -1097,11 +1111,14 @@ observeEvent(input$hits_tab_rows_selected,{
   curr_mz <<- hits_table[curr_row, mzmed.pgrp]
   output$meba_plot <- renderPlotly({ggplotMeba(curr_mz, draw.average, cols = color.vec() )})
   output$asca_plot <- renderPlotly({ggplotSummary(curr_mz, cols = color.vec())})
+  output$fc_specific_plot <- renderPlotly({ggplotSummary(curr_mz, cols = color.vec())})
+  output$tt_specific_plot <- renderPlotly({ggplotSummary(curr_mz, cols = color.vec())})
   })
 
 # --- ON CLOSE ---
 session$onSessionEnded(function() {
   if(any(!is.na(session_cl))) stopCluster(session_cl)
+  save(dataSet, analSet, file = file.path(options$work_dir, paste0(options$proj_name, ".RData")))
 })
-
+options$proj_name
 })

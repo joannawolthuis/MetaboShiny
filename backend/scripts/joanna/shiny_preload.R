@@ -39,16 +39,24 @@ load.necessarities <- function(shiny.tab){
            library(data.table)
            library(reshape2)},
          filter = {
+           sourceAll(file.path("backend", 
+                               "scripts", 
+                               "metaboanalyst"))
            library(plotly)
            library(data.table)
            library(Cairo)
            library(preprocessCore)},
          analysis = {
+           sourceAll(file.path("backend", 
+                               "scripts", 
+                               "metaboanalyst"))
            library(plotly)
            library(heatmaply)
            library(data.table)},
          options = {
            library(shinyFiles)
+           library(colorRamps)
+           library(grDevices)
            library(colourpicker)
          })
 }

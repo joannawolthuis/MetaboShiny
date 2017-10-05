@@ -23,7 +23,7 @@ shinyUI(fluidPage(theme = "button.css",
                     )  
                   } else{
                     navbarPage("MetaboShiny", id="nav_general",windowTitle = "MetaboShiny",
-                               tabPanel("", icon = icon("star"), value="setup",
+                               tabPanel("", icon = icon("share-alt"), value="setup",
                                         # --- db check cols ---
                                         fluidRow(column(width=2),column(width=5, align="center",
                                                                         h2("Setup"),
@@ -38,8 +38,15 @@ shinyUI(fluidPage(theme = "button.css",
                                                                         br(),br(),
                                                                         imageOutput("package_check")
                                         ))),
+                               tabPanel("",  icon = icon("save"), value="save",
+                                        helpText("Save your dataset"),
+                                        fadeImageButton("test"),
+                                        fadeImageButton("test2"),
+                                        fadeImageButton("test3")
+                                        ),
+                               tabPanel("", value=""),
                                # --------------------------------------------------------------------------------------------------------------------------------
-                               tabPanel("Databases", icon = icon("database"), value="database",
+                               tabPanel("", icon = icon("database"), value="database",
                                         # -- header row ---
                                         fluidRow(column(12, align="center",
                                                         h3("")
@@ -93,7 +100,7 @@ shinyUI(fluidPage(theme = "button.css",
                                         )
                                ),
                                # --------------------------------------------------------------------------------------------------------------------------------
-                               tabPanel("Import", icon = icon("upload"), value="upload", ## this guy gives error???
+                               tabPanel("", icon = icon("upload"), value="upload", ## this guy gives error???
                                         fluidRow(column(9, align="center", h4("Create project"), br())),
                                         fluidRow(column(3,  align="center",
                                                         imageOutput("pos_icon",inline = T),
@@ -128,7 +135,7 @@ shinyUI(fluidPage(theme = "button.css",
                                                         imageOutput("db_upload_check",inline = T)
                                         ))
                                ),
-                               tabPanel("Document", icon=icon("file-text-o"), value="document",
+                               tabPanel("", icon=icon("file-text-o"), value="document",
                                         fluidRow(column(4, align="center",
                                                         selectInput('exp_var', 'Which experimental variable do you want to look at?', choices = c("")),
                                                         actionButton("check_excel", "Get variables", icon=icon("refresh")),
@@ -156,8 +163,8 @@ shinyUI(fluidPage(theme = "button.css",
                                         )
                                ),
                                # --------------------------------------------------------------------------------------------------------------------------------
-                               tabPanel("Clean",  icon = icon("filter"), value="filter",
-                                        column(3, aligh="center",
+                               tabPanel("",  icon = icon("shower"), value="filter",
+                                        fluidRow(column(3, aligh="center",
                                                selectInput('filt_type', 'How will you filter your m/z values?', choices = list("Interquantile range"="iqr",
                                                                                                                                "Relative stdev"="rsd",
                                                                                                                                "Non-parametric relative stdev"="nrsd",
@@ -178,7 +185,14 @@ shinyUI(fluidPage(theme = "button.css",
                                                                                                                          "Pareto Scaling"="ParetoNorm",
                                                                                                                          "Range scaling"="RangeNorm",
                                                                                                                          "None"="N/A")),
-                                               actionButton("initialize", "Go", icon=icon("hand-o-right"))
+                                               actionButton("initialize", "Go", icon=icon("hand-o-right")),
+                                               hr(),
+                                               imageOutput("dataset_icon",inline = T),
+                                               fileInput("pat_dataset", "Import dataset",
+                                                         multiple = F,
+                                                         accept = c(".RData")),
+                                               actionButton("import_dataset", "Import", icon = icon("hand-peace-o")),
+                                               imageOutput("dataset_upload_check",inline = T)
                                         ), column(9,
                                                   navbarPage("Explore",
                                                              tabPanel("Variables", icon=icon("braille"),
@@ -186,27 +200,27 @@ shinyUI(fluidPage(theme = "button.css",
                                                              tabPanel("Samples", icon=icon("tint"),
                                                                       plotOutput('samp_norm_plot', width = '800px', height='800px'))
                                                   ))
-                                        
-                               ),
+                                        )),
                                # --------------------------------------------------------------------------------------------------------------------------------
-                               tabPanel("Analysis",  icon = icon("bar-chart"), value = "analysis",# multiple options here :-)
+                               tabPanel("",  icon = icon("bar-chart"), value = "analysis",# multiple options here :-)
                                         column(8, 
                                                uiOutput("analUI")
                                         ),column(4, align="center",
                                                  fluidRow(imageOutput("find_mol_icon",inline = T),
                                                           div(checkboxGroupInput("checkGroup", 
                                                                                  label = h4("Selected database(s):"),
-                                                                                 choices = list("Internal DB" = file.path(options$db_dir,"internal.full.db"), 
-                                                                                                "Noise DB" = file.path(options$db_dir,"noise.full.db"), 
+                                                                                 choices = list("Internal" = file.path(options$db_dir,"internal.full.db"), 
+                                                                                                "Noise" = file.path(options$db_dir,"noise.full.db"), 
                                                                                                 "HMDB" = file.path(options$db_dir,"hmdb.full.db"),
                                                                                                 "ChEBI" = file.path(options$db_dir,"chebi.full.db"),
                                                                                                 "PubChem" = file.path(options$db_dir,"pubchem.full.db")),
-                                                                                 selected = 1, inline = T),style='font-size:90%')), hr(),
+                                                                                 selected = 1, inline = T),style='font-size:70%')), br(), br(),
+                                                 fluidRow(switchButton(inputId = "autosearch",
+                                                                       label = "Autosearch", 
+                                                                       value = FALSE, col = "BW", type = "OO")),
+                                                 hr(),
                                                  h4("Current compound:"),
                                                  verbatimTextOutput("curr_mz"), hr(),
-                                                 fluidRow(switchButton(inputId = "autosearch",
-                                                              label = "Autosearch", 
-                                                              value = FALSE, col = "BW", type = "OO")),
                                                  fluidRow(navbarPage("Search", id="tab_iden",
                                                                      tabPanel("Current", icon=icon("sort-numeric-asc"),
                                                                               actionButton("search_mz", "Find hits", icon=icon("search")),
@@ -228,6 +242,7 @@ shinyUI(fluidPage(theme = "button.css",
                                                                      ))
                                                           # --------------------------------------------------------------------------------------------------------------------------------
                                                  ))),
+                               tabPanel("", value=""),
                                tabPanel("",  icon = icon("cog"), value="options", 
                                         navbarPage("Settings", id="tab_settings",
                                                    tabPanel("Project", icon=icon("gift"),
@@ -278,8 +293,7 @@ shinyUI(fluidPage(theme = "button.css",
                                         )
                                         
                                         
-                               )
-                    )
+                               )                    )
                   }
 ))
                   

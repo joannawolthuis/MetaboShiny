@@ -29,7 +29,6 @@ body {
   font-size: 14px; color: white; font-family: Trebuchet, Arial, sans-serif; font-weight: bold;
   box-sizing: border-box;
 }
-
 /* All switch - default div class */
 .onoffswitch-inner:before {
   content: " ";
@@ -145,4 +144,16 @@ body {
 .TtFc .onoffswitch-inner:after {
   content: "FC";
   font-size: 18px;
+}
+
+/* -------------------- EXPERIMENTATION -------------------- */
+
+/* funky code */
+
+input.fadebox {
+    display: none;
+}
+
+input.fadebox:checked + label > img {
+    opacity: 0.25;
 }
