@@ -13,17 +13,21 @@ body {
   -webkit-user-select:none; -moz-user-select:none; -ms-user-select: none;
   font-family:'Helvetica', sans-serif; 
 }
+
 .onoffswitch-checkbox {
   display: none;
 }
+
 .onoffswitch-label {
   display: block; overflow: hidden; cursor: pointer;
   border: 2px solid #999999; border-radius: 30px;
 }
+
 .onoffswitch-inner {
   display: block; width: 200%; margin-left: -100%;
   transition: margin 0.3s ease-in 0s;
 }
+
 .onoffswitch-inner:before, .onoffswitch-inner:after {
   display: block; float: left; width: 50%; height: 40px; padding: 0; line-height: 40px;
   font-size: 14px; color: white; font-family: Trebuchet, Arial, sans-serif; font-weight: bold;
@@ -49,9 +53,11 @@ body {
   right: 56px;
   transition: all 0.3s ease-in 0s; 
 }
+
 .onoffswitch-checkbox:checked + .onoffswitch-label .onoffswitch-switch {
   right: 0px;
 }
+
 .onoffswitch-checkbox:checked + .onoffswitch-label .onoffswitch-inner {
   margin-left: 0;
 }

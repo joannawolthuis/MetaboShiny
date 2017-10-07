@@ -2,8 +2,22 @@
 # package (which generally comes preloaded).
 
 source("./Rsource/SwitchButton.R")
+sardine <- function(content) div(style="display: inline-block;vertical-align:top;", content)
 
-shinyUI(fluidPage(theme = "button.css",
+shinyUI(fluidPage(
+  tags$head(
+    tags$style(HTML("
+                    @import url('//fonts.googleapis.com/css?family=Bungee Outline');
+                    
+                    h1 {
+                    margin: 2px;
+                    font-family: 'Bungee Outline';
+                    font-weight: 15;
+                    line-height: 0.5;
+                    }
+                    
+                    "))
+    ),theme = "button.css",
                   if(options$packages_installed != "Y"){
                     navbarPage("MetaboSetup", id="nav_general",windowTitle = "MetaboShiny",
                                tabPanel("", icon = icon("wrench"), value="setup",
@@ -22,7 +36,9 @@ shinyUI(fluidPage(theme = "button.css",
                                         )))
                     )  
                   } else{
-                    navbarPage("MetaboShiny", id="nav_general",windowTitle = "MetaboShiny",
+                    navbarPage(title=h1("MetaboShiny"),
+                               id="nav_general",
+                               windowTitle = "MetaboShiny",
                                tabPanel("", icon = icon("share-alt"), value="setup",
                                         # --- db check cols ---
                                         fluidRow(column(width=2),column(width=5, align="center",
@@ -84,18 +100,28 @@ shinyUI(fluidPage(theme = "button.css",
                                                actionButton("build_chebi", "Build", icon = icon("wrench")),
                                                br(),br(),
                                                imageOutput("chebi_check",inline = T)
-                                        ),
-                                        column(3,  align="center",
-                                               h2("PubChem"),
-                                               helpText("A huge database with known pretty much all known chemicals."),
-                                               br(),
-                                               imageOutput("pubchem_logo",inline = T),
-                                               br(),br(),br(),
-                                               actionButton("check_pubchem", "Check", icon = icon("check")),
-                                               actionButton("build_pubchem", "Build", icon = icon("wrench")),
-                                               br(),br(),
-                                               imageOutput("pubchem_check",inline = T)
-                                        )
+                                        )),
+                                        fluidRow(column(3,  align="center",
+                                                        h2("WikiPathways"),
+                                                        helpText("Compounds associated with biological pathways."),
+                                                        imageOutput("wikipath_logo",inline = T),
+                                                        br(),br(),
+                                                        actionButton("check_wikipath", "Check", icon = icon("check")),
+                                                        actionButton("build_wikipath", "Build", icon = icon("wrench")),
+                                                        br(),br(),
+                                                        imageOutput("wikipath_check",inline = T)
+                                                        ),
+                                                 column(3,  align="center",
+                                                        h2("PubChem"),
+                                                        helpText("A huge database with known pretty much all known chemicals."),
+                                                        br(),
+                                                        imageOutput("pubchem_logo",inline = T),
+                                                        br(),br(),br(),
+                                                        actionButton("check_pubchem", "Check", icon = icon("check")),
+                                                        actionButton("build_pubchem", "Build", icon = icon("wrench")),
+                                                        br(),br(),
+                                                        imageOutput("pubchem_check",inline = T)
+                                                        )
                                         )
                                         )
                                ),
@@ -203,53 +229,47 @@ shinyUI(fluidPage(theme = "button.css",
                                         )),
                                # --------------------------------------------------------------------------------------------------------------------------------
                                tabPanel("",  icon = icon("bar-chart"), value = "analysis",# multiple options here :-)
-                                        column(8, 
-                                               uiOutput("analUI")
-                                        ),column(4, align="center",
-                                                 fluidRow(imageOutput("find_mol_icon",inline = T),
-                                                          h4("Selected database(s):"),
-                                                          fluidRow(
-                                                            column(align="center",width=2,fadeImageButton("search_internal", img.path = "umcinternal.png")),
-                                                            column(align="center",width=2,fadeImageButton("search_noise", img.path = "umcnoise.png")),
-                                                            column(align="center",width=2,fadeImageButton("search_hmdb", img.path = "hmdblogo.png")),
-                                                            column(align="center",width=2,fadeImageButton("search_chebi", img.path = "chebilogo.png")),
-                                                            column(align="center",width=1,fadeImageButton("search_pubchem", img.path = "pubchemlogo.png"))
-                                                          ),
-                                                          div(checkboxGroupInput("checkGroup",
-                                                                                 label = h4("Selected database(s):"),
-                                                                                 choices = list("Internal" = file.path(options$db_dir,"internal.full.db"), 
-                                                                                                "Noise" = file.path(options$db_dir,"noise.full.db"), 
-                                                                                                "HMDB" = file.path(options$db_dir,"hmdb.full.db"),
-                                                                                                "ChEBI" = file.path(options$db_dir,"chebi.full.db"),
-                                                                                                "PubChem" = file.path(options$db_dir,"pubchem.full.db")),
-                                                                                 selected = 1, inline = T),style='font-size:70%')), br(), br(),
-                                                 fluidRow(switchButton(inputId = "autosearch",
-                                                                       label = "Autosearch", 
-                                                                       value = FALSE, col = "BW", type = "OO")),
-                                                 hr(),
-                                                 h4("Current compound:"),
-                                                 verbatimTextOutput("curr_mz"), hr(),
-                                                 fluidRow(navbarPage("Search", id="tab_iden",
-                                                                     tabPanel("Current", icon=icon("sort-numeric-asc"),
-                                                                              actionButton("search_mz", "Find hits", icon=icon("search")),
-                                                                              hr(),
-                                                                              div(DT::dataTableOutput('match_tab'),style='font-size:80%'),
-                                                                              hr(),
-                                                                              div(textOutput("curr_definition"))
-                                                                     ),
-                                                                     tabPanel("Target", icon=icon("sort-alpha-asc"),
-                                                                              actionButton("browse_db", "Browse compounds", icon=icon("eye")),
-                                                                              hr(),
-                                                                              div(DT::dataTableOutput('browse_tab'),style='font-size:80%'),
-                                                                              hr(),
-                                                                              div(textOutput("browse_definition"),style='font-size:80%'),
-                                                                              hr(),
-                                                                              actionButton("search_cpd", "Find hits", icon=icon("search")),
-                                                                              hr(),
-                                                                              div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
-                                                                     ))
-                                                          # --------------------------------------------------------------------------------------------------------------------------------
-                                                 ))),
+                                        sidebarLayout(position="right",
+                                                      mainPanel = mainPanel(
+                                                        uiOutput("analUI")
+                                                      ),
+                                                      sidebarPanel = sidebarPanel(align="center",
+                                                        fluidRow(imageOutput("find_mol_icon",inline = T),
+                                                                 h4("Selected database(s):"),br(),
+                                                                 sardine(fadeImageButton("search_internal", img.path = "umcinternal.png")),
+                                                                 sardine(fadeImageButton("search_noise", img.path = "umcnoise.png")),
+                                                                 sardine(fadeImageButton("search_hmdb", img.path = "hmdblogo.png")),br(),
+                                                                 sardine(fadeImageButton("search_chebi", img.path = "chebilogo.png")),
+                                                                 sardine(fadeImageButton("search_wikipath", img.path = "wikipathways.png")),
+                                                                 sardine(fadeImageButton("search_pubchem", img.path = "pubchemlogo.png")),br(),
+                                                                 sardine(switchButton(inputId = "autosearch",
+                                                                              label = "Autosearch", 
+                                                                              value = FALSE, col = "BW", type = "OO"))
+                                                                 ),
+                                                        hr(),
+                                                        h4("Current compound:"),
+                                                        verbatimTextOutput("curr_mz"), hr(),
+                                                        fluidRow(navbarPage("Search", id="tab_iden",
+                                                                            tabPanel("Current", icon=icon("sort-numeric-asc"),
+                                                                                     actionButton("search_mz", "Find hits", icon=icon("search")),
+                                                                                     hr(),
+                                                                                     div(DT::dataTableOutput('match_tab'),style='font-size:80%'),
+                                                                                     hr(),
+                                                                                     div(textOutput("curr_definition"))
+                                                                            ),
+                                                                            tabPanel("Target", icon=icon("sort-alpha-asc"),
+                                                                                     actionButton("browse_db", "Browse compounds", icon=icon("eye")),
+                                                                                     hr(),
+                                                                                     div(DT::dataTableOutput('browse_tab'),style='font-size:80%'),
+                                                                                     hr(),
+                                                                                     div(textOutput("browse_definition"),style='font-size:80%'),
+                                                                                     hr(),
+                                                                                     actionButton("search_cpd", "Find hits", icon=icon("search")),
+                                                                                     hr(),
+                                                                                     div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
+                                                                            )))
+                                                      )
+                                                      ),
                                tabPanel("", value=""),
                                tabPanel("",  icon = icon("cog"), value="options", 
                                         navbarPage("Settings", id="tab_settings",
@@ -301,7 +321,6 @@ shinyUI(fluidPage(theme = "button.css",
                                         )
                                         
                                         
-                               )                    )
-                  }
+                               )))}
 ))
                   

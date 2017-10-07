@@ -610,3 +610,30 @@ load.excel <- function(path.to.xlsx,
   # --- disconnect ---
   dbDisconnect(conn)
 }
+
+# ------- TESTING WIKIPATH --------
+
+# http://sparql.wikipathways.org/
+# ------------------------------
+# PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+#   
+#   SELECT DISTINCT ?metabolite WHERE {
+#     ?metabolite a wp:Metabolite .
+#   }
+
+wp_query <- "http://sparql.wikipathways.org/?default-graph-uri=&query=PREFIX+wdt%3A+%3Chttp%3A%2F%2Fwww.wikidata.org%2Fprop%2Fdirect%2F%3E%0D%0A%0D%0ASELECT+DISTINCT+%3Fmetabolite+WHERE+%7B%0D%0A++%3Fmetabolite+a+wp%3AMetabolite+.%0D%0A%7D&format=text%2Fhtml&timeout=0&debug=on"
+# query directly?
+
+wp_ids <- readLines(file("backend/umcfiles/wikipath/wikipath_identifiers.txt"))
+
+tbl_list <- lapply(wp_ids, FUN=function(id_url){
+  split_url <- str_match(id_url, pattern = "(?:.org\\/)(.*)(?:\\/)(.*$)")
+  data.table(Database = split_url[2],
+             Identifier = split_url[3])
+})
+
+# dont forget wikipathway id!!!
+tbl <- rbindlist(tbl_list)
+chebi.subset <- tbl[Database == "chebi"]
+hmdb.subset <- tbl[Database == "hmdb"]
+pubchem.subset <- tbl[Database == "Pubchem"]

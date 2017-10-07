@@ -124,10 +124,11 @@ stat.anal.ui <- reactive({
 })
 
 observe({
-  curr_mode <- mainmode
+  curr_mode <<- mainmode
   if(exists("dataSet")){
-    if("shinymode" %in% names(dataSet)) curr_mode <- dataSet$shinymode
+    if("shinymode" %in% names(dataSet)) curr_mode <<- dataSet$shinymode
   } 
+  print(curr_mode)
   whichUI <- switch(curr_mode,
                     time={time.anal.ui()},
                     stat={stat.anal.ui()})
@@ -158,17 +159,18 @@ observeEvent(input$nav_general, {
 
 # =================================================
 
-images <- list(list(name = 'cute_package', path = 'backend/img/new-product.png', dimensions = c(80, 80)),
-               list(name = 'umc_logo', path = 'backend/img/umclogo.jpg', dimensions = c(120, 100)),
-               list(name = 'hmdb_logo', path = 'backend/img/hmdblogo.png', dimensions = c(150, 100)),
-               list(name = 'chebi_logo', path = 'backend/img/chebilogo.png', dimensions = c(100, 100)),
-               list(name = 'pubchem_logo', path = 'backend/img/pubchemlogo.png', dimensions = c(140, 100)),
-               list(name = 'pos_icon', path = 'backend/img/handpos.png', dimensions = c(120, 120)),
-               list(name = 'neg_icon', path = 'backend/img/handneg.png', dimensions = c(120, 120)),
-               list(name = 'excel_icon', path = 'backend/img/excel.png', dimensions = c(120, 120)),
-               list(name = 'db_icon', path = 'backend/img/office.png', dimensions = c(100, 100)),
-               list(name = 'csv_icon', path = 'backend/img/office.png', dimensions = c(100, 100)),
-               list(name = 'dataset_icon', path = 'backend/img/office.png', dimensions = c(100, 100))
+images <- list(list(name = 'cute_package', path = 'www/new-product.png', dimensions = c(80, 80)),
+               list(name = 'umc_logo', path = 'www/umclogo.png', dimensions = c(120, 100)),
+               list(name = 'hmdb_logo', path = 'www/hmdblogo.png', dimensions = c(150, 100)),
+               list(name = 'chebi_logo', path = 'www/chebilogo.png', dimensions = c(100, 100)),
+               list(name = 'wikipath_logo', path = 'www/wikipathways.png', dimensions = c(120, 140)),
+               list(name = 'pubchem_logo', path = 'www/pubchemlogo.png', dimensions = c(145, 90)),
+               list(name = 'pos_icon', path = 'www/handpos.png', dimensions = c(120, 120)),
+               list(name = 'neg_icon', path = 'www/handneg.png', dimensions = c(120, 120)),
+               list(name = 'excel_icon', path = 'www/excel.png', dimensions = c(120, 120)),
+               list(name = 'db_icon', path = 'www/office.png', dimensions = c(100, 100)),
+               list(name = 'csv_icon', path = 'www/office.png', dimensions = c(100, 100)),
+               list(name = 'dataset_icon', path = 'www/office.png', dimensions = c(100, 100))
                )
 
 lapply(images, FUN=function(image){
@@ -566,7 +568,7 @@ observeEvent(input$create_csv, {
     fwrite(mz.adj, csv_loc, sep="\t")
     # --- overview table ---
     setProgress(3/4, "Creating overview table...")
-    overview_tab <- if(mode == "time"){
+    overview_tab <- if(mainmode == "time"){
       t(data.table(keep.rownames = F,
                    Mz = ncol(mz.adj) - 3,
                    Samples = nrow(mz.adj),
@@ -859,6 +861,9 @@ observeEvent(input$tab_stat, {
 })
 
 observeEvent(input$heatmode,{
+  req(analSet$tt)
+  req(analSet$fc)
+  #-------------------
   x <- if(input$heatmode == TRUE){
     dataSet$norm[,names(analSet$tt$inx.imp[analSet$tt$inx.imp == TRUE])]
     } else{dataSet$norm[,names(analSet$fc$inx.imp[analSet$fc$inx.imp == TRUE])]}
@@ -882,10 +887,16 @@ observeEvent(input$heatmode,{
               subplot_widths = c(.9,.1),
               subplot_heights =  c(.1,.05,.85),
               column_text_angle = 90)
-    
       })
 })
 
+
+observe({
+  db_list <- lapply(c("internal", "noise", "hmdb", "chebi", "pubchem"), 
+                    FUN = function(db) if(!input[[paste0("search_", db)]]) c(file.path(options$db_dir, paste0(db, ".full.db"))) else{NA}
+  )
+  db_list <<- db_list[!is.na(db_list)]
+})
 
 observeEvent(input$tt_tab_rows_selected,{
   curr_row = input$tt_tab_rows_selected
@@ -897,8 +908,8 @@ observeEvent(input$tt_tab_rows_selected,{
     # --- ggplot ---
     ggplotSummary(curr_mz, cols = color.vec())
   })
-  if(input$autosearch & length(input$checkGroup > 0)){
-    match_list <- lapply(input$checkGroup, FUN=function(match.table){
+  if(input$autosearch & length(db_list > 0)){
+    match_list <- lapply(db_list, FUN=function(match.table){
       get_matches(curr_mz, match.table)
     })
     match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
@@ -921,8 +932,8 @@ observeEvent(input$fc_tab_rows_selected,{
   # --- ggplot ---
   ggplotSummary(curr_mz, cols = color.vec())
   })
-  if(input$autosearch & length(input$checkGroup > 0)){
-    match_list <- lapply(input$checkGroup, FUN=function(match.table){
+  if(input$autosearch & length(db_list > 0)){
+    match_list <- lapply(db_list, FUN=function(match.table){
       get_matches(curr_mz, match.table)
     })
     match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
@@ -960,8 +971,8 @@ observe({
            curr_mz <<- hm_matrix$matrix$rows[d$y]
              })
   output$curr_mz <- renderText(curr_mz)
-  if(input$autosearch & length(input$checkGroup > 0)){
-    match_list <- lapply(input$checkGroup, FUN=function(match.table){
+  if(input$autosearch & length(db_list > 0)){
+    match_list <- lapply(db_list, FUN=function(match.table){
       get_matches(curr_mz, match.table)
     })
     match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
@@ -988,8 +999,8 @@ observeEvent(input$meba_tab_rows_selected,{
   })
   output$curr_mz <- renderText(curr_mz)
   
-  if(input$autosearch & length(input$checkGroup > 0)){
-      match_list <- lapply(input$checkGroup, FUN=function(match.table){
+  if(input$autosearch & length(db_list > 0)){
+    match_list <- lapply(db_list, FUN=function(match.table){
       get_matches(curr_mz, match.table)
     })
     match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
@@ -1010,9 +1021,8 @@ observeEvent(input$asca_tab_rows_selected,{
   curr_mz <<- asca.table[curr_row,'X']
   output$asca_plot <- renderPlotly({ggplotSummary(curr_mz, cols = color.vec())})
   output$curr_mz <- renderText(curr_mz)
-  
-  if(input$autosearch & length(input$checkGroup > 0)){
-    match_list <- lapply(input$checkGroup, FUN=function(match.table){
+  if(input$autosearch & length(db_list > 0)){
+    match_list <- lapply(db_list, FUN=function(match.table){
       get_matches(curr_mz, match.table)
     })
     match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
@@ -1029,7 +1039,7 @@ observeEvent(input$asca_tab_rows_selected,{
 
 output$find_mol_icon <- renderImage({
   # When input$n is 3, filename is ./images/image3.jpeg
-  filename <- normalizePath(file.path('./backend/img/search.png'))
+  filename <- normalizePath(file.path('www/search.png'))
   # Return a list containing the filename and alt text
   list(src = filename,
        width=70,
@@ -1037,9 +1047,8 @@ output$find_mol_icon <- renderImage({
 }, deleteFile = FALSE)
 
 observeEvent(input$search_mz, {
-  req(input$checkGroup)
   # ------------------
-  match_list <- lapply(input$checkGroup, FUN=function(match.table){
+  match_list <- lapply(db_list, FUN=function(match.table){
     get_matches(curr_mz, match.table)
   })
   match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
@@ -1093,6 +1102,14 @@ observeEvent(input$search_cpd, {
               options = list(lengthMenu = c(5, 10, 20), pageLength = 5))
   })
 })
+
+fluidRow(
+  column(align="center",width=2,fadeImageButton("search_internal", img.path = "umcinternal.png")),
+  column(align="center",width=2,fadeImageButton("search_noise", img.path = "umcnoise.png")),
+  column(align="center",width=2,fadeImageButton("search_hmdb", img.path = "hmdblogo.png")),
+  column(align="center",width=2,fadeImageButton("search_chebi", img.path = "chebilogo.png")),
+  column(align="center",width=1,fadeImageButton("search_pubchem", img.path = "pubchemlogo.png"))
+)
 
 observeEvent(input$browse_tab_rows_selected,{
   curr_row = input$browse_tab_rows_selected
