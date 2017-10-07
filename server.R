@@ -9,6 +9,7 @@ shinyServer(function(input, output, session) {
 mz <<- NA
 session_cl <<- NA
 patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
+mainmode <<- "stat"
 
 packages <<- c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
                "plotly", "parallel", "shinyFiles", "curl", "httr", "pbapply", 
@@ -206,7 +207,7 @@ observeEvent(input$update_packages, {
   setOption(".conf", "packages_installed", "Y")
   output$package_check <- renderImage({
     # When input$n is 3, filename is ./images/image3.jpeg
-    filename <- normalizePath(file.path('backend/img/yes.png'))
+    filename <- normalizePath('www/yes.png')
     # Return a list containing the filename and alt text
     list(src = filename, width = 70,
          height = 70)
@@ -350,7 +351,7 @@ observeEvent(input$check_umc,{
   check_pic <- if(is.present) "yes.png" else "no.png"
   output$umc_check <- renderImage({
     # When input$n is 3, filename is ./images/image3.jpeg
-    filename <- normalizePath(file.path('backend/img', check_pic))
+    filename <- normalizePath(file.path('www', check_pic))
     # Return a list containing the filename and alt text
     list(src = filename, width = 70,
          height = 70)
@@ -363,7 +364,7 @@ observeEvent(input$check_hmdb,{
   check_pic <- if(is.present) "yes.png" else "no.png"
   output$hmdb_check <- renderImage({
     # When input$n is 3, filename is ./images/image3.jpeg
-    filename <- normalizePath(file.path('backend/img', check_pic))
+    filename <- normalizePath(file.path('www', check_pic))
     # Return a list containing the filename and alt text
     list(src = filename, width = 70,
          height = 70)
@@ -376,7 +377,7 @@ observeEvent(input$check_chebi,{
   check_pic <- if(is.present) "yes.png" else "no.png"
   output$chebi_check <- renderImage({
     # When input$n is 3, filename is ./images/image3.jpeg
-    filename <- normalizePath(file.path('backend/img', check_pic))
+    filename <- normalizePath(file.path('www', check_pic))
     # Return a list containing the filename and alt text
     list(src = filename, width = 70,
          height = 70)
@@ -389,7 +390,7 @@ observeEvent(input$check_pubchem,{
   check_pic <- if(is.present) "yes.png" else "no.png"
   output$pubchem_check <- renderImage({
     # When input$n is 3, filename is ./images/image3.jpeg
-    filename <- normalizePath(file.path('backend/img', check_pic))
+    filename <- normalizePath(file.path('www', check_pic))
     # Return a list containing the filename and alt text
     list(src = filename, width = 70,
          height = 70)
@@ -475,7 +476,7 @@ observeEvent(input$import_db, {
   patdb <<- input$pat_db$datapath
   output$db_upload_check <- renderImage({
     # When input$n is 3, filename is ./images/image3.jpeg
-    filename <- normalizePath('backend/img/yes.png')
+    filename <- normalizePath('www/yes.png')
     # Return a list containing the filename and alt text
     list(src = filename, width = 20,
          height = 20)
@@ -490,7 +491,7 @@ observeEvent(input$import_csv, {
   csv_loc <<- input$pat_csv$datapath
   output$csv_upload_check <- renderImage({
     # When input$n is 3, filename is ./images/image3.jpeg
-    filename <- normalizePath('backend/img/yes.png')
+    filename <- normalizePath('www/yes.png')
     # Return a list containing the filename and alt text
     list(src = filename, width = 20,
          height = 20)
@@ -599,7 +600,7 @@ observeEvent(input$import_dataset, {
   data_loc <<- input$pat_dataset$datapath
   output$dataset_upload_check <- renderImage({
     # When input$n is 3, filename is ./images/image3.jpeg
-    filename <- normalizePath('backend/img/yes.png')
+    filename <- normalizePath('www/yes.png')
     # Return a list containing the filename and alt text
     list(src = filename, width = 20,
          height = 20)
@@ -1135,7 +1136,6 @@ observeEvent(input$hits_tab_rows_selected,{
 # --- ON CLOSE ---
 session$onSessionEnded(function() {
   if(any(!is.na(session_cl))) stopCluster(session_cl)
-  save(dataSet, analSet, file = file.path(options$work_dir, paste0(options$proj_name, ".RData")))
+  #save(dataSet, analSet, file = file.path(options$work_dir, paste0(options$proj_name, ".RData")))
 })
-options$proj_name
 })

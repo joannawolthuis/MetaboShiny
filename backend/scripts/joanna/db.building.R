@@ -122,7 +122,7 @@ build.base.db <- function(dbname=NA,
                                  print("Downloading XML database...")
                                  file.url <- "http://www.hmdb.ca/system/downloads/current/hmdb_metabolites.zip"
                                  # ----
-                                 base.loc <- file.path(dbDir, "hmdb_source")
+                                 base.loc <- file.path(options$db_dir, "hmdb_source")
                                  if(!dir.exists(base.loc)) dir.create(base.loc)
                                  zip.file <- file.path(base.loc, "HMDB.zip")
                                  download.file(file.url, zip.file)
@@ -151,7 +151,7 @@ build.base.db <- function(dbname=NA,
                                    compoundname = sapply(compoundnames, xmlValue),
                                    description = sapply(description, xmlValue),
                                    baseformula = sapply(formulae, xmlValue),
-                                   identifier = sapply(identifiers, xmlValue),
+                                   identifier =  gsub(sapply(identifiers, xmlValue), pattern = "(HMDB0*)", replacement = ""),
                                    charge = sapply(charges, xmlValue)
                                  )
                                  # --- check formulae ---
@@ -185,7 +185,7 @@ build.base.db <- function(dbname=NA,
                                pubchem = function(dbname, ...){
 
                                  # --- create working space ---
-                                 baseLoc <- file.path(dbDir, "pubchem_source")
+                                 baseLoc <- file.path(options$db_dir, "pubchem_source")
                                  sdf.loc <- file.path(baseLoc, "sdf")
                                  csv.loc <- file.path(baseLoc, "csv")
                                  # --- check the user's determination ---
@@ -616,24 +616,58 @@ load.excel <- function(path.to.xlsx,
 # http://sparql.wikipathways.org/
 # ------------------------------
 # PREFIX wdt: <http://www.wikidata.org/prop/direct/>
-#   
+#
 #   SELECT DISTINCT ?metabolite WHERE {
 #     ?metabolite a wp:Metabolite .
 #   }
-
-wp_query <- "http://sparql.wikipathways.org/?default-graph-uri=&query=PREFIX+wdt%3A+%3Chttp%3A%2F%2Fwww.wikidata.org%2Fprop%2Fdirect%2F%3E%0D%0A%0D%0ASELECT+DISTINCT+%3Fmetabolite+WHERE+%7B%0D%0A++%3Fmetabolite+a+wp%3AMetabolite+.%0D%0A%7D&format=text%2Fhtml&timeout=0&debug=on"
+#
 # query directly?
+library(SPARQL)
+res <- SPARQL(url="http://sparql.wikipathways.org/",
+              query="
+              prefix wp:      <http://vocabularies.wikipathways.org/wp#>
+              prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+              prefix dcterms: <http://purl.org/dc/terms/>
+              prefix xsd:     <http://www.w3.org/2001/XMLSchema#>
 
-wp_ids <- readLines(file("backend/umcfiles/wikipath/wikipath_identifiers.txt"))
+              select distinct ?mb str(?labelLit) as ?label
+              where {
+              ?mb a wp:Metabolite ;
+              rdfs:label ?labelLit ;
+              dcterms:isPartOf ?pathway .
+              ?pathway a wp:Pathway .
+              } order by ?pathway")
 
-tbl_list <- lapply(wp_ids, FUN=function(id_url){
-  split_url <- str_match(id_url, pattern = "(?:.org\\/)(.*)(?:\\/)(.*$)")
-  data.table(Database = split_url[2],
-             Identifier = split_url[3])
+
+tbl2 <- res$results
+res$results$mb <- gsub(x=res$results$mb,
+                       pattern = '(<http:\\/\\/identifiers.org)|(>)$|("\\/)',
+                       replacement = "",
+                       perl=T)
+
+split.res <- strsplit(res$results$mb,split = "\\/")
+
+sapply(split.res, FUN=function(litem) litem[2])
+new.table = data.table(CompoundName = res$results$label,
+                       Database = sapply(split.res, FUN=function(litem) litem[2]),
+                       Identifier = sapply(split.res, FUN=function(litem) litem[3])
+                       )
+
+View(new.table)
+
+connHMDB <- dbConnect(RSQLite::SQLite(), 'backend/db/hmdb.base.db')
+connCHEBI <- dbConnect(RSQLite::SQLite(), 'backend/db/chebi.base.db')
+
+res2 <- lapply(1:nrow(new.table), FUN=function(i){
+  row = new.table[i,]
+  name <- row$CompoundName
+  db <- row$Database
+  id <- gsub(row$Identifier, pattern = "(CHEBI:)|(HMDB0*)", replacement = "")
+  print(id)
+  # ----------------
+  search.one <- switch(db,
+                   chebi = {dbGetQuery(connCHEBI, statement = fn$paste("SELECT DISTINCT baseformula FROM base WHERE Identifier LIKE '$id'"))},
+                   hmdb = {dbGetQuery(connHMDB, statement = fn$paste("SELECT DISTINCT baseformula FROM base WHERE Identifier LIKE '$id'"))}
+                   )
 })
 
-# dont forget wikipathway id!!!
-tbl <- rbindlist(tbl_list)
-chebi.subset <- tbl[Database == "chebi"]
-hmdb.subset <- tbl[Database == "hmdb"]
-pubchem.subset <- tbl[Database == "Pubchem"]

@@ -19,7 +19,9 @@ shinyUI(fluidPage(
                     "))
     ),theme = "button.css",
                   if(options$packages_installed != "Y"){
-                    navbarPage("MetaboSetup", id="nav_general",windowTitle = "MetaboShiny",
+                    navbarPage(title=h1("MetaboSetup"), 
+                               id="nav_setup",
+                               windowTitle = "MetaboShiny",
                                tabPanel("", icon = icon("wrench"), value="setup",
                                         # --- db check cols ---
                                         fluidRow(column(width=2),column(width=5, align="center",
@@ -60,7 +62,6 @@ shinyUI(fluidPage(
                                         #         column(width=1,fadeImageButton("test2", img.path = "cutemolecule.png"))
                                         #         )
                                         ),
-                               tabPanel("", value=""),
                                # --------------------------------------------------------------------------------------------------------------------------------
                                tabPanel("", icon = icon("database"), value="database",
                                         # -- header row ---
@@ -269,8 +270,7 @@ shinyUI(fluidPage(
                                                                                      div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
                                                                             )))
                                                       )
-                                                      ),
-                               tabPanel("", value=""),
+                                                      )),
                                tabPanel("",  icon = icon("cog"), value="options", 
                                         navbarPage("Settings", id="tab_settings",
                                                    tabPanel("Project", icon=icon("gift"),
@@ -321,6 +321,6 @@ shinyUI(fluidPage(
                                         )
                                         
                                         
-                               )))}
+                               ))}
 ))
                   
