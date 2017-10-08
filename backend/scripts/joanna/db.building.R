@@ -649,6 +649,7 @@ split.res <- strsplit(res$results$mb,split = "\\/")
 
 sapply(split.res, FUN=function(litem) litem[2])
 new.table = data.table(CompoundName = res$results$label,
+                       fullID = res$results$mb,
                        Database = sapply(split.res, FUN=function(litem) litem[2]),
                        Identifier = sapply(split.res, FUN=function(litem) litem[3])
                        )
@@ -658,16 +659,94 @@ View(new.table)
 connHMDB <- dbConnect(RSQLite::SQLite(), 'backend/db/hmdb.base.db')
 connCHEBI <- dbConnect(RSQLite::SQLite(), 'backend/db/chebi.base.db')
 
-res2 <- lapply(1:nrow(new.table), FUN=function(i){
+unique(new.table$Database)
+
+search.one.list <- lapply(1:nrow(new.table), FUN=function(i){
   row = new.table[i,]
   name <- row$CompoundName
   db <- row$Database
   id <- gsub(row$Identifier, pattern = "(CHEBI:)|(HMDB0*)", replacement = "")
   print(id)
   # ----------------
-  search.one <- switch(db,
-                   chebi = {dbGetQuery(connCHEBI, statement = fn$paste("SELECT DISTINCT baseformula FROM base WHERE Identifier LIKE '$id'"))},
-                   hmdb = {dbGetQuery(connHMDB, statement = fn$paste("SELECT DISTINCT baseformula FROM base WHERE Identifier LIKE '$id'"))}
-                   )
+  search.one <- if(db == "chebi"){dbGetQuery(connCHEBI, statement = fn$paste("SELECT DISTINCT baseformula FROM base WHERE Identifier LIKE '$id'"))}
+                else if(db == "hmdb"){dbGetQuery(connHMDB, statement = fn$paste("SELECT DISTINCT baseformula FROM base WHERE Identifier LIKE '$id'"))}
+                else(print(dbGetQuery(connCHEBI, statement = fn$paste("SELECT DISTINCT * FROM base WHERE compoundname LIKE '%name%'"))))   
+  #   dbExecute(conn, statement = "create table base(compoundname text, description text, baseformula text, identifier text, charge text)")
+  # data.table(compoundname = name,
+  #            description = "",
+  #            baseformula = search.one$baseformula,
+  #            identifier = row$fullID)
 })
 
+# mining kegg
+
+# http://www.genome.jp/dbget-bin/www_bget?cpd:C00001
+
+library(KEGGREST)
+
+total.interesting <- unique(names(keggFind("compound", 50:600, "mol_weight")))
+batches <- split(total.interesting, ceiling(seq_along(total.interesting)/10))
+
+test[[1]]$ATOM
+carbonate <- keggGet("C00288")[[1]]
+violet <- keggGet("C00225")[[1]]
+kegg.charge(violet$ATOM)
+kegg.charge(carbonate$ATOM)
+
+kegg.charge <- function(atomlist){
+  atom.str <- paste(atomlist, collapse = " ") 
+  print(atom.str)
+  charges  <- str_match(atom.str, pattern = "(#[+-])|(#\\d*[+-])")
+  print(charges)
+  return(NULL)
+  charges <- lapply(atomlist, FUN=function(atom){
+    charge <- str_match(atom, pattern = "#(.*$)")[[2]]
+    
+    if(is.na(charge)) return(NA)
+    
+    charge <- if(charge == "-"){"1-"} else if(charge == "+"){"1+"}
+    charge.type <- gsub(charge, pattern = "\\d", replacement = "")
+    item <- data.table(type = charge.type, 
+                       count = as.numeric(gsub(charge, 
+                                               pattern = "[+-]", 
+                                               replacement = "")))
+    item
+  })
+  charge.table <- rbindlist(charges[!is.na(charges)])
+  charge.table.filled <- if("+" %in% charge.table$type & 
+                            "-" %in% charge.table$type){
+    charge.table
+  } else if("+" %not in% charge.table$type){
+    rbind(charge.table, data.table(type="+", count=0))
+  } else if("-" %not in% charge.table$type){
+    rbind(charge.table, data.table(type="-", count=0))
+  } else(data.table(0L))
+  # --------------
+  print(charge.table.filled)
+  formal.charge <- if(nrow(charge.table.filled) == 0 | sum(as.numeric(charge.table.filled$count)) == 0) 0 else{
+    charge.table.filled[type == "+", count] - charge.table.filled[type == "-", count]
+  }
+  formal.charge
+}
+
+kegg.charge(violet$ATOM)
+
+kegg.db.list <- pblapply(batches, FUN=function(batch){
+  rest.result <- keggGet(batch)
+  # ---------------------------
+  base.list <- lapply(rest.result, FUN=function(cpd){
+    print(cpd$ENTRY)
+    data.table(compoundname = gsub(cpd$NAME[1], pattern = ";", replacement = ""),
+               baseformula = cpd$FORMULA,
+               description = if("MODULE" %in% names(cpd)) cpd$MODULE[1] else{cpd$NAME[2]},
+               identifier = cpd$ENTRY,
+               charge = kegg.charge(cpd$ATOM)
+               )
+  })
+  tbl <- rbindlist(base.list)
+  tbl$compoundname <- gsub(tbl$compoundname, pattern = ";", replacement = "")
+  # -------------------------------
+  tbl
+})
+
+kegg.db <- rbindlint(kegg.db.list)
