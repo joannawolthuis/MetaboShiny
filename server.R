@@ -165,6 +165,7 @@ images <- list(list(name = 'cute_package', path = 'www/new-product.png', dimensi
                list(name = 'hmdb_logo', path = 'www/hmdblogo.png', dimensions = c(150, 100)),
                list(name = 'chebi_logo', path = 'www/chebilogo.png', dimensions = c(100, 100)),
                list(name = 'wikipath_logo', path = 'www/wikipathways.png', dimensions = c(120, 140)),
+               list(name = 'kegg_logo', path = 'www/kegglogo.gif', dimensions = c(200, 150)),
                list(name = 'pubchem_logo', path = 'www/pubchemlogo.png', dimensions = c(145, 90)),
                list(name = 'pos_icon', path = 'www/handpos.png', dimensions = c(120, 120)),
                list(name = 'neg_icon', path = 'www/handneg.png', dimensions = c(120, 120)),
@@ -384,6 +385,19 @@ observeEvent(input$check_chebi,{
   }, deleteFile = FALSE)
 })
 
+observeEvent(input$check_kegg,{
+  db_folder_files <- list.files(options$db_dir)
+  is.present <- "kegg.full.db" %in% db_folder_files
+  check_pic <- if(is.present) "yes.png" else "no.png"
+  output$kegg_check <- renderImage({
+    # When input$n is 3, filename is ./images/image3.jpeg
+    filename <- normalizePath(file.path('www', check_pic))
+    # Return a list containing the filename and alt text
+    list(src = filename, width = 70,
+         height = 70)
+  }, deleteFile = FALSE)
+})
+
 observeEvent(input$check_pubchem,{
   db_folder_files <- list.files(options$db_dir)
   is.present <- "pubchem.full.db" %in% db_folder_files
@@ -435,6 +449,16 @@ observeEvent(input$build_chebi,{
     build.base.db("chebi", outfolder=options$db_dir)
     setProgress(0.5,message = "Halfway there...")
     build.extended.db("chebi", outfolder=options$db_dir, adduct.table = wkz.adduct.confirmed, cl=session_cl, fetch.limit=100)
+    setProgress(message = "Ok!")
+  })
+})
+
+observeEvent(input$build_kegg,{
+  withProgress({
+    setProgress(message = "Working...")
+    build.base.db("kegg", outfolder=options$db_dir, cl = session_cl)
+    setProgress(0.5,message = "Halfway there...")
+    build.extended.db("kegg", outfolder=options$db_dir, adduct.table = wkz.adduct.confirmed, cl=session_cl, fetch.limit=100)
     setProgress(message = "Ok!")
   })
 })
@@ -876,6 +900,7 @@ observeEvent(input$heatmode,{
                         Rowv=T,
                         col_side_colors = group_assignments,
                         k_row = NA)
+  print("here")
   output$heatmap <- renderPlotly({
     heatmaply(hm_matrix,
               Colv=F, Rowv=F,
@@ -893,7 +918,7 @@ observeEvent(input$heatmode,{
 
 
 observe({
-  db_list <- lapply(c("internal", "noise", "hmdb", "chebi", "pubchem"), 
+  db_list <- lapply(c("internal", "noise", "hmdb", "chebi", "pubchem", "kegg"), 
                     FUN = function(db) if(!input[[paste0("search_", db)]]) c(file.path(options$db_dir, paste0(db, ".full.db"))) else{NA}
   )
   db_list <<- db_list[!is.na(db_list)]
@@ -1103,14 +1128,6 @@ observeEvent(input$search_cpd, {
               options = list(lengthMenu = c(5, 10, 20), pageLength = 5))
   })
 })
-
-fluidRow(
-  column(align="center",width=2,fadeImageButton("search_internal", img.path = "umcinternal.png")),
-  column(align="center",width=2,fadeImageButton("search_noise", img.path = "umcnoise.png")),
-  column(align="center",width=2,fadeImageButton("search_hmdb", img.path = "hmdblogo.png")),
-  column(align="center",width=2,fadeImageButton("search_chebi", img.path = "chebilogo.png")),
-  column(align="center",width=1,fadeImageButton("search_pubchem", img.path = "pubchemlogo.png"))
-)
 
 observeEvent(input$browse_tab_rows_selected,{
   curr_row = input$browse_tab_rows_selected

@@ -103,14 +103,14 @@ shinyUI(fluidPage(
                                                imageOutput("chebi_check",inline = T)
                                         )),
                                         fluidRow(column(3,  align="center",
-                                                        h2("WikiPathways"),
+                                                        h2("KEGG"),
                                                         helpText("Compounds associated with biological pathways."),
-                                                        imageOutput("wikipath_logo",inline = T),
+                                                        imageOutput("kegg_logo",inline = T),
                                                         br(),br(),
-                                                        actionButton("check_wikipath", "Check", icon = icon("check")),
-                                                        actionButton("build_wikipath", "Build", icon = icon("wrench")),
+                                                        actionButton("check_kegg", "Check", icon = icon("check")),
+                                                        actionButton("build_kegg", "Build", icon = icon("wrench")),
                                                         br(),br(),
-                                                        imageOutput("wikipath_check",inline = T)
+                                                        imageOutput("kegg_check",inline = T)
                                                         ),
                                                  column(3,  align="center",
                                                         h2("PubChem"),
@@ -241,7 +241,7 @@ shinyUI(fluidPage(
                                                                  sardine(fadeImageButton("search_noise", img.path = "umcnoise.png")),
                                                                  sardine(fadeImageButton("search_hmdb", img.path = "hmdblogo.png")),br(),
                                                                  sardine(fadeImageButton("search_chebi", img.path = "chebilogo.png")),
-                                                                 sardine(fadeImageButton("search_wikipath", img.path = "wikipathways.png")),
+                                                                 sardine(fadeImageButton("search_kegg", img.path = "kegglogo.gif")),
                                                                  sardine(fadeImageButton("search_pubchem", img.path = "pubchemlogo.png")),br(),
                                                                  sardine(switchButton(inputId = "autosearch",
                                                                               label = "Autosearch", 

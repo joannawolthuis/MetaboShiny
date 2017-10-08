@@ -1,5 +1,4 @@
 #' @export
-
 get_ref_vars <- function(fac="Label"){
   req(csv_loc)
   csv <- fread(csv_loc, sep="\t", header = T)
@@ -37,3 +36,17 @@ getProfile <-function (varName, title=varName, mode="stat") {
   return(translator)
 }
 
+kegg.charge <- function(atomlist){
+  atom.str <- paste(atomlist, collapse = " ") 
+  charges  <- str_match(atom.str, pattern = "#[+-]|#\\d*[+-]")
+  formal_charge = 0
+  for(ch in charges[!is.na(charges)]){
+    ch.base <- gsub(ch, pattern = "#", replacement = "")
+    ch.base <- if(ch.base == "-" | ch.base == "+") paste0(ch.base, 1) else(ch.base)
+    ch.base <- gsub(ch.base, pattern = "\\+", replacement = "")
+    ch.base <- as.numeric(sub("([0-9.]+)-$", "-\\1", ch.base))
+    # -------
+    formal_charge = formal_charge + ch.base
+  }
+  formal_charge
+}
