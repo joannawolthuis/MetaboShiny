@@ -5,9 +5,9 @@ shinyServer(function(input, output, session) {
   
 # ===== defaults =====
 
-
 mz <<- NA
 session_cl <<- NA
+tables <- list()
 patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
 mainmode <<- "stat"
 
@@ -686,7 +686,7 @@ observeEvent(input$nav_time, {
            if("MB" %not in% names(analSet)){
             performMB(10, dir=options$work_dir)
            }
-           tables$meba_tab <<- read.csv(file.path(options$work_dir, 'meba_sig_features.csv'))
+           tables$meba_tab <- read.csv(file.path(options$work_dir, 'meba_sig_features.csv'))
            output$meba_tab <- DT::renderDataTable({
              req(tables$meba_tab)
              # -------------
@@ -702,7 +702,7 @@ observeEvent(input$nav_time, {
              Perform.ASCA(1, 1, 2, 2)
               CalculateImpVarCutoff(0.05, 0.9, dir=options$work_dir)
             }
-           tables$asca_tab <<- read.csv(file.path(options$work_dir,'Sig_features_Model_ab.csv'))
+           tables$asca_tab <- read.csv(file.path(options$work_dir,'Sig_features_Model_ab.csv'))
            output$asca_tab <- DT::renderDataTable({
              req(tables$asca_tab)
              # -------------
@@ -752,7 +752,6 @@ observeEvent(input$tab_stat, {
                                             digits = 2),
                                       keep.rownames = T)
            colnames(pca.table) <- c("Principal Component", "% variance")
-           pca.table
            output$pca_tab <- DT::renderDataTable({
              req(pca.table)
              # -------------
@@ -765,13 +764,10 @@ observeEvent(input$tab_stat, {
            },
          tt = {
            Ttests.Anal(F, 0.05, FALSE, TRUE)
-           tables$tt_tab <<- as.data.table(read.csv(file.path(options$work_dir,'t_test.csv')),keep.rownames = F)
            output$tt_tab <- DT::renderDataTable({
-             req(tt.table)
              # -------------
-             datatable(tt.table[,c(1,3)], 
+             datatable(analSet$tt$sig.mat, 
                        selection = 'single',
-                       colnames = c("Mass/charge", "p-value"),
                        autoHideNavigation = T,
                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
              
@@ -783,12 +779,10 @@ observeEvent(input$tab_stat, {
            },
          fc = {
            FC.Anal.unpaired(2.0, 1)
-           tables$fc_table <<- as.data.table(read.csv(file.path(options$work_dir,'fold_change.csv')),keep.rownames = F)
            output$fc_tab <- DT::renderDataTable({
              # -------------
-             datatable(fc.table, 
+             datatable(analSet$fc$sig.mat, 
                        selection = 'single',
-                       colnames = c("Mass/charge", "FC", "log2(FC)"),
                        autoHideNavigation = T,
                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
              
@@ -815,7 +809,6 @@ observeEvent(input$heatmode,{
                         Rowv=T,
                         col_side_colors = group_assignments,
                         k_row = NA)
-  print("here")
   output$heatmap <- renderPlotly({
     heatmaply(hm_matrix,
               Colv=F, Rowv=F,
@@ -848,19 +841,25 @@ lapply(db_list, FUN=function(db){
 })
 
 
-mz.update.tables <<- c("tt_tab", 
-                      "fc_tab", 
-                      "asca_tab", 
-                      "meba_tab")
+mz.update.tables <<- c("tt", 
+                      "fc", 
+                      "asca", 
+                      "meba")
 
 lapply(mz.update.tables, FUN=function(table){
-  observeEvent(input[[paste0(table, "_rows_selected")]], {
-    curr_row = input[[paste0(table, "_rows_selected")]]
+  observeEvent(input[[paste0(table, "_tab_rows_selected")]], {
+    curr_row = input[[paste0(table, "_tab_rows_selected")]]
     # do nothing if not clicked yet, or the clicked cell is not in the 1st column
     if (is.null(curr_row)) return()
-    curr_mz <<- tables[[table]][curr_row,X]
+    rownames(analSet$tt$sig.mat)
+    curr_mz <<- data.table(analSet[[switch(table,
+                                     tt = "tt",
+                                     fc = "fc",
+                                     asca = "asca",
+                                     meba = "mb")]][["sig.mat"]]
+                              , keep.rownames = T)[curr_row, rn]
     output$curr_mz <- renderText(curr_mz)
-    output$paste0(table, "_specific_plot") <- renderPlotly({
+    output[[paste0(table, "_specific_plot")]] <- renderPlotly({
       # --- ggplot ---
       ggplotSummary(curr_mz, cols = color.vec())
     })
