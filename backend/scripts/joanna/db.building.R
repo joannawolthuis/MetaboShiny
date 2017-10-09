@@ -182,8 +182,61 @@ build.base.db <- function(dbname=NA,
                                  # ----------------------
                                  dbWriteTable(conn, "base", db.formatted, append=TRUE)
                                }, 
+                               wikipathways = function(dbname){
+                                 chebi <- SPARQL(url="http://sparql.wikipathways.org/",
+                                                    query='prefix wp:      <http://vocabularies.wikipathways.org/wp#>
+                                                          prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+                                                          prefix dcterms: <http://purl.org/dc/terms/>
+                                                          prefix xsd:     <http://www.w3.org/2001/XMLSchema#>
+                                                          PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+                                                          select distinct ?mb str(?labelLit) as ?label ?idurl as ?csid ?pwTitle
+                                                          where {
+                                                          ?mb a wp:Metabolite ;
+                                                          rdfs:label ?labelLit ;
+                                                          wp:bdbChEBI ?idurl ;
+                                                          dcterms:isPartOf ?pathway .
+                                                          ?pathway a wp:Pathway ;
+                                                          dc:title ?pwTitle .
+                                                          FILTER (BOUND(?idurl))
+                                                          }')
+                                 chebi.ids <- gsub(chebi$results$csid, pattern = ".*:|>", replacement = "")
+                                 chebi.loc <- file.path(options$db_dir, "chebi.full.db")
+                                 if(!file.exists(chebi.loc)) print("Requires ChEbi being built as source"); return(NULL)
+                                 conn <- dbConnect(RSQLite::SQLite(), chebi.loc)
+                                 chebi.join.table <- data.table(identifier = chebi.ids,
+                                                                description = chebi$results$description,
+                                                                widentifier = chebi$results$mb)
+                                 dbGetQuery(conn, "SELECT * FROM base limit 10")
+                                 dbRemoveTable(conn, "wikipathways")
+                                 dbWriteTable(conn, "wikipathways", chebi.join.table)
+                                 db.formatted <- dbGetQuery(conn, "SELECT b.compoundname, w.description,b.baseformula, w.widentifier as identifier, b.charge FROM base b
+                                                                  JOIN wikipathways w
+                                                                  ON b.identifier = w.identifier")
+                                 dbRemoveTable(conn, "wikipathways")
+                                 # ---------------------------------
+                                 # SOMETHING FOR THE UNIDENTIFIED ONES HERE...
+                                 # no.chebi <- SPARQL(url="http://sparql.wikipathways.org/",
+                                 #                    query='prefix wp:      <http://vocabularies.wikipathways.org/wp#>
+                                 #                          prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+                                 #                          prefix dcterms: <http://purl.org/dc/terms/>
+                                 #                          prefix xsd:     <http://www.w3.org/2001/XMLSchema#>
+                                 #                          PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+                                 #                          
+                                 #                          select distinct ?mb str(?labelLit) as ?label ?idurl as ?csid ?pwTitle
+                                 #                          where {
+                                 #                          ?mb a wp:Metabolite ;
+                                 #                          rdfs:label ?labelLit ;
+                                 #                          wp:bdbChEBI ?idurl ;
+                                 #                          dcterms:isPartOf ?pathway .
+                                 #                          ?pathway a wp:Pathway ;
+                                 #                          dc:title ?pwTitle .
+                                 #                          FILTER (!BOUND(?idurl))
+                                 #                          }')
+                                 # ---------------------------------
+                                 dbWriteTable(conn, "base", db.formatted, append=TRUE)
+                               },
                                kegg = function(dbname){
-                                 library(KEGGREST)
                                  # ---------------
                                  batches <- split(0:2000, ceiling(seq_along(0:2000)/100))
                                  cpds <- pblapply(batches, cl=cl, FUN=function(batch){
@@ -192,13 +245,13 @@ build.base.db <- function(dbname=NA,
                                  cpd.ids <- Reduce(c, cpds)
                                  id.batches <- split(cpd.ids, ceiling(seq_along(cpd.ids)/10))
                                  # ---------------
-                                 kegg.db.list <- lapply(id.batches, FUN=function(batch){
+                                 kegg.db.list <- pblapply(id.batches, cl=cl, FUN=function(batch){
                                    rest.result <- keggGet(batch)
                                    # ---------------------------
-                                   base.list <- pblapply(rest.result, cl=cl, FUN=function(cpd){
+                                   base.list <- lapply(rest.result, FUN=function(cpd){
                                      cpd$NAME_FILT <- gsub(cpd$NAME, pattern = ";", replacement = "")
                                      data.table(compoundname = cpd$NAME_FILT[1],
-                                                description = if("MODULE" %in% names(cpd)) paste(cpd$MODULE, collapse=", ") else{paste(cpd$NAME_FILT, collapse=", ")},
+                                                description = if("BRITE" %in% names(cpd)) paste(cpd$BRITE, collapse=", ") else{paste(cpd$NAME_FILT, collapse=", ")},
                                                 baseformula = cpd$FORMULA,
                                                 identifier = cpd$ENTRY,
                                                 charge = kegg.charge(cpd$ATOM)
@@ -207,7 +260,7 @@ build.base.db <- function(dbname=NA,
                                    rbindlist(base.list)
                                  })
                                  db.formatted <- rbindlist(kegg.db.list)
-                                 # -------------------------------
+                                 db.formatted$baseformula <- gsub(pattern = " |\\.", replacement = "", db.formatted$baseformula) # fix salt and spacing issues                                 # -------------------------------
                                  checked <- as.data.table(check.chemform.joanna(isotopes,
                                                                                 db.formatted$baseformula))
                                  db.formatted$baseformula <- checked$new_formula
@@ -645,7 +698,7 @@ load.excel <- function(path.to.xlsx,
 }
 
 # ------- TESTING WIKIPATH --------
-
+# http://www.wikipathways.org/index.php/Help:WikiPathways_Metabolomics
 # http://sparql.wikipathways.org/
 # ------------------------------
 # PREFIX wdt: <http://www.wikidata.org/prop/direct/>
@@ -655,58 +708,42 @@ load.excel <- function(path.to.xlsx,
 #   }
 #
 # query directly?
-# library(SPARQL)
-# res <- SPARQL(url="http://sparql.wikipathways.org/",
-#               query="
-#               prefix wp:      <http://vocabularies.wikipathways.org/wp#>
-#               prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
-#               prefix dcterms: <http://purl.org/dc/terms/>
-#               prefix xsd:     <http://www.w3.org/2001/XMLSchema#>
-# 
-#               select distinct ?mb str(?labelLit) as ?label
-#               where {
-#               ?mb a wp:Metabolite ;
-#               rdfs:label ?labelLit ;
-#               dcterms:isPartOf ?pathway .
-#               ?pathway a wp:Pathway .
-#               } order by ?pathway")
-# 
-# 
-# tbl2 <- res$results
-# res$results$mb <- gsub(x=res$results$mb,
-#                        pattern = '(<http:\\/\\/identifiers.org)|(>)$|("\\/)',
-#                        replacement = "",
-#                        perl=T)
-# 
-# split.res <- strsplit(res$results$mb,split = "\\/")
-# 
-# sapply(split.res, FUN=function(litem) litem[2])
-# new.table = data.table(CompoundName = res$results$label,
-#                        fullID = res$results$mb,
-#                        Database = sapply(split.res, FUN=function(litem) litem[2]),
-#                        Identifier = sapply(split.res, FUN=function(litem) litem[3])
-#                        )
-# 
-# View(new.table)
-# 
-# connHMDB <- dbConnect(RSQLite::SQLite(), 'backend/db/hmdb.base.db')
-# connCHEBI <- dbConnect(RSQLite::SQLite(), 'backend/db/chebi.base.db')
-# 
-# unique(new.table$Database)
-# 
-# search.one.list <- lapply(1:nrow(new.table), FUN=function(i){
-#   row = new.table[i,]
-#   name <- row$CompoundName
-#   db <- row$Database
-#   id <- gsub(row$Identifier, pattern = "(CHEBI:)|(HMDB0*)", replacement = "")
-#   print(id)
-#   # ----------------
-#   search.one <- if(db == "chebi"){dbGetQuery(connCHEBI, statement = fn$paste("SELECT DISTINCT baseformula FROM base WHERE Identifier LIKE '$id'"))}
-#                 else if(db == "hmdb"){dbGetQuery(connHMDB, statement = fn$paste("SELECT DISTINCT baseformula FROM base WHERE Identifier LIKE '$id'"))}
-#                 else(print(dbGetQuery(connCHEBI, statement = fn$paste("SELECT DISTINCT * FROM base WHERE compoundname LIKE '%name%'"))))   
-  #   dbExecute(conn, statement = "create table base(compoundname text, description text, baseformula text, identifier text, charge text)")
-  # data.table(compoundname = name,
-  #            description = "",
-  #            baseformula = search.one$baseformula,
-  #            identifier = row$fullID)
-#})
+
+# WORKS!!! DONT TOUCH, JUST COPY AND ALTER
+# prefix wp:      <http://vocabularies.wikipathways.org/wp#>
+# prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+# prefix dcterms: <http://purl.org/dc/terms/>
+#   prefix xsd:     <http://www.w3.org/2001/XMLSchema#>
+# PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+#   
+#   
+#   select distinct ?mb str(?labelLit) as ?label ?pwTitle
+# where {
+#   ?mb a wp:Metabolite ;
+#   rdfs:label ?labelLit ;
+#   wp:bdbWikidata ?wikidata ;
+#   dcterms:isPartOf ?pathway .
+#   ?pathway a wp:Pathway ;
+#   dc:title ?pwTitle .
+# }
+
+# VARIANT THAT TIMES OUT WITH INCHIKEY
+# prefix wp:      <http://vocabularies.wikipathways.org/wp#>
+# prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+# prefix dcterms: <http://purl.org/dc/terms/>
+#   prefix xsd:     <http://www.w3.org/2001/XMLSchema#>
+# PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+#   
+#   
+#   select distinct ?mb str(?labelLit) as ?label ?pwTitle ?inchikey
+# where {
+#   ?mb a wp:Metabolite ;
+#   rdfs:label ?labelLit ;
+#   wp:bdbWikidata ?wikidata ;
+#   dcterms:isPartOf ?pathway .
+#   ?pathway a wp:Pathway ;
+#   dc:title ?pwTitle .
+#   SERVICE <https://query.wikidata.org/sparql> {
+#     ?wikidata wdt:P235 ?inchikey .
+#   }
+# }

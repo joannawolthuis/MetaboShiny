@@ -12,6 +12,7 @@ load.necessarities <- function(shiny.tab){
            library(minval)
            library(curl)
            library(enviPat)
+           library(SPARQL)
            data(isotopes, package = "enviPat")
            if(any(is.na(session_cl))){
              session_cl <<- makeCluster(detectCores())
@@ -23,7 +24,12 @@ load.necessarities <- function(shiny.tab){
                "check.ded.joanna",
                "data.table",
                "rbindlist",
-               "isopattern"
+               "isopattern",
+               "keggFind",
+               "keggGet",
+               "kegg.charge",
+               "regexpr",
+               "regmatches"
              ))
            }
          },

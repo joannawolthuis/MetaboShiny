@@ -68,17 +68,27 @@ shinyUI(fluidPage(
                                         fluidRow(column(12, align="center",
                                                         h3("")
                                         ),
-                                        # --- db check cols ---
+                                        # --- db check cols --- common pollutants found in DIMS.
                                         fluidRow(column(3, align="center",
-                                                        h2("UMC"),
-                                                        helpText("Internal commonly known metabolites and common pollutants found in DIMS."),
+                                                        h2("UMC Internal"),
+                                                        helpText("Internal commonly known metabolites."),
                                                         br(),
-                                                        imageOutput("umc_logo",inline = T),
+                                                        imageOutput("umc_logo_int",inline = T),
                                                         br(),br(),br(),
-                                                        actionButton("check_umc", "Check", icon = icon("check")),
-                                                        actionButton("build_umc", "Build", icon = icon("wrench")),
+                                                        actionButton("check_internal", "Check", icon = icon("check")),
+                                                        actionButton("build_internal", "Build", icon = icon("wrench")),
                                                         br(),br(),
-                                                        imageOutput("umc_check",inline = T)
+                                                        imageOutput("internal_check",inline = T)
+                                        ),column(3, align="center",
+                                                 h2("UMC Noise"),
+                                                 helpText("Internal common pollutants found in DIMS using local method."),
+                                                 br(),
+                                                 imageOutput("umc_logo_noise",inline = T),
+                                                 br(),br(),br(),
+                                                 actionButton("check_noise", "Check", icon = icon("check")),
+                                                 actionButton("build_noise", "Build", icon = icon("wrench")),
+                                                 br(),br(),
+                                                 imageOutput("noise_check",inline = T)
                                         ),
                                         column(3,  align="center",
                                                h2("HMDB"),
@@ -103,6 +113,15 @@ shinyUI(fluidPage(
                                                imageOutput("chebi_check",inline = T)
                                         )),
                                         fluidRow(column(3,  align="center",
+                                                        h2("WikiPathways"),
+                                                        helpText("Compounds associated with open source biological pathways."),
+                                                        imageOutput("wikipath_logo",inline = T),
+                                                        br(),br(),
+                                                        actionButton("check_wikipathways", "Check", icon = icon("check")),
+                                                        actionButton("build_wikipathways", "Build", icon = icon("wrench")),
+                                                        br(),br(),
+                                                        imageOutput("wikipathways_check",inline = T)
+                                        ),column(3,  align="center",
                                                         h2("KEGG"),
                                                         helpText("Compounds associated with biological pathways."),
                                                         imageOutput("kegg_logo",inline = T),
@@ -241,6 +260,7 @@ shinyUI(fluidPage(
                                                                  sardine(fadeImageButton("search_noise", img.path = "umcnoise.png")),
                                                                  sardine(fadeImageButton("search_hmdb", img.path = "hmdblogo.png")),br(),
                                                                  sardine(fadeImageButton("search_chebi", img.path = "chebilogo.png")),
+                                                                 sardine(fadeImageButton("search_wikipathways", img.path = "wikipathways.png")),
                                                                  sardine(fadeImageButton("search_kegg", img.path = "kegglogo.gif")),
                                                                  sardine(fadeImageButton("search_pubchem", img.path = "pubchemlogo.png")),br(),
                                                                  sardine(switchButton(inputId = "autosearch",

@@ -21,7 +21,7 @@ packages <<- c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
                "globaltest", "GlobalAncova", "Rgraphviz","KEGGgraph",
                "preprocessCore", "genefilter", "pheatmap", "igraph",
                "RJSONIO", "SSPA", "caTools", "ROCR", "pROC", "sva", "rJava",
-               "colorRamps", "grDevices")
+               "colorRamps", "grDevices", "KEGGREST")
 
 options <- getOptions(".conf")
 
@@ -32,6 +32,30 @@ default.text <- list(list(name='options$work_dir',text=options$work_dir),
                      list(name='proj_name',text=options$proj_name),
                      list(name="curr_mz", text="...")
                      )
+
+db_list <<- c("internal", 
+             "noise", 
+             "hmdb", 
+             "chebi", 
+             "pubchem", 
+             "kegg",
+             "wikipathways")
+
+images <<- list(list(name = 'cute_package', path = 'www/new-product.png', dimensions = c(80, 80)),
+               list(name = 'umc_logo_int', path = 'www/umcinternal.png', dimensions = c(120, 120)),
+               list(name = 'umc_logo_noise', path = 'www/umcnoise.png', dimensions = c(120, 120)),
+               list(name = 'hmdb_logo', path = 'www/hmdblogo.png', dimensions = c(150, 100)),
+               list(name = 'chebi_logo', path = 'www/chebilogo.png', dimensions = c(120, 120)),
+               list(name = 'wikipath_logo', path = 'www/wikipathways.png', dimensions = c(120, 140)),
+               list(name = 'kegg_logo', path = 'www/kegglogo.gif', dimensions = c(200, 150)),
+               list(name = 'pubchem_logo', path = 'www/pubchemlogo.png', dimensions = c(145, 90)),
+               list(name = 'pos_icon', path = 'www/handpos.png', dimensions = c(120, 120)),
+               list(name = 'neg_icon', path = 'www/handneg.png', dimensions = c(120, 120)),
+               list(name = 'excel_icon', path = 'www/excel.png', dimensions = c(120, 120)),
+               list(name = 'db_icon', path = 'www/office.png', dimensions = c(100, 100)),
+               list(name = 'csv_icon', path = 'www/office.png', dimensions = c(100, 100)),
+               list(name = 'dataset_icon', path = 'www/office.png', dimensions = c(100, 100))
+)
 
 options$db_dir <<- options$db_dir
 # --- render text ---
@@ -159,21 +183,6 @@ observeEvent(input$nav_general, {
 })
 
 # =================================================
-
-images <- list(list(name = 'cute_package', path = 'www/new-product.png', dimensions = c(80, 80)),
-               list(name = 'umc_logo', path = 'www/umclogo.png', dimensions = c(120, 100)),
-               list(name = 'hmdb_logo', path = 'www/hmdblogo.png', dimensions = c(150, 100)),
-               list(name = 'chebi_logo', path = 'www/chebilogo.png', dimensions = c(100, 100)),
-               list(name = 'wikipath_logo', path = 'www/wikipathways.png', dimensions = c(120, 140)),
-               list(name = 'kegg_logo', path = 'www/kegglogo.gif', dimensions = c(200, 150)),
-               list(name = 'pubchem_logo', path = 'www/pubchemlogo.png', dimensions = c(145, 90)),
-               list(name = 'pos_icon', path = 'www/handpos.png', dimensions = c(120, 120)),
-               list(name = 'neg_icon', path = 'www/handneg.png', dimensions = c(120, 120)),
-               list(name = 'excel_icon', path = 'www/excel.png', dimensions = c(120, 120)),
-               list(name = 'db_icon', path = 'www/office.png', dimensions = c(100, 100)),
-               list(name = 'csv_icon', path = 'www/office.png', dimensions = c(100, 100)),
-               list(name = 'dataset_icon', path = 'www/office.png', dimensions = c(100, 100))
-               )
 
 lapply(images, FUN=function(image){
   output[[image$name]] <- renderImage({
@@ -346,130 +355,37 @@ color.vec <- reactive({
 
 # --- check for db files ---
 
-observeEvent(input$check_umc,{
-  db_folder_files <- list.files(options$db_dir)
-  is.present <- "internal.full.db" %in% db_folder_files | "noise.full.db" %in% db_folder_files
-  check_pic <- if(is.present) "yes.png" else "no.png"
-  output$umc_check <- renderImage({
-    # When input$n is 3, filename is ./images/image3.jpeg
-    filename <- normalizePath(file.path('www', check_pic))
-    # Return a list containing the filename and alt text
-    list(src = filename, width = 70,
-         height = 70)
-  }, deleteFile = FALSE)
-})
-
-observeEvent(input$check_hmdb,{
-  db_folder_files <- list.files(options$db_dir)
-  is.present <- "hmdb.full.db" %in% db_folder_files
-  check_pic <- if(is.present) "yes.png" else "no.png"
-  output$hmdb_check <- renderImage({
-    # When input$n is 3, filename is ./images/image3.jpeg
-    filename <- normalizePath(file.path('www', check_pic))
-    # Return a list containing the filename and alt text
-    list(src = filename, width = 70,
-         height = 70)
-  }, deleteFile = FALSE)
-})
-
-observeEvent(input$check_chebi,{
-  db_folder_files <- list.files(options$db_dir)
-  is.present <- "chebi.full.db" %in% db_folder_files
-  check_pic <- if(is.present) "yes.png" else "no.png"
-  output$chebi_check <- renderImage({
-    # When input$n is 3, filename is ./images/image3.jpeg
-    filename <- normalizePath(file.path('www', check_pic))
-    # Return a list containing the filename and alt text
-    list(src = filename, width = 70,
-         height = 70)
-  }, deleteFile = FALSE)
-})
-
-observeEvent(input$check_kegg,{
-  db_folder_files <- list.files(options$db_dir)
-  is.present <- "kegg.full.db" %in% db_folder_files
-  check_pic <- if(is.present) "yes.png" else "no.png"
-  output$kegg_check <- renderImage({
-    # When input$n is 3, filename is ./images/image3.jpeg
-    filename <- normalizePath(file.path('www', check_pic))
-    # Return a list containing the filename and alt text
-    list(src = filename, width = 70,
-         height = 70)
-  }, deleteFile = FALSE)
-})
-
-observeEvent(input$check_pubchem,{
-  db_folder_files <- list.files(options$db_dir)
-  is.present <- "pubchem.full.db" %in% db_folder_files
-  check_pic <- if(is.present) "yes.png" else "no.png"
-  output$pubchem_check <- renderImage({
-    # When input$n is 3, filename is ./images/image3.jpeg
-    filename <- normalizePath(file.path('www', check_pic))
-    # Return a list containing the filename and alt text
-    list(src = filename, width = 70,
-         height = 70)
-  }, deleteFile = FALSE)
-})
-
+lapply(db_list, FUN=function(db){
+  observeEvent(input[[paste0("check_", db)]],{
+    db_folder_files <- list.files(options$db_dir)
+    is.present <- paste0(db, ".full.db") %in% db_folder_files
+    check_pic <- if(is.present) "yes.png" else "no.png"
+    output[[paste0(db,"_check")]] <- renderImage({
+      # When input$n is 3, filename is ./images/image3.jpeg
+      filename <- normalizePath(file.path('www', check_pic))
+      # Return a list containing the filename and alt text
+      list(src = filename, width = 70,
+           height = 70)
+    }, deleteFile = FALSE)
+  })
+  })
+  
 # --- build db ---
 
-observeEvent(input$build_umc, {
-  # ---------------------------
-  withProgress({
-    setProgress(message = "Working...")
-    build.base.db("internal", outfolder=options$db_dir)
-    setProgress(0.5,message = "Halfway there...")
-    build.extended.db("internal", 
-                      outfolder=options$db_dir,
-                      adduct.table = wkz.adduct.confirmed, 
-                      cl=session_cl, 
-                      fetch.limit=10)
-    build.base.db("noise", outfolder=options$db_dir) # does both because its a special db
-    setProgress(message = "Ok!")
-  })
-})
-
-observeEvent(input$build_hmdb,{
-  withProgress({
-    setProgress(message = "Working...")
-    build.base.db("hmdb", outfolder=options$db_dir)
-    setProgress(0.5,message = "Halfway there...")
-    build.extended.db("hmdb", 
-                      outfolder=options$db_dir, 
-                      adduct.table = wkz.adduct.confirmed, 
-                      cl=session_cl, 
-                      fetch.limit=100)
-    setProgress(message = "Ok!")
-  })
-})
-
-observeEvent(input$build_chebi,{
-  withProgress({
-    setProgress(message = "Working...")
-    build.base.db("chebi", outfolder=options$db_dir)
-    setProgress(0.5,message = "Halfway there...")
-    build.extended.db("chebi", outfolder=options$db_dir, adduct.table = wkz.adduct.confirmed, cl=session_cl, fetch.limit=100)
-    setProgress(message = "Ok!")
-  })
-})
-
-observeEvent(input$build_kegg,{
-  withProgress({
-    setProgress(message = "Working...")
-    build.base.db("kegg", outfolder=options$db_dir, cl = session_cl)
-    setProgress(0.5,message = "Halfway there...")
-    build.extended.db("kegg", outfolder=options$db_dir, adduct.table = wkz.adduct.confirmed, cl=session_cl, fetch.limit=100)
-    setProgress(message = "Ok!")
-  })
-})
-
-observeEvent(input$build_pubchem,{
-  withProgress({
-    setProgress(message = "Working...")
-    build.base.db("pubchem", outfolder=options$db_dir, cl = session_cl)
-    setProgress(0.5,message = "Halfway there...")
-    build.extended.db("pubchem", outfolder=options$db_dir, adduct.table = wkz.adduct.confirmed, cl=session_cl, fetch.limit=100)
-    setProgress(message = "Ok!")
+lapply(db_list, FUN=function(db){
+  observeEvent(input[[paste0("build_", db)]], {
+    # ---------------------------
+    withProgress({
+      setProgress(message = "Working...")
+      build.base.db(db, outfolder=options$db_dir)
+      setProgress(0.5,message = "Halfway there...")
+      build.extended.db(db, 
+                        outfolder=options$db_dir,
+                        adduct.table = wkz.adduct.confirmed, 
+                        cl=session_cl, 
+                        fetch.limit=100)
+      setProgress(message = "Ok!")
+    })
   })
 })
 
@@ -667,6 +583,7 @@ observeEvent(input$check_csv, {
                     choices = get_ref_vars(input$exp_var)
   )
 })
+
 output$ref_select <- renderUI({ref.selector()})
 
 observeEvent(input$initialize,{
@@ -727,7 +644,6 @@ observeEvent(input$initialize,{
 })
 })
 
-
 observeEvent(input$nav_time, {
   if(input$nav_general != "analysis") return(NULL)
     # get excel table stuff.
@@ -770,11 +686,11 @@ observeEvent(input$nav_time, {
            if("MB" %not in% names(analSet)){
             performMB(10, dir=options$work_dir)
            }
-           meba.table <<- read.csv(file.path(options$work_dir, 'meba_sig_features.csv'))
+           tables$meba_tab <<- read.csv(file.path(options$work_dir, 'meba_sig_features.csv'))
            output$meba_tab <- DT::renderDataTable({
-             req(meba.table)
+             req(tables$meba_tab)
              # -------------
-             datatable(meba.table, 
+             datatable(tables$meba_tab, 
                        selection = 'single',
                        colnames = c("Mass/charge", "Hotelling/T2 score"),
                        autoHideNavigation = T,
@@ -786,11 +702,11 @@ observeEvent(input$nav_time, {
              Perform.ASCA(1, 1, 2, 2)
               CalculateImpVarCutoff(0.05, 0.9, dir=options$work_dir)
             }
-           asca.table <<- read.csv(file.path(options$work_dir,'Sig_features_Model_ab.csv'))
+           tables$asca_tab <<- read.csv(file.path(options$work_dir,'Sig_features_Model_ab.csv'))
            output$asca_tab <- DT::renderDataTable({
-             req(asca.table)
+             req(tables$asca_tab)
              # -------------
-             datatable(asca.table, 
+             datatable(tables$asca_tab, 
                        selection = 'single',
                        colnames = c("Mass/charge", "Leverage", "SPE"),
                        autoHideNavigation = T,
@@ -849,7 +765,7 @@ observeEvent(input$tab_stat, {
            },
          tt = {
            Ttests.Anal(F, 0.05, FALSE, TRUE)
-           tt.table <<- as.data.table(read.csv(file.path(options$work_dir,'t_test.csv')),keep.rownames = F)
+           tables$tt_tab <<- as.data.table(read.csv(file.path(options$work_dir,'t_test.csv')),keep.rownames = F)
            output$tt_tab <- DT::renderDataTable({
              req(tt.table)
              # -------------
@@ -867,8 +783,7 @@ observeEvent(input$tab_stat, {
            },
          fc = {
            FC.Anal.unpaired(2.0, 1)
-           fc.table <<- as.data.table(read.csv(file.path(options$work_dir,'fold_change.csv')),keep.rownames = F)
-           fc.table
+           tables$fc_table <<- as.data.table(read.csv(file.path(options$work_dir,'fold_change.csv')),keep.rownames = F)
            output$fc_tab <- DT::renderDataTable({
              # -------------
              datatable(fc.table, 
@@ -916,61 +831,54 @@ observeEvent(input$heatmode,{
       })
 })
 
-
-observe({
-  db_list <- lapply(c("internal", "noise", "hmdb", "chebi", "pubchem", "kegg"), 
-                    FUN = function(db) if(!input[[paste0("search_", db)]]) c(file.path(options$db_dir, paste0(db, ".full.db"))) else{NA}
-  )
-  db_list <<- db_list[!is.na(db_list)]
+lapply(db_list, FUN=function(db){
+  observe({
+    # ---------------------------------
+    db_search_list <- lapply(db_list, 
+                             FUN = function(search_db){
+                               # -----------------------
+                               if(!input[[paste0("search_", search_db)]]){
+                                 c(file.path(options$db_dir, paste0(search_db, ".full.db")))
+                                 }
+                               else{NA}
+                               }
+                             )
+    db_search_list <<- db_search_list[!is.na(db_search_list)]
+  })  
 })
 
-observeEvent(input$tt_tab_rows_selected,{
-  curr_row = input$tt_tab_rows_selected
-  # do nothing if not clicked yet, or the clicked cell is not in the 1st column
-  if (is.null(curr_row)) return()
-  curr_mz <<- tt.table[curr_row,X]
-  output$curr_mz <- renderText(curr_mz)
-  output$tt_specific_plot <- renderPlotly({
-    # --- ggplot ---
-    ggplotSummary(curr_mz, cols = color.vec())
-  })
-  if(input$autosearch & length(db_list > 0)){
-    match_list <- lapply(db_list, FUN=function(match.table){
-      get_matches(curr_mz, match.table)
+
+mz.update.tables <<- c("tt_tab", 
+                      "fc_tab", 
+                      "asca_tab", 
+                      "meba_tab")
+
+lapply(mz.update.tables, FUN=function(table){
+  observeEvent(input[[paste0(table, "_rows_selected")]], {
+    curr_row = input[[paste0(table, "_rows_selected")]]
+    # do nothing if not clicked yet, or the clicked cell is not in the 1st column
+    if (is.null(curr_row)) return()
+    curr_mz <<- tables[[table]][curr_row,X]
+    output$curr_mz <- renderText(curr_mz)
+    output$paste0(table, "_specific_plot") <- renderPlotly({
+      # --- ggplot ---
+      ggplotSummary(curr_mz, cols = color.vec())
     })
-    match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
-    output$match_tab <- DT::renderDataTable({
-      datatable(match_table[,-"Description"],
-                selection = 'single',
-                autoHideNavigation = T,
-                options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-    })  
-  }
+    if(input$autosearch & length(db_search_list > 0)){
+      match_list <- lapply(db_search_list, FUN=function(match.table){
+        get_matches(curr_mz, match.table)
+      })
+      match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
+      output$match_tab <- DT::renderDataTable({
+        datatable(match_table[,-"Description"],
+                  selection = 'single',
+                  autoHideNavigation = T,
+                  options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+      })  
+    }
+  })
 })
 
-observeEvent(input$fc_tab_rows_selected,{
-  curr_row = input$fc_tab_rows_selected
-  # do nothing if not clicked yet, or the clicked cell is not in the 1st column
-  if (is.null(curr_row)) return()
-  curr_mz <<- fc.table[curr_row, X]
-  output$curr_mz <- renderText(curr_mz)
-  output$fc_specific_plot <- renderPlotly({
-  # --- ggplot ---
-  ggplotSummary(curr_mz, cols = color.vec())
-  })
-  if(input$autosearch & length(db_list > 0)){
-    match_list <- lapply(db_list, FUN=function(match.table){
-      get_matches(curr_mz, match.table)
-    })
-    match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
-    output$match_tab <- DT::renderDataTable({
-      datatable(match_table[,-"Description"],
-                selection = 'single',
-                autoHideNavigation = T,
-                options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-    })  
-  }
-})
 
 observe({
   d <- event_data("plotly_click")
@@ -997,8 +905,8 @@ observe({
            curr_mz <<- hm_matrix$matrix$rows[d$y]
              })
   output$curr_mz <- renderText(curr_mz)
-  if(input$autosearch & length(db_list > 0)){
-    match_list <- lapply(db_list, FUN=function(match.table){
+  if(input$autosearch & length(db_search_list > 0)){
+    match_list <- lapply(db_search_list, FUN=function(match.table){
       get_matches(curr_mz, match.table)
     })
     match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
@@ -1010,56 +918,6 @@ observe({
     })  
   }
 })
-         
-# ================ MEBA ========================
-
-observeEvent(input$meba_tab_rows_selected,{
-  curr_row = input$meba_tab_rows_selected
-  draw.average = T
-  # do nothing if not clicked yet, or the clicked cell is not in the 1st column
-  if (is.null(curr_row)) return()
-  curr_mz <<- meba.table[curr_row,'X']
-  output$meba_plot <- renderPlotly({
-    # --- ggplot ---
-    ggplotMeba(curr_mz, draw.average, cols = color.vec())
-  })
-  output$curr_mz <- renderText(curr_mz)
-  
-  if(input$autosearch & length(db_list > 0)){
-    match_list <- lapply(db_list, FUN=function(match.table){
-      get_matches(curr_mz, match.table)
-    })
-    match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
-    output$match_tab <- DT::renderDataTable({
-      datatable(match_table[,-"Description"],
-                selection = 'single',
-                autoHideNavigation = T,
-                options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-    })  
-  }
-})
-
-# check for selected mz row
-observeEvent(input$asca_tab_rows_selected,{
-  curr_row = input$asca_tab_rows_selected
-  # do nothing if not clicked yet, or the clicked cell is not in the 1st column
-  if (is.null(curr_row)) return()
-  curr_mz <<- asca.table[curr_row,'X']
-  output$asca_plot <- renderPlotly({ggplotSummary(curr_mz, cols = color.vec())})
-  output$curr_mz <- renderText(curr_mz)
-  if(input$autosearch & length(db_list > 0)){
-    match_list <- lapply(db_list, FUN=function(match.table){
-      get_matches(curr_mz, match.table)
-    })
-    match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
-    output$match_tab <- DT::renderDataTable({
-      datatable(match_table[,-"Description"],
-                selection = 'single',
-                autoHideNavigation = T,
-                options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-    })  
-  }
-  })
 
 # --- find matches ---
 
@@ -1074,7 +932,7 @@ output$find_mol_icon <- renderImage({
 
 observeEvent(input$search_mz, {
   # ------------------
-  match_list <- lapply(db_list, FUN=function(match.table){
+  match_list <- lapply(db_search_list, FUN=function(match.table){
     get_matches(curr_mz, match.table)
   })
   match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])

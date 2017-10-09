@@ -37,8 +37,10 @@ getProfile <-function (varName, title=varName, mode="stat") {
 }
 
 kegg.charge <- function(atomlist){
-  atom.str <- paste(atomlist, collapse = " ") 
-  charges  <- str_match(atom.str, pattern = "#[+-]|#\\d*[+-]")
+  charges  <-regmatches(
+    atomlist,
+    regexpr(atomlist, pattern = "#[+-]|#\\d*[+-]",perl = T)
+  ) 
   formal_charge = 0
   for(ch in charges[!is.na(charges)]){
     ch.base <- gsub(ch, pattern = "#", replacement = "")
