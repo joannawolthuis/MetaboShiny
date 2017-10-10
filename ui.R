@@ -100,19 +100,18 @@ shinyUI(fluidPage(
                                                actionButton("build_hmdb", "Build", icon = icon("wrench")),
                                                br(),br(),
                                                imageOutput("hmdb_check",inline = T)
-                                        ),
-                                        column(3,  align="center",
-                                               h2("ChEBI"),
-                                               helpText("A broad database with known chemicals of biological interest."),
-                                               br(),
-                                               imageOutput("chebi_logo",inline = T),
-                                               br(),br(),br(),
-                                               actionButton("check_chebi", "Check", icon = icon("check")),
-                                               actionButton("build_chebi", "Build", icon = icon("wrench")),
-                                               br(),br(),
-                                               imageOutput("chebi_check",inline = T)
                                         )),
                                         fluidRow(column(3,  align="center",
+                                                        h2("ChEBI"),
+                                                        helpText("A broad database with known chemicals of biological interest."),
+                                                        br(),
+                                                        imageOutput("chebi_logo",inline = T),
+                                                        br(),br(),br(),
+                                                        actionButton("check_chebi", "Check", icon = icon("check")),
+                                                        actionButton("build_chebi", "Build", icon = icon("wrench")),
+                                                        br(),br(),
+                                                        imageOutput("chebi_check",inline = T)
+                                        ),column(3,  align="center",
                                                         h2("WikiPathways"),
                                                         helpText("Compounds associated with open source biological pathways."),
                                                         imageOutput("wikipath_logo",inline = T),
@@ -130,18 +129,19 @@ shinyUI(fluidPage(
                                                         actionButton("build_kegg", "Build", icon = icon("wrench")),
                                                         br(),br(),
                                                         imageOutput("kegg_check",inline = T)
-                                                        ),
-                                                 column(3,  align="center",
-                                                        h2("PubChem"),
-                                                        helpText("A huge database with known pretty much all known chemicals."),
-                                                        br(),
-                                                        imageOutput("pubchem_logo",inline = T),
-                                                        br(),br(),br(),
-                                                        actionButton("check_pubchem", "Check", icon = icon("check")),
-                                                        actionButton("build_pubchem", "Build", icon = icon("wrench")),
-                                                        br(),br(),
-                                                        imageOutput("pubchem_check",inline = T)
                                                         )
+                                        # ,
+                                        #          column(3,  align="center",
+                                        #                 h2("PubChem"),
+                                        #                 helpText("A huge database with known pretty much all known chemicals."),
+                                        #                 br(),
+                                        #                 imageOutput("pubchem_logo",inline = T),
+                                        #                 br(),br(),br(),
+                                        #                 actionButton("check_pubchem", "Check", icon = icon("check")),
+                                        #                 actionButton("build_pubchem", "Build", icon = icon("wrench")),
+                                        #                 br(),br(),
+                                        #                 imageOutput("pubchem_check",inline = T)
+                                        #                 )
                                         )
                                         )
                                ),
@@ -262,7 +262,8 @@ shinyUI(fluidPage(
                                                                  sardine(fadeImageButton("search_chebi", img.path = "chebilogo.png")),
                                                                  sardine(fadeImageButton("search_wikipathways", img.path = "wikipathways.png")),
                                                                  sardine(fadeImageButton("search_kegg", img.path = "kegglogo.gif")),
-                                                                 sardine(fadeImageButton("search_pubchem", img.path = "pubchemlogo.png")),br(),
+                                                                 #sardine(fadeImageButton("search_pubchem", img.path = "pubchemlogo.png")),
+                                                                 br(),
                                                                  sardine(switchButton(inputId = "autosearch",
                                                                               label = "Autosearch", 
                                                                               value = FALSE, col = "BW", type = "OO"))

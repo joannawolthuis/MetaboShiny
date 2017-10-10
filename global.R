@@ -5,11 +5,50 @@ if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
 # === LOAD LIBRARIES ===
 
-library(pacman)
-library(shiny)
-library(DT)
-library(data.table)
-library(shinyFiles)
+  library(RSQLite)
+  library(DBI)
+  library(reshape2)
+  library(data.table)
+  library(xlsx)
+  library(plotly)
+  library(preprocessCore)
+  library(heatmaply)
+  library(shinyFiles)
+  library(colorRamps)
+  library(grDevices)
+  library(colourpicker)
+  library(pacman)
+  library(RSQLite)
+  library(gsubfn)
+  library(DBI)
+  library(parallel)
+  library(XML)
+  library(minval)
+  library(curl)
+  library(enviPat)
+  library(SPARQL)
+  data(isotopes, package = "enviPat")
+  if(any(is.na(session_cl))){
+    session_cl <<- makeCluster(detectCores())
+    clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
+      "isotopes",
+      "subform.joanna", 
+      "mergeform.joanna",
+      "multiform.joanna",
+      "check.ded.joanna",
+      "data.table",
+      "rbindlist",
+      "isopattern",
+      "keggFind",
+      "keggGet",
+      "kegg.charge",
+      "regexpr",
+      "regmatches"
+    ))
+  }
+  sourceAll(file.path("backend", 
+                      "scripts", 
+                      "metaboanalyst"))
 
 # ------------------------
 

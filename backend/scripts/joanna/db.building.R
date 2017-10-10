@@ -239,6 +239,7 @@ build.base.db <- function(dbname=NA,
                                  #                          }')
                                  # ---------------------------------
                                  dbWriteTable(conn, "base", db.formatted, append=TRUE)
+                                 # ---------------------------------
                                },
                                kegg = function(dbname){
                                  # ---------------

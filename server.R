@@ -2,12 +2,12 @@ library(shiny)
 
 shinyServer(function(input, output, session) {
   
-  
 # ===== defaults =====
 
 mz <<- NA
 session_cl <<- NA
 tables <- list()
+db_search_list <- c()
 patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
 mainmode <<- "stat"
 
@@ -21,7 +21,7 @@ packages <<- c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
                "globaltest", "GlobalAncova", "Rgraphviz","KEGGgraph",
                "preprocessCore", "genefilter", "pheatmap", "igraph",
                "RJSONIO", "SSPA", "caTools", "ROCR", "pROC", "sva", "rJava",
-               "colorRamps", "grDevices", "KEGGREST")
+               "colorRamps", "grDevices", "KEGGREST", "manhattanly")
 
 options <- getOptions(".conf")
 
@@ -37,7 +37,7 @@ db_list <<- c("internal",
              "noise", 
              "hmdb", 
              "chebi", 
-             "pubchem", 
+             #"pubchem", 
              "kegg",
              "wikipathways")
 
@@ -64,9 +64,6 @@ lapply(default.text, FUN=function(default){
   output[[default$name]] = renderText(default$text)
 })
 
-observeEvent(input$test, {
-  print(input$test)
-})
 
 # -------------------
 time.anal.ui <- reactive({
@@ -134,7 +131,7 @@ stat.anal.ui <- reactive({
                                            plotlyOutput('fc_overview_plot',width = "600px", height="250px")
                                  )
                       )),
-             tabPanel("Heatmap", value="heat",
+             tabPanel("Heatmap", value="heatmap",
                       plotlyOutput("heatmap", height='600px', width='750px'),
                       fluidRow(switchButton(inputId = "heatmode",
                                             label = "Use data from:", 
@@ -153,7 +150,6 @@ observe({
   if(exists("dataSet")){
     if("shinymode" %in% names(dataSet)) curr_mode <<- dataSet$shinymode
   } 
-  print(curr_mode)
   whichUI <- switch(curr_mode,
                     time={time.anal.ui()},
                     stat={stat.anal.ui()})
@@ -274,30 +270,30 @@ observeEvent(input$set_ppm, {
 })
 
 observeEvent(input$color_ramp,{
-  color.function <<- switch(input$color_ramp,
-                           "rb"=rainbow,
-                           "y2b"=ygobb,
-                           "ml1"=matlab.like2,
-                           "ml2"=matlab.like,
-                           "m2g"=magenta2green,
-                           "c2y"=cyan2yellow,
-                           "b2y"=blue2yellow,
-                           "g2r"=green2red,
-                           "b2g"=blue2green,
-                           "b2r"=blue2red,
-                           "b2p"=cm.colors,
-                           "bgy"=topo.colors,
-                           "gyw"=terrain.colors,
-                           "ryw"=heat.colors)
-  
-  ax <- list(
-    title = "",
-    zeroline = FALSE,
-    showline = FALSE,
-    showticklabels = FALSE,
-    showgrid = FALSE
-  )
   output$ramp_plot <- renderPlotly({
+    color.function <<- switch(input$color_ramp,
+                              "rb"=rainbow,
+                              "y2b"=ygobb,
+                              "ml1"=matlab.like2,
+                              "ml2"=matlab.like,
+                              "m2g"=magenta2green,
+                              "c2y"=cyan2yellow,
+                              "b2y"=blue2yellow,
+                              "g2r"=green2red,
+                              "b2g"=blue2green,
+                              "b2r"=blue2red,
+                              "b2p"=cm.colors,
+                              "bgy"=topo.colors,
+                              "gyw"=terrain.colors,
+                              "ryw"=heat.colors)
+    ax <- list(
+      title = "",
+      zeroline = FALSE,
+      showline = FALSE,
+      showticklabels = FALSE,
+      showgrid = FALSE
+    )
+    # --- render ---
     plot_ly(z = volcano, 
           colors = color.function(100), 
           type = "heatmap",
@@ -509,21 +505,22 @@ observeEvent(input$create_csv, {
     fwrite(mz.adj, csv_loc, sep="\t")
     # --- overview table ---
     setProgress(3/4, "Creating overview table...")
-    overview_tab <- if(mainmode == "time"){
-      t(data.table(keep.rownames = F,
-                   Mz = ncol(mz.adj) - 3,
-                   Samples = nrow(mz.adj),
-                   Times = length(unique(mz.adj$Time)),
-                   Groups = length(unique(mz.adj$Label))
-      ))
-    } else{
-      t(data.table(keep.rownames = F,
-                   Mz = ncol(mz.adj) - 3,
-                   Samples = nrow(mz.adj),
-                   Groups = length(unique(mz.adj$Label))
-      )) 
-      }
     output$csv_tab <- DT::renderDataTable({
+      overview_tab <- if(mainmode == "time"){
+        t(data.table(keep.rownames = F,
+                     Mz = ncol(mz.adj) - 3,
+                     Samples = nrow(mz.adj),
+                     Times = length(unique(mz.adj$Time)),
+                     Groups = length(unique(mz.adj$Label))
+        ))
+      } else{
+        t(data.table(keep.rownames = F,
+                     Mz = ncol(mz.adj) - 3,
+                     Samples = nrow(mz.adj),
+                     Groups = length(unique(mz.adj$Label))
+        )) 
+      }
+      # --- render ---
       datatable(overview_tab, 
                 selection = 'single',
                 autoHideNavigation = T,
@@ -649,19 +646,18 @@ observeEvent(input$nav_time, {
     # get excel table stuff.
   switch(input$nav_time,
          ipca = {
-           if("ipca" %not in% names(analSet)){
-             iPCA.Anal(file.path(options$work_dir, "ipca_3d_0_.json"))
-             analSet[["ipca"]] <- "Done!"             
-           }
-           json_pca <- fromJSON(file.path(options$work_dir, "ipca_3d_0_.json"))
-           req(json_pca)
            # --------------------
            output$plot_ipca <- renderPlotly({
-             req(json_pca)
+             if("ipca" %not in% names(analSet)){
+               iPCA.Anal(file.path(options$work_dir, "ipca_3d_0_.json"))
+               analSet[["ipca"]] <- "Done!"             
+             }
+             json_pca <- fromJSON(file.path(options$work_dir, "ipca_3d_0_.json"))
              fac.lvls <- unique(json_pca$score[[input$ipca_factor]])
              chosen.colors <- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
              # ---------------
              df <- t(as.data.frame(json_pca$score$xyz))
+             # --- render! ---
              plot_ly(hoverinfo = 'text',
                      text = json_pca$score$name ) %>%
                add_trace(
@@ -686,11 +682,11 @@ observeEvent(input$nav_time, {
            if("MB" %not in% names(analSet)){
             performMB(10, dir=options$work_dir)
            }
-           tables$meba_tab <- read.csv(file.path(options$work_dir, 'meba_sig_features.csv'))
+           #tables$meba_tab <- read.csv(file.path(options$work_dir, 'meba_sig_features.csv'))
            output$meba_tab <- DT::renderDataTable({
              req(tables$meba_tab)
              # -------------
-             datatable(tables$meba_tab, 
+             datatable(analSet$mb$sig.mat, 
                        selection = 'single',
                        colnames = c("Mass/charge", "Hotelling/T2 score"),
                        autoHideNavigation = T,
@@ -702,11 +698,11 @@ observeEvent(input$nav_time, {
              Perform.ASCA(1, 1, 2, 2)
               CalculateImpVarCutoff(0.05, 0.9, dir=options$work_dir)
             }
-           tables$asca_tab <- read.csv(file.path(options$work_dir,'Sig_features_Model_ab.csv'))
+           #tables$asca_tab <- read.csv(file.path(options$work_dir,'Sig_features_Model_ab.csv'))
            output$asca_tab <- DT::renderDataTable({
              req(tables$asca_tab)
              # -------------
-             datatable(tables$asca_tab, 
+             datatable(analSet$asca$sig.mat, 
                        selection = 'single',
                        colnames = c("Mass/charge", "Leverage", "SPE"),
                        autoHideNavigation = T,
@@ -760,7 +756,36 @@ observeEvent(input$tab_stat, {
                        autoHideNavigation = T,
                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
            })},
-         heatmap = {   NULL
+         heatmap = {
+           req(input$heatmode)
+           req(input$color_ramp)
+           req(analSet$tt)
+           req(analSet$fc)
+           # --- render ---
+           output$heatmap <- renderPlotly({
+             x <- if(input$heatmode == TRUE){
+               dataSet$norm[,names(analSet$tt$inx.imp[analSet$tt$inx.imp == TRUE])]
+             } else{dataSet$norm[,names(analSet$fc$inx.imp[analSet$fc$inx.imp == TRUE])]}
+             final_matrix <- t(x)
+             translator <- data.table(Sample=rownames(dataSet$norm),Group=dataSet$prenorm.cls)
+             group_assignments <- translator[,"Group",on=colnames(final_matrix)]$Group
+             hm_matrix <<- heatmapr(final_matrix, 
+                                    Colv=T, 
+                                    Rowv=T,
+                                    col_side_colors = group_assignments,
+                                    k_row = NA)
+             heatmaply(hm_matrix,
+                       Colv=F, Rowv=F,
+                       branches_lwd = 0.3,
+                       margins = c(60,0,NA,50),
+                       colors = color.function(256),
+                       col_side_palette = function(n){
+                         if(n == length(color.vec())) color.vec() else rainbow(n)
+                       },
+                       subplot_widths = c(.9,.1),
+                       subplot_heights =  c(.1,.05,.85),
+                       column_text_angle = 90)
+           })
            },
          tt = {
            Ttests.Anal(F, 0.05, FALSE, TRUE)
@@ -791,37 +816,22 @@ observeEvent(input$tab_stat, {
              # --- ggplot ---
              ggPlotFC(color.function, 20)
            })
+           },
+         volc = {
+           Volcano.Anal(FALSE, 2.0, 0, 0.75,F, 0.1, TRUE, "raw")
+           output$volc_tab <- DT::renderDataTable({
+             # -------------
+             datatable(analSet$volc$sig.mat, 
+                       selection = 'single',
+                       autoHideNavigation = T,
+                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+             
            })
-})
-
-observeEvent(input$heatmode,{
-  req(analSet$tt)
-  req(analSet$fc)
-  #-------------------
-  x <- if(input$heatmode == TRUE){
-    dataSet$norm[,names(analSet$tt$inx.imp[analSet$tt$inx.imp == TRUE])]
-    } else{dataSet$norm[,names(analSet$fc$inx.imp[analSet$fc$inx.imp == TRUE])]}
-  final_matrix <- t(x)
-  translator <- data.table(Sample=rownames(dataSet$norm),Group=dataSet$prenorm.cls)
-  group_assignments <- translator[,"Group",on=colnames(final_matrix)]$Group
-  hm_matrix <<- heatmapr(final_matrix, 
-                        Colv=T, 
-                        Rowv=T,
-                        col_side_colors = group_assignments,
-                        k_row = NA)
-  output$heatmap <- renderPlotly({
-    heatmaply(hm_matrix,
-              Colv=F, Rowv=F,
-              branches_lwd = 0.3,
-              margins = c(60,0,NA,50),
-              colors = color.function(256),
-              col_side_palette = function(n){
-                if(n == length(color.vec())) color.vec() else rainbow(n)
-              },
-              subplot_widths = c(.9,.1),
-              subplot_heights =  c(.1,.05,.85),
-              column_text_angle = 90)
-      })
+           output$fc_overview_plot <- renderPlotly({
+             # --- ggplot ---
+             ggPlotVOLC(color.function, 20)
+           })
+         })
 })
 
 lapply(db_list, FUN=function(db){
@@ -839,7 +849,6 @@ lapply(db_list, FUN=function(db){
     db_search_list <<- db_search_list[!is.na(db_search_list)]
   })  
 })
-
 
 mz.update.tables <<- c("tt", 
                       "fc", 
@@ -881,9 +890,11 @@ lapply(mz.update.tables, FUN=function(table){
 
 observe({
   d <- event_data("plotly_click")
-  if(length(d) == 0) return(NULL)
+  req(d)
+  # -----------------------------
   switch(input$tab_stat,
          tt = {
+           if('key' %not in% colnames(d)) return(NULL)
            if(d$key %not in% names(analSet$tt$p.value)) return(NULL)
            curr_mz <<- d$key
            output$tt_specific_plot <- renderPlotly({
@@ -892,6 +903,7 @@ observe({
            })
            },
          fc = {
+           if('key' %not in% colnames(d)) return(NULL)
            if(d$key %not in% names(analSet$fc$fc.log)) return(NULL)
            curr_mz <<- d$key
            output$fc_specific_plot <- renderPlotly({
@@ -899,12 +911,13 @@ observe({
              ggplotSummary(curr_mz, cols = color.vec())
            })
          },
-         heat = {
+         heatmap = {
            if(d$y > length(hm_matrix$matrix$rows)) return(NULL)
            curr_mz <<- hm_matrix$matrix$rows[d$y]
              })
+  # ----------------------------
   output$curr_mz <- renderText(curr_mz)
-  if(input$autosearch & length(db_search_list > 0)){
+  if(input$autosearch & length(db_search_list) > 0){
     match_list <- lapply(db_search_list, FUN=function(match.table){
       get_matches(curr_mz, match.table)
     })
@@ -930,17 +943,20 @@ output$find_mol_icon <- renderImage({
 }, deleteFile = FALSE)
 
 observeEvent(input$search_mz, {
-  # ------------------
-  match_list <- lapply(db_search_list, FUN=function(match.table){
-    get_matches(curr_mz, match.table)
-  })
-  match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
-  output$match_tab <- DT::renderDataTable({
-    datatable(match_table[,-"Description"],
-              selection = 'single',
-              autoHideNavigation = T,
-              options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-  })  
+  req(db_search_list)
+  # ----------------
+  if(length(db_search_list) > 0){
+    match_list <- lapply(db_search_list, FUN=function(match.table){
+      get_matches(curr_mz, match.table)
+    })
+    match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
+    output$match_tab <- DT::renderDataTable({
+      datatable(match_table[,-"Description"],
+                selection = 'single',
+                autoHideNavigation = T,
+                options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+    })  
+  }
 })
 
 observeEvent(input$match_tab_rows_selected,{
@@ -1001,7 +1017,7 @@ observeEvent(input$hits_tab_rows_selected,{
   if (is.null(curr_row)) return()
   # -----------------------------
   curr_mz <<- hits_table[curr_row, mzmed.pgrp]
-  output$meba_plot <- renderPlotly({ggplotMeba(curr_mz, draw.average, cols = color.vec() )})
+  output$meba_plot <- renderPlotly({ggplotMeba(curr_mz, draw.average, cols = color.vec())})
   output$asca_plot <- renderPlotly({ggplotSummary(curr_mz, cols = color.vec())})
   output$fc_specific_plot <- renderPlotly({ggplotSummary(curr_mz, cols = color.vec())})
   output$tt_specific_plot <- renderPlotly({ggplotSummary(curr_mz, cols = color.vec())})

@@ -580,15 +580,17 @@ Volcano.Anal<-function(paired=FALSE,fcthresh,cmpType, percent.thresh, nonpar=F, 
             max.xthresh <- count.thresh;
             min.xthresh <- -count.thresh;
         }
-
         # create named sig table for display
         inx.imp<-(inx.up | inx.down) & inx.p;
         if(paired){ 
             sig.var<-cbind(fc.all[1,][inx.imp,drop=F], fc.all[2,][inx.imp, drop=F], p.value[inx.imp, drop=F], p.log[inx.imp, drop=F]);
+            all.var<-cbind(fc.all, fc.all, p.value, p.log);
             if(pval.type == "fdr"){
                 colnames(sig.var)<-c("Counts (up)","Counts (down)", "p.adjusted", "-log10(p)");
+                colnames(all.var)<-c("Counts (up)","Counts (down)", "p.adjusted", "-log10(p)");
             }else{
                 colnames(sig.var)<-c("Counts (up)","Counts (down)", "raw.pval", "-log10(p)");
+                colnames(all.var)<-c("Counts (up)","Counts (down)", "raw.pval", "-log10(p)");
             }
             # first order by count difference, then by log(p)
             dif.count<-abs(sig.var[,1]-sig.var[,2]);
@@ -597,10 +599,14 @@ Volcano.Anal<-function(paired=FALSE,fcthresh,cmpType, percent.thresh, nonpar=F, 
             sig.var[,c(3,4)]<-signif(sig.var[,c(3,4)],5);
         }else{
             sig.var<-cbind(fc.all[inx.imp,drop=F], fc.log[inx.imp,drop=F], p.value[inx.imp,drop=F], p.log[inx.imp,drop=F]);
+            all.var<-cbind(fc.all, fc.all, p.value, p.log);
             if(pval.type == "fdr"){
-                colnames(sig.var)<-c("FC", "log2(FC)", "p.ajusted", "-log10(p)");
+                colnames(sig.var)<-c("FC", "log2(FC)", "p.adjusted", "-log10(p)");
+                colnames(all.var)<-c("FC", "log2(FC)", "p.adjusted", "-log10(p)");
             }else{
                 colnames(sig.var)<-c("FC", "log2(FC)", "raw.pval", "-log10(p)");
+                colnames(all.var)<-c("FC", "log2(FC)", "raw.pval", "-log10(p)");
+                
             }
             # first order by log(p), then by log(FC)
             ord.inx<-order(sig.var[,4], abs(sig.var[,2]), decreasing=T);
@@ -608,8 +614,8 @@ Volcano.Anal<-function(paired=FALSE,fcthresh,cmpType, percent.thresh, nonpar=F, 
             sig.var<-signif(sig.var,5);
         }
 
-        fileName <- "volcano.csv";
-        write.csv(signif(sig.var,5),file=fileName);
+        #fileName <- "volcano.csv";
+        #write.csv(signif(sig.var,5),file=fileName);
         volcano<-list (
             raw.threshx = fcthresh,
             raw.threshy = threshp,
@@ -624,7 +630,8 @@ Volcano.Anal<-function(paired=FALSE,fcthresh,cmpType, percent.thresh, nonpar=F, 
             inx.down = inx.down,
             p.log = p.log,
             inx.p = inx.p,
-            sig.mat = sig.var
+            sig.mat = sig.var,
+            all.mat = all.var
         );
         analSet$volcano <-volcano;
         analSet <<- analSet;
