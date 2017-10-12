@@ -110,8 +110,30 @@ stat.anal.ui <- reactive({
                       )
                       )
              ),
-             tabPanel("PLS-DA", #icon=icon("bar-chart-o"),
-                      helpText("placeholder")
+             tabPanel("PLSDA", value = "plsda",
+                      navbarPage("",
+                                 tabPanel("Overview", icon=icon("globe"),
+                                          plotlyOutput("plot_plsda"),
+                                          fluidRow(column(3,
+                                                          selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:8),selected = "PC1"),
+                                                          selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:8),selected = "PC2"),
+                                                          selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:8),selected = "PC3")
+                                          ), 
+                                          column(8, 
+                                                 div(DT::dataTableOutput('plsda_tab'),style='font-size:80%')
+                                          ))),
+                                 tabPanel("VIPs", icon=icon("star-o"), 
+                                          plotlyOutput("plsda_vip_specific_plot"),
+                                          fluidRow(column(3,
+                                                          selectInput("plsda_vip_cmp", label = "Compounds from:", choices = paste0("PC",1:5),selected = "PC1")
+                                          ), 
+                                          column(8, 
+                                                 div(DT::dataTableOutput('plsda_vip_tab'),style='font-size:80%')
+                                          ))
+                                          
+                                 )
+                                 )
+                                          
              ),
              # =================================================================================
              tabPanel("T-test", value="tt", 
@@ -143,7 +165,7 @@ stat.anal.ui <- reactive({
                       fluidRow(plotlyOutput('volc_plot', height='600px', width='700px'))
                       #,fluidRow(div(DT::dataTableOutput('volc_tab'),style='font-size:80%'))
                       )
-)
+  )
 })
 
 observe({
@@ -757,6 +779,71 @@ observeEvent(input$tab_stat, {
                        autoHideNavigation = T,
                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
            })},
+         plsda = {
+           PLSR.Anal()
+          # PLSDA.CV("L",5, "Q2")
+           plsda.table <- as.data.table(round(analSet$plsr$Xvar 
+                                              / analSet$plsr$Xtotvar 
+                                              * 100.0,
+                                              digits = 2),
+                                        keep.rownames = T)
+           colnames(plsda.table) <- c("Principal Component", "% variance")
+           plsda.table[, "Principal Component"] <- paste0("PC", 1:nrow(plsda.table))
+           # -----------
+           output$plot_plsda <- renderPlotly({
+             x <- input$plsda_x
+             y <- input$plsda_y
+             z <- input$plsda_z
+             x.var <- plsda.table[`Principal Component` == x, 
+                                  `% variance`]
+             y.var <- plsda.table[`Principal Component` == y, 
+                                  `% variance`]
+             z.var <- plsda.table[`Principal Component` == z, 
+                                  `% variance`]
+             fac.lvls <- unique(dataSet$filt.cls)
+             colnames(analSet$plsr$Yscores) <- paste0("PC", 1:ncol(analSet$plsr$Yscores))
+             chosen.colors <- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
+             # ---------------
+             plot_ly(hoverinfo = 'text',
+                     text = rownames(dataSet$norm)) %>%
+               add_trace(
+                 x = analSet$plsr$Yscores[,x], 
+                 y = analSet$plsr$Yscores[,y], 
+                 z = analSet$plsr$Yscores[,z], 
+                 type = "scatter3d",
+                 color = dataSet$filt.cls, colors=chosen.colors
+               ) %>%  layout(scene = list(
+                 xaxis = list(
+                   title = fn$paste("$x ($x.var %)")),
+                 yaxis = list(
+                   title = fn$paste("$y ($y.var %)")),
+                 zaxis = list(
+                   title = fn$paste("$z ($z.var %)")
+                   )
+                 ))
+           })
+  output$plsda_tab <- DT::renderDataTable({
+    req(plsda.table)
+    # -------------
+    datatable(plsda.table, 
+              selection = 'single',
+              autoHideNavigation = T,
+              options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+  })
+  # -------------
+  output$plsda_vip_tab <- DT::renderDataTable({
+    colnames(analSet$plsda$vip.mat) <- paste0("PC", 1:ncol(analSet$plsda$vip.mat))
+    compounds_pc <- as.data.table(analSet$plsda$vip.mat,keep.rownames = T)
+    ordered_pc <- setorderv(compounds_pc, input$plsda_vip_cmp, -1)
+    plsda_tab <<- cbind(ordered_pc[1:50, c("rn")], 
+          Rank=c(1:50))
+    # -------------
+    datatable(plsda_tab,
+              selection = 'single',
+              autoHideNavigation = T,
+              options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+    })
+         },
          heatmap = {
            req(input$heatmode)
            req(input$color_ramp)
@@ -848,13 +935,17 @@ lapply(db_list, FUN=function(db){
                                }
                              )
     db_search_list <<- db_search_list[!is.na(db_search_list)]
+    # if(length(db_search_list) == 0) updateCollapse(session, "dbSelect", style = list("Settings" = "warning")) else{
+    #   updateCollapse(session, "dbSelect", style = list("Settings" = "success"))
+    # }
   })  
 })
 
 mz.update.tables <<- c("tt", 
                       "fc", 
                       "asca", 
-                      "meba")
+                      "meba",
+                      "plsda_vip")
 
 lapply(mz.update.tables, FUN=function(table){
   observeEvent(input[[paste0(table, "_tab_rows_selected")]], {
@@ -862,11 +953,12 @@ lapply(mz.update.tables, FUN=function(table){
     # do nothing if not clicked yet, or the clicked cell is not in the 1st column
     if (is.null(curr_row)) return()
     rownames(analSet$tt$sig.mat)
-    curr_mz <<- data.table(analSet[[switch(table,
-                                     tt = "tt",
-                                     fc = "fc",
-                                     asca = "asca",
-                                     meba = "mb")]][["sig.mat"]]
+    curr_mz <<- data.table(switch(table,
+                                     tt = analSet$tt$sig.mat,
+                                     fc = analSet$fc$sig.mat,
+                                     asca = analSet$asca$sig.mat,
+                                     meba = analSet$mb$sig.mat,
+                                     plsda_vip = plsda_tab)
                               , keep.rownames = T)[curr_row, rn]
     output$curr_mz <- renderText(curr_mz)
     output[[paste0(table, "_specific_plot")]] <- renderPlotly({
@@ -887,7 +979,6 @@ lapply(mz.update.tables, FUN=function(table){
     }
   })
 })
-
 
 observe({
   d <- event_data("plotly_click")
@@ -917,9 +1008,9 @@ observe({
            if(d$y > length(hm_matrix$matrix$rows)) return(NULL)
            curr_mz <<- hm_matrix$matrix$rows[d$y]
              },
-         volcano = {
+         volc = {
            if('key' %not in% colnames(d)) return(NULL)
-           if(d$key %not in% names(analSet$fc$fc.log)) return(NULL)
+           if(d$key %not in% rownames(analSet$volcano$sig.mat)) return(NULL)
            curr_mz <<- d$key
          })
   # ----------------------------
@@ -1028,6 +1119,7 @@ observeEvent(input$hits_tab_rows_selected,{
   output$asca_plot <- renderPlotly({ggplotSummary(curr_mz, cols = color.vec())})
   output$fc_specific_plot <- renderPlotly({ggplotSummary(curr_mz, cols = color.vec())})
   output$tt_specific_plot <- renderPlotly({ggplotSummary(curr_mz, cols = color.vec())})
+  output$plsda_specific_plot <- renderPlotly({ggplotSummary(curr_mz, cols = color.vec())})
   })
 
 # --- ON CLOSE ---

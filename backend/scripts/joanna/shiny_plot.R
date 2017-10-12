@@ -90,7 +90,11 @@ ggPlotVolc <- function(cf, n){
     colnames(dt) <- c("mz", "log2FC", "minlog10P")
     plot <- ggplot() +
       #geom_point(data=dt[!imp.inx], aes(x=log2FC, y=minlog10P)) +
-      geom_point(data=dt[imp.inx], aes(x=log2FC, y=minlog10P,text=mz,color=abs(log2FC*minlog10P), key=mz)) +
+      geom_point(data=dt[imp.inx], aes(x=log2FC, 
+                                       y=minlog10P,
+                                       text=mz,
+                                       color=abs(log2FC*minlog10P), 
+                                       key=mz)) +
       theme_minimal(base_size = 10) +
       scale_colour_gradientn(colours = cf(n),guide=FALSE)
     ggplotly(plot, tooltip="mz")
