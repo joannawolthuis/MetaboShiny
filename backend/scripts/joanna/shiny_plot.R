@@ -85,42 +85,18 @@ ggPlotFC <- function(cf, n){
 
 ggPlotVolc <- function(cf, n){
     vcn<-analSet$volcano;
-    if(vcn$paired){
-      xlim<-c(-nrow(dataSet$norm)/2, nrow(dataSet$norm)/2)*1.2;
-      
-      # merge fc.all two rows into one, bigger one win
-      fc.all <- apply(vcn$fc.all, 2, function(x){ if(x[1] > x[2]){return(x[1])}else{return(-x[2])}})
-      hit.inx <- vcn$inx.p & (vcn$inx.up | vcn$inx.down);
-      print(cbind(fc.all, vcm$p.log))
-      plot(fc.all, vcn$p.log, xlim=xlim, pch=20, cex=ifelse(hit.inx, 1.2, 0.8),
-           col = ifelse(hit.inx, "red", "black"),
-           xlab="Count of Significant Pairs", ylab="-log10(p)");
-      
-    }else{
-      imp.inx<-(vcn$inx.up | vcn$inx.down) & vcn$inx.p;
-      print(head(cbind(vcn$fc.log, vcn$p.log)))
-      
-      plot(vcn$fc.log, vcn$p.log, pch=20, cex=ifelse(imp.inx, 1.2, 0.7),
-           col = ifelse(imp.inx, "red", "black"),
-           xlab="log2 (FC)", ylab="-log10(p)");
-    }
-    
-    abline (v = vcn$max.xthresh, lty=3);
-    abline (v = vcn$min.xthresh, lty=3);
-    abline (h = vcn$thresh.y, lty=3);
-    axis(4); # added by Beomsoo
+    dt <- as.data.table(cbind(vcn$fc.log, vcn$p.log), keep.rownames=T)
+    imp.inx<-(vcn$inx.up | vcn$inx.down) & vcn$inx.p;
+    colnames(dt) <- c("mz", "log2FC", "minlog10P")
+    plot <- ggplot() +
+      #geom_point(data=dt[!imp.inx], aes(x=log2FC, y=minlog10P)) +
+      geom_point(data=dt[imp.inx], aes(x=log2FC, y=minlog10P,text=mz,color=abs(log2FC*minlog10P), key=mz)) +
+      theme_minimal(base_size = 10) +
+      scale_colour_gradientn(colours = cf(n),guide=FALSE)
+    ggplotly(plot, tooltip="mz")
+    #abline (v = vcn$max.xthresh, lty=3);
+    #abline (v = vcn$min.xthresh, lty=3);
+    #abline (h = vcn$thresh.y, lty=3);
 }
 
 
-# library(manhattanly)
-# testy <- as.data.table(analSet$volcano$sig.mat, keep.rownames = T)
-# testy2 <- as.data.table(cbind(analSet$volcano$fc.log, analSet$volcano$p.log), keep.rownames=T)
-# testy2
-# 
-# colnames(testy) <- c("m/z", "a", "EFFECTSIZE", "P", "b")
-# colnames(testy2) <- c("m/z", "EFFECTSIZE", "log10p")
-# 
-# volcanorObject <- volcanor(testy2, snp = "m/z")
-# volcanoly(testy, varName = "m/z",  genomewideline = 1, effect_size_line = FALSE) %>% layout(title = "", xaxis=list(title="Log10 fold change"))
-# 
-# ggPlotVolc(rainbow, 10)

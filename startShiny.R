@@ -22,7 +22,7 @@ for(package in base.packs){
 # bioconductor 
 
 source("https://bioconductor.org/biocLite.R")
-biocLite(suppressUpdates = T)
+biocInstaller::biocLite(suppressUpdates = T)
 
 wdir <<- "/Users/jwolthuis/Google Drive/MetaboShiny"
 setwd(wdir)

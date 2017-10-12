@@ -8,6 +8,7 @@ mz <<- NA
 session_cl <<- NA
 tables <- list()
 db_search_list <- c()
+color.function <- rainbow
 patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
 mainmode <<- "stat"
 
@@ -132,16 +133,16 @@ stat.anal.ui <- reactive({
                                  )
                       )),
              tabPanel("Heatmap", value="heatmap",
-                      plotlyOutput("heatmap", height='600px', width='750px'),
+                      plotlyOutput("heatmap", height='500px', width='600px'),
                       fluidRow(switchButton(inputId = "heatmode",
                                             label = "Use data from:", 
                                             value = TRUE, col = "BW", type = "TTFC"))
              ),
              # =================================================================================
              tabPanel("Volcano", value="volc",
-                      fluidRow(plotOutput('volc_plot')),
-                      fluidRow(div(DT::dataTableOutput('volc_tab'),style='font-size:80%')))
-             
+                      fluidRow(plotlyOutput('volc_plot', height='600px', width='700px'))
+                      #,fluidRow(div(DT::dataTableOutput('volc_tab'),style='font-size:80%'))
+                      )
 )
 })
 
@@ -827,9 +828,9 @@ observeEvent(input$tab_stat, {
                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
              
            })
-           output$fc_overview_plot <- renderPlotly({
+           output$volc_plot <- renderPlotly({
              # --- ggplot ---
-             ggPlotVOLC(color.function, 20)
+             ggPlotVolc(color.function, 20)
            })
          })
 })
@@ -912,9 +913,15 @@ observe({
            })
          },
          heatmap = {
+           if(!exists("hm_matrix")) return(NULL)
            if(d$y > length(hm_matrix$matrix$rows)) return(NULL)
            curr_mz <<- hm_matrix$matrix$rows[d$y]
-             })
+             },
+         volcano = {
+           if('key' %not in% colnames(d)) return(NULL)
+           if(d$key %not in% names(analSet$fc$fc.log)) return(NULL)
+           curr_mz <<- d$key
+         })
   # ----------------------------
   output$curr_mz <- renderText(curr_mz)
   if(input$autosearch & length(db_search_list) > 0){
