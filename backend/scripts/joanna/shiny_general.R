@@ -1,9 +1,10 @@
 #' @export
 get_ref_vars <- function(fac="Label"){
   req(csv_loc)
-  csv <- fread(csv_loc, sep="\t", header = T)
+  # csv_loc = "backend/appdata/euronutrition/Test.csv"
+  csv <- fread(csv_loc, sep="\t", header = T)[,1:5]
   # --- return ---
-  unique(csv[,fac])
+  c(unique(csv[,..fac]))[[fac]]
 }
 
 getProfile <-function (varName, title=varName, mode="stat") {

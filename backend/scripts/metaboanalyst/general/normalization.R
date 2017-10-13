@@ -172,17 +172,16 @@ Normalization<-function(rowNorm,
                         ref=NULL, 
                         ratio=FALSE, 
                         ratioNum=20){
-
+  
     data <- dataSet$proc;
-    print(names(dataSet))
-    
+
     if(is.null(dataSet$prenorm.cls)){ # can be so for regression 
         dataSet$prenorm.cls <- dataSet$proc.cls;
     }
 
     cls <- dataSet$prenorm.cls;
 
-    # note, setup time factor
+        # note, setup time factor
     if(substring(dataSet$format,4,5)=="ts"){
         nfacA <- dataSet$prenorm.facA;
         nfacB <- dataSet$prenorm.facB;
@@ -205,7 +204,7 @@ Normalization<-function(rowNorm,
     colNames <- colnames(data);
     rowNames <- rownames(data);
 
-        # row-wise normalization
+    # row-wise normalization
     if(rowNorm=="QuantileNorm"){
         data<-QuantileNormalize(data);
         # this can introduce constant variables if a variable is at the same rank across all samples (replaced by its average across all)
@@ -229,8 +228,8 @@ Normalization<-function(rowNorm,
         data<-t(apply(data, 1, ProbNorm, ref.smpl));
         rownm<-"Probabilistic Quotient Normalization";
     }else if(rowNorm=="CompNorm"){
-        data<-t(apply(data, 1, CompNorm, ref));
-        rownm<-"Normalization by a reference feature";
+        data <- t(apply(data, 1, CompNorm, ref));
+        rownm <- "Normalization by a reference feature";
     }else if(rowNorm=="SumNorm"){
         data<-t(apply(data, 1, SumNorm));
         rownm<-"Normalization to constant sum";
@@ -242,14 +241,15 @@ Normalization<-function(rowNorm,
             norm.vec <- rep(1,nrow(data)); # default all same weight vec to prevent error
             print("No sample specific information were given, all set to 1.0");
          }
-         rownm<-"Normalization by sample-specific factor";
-         data<-data/norm.vec;
+         rownm <- "Normalization by sample-specific factor";
+         data <- data / norm.vec;
     }else{
         # nothing to do
         rownm<-"N/A";
     }
 
-   # use apply will lose dimesion info (i.e. row names and colnames)
+    # use apply will lose dimesion info (i.e. row names and colnames)
+   
    rownames(data)<-rowNames;
    colnames(data)<-colNames;
 
@@ -263,16 +263,19 @@ Normalization<-function(rowNorm,
    # data[dataSet$fill.inx]<-minConc;
 
    # if the reference by feature, the feature column should be removed, since it is all 1
+
     if(rowNorm=="CompNorm" && !is.null(ref)){
-        inx<-match(ref, colnames(data));
-        data<-data[,-inx];
+        inx <- match(colnames(data), ref);
+        data <- data[,-inx];
         colNames <- colNames[-inx];
     }
 
    # record row-normed data for fold change analysis (b/c not applicable for mean-centered data)
-   dataSet$row.norm<-as.data.frame(CleanData(data));
+   
+   dataSet$row.norm <- as.data.frame(CleanData(data));
 
    # this is for biomarker analysis only (for compound concentraion data)
+   
     if(ratio){
         min.val <- min(abs(data[data!=0]))/2;
         norm.data <- log2((data + sqrt(data^2 + min.val))/2);
@@ -322,14 +325,15 @@ Normalization<-function(rowNorm,
     }
 
     # note after using "apply" function, all the attribute lost, need to add back
-    rownames(data)<-rowNames;
-    colnames(data)<-colNames;
+    
+   rownames(data)<-rowNames;
+   colnames(data)<-colNames;
 
     # need to do some sanity check, for log there may be Inf values introduced
-    data <- CleanData(data, T, F);
-    View(head(data))
-    dataSet$norm <- as.data.frame(data);
-    dataSet$cls <- cls;
+    
+   data <- CleanData(data, T, F);
+   dataSet$norm <- as.data.frame(data);
+   dataSet$cls <- cls;
 
     dataSet$rownorm.method<-rownm;
     dataSet$trans.method<-transnm;

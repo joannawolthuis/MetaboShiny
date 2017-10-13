@@ -219,7 +219,7 @@ shinyUI(fluidPage(
                                                                                                                                "Median absolute deviation"="mad",
                                                                                                                                "Median"="median")),
                                                selectInput('norm_type', 'What type of normalization do you want to do?', choices = list("Quantile normalization"="QuantileNorm",
-                                                                                                                                        "By reference feature"="CompNorm",
+                                                                                                                                        "By reference feature"="ProbNorm",
                                                                                                                                         "Sum"="SumNorm",
                                                                                                                                         "Median"="MedianNorm")),
                                                uiOutput("ref_select"),
@@ -341,7 +341,22 @@ shinyUI(fluidPage(
                                                             textInput(inputId="ppm", label="PPM", value = '', width = "50px"),
                                                             actionButton("set_ppm", label="Apply"),
                                                             helpText("Parts per million window for matching. Please re-import outlists and excel file after changing this!"),
-                                                            textOutput("ppm"))
+                                                            textOutput("ppm")),
+                                                   tabPanel("Adducts", icon=icon("cubes"),
+                                                            h3("Current adduct table:"),
+                                                            rHandsontableOutput("adduct_tab", width=800, height=600),
+                                                            shinySaveButton("save_adducts", 
+                                                                            "Save changed table", 
+                                                                            "Save file as ...", 
+                                                                            filetype=list(RData="RData", csv="csv")
+                                                                            ),
+                                                            hr(),
+                                                            fileInput("add_tab", "Import adduct table",
+                                                                      multiple = F,
+                                                                      accept = c(".RData", ".csv")),
+                                                            sardine(actionButton("import_adducts", "Import", icon = icon("hand-peace-o"))),
+                                                            sardine(imageOutput("adduct_upload_check",inline = T))
+                                                   )
                                         )
                                         
                                         

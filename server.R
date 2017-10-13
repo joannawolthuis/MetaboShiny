@@ -112,7 +112,7 @@ stat.anal.ui <- reactive({
              ),
              tabPanel("PLSDA", value = "plsda",
                       navbarPage("",
-                                 tabPanel("Overview", icon=icon("globe"),
+                                 tabPanel("", icon=icon("globe"),
                                           plotlyOutput("plot_plsda"),
                                           fluidRow(column(3,
                                                           selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:8),selected = "PC1"),
@@ -122,7 +122,7 @@ stat.anal.ui <- reactive({
                                           column(8, 
                                                  div(DT::dataTableOutput('plsda_tab'),style='font-size:80%')
                                           ))),
-                                 tabPanel("VIPs", icon=icon("star-o"), 
+                                 tabPanel("", icon=icon("star-o"), 
                                           plotlyOutput("plsda_vip_specific_plot"),
                                           fluidRow(column(3,
                                                           selectInput("plsda_vip_cmp", label = "Compounds from:", choices = paste0("PC",1:5),selected = "PC1")
@@ -368,6 +368,53 @@ color.vec <- reactive({
   }))
 })
 
+# --- adduct table editing ---
+
+values = reactiveValues()
+
+observeEvent(input$import_adducts, {
+  req(input$add_tab)
+  # ----------------
+  load(input$add_tab$datapath)
+  output$adduct_upload_check <- renderImage({
+    # When input$n is 3, filename is ./images/image3.jpeg
+    filename <- normalizePath('www/yes.png')
+    # Return a list containing the filename and alt text
+    list(src = filename, width = 20,
+         height = 20)
+  }, deleteFile = FALSE)
+})
+
+adduct_tab_data <- reactive({
+  if (!is.null(input$adduct_tab)) {
+    DF = hot_to_r(input$adduct_tab)
+  } else {
+    if (is.null(values[["DF"]]))
+      DF = wkz.adduct.confirmed
+    else
+      DF = values[["DF"]]
+  }
+  values[["DF"]] = DF
+  DF
+})
+
+output$adduct_tab <- renderRHandsontable({
+  DF = adduct_tab_data()
+  if (!is.null(DF))
+    rhandsontable(DF, stretchH = "all", useTypes = TRUE)
+})
+
+observe({
+  shinyFileSave(input, "save_adducts", roots=getVolumes(), session=session)
+  fileinfo <- parseSavePath(getVolumes(), input$save_adducts)
+  if (nrow(fileinfo) > 0) {
+    switch(fileinfo$type,
+           csv = fwrite(file = fileinfo$datapath, x = wkz.adduct.confirmed),
+           RData = save(file = fileinfo$datapath, wkz.adduct.confirmed)
+    )
+    }
+})
+
 # ======================== DB CHECK ============================
 
 
@@ -583,7 +630,7 @@ observeEvent(input$check_excel, {
 
 ref.selector <- reactive({
   # -------------
-  if(input$norm_type == "CompNorm"){
+  if(input$norm_type == "ProbNorm"){
       fluidRow(
         hr(),
         selectInput('ref_var', 
@@ -598,9 +645,10 @@ ref.selector <- reactive({
 })
 
 observeEvent(input$check_csv, {
+  req(csv_loc)
   # get excel table stuff.
   updateSelectInput(session, "ref_var",
-                    choices = get_ref_vars(input$exp_var)
+                    choices = get_ref_vars(fac = "Label") # please add options for different times later, not difficult
   )
 })
 
@@ -640,9 +688,9 @@ observeEvent(input$initialize,{
   RemoveMissingPercent(percent = 0.5)
   ImputeVar(method = "min")
   ReplaceMin()
-  FilterVariable(input$filt_type, 
-                 "F", 
-                 25)
+  FilterVariable(filter = input$filt_type,
+                 qcFilter = "F", 
+                 rsd = 25)
   # # ---- here facA/facB disappears?? ---
   GetPrenormSmplNms()
   GetPrenormFeatureNms()
