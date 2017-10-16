@@ -1,4 +1,5 @@
 library(shiny)
+library(shinyBS)
 
 shinyServer(function(input, output, session) {
   
@@ -181,20 +182,65 @@ observe({
 
 # -----------------
 
+
 observeEvent(input$exp_type,{
   req(input$exp_type)
   modes <- strsplit(x=input$exp_type, split = '\\.')[[1]]
   mainmode <<- modes[[1]]
   submode <<- modes[[2]]
   # ---------------------
-  optUI <- function(){
-    selectInput('your.time', 'What end time do you want to pick?', choices = get_times(patdb))
-  }
   if(mainmode == "time" & submode != "standard"){
     output$exp_opt <- renderUI({optUI()})
   }
 })
 
+addUI <- reactive({
+  bsCollapse(id = "adductSettings", open = "Settings",
+             bsCollapsePanel(h2("Databases"), "",style = "info",
+                             fluidRow(
+                               sardine(fadeImageButton("search_internal", img.path = "umcinternal.png")),
+                               sardine(fadeImageButton("search_noise", img.path = "umcnoise.png")),
+                               sardine(fadeImageButton("search_hmdb", img.path = "hmdblogo.png")),br(),
+                               sardine(fadeImageButton("search_chebi", img.path = "chebilogo.png")),
+                               sardine(fadeImageButton("search_wikipathways", img.path = "wikipathways.png")),
+                               sardine(fadeImageButton("search_kegg", img.path = "kegglogo.gif"))
+                             )),
+             bsCollapsePanel(h2("Adducts"), "",style = "success",
+                             fluidRow(column(width=6, h2("+")), column(width=6,h2("-"))),
+                             fluidRow(column(width=6,div(DT::dataTableOutput('pos_adduct_tab'),style='font-size:60%')),
+                                      column(width=6,div(DT::dataTableOutput('neg_adduct_tab'),style='font-size:60%'))
+                             )
+             )
+  )
+})
+
+output$pos_adduct_tab <- DT::renderDataTable({
+    # -------------
+    datatable(wkz.adduct.confirmed[Ion_mode == "positive",
+                                   c("Name")],
+              selection = 'multiple',
+              options = list(pageLength = 5, dom = 'tp')
+              , rownames = F)
+  })
+
+output$neg_adduct_tab <- DT::renderDataTable({
+  # -------------
+  datatable(wkz.adduct.confirmed[Ion_mode == "negative",
+                                 c("Name")],
+            selection = 'multiple',
+            options = list(pageLength = 5, dom = 'tp')
+            , rownames = F)
+})
+
+observeEvent(input$adduct_grouping,{
+  print(input$adduct_grouping)
+  # ---------------------
+  
+  # ---------------------
+  if(input$adduct_grouping){
+    output$add_ui <- renderUI({addUI()})
+  } else(output$add_ui <- renderUI({br()}))
+})
 # ===== PACKAGE LOADING ====
 
 observeEvent(input$nav_general, {

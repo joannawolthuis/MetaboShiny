@@ -1,9 +1,6 @@
 # Rely on the 'WorldPhones' dataset in the datasets
 # package (which generally comes preloaded).
 
-source("./Rsource/SwitchButton.R")
-sardine <- function(content) div(style="display: inline-block;vertical-align:top;", content)
-
 shinyUI(fluidPage(
   tags$head(
     tags$style(HTML("
@@ -13,6 +10,13 @@ shinyUI(fluidPage(
                     margin: 2px;
                     font-family: 'Bungee Outline';
                     font-weight: 15;
+                    line-height: 0.5;
+                    }
+
+                    h2 {
+                    margin: 1px;
+                    font-family: 'Bungee Outline';
+                    font-weight: 8;
                     line-height: 0.5;
                     }
                     
@@ -182,7 +186,8 @@ shinyUI(fluidPage(
                                         ))
                                ),
                                tabPanel("", icon=icon("file-text-o"), value="document",
-                                        fluidRow(column(4, align="center",
+                                        sidebarLayout(position="left",
+                                                      sidebarPanel = sidebarPanel(align="center",
                                                         selectInput('exp_var', 'Which experimental variable do you want to look at?', choices = c("")),
                                                         actionButton("check_excel", "Get variables", icon=icon("refresh")),
                                                         br(),br(),
@@ -195,7 +200,8 @@ shinyUI(fluidPage(
                                                         sardine(switchButton(inputId = "adduct_grouping",
                                                                              label = "Adduct grouping", 
                                                                              value = FALSE, col = "BW", type = "OO")),
-                                                        br(),br(),
+                                                        uiOutput("add_ui"),
+                                                        br(),
                                                         actionButton("create_csv", "Create CSV", icon=icon("file-text-o")),
                                                         br(),hr(),
                                                         imageOutput("csv_icon",inline = T),
@@ -205,10 +211,10 @@ shinyUI(fluidPage(
                                                                   accept = c(".csv")),
                                                         actionButton("import_csv", "Import", icon = icon("hand-peace-o")),
                                                         imageOutput("csv_upload_check",inline = T)
-                                        ),
-                                        column(7, 
-                                               fluidRow(div(DT::dataTableOutput('csv_tab'),style='font-size:80%'))
-                                        )
+                                                      ),
+                                                      mainPanel = mainPanel(align="center",
+                                                        fluidRow(div(DT::dataTableOutput('csv_tab'),style='font-size:80%'))
+                                                        )
                                         )
                                ),
                                # --------------------------------------------------------------------------------------------------------------------------------
@@ -258,7 +264,7 @@ shinyUI(fluidPage(
                                                       ),
                                                       sidebarPanel = sidebarPanel(align="center",
                                                                                   bsCollapse(id = "dbSelect", open = "Settings",
-                                                                                             bsCollapsePanel(h1("Databases"), "",style = "info",
+                                                                                             bsCollapsePanel(h2("Databases"), "",style = "info",
                                                                                                fluidRow(#imageOutput("find_mol_icon",inline = T),
                                                                                                  sardine(fadeImageButton("search_internal", img.path = "umcinternal.png")),
                                                                                                  sardine(fadeImageButton("search_noise", img.path = "umcnoise.png")),

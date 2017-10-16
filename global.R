@@ -99,6 +99,8 @@ library(curl)
 library(enviPat)
 library(SPARQL)
 library(KEGGREST)
+library(shinyBS)
+library(rhandsontable)
 sourceAll(file.path("backend", 
                     "scripts", 
                     "joanna"))
@@ -124,6 +126,8 @@ if(!exists("session_cl")){
 sourceAll(file.path("backend", 
                     "scripts", 
                     "metaboanalyst"))
+source("./Rsource/SwitchButton.R")
+sardine <- function(content) div(style="display: inline-block;vertical-align:top;", content)
 
 print("loaded global settings")
 
