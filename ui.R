@@ -192,6 +192,9 @@ shinyUI(fluidPage(
                                                                                                                                            "Time series - subtract" = "time.subtract"
                                                         )),
                                                         uiOutput("exp_opt"),
+                                                        sardine(switchButton(inputId = "adduct_grouping",
+                                                                             label = "Adduct grouping", 
+                                                                             value = FALSE, col = "BW", type = "OO")),
                                                         br(),br(),
                                                         actionButton("create_csv", "Create CSV", icon=icon("file-text-o")),
                                                         br(),hr(),

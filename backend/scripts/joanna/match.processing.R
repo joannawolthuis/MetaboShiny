@@ -1,8 +1,6 @@
 #' @export
-iden.code.binned <- function(outlist.path,
-                             db.path,
-                             isofilt=FALSE,
-                             excl.adducts=c("PLACEHOLDER")){
+iden.code.joanna <- function(outlist.path,
+                             db.path){
   # --------------------------------- -------
   library(pbapply)
   library(parallel)
@@ -10,8 +8,9 @@ iden.code.binned <- function(outlist.path,
   library(gsubfn)
   library(DBI)
   library(RSQLite)
+  req(patdb)
   # - connect -
-  conn <- dbConnect(RSQLite::SQLite(), outlist.path)
+  conn <- dbConnect(RSQLite::SQLite(), patdb)
   # --- skip if already exists ---
   result.table <- paste("matches", gsub("\\.db|\\.|full", "", basename(db.path)), sep="_")
   #if(dbExistsTable(conn, result.table)) return("Already exists!")
@@ -40,8 +39,7 @@ iden.code.binned <- function(outlist.path,
   filt.query <- strwrap(fn$paste("CREATE TEMP TABLE isocount AS
                                   SELECT DISTINCT *
                                   FROM patresults indexed by pat_idx
-                                  WHERE (isoprevalence = 100
-                                  AND adduct NOT IN ($adduct.string))"), width=10000, simplify=TRUE)
+                                  WHERE (isoprevalence = 100)"), width=10000, simplify=TRUE)
   print(filt.query)
   dbExecute(conn, filt.query)
   dbExecute(conn, "DROP INDEX IF EXISTS iso_idx")
@@ -52,15 +50,8 @@ iden.code.binned <- function(outlist.path,
                                       ON pat.baseformula = iso.baseformula AND
                                       pat.adduct = iso.adduct"), width=10000, simplify=TRUE)
   print(match.sql)
-  nomatch.sql <- strwrap("SELECT DISTINCT *
-                         FROM patresults pat indexed by pat_idx
-                         WHERE pat.baseformula ISNULL", width=10000, simplify=TRUE)
   # --- getto!! ---
   matches <- as.data.table(dbGetQuery(conn, match.sql))
-  nomatches <- as.data.table(dbGetQuery(conn, nomatch.sql))
-  print("here...")
- # --- return ---
-  results <- unique(rbind(matches, nomatches, fill=TRUE))
   # --- write to table ---
   dbWriteTable(conn, result.table, results, overwrite=TRUE)
   # --- index ---
@@ -73,7 +64,6 @@ iden.code.binned <- function(outlist.path,
   # --- disconnect ---
   dbDisconnect(conn)
   # --- AND return to R (can remove later) ---
-  return(nrow(matches))
 }
 
 #' @export

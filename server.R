@@ -375,7 +375,11 @@ values = reactiveValues()
 observeEvent(input$import_adducts, {
   req(input$add_tab)
   # ----------------
-  load(input$add_tab$datapath)
+  DF = fread(input$add_tab$datapath)
+  output$adduct_tab <- renderRHandsontable({
+    if (!is.null(DF))
+      rhandsontable(DF, stretchH = "all", useTypes = TRUE)
+  })
   output$adduct_upload_check <- renderImage({
     # When input$n is 3, filename is ./images/image3.jpeg
     filename <- normalizePath('www/yes.png')
@@ -395,6 +399,7 @@ adduct_tab_data <- reactive({
       DF = values[["DF"]]
   }
   values[["DF"]] = DF
+  # ---------------
   DF
 })
 
@@ -405,12 +410,12 @@ output$adduct_tab <- renderRHandsontable({
 })
 
 observe({
+  DF = adduct_tab_data()
   shinyFileSave(input, "save_adducts", roots=getVolumes(), session=session)
   fileinfo <- parseSavePath(getVolumes(), input$save_adducts)
   if (nrow(fileinfo) > 0) {
     switch(fileinfo$type,
-           csv = fwrite(file = fileinfo$datapath, x = wkz.adduct.confirmed),
-           RData = save(file = fileinfo$datapath, wkz.adduct.confirmed)
+           csv = fwrite(file = fileinfo$datapath, x = DF)
     )
     }
 })
@@ -544,9 +549,17 @@ observeEvent(input$create_csv, {
     setProgress(1/4, "Creating csv file for MetaboAnalyst...")
     # create csv
     patdb
-    mz = get.csv(patdb,
-                 time.series = if(mainmode == "time") T else F,
-                 exp.condition = input$exp_var)
+    mz = switch(input$adduct_grouping, 
+                "FALSE" = {
+                  get.csv(patdb,
+                          time.series = if(mainmode == "time") T else F,
+                          exp.condition = input$exp_var)
+                  },
+                "TRUE" = {
+                  get.csv(patdb,
+                          time.series = if(mainmode == "time") T else F,
+                          exp.condition = input$exp_var)
+                })
     # --- experimental stuff ---
     switch(mainmode,
            time = {
