@@ -197,6 +197,11 @@ observeEvent(input$exp_type,{
 
 addUI <- reactive({
   bsCollapse(id = "adductSettings", open = "Settings",
+             bsCollapsePanel(h2("Identifier"), "",style = "error",
+                             radioButtons("group_by", "What do you want as identifier?", choices = list("Database ID" = "identifier", 
+                                                                                                        "Compound name" = "compoundname",
+                                                                                                        "Molecular formula" = "baseformula"), 
+                                          selected = 3)),
              bsCollapsePanel(h2("Databases"), "",style = "info",
                              fluidRow(
                                sardine(fadeImageButton("add_internal", img.path = "umcinternal.png")),
@@ -595,6 +600,7 @@ observeEvent(input$create_csv, {
                  time.series = if(mainmode == "time") T else F,
                  exp.condition = input$exp_var,
                  group_adducts = input$adduct_grouping,
+                 group_by = input$group_by,
                  which_dbs = add_search_list,
                  which_adducts = selected_adduct_list
                  )
@@ -1090,7 +1096,7 @@ lapply(res.update.tables, FUN=function(table){
     })
     if(input$autosearch & length(db_search_list > 0)){
       match_list <- lapply(db_search_list, FUN=function(match.table){
-        get_matches(curr_cpd, match.table, search_formula=input$adduct_grouping)
+        get_matches(curr_cpd, match.table, searchid=input$group_by)
       })
       match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
       output$match_tab <- DT::renderDataTable({
@@ -1140,7 +1146,7 @@ observe({
   output$curr_cpd <- renderText(curr_cpd)
   if(input$autosearch & length(db_search_list) > 0){
     match_list <- lapply(db_search_list, FUN=function(match.table){
-      get_matches(curr_cpd, match.table, search_formula=input$adduct_grouping)
+      get_matches(curr_cpd, match.table, searchid=input$group_by)
     })
     match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
     output$match_tab <- DT::renderDataTable({
@@ -1168,7 +1174,7 @@ observeEvent(input$search_cpd, {
   # ----------------
   if(length(db_search_list) > 0){
     match_list <- lapply(db_search_list, FUN=function(match.table){
-      get_matches(curr_cpd, match.table, search_formula=input$adduct_grouping)
+      get_matches(curr_cpd, match.table, searchid=input$group_by)
     })
     match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
     output$match_tab <- DT::renderDataTable({
