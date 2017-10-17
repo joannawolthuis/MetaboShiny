@@ -6,7 +6,6 @@ shinyServer(function(input, output, session) {
 # ===== defaults =====
 
 mz <<- NA
-session_cl <<- NA
 tables <- list()
 db_search_list <- c()
 color.function <- rainbow
@@ -181,7 +180,9 @@ observe({
 })
 
 # -----------------
-
+optUI <- function(){		
+  selectInput('your.time', 'What end time do you want to pick?', choices = get_times(patdb))		
+}
 
 observeEvent(input$exp_type,{
   req(input$exp_type)
@@ -234,8 +235,6 @@ output$neg_adduct_tab <- DT::renderDataTable({
 
 observeEvent(input$adduct_grouping,{
   print(input$adduct_grouping)
-  # ---------------------
-  
   # ---------------------
   if(input$adduct_grouping){
     output$add_ui <- renderUI({addUI()})
@@ -594,18 +593,10 @@ observeEvent(input$create_csv, {
   withProgress({
     setProgress(1/4, "Creating csv file for MetaboAnalyst...")
     # create csv
-    patdb
-    mz = switch(input$adduct_grouping, 
-                "FALSE" = {
-                  get.csv(patdb,
-                          time.series = if(mainmode == "time") T else F,
-                          exp.condition = input$exp_var)
-                  },
-                "TRUE" = {
-                  get.csv(patdb,
-                          time.series = if(mainmode == "time") T else F,
-                          exp.condition = input$exp_var)
-                })
+    mz = get.csv(patdb,
+                 time.series = if(mainmode == "time") T else F,
+                 exp.condition = input$exp_var,
+                 group_adducts = input$adduct_grouping)
     # --- experimental stuff ---
     switch(mainmode,
            time = {
@@ -888,7 +879,7 @@ observeEvent(input$tab_stat, {
            })},
          plsda = {
            PLSR.Anal()
-          # PLSDA.CV("L",5, "Q2")
+           PLSDA.CV("L",5, "Q2")
            plsda.table <- as.data.table(round(analSet$plsr$Xvar 
                                               / analSet$plsr$Xtotvar 
                                               * 100.0,
@@ -943,7 +934,7 @@ observeEvent(input$tab_stat, {
     compounds_pc <- as.data.table(analSet$plsda$vip.mat,keep.rownames = T)
     ordered_pc <- setorderv(compounds_pc, input$plsda_vip_cmp, -1)
     plsda_tab <<- cbind(ordered_pc[1:50, c("rn")], 
-          Rank=c(1:50))
+                        Rank=c(1:50))
     # -------------
     datatable(plsda_tab,
               selection = 'single',

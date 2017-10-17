@@ -105,24 +105,22 @@ sourceAll(file.path("backend",
                     "scripts", 
                     "joanna"))
 data(isotopes, package = "enviPat")
-if(!exists("session_cl")){
-  session_cl <<- makeCluster(detectCores())
-  clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
-    "isotopes",
-    "subform.joanna", 
-    "mergeform.joanna",
-    "multiform.joanna",
-    "check.ded.joanna",
-    "data.table",
-    "rbindlist",
-    "isopattern",
-    "keggFind",
-    "keggGet",
-    "kegg.charge",
-    "regexpr",
-    "regmatches"
-  ))
-}
+session_cl <<- makeCluster(detectCores())
+clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
+  "isotopes",
+  "subform.joanna", 
+  "mergeform.joanna",
+  "multiform.joanna",
+  "check.ded.joanna",
+  "data.table",
+  "rbindlist",
+  "isopattern",
+  "keggFind",
+  "keggGet",
+  "kegg.charge",
+  "regexpr",
+  "regmatches"
+))
 sourceAll(file.path("backend", 
                     "scripts", 
                     "metaboanalyst"))

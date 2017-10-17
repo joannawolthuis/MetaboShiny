@@ -104,7 +104,7 @@ shinyUI(fluidPage(
                                                actionButton("build_hmdb", "Build", icon = icon("wrench")),
                                                br(),br(),
                                                imageOutput("hmdb_check",inline = T)
-                                        )),
+                                        )), br(),
                                         fluidRow(column(3,  align="center",
                                                         h2("ChEBI"),
                                                         helpText("A broad database with known chemicals of biological interest."),

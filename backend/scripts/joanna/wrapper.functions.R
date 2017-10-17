@@ -2,7 +2,8 @@
 get.csv <- function(patdb, 
                     time.series = F, 
                     exp.condition = "diet",
-                    max.vals = -1){
+                    max.vals = -1,
+                    group_adducts = F){
   library(reshape2)
   library(DBI)
   library(RSQLite)
@@ -20,32 +21,23 @@ get.csv <- function(patdb,
                                  group by filename, [mzmed.pgrp]"), width=10000, simplify=TRUE)
   dbExecute(conn, make.query)
   index.query <- "create index if not exists avg_index on avg_intensities(filename, mz)"
-  # --- identification?? ---
-  
-  if(input$group_adducts){
-    NULL
-  }
-  
+
   # --- build result fetching query ---
-  get.query = switch(input$group_adducts, 
-                     "TRUE" = {strwrap(fn$paste("select distinct i.filename, d.animal_internal_id, s.[$exp.condition] as label, d.sampling_date, r.baseformula as identifier, sum(i.intensity) as intensity
-                               from avg_intensities i
-                               join individual_data d
-                               on i.filename = d.card_id
-                               join setup s
-                               on d.[group] = s.[group]
-                               group by d.animal_internal_id, d.sampling_date, r.baseformula"), width=10000, simplify=TRUE)},
-                     "FALSE" = {strwrap(fn$paste("select distinct i.filename, d.animal_internal_id, s.[$exp.condition] as label, d.sampling_date, i.mz as identifier, sum(i.intensity) as intensity
-                               from avg_intensities i
-                               join individual_data d
-                               on i.filename = d.card_id
-                               join setup s
-                               on d.[group] = s.[group]
-                               group by d.animal_internal_id, d.sampling_date, i.mz"), width=10000, simplify=TRUE)}
-)
-  print(get.query)
+  z = if(group_adducts){
+    get_all_matches(exp.condition, pat.conn = conn)
+  }else{
+    dbGetQuery(conn, strwrap(fn$paste("select distinct i.filename, d.animal_internal_id, s.[$exp.condition] as label, d.sampling_date, i.mz as identifier, sum(i.intensity) as intensity
+                      from avg_intensities i
+                      join individual_data d
+                      on i.filename = d.card_id
+                      join setup s
+                      on d.[group] = s.[group]
+                      group by d.animal_internal_id, d.sampling_date, i.mz"), 
+            width=10000, 
+            simplify=TRUE)
+            )
+      }
   # --- fetch results ---
-  z = dbGetQuery(conn, get.query)
   z.dt <- as.data.table(z)
   # --- cast to right format ---
   cast.dt <- dcast.data.table(z.dt, animal_internal_id + sampling_date + label ~ identifier, fun.aggregate = sum, value.var = "intensity") # what to do w/ duplicates? 

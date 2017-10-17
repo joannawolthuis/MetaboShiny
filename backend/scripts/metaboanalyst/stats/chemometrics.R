@@ -28,8 +28,8 @@ PCA.Anal<-function(){
                                     variance=var.pca, 
                                     cum.var=cum.pca))
     analSet <<- analSet
-    write.csv(signif(analSet$pca$x,5), file="pca_score.csv")
-    write.csv(signif(analSet$pca$rotation,5), file="pca_loadings.csv")
+   #write.csv(signif(analSet$pca$x,5), file="pca_score.csv")
+   #write.csv(signif(analSet$pca$rotation,5), file="pca_loadings.csv")
 }
 
 # perform PCA analysis
@@ -46,8 +46,8 @@ PCA.Flip<-function(axisOpt){
         pca$x <- -pca$x;
         pca$rotation <- -pca$rotation
     }
-    write.csv(signif(pca$x,5), file="pca_score.csv")
-    write.csv(signif(pca$rotation,5), file="pca_loadings.csv")
+   #write.csv(signif(pca$x,5), file="pca_score.csv")
+   #write.csv(signif(pca$rotation,5), file="pca_loadings.csv")
     analSet$pca <- pca
     analSet <<- analSet
 }
@@ -391,8 +391,8 @@ PLSR.Anal<-function(){
     datmat<-as.matrix(dataSet$norm);
     analSet$plsr<-plsr(cls~datmat,method='oscorespls', ncomp=comp.num);
     analSet <<- analSet;
-    write.csv(signif(analSet$plsr$scores,5), row.names=rownames(dataSet$norm), file=file.path(exp_dir, "plsda_score.csv"));
-    write.csv(signif(analSet$plsr$loadings,5), file=file.path(exp_dir, "plsda_loadings.csv"));
+#   #write.csv(signif(analSet$plsr$scores,5), row.names=rownames(dataSet$norm), file=file.path(exp_dir, "plsda_score.csv"));
+#   #write.csv(signif(analSet$plsr$loadings,5), file=file.path(exp_dir, "plsda_loadings.csv"));
 }
 
 # plot pairwise summary
@@ -676,7 +676,7 @@ PLSDA.CV<-function(methodName="T", compNum=GetDefaultPLSCVComp(), choice="Q2"){
         # rearange in decreasing order, keep as matrix, prevent dimesion dropping if only 1 col
         inx.ord<- order(coef.mat[,1], decreasing=T);
         coef.mat <- data.matrix(coef.mat[inx.ord, ,drop=FALSE]);
-        write.csv(signif(coef.mat,5), file=file.path(exp_dir, "plsda_coef.csv")); # added 27 Jan 2014
+       ##write.csv(signif(coef.mat,5), file=file.path(exp_dir, "plsda_coef.csv")); # added 27 Jan 2014
     }
     # calculate VIP http://mevik.net/work/software/VIP.R
     pls<-analSet$plsr;
@@ -693,7 +693,7 @@ PLSDA.CV<-function(methodName="T", compNum=GetDefaultPLSCVComp(), choice="Q2"){
         vip.mat <- as.matrix(vips);
     }
     colnames(vip.mat) <- paste("Comp.", 1:ncol(vip.mat));
-    write.csv(signif(vip.mat,5),file=file.path(exp_dir, "plsda_vip.csv"));
+   ##write.csv(signif(vip.mat,5),file=file.path(exp_dir, "plsda_vip.csv"));
 
     analSet$plsda<-list(best.num=best.num, choice=choice, coef.mat=coef.mat, vip.mat=vip.mat, fit.info=all.info);
     analSet <<- analSet;
@@ -1041,10 +1041,10 @@ OPLSR.Anal<-function(){
     analSet$oplsda<-perform_opls(datmat,cls, predI=1, permI=0, orthoI=NA, crossvalI=cv.num);
     score.mat <- cbind(analSet$oplsda$scoreMN[,1], analSet$oplsda$orthoScoreMN[,1]);
     colnames(score.mat) <- c("Score (t1)","OrthoScore (to1)");
-    write.csv(signif(score.mat,5), row.names=rownames(dataSet$norm), file="oplsda_score.csv");
+    #write.csv(signif(score.mat,5), row.names=rownames(dataSet$norm), file="oplsda_score.csv");
     load.mat <- cbind(analSet$oplsda$loadingMN[,1], analSet$oplsda$orthoLoadingMN[,1]);
     colnames(load.mat) <- c("Loading (t1)","OrthoLoading (to1)");
-    write.csv(signif(load.mat,5), file="oplsda_loadings.csv");
+    #write.csv(signif(load.mat,5), file="oplsda_loadings.csv");
     analSet <<- analSet;
     custom.cmpds <<- c();
 }
@@ -1187,7 +1187,7 @@ PlotOPLS.Splot<-function(imgName, format="png", dpi=72, width=NA, plotType){
     splot.mat <- cbind(jitter(p1),p1, pcorr1);
     rownames(splot.mat) <- colnames(s); 
     colnames(splot.mat) <- c("jitter", "p[1]","p(corr)[1]");
-    write.csv(signif(splot.mat[,2:3],5), file=file.path(exp_dir, "oplsda_splot.csv")); 
+    #write.csv(signif(splot.mat[,2:3],5), file=file.path(exp_dir, "oplsda_splot.csv")); 
     analSet$oplsda$splot.mat <- splot.mat;
     analSet <<- analSet;
 }
@@ -1225,7 +1225,7 @@ PlotOPLS.MDL <- function(imgName, format="png", dpi=72, width=NA){
     ypos <- max(mod.dat)/2;
     legend(xpos, ypos, legend = c("R2X", "R2Y", "Q2"), pch=15, col=c("lightblue", "mistyrose", "lavender"), xpd=T, bty="n");
 
-    write.csv(mod.dat, file=file.path(exp_dir, "oplsda_model.csv"));
+    #write.csv(mod.dat, file=file.path(exp_dir, "oplsda_model.csv"));
 }
 
 GetOPLSLoadAxesSpec<-function(){
@@ -1334,9 +1334,9 @@ SPLSR.Anal<-function(comp.num, var.num, compVarOpt){
     cv.num <- min(7, dim(dataSet$norm)[1]-1); 
     analSet$splsr<-splsda(datmat,cls, ncomp=comp.num, keepX=comp.var.nums);
     score.mat <- analSet$splsr$variates$X;
-    write.csv(signif(score.mat,5), row.names=rownames(dataSet$norm), file=file.path(exp_dir, "splsda_score.csv"));
+   #write.csv(signif(score.mat,5), row.names=rownames(dataSet$norm), file=file.path(exp_dir, "splsda_score.csv"));
     load.mat <- score.mat <- analSet$splsr$loadings$X;
-    write.csv(signif(load.mat,5), file=file.path(exp_dir, "splsda_loadings.csv"));
+   #write.csv(signif(load.mat,5), file=file.path(exp_dir, "splsda_loadings.csv"));
     analSet <<- analSet;
 }
 

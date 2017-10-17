@@ -40,17 +40,17 @@ get_matches <- function(mz = NA, chosen.db){
       JOIN db.extended cpd indexed by e_idx2
       ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
       AND mz.foundinmode = cpd.foundinmode",width=10000, simplify=TRUE))
-    } else{
-      fn$paste(strwrap(
-        "CREATE TEMP TABLE unfiltered AS
-        SELECT cpd.baseformula, cpd.adduct
-        FROM mzvals mz
-        JOIN mzranges rng ON rng.ID = mz.ID
-        JOIN db.extended cpd indexed by e_idx2
-        ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
-        AND mz.foundinmode = cpd.foundinmode
-        WHERE ABS(mz.[mzmed.pgrp] - $mz) < 0.000000000001",width=10000, simplify=TRUE))
-            }
+  } else{
+    fn$paste(strwrap(
+      "CREATE TEMP TABLE unfiltered AS
+      SELECT cpd.baseformula, cpd.adduct
+      FROM mzvals mz
+      JOIN mzranges rng ON rng.ID = mz.ID
+      JOIN db.extended cpd indexed by e_idx2
+      ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
+      AND mz.foundinmode = cpd.foundinmode
+      WHERE ABS(mz.[mzmed.pgrp] - $mz) < 0.000000000001",width=10000, simplify=TRUE))
+  }
   # 1. Find matches in range (reasonably fast <3)
   dbExecute(conn, query.one)
   #  2. get isotopes for these matchies (reverse search)
@@ -86,12 +86,12 @@ get_matches <- function(mz = NA, chosen.db){
       GROUP BY iso.baseformula, iso.adduct
       HAVING COUNT(iso.isoprevalence > 99.99999999999) > 0"
       , width=10000, simplify=TRUE)
-    }
+  }
   # 3. get the info you want
   results <- dbGetQuery(conn,query.three)
   # --- results ---
   results
-}
+  }
 
 #' @export
 get_mzs <- function(baseformula, charge, chosen.db){
@@ -140,64 +140,64 @@ get_mzs <- function(baseformula, charge, chosen.db){
   print(results)
 }
 
-get_matches <- function(mz, chosen.db){
+#' @export
+get_all_matches <- function(exp.condition=NA, pat.conn=NA){
   # --- connect to db ---
   req("patdb")
-  conn <- dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
+  available.dbs <- list.files(options$db_dir,pattern = ".full.db$",full.names = T)
+  # --- GET POOL OF ALL DBS ---
+  # pooled.db <- pblapply(available.dbs, FUN=function(chosen.db){
+  #   print(chosen.db)
+  #   db.conn <- dbConnect(RSQLite::SQLite(), chosen.db) # change this to proper var later
+  #   uniques <- dbGetQuery(db.conn, "SELECT DISTINCT fullmz, baseformula, adduct, isoprevalence, basecharge, foundinmode
+  #                                   FROM extended")
+  #   dbDisconnect(db.conn)
+  #   uniques
+  # })
+  # full.db.table <- unique(rbindlist(pooled.db))
+  # # -----------
   # 0. Attach db
-  query.zero <- fn$paste("ATTACH '$chosen.db' AS db")
-  
-  dbExecute(conn, query.zero)
+  # print("adding big db...")
+  # dbWriteTable(conn, name = "extended", value = full.db.table, overwrite=T)
+  # print("indexing big db...")
+  # dbExecute(conn, "create index e_idx1 on extended(baseformula, basecharge)")
+  # dbExecute(conn, "create index e_idx2 on extended(fullmz, foundinmode)")
+  # # ------------
   query.one <- fn$paste(strwrap(
-    "CREATE TEMP TABLE unfiltered AS
-    SELECT cpd.baseformula, cpd.adduct
+    "CREATE TEMP TABLE isotopes AS
+    SELECT mz.[mzmed.pgrp] as mz, cpd.baseformula, cpd.adduct,cpd.isoprevalence, cpd.basecharge 
     FROM mzvals mz
     JOIN mzranges rng ON rng.ID = mz.ID
-    JOIN db.extended cpd indexed by e_idx2
+    JOIN extended cpd indexed by e_idx2
     ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
-    AND mz.foundinmode = cpd.foundinmode
-    WHERE ABS(mz.[mzmed.pgrp] - $mz) < 0.000000000001",width=10000, simplify=TRUE))
+    AND mz.foundinmode = cpd.foundinmode",width=10000, simplify=TRUE))
   # 1. Find matches in range (reasonably fast <3)
-  dbExecute(conn, query.one)
-  #  2. get isotopes for these matchies (reverse search)
-  query.two <- fn$paste(strwrap(
-    "CREATE TEMP TABLE isotopes AS
-    SELECT cpd.baseformula, cpd.adduct, cpd.isoprevalence, cpd.basecharge 
-    FROM db.extended cpd indexed by e_idx1
-    JOIN unfiltered u
-    ON u.baseformula = cpd.baseformula
-    AND u.adduct = cpd.adduct
-    JOIN mzranges rng
-    ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax"
-    , width=10000, simplify=TRUE))
-  dbExecute(conn, query.two)
-  query.three <-  strwrap(
-    "SELECT DISTINCT base.compoundname as Compound, base.identifier as Identifier, iso.adduct as Adduct, base.description as Description 
+  print("Exec query one")
+  dbExecute(pat.conn, query.one)
+  query.two <- strwrap(
+    "CREATE temp TABLE results AS
+    SELECT DISTINCT iso.mz as mz, iso.baseformula as Baseformula, iso.adduct as Adduct
     FROM isotopes iso
-    JOIN db.base base indexed by b_idx1
-    ON base.baseformula = iso.baseformula AND
-    base.charge = iso.basecharge
-    GROUP BY iso.baseformula, iso.adduct
+    GROUP BY mz
     HAVING COUNT(iso.isoprevalence > 99.99999999999) > 0"
     , width=10000, simplify=TRUE)
+  print("Exec query two")
+  dbExecute(pat.conn, query.two)
   # 3. get the info you want
-  results <- dbGetQuery(conn,query.three)
-  # --- results ---
-  results
+  query.collect <-  strwrap(fn$paste("select distinct i.filename, d.animal_internal_id, s.[$exp.condition] as label, d.sampling_date, r.baseformula as identifier, sum(i.intensity) as intensity
+                                     from avg_intensities i
+                                     join individual_data d
+                                     on i.filename = d.card_id
+                                     join setup s
+                                     on d.[group] = s.[group]
+                                     join results r
+                                     on r.mz = i.mz
+                                     group by d.animal_internal_id, 
+                                     d.sampling_date, 
+                                     r.baseformula"),
+                            width=10000,
+                            simplify=TRUE)
+  print("Exec query three")
+  # ---------------------------
+  dbGetQuery(pat.conn, query.collect)
 }
-
-#' @export
-get_all_matches <- function(){
-  # --- connect to db ---
-  req("patdb")
-  conn <- dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
-  print(baseformula)
-  print(charge)
-  available.dbs <- list.files(options$db_dir,pattern = ".full.db$",full.names = T)
-  # -----------
-  matches <- pblapply(available.dbs, FUN=function(chosen.db){
-   
-  })
-    
-}
-
