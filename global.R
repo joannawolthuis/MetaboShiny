@@ -127,5 +127,9 @@ sourceAll(file.path("backend",
 source("./Rsource/SwitchButton.R")
 sardine <- function(content) div(style="display: inline-block;vertical-align:top;", content)
 
+pos_adducts <<- wkz.adduct.confirmed[Ion_mode == "positive",
+                                     c("Name")]
+neg_adducts <<- wkz.adduct.confirmed[Ion_mode == "negative",
+                                     c("Name")]
 print("loaded global settings")
 

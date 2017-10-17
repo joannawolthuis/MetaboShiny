@@ -208,26 +208,24 @@ addUI <- reactive({
                              )),
              bsCollapsePanel(h2("Adducts"), "",style = "success",
                              fluidRow(column(width=6, h2("+")), column(width=6,h2("-"))),
-                             fluidRow(column(width=6,div(DT::dataTableOutput('pos_adduct_tab'),style='font-size:60%')),
-                                      column(width=6,div(DT::dataTableOutput('neg_adduct_tab'),style='font-size:60%'))
+                             fluidRow(column(width=6,div(DT::dataTableOutput('pos_add_tab'),style='font-size:60%')),
+                                      column(width=6,div(DT::dataTableOutput('neg_add_tab'),style='font-size:60%'))
                              )
              )
   )
 })
 
-output$pos_adduct_tab <- DT::renderDataTable({
+output$pos_add_tab <- DT::renderDataTable({
     # -------------
-    datatable(wkz.adduct.confirmed[Ion_mode == "positive",
-                                   c("Name")],
+    datatable(pos_adducts,
               selection = 'multiple',
               options = list(pageLength = 5, dom = 'tp')
               , rownames = F)
   })
 
-output$neg_adduct_tab <- DT::renderDataTable({
+output$neg_add_tab <- DT::renderDataTable({
   # -------------
-  datatable(wkz.adduct.confirmed[Ion_mode == "negative",
-                                 c("Name")],
+  datatable(neg_adducts,
             selection = 'multiple',
             options = list(pageLength = 5, dom = 'tp')
             , rownames = F)
@@ -596,7 +594,10 @@ observeEvent(input$create_csv, {
     tbl = get.csv(patdb,
                  time.series = if(mainmode == "time") T else F,
                  exp.condition = input$exp_var,
-                 group_adducts = input$adduct_grouping)
+                 group_adducts = input$adduct_grouping,
+                 which_dbs = add_search_list,
+                 which_adducts = selected_adduct_list
+                 )
     # --- experimental stuff ---
     switch(mainmode,
            time = {
@@ -1020,30 +1021,54 @@ observeEvent(input$tab_stat, {
          })
 })
 
-lapply(db_list, FUN=function(db){
-  observe({
+observe({
     # ---------------------------------
     db_search_list <- lapply(db_list, 
-                             FUN = function(search_db){
+                             FUN = function(db){
                                # -----------------------
-                               if(!input[[paste0("search_", search_db)]]){
-                                 c(file.path(options$db_dir, paste0(search_db, ".full.db")))
+                               if(!input[[paste0("search_", db)]]){
+                                 c(file.path(options$db_dir, paste0(db, ".full.db")))
                                  }
                                else{NA}
                                }
                              )
     db_search_list <<- db_search_list[!is.na(db_search_list)]
-    # if(length(db_search_list) == 0) updateCollapse(session, "dbSelect", style = list("Settings" = "warning")) else{
-    #   updateCollapse(session, "dbSelect", style = list("Settings" = "success"))
-    # }
-  })  
-})
+})  
+
+observe({
+  # ---------------------------------
+  add_search_list <- lapply(db_list, 
+                            FUN = function(db){
+                              if(is.null(input[[paste0("add_", db)]])){
+                                return(NA)
+                                }else{
+                                  # -----------------------
+                                  if(!input[[paste0("add_", db)]]){
+                                    c(file.path(options$db_dir, paste0(db, ".full.db")))
+                                }
+                                else{NA}
+                              }
+                              }
+
+  )
+  add_search_list <<- add_search_list[!is.na(add_search_list)]
+  print(add_search_list)
+})  
 
 res.update.tables <<- c("tt", 
                       "fc", 
                       "asca", 
                       "meba",
                       "plsda_vip")
+
+observe({
+    # --------------
+    wanted.adducts.pos <- pos_adducts[input$pos_add_tab_rows_selected, "Name"]
+    wanted.adducts.neg <- neg_adducts[input$neg_add_tab_rows_selected, "Name"]
+    # ---------
+    selected_adduct_list <<- rbind(wanted.adducts.neg, 
+                               wanted.adducts.pos)$Name
+  })
 
 lapply(res.update.tables, FUN=function(table){
   observeEvent(input[[paste0(table, "_tab_rows_selected")]], {
@@ -1065,7 +1090,7 @@ lapply(res.update.tables, FUN=function(table){
     })
     if(input$autosearch & length(db_search_list > 0)){
       match_list <- lapply(db_search_list, FUN=function(match.table){
-        get_matches(curr_cpd, match.table, search_formula=!input$adduct_grouping)
+        get_matches(curr_cpd, match.table, search_formula=input$adduct_grouping)
       })
       match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
       output$match_tab <- DT::renderDataTable({
@@ -1115,7 +1140,7 @@ observe({
   output$curr_cpd <- renderText(curr_cpd)
   if(input$autosearch & length(db_search_list) > 0){
     match_list <- lapply(db_search_list, FUN=function(match.table){
-      get_matches(curr_cpd, match.table, search_formula=!input$adduct_grouping)
+      get_matches(curr_cpd, match.table, search_formula=input$adduct_grouping)
     })
     match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
     output$match_tab <- DT::renderDataTable({
@@ -1143,7 +1168,7 @@ observeEvent(input$search_cpd, {
   # ----------------
   if(length(db_search_list) > 0){
     match_list <- lapply(db_search_list, FUN=function(match.table){
-      get_matches(curr_cpd, match.table, search_formula=!input$adduct_grouping)
+      get_matches(curr_cpd, match.table, search_formula=input$adduct_grouping)
     })
     match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
     output$match_tab <- DT::renderDataTable({

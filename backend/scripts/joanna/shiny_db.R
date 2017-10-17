@@ -28,7 +28,6 @@ get_matches <- function(cpd = NA, chosen.db, search_formula=F){
   req("patdb")
    # change this to proper var later
   # 0. Attach db
-  print(search_formula)
   if(search_formula){
     conn <- dbConnect(RSQLite::SQLite(), chosen.db)
     query <- fn$paste(strwrap(
@@ -129,14 +128,16 @@ get_mzs <- function(baseformula, charge, chosen.db){
 }
 
 #' @export
-get_all_matches <- function(exp.condition=NA, pat.conn=NA){
+get_all_matches <- function(exp.condition=NA, pat.conn=NA, which_dbs=NA, which_adducts=NA){
   # --- connect to db ---
   req("patdb")
   available.dbs <- list.files(options$db_dir,pattern = ".full.db$",full.names = T)
   join.query <- c()
   # --- GET POOL OF ALL DBS ---
-  for(i in seq_along(available.dbs)){
-     chosen.db <- available.dbs[i]
+  for(i in seq_along(which_dbs)){
+     chosen.db <- which_dbs[i]
+     if(is.na(chosen.db)) next
+    # --------------------------
      dbshort <- paste0("db", i)
      dbExecute(pat.conn, fn$paste("ATTACH '$chosen.db' AS $dbshort"))
      dbpfx <- paste0(dbshort, ".extended")
@@ -167,16 +168,18 @@ get_all_matches <- function(exp.condition=NA, pat.conn=NA){
     $union",width=10000, simplify=TRUE))
     print("Exec query one")
   dbExecute(pat.conn, query.one)
-  query.two <- strwrap(
+  adductfilter <- paste0("WHERE adduct = '", paste(which_adducts, collapse= "' OR adduct = '"), "'")
+  # adductfilter <- paste0("WHERE adduct NOT REGEXP '[", paste(which_adducts, collapse="|"), "]'")
+  query.two <- fn$paste(strwrap(
     "CREATE temp TABLE results AS
     SELECT DISTINCT iso.mz as mz, iso.baseformula as Baseformula, iso.adduct as Adduct
     FROM isotopes iso
+    $adductfilter
     GROUP BY mz
     HAVING COUNT(iso.isoprevalence > 99.99999999999) > 0"
-    , width=10000, simplify=TRUE)
+    , width=10000, simplify=TRUE))
   print("Exec query two")
   dbExecute(pat.conn, query.two)
-
   query.collect <-  strwrap(fn$paste("select distinct i.filename, d.animal_internal_id, s.[$exp.condition] as label, d.sampling_date, r.baseformula as identifier, sum(i.intensity) as intensity
                                      from avg_intensities i
                                      join individual_data d

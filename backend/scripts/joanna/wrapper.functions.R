@@ -3,7 +3,9 @@ get.csv <- function(patdb,
                     time.series = F, 
                     exp.condition = "diet",
                     max.vals = -1,
-                    group_adducts = F){
+                    group_adducts = F,
+                    which_dbs = NA,
+                    which_adducts = NA){
   library(reshape2)
   library(DBI)
   library(RSQLite)
@@ -24,7 +26,10 @@ get.csv <- function(patdb,
 
   # --- build result fetching query ---
   z = if(group_adducts){
-    get_all_matches(exp.condition, pat.conn = conn)
+    get_all_matches(exp.condition, 
+                    pat.conn = conn,
+                    which_dbs,
+                    which_adducts)
   }else{
     dbGetQuery(conn, strwrap(fn$paste("select distinct i.filename, d.animal_internal_id, s.[$exp.condition] as label, d.sampling_date, i.mz as identifier, sum(i.intensity) as intensity
                       from avg_intensities i
