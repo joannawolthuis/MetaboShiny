@@ -1,27 +1,7 @@
 # Rely on the 'WorldPhones' dataset in the datasets
 # package (which generally comes preloaded).
 
-shinyUI(fluidPage(
-  tags$head(
-    tags$style(HTML("
-                    @import url('//fonts.googleapis.com/css?family=Bungee Outline');
-                    
-                    h1 {
-                    margin: 2px;
-                    font-family: 'Bungee Outline';
-                    font-weight: 15;
-                    line-height: 0.5;
-                    }
-
-                    h2 {
-                    margin: 1px;
-                    font-family: 'Bungee Outline';
-                    font-weight: 8;
-                    line-height: 0.5;
-                    }
-                    
-                    "))
-    ),theme = "button.css",
+shinyUI(fluidPage(theme = "button.css",
                   if(options$packages_installed != "Y"){
                     navbarPage(title=h1("MetaboSetup"), 
                                id="nav_setup",
@@ -279,13 +259,13 @@ shinyUI(fluidPage(
                                                                                                                       value = FALSE, col = "BW", type = "OO"))
                                                                                                ),
                                                                                                h4("Current compound:"),
-                                                                                               verbatimTextOutput("curr_mz") 
+                                                                                               verbatimTextOutput("curr_cpd") 
                                                                                              )
                                                                                              ),
                                                         hr(),
                                                         fluidRow(navbarPage("Search", id="tab_iden",
                                                                             tabPanel("Current", icon=icon("sort-numeric-asc"),
-                                                                                     actionButton("search_mz", "Find hits", icon=icon("search")),
+                                                                                     actionButton("search_cpd", "Find hits", icon=icon("search")),
                                                                                      hr(),
                                                                                      div(DT::dataTableOutput('match_tab'),style='font-size:80%'),
                                                                                      hr(),
@@ -298,7 +278,7 @@ shinyUI(fluidPage(
                                                                                      hr(),
                                                                                      div(textOutput("browse_definition"),style='font-size:80%'),
                                                                                      hr(),
-                                                                                     actionButton("search_cpd", "Find hits", icon=icon("search")),
+                                                                                     actionButton("revsearch_cpd", "Find hits", icon=icon("search")),
                                                                                      hr(),
                                                                                      div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
                                                                             )))

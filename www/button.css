@@ -1,3 +1,19 @@
+@import url('//fonts.googleapis.com/css?family=Bungee Outline');
+                    
+ h1 {
+margin: 2px;
+font-family: 'Bungee Outline';
+font-weight: 15;
+line-height: 0.5;
+ }
+
+ h2 {
+margin: 1px;
+font-family: 'Bungee Outline';
+font-weight: 8;
+line-height: 0.5;
+}
+
 body {
   font-family:'Helvetica', sans-serif; 
 }
