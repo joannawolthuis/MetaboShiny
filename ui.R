@@ -1,9 +1,9 @@
 # Rely on the 'WorldPhones' dataset in the datasets
 # package (which generally comes preloaded).
 
-shinyUI(fluidPage(theme = "button.css",
+shinyUI(fluidPage(theme = "metaboshiny.css",
                   if(options$packages_installed != "Y"){
-                    navbarPage(title=h1("MetaboSetup"), 
+                    navbarPage(title=h1("MetaboSetup"),
                                id="nav_setup",
                                windowTitle = "MetaboShiny",
                                tabPanel("", icon = icon("wrench"), value="setup",
@@ -22,7 +22,7 @@ shinyUI(fluidPage(theme = "button.css",
                                         )))
                     )  
                   } else{
-                    navbarPage(title=h1("MetaboShiny"),
+                    navbarPage(title=h1("MetaboShiny"), inverse = T,
                                id="nav_general",
                                windowTitle = "MetaboShiny",
                                tabPanel("", icon = icon("share-alt"), value="setup",
@@ -40,12 +40,12 @@ shinyUI(fluidPage(theme = "button.css",
                                                                         br(),br(),
                                                                         imageOutput("package_check")
                                         ))),
-                               tabPanel("",  icon = icon("save"), value="save",
-                                        helpText("Save your dataset")
+                               # tabPanel("",  icon = icon("save"), value="save",
+                               #          helpText("Save your dataset")
                                         #fluidRow(column(width=1,fadeImageButton("test", img.path = "cutemolecule.png")),
                                         #         column(width=1,fadeImageButton("test2", img.path = "cutemolecule.png"))
                                         #         )
-                                        ),
+                               #      ),
                                # --------------------------------------------------------------------------------------------------------------------------------
                                tabPanel("", icon = icon("database"), value="database",
                                         # -- header row ---
@@ -114,18 +114,6 @@ shinyUI(fluidPage(theme = "button.css",
                                                         br(),br(),
                                                         imageOutput("kegg_check",inline = T)
                                                         )
-                                        # ,
-                                        #          column(3,  align="center",
-                                        #                 h2("PubChem"),
-                                        #                 helpText("A huge database with known pretty much all known chemicals."),
-                                        #                 br(),
-                                        #                 imageOutput("pubchem_logo",inline = T),
-                                        #                 br(),br(),br(),
-                                        #                 actionButton("check_pubchem", "Check", icon = icon("check")),
-                                        #                 actionButton("build_pubchem", "Build", icon = icon("wrench")),
-                                        #                 br(),br(),
-                                        #                 imageOutput("pubchem_check",inline = T)
-                                        #                 )
                                         )
                                         )
                                ),
@@ -181,7 +169,6 @@ shinyUI(fluidPage(theme = "button.css",
                                                                              label = "Adduct grouping", 
                                                                              value = FALSE, col = "BW", type = "OO")),
                                                         uiOutput("add_ui"),
-                                                        br(),
                                                         actionButton("create_csv", "Create CSV", icon=icon("file-text-o")),
                                                         br(),hr(),
                                                         imageOutput("csv_icon",inline = T),
@@ -244,7 +231,7 @@ shinyUI(fluidPage(theme = "button.css",
                                                       ),
                                                       sidebarPanel = sidebarPanel(align="center",
                                                                                   bsCollapse(id = "dbSelect", open = "Settings",
-                                                                                             bsCollapsePanel(h2("Databases"), "",style = "info",
+                                                                                             bsCollapsePanel(h3("Databases"), "",style = "info",
                                                                                                fluidRow(#imageOutput("find_mol_icon",inline = T),
                                                                                                  sardine(fadeImageButton("search_internal", img.path = "umcinternal.png")),
                                                                                                  sardine(fadeImageButton("search_noise", img.path = "umcnoise.png")),
@@ -347,8 +334,12 @@ shinyUI(fluidPage(theme = "button.css",
                                                             sardine(imageOutput("adduct_upload_check",inline = T))
                                                    )
                                         )
-                                        
-                                        
-                               ))}
-))
+                               ), div(class="spinnylocation", 
+                                      div(class="plus", img(class="imagetop", src="https://image.flaticon.com/icons/svg/192/192623.svg", width="120px", height="120px")),
+                                      div(class="minus", img(class="imagebottom", src="https://image.flaticon.com/icons/svg/192/192623.svg", width="120px", height="120px"))
+                                      )
+                    )
+                    }
+                  )
+        )
                   

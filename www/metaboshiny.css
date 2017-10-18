@@ -1,21 +1,31 @@
-@import url('//fonts.googleapis.com/css?family=Bungee Outline');
-                    
+@import url('https://fonts.googleapis.com/css?family=Megrim|Raleway:bold,regular|Bungee+Outline|Bungee+Inline');     
+
  h1 {
 margin: 2px;
-font-family: 'Bungee Outline';
+font-family: 'Megrim';
 font-weight: 15;
 line-height: 0.5;
  }
 
  h2 {
 margin: 1px;
-font-family: 'Bungee Outline';
-font-weight: 8;
-line-height: 0.5;
+font-family: 'Raleway', bold;
+font-weight: bold;
+font-size: 20pt;
+line-height: 1;
+}
+
+ h3 {
+margin: 1px;
+font-family: 'Raleway', bold;
+font-weight: bold;
+font-size: 12pt;
+line-height: 1;
 }
 
 body {
-  font-family:'Helvetica', sans-serif; 
+  font-family:'Raleway', serif; 
+  font-size: 10pt;
 }
 
 /* ON-OFF switch button */
@@ -183,3 +193,54 @@ body {
 .fadebox:checked + label > img {
   opacity: 0.25;
 }
+
+/* FANCY ICON */
+.spinnylocation
+{
+  position: absolute;
+  top: -3.5%;
+  right: 0%;
+  animation-fill-mode: forwards;
+  z-index:99999 !important;
+}
+
+.imagetop
+{
+  -webkit-animation:spin 30s linear infinite;
+  -moz-animation:spin 30s linear infinite;
+  animation:spin 30s linear infinite;
+  filter: invert(100%);
+  margin-top: 20px;
+  margin-left: 15px;
+}
+
+.imagebottom
+{
+  -webkit-animation:spin 30s linear infinite;
+  -moz-animation:spin 30s linear infinite;
+  animation:spin 30s linear infinite;
+  margin-top: -60px;
+  margin-left: 15px;
+}
+
+.plus
+{
+    margin : 0;
+    padding : 0;
+    height: 80px;
+    width : 180px;
+    overflow : hidden;
+}
+
+.minus
+{
+    margin : 0;
+    padding : 0;
+    height: 80px;
+    width : 180px;
+    overflow : hidden;
+}
+
+@-moz-keyframes spin { 100% { -moz-transform: rotate(360deg); } }
+@-webkit-keyframes spin { 100% { -webkit-transform: rotate(360deg); } }
+@keyframes spin { 100% { -webkit-transform: rotate(360deg); transform:rotate(360deg); } }

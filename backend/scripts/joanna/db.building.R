@@ -4,8 +4,6 @@ build.base.db <- function(dbname=NA,
                           cl=FALSE){
   # --- check if user chose something ---
   if(is.na(dbname)) return("~ Please choose one of the following options: HMDB, ChEBI, PubChem! d(>..w.<)b ~")
-  # -------------------------------------
-  
   # --- make dir if not exists ---
   if(!dir.exists(outfolder)) dir.create(outfolder)
   # --- create .db file ---
@@ -196,6 +194,7 @@ build.base.db <- function(dbname=NA,
                                                         (group_concat(distinct str(?labelLit);separator=", ") as ?label )
                                                         ?idurl as ?csid 
                                                         (group_concat(distinct ?pwTitle;separator=", ") as ?description)
+                                                        ?pathway
                                                         where {
                                                         ?mb a wp:Metabolite ;
                                                         rdfs:label ?labelLit ;
@@ -205,18 +204,42 @@ build.base.db <- function(dbname=NA,
                                                         dc:title ?pwTitle .
                                                         FILTER (BOUND(?idurl))
                                                         }
-                                                        GROUP BY ?mb ?wp ?idurl')
-                                 print(chebi)
+                                                        GROUP BY ?mb ?wp ?idurl ?pathway')
                                  chebi.ids <- gsub(chebi$results$csid, pattern = ".*:|>", replacement = "")
                                  conn.chebi <- dbConnect(RSQLite::SQLite(), chebi.loc)
                                  chebi.join.table <- data.table(identifier = chebi.ids,
                                                                 description = chebi$results$description,
-                                                                widentifier = chebi$results$mb)
-                                 dbRemoveTable(conn.chebi, "wikipathways")
-                                 dbWriteTable(conn.chebi, "wikipathways", chebi.join.table)
-                                 db.formatted <- dbGetQuery(conn.chebi, "SELECT b.compoundname, w.description,b.baseformula, w.widentifier as identifier, b.charge FROM base b
-                                                            JOIN wikipathways w
-                                                            ON b.identifier = w.identifier")
+                                                                widentifier = chebi$results$mb,
+                                                                pathway = chebi$results$pathway)
+                                 dbWriteTable(conn.chebi, "wikipathways", chebi.join.table, overwrite=TRUE)
+                                 db.formatted <- dbGetQuery(conn.chebi, "SELECT DISTINCT  b.compoundname, 
+                                                                                          w.description,
+                                                                                          b.baseformula, 
+                                                                                          w.widentifier as identifier, 
+                                                                                          b.charge,
+                                                                                          w.pathway 
+                                                                         FROM base b
+                                                                         JOIN wikipathways w
+                                                                         ON b.identifier = w.identifier")
+                                 # --- get pathway info ---
+                                 sparql.pathways <- SPARQL(url="http://sparql.wikipathways.org/",
+                                                 query='PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                                                        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                                                        PREFIX dc:  <http://purl.org/dc/elements/1.1/>
+                                                        PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+                                                        PREFIX schema: <http://schema.org/>
+                                                        PREFIX wp:      <http://vocabularies.wikipathways.org/wp#>
+                                                        PREFIX dcterms:  <http://purl.org/dc/terms/>
+                                                        
+                                                        SELECT DISTINCT str(?titleLit) as ?name ?identifier ?ontology
+                                                        WHERE {
+                                                        ?pathway dc:title ?titleLit .
+                                                        ?pathway dc:identifier ?identifier .
+                                                        OPTIONAL {?pathway wp:ontologyTag ?ontology .}
+                                                        } ')
+                                 db.pathways <- sparql.pathways$results
+                                 dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
+                                 dbWriteTable(conn, "pathways", db.pathways, overwrite=TRUE)
                                  dbRemoveTable(conn.chebi, "wikipathways")
                                  # ---------------------------------
                                  # SOMETHING FOR THE UNIDENTIFIED ONES HERE...
@@ -238,8 +261,6 @@ build.base.db <- function(dbname=NA,
                                  #                          FILTER (!BOUND(?idurl))
                                  #                          }')
                                  # ---------------------------------
-                                 dbWriteTable(conn, "base", db.formatted, append=TRUE)
-                                 # ---------------------------------
                                },
                                kegg = function(dbname){
                                  # ---------------
@@ -250,29 +271,58 @@ build.base.db <- function(dbname=NA,
                                  cpd.ids <- Reduce(c, cpds)
                                  id.batches <- split(cpd.ids, ceiling(seq_along(cpd.ids)/10))
                                  # ---------------
-                                 kegg.db.list <- pblapply(id.batches, cl=cl, FUN=function(batch){
+                                 # keggGet("C00032") # cpd
+                                 # keggGet("map00860") # pathway
+                                 # keggGet("M00121") # module
+                                 # keggGet("H00201") # disease
+                                 # --- GET COMPOUNDS ---
+                                 kegg.cpd.list <- pblapply(id.batches, cl=cl, FUN=function(batch){
                                    rest.result <- keggGet(batch)
                                    # ---------------------------
                                    base.list <- lapply(rest.result, FUN=function(cpd){
                                      cpd$NAME_FILT <- gsub(cpd$NAME, pattern = ";", replacement = "")
-                                     data.table(compoundname = cpd$NAME_FILT[1],
-                                                description = if("BRITE" %in% names(cpd)) paste(cpd$BRITE, collapse=", ") else{paste(cpd$NAME_FILT, collapse=", ")},
-                                                baseformula = cpd$FORMULA,
-                                                identifier = cpd$ENTRY,
-                                                charge = kegg.charge(cpd$ATOM)
+                                     data.table(compoundname = c(paste(cpd$NAME_FILT, collapse=", ")),
+                                                description = c(if("BRITE" %in% names(cpd)) paste(cpd$BRITE, collapse=", ") else{NA}),
+                                                baseformula = c(cpd$FORMULA),
+                                                identifier = c(cpd$ENTRY),
+                                                charge = c(kegg.charge(cpd$ATOM)),
+                                                pathway = if("PATHWAY" %in% names(cpd)) names(cpd$PATHWAY) else{NA}
                                      )
                                    })
                                    rbindlist(base.list)
                                  })
-                                 db.formatted <- rbindlist(kegg.db.list)
-                                 db.formatted$baseformula <- gsub(pattern = " |\\.", replacement = "", db.formatted$baseformula) # fix salt and spacing issues                                 # -------------------------------
+                                 db.cpds <- rbindlist(kegg.cpd.list)
+                                 db.cpds$baseformula <- gsub(pattern = " |\\.", replacement = "", db.cpds$baseformula) # fix salt and spacing issues                                 
+                                 # -------------------------------
                                  checked <- as.data.table(check.chemform.joanna(isotopes,
-                                                                                db.formatted$baseformula))
-                                 db.formatted$baseformula <- checked$new_formula
+                                                                                db.cpds$baseformula))
+                                 db.cpds$baseformula <- checked$new_formula
                                  keep <- checked[warning == FALSE, which = TRUE]
-                                 db.formatted <- db.formatted[keep]
-                                 # ----------------------
-                                 dbWriteTable(conn, "base", db.formatted, append=TRUE)
+                                 db.cpds <- db.cpds[keep]
+                                 # --- GET PATHWAYS ---
+                                 pathways <- unique(db.cpds$pathway)
+                                 pw.batches <- split(pathways, ceiling(seq_along(pathways)/10))
+                                 kegg.pw.list <- pblapply(pw.batches, cl=cl, FUN=function(batch){
+                                   rest.result <- keggGet(batch)
+                                   # ---------------------------
+                                   base.list <- lapply(rest.result, FUN=function(pw){
+                                     data.table(identifier = as.character(pw$ENTRY),
+                                                name = as.character(pw$NAME),
+                                                class = if("CLASS" %in% names(pw)) pw$CLASS else{NA},
+                                                module = if("MODULE" %in% names(pw)) pw$MODULE else{NA},
+                                                disease = if("DISEASE" %in% names(pw)) as.character(pw$DISEASE) else{NA}
+                                     )
+                                   })
+                                   rbindlist(base.list)
+                                 })
+                                 db.pathways <- rbindlist(kegg.pw.list)
+                                 # --- GET MODULES & DISEASES? (necessary for future?) ---
+                                 # modules <- unique(db.cpds$module)
+                                 # md.batches <- split(modules, ceiling(seq_along(modules)/10))
+                                 # dbWriteTable(conn, "modules", db.modules, overwrite=TRUE)
+                                 # -------------------------------------------------------
+                                 dbWriteTable(conn, "base", db.cpds, overwrite=TRUE)
+                                 dbWriteTable(conn, "pathways", db.pathways, overwrite=TRUE)
                                },
                                pubchem = function(dbname, ...){
                                  # --- create working space ---

@@ -26,13 +26,13 @@ browse_db <- function(chosen.db){
 get_matches <- function(cpd = NA, 
                         chosen.db, 
                         search_formula=F,
-                        searchid=F)
+                        searchid)
 {
   # --- connect to db -=
   req("patdb")
    # change this to proper var later
   # 0. Attach db
-  if(searchid != FALSE){
+  if(!is.null(searchid)){
     print(searchid)
     print(search)
     conn <- dbConnect(RSQLite::SQLite(), chosen.db)

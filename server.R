@@ -47,7 +47,7 @@ images <<- list(list(name = 'cute_package', path = 'www/new-product.png', dimens
                list(name = 'umc_logo_noise', path = 'www/umcnoise.png', dimensions = c(120, 120)),
                list(name = 'hmdb_logo', path = 'www/hmdblogo.png', dimensions = c(150, 100)),
                list(name = 'chebi_logo', path = 'www/chebilogo.png', dimensions = c(120, 120)),
-               list(name = 'wikipath_logo', path = 'www/wikipathways.png', dimensions = c(120, 140)),
+               list(name = 'wikipath_logo', path = 'www/wikipathways.png', dimensions = c(130, 150)),
                list(name = 'kegg_logo', path = 'www/kegglogo.gif', dimensions = c(200, 150)),
                list(name = 'pubchem_logo', path = 'www/pubchemlogo.png', dimensions = c(145, 90)),
                list(name = 'pos_icon', path = 'www/handpos.png', dimensions = c(120, 120)),
@@ -197,12 +197,13 @@ observeEvent(input$exp_type,{
 
 addUI <- reactive({
   bsCollapse(id = "adductSettings", open = "Settings",
-             bsCollapsePanel(h2("Identifier"), "",style = "error",
+             bsCollapsePanel(h3("Identifier"), "",style = "info",
                              radioButtons("group_by", "What do you want as identifier?", choices = list("Database ID" = "identifier", 
                                                                                                         "Compound name" = "compoundname",
-                                                                                                        "Molecular formula" = "baseformula"), 
+                                                                                                        "Molecular formula" = "baseformula",
+                                                                                                        "Mass/charge" = "mz"), 
                                           selected = 3)),
-             bsCollapsePanel(h2("Databases"), "",style = "info",
+             bsCollapsePanel(h3("Databases"), "",style = "error",
                              fluidRow(
                                sardine(fadeImageButton("add_internal", img.path = "umcinternal.png")),
                                sardine(fadeImageButton("add_noise", img.path = "umcnoise.png")),
@@ -211,7 +212,7 @@ addUI <- reactive({
                                sardine(fadeImageButton("add_wikipathways", img.path = "wikipathways.png")),
                                sardine(fadeImageButton("add_kegg", img.path = "kegglogo.gif"))
                              )),
-             bsCollapsePanel(h2("Adducts"), "",style = "success",
+             bsCollapsePanel(h3("Adducts"), "",style = "danger",
                              fluidRow(column(width=6, h2("+")), column(width=6,h2("-"))),
                              fluidRow(column(width=6,div(DT::dataTableOutput('pos_add_tab'),style='font-size:60%')),
                                       column(width=6,div(DT::dataTableOutput('neg_add_tab'),style='font-size:60%'))
@@ -610,7 +611,7 @@ observeEvent(input$create_csv, {
              switch(submode, 
                     standard = { tbl.adj <- tbl }, #mode stays the same
                     custom = { 
-                      tbl.adj <- unique(tbl[Time == input$your.time, -"Time"])
+                      tbl.adj <<- unique(tbl[Time == input$your.time, -"Time"])
                       mainmode <<- "stat"
                     },
                     subtract = { 
@@ -618,7 +619,7 @@ observeEvent(input$create_csv, {
                       table.base <- tbl[Time == input$your.time,c(1,3)][on=uniq.samples]
                       time.end <- tbl[Time == input$your.time,][,4:ncol(tbl),on=uniq.samples]
                       time.begin <- tbl[Time == min(as.numeric(tbl$Time)),][,4:ncol(tbl),on=uniq.samples]
-                      tbl.adj <- cbind(table.base, 
+                      tbl.adj <<- cbind(table.base, 
                                       time.end - time.begin) 
                       # --- change mode ---
                       mainmode <<- "stat"
