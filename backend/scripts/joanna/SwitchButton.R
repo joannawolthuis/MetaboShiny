@@ -93,13 +93,17 @@ switchButton <- function(inputId, label, value=FALSE, col = "GB", type="TF") {
 # )
 # 
 
-fadeImageButton <- function(inputId, img.path=NA) {
+fadeImageButton <- function(inputId, img.path=NA,value=FALSE) {
   # ---------------
   if(is.na(img)) stop("Please enter an image name (place in www folder please)")
   # ---------------
   tagList(
     tags$div(class = "form-group shiny-input-container",
-    tags$input(type="checkbox", class="fadebox", id=inputId, checked=""),
+             if(value){
+               tags$input(type="checkbox", class="fadebox", id=inputId)
+             } else{
+               tags$input(type="checkbox", class="fadebox", id=inputId, checked="")
+             },
     tags$label(class="btn", "for"=inputId,
                tags$img(src=img.path, id="btnLeft"))
     )

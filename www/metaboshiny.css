@@ -1,8 +1,8 @@
-@import url('https://fonts.googleapis.com/css?family=Megrim|Raleway:bold,regular|Bungee+Outline|Bungee+Inline');     
+@import url('https://fonts.googleapis.com/css?family=Megrim|Raleway:bold,regular|Leckerli+One|Open+Sans');     
 
  h1 {
 margin: 2px;
-font-family: 'Megrim';
+font-family:'Leckerli One';
 font-weight: 15;
 line-height: 0.5;
  }
@@ -17,17 +17,53 @@ line-height: 1;
 
  h3 {
 margin: 1px;
-font-family: 'Raleway', bold;
+font-family: 'Raleway';
 font-weight: bold;
-font-size: 12pt;
+font-size: 15pt;
 line-height: 1;
 }
 
 body {
   font-family:'Raleway', serif; 
-  font-size: 10pt;
+  font-size: 12pt;
 }
 
+/* progress bar */
+
+.shiny-notification {
+            height: 50px;
+            width: 100%;
+            position:fixed;
+            left: 0%;
+            bottom: 0%;
+            }
+
+.progress-bar {
+  height: 5px;
+  position: absolute;
+  left: 15px;
+  background: linear-gradient(to right, transparent 50%, white 50%), linear-gradient(to right, orange, yellow, green, cyan, blue, violet) !important;
+  background-size: 16px 5px, 100% 5px !important;
+}
+
+.progress-text {
+  display: none;
+}
+
+/* rainbow gradient line */
+
+.line {
+  height: 5px;
+  width: calc(100% - 190px);
+  position: absolute;
+  top: 51px;
+  left: 15px;
+  background: linear-gradient(to right, transparent 50%, white 50%), linear-gradient(to right, orange, yellow, green, cyan, blue, violet);
+  background-size: 16px 5px, 100% 5px;
+  z-index:99998 !important;
+}
+
+            
 /* ON-OFF switch button */
 /* Sébastien Rochette */
 /* http://sebrock.fr/en/ */
@@ -37,7 +73,6 @@ body {
   width: 100px;
   position: relative;
   -webkit-user-select:none; -moz-user-select:none; -ms-user-select: none;
-  font-family:'Helvetica', sans-serif; 
 }
 
 .onoffswitch-checkbox {
@@ -180,6 +215,7 @@ body {
 
 /* -------------------- EXPERIMENTATION -------------------- */
 
+
 /* funky code that works */
 
 .fadebox {
@@ -195,11 +231,11 @@ body {
 }
 
 /* FANCY ICON */
-.spinnylocation
+.spinnylocation1
 {
   position: absolute;
-  top: -3.5%;
-  right: 0%;
+  top: -30px;
+  right: 0px;
   animation-fill-mode: forwards;
   z-index:99999 !important;
 }

@@ -14,108 +14,135 @@ shinyUI(fluidPage(theme = "metaboshiny.css",
                                                                         imageOutput("cute_package",inline = T),
                                                                         hr(),
                                                                         helpText("Needed packages:"),
-                                                                        div(DT::dataTableOutput('package_tab'),style='font-size:80%'),
+                                                                        DT::dataTableOutput('package_tab',width="100%"),style='font-size:80%'),
                                                                         br(),                                  
                                                                         actionButton("install_packages", "Install", icon = icon("wrench")),
                                                                         br(),br(),
                                                                         imageOutput("package_check")
-                                        )))
-                    )  
+                                        ))
+                               )
                   } else{
                     navbarPage(title=h1("MetaboShiny"), inverse = T,
                                id="nav_general",
                                windowTitle = "MetaboShiny",
                                tabPanel("", icon = icon("share-alt"), value="setup",
                                         # --- db check cols ---
-                                        fluidRow(column(width=2),column(width=5, align="center",
+                                        fluidRow(column(width=2),column(width=8, align="center",
                                                                         h2("Setup"),
                                                                         br(),
                                                                         imageOutput("cute_package",inline = T),
                                                                         hr(),
                                                                         helpText("Installed packages:"),
-                                                                        div(DT::dataTableOutput('package_tab'),style='font-size:80%'),
+                                                                        div(DT::dataTableOutput('package_tab', width="100%"),style='font-size:80%'),
                                                                         br(),                                  
                                                                         #                                        actionButton("install_packages", "Install", icon = icon("wrench")),
                                                                         actionButton("update_packages", "Update", icon = icon("star")),
                                                                         br(),br(),
                                                                         imageOutput("package_check")
                                         ))),
-                               # tabPanel("",  icon = icon("save"), value="save",
-                               #          helpText("Save your dataset")
-                                        #fluidRow(column(width=1,fadeImageButton("test", img.path = "cutemolecule.png")),
-                                        #         column(width=1,fadeImageButton("test2", img.path = "cutemolecule.png"))
-                                        #         )
-                               #      ),
                                # --------------------------------------------------------------------------------------------------------------------------------
                                tabPanel("", icon = icon("database"), value="database",
                                         # -- header row ---
                                         fluidRow(column(12, align="center",
                                                         h3("")
-                                        ),
+                                        )),
                                         # --- db check cols --- common pollutants found in DIMS.
                                         fluidRow(column(3, align="center",
                                                         h2("UMC Internal"),
-                                                        helpText("Internal commonly known metabolites."),
-                                                        br(),
+                                                        helpText("Internal commonly known metabolites.")
+                                        ),column(3, align="center",
+                                                 h2("UMC Noise"),
+                                                 helpText("Internal common pollutants found in DIMS using local method.")
+                                        ),
+                                        column(3,  align="center",
+                                               h2("HMDB"),
+                                               helpText("Metabolites commonly found in human biological samples.")
+                                        ),column(3, align="center",
+                                                h2("ChEBI"),
+                                                helpText("A broad database with known chemicals of biological interest.")
+                                        )), br(),
+                                        fluidRow(column(3, align="center",
                                                         imageOutput("umc_logo_int",inline = T),
-                                                        br(),br(),br(),
+                                                        br(),br()
+                                        ),column(3, align="center",
+                                                 imageOutput("umc_logo_noise",inline = T),
+                                                 br(),br()
+                                        ),
+                                        column(3,  align="center",
+                                               imageOutput("hmdb_logo",inline = T),
+                                               br(),br()
+                                               ),
+                                        column(3, align="center",
+                                               imageOutput("chebi_logo",inline = T),
+                                               br(),br()
+                                        )),
+                                        fluidRow(column(3, align="center",
                                                         actionButton("check_internal", "Check", icon = icon("check")),
                                                         actionButton("build_internal", "Build", icon = icon("wrench")),
                                                         br(),br(),
                                                         imageOutput("internal_check",inline = T)
                                         ),column(3, align="center",
-                                                 h2("UMC Noise"),
-                                                 helpText("Internal common pollutants found in DIMS using local method."),
-                                                 br(),
-                                                 imageOutput("umc_logo_noise",inline = T),
-                                                 br(),br(),br(),
                                                  actionButton("check_noise", "Check", icon = icon("check")),
                                                  actionButton("build_noise", "Build", icon = icon("wrench")),
                                                  br(),br(),
                                                  imageOutput("noise_check",inline = T)
                                         ),
                                         column(3,  align="center",
-                                               h2("HMDB"),
-                                               helpText("Metabolites commonly found in human biological samples."),
-                                               br(),
-                                               imageOutput("hmdb_logo",inline = T),
-                                               br(),br(),br(),
                                                actionButton("check_hmdb", "Check", icon = icon("check")),
                                                actionButton("build_hmdb", "Build", icon = icon("wrench")),
                                                br(),br(),
-                                               imageOutput("hmdb_check",inline = T)
+                                               imageOutput("hmdb_check",inline = T)),
+                                        column(3, align="center",
+                                               actionButton("check_chebi", "Check", icon = icon("check")),
+                                               actionButton("build_chebi", "Build", icon = icon("wrench")),
+                                               br(),br(),
+                                               imageOutput("chebi_check",inline = T)
+                                        )),
+                                        br(),br(),
+                                        # --- db check cols --- common pollutants found in DIMS.
+                                        fluidRow(column(3, align="center",
+                                                 h2("WikiPathways"),
+                                                 helpText("Open source biological pathway database. Currently only partially available."),
+                                                 h3(" - REQUIRES CHEBI - ")
+                                        ),
+                                        column(3,  align="center",
+                                               h2("KEGG"),
+                                               helpText("Large pathway database with info on pathways in various organisms, involved enzymes, and connected disease phenotypes.")
+                                        ),
+                                        column(3,  align="center",
+                                               h2("SMPDB"),
+                                               helpText("The Small Molecule Pathway Database is a database containing > 700 small molecule pathways found in humans."),
+                                               h3(" - REQUIRES HMDB - ")
                                         )), br(),
-                                        fluidRow(column(3,  align="center",
-                                                        h2("ChEBI"),
-                                                        helpText("A broad database with known chemicals of biological interest."),
-                                                        br(),
-                                                        imageOutput("chebi_logo",inline = T),
-                                                        br(),br(),br(),
-                                                        actionButton("check_chebi", "Check", icon = icon("check")),
-                                                        actionButton("build_chebi", "Build", icon = icon("wrench")),
-                                                        br(),br(),
-                                                        imageOutput("chebi_check",inline = T)
-                                        ),column(3,  align="center",
-                                                        h2("WikiPathways"),
-                                                        helpText("Compounds associated with open source biological pathways."),
-                                                        imageOutput("wikipath_logo",inline = T),
-                                                        br(),br(),
-                                                        actionButton("check_wikipathways", "Check", icon = icon("check")),
-                                                        actionButton("build_wikipathways", "Build", icon = icon("wrench")),
-                                                        br(),br(),
-                                                        imageOutput("wikipathways_check",inline = T)
-                                        ),column(3,  align="center",
-                                                        h2("KEGG"),
-                                                        helpText("Compounds associated with biological pathways."),
-                                                        imageOutput("kegg_logo",inline = T),
-                                                        br(),br(),
-                                                        actionButton("check_kegg", "Check", icon = icon("check")),
-                                                        actionButton("build_kegg", "Build", icon = icon("wrench")),
-                                                        br(),br(),
-                                                        imageOutput("kegg_check",inline = T)
-                                                        )
-                                        )
-                                        )
+                                        fluidRow(column(3, align="center",
+                                                 imageOutput("wikipath_logo",inline = T),
+                                                 br(),br()
+                                        ),
+                                        column(3,  align="center",
+                                               imageOutput("kegg_logo",inline = T),
+                                               br(),br()
+                                               ),
+                                        column(3,  align="center",
+                                               imageOutput("smpdb_logo",inline = T),
+                                               br(),br()
+                                        )),
+                                        fluidRow(column(3, align="center",
+                                                 actionButton("check_wikipathways", "Check", icon = icon("check")),
+                                                 actionButton("build_wikipathways", "Build", icon = icon("wrench")),
+                                                 br(),br(),
+                                                 imageOutput("wikipathways_check",inline = T)
+                                        ),
+                                        column(3,  align="center",
+                                               actionButton("check_kegg", "Check", icon = icon("check")),
+                                               actionButton("build_kegg", "Build", icon = icon("wrench")),
+                                               br(),br(),
+                                               imageOutput("kegg_check",inline = T)),
+                                        column(3,  align="center",
+                                               actionButton("check_smpdb", "Check", icon = icon("check")),
+                                               actionButton("build_smpdb", "Build", icon = icon("wrench")),
+                                               br(),br(),
+                                               imageOutput("smpdb_check",inline = T)))
+                                       # ----------------------------------------------------
                                ),
                                # --------------------------------------------------------------------------------------------------------------------------------
                                tabPanel("", icon = icon("upload"), value="upload", ## this guy gives error???
@@ -235,8 +262,10 @@ shinyUI(fluidPage(theme = "metaboshiny.css",
                                                                                                fluidRow(#imageOutput("find_mol_icon",inline = T),
                                                                                                  sardine(fadeImageButton("search_internal", img.path = "umcinternal.png")),
                                                                                                  sardine(fadeImageButton("search_noise", img.path = "umcnoise.png")),
-                                                                                                 sardine(fadeImageButton("search_hmdb", img.path = "hmdblogo.png")),br(),
+                                                                                                 sardine(fadeImageButton("search_hmdb", img.path = "hmdblogo.png")),
                                                                                                  sardine(fadeImageButton("search_chebi", img.path = "chebilogo.png")),
+                                                                                                 br(),
+                                                                                                 sardine(fadeImageButton("search_smpdb", img.path = "smpdb_logo_adj.png")),
                                                                                                  sardine(fadeImageButton("search_wikipathways", img.path = "wikipathways.png")),
                                                                                                  sardine(fadeImageButton("search_kegg", img.path = "kegglogo.gif")),
                                                                                                  #sardine(fadeImageButton("search_pubchem", img.path = "pubchemlogo.png")),
@@ -309,7 +338,7 @@ shinyUI(fluidPage(theme = "metaboshiny.css",
                                                                                                                              "Green - yellow - white"="gyw",
                                                                                                                              "Red - yellow - white"="ryw")
                                                             ),
-                                                            fluidRow(plotlyOutput("ramp_plot",inline = T, width = "400px", height="200px")),
+                                                            fluidRow(plotlyOutput("ramp_plot",inline = T, width="100%")),
                                                             h2("Discrete data"),
                                                             uiOutput("colourPickers")
                                                    ),
@@ -334,10 +363,11 @@ shinyUI(fluidPage(theme = "metaboshiny.css",
                                                             sardine(imageOutput("adduct_upload_check",inline = T))
                                                    )
                                         )
-                               ), div(class="spinnylocation", 
-                                      div(class="plus", img(class="imagetop", src="https://image.flaticon.com/icons/svg/192/192623.svg", width="120px", height="120px")),
-                                      div(class="minus", img(class="imagebottom", src="https://image.flaticon.com/icons/svg/192/192623.svg", width="120px", height="120px"))
-                                      )
+                               ), div(class="spinnylocation1", 
+                                      div(class="plus", img(class="imagetop", src="heart-research.png", width="120px", height="120px")),
+                                      div(class="minus", img(class="imagebottom", src="heart-research.png", width="120px", height="120px"))
+                                      ),
+                               div(class="line")
                     )
                     }
                   )

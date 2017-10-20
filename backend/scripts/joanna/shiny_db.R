@@ -36,11 +36,17 @@ get_matches <- function(cpd = NA,
     print(searchid)
     print(search)
     conn <- dbConnect(RSQLite::SQLite(), chosen.db)
-    query <- fn$paste(strwrap(
-      "SELECT DISTINCT compoundname as Compound, baseformula as 'Mol. Formula', identifier as Identifier, description as Description 
-      FROM base indexed by b_idx1
-      WHERE $searchid = '$cpd'"
-      , width=10000, simplify=TRUE))
+    query <- if(searchid == "pathway"){
+      "SELECT DISTINCT *
+      FROM pathways
+      WHERE identifier = '$cpd'"
+    }else{
+      fn$paste(strwrap(
+        "SELECT DISTINCT compoundname as Compound, baseformula as 'Mol. Formula', identifier as Identifier, description as Description 
+        FROM base indexed by b_idx1
+        WHERE $searchid = '$cpd'"
+        , width=10000, simplify=TRUE))
+    }
     print(query)
     dbGetQuery(conn, query)
   }else{
@@ -162,6 +168,8 @@ get_all_matches <- function(exp.condition=NA,
      basepfx <- paste0("dbbase", i)
      basechargequery <- paste0(basepfx, ".charge")
      baseformquery <- paste0(basepfx, ".baseformula")
+     # --- VERY OPTIONAL ---
+     pathway = if(group_by == "pathway") ",pathway" else{""}
      # ------------------------
      join.query <- c(join.query, 
       fn$paste(strwrap("SELECT DISTINCT mz.[mzmed.pgrp] as mz, 
@@ -171,6 +179,7 @@ get_all_matches <- function(exp.condition=NA,
                                         adduct, 
                                         isoprevalence, 
                                         basecharge
+                                        $pathway
                         FROM mzvals mz
                         JOIN mzranges rng ON rng.ID = mz.ID
                         JOIN $dbext $extpfx indexed by e_idx2
@@ -202,12 +211,14 @@ get_all_matches <- function(exp.condition=NA,
     , width=10000, simplify=TRUE))
   print("Exec query two")
   dbExecute(pat.conn, query.two)
+  summary = if(group_by == "pathway") "sum(abs(i.intensity)) as intensity" else{"sum(i.intensity) as intensity"}
+  
   query.collect <-  strwrap(fn$paste("select distinct i.filename, 
                                                       d.animal_internal_id, 
                                                       s.[$exp.condition] as label, 
                                                       d.sampling_date, 
                                                       r.identifier as identifier, 
-                                                      sum(i.intensity) as intensity
+                                                      $summary
                                      from avg_intensities i
                                      join individual_data d
                                      on i.filename = d.card_id

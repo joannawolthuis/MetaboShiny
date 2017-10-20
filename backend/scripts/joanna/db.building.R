@@ -262,6 +262,53 @@ build.base.db <- function(dbname=NA,
                                  #                          }')
                                  # ---------------------------------
                                },
+                               smpdb = function(dbname){
+                                 # ---------------
+                                 file.url <- "http://smpdb.ca/downloads/smpdb_metabolites.csv.zip"
+                                 # ----
+                                 base.loc <- file.path(options$db_dir, "smpdb_source")
+                                 if(!dir.exists(base.loc)) dir.create(base.loc)
+                                 zip.file <- file.path(base.loc, "SMPDB.zip")
+                                 download.file(file.url, zip.file)
+                                 unzip(zip.file, exdir = base.loc)
+                                 # -------------------------------
+                                 smpdb.tab <- fread(file.path(base.loc, "metabolites.csv"))
+                                 # --- get charges ---
+                                 charges <- c(gsub(str_match(smpdb.tab$`InChI`, pattern = "q[+-](\\d*)")[,1], pattern = "q|\\+", replacement = ""))
+                                 charges[is.na(charges)] <- "0" # set all missing to zero
+                                 db.cpds <- data.table(compoundname = smpdb.tab$`Metabolite Name`,
+                                                       baseformula = smpdb.tab$Formula,
+                                                       identifier = smpdb.tab$`Metabolite ID`,
+                                                       widentifier = gsub(smpdb.tab$`HMDB ID`, pattern = "(HMDB0*)", replacement = ""),
+                                                       charge = charges,
+                                                       pathway = smpdb.tab$`SMPDB ID`)
+                                 db.pathways <- data.table(name = smpdb.tab$`Pathway Name`,
+                                                           identifier = smpdb.tab$`SMPDB ID`)
+                                 checked <- as.data.table(check.chemform.joanna(isotopes,
+                                                                                db.cpds$baseformula))
+                                 db.cpds$baseformula <- checked$new_formula
+                                 keep <- checked[warning == FALSE, which = TRUE]
+                                 db.cpds <- db.cpds[keep]
+                                 # --- get descriptions from hmdb!!! ---
+                                 hmdb.loc <- file.path(options$db_dir, "hmdb.full.db")
+                                 conn.hmdb <- dbConnect(RSQLite::SQLite(), hmdb.loc)
+                                 dbWriteTable(conn.hmdb, "smpdb", db.cpds, overwrite=TRUE)
+                                 db.formatted <- dbGetQuery(conn.hmdb, "SELECT DISTINCT  
+                                                                        s.compoundname,
+                                                                        b.description,
+                                                                        s.baseformula, 
+                                                                        s.charge as charge,
+                                                                        s.identifier as identifier, 
+                                                                        s.pathway 
+                                                                        FROM smpdb s
+                                                                        LEFT JOIN base b
+                                                                        ON b.identifier = s.widentifier")
+                                 dbRemoveTable(conn.hmdb, "smpdb")
+                                 dbDisconnect(conn.hmdb)
+                                 # --- create ---
+                                 dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
+                                 dbWriteTable(conn, "pathways", db.pathways, overwrite=TRUE)
+                               },
                                kegg = function(dbname){
                                  # ---------------
                                  batches <- split(0:2000, ceiling(seq_along(0:2000)/100))
@@ -405,7 +452,6 @@ build.base.db <- function(dbname=NA,
                                    if("description" %not in% colnames(first.row)){print("NOPE!"); file.remove(file); return(NULL)}
                                    read.csv.sql(file, sep="\t", sql = c(fn$paste("insert into base select compoundname, description, baseformula, identifier, charge from file")), dbname = db)
                                  })
-                                 dbDisconnect(conn)
                                  print("Done!")
                                  # --- cleanup --- downloading takes forever, would not recommend unless compressing... ---
                                  # remove.residuals <- readline("Done! Remove downloaded SDF / XLS files? (yes/no): ")
@@ -413,6 +459,7 @@ build.base.db <- function(dbname=NA,
                                })
   # --- execute ;) ---
   function.of.choice(dbname)
+  dbDisconnect(conn)
 }
 
 #' @export
@@ -461,6 +508,9 @@ build.extended.db <- function(dbname,
     dbExecute(full.conn, fn$paste("ATTACH '$base.db' AS tmp"))
     dbExecute(full.conn, fn$paste("CREATE TABLE IF NOT EXISTS done(baseformula text, basecharge text)"))
     dbExecute(full.conn, fn$paste("CREATE TABLE IF NOT EXISTS base AS SELECT * FROM tmp.base"))
+    if(dbExistsTable(base.conn, "pathways")){
+      dbExecute(full.conn, fn$paste("CREATE TABLE IF NOT EXISTS pathways AS SELECT * FROM tmp.pathways"))
+    }
     print("Indexing base...")
     dbExecute(full.conn, "CREATE INDEX IF NOT EXISTS b_idx1 on base(baseformula, charge)")
     # ----------------------
