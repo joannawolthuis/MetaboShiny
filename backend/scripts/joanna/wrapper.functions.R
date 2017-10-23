@@ -1,6 +1,6 @@
 #' @export
 get.csv <- function(patdb, 
-                    time.series = F, 
+                    time.series = T, 
                     exp.condition = "diet",
                     max.vals = -1,
                     group_adducts = F,
@@ -34,12 +34,12 @@ get.csv <- function(patdb,
                     group_by)
   }else{
     dbGetQuery(conn, strwrap(fn$paste("select distinct i.filename, d.animal_internal_id, s.[$exp.condition] as label, d.sampling_date, i.mz as identifier, sum(i.intensity) as intensity
-                      from avg_intensities i
-                      join individual_data d
-                      on i.filename = d.card_id
-                      join setup s
-                      on d.[group] = s.[group]
-                      group by d.animal_internal_id, d.sampling_date, i.mz"), 
+                                      from avg_intensities i
+                                      join individual_data d
+                                      on i.filename = d.card_id
+                                      join setup s
+                                      on d.[group] = s.[group]
+                                      group by d.animal_internal_id, d.sampling_date, i.mz"), 
             width=10000, 
             simplify=TRUE)
             )
@@ -48,16 +48,18 @@ get.csv <- function(patdb,
   z.dt <- as.data.table(z)
   # --- cast to right format ---
   cast.dt <- dcast.data.table(z.dt, animal_internal_id + sampling_date + label ~ identifier, fun.aggregate = sum, value.var = "intensity") # what to do w/ duplicates? 
-  print(cast.dt)
   max.vals.final <- if(max.vals == -1) ncol(cast.dt) else max.vals + 3
   small.set <- cast.dt[,1:(max.vals.final)]
   # --- name for metaboanalyst ---
   names(small.set)[1:3] <- c("Sample", "Time", "Label")
   # --- make time series if necessary (this factorizes sampling date) ---
-  small.set <- if(!time.series) small.set[,-"Time", with=F] else small.set
   if(time.series){
-    small.set$Time <- as.numeric(as.factor(as.Date(small.set$Time)))
+      small.set$Time <- as.numeric(as.factor(as.Date(small.set$Time)))
+      small.set$Sample <- paste(small.set$Sample, as.character(small.set$Time), sep="_T")
+  } else{
+    small.set[,-"Time", with=F]
   }
+  
   # --- measure file size ---
   size <- object.size(small.set)
   cat("Resulting file will be approximately ")

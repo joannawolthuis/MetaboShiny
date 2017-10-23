@@ -40,10 +40,10 @@ performMB<-function(topPerc = 10, dir="."){
          }
          k = k + len;
     }
-
     # the size matrix specify the number of replicates in each exp. condition
     size <- matrix(exp.len, byrow=TRUE, nrow=ncol(dataSet$norm), ncol=length(levels(exp.fac)));
     exp.grp <- as.character(exp.fac);
+    exp.fac
     rep.grp <- as.character(sbj);
     if(dataSet$design == "time0"){ # time series only
         time.len <- length(levels(time.fac));
@@ -62,6 +62,7 @@ performMB<-function(topPerc = 10, dir="."){
         analSet$MB <- NULL;
         return(0);
     }
+    dir = options$work_dir
     write.csv(signif(MB.stats, 5), file=file.path(dir, "meba_sig_features.csv"));
     analSet$MB <-list(stats=MB.stats);
     analSet <<- analSet;
@@ -258,7 +259,6 @@ mb.MANOVA <- function (object, times, D, size, nu = NULL, Lambda = NULL, beta.d 
             matrix(M1[, x], ncol = times)), 10)))
         MB <- MB1 + MB2 + MB3 + MB4
     }
-
     names(MB) <- rownames(object);
     MB <- round(sort(MB, decreasing = TRUE),5);
     MB <- as.matrix(MB, ncol=1);

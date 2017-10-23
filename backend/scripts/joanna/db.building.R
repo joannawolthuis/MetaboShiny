@@ -238,6 +238,10 @@ build.base.db <- function(dbname=NA,
                                                         OPTIONAL {?pathway wp:ontologyTag ?ontology .}
                                                         } ')
                                  db.pathways <- sparql.pathways$results
+                                 db.formatted$identifier <- gsub(db.formatted$identifier, pattern = "<|>", replacement = "")
+                                 db.formatted$pathway <- gsub(db.formatted$pathway, pattern = "<|_.*", replacement = "")
+                                 db.pathways$identifier <- gsub(db.pathways$identifier, pattern = "<|>", replacement = "")
+                                 # ---------------------------------
                                  dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
                                  dbWriteTable(conn, "pathways", db.pathways, overwrite=TRUE)
                                  dbRemoveTable(conn.chebi, "wikipathways")
@@ -640,9 +644,7 @@ build.extended.db <- function(dbname,
     done.table <- unique(total.table[,c("baseformula", "basecharge")])
     # --- filter on m/z ===
     dbWriteTable(full.conn, "extended", total.table, append=T)
-    print("here...")
     dbWriteTable(full.conn, "done", done.table, append=T)
-    print("here2...")
   }
   dbClearResult(results)
   # --- indexy ---
@@ -685,10 +687,8 @@ build.pat.db <- function(db.name,
                         id="mzmed.pgrp", 
                         variable="filename",
                         value="intensity")
-  print("here")
   filenames <- gsub(x=as.character(mzintensities$filename), "", pattern="-\\d*$", perl=T)
   replicates <- gsub(x=as.character(mzintensities$filename), "", pattern=".*-(?=\\d*$)", perl=T)
-  print("here")
   # ------------------------
   mzintensities$filename <- filenames
   mzintensities$replicate <- replicates
@@ -696,8 +696,6 @@ build.pat.db <- function(db.name,
   if(overwrite==TRUE & file.exists(db.name)) file.remove(db.name)
   # --- reconnect / remake ---
   conn <- dbConnect(RSQLite::SQLite(), db.name)
-  print(unique(mzintensities$filename))
-  print(unique(mzintensities$replicate))
   # ------------------------
   sql.make.int <- strwrap("CREATE TABLE mzintensities(
                           ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -750,7 +748,6 @@ load.excel <- function(path.to.xlsx,
   # -------------------------------
   tab.store <- pblapply(tabs.to.read, FUN=function(tab.name){
     tab <- as.data.table(read.xlsx(path.to.xlsx, sheetName = tab.name))
-    print(tab)
     # --- reformat colnames ---
     split.cols <- strsplit(colnames(tab), split = "\\.\\.")
     reformat.cols <- lapply(split.cols, FUN=function(col.split){
@@ -764,7 +761,6 @@ load.excel <- function(path.to.xlsx,
                  column = as.character(col.type), 
                  unit = as.character(col.unit))})
     unit.table <- rbindlist(reformat.cols)
-    print(head(tab))
     colnames(tab) <- unit.table$column
     # --- return both ---
     result <- list(units = unit.table, data = tab)
@@ -786,7 +782,6 @@ load.excel <- function(path.to.xlsx,
   #individual.data$sampling_date <- as.numeric(as.factor(as.Date(individual.data$sampling_date, format = "%d-%m-%y")))
   pen.data <- data.store[[4]]
   admin <- data.store[[5]]
-  print(individual.data)
   # --- import to patient sql file ---
   #dbWriteTable(conn, "general", general, overwrite=TRUE) # insert into BUGGED FIX LATER
   dbWriteTable(conn, "setup", setup, overwrite=TRUE) # insert into
@@ -801,54 +796,3 @@ load.excel <- function(path.to.xlsx,
   # --- disconnect ---
   dbDisconnect(conn)
 }
-
-# ------- TESTING WIKIPATH --------
-# http://www.wikipathways.org/index.php/Help:WikiPathways_Metabolomics
-# http://sparql.wikipathways.org/
-# ------------------------------
-# PREFIX wdt: <http://www.wikidata.org/prop/direct/>
-#
-#   SELECT DISTINCT ?metabolite WHERE {
-#     ?metabolite a wp:Metabolite .
-#   }
-#
-# query directly?
-
-# WORKS!!! DONT TOUCH, JUST COPY AND ALTER
-# prefix wp:      <http://vocabularies.wikipathways.org/wp#>
-# prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
-# prefix dcterms: <http://purl.org/dc/terms/>
-#   prefix xsd:     <http://www.w3.org/2001/XMLSchema#>
-# PREFIX wdt: <http://www.wikidata.org/prop/direct/>
-#   
-#   
-#   select distinct ?mb str(?labelLit) as ?label ?pwTitle
-# where {
-#   ?mb a wp:Metabolite ;
-#   rdfs:label ?labelLit ;
-#   wp:bdbWikidata ?wikidata ;
-#   dcterms:isPartOf ?pathway .
-#   ?pathway a wp:Pathway ;
-#   dc:title ?pwTitle .
-# }
-
-# VARIANT THAT TIMES OUT WITH INCHIKEY
-# prefix wp:      <http://vocabularies.wikipathways.org/wp#>
-# prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
-# prefix dcterms: <http://purl.org/dc/terms/>
-#   prefix xsd:     <http://www.w3.org/2001/XMLSchema#>
-# PREFIX wdt: <http://www.wikidata.org/prop/direct/>
-#   
-#   
-#   select distinct ?mb str(?labelLit) as ?label ?pwTitle ?inchikey
-# where {
-#   ?mb a wp:Metabolite ;
-#   rdfs:label ?labelLit ;
-#   wp:bdbWikidata ?wikidata ;
-#   dcterms:isPartOf ?pathway .
-#   ?pathway a wp:Pathway ;
-#   dc:title ?pwTitle .
-#   SERVICE <https://query.wikidata.org/sparql> {
-#     ?wikidata wdt:P235 ?inchikey .
-#   }
-# }

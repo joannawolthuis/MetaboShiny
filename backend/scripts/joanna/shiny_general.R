@@ -14,22 +14,21 @@ getProfile <-function (varName, title=varName, mode="stat") {
   varInx <- colnames(dataSet$norm) == varName;
   var <- as.data.table(dataSet$norm, keep.rownames = T)[,varInx, with=FALSE];
   samp.names <- rownames(dataSet$norm)
-  exp.fac <<- dataSet$filt.cls
   # ---------------
-  if(mainmode == "time"){
+  if(dataSet$design.type == "time"){
     time.fac <<- dataSet$time.fac;
     translator <- data.table(
       index = 1:length(samp.names),
-      Sample = gsub(x = samp.names, pattern = "T\\d$", replacement=""),
-      Group = exp.fac,
+      Sample = gsub(x = samp.names, pattern = "_T\\d$", replacement=""),
+      Group = dataSet$facB,
       Time = time.fac,
       Abundance = dataSet$norm[,varInx]
     )
-  }else if(mainmode == "stat"){
+  }else if(dataSet$design.type == "stat"){
     translator <- data.table(
       index = 1:length(samp.names),
       Sample = gsub(x = samp.names, pattern = "T\\d$", replacement=""),
-      Group = exp.fac,
+      Group = dataSet$filt.cls,
       Abundance = dataSet$norm[,varInx]
     )
   }

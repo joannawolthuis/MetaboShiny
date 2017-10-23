@@ -13,8 +13,8 @@
 SanityCheckData<-function(){
 
     msg = NULL;
-    cls <- dataSet$orig.cls;
     dataSet$small.smpl.size <- 0;
+
     # check class info
     if(dataSet$cls.type == "disc"){
         if(substring(dataSet$format,4,5)=="ts"){

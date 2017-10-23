@@ -33,22 +33,22 @@ get_matches <- function(cpd = NA,
    # change this to proper var later
   # 0. Attach db
   if(!is.null(searchid)){
-    print(searchid)
-    print(search)
     conn <- dbConnect(RSQLite::SQLite(), chosen.db)
+    cpd <- gsub(cpd, pattern = "http\\/\\/", replacement = "http:\\/\\/")
     query <- if(searchid == "pathway"){
-      "SELECT DISTINCT *
-      FROM pathways
-      WHERE identifier = '$cpd'"
+        fn$paste(strwrap("SELECT DISTINCT name as Name
+                        FROM pathways
+                         WHERE identifier = '$cpd'"
+                         , width=10000, simplify=TRUE))
     }else{
       fn$paste(strwrap(
-        "SELECT DISTINCT compoundname as Compound, baseformula as 'Mol. Formula', identifier as Identifier, description as Description 
+        "SELECT DISTINCT compoundname as Name, baseformula as 'Mol. Formula', identifier as Identifier, description as Description 
         FROM base indexed by b_idx1
         WHERE $searchid = '$cpd'"
         , width=10000, simplify=TRUE))
     }
-    print(query)
-    dbGetQuery(conn, query)
+    res <- dbGetQuery(conn, query)
+    return(res)
   }else{
     conn <- dbConnect(RSQLite::SQLite(), patdb)
     query.zero <- fn$paste("ATTACH '$chosen.db' AS db")

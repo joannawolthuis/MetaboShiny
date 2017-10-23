@@ -73,7 +73,7 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
         AddErrMsg("Missing values should be blank or NA without quote.");
         return(0);
     }
-  print(format)
+
     msg <- NULL;
 
     if(substring(format,4,5)=="ts"){
@@ -112,7 +112,6 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
             }
         }
     }else{
-      print("Should be hereeee!!!")
         if(substring(format,1,3)=="row"){ # sample in row
             msg<-c(msg, "Samples are in rows and features in columns");
             smpl.nms <-dat[,1];
@@ -137,8 +136,6 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
         }
     }
     
-    print(cls.lbl)
-
     # free memory
     dat <- NULL;
 
@@ -180,6 +177,7 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
 
     # try to remove check & remove empty line if sample name is empty
     empty.inx <- is.na(smpl.nms) | smpl.nms == "";
+    
     if(sum(empty.inx) > 0){
         msg<-c(msg,paste("<font color=\"red\">", sum(empty.inx), "empty samples</font> were detected and excluded from your data."));
         smpl.nms <- smpl.nms[!empty.inx];
@@ -230,10 +228,11 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
     var.nms <- gsub("[^[:alnum:][:space:],'./_-]", "", var.nms); # allow space, comma and period
     cls.lbl <- ClearStrings(as.vector(cls.lbl));
 
-    # now assgin the dimension names
+    # now assign the dimension names
+    
     rownames(conc) <- smpl.nms;
     colnames(conc) <- var.nms;
-
+  
     # check if paired or not
     if(dataSet$paired){
         # save as it is and process in sanity check step
@@ -254,11 +253,13 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
                 dataSet$orig.facB <-dataSet$facB <- as.factor(as.character(facB));
                 dataSet$facB.lbl <- facB.lbl;
             }
+            dataSet$orig.cls <- cls.lbl
+            
         }else{ # continuous
             dataSet$orig.cls <- dataSet$cls <- as.numeric(cls.lbl);
         }
     }
-
+    print(dataSet$orig.cls)
     # for the current being to support MSEA and MetPA
     if(dataSet$type == "conc"){
         dataSet$cmpd <- var.nms;
@@ -319,7 +320,7 @@ Read.PeakList<-function(foldername){
     # check for unique sample names
     if(length(unique(snames))!=length(snames)){
         AddErrMsg("Duplcate sample names are not allowed!");
-        dup.nm <- paste(snames[duplicated(snames)], collapse=" ");;
+        dup.nm <- paste(snames[duplicated(snames)], collapse=" ");
         AddErrMsg("Duplicate sample names are not allowed!");
         AddErrMsg(dup.nm);
         return(0);

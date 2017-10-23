@@ -227,10 +227,9 @@ GetMaxAnova2Inx <- function(){
 iPCA.Anal<-function(fileNm){
     pca<-prcomp(dataSet$norm, center=T, scale=F);
     imp.pca<-summary(pca)$importance;
-
     pca3d <- list();
-    pca3d$score$axis <- paste("PC", 1:3, " (", 100*round(imp.pca[2,][1:3], 3), "%)", sep="");
-    coords <- data.frame(t(signif(pca$x[,1:3], 5)));
+    pca3d$score$axis <- paste("PC", 1:ncol(imp.pca), " (", 100*round(imp.pca[2,], 3), "%)", sep="");
+    coords <- data.frame(t(signif(pca$x, 5)));
     colnames(coords) <- NULL; 
     pca3d$score$xyz <- coords;
     pca3d$score$name <- rownames(dataSet$norm);
@@ -244,24 +243,26 @@ iPCA.Anal<-function(fileNm){
         facB <- paste("Group", facB);
     }
     pca3d$score$facB <- facB;
-
-    pca3d$loadings$axis <- paste("Loadings", 1:3);
-    coords <- data.frame(t(signif(pca$rotation[,1:3], 5)));
+    pca3d$loadings$axis <- paste("Loadings", 1:ncol(imp.pca));
+    coords <- data.frame(t(signif(pca$rotation, 5)));
     colnames(coords) <- NULL; 
     pca3d$loadings$xyz <- coords;
     pca3d$loadings$name <- colnames(dataSet$norm);
-
     # now set color for each group
     cols <- unique(GetColorSchema());
     rgbcols <- col2rgb(cols);
     cols <- apply(rgbcols, 2, function(x){paste("rgb(", paste(x, collapse=","), ")", sep="")});
     pca3d$score$colors <- cols;
-
-    require(RJSONIO);
-    json.obj <- toJSON(pca3d, .na='null');
-    sink(fileNm);
-    cat(json.obj);
-    sink();
+    
+    # ------------------------
+    
+    analSet$ipca <<- pca3d
+    
+    # require(RJSONIO);
+    # json.obj <- toJSON(pca3d, .na='null');
+    # sink(fileNm);
+    # cat(json.obj);
+    # sink();
 }
 
 #	Plot Venn diagram

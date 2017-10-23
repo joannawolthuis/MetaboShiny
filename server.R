@@ -11,6 +11,7 @@ db_search_list <- c()
 color.function <- rainbow
 patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
 mainmode <<- "stat"
+shinyOptions(progress.style="old")
 
 packages <<- c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
                "plotly", "parallel", "shinyFiles", "curl", "httr", "pbapply", 
@@ -75,21 +76,25 @@ time.anal.ui <- reactive({
              tabPanel("iPCA", value = "ipca", 
                       plotlyOutput("plot_ipca",width="100%"),
                       selectInput("ipca_factor", label = "Color based on:", choices =list("Time"="facA",
-                                                                                          "Experimental group"="facB"),width="100%")
+                                                                                          "Experimental group"="facB"),width="100%"),
+                      fluidRow(column(3,
+                                      selectInput("ipca_x", label = "X axis:", choices = paste0("PC",1:90),selected = "PC1",width="100%"),
+                                      selectInput("ipca_y", label = "Y axis:", choices = paste0("PC",1:90),selected = "PC2",width="100%"),
+                                      selectInput("ipca_z", label = "Z axis:", choices = paste0("PC",1:90),selected = "PC3",width="100%")
+                      ), 
+                      column(9, 
+                             div(DT::dataTableOutput('ipca_tab',width="100%"),style='font-size:80%')
+                      ))
              ),
              # =================================================================================
              tabPanel("MEBA", value="meba", 
-                      fluidRow(plotlyOutput('meba_plot'),width="100%"),
+                      fluidRow(plotlyOutput('meba_specific_plot'),width="100%"),
                       fluidRow(div(DT::dataTableOutput('meba_tab', width="100%"),style='font-size:80%'))
                       ),
              # =================================================================================
              tabPanel("ASCA", value="asca",
-                      navbarPage("Explore", 
-                                 tabPanel("Plots", icon=icon("bar-chart-o"),
-                                          fluidRow(plotlyOutput('asca_plot', width="100%")),
-                                          fluidRow(div(DT::dataTableOutput('asca_tab',width="100%"),style='font-size:80%'))
-                                 )
-                      )
+                      fluidRow(plotlyOutput('asca_specific_plot', width="100%")),
+                      fluidRow(div(DT::dataTableOutput('asca_tab',width="100%"),style='font-size:80%'))
              )
              # =================================================================================
   )
@@ -175,7 +180,6 @@ stat.anal.ui <- reactive({
 
   
 observe({
-  curr_mode <<- mainmode
   if(exists("dataSet")){
     if("shinymode" %in% names(dataSet)) curr_mode <<- dataSet$shinymode
   } 
@@ -209,7 +213,6 @@ addUI <- reactive({
                                sardine(fadeImageButton("add_noise", img.path = "umcnoise.png")),
                                sardine(fadeImageButton("add_hmdb", img.path = "hmdblogo.png")),
                                sardine(fadeImageButton("add_chebi", img.path = "chebilogo.png")),
-                               br(),
                                sardine(fadeImageButton("add_smpdb", img.path = "smpdb_logo_adj.png")),
                                sardine(fadeImageButton("add_wikipathways", img.path = "wikipathways.png")),
                                sardine(fadeImageButton("add_kegg", img.path = "kegglogo.gif", value = T))
@@ -220,9 +223,7 @@ addUI <- reactive({
                                                    "Database ID" = "identifier", 
                                                    "Compound name" = "compoundname",
                                                    "Molecular formula" = "baseformula",
-                                                   "Mass/charge" = "mz"),selected = 3,width="100%"),
-                             tags$i("Pathway ID is only available when ONLY KEGG and/or WikiPathways are selected.")
-                             ), 
+                                                   "Mass/charge" = "mz"),selected = 3,width="100%")                             ), 
              bsCollapsePanel(h3("Adducts"), "",style = "danger",
                              fluidRow(column(width=6, h2("+")), column(width=6,h2("-"))),
                              fluidRow(column(width=6,div(DT::dataTableOutput('pos_add_tab',width="100%"),style='font-size:80%')),
@@ -480,11 +481,7 @@ observe({
     }
 })
 
-
-
-
 # ======================== DB CHECK ============================
-
 
 # --- check for db files ---
 
@@ -508,7 +505,7 @@ lapply(db_list, FUN=function(db){
 lapply(db_list, FUN=function(db){
   observeEvent(input[[paste0("build_", db)]], {
     # ---------------------------
-    withProgress(style="old", {
+    withProgress({
       #setProgress(message = "Working...")
       build.base.db(db, outfolder=options$db_dir)
       setProgress(0.5)
@@ -604,7 +601,6 @@ observeEvent(input$create_csv, {
   req(options$work_dir)
   req(mainmode)
   req(submode)
-  req(input$your.time)
   # ---------
   withProgress({
     setProgress(1/4)
@@ -774,11 +770,16 @@ observeEvent(input$initialize,{
                 transNorm = input$trans_type,
                 scaleNorm = input$scale_type,
                 ref = input$ref_var)
+  if("grouping" %in% names(dataSet)){
+    dataSet$grouping <<- input$group_by
+    if(dataSet$grouping == "pathway"){dataSet$norm <- abs(dataSet$norm)}
+  }
   setProgress(.3)
   output$var_norm_plot <- renderPlot(PlotNormSummary())
   setProgress(.4)
   output$samp_norm_plot <- renderPlot(PlotSampleNormSummary())
-  dataSet$shinymode <<- mainmode
+  dataSet$adducts <<- selected_adduct_list
+  # --- ABS-ify if grouped by pathway --- (use glmnet ish thing later?) ---
 })
 })
 
@@ -791,45 +792,62 @@ observeEvent(input$nav_time, {
            output$plot_ipca <- renderPlotly({
              if("ipca" %not in% names(analSet)){
                iPCA.Anal(file.path(options$work_dir, "ipca_3d_0_.json"))
-               analSet[["ipca"]] <- "Done!"             
              }
-             json_pca <- fromJSON(file.path(options$work_dir, "ipca_3d_0_.json"))
-             fac.lvls <- unique(json_pca$score[[input$ipca_factor]])
+             fac.lvls <- unique(analSet$ipca$score[[input$ipca_factor]])
              chosen.colors <- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
              # ---------------
-             df <- t(as.data.frame(json_pca$score$xyz))
+             df <- t(as.data.frame(analSet$ipca$score$xyz))
+             x <- gsub(input$ipca_x,pattern = "\\(.*$", replacement = "")
+             y <- gsub(input$ipca_y,pattern = "\\(.*$", replacement = "")
+             z <- gsub(input$ipca_z,pattern = "\\(.*$", replacement = "")
+             x.num <- as.numeric(gsub(x, pattern = "PC", replacement = ""))
+             y.num <- as.numeric(gsub(y, pattern = "PC", replacement = ""))
+             z.num <- as.numeric(gsub(z, pattern = "PC", replacement = ""))
              # --- render! ---
              plot_ly(hoverinfo = 'text',
-                     text = json_pca$score$name ) %>%
+                     text = analSet$ipca$score$name ) %>%
                add_trace(
                  x = df[,1], 
                  y = df[,2], 
                  z = df[,3], 
                  type = "scatter3d",
-                 color= json_pca$score[[input$ipca_factor]], colors=chosen.colors
+                 color= analSet$ipca$score[[input$ipca_factor]], colors=chosen.colors
                ) %>%  layout(scene = list(
                  xaxis = list(
-                   title = json_pca$score$axis[1]),
+                   title = analSet$ipca$score$axis[x.num]),
                  yaxis = list(
-                   title = json_pca$score$axis[2]),
+                   title = analSet$ipca$score$axis[y.num]),
                  zaxis = list(
-                   title = json_pca$score$axis[3])))
+                   title = analSet$ipca$score$axis[z.num])))
            })
+          
            # but perform first...
            updateSelectInput(session, "ipca_factor",
                              choices = grep(names(json_pca$score), pattern = "^fac[A-Z]", value = T))
+           # ------------------
+           
+           ipca.table <- as.data.table(data.table(gsub(analSet$ipca$score$axis, pattern = "\\(.*$| ", replacement = ""),
+                                                 gsub(analSet$ipca$score$axis, pattern = "PC\\d*| |\\(|%\\)", replacement = "")),
+                                      keep.rownames = T)
+           colnames(pca.table) <- c("Principal Component", "% variance")
+           output$ipca_tab <- DT::renderDataTable({
+             req(ipca.table)
+             # -------------
+             datatable(ipca.table, 
+                       selection = 'single',
+                       autoHideNavigation = T,
+                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+           })
          },
          meba = {
            if("MB" %not in% names(analSet)){
             performMB(10, dir=options$work_dir)
            }
-           #tables$meba_tab <- read.csv(file.path(options$work_dir, 'meba_sig_features.csv'))
            output$meba_tab <- DT::renderDataTable({
-             req(tables$meba_tab)
              # -------------
-             datatable(analSet$mb$sig.mat, 
+             datatable(analSet$MB$stats, 
                        selection = 'single',
-                       colnames = c("Mass/charge", "Hotelling/T2 score"),
+                       colnames = c("Compound", "Hotelling/T2 score"),
                        autoHideNavigation = T,
                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
            })
@@ -837,18 +855,17 @@ observeEvent(input$nav_time, {
          asca = {
            if("asca" %not in% names(analSet)){
              Perform.ASCA(1, 1, 2, 2)
-              CalculateImpVarCutoff(0.05, 0.9, dir=options$work_dir)
-            }
-           #tables$asca_tab <- read.csv(file.path(options$work_dir,'Sig_features_Model_ab.csv'))
+             CalculateImpVarCutoff(0.05, 0.9, dir=options$work_dir)
+           }
            output$asca_tab <- DT::renderDataTable({
-             req(tables$asca_tab)
              # -------------
-             datatable(analSet$asca$sig.mat, 
+             datatable(analSet$asca$sig.list$Model.ab, 
                        selection = 'single',
-                       colnames = c("Mass/charge", "Leverage", "SPE"),
+                       colnames = c("Compound", "Leverage", "SPE"),
                        autoHideNavigation = T,
                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
            })
+
          })
   })
 
@@ -1074,12 +1091,6 @@ observe({
   print(add_search_list)
 })  
 
-res.update.tables <<- c("tt", 
-                      "fc", 
-                      "asca", 
-                      "meba",
-                      "plsda_vip")
-
 observe({
     # --------------
     wanted.adducts.pos <- pos_adducts[input$pos_add_tab_rows_selected, "Name"]
@@ -1088,6 +1099,12 @@ observe({
     selected_adduct_list <<- rbind(wanted.adducts.neg, 
                                wanted.adducts.pos)$Name
   })
+
+res.update.tables <<- c("tt", 
+                        "fc", 
+                        "asca", 
+                        "meba",
+                        "plsda_vip")
 
 lapply(res.update.tables, FUN=function(table){
   observeEvent(input[[paste0(table, "_tab_rows_selected")]], {
@@ -1098,22 +1115,26 @@ lapply(res.update.tables, FUN=function(table){
     curr_cpd <<- data.table(switch(table,
                                      tt = analSet$tt$sig.mat,
                                      fc = analSet$fc$sig.mat,
-                                     asca = analSet$asca$sig.mat,
-                                     meba = analSet$mb$sig.mat,
+                                     asca = analSet$asca$sig.list$Model.ab,
+                                     meba = analSet$MB$stats,
                                      plsda_vip = plsda_tab)
                               , keep.rownames = T)[curr_row, rn]
     output$curr_cpd <- renderText(curr_cpd)
     output[[paste0(table, "_specific_plot")]] <- renderPlotly({
       # --- ggplot ---
-      ggplotSummary(curr_cpd, cols = color.vec())
+      if(table == 'meba'){
+        ggplotMeba(curr_cpd, draw.average, cols = color.vec())
+      }else{
+        ggplotSummary(curr_cpd, cols = color.vec())
+      }
     })
     if(input$autosearch & length(db_search_list > 0)){
       match_list <- lapply(db_search_list, FUN=function(match.table){
-        get_matches(curr_cpd, match.table, searchid=input$group_by)
+        get_matches(curr_cpd, match.table, searchid=dataSet$grouping)
       })
-      match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
+      match_table <<- unique(as.data.table(rbindlist(match_list))[Name != ""])
       output$match_tab <- DT::renderDataTable({
-        datatable(match_table[,-"Description"],
+        datatable(if(dataSet$grouping == 'pathway') match_table else{match_table[,-"Description"]},
                   selection = 'single',
                   autoHideNavigation = T,
                   options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -1161,9 +1182,9 @@ observe({
     match_list <- lapply(db_search_list, FUN=function(match.table){
       get_matches(curr_cpd, match.table, searchid=input$group_by)
     })
-    match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
+    match_table <<- unique(as.data.table(rbindlist(match_list))[Name != ""])
     output$match_tab <- DT::renderDataTable({
-      datatable(match_table[,-"Description"],
+      datatable(if(dataSet$grouping == 'pathway') match_table else{match_table[,-"Description"]},
                 selection = 'single',
                 autoHideNavigation = T,
                 options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -1189,9 +1210,9 @@ observeEvent(input$search_cpd, {
     match_list <- lapply(db_search_list, FUN=function(match.table){
       get_matches(curr_cpd, match.table, searchid=input$group_by)
     })
-    match_table <<- unique(as.data.table(rbindlist(match_list))[Compound != ""])
+    match_table <<- unique(as.data.table(rbindlist(match_list))[Name != ""])
     output$match_tab <- DT::renderDataTable({
-      datatable(match_table[,-"Description"],
+      datatable(if(dataSet$grouping == 'pathway') match_table else{match_table[,-"Description"]},
                 selection = 'single',
                 autoHideNavigation = T,
                 options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -1204,7 +1225,7 @@ observeEvent(input$match_tab_rows_selected,{
   curr_row <<- input$match_tab_rows_selected
   if (is.null(curr_row)) return()
   # -----------------------------
-  curr_def <<- match_table[curr_row,'Description']
+  curr_def <<- if(dataSet$grouping == 'pathway') "Unavailable" else(match_table[curr_row,'Description'])
   output$curr_definition <- renderText(curr_def$Description)
   })
 
@@ -1257,8 +1278,8 @@ observeEvent(input$hits_tab_rows_selected,{
   if (is.null(curr_row)) return()
   # -----------------------------
   curr_cpd <<- hits_table[curr_row, mzmed.pgrp]
-  output$meba_plot <- renderPlotly({ggplotMeba(curr_cpd, draw.average, cols = color.vec())})
-  output$asca_plot <- renderPlotly({ggplotSummary(curr_cpd, cols = color.vec())})
+  output$meba_specific_plot <- renderPlotly({ggplotMeba(curr_cpd, draw.average, cols = color.vec())})
+  output$asca_specific_plot <- renderPlotly({ggplotSummary(curr_cpd, cols = color.vec())})
   output$fc_specific_plot <- renderPlotly({ggplotSummary(curr_cpd, cols = color.vec())})
   output$tt_specific_plot <- renderPlotly({ggplotSummary(curr_cpd, cols = color.vec())})
   output$plsda_specific_plot <- renderPlotly({ggplotSummary(curr_cpd, cols = color.vec())})

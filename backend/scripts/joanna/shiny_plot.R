@@ -1,8 +1,7 @@
 #' @export
-ggplotMeba <- function(mz, draw.average, cols=c("Red", "Green")){
+ggplotMeba <- function(cpd, draw.average=T, cols=c("Red", "Green")){
   cols <- if(is.null(cols)) c("Red", "Green") else(cols)
-  print(cols)
-  profile <- getProfile(mz, mode="time")
+  profile <- getProfile(cpd, mode="time")
   plot <- if(draw.average){
     ggplot(data=profile) +
       geom_line(size=0.3, aes(x=Time, y=Abundance, group=Sample, color=Group, text=Sample), alpha=0.4) +
@@ -22,12 +21,11 @@ ggplotMeba <- function(mz, draw.average, cols=c("Red", "Green")){
 }
 
 #' @export
-ggplotSummary <- function(mz = curr_mz, cols=c("Red", "Green")){
+ggplotSummary <- function(cpd = curr_cpd, cols=c("Red", "Green")){
   cols <- if(is.null(cols)) c("Red", "Green") else(cols)
-  print(cols)
   if(substring(dataSet$format,4,5)!="ts"){
     # --- ggplot ---
-    profile <- getProfile(mz, mode="stat")
+    profile <- getProfile(cpd, mode="stat")
     # -----------
     # ggplot
     plot <- ggplot(data=profile, aes(x=Group,y=Abundance, fill=Group, color=Group)) +
@@ -40,7 +38,7 @@ ggplotSummary <- function(mz = curr_mz, cols=c("Red", "Green")){
     ggplotly(plot, tooltip="Sample")
     #
   }else if(dataSet$design.type =="time"){ # time trend within phenotype
-    profile <- getProfile(mz, mode="time")
+    profile <- getProfile(cpd, mode="time")
     # -----------
     print(profile)
     # ggplot
@@ -58,25 +56,25 @@ ggplotSummary <- function(mz = curr_mz, cols=c("Red", "Green")){
 
 ggPlotTT <- function(cf, n){
   profile <- as.data.table(analSet$tt$p.log[analSet$tt$inx.imp],keep.rownames = T)
-  colnames(profile) <- c("mz", "p")
+  colnames(profile) <- c("cpd", "p")
   profile$Peak <- c(1:nrow(profile)) 
   # ---------------------------
   plot <- ggplot(data=profile) +
-    geom_point(aes(x=Peak, y=p,text=mz, color=p, key=mz)) +
+    geom_point(aes(x=Peak, y=p,text=cpd, color=p, key=cpd)) +
     theme_minimal(base_size = 10) +
     scale_colour_gradientn(colours = cf(n)) +
     scale_y_log10()
-  ggplotly(plot, tooltip="mz")
+  ggplotly(plot, tooltip="cpd")
 }
 
 ggPlotFC <- function(cf, n){
   profile <- as.data.table(analSet$fc$fc.log[analSet$fc$inx.imp],keep.rownames = T)
   profile
-  colnames(profile) <- c("mz", "log2fc")
+  colnames(profile) <- c("cpd", "log2fc")
   profile$Peak <- c(1:nrow(profile)) 
   # ---------------------------
   plot <- ggplot(data=profile) +
-    geom_point(aes(x=Peak, y=log2fc, text=log2fc, color=log2fc, key=mz)) +
+    geom_point(aes(x=Peak, y=log2fc, text=log2fc, color=log2fc, key=cpd)) +
     geom_abline(aes(intercept = 0, slope = 0)) +
     theme_minimal(base_size = 10) +
     scale_colour_gradientn(colours = cf(n))
@@ -87,17 +85,17 @@ ggPlotVolc <- function(cf, n){
     vcn<-analSet$volcano;
     dt <- as.data.table(cbind(vcn$fc.log, vcn$p.log), keep.rownames=T)
     imp.inx<-(vcn$inx.up | vcn$inx.down) & vcn$inx.p;
-    colnames(dt) <- c("mz", "log2FC", "minlog10P")
+    colnames(dt) <- c("cpd", "log2FC", "minlog10P")
     plot <- ggplot() +
       #geom_point(data=dt[!imp.inx], aes(x=log2FC, y=minlog10P)) +
       geom_point(data=dt[imp.inx], aes(x=log2FC, 
                                        y=minlog10P,
-                                       text=mz,
+                                       text=cpd,
                                        color=abs(log2FC*minlog10P), 
-                                       key=mz)) +
+                                       key=cpd)) +
       theme_minimal(base_size = 10) +
       scale_colour_gradientn(colours = cf(n),guide=FALSE)
-    ggplotly(plot, tooltip="mz")
+    ggplotly(plot, tooltip="cpd")
     #abline (v = vcn$max.xthresh, lty=3);
     #abline (v = vcn$min.xthresh, lty=3);
     #abline (h = vcn$thresh.y, lty=3);
