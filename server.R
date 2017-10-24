@@ -3,7 +3,7 @@ library(shinyBS)
 
 shinyServer(function(input, output, session) {
   
-# ===== defaults =====
+# ================================= DEFAULTS ===================================
 
 tbl <<- NA
 tables <- list()
@@ -180,10 +180,13 @@ stat.anal.ui <- reactive({
 
   
 observe({
+  curr_mode <<- mainmode		
   if(exists("dataSet")){
-    if("shinymode" %in% names(dataSet)) curr_mode <<- dataSet$shinymode
+    if("shinymode" %in% names(dataSet)){
+      mainmode <<- dataSet$shinymode
+    }
   } 
-  whichUI <- switch(curr_mode,
+  whichUI <- switch(mainmode,
                     time={time.anal.ui()},
                     stat={stat.anal.ui()})
   output$analUI <- renderUI({whichUI})
@@ -191,7 +194,7 @@ observe({
 
 # -----------------
 optUI <- function(){		
-  selectInput('your.time', 'What end time do you want to pick?', choices = get_times(patdb))		
+  selectInput('your.time', 'What end time do you want to pick?', choices = get_times(patdb))
 }
 
 observeEvent(input$exp_type,{
@@ -205,38 +208,11 @@ observeEvent(input$exp_type,{
   }
 })
 
-addUI <- reactive({
-  bsCollapse(id = "adductSettings", open = "Settings",
-             bsCollapsePanel(h3("Databases"), "",style = "error",
-                             fluidRow(
-                               sardine(fadeImageButton("add_internal", img.path = "umcinternal.png")),
-                               sardine(fadeImageButton("add_noise", img.path = "umcnoise.png")),
-                               sardine(fadeImageButton("add_hmdb", img.path = "hmdblogo.png")),
-                               sardine(fadeImageButton("add_chebi", img.path = "chebilogo.png")),
-                               sardine(fadeImageButton("add_smpdb", img.path = "smpdb_logo_adj.png")),
-                               sardine(fadeImageButton("add_wikipathways", img.path = "wikipathways.png")),
-                               sardine(fadeImageButton("add_kegg", img.path = "kegglogo.gif", value = T))
-                             )),
-             bsCollapsePanel(h3("Identifier"), "",style = "info",
-                             radioButtons("group_by", "What do you want as identifier?", choices = 
-                                              list("Pathway ID" = "pathway",
-                                                   "Database ID" = "identifier", 
-                                                   "Compound name" = "compoundname",
-                                                   "Molecular formula" = "baseformula",
-                                                   "Mass/charge" = "mz"),selected = 3,width="100%")                             ), 
-             bsCollapsePanel(h3("Adducts"), "",style = "danger",
-                             fluidRow(column(width=6, h2("+")), column(width=6,h2("-"))),
-                             fluidRow(column(width=6,div(DT::dataTableOutput('pos_add_tab',width="100%"),style='font-size:80%')),
-                                      column(width=6,div(DT::dataTableOutput('neg_add_tab',width="100%"),style='font-size:80%'))
-                             )
-             )
-  )
-})
 
 output$pos_add_tab <- DT::renderDataTable({
     # -------------
     datatable(pos_adducts,
-              selection = 'multiple',
+              selection = list(mode = 'multiple', selected = c(1, 2, nrow(pos_adducts)), target = 'row'),
               options = list(pageLength = 5, dom = 'tp')
               , rownames = F)
   })
@@ -244,18 +220,11 @@ output$pos_add_tab <- DT::renderDataTable({
 output$neg_add_tab <- DT::renderDataTable({
   # -------------
   datatable(neg_adducts,
-            selection = 'multiple',
+            selection = list(mode = 'multiple', selected = c(1, 2, nrow(neg_adducts)), target = 'row'),
             options = list(pageLength = 5, dom = 'tp')
             , rownames = F)
 })
 
-observeEvent(input$adduct_grouping,{
-  print(input$adduct_grouping)
-  # ---------------------
-  if(input$adduct_grouping){
-    output$add_ui <- renderUI({addUI()})
-  } else(output$add_ui <- renderUI({br()}))
-})
 # ===== PACKAGE LOADING ====
 
 observeEvent(input$nav_general, {
@@ -554,47 +523,6 @@ observeEvent(input$import_db, {
 
 # ==================== CREATE CSV =======================
 
-observeEvent(input$import_csv, {
-  req(input$pat_csv)
-  # -----------------------------------
-  csv_loc <<- input$pat_csv$datapath
-  output$csv_upload_check <- renderImage({
-    # When input$n is 3, filename is ./images/image3.jpeg
-    filename <- normalizePath('www/yes.png')
-    # Return a list containing the filename and alt text
-    list(src = filename, width = 20,
-         height = 20)
-  }, deleteFile = FALSE)
-  tbl <<- fread(csv_loc, sep="\t", header = T)
-  # --- detect mode from csv ---
-  mainmode <<- if("Time" %not in% names(tbl)[1:5]) "stat" else "time"
-  # ----------------------------
-  overview_tab <- if(mainmode == "time"){
-    t(data.table(keep.rownames = F,
-                 Identifiers = ncol(tbl) - 3,
-                 Samples = nrow(tbl),
-                 Times = length(unique(tbl$Time)),
-                 Groups = length(unique(tbl$Label))
-    ))
-  } else{
-    t(data.table(keep.rownames = F,
-                 Identifiers = ncol(tbl) - 3,
-                 Samples = nrow(tbl),
-                 Groups = length(unique(tbl$Label))
-    )) 
-  }
-  output$csv_tab <- DT::renderDataTable({
-    datatable(overview_tab, 
-              selection = 'single',
-              autoHideNavigation = T,
-              options = list(lengthMenu = c(10, 30, 50), pageLength = 30,scrollX=TRUE, scrollY=TRUE))
-    })
-  whichUI <- switch(mainmode,
-                    time={time.anal.ui()},
-                    stat={stat.anal.ui()})
-  output$analUI <- renderUI({whichUI})
-  })
-
   
 observeEvent(input$create_csv, {
   req(options$proj_name)
@@ -608,7 +536,7 @@ observeEvent(input$create_csv, {
     tbl = get.csv(patdb,
                  time.series = if(mainmode == "time") T else F,
                  exp.condition = input$exp_var,
-                 group_adducts = input$adduct_grouping,
+                 group_adducts = T,
                  group_by = input$group_by,
                  which_dbs = add_search_list,
                  which_adducts = selected_adduct_list
@@ -621,6 +549,7 @@ observeEvent(input$create_csv, {
                     custom = { 
                       tbl.adj <<- unique(tbl[Time == input$your.time, -"Time"])
                       mainmode <<- "stat"
+                      tbl.adj$Sample <- gsub(tbl.adj$Sample,pattern = "_T.*", replacement = "")
                     },
                     subtract = { 
                       uniq.samples <- unique(tbl$Sample)
@@ -629,6 +558,7 @@ observeEvent(input$create_csv, {
                       time.begin <- tbl[Time == min(as.numeric(tbl$Time)),][,4:ncol(tbl),on=uniq.samples]
                       tbl.adj <<- cbind(table.base, 
                                       time.end - time.begin) 
+                      tbl.adj$Sample <- gsub(tbl.adj$Sample,pattern = "_T.*", replacement = "")
                       # --- change mode ---
                       mainmode <<- "stat"
                     })
@@ -770,10 +700,9 @@ observeEvent(input$initialize,{
                 transNorm = input$trans_type,
                 scaleNorm = input$scale_type,
                 ref = input$ref_var)
-  if("grouping" %in% names(dataSet)){
-    dataSet$grouping <<- input$group_by
-    if(dataSet$grouping == "pathway"){dataSet$norm <- abs(dataSet$norm)}
-  }
+  dataSet$grouping <<- input$group_by
+  dataSet$shinymode <<- mainmode
+  if(dataSet$grouping == "pathway"){dataSet$norm <- abs(dataSet$norm)}
   setProgress(.3)
   output$var_norm_plot <- renderPlot(PlotNormSummary())
   setProgress(.4)
@@ -829,7 +758,7 @@ observeEvent(input$nav_time, {
            ipca.table <- as.data.table(data.table(gsub(analSet$ipca$score$axis, pattern = "\\(.*$| ", replacement = ""),
                                                  gsub(analSet$ipca$score$axis, pattern = "PC\\d*| |\\(|%\\)", replacement = "")),
                                       keep.rownames = T)
-           colnames(pca.table) <- c("Principal Component", "% variance")
+           colnames(ipca.table) <- c("Principal Component", "% variance")
            output$ipca_tab <- DT::renderDataTable({
              req(ipca.table)
              # -------------

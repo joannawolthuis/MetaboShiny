@@ -51,8 +51,6 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
 
     dat <- .readDataTable(filePath);
 
-    print(head(dat)[,1:10])
-    
     # try to guess column numers and class labels (starts with #) from the top 20 rows
     if(class(dat) == "try-error") {
         AddErrMsg("Data format error. Failed to read in the data!");
@@ -253,8 +251,7 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
                 dataSet$orig.facB <-dataSet$facB <- as.factor(as.character(facB));
                 dataSet$facB.lbl <- facB.lbl;
             }
-            dataSet$orig.cls <- cls.lbl
-            
+
         }else{ # continuous
             dataSet$orig.cls <- dataSet$cls <- as.numeric(cls.lbl);
         }
@@ -395,7 +392,6 @@ Read.PeakList<-function(foldername){
     dataSet <<- dataSet;
     return (1);
 }
-
 
 # read LC/GC-MS spectra(.netCDF, .mzXML, mzData)
 # use functions in XCMS package

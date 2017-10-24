@@ -12,7 +12,6 @@ inTrain <- createDataPartition(y = mat$Label,
                                   p = .75,
                                 ## The percentage of data in the training set
                                  list = FALSE)
-
 training <- mat[ inTrain,]
 testing <- mat[-inTrain,]
 
@@ -37,9 +36,8 @@ model
 
 testPred <- predict(model , testing)
 
-
-data.table(known = training$Label,
-           prediction = testPred)
+View(data.table(known = training$Label,
+           prediction = testPred))
 
 # estimate variable importance
 importance <- varImp(model, scale=FALSE)
@@ -99,6 +97,3 @@ importance <- varImp(model, scale=FALSE)
 print(importance)
   
 View(get_matches("backend/db/chebi.full.db", cpd = 157.0815375867, searchid=NULL))
-
-# LEAVE ONE OUT CROSS VALIDAITION?
-                
