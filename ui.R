@@ -146,7 +146,11 @@ shinyUI(fluidPage(theme = "metaboshiny.css",
                                ),
                                # --------------------------------------------------------------------------------------------------------------------------------
                                tabPanel("", icon = icon("upload"), value="upload", ## this guy gives error???
-                                        fluidRow(column(9, align="center", h4("Create project"), br())),
+                                        fluidRow(column(9, align="center", 
+                                                        h4("Create project"), 
+                                                        br()
+                                                        )
+                                                 ),
                                         fluidRow(column(3,  align="center",
                                                         imageOutput("pos_icon",inline = T),
                                                         br(),br(),
@@ -193,42 +197,7 @@ shinyUI(fluidPage(theme = "metaboshiny.css",
                                                         )),
                                                         uiOutput("exp_opt"),
                                                         # ------------------
-                                                          tabsetPanel( id = "adductSettings", selected="db",
-                                                                       tabPanel(icon("database"), value="db",
-                                                                                br(),
-                                                                                tags$i("Select database(s)"),
-                                                                                br(),
-                                                                                fluidRow(
-                                                                                  sardine(fadeImageButton("add_internal", img.path = "umcinternal.png")),
-                                                                                  sardine(fadeImageButton("add_noise", img.path = "umcnoise.png")),
-                                                                                  sardine(fadeImageButton("add_hmdb", img.path = "hmdblogo.png")),
-                                                                                  sardine(fadeImageButton("add_chebi", img.path = "chebilogo.png")),
-                                                                                  sardine(fadeImageButton("add_smpdb", img.path = "smpdb_logo_adj.png")),
-                                                                                  sardine(fadeImageButton("add_wikipathways", img.path = "wikipathways.png")),
-                                                                                  sardine(fadeImageButton("add_kegg", img.path = "kegglogo.gif", value = T))
-                                                                                )),
-                                                                       tabPanel(icon("id-card-o"), value = "identifier",
-                                                                                br(),
-                                                                                tags$i("Select identifier"),
-                                                                                radioButtons(inputId = "group_by", label = NULL, choices = 
-                                                                                               list("Pathway ID" = "pathway",
-                                                                                                    "Database ID" = "identifier", 
-                                                                                                    "Compound name" = "compoundname",
-                                                                                                    "Molecular formula" = "baseformula",
-                                                                                                    "Mass/charge" = "mz"), 
-                                                                                             selected = "baseformula",
-                                                                                             width="100%")                             ), 
-                                                                       tabPanel(icon("plus-square"), value="adducts",
-                                                                                br(),
-                                                                                tags$i("Select adduct(s)"),
-                                                                                fluidRow(column(width=6, div(style="font-size:120%",icon("search-plus"))), 
-                                                                                         column(width=6,div(style="font-size:120%",icon("search-minus")))
-                                                                                         ),
-                                                                                fluidRow(column(width=6,div(DT::dataTableOutput('pos_add_tab',width="100%"),style='font-size:70%')),
-                                                                                         column(width=6,div(DT::dataTableOutput('neg_add_tab',width="100%"),style='font-size:70%'))
-                                                                                        )
-                                                                       )
-                                                        ),
+                                                        uiOutput("adductSettings"),
                                                         # ------------------
                                                         actionButton("create_csv", "Create CSV", icon=icon("file-text-o"))
                                                         # ,imageOutput("csv_icon",inline = T),

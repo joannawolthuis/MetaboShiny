@@ -28,5 +28,6 @@ wdir <<- "/Users/jwolthuis/Google Drive/MetaboShiny"
 setwd(wdir)
 
 # ---------------------------------
-
-runApp(".")
+suppressWarnings(
+  runApp(".")
+)

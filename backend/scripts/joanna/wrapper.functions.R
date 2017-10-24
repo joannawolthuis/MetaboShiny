@@ -3,7 +3,7 @@ get.csv <- function(patdb,
                     time.series = T, 
                     exp.condition = "diet",
                     max.vals = -1,
-                    group_adducts = F,
+                    group_adducts = T,
                     which_dbs = NA,
                     which_adducts = c("M+H", "M-H", "M"),
                     group_by = "mz"){
@@ -24,16 +24,19 @@ get.csv <- function(patdb,
                                  group by filename, [mzmed.pgrp]"), width=10000, simplify=TRUE)
   dbExecute(conn, make.query)
   index.query <- "create index if not exists avg_index on avg_intensities(filename, mz)"
-
+  if(is.null(which_adducts)) which_adducts <- c("M+H", "M-H", "M-Cl", "M+K", "M")
+  print(which_adducts)
+  print(group_by)
   # --- build result fetching query ---
   z = {get_all_matches(exp.condition, 
-                    pat.conn = conn,
-                    which_dbs,
-                    which_adducts,
-                    group_by)
+                      pat.conn = conn,
+                      which_dbs,
+                      which_adducts,
+                      group_by)
     }
   # --- fetch results ---
   z.dt <- as.data.table(z)
+  print(head(z.dt))
   # --- cast to right format ---
   cast.dt <- dcast.data.table(z.dt, 
                               animal_internal_id + sampling_date + label ~ identifier, 

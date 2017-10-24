@@ -13,6 +13,46 @@ patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
 mainmode <<- "stat"
 shinyOptions(progress.style="old")
 
+
+output$adductSettings <- renderUI({
+  tabsetPanel( id = "adductSettings", selected="db",
+               tabPanel(icon("database"), value="db",
+                        br(),
+                        tags$i("Select database(s)"),
+                        br(),
+                        fluidRow(
+                          sardine(fadeImageButton("add_internal", img.path = "umcinternal.png")),
+                          sardine(fadeImageButton("add_noise", img.path = "umcnoise.png")),
+                          sardine(fadeImageButton("add_hmdb", img.path = "hmdblogo.png")),
+                          sardine(fadeImageButton("add_chebi", img.path = "chebilogo.png")),
+                          sardine(fadeImageButton("add_smpdb", img.path = "smpdb_logo_adj.png")),
+                          sardine(fadeImageButton("add_wikipathways", img.path = "wikipathways.png")),
+                          sardine(fadeImageButton("add_kegg", img.path = "kegglogo.gif", value = T))
+                        )),
+               tabPanel(icon("id-card-o"), value = "identifier",
+                        br(),
+                        tags$i("Select identifier"),
+                        radioButtons(inputId = "group_by", label = NULL, choices = 
+                                       list("Pathway ID" = "pathway",
+                                            "Database ID" = "identifier", 
+                                            "Compound name" = "compoundname",
+                                            "Molecular formula" = "baseformula",
+                                            "Mass/charge" = "mz"), 
+                                     selected = "baseformula",
+                                     width="100%")                             ), 
+               tabPanel(icon("plus-square"), value="adducts",
+                        br(),
+                        tags$i("Select adduct(s)"),
+                        fluidRow(column(width=6, div(style="font-size:120%",icon("search-plus"))), 
+                                 column(width=6,div(style="font-size:120%",icon("search-minus")))
+                        ),
+                        fluidRow(column(width=6,div(DT::dataTableOutput('pos_add_tab',width="100%"),style='font-size:70%')),
+                                 column(width=6,div(DT::dataTableOutput('neg_add_tab',width="100%"),style='font-size:70%'))
+                        )
+               )
+  )
+  })
+
 packages <<- c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
                "plotly", "parallel", "shinyFiles", "curl", "httr", "pbapply", 
                "sqldf", "plyr", "ChemmineR", "gsubfn", "stringr", "plotly", "heatmaply",
@@ -62,6 +102,7 @@ images <<- list(list(name = 'cute_package', path = 'www/new-product.png', dimens
 )
 
 options$db_dir <<- options$db_dir
+
 # --- render text ---
 
 lapply(default.text, FUN=function(default){
@@ -69,130 +110,115 @@ lapply(default.text, FUN=function(default){
 })
 
 
-# -------------------
-time.anal.ui <- reactive({
-  # -------------
-  navbarPage("Time Series", id="nav_time",
-             tabPanel("iPCA", value = "ipca", 
-                      plotlyOutput("plot_ipca",width="100%"),
-                      selectInput("ipca_factor", label = "Color based on:", choices =list("Time"="facA",
-                                                                                          "Experimental group"="facB"),width="100%"),
-                      fluidRow(column(3,
-                                      selectInput("ipca_x", label = "X axis:", choices = paste0("PC",1:90),selected = "PC1",width="100%"),
-                                      selectInput("ipca_y", label = "Y axis:", choices = paste0("PC",1:90),selected = "PC2",width="100%"),
-                                      selectInput("ipca_z", label = "Z axis:", choices = paste0("PC",1:90),selected = "PC3",width="100%")
-                      ), 
-                      column(9, 
-                             div(DT::dataTableOutput('ipca_tab',width="100%"),style='font-size:80%')
-                      ))
-             ),
-             # =================================================================================
-             tabPanel("MEBA", value="meba", 
-                      fluidRow(plotlyOutput('meba_specific_plot'),width="100%"),
-                      fluidRow(div(DT::dataTableOutput('meba_tab', width="100%"),style='font-size:80%'))
-                      ),
-             # =================================================================================
-             tabPanel("ASCA", value="asca",
-                      fluidRow(plotlyOutput('asca_specific_plot', width="100%")),
-                      fluidRow(div(DT::dataTableOutput('asca_tab',width="100%"),style='font-size:80%'))
-             )
-             # =================================================================================
-  )
-})
-
-stat.anal.ui <- reactive({
+stat.ui <- reactive({
   navbarPage("Standard analysis", id="tab_stat",
-             tabPanel("", value = "intro", icon=icon("comment-o"),
-                      helpText("Info text here")
-             ),
-             tabPanel("PCA", value = "pca", #icon=icon("cube"),
-                      plotlyOutput("plot_pca",width="100%"),
-                      fluidRow(column(3,
-                                      selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:30),selected = "PC1",width="100%"),
-                                      selectInput("pca_y", label = "Y axis:", choices = paste0("PC",1:30),selected = "PC2",width="100%"),
-                                      selectInput("pca_z", label = "Z axis:", choices = paste0("PC",1:30),selected = "PC3",width="100%")
-                      ), 
-                      column(9, 
-                             div(DT::dataTableOutput('pca_tab',width="100%"),style='font-size:80%')
-                      )
-                      )
-             ),
-             tabPanel("PLSDA", value = "plsda",
-                      navbarPage("",
-                                 tabPanel("", icon=icon("globe"),
-                                          plotlyOutput("plot_plsda",width="100%"),
-                                          fluidRow(column(3,
-                                                          selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:8),selected = "PC1",width="100%"),
-                                                          selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:8),selected = "PC2",width="100%"),
-                                                          selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:8),selected = "PC3",width="100%")
-                                          ), 
-                                          column(9, 
-                                                 div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')
-                                          ))),
-                                 tabPanel("", icon=icon("star-o"), 
-                                          plotlyOutput("plsda_vip_specific_plot",width="100%"),
-                                          fluidRow(column(3,
-                                                          selectInput("plsda_vip_cmp", label = "Compounds from:", choices = paste0("PC",1:5),selected = "PC1",width="100%")
-                                          ), 
-                                          column(9, 
-                                                 div(DT::dataTableOutput('plsda_vip_tab',width="100%"),style='font-size:80%')
-                                          ))
-                                          
-                                 )
-                                 )
-                                          
-             ),
-             # =================================================================================
-             tabPanel("T-test", value="tt", 
-                      fluidRow(plotlyOutput('tt_specific_plot',width="100%")),
-                      navbarPage("",
-                                 tabPanel("", icon=icon("table"),
-                                          div(DT::dataTableOutput('tt_tab',width="100%"),style='font-size:80%'))
-                                 ,tabPanel("", icon=icon("area-chart"),
-                                           plotlyOutput('tt_overview_plot',height="300px")
-                                 )
-                      )),
-             tabPanel("Fold-change", value="fc",
-                      fluidRow(plotlyOutput('fc_specific_plot',width="100%")),
-                      navbarPage("",
-                                 tabPanel("", icon=icon("table"),
-                                          div(DT::dataTableOutput('fc_tab',width="100%"),style='font-size:80%'))
-                                 ,tabPanel("", icon=icon("area-chart"),
-                                           plotlyOutput('fc_overview_plot',height="300px")
-                                 )
-                      )),
-             tabPanel("Heatmap", value="heatmap",
-                      plotlyOutput("heatmap",width="110%",height="700px"),
-                      br(),
-                      fluidRow(column(align="center",
-                                      width=12,switchButton(inputId = "heatmode",
-                                            label = "Use data from:", 
-                                            value = TRUE, col = "BW", type = "TTFC"))
-                      )
-             ),
-             # =================================================================================
-             tabPanel("Volcano", value="volc",
-                      fluidRow(plotlyOutput('volc_plot',width="100%",height="600px"))
-                      #,fluidRow(div(DT::dataTableOutput('volc_tab'),style='font-size:80%'))
-                      )
-  )
-})
+               tabPanel("", value = "intro", icon=icon("comment-o"),
+                        helpText("Info text here")
+               ),
+               tabPanel("PCA", value = "pca", #icon=icon("cube"),
+                        plotlyOutput("plot_pca",width="100%"),
+                        fluidRow(column(3,
+                                        selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:30),selected = "PC1",width="100%"),
+                                        selectInput("pca_y", label = "Y axis:", choices = paste0("PC",1:30),selected = "PC2",width="100%"),
+                                        selectInput("pca_z", label = "Z axis:", choices = paste0("PC",1:30),selected = "PC3",width="100%")
+                        ), 
+                        column(9, 
+                               div(DT::dataTableOutput('pca_tab',width="100%"),style='font-size:80%')
+                        )
+                        )
+               ),
+               tabPanel("PLSDA", value = "plsda",
+                        navbarPage("",
+                                   tabPanel("", icon=icon("globe"),
+                                            plotlyOutput("plot_plsda",width="100%"),
+                                            fluidRow(column(3,
+                                                            selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:8),selected = "PC1",width="100%"),
+                                                            selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:8),selected = "PC2",width="100%"),
+                                                            selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:8),selected = "PC3",width="100%")
+                                            ), 
+                                            column(9, 
+                                                   div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')
+                                            ))),
+                                   tabPanel("", icon=icon("star-o"), 
+                                            plotlyOutput("plsda_vip_specific_plot",width="100%"),
+                                            fluidRow(column(3,
+                                                            selectInput("plsda_vip_cmp", label = "Compounds from:", choices = paste0("PC",1:5),selected = "PC1",width="100%")
+                                            ), 
+                                            column(9, 
+                                                   div(DT::dataTableOutput('plsda_vip_tab',width="100%"),style='font-size:80%')
+                                            ))
+                                            
+                                   )
+                        )
+                        
+               ),
+               # =================================================================================
+               tabPanel("T-test", value="tt", 
+                        fluidRow(plotlyOutput('tt_specific_plot',width="100%")),
+                        navbarPage("",
+                                   tabPanel("", icon=icon("table"),
+                                            div(DT::dataTableOutput('tt_tab',width="100%"),style='font-size:80%'))
+                                   ,tabPanel("", icon=icon("area-chart"),
+                                             plotlyOutput('tt_overview_plot',height="300px")
+                                   )
+                        )),
+               tabPanel("Fold-change", value="fc",
+                        fluidRow(plotlyOutput('fc_specific_plot',width="100%")),
+                        navbarPage("",
+                                   tabPanel("", icon=icon("table"),
+                                            div(DT::dataTableOutput('fc_tab',width="100%"),style='font-size:80%'))
+                                   ,tabPanel("", icon=icon("area-chart"),
+                                             plotlyOutput('fc_overview_plot',height="300px")
+                                   )
+                        )),
+               tabPanel("Heatmap", value="heatmap",
+                        plotlyOutput("heatmap",width="110%",height="700px"),
+                        br(),
+                        fluidRow(column(align="center",
+                                        width=12,switchButton(inputId = "heatmode",
+                                                              label = "Use data from:", 
+                                                              value = TRUE, col = "BW", type = "TTFC"))
+                        )
+               ),
+               # =================================================================================
+               tabPanel("Volcano", value="volc",
+                        fluidRow(plotlyOutput('volc_plot',width="100%",height="600px"))
+                        #,fluidRow(div(DT::dataTableOutput('volc_tab'),style='font-size:80%'))
+               )
+    )
+  })
 
-  
-observe({
-  curr_mode <<- mainmode		
-  if(exists("dataSet")){
-    if("shinymode" %in% names(dataSet)){
-      mainmode <<- dataSet$shinymode
-    }
-  } 
-  whichUI <- switch(mainmode,
-                    time={time.anal.ui()},
-                    stat={stat.anal.ui()})
-  output$analUI <- renderUI({whichUI})
-})
+time.ui <- reactive({
+    navbarPage("Time Series", id="nav_time",
+               tabPanel("iPCA", value = "ipca", 
+                        plotlyOutput("plot_ipca",width="100%"),
+                        selectInput("ipca_factor", label = "Color based on:", choices =list("Time"="facA",
+                                                                                            "Experimental group"="facB"),width="100%"),
+                        fluidRow(column(3,
+                                        selectInput("ipca_x", label = "X axis:", choices = paste0("PC",1:90),selected = "PC1",width="100%"),
+                                        selectInput("ipca_y", label = "Y axis:", choices = paste0("PC",1:90),selected = "PC2",width="100%"),
+                                        selectInput("ipca_z", label = "Z axis:", choices = paste0("PC",1:90),selected = "PC3",width="100%")
+                        ), 
+                        column(9, 
+                               div(DT::dataTableOutput('ipca_tab',width="100%"),style='font-size:80%')
+                        ))
+               ),
+               # =================================================================================
+               tabPanel("MEBA", value="meba", 
+                        fluidRow(plotlyOutput('meba_specific_plot'),width="100%"),
+                        fluidRow(div(DT::dataTableOutput('meba_tab', width="100%"),style='font-size:80%'))
+               ),
+               # =================================================================================
+               tabPanel("ASCA", value="asca",
+                        fluidRow(plotlyOutput('asca_specific_plot', width="100%")),
+                        fluidRow(div(DT::dataTableOutput('asca_tab',width="100%"),style='font-size:80%'))
+               )
+               # =================================================================================
+      )
+    })
 
 # -----------------
+
 optUI <- function(){		
   selectInput('your.time', 'What end time do you want to pick?', choices = get_times(patdb))
 }
@@ -203,11 +229,18 @@ observeEvent(input$exp_type,{
   mainmode <<- modes[[1]]
   submode <<- modes[[2]]
   # ---------------------
+  print(mainmode)
+  # ---------------------
   if(mainmode == "time" & submode != "standard"){
     output$exp_opt <- renderUI({optUI()})
+    output$analUI <- renderUI({stat.ui()})
+  } else if(mainmode == "time" & submode == "standard"){
+    output$exp_opt <- renderUI({})
+    output$analUI <- renderUI({time.ui()})
   }
 })
 
+# -----------------
 
 output$pos_add_tab <- DT::renderDataTable({
     # -------------
@@ -530,6 +563,8 @@ observeEvent(input$create_csv, {
   req(mainmode)
   req(submode)
   # ---------
+  print(mainmode)
+  # ---------
   withProgress({
     setProgress(1/4)
     # create csv
@@ -613,6 +648,11 @@ observeEvent(input$import_dataset, {
   # -----------
   output$var_norm_plot <- renderPlot(PlotNormSummary())
   output$samp_norm_plot <- renderPlot(PlotSampleNormSummary())
+  output$analUI <- renderUI({
+    switch(dataSet$shinymode, 
+           time={time.ui()},
+           stat={stat.ui()})
+  })
 })
   
 # ===================== METABOSTART ========================
@@ -687,14 +727,14 @@ observeEvent(input$initialize,{
   FilterVariable(filter = input$filt_type,
                  qcFilter = "F", 
                  rsd = 25)
-  # # ---- here facA/facB disappears?? ---
+  # ---- here facA/facB disappears?? ---
   GetPrenormSmplNms()
   GetPrenormFeatureNms()
   GetPrenormClsNms()
   UpdateGroupItems()
   UpdateSampleItems()
   UpdateFeatureItems()
-  # # ------------------------------------
+  # ------------------------------------
   setProgress(.2)
   Normalization(rowNorm = input$norm_type,
                 transNorm = input$trans_type,
@@ -702,12 +742,20 @@ observeEvent(input$initialize,{
                 ref = input$ref_var)
   dataSet$grouping <<- input$group_by
   dataSet$shinymode <<- mainmode
+  mainmode <<- dataSet$shinymode
+  # -------------------------------------
   if(dataSet$grouping == "pathway"){dataSet$norm <- abs(dataSet$norm)}
   setProgress(.3)
   output$var_norm_plot <- renderPlot(PlotNormSummary())
   setProgress(.4)
   output$samp_norm_plot <- renderPlot(PlotSampleNormSummary())
   dataSet$adducts <<- selected_adduct_list
+  # ------------------------------------
+  output$analUI <- renderUI({
+    switch(dataSet$shinymode, 
+           time={time.ui()},
+           stat={stat.ui()})
+    })
   # --- ABS-ify if grouped by pathway --- (use glmnet ish thing later?) ---
 })
 })
@@ -1017,7 +1065,6 @@ observe({
 
   )
   add_search_list <<- add_search_list[!is.na(add_search_list)]
-  print(add_search_list)
 })  
 
 observe({
