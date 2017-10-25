@@ -124,7 +124,9 @@ clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
 sourceAll(file.path("backend", 
                     "scripts", 
                     "metaboanalyst"))
+
 source("./Rsource/SwitchButton.R")
+
 sardine <- function(content) div(style="display: inline-block;vertical-align:top;", content)
 
 pos_adducts <<- wkz.adduct.confirmed[Ion_mode == "positive",

@@ -1,0 +1,300 @@
+@import url('https://fonts.googleapis.com/css?family=Megrim|Raleway:bold,regular|Leckerli+One|Open+Sans');     
+
+ h1 {
+margin: 2px;
+font-family:'Leckerli One';
+font-weight: 15;
+line-height: 0.5;
+ }
+
+ h2 {
+margin: 1px;
+font-family: 'Raleway', bold;
+font-weight: bold;
+font-size: 20pt;
+line-height: 1;
+}
+
+ h3 {
+margin: 1px;
+font-family: 'Raleway';
+font-weight: bold;
+font-size: 15pt;
+line-height: 1;
+}
+
+body {
+  font-family:'Raleway', serif; 
+  font-size: 12pt;
+}
+
+/* progress bar */
+
+.shiny-notification {
+            height: 50px;
+            width: 100%;
+            position:fixed;
+            left: 0%;
+            bottom: 0%;
+            }
+
+.progress-bar {
+  height: 5px;
+  position: absolute;
+  left: 15px;
+  background: linear-gradient(to right, transparent 50%, white 50%), linear-gradient(to right, orange, yellow, green, cyan, blue, violet) !important;
+  background-size: 16px 5px, 100% 5px !important;
+}
+
+/* rainbow gradient line */
+
+.line {
+  height: 5px;
+  width: calc(100% - 190px);
+  position: absolute;
+  top: 51px;
+  left: 15px;
+  background: linear-gradient(to right, transparent 50%, white 50%), linear-gradient(to right, orange, yellow, green, cyan, blue, violet);
+  background-size: 16px 5px, 100% 5px;
+  /*z-index:99998 !important;*/
+}
+
+/* ON-OFF switch button */
+/* Sébastien Rochette */
+/* http://sebrock.fr/en/ */
+/* CSS modified from : https://proto.io/freebies/onoff/ */
+/* All switch */
+.onoffswitch {
+  width: 100px;
+  position: relative;
+  -webkit-user-select:none; -moz-user-select:none; -ms-user-select: none;
+}
+
+.onoffswitch-checkbox {
+  display: none;
+}
+
+.onoffswitch-label {
+  display: block; overflow: hidden; cursor: pointer;
+  border: 2px solid #999999; border-radius: 30px;
+}
+
+.onoffswitch-inner {
+  display: block; width: 200%; margin-left: -100%;
+  transition: margin 0.3s ease-in 0s;
+}
+
+.onoffswitch-inner:before, .onoffswitch-inner:after {
+  display: block; float: left; width: 50%; height: 40px; padding: 0; line-height: 40px;
+  font-size: 14px; color: white; font-family: Trebuchet, Arial, sans-serif; font-weight: bold;
+  box-sizing: border-box;
+}
+/* All switch - default div class */
+.onoffswitch-inner:before {
+  content: " ";
+  padding-left: 20px;
+  text-align: left;
+}
+
+.onoffswitch-inner:after {
+  content: " ";
+  padding-right: 20px;
+  text-align: right;
+}
+
+.onoffswitch-switch {
+  display: block; width: 30px; height: 30px; margin: 6.5px;
+  position: absolute; top: 0; bottom: 0;
+  border-radius: 30px;
+  right: 56px;
+  transition: all 0.3s ease-in 0s; 
+}
+
+.onoffswitch-checkbox:checked + .onoffswitch-label .onoffswitch-switch {
+  right: 0px;
+}
+
+.onoffswitch-checkbox:checked + .onoffswitch-label .onoffswitch-inner {
+  margin-left: 0;
+}
+
+/* Color change */
+/* RedGreen */
+.RedGreen .onoffswitch-inner:before {
+  background-color: #008A0C; color: #FFFFFF;
+}
+.RedGreen .onoffswitch-inner:after {
+  background-color: #D10000; color: #FFFFFF;
+}
+
+.RedGreen .onoffswitch-switch {
+  background: #FFFFFF;
+  border: 2px solid #FFFFFF;
+}
+
+/* Color change */
+/* BlackWhite */
+.BlackWhite .onoffswitch-inner:before {
+  background-color: #000000; color: #FFFFFF;
+}
+.BlackWhite .onoffswitch-inner:after {
+  background-color: #FFFFFF; color: #000000;
+}
+
+.BlackWhite .onoffswitch-switch {
+  background: #000000;
+  border: 2px solid #000000;
+}
+.BlackWhite .onoffswitch-checkbox:checked + .onoffswitch-label .onoffswitch-switch {
+  background-color: #FFFFFF;
+  border: 2px solid #FFFFFF;
+}
+
+/* GreyBlue */ 
+.GreyBlue .onoffswitch-inner:before {
+  background-color: #FFFFFF; color: #428bca;
+}
+.GreyBlue .onoffswitch-inner:after {
+  background-color: #FFFFFF; color: #AAA;
+}
+.GreyBlue .onoffswitch-switch {
+  background: #AAA;
+  border: 2px solid #AAA;
+}
+.GreyBlue .onoffswitch-checkbox:checked + .onoffswitch-label .onoffswitch-switch {
+  background-color: #428bca;
+}
+
+/* Text change */
+/* On / Off */
+.OnOff .onoffswitch-inner:before {
+  content: "ON";
+  font-size: 15px;
+}
+
+.OnOff .onoffswitch-inner:after {
+  content: "OFF";
+  font-size: 15px;
+}
+/* Yes / No */
+.YesNo .onoffswitch-inner:before {
+  content: "YES";
+  font-size: 15px;
+}
+
+.YesNo .onoffswitch-inner:after {
+  content: "NO";
+  font-size: 15px;
+}
+/* True / False */
+.TrueFalse .onoffswitch-inner:before {
+  content: "TRUE";
+  font-size: 15px;
+}
+
+.TrueFalse .onoffswitch-inner:after {
+  content: "FALSE";
+  font-size: 15px;
+}
+
+/* Tt / Fc */
+.TtFc .onoffswitch-inner:before {
+  content: "TT";
+  font-size: 15px;
+}
+
+.TtFc .onoffswitch-inner:after {
+  content: "FC";
+  font-size: 18px;
+}
+
+/* -------------------- EXPERIMENTATION -------------------- */
+
+
+/* funky code that works */
+
+.fadebox {
+  display: none;
+}
+
+
+.fadebox + label > img {
+  height: 220px;
+}
+
+.fadebox:checked + label > img {
+  opacity: 0.25;
+}
+
+.fadebox:checked + label  {
+    background: url('no.png') no-repeat 0 0 ;
+    background-size: contain;
+    background-position: center; 
+    /*
+       linear-gradient(to top left,
+           rgba(0,0,0,0) 0%,
+           rgba(0,0,0,0) calc(50% - 0.8px),
+           rgba(0,0,0,1) 50%,
+           rgba(0,0,0,0) calc(50% + 0.8px),
+           rgba(0,0,0,0) 100%),
+       linear-gradient(to top right,
+           rgba(0,0,0,0) 0%,
+           rgba(0,0,0,0) calc(50% - 0.8px),
+           rgba(0,0,0,1) 50%,
+           rgba(0,0,0,0) calc(50% + 0.8px),
+           rgba(0,0,0,0) 100%);
+    */
+    z-index:99999 !important;
+}
+
+
+/* FANCY ICON */
+.spinnylocation1
+{
+  position: absolute;
+  top: -30px;
+  right: 0px;
+  animation-fill-mode: forwards;
+  z-index:99999 !important;
+}
+
+.imagetop
+{
+  -webkit-animation:spin 30s linear infinite;
+  -moz-animation:spin 30s linear infinite;
+  animation:spin 30s linear infinite;
+  filter: invert(100%);
+  margin-top: 20px;
+  margin-left: 15px;
+}
+
+.imagebottom
+{
+  -webkit-animation:spin 30s linear infinite;
+  -moz-animation:spin 30s linear infinite;
+  animation:spin 30s linear infinite;
+  margin-top: -60px;
+  margin-left: 15px;
+}
+
+.plus
+{
+    margin : 0;
+    padding : 0;
+    height: 80px;
+    width : 180px;
+    overflow : hidden;
+}
+
+.minus
+{
+    margin : 0;
+    padding : 0;
+    height: 80px;
+    width : 180px;
+    overflow : hidden;
+}
+
+@-moz-keyframes spin { 100% { -moz-transform: rotate(360deg); } }
+@-webkit-keyframes spin { 100% { -webkit-transform: rotate(360deg); } }
+@keyframes spin { 100% { -webkit-transform: rotate(360deg); transform:rotate(360deg); } }

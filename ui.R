@@ -364,9 +364,10 @@ shinyUI(fluidPage(theme = "metaboshiny.css",
                                                             sardine(imageOutput("adduct_upload_check",inline = T))
                                                    )
                                         )
-                               ), div(class="spinnylocation1", 
-                                      div(class="plus", img(class="imagetop", src="heart-research.png", width="120px", height="120px")),
-                                      div(class="minus", img(class="imagebottom", src="heart-research.png", width="120px", height="120px"))
+                               ), 
+                               div(class="spinnylocation1",
+                                      div(class="plus", img(class="imagetop", src="colorfulatom.svg", width="120px", height="120px")),
+                                      div(class="minus", img(class="imagebottom", src="colorfulatom.svg", width="120px", height="120px"))
                                       ),
                                div(class="line")
                     )

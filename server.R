@@ -13,7 +13,10 @@ patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
 mainmode <<- "stat"
 shinyOptions(progress.style="old")
 
+spinnyimg <- reactiveVal("www/electron.png")
 
+output$spinny <- renderText({spinnyimg()})
+  
 output$adductSettings <- renderUI({
   tabsetPanel( id = "adductSettings", selected="db",
                tabPanel(icon("database"), value="db",

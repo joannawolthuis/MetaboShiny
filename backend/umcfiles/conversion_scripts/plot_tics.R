@@ -1,54 +1,83 @@
 library(xcms)
 library(pbapply)
 library(parallel)
+library(data.table)
 
 cl = makeCluster(4, type="FORK") 
 ##  NB: peak finding, peak group finding and fill missing done on HPC !
+CheckCDFfile<-function(file, type=".cdf"){
+  print(paste("Loading File:", file, sep=""))
+  xr<-xcmsRaw(file, profstep=0)
+  for(i in 1:length(xr@scanindex)){
+    scan<-getScan(xr, scan=i)
+    if(is.unsorted(scan[,"mz"]) == TRUE){
+      print(" corrupt, fixing ")
+      newfile<-sub(type, "-Fixed.mzdata", file, ignore.case=TRUE, fixed=TRUE)
+      write.mzdata(xr, newfile)
+      file.copy(file, sub(type, ".OLD", file, ignore.case=TRUE))
+      unlink(file)
+      return(1)
+    }
+    if(i == length(xr@scanindex)){
+      print(" is ok ")
+      return(0)
+    }
+  }
+}
+sapply(xmlfiles, CheckCDFfile)
 
-## Set directory where output files are going to be on new Windows PC
-outdir <- "/Users/jwolthuis/PROCESSING_HPC/"   # project dir E:\Metabolomics\Project2016_03_biggen
+# check sorting of files - can be corrupt
+outdir <- "/Users/jwolthuis/PROCESSING_HPC"   # project dir E:\Metabolomics\Project2016_03_biggen
 
-# source("C:/Users/mraves/Metabolomics/AddOnFunctions.R")
-# source("E:/Metabolomics/Mia_rescuedC/Metabolomics/AddOnFunctions.R") # Temporary
-# source("Z:/Project2015_003_Toth/AddOnFunctions.R") # More complete in adducts
-# source add on functions
+xmlfiles<-list.files(outdir,recursive=TRUE, pattern="mzXML", ignore.case=TRUE, full.names=TRUE)
 
-## Path where sample directories are stored    
-# Centroided data:
-# filepath <- "Y:/Diagnostiek/Analyse_Data_Metabonomics/Q-Exact/BSP-2015-04-14/Bioinformatics Toth/mzXML_centroid" 
-
-xmlfiles <- list.files(outdir, recursive=TRUE, full.names=TRUE, pattern="*.mzXML")
-
-resol <- 140000
-
-# theor.MZ <- read.table(file="C:/Users/mraves/Metabolomics/TheoreticalMZ_NegPos.txt", sep="\t", header=TRUE)
-options(digits=16)
-
-### plots and checks  ### include checks on "good" versus "bad" inputfiles?
-# Ctrl <- xmlfiles.centroid[31]
-# Ctrl <- xmlfiles[1]  # Ctrl2 <- xmlfiles.centroid[4]
-# rawCtrl <- xcmsRaw(Ctrl, profstep=0.01) # NB 0.001 is too big for plotSurf
-# rawCtrl  # check mz range:  69.3032-606.0467. Time range: 0.3-181.1 seconds (0-3 minutes)
-# rawCtrl@scantime  # check RT range: 0.3 to 181.1 in steps of 0.6 seconds
-# rawCtrl@polarity  # 155 positive scans, 150 negative
-# Check out matrix of intensities
-#allY <- rawMat(rawCtrl)  # matrix with time, mz, intensity for Pos and Neg
-#allY.subset <- allY[1:100000, ]
-#write.table(allY.subset, file=paste("Profile_C1A_022.txt", sep=""), sep="\t")
-# plotChrom(rawCtrl, mz=c(172, 172.2), rt=c(0,max(rawCtrl@scantime)))  # 13C6 Phe in Pos
-# plotChrom(rawCtrl, mz=c(188.08, 188.12), rt=c(0,max(rawCtrl@scantime)))  # 13C6 Tyr in Pos
-# plotChrom(rawCtrl, mz=c(186.07, 186.10), rt=c(0,max(rawCtrl@scantime)))  # 13C6 Tyr in Neg
-
-# plotTIC(rawCtrl, ident=FALSE, msident=FALSE) # ident=TRUE waits for mouse input; hit Esc
-
-# save all TICs to file
+rawfiles<-list.files(outdir,recursive=TRUE, pattern="raw", ignore.case=TRUE, full.names=TRUE)
 TICdir <- paste(outdir, "/TICs", sep="")
-
 dir.create(TICdir)
 
-for(x in 1:length(xmlfiles)){
-  rawF <- xcmsRaw(xmlfiles[x], profstep=0.1)
-  png(filename=paste(TICdir, "/", sprintf("%04d", x), ".png", sep=""), 320, 240)
+
+plotTICtoFolder <- function(file, TICdir=TICdir){
+  print(file)
+  # -------------
+  rawF <- NULL
+  attempt <- 1
+  while( is.null(rawF) && attempt <= 3 ) {
+    attempt <- attempt + 1
+    try(
+     rawF <- xcmsRaw(file, profstep=0.1)
+    )
+  }
+  # -----------
+  png(filename=paste(TICdir, "/", basename(file), ".png", sep=""), 320, 240)
   plotTIC(rawF, ident=FALSE, msident=FALSE)
   dev.off()
+}
+
+getMLrows <- function(file){
+  print(file)
+  # -------------
+  rawF <- NULL
+  attempt <- 1
+  while( is.null(rawF) && attempt <= 3 ) {
+    attempt <- attempt + 1
+    try(
+      rawF <- xcmsRaw(file, profstep=0.1)
+    )
   }
+  judgeN <- 0
+  plotTIC(rawF, ident=FALSE, msident=FALSE)
+  while(!judgeN %in% c(1, 2, 3))
+  {
+    judgeN <- as.integer(readline(prompt="Judge tic (OK=1, DOUBT=2, BAD=3): "))
+  }
+  judgement <- if(judgeN == 1) "OK" else if(judgeN == 2) "DOUBT" else if(judgeN == 3) "BAD"
+  MLrow <- as.data.table(t(c(basename(file),judgement, rawF@tic)))
+  colnames(MLrow) = c("filename", "judgement", paste0("sec", 1:length(rawF@tic)))
+  # -----------------
+  return(MLrow)
+}
+
+x11()
+ML_list <- lapply(xmlfiles, getMLrows)
+
+save(ML_list, file = "TIC_ml.RData")
