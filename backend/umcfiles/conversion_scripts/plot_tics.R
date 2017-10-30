@@ -2,6 +2,8 @@ library(xcms)
 library(pbapply)
 library(parallel)
 library(data.table)
+library(xlsx)
+
 
 cl = makeCluster(4, type="FORK") 
 ##  NB: peak finding, peak group finding and fill missing done on HPC !

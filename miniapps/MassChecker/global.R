@@ -2,6 +2,9 @@ library(shiny)
 library(shinyFiles)
 library(xcms)
 library(gsubfn)
+library(data.table)
+library(DT)
+library(xlsx)
 
 CheckFile<-function(file, type=".mzXML"){
   print(paste("Loading File:", file, sep=""))
@@ -45,5 +48,7 @@ fadeImageButton <- function(inputId, img.path=NA,value=FALSE) {
     )
   )
 }
+
+
 
 sardine <- function(content) div(style="display: inline-block;vertical-align:top;", content)

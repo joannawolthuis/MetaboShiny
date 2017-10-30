@@ -665,30 +665,29 @@ build.pat.db <- function(db.name,
                          neglist, 
                          overwrite=FALSE,
                          rtree=TRUE,
-                         ppm=3,
-                         rmv.cols=c("mzmin.pgrp", 
-                                    "mzmax.pgrp",
-                                    "fq.best", 
-                                    "fq.worst",
-                                    "nrsamples",
-                                    "avg.int")){
+                         ppm=2,
+                         rmv.cols=c("mzmin", 
+                                    "mzmax")){
+  # db.name = "/Users/jwolthuis/Documents/umc/turkey.db"
+  # poslist = outlist_pos
+  # neglist = outlist_neg
   # ------------------------
   ppm = as.numeric(ppm)
   # ------------------------
-  mzvals <- data.table(mzmed.pgrp = c(poslist$mzmed.pgrp, neglist$mzmed.pgrp),
+  mzvals <- data.table(mzmed = c(poslist$mzmed, neglist$mzmed),
                        foundinmode = c(rep("positive", nrow(poslist)), rep("negative", nrow(neglist))))
-  mzranges <- data.table(mzmin = sapply(c(poslist$mzmed.pgrp, neglist$mzmed.pgrp), 
+  mzranges <- data.table(mzmin = sapply(c(poslist$mzmed, neglist$mzmed), 
                                         FUN=function(mz, ppm){
                                           mz - mz * (ppm / 1E6)}, ppm=ppm),
-                         mzmax = sapply(c(poslist$mzmed.pgrp, neglist$mzmed.pgrp), 
+                         mzmax = sapply(c(poslist$mzmed, neglist$mzmed), 
                                         FUN=function(mz, ppm){
                                           mz + mz * (ppm / 1E6)}, ppm=ppm))
   mzintensities <- melt(as.data.table(rbind(poslist, neglist))[,(rmv.cols) := NULL], 
-                        id="mzmed.pgrp", 
+                        id="mzmed", 
                         variable="filename",
                         value="intensity")
-  filenames <- gsub(x=as.character(mzintensities$filename), "", pattern="-\\d*$", perl=T)
-  replicates <- gsub(x=as.character(mzintensities$filename), "", pattern=".*-(?=\\d*$)", perl=T)
+  filenames <- gsub(x=as.character(mzintensities$filename), "", pattern="_\\d*$", perl=T)
+  replicates <- gsub(x=as.character(mzintensities$filename), "", pattern=".*_(?=\\d*$)", perl=T)
   # ------------------------
   mzintensities$filename <- filenames
   mzintensities$replicate <- replicates
@@ -699,21 +698,21 @@ build.pat.db <- function(db.name,
   # ------------------------
   sql.make.int <- strwrap("CREATE TABLE mzintensities(
                           ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                          'mzmed.pgrp' decimal(30,13),
+                          mzmed decimal(30,13),
                           filename text,
                           intensity float,
                           replicate int)", width=10000, simplify=TRUE)
   dbExecute(conn, sql.make.int)
   # --- write intensities to table and index ---
   dbWriteTable(conn, "mzintensities", mzintensities, append=TRUE) # insert into
-  dbExecute(conn, "CREATE INDEX intindex ON mzintensities(filename,'mzmed.pgrp',intensity)")
+  dbExecute(conn, "CREATE INDEX intindex ON mzintensities(filename,'mzmed',intensity)")
   # ------------------------
   sql.make.meta <- strwrap("CREATE TABLE mzvals(
                            ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                           'mzmed.pgrp' decimal(30,13),
+                           mzmed decimal(30,13),
                            foundinmode text)", width=10000, simplify=TRUE)
   dbExecute(conn, sql.make.meta)
-  dbExecute(conn, "create index mzfind on mzvals([mzmed.pgrp], foundinmode);")
+  dbExecute(conn, "create index mzfind on mzvals(mzmed, foundinmode);")
   # --- write vals to table ---
   dbWriteTable(conn, "mzvals", mzvals, append=TRUE) # insert into
   # --- make range table (choose if R*tree or not) ---
@@ -730,7 +729,7 @@ build.pat.db <- function(db.name,
   # --- write ranges to table ---
   dbWriteTable(conn, "mzranges", mzranges, append=TRUE) # insert into
   # --- cleanup ---
-  dbGetQuery(conn, "VACUUM")
+  dbExecute(conn, "VACUUM")
   # ----------------
   dbDisconnect(conn)
   print("Made!")}
@@ -744,53 +743,35 @@ load.excel <- function(path.to.xlsx,
                                         "Pen Data",
                                         "Admin")){
   # --- connect to sqlite db ---
+  # path.to.xlsx = "/Users/jwolthuis/Documents/umc/metaboshiny_all/ExcelSheetsDSM/TR/DSM_TR1.xlsx"
+  # path.to.patdb = "/Users/jwolthuis/Documents/umc/turkey.db"
   conn <- dbConnect(RSQLite::SQLite(), path.to.patdb)
   # -------------------------------
-  tab.store <- pblapply(tabs.to.read, FUN=function(tab.name){
+  data.store <- pblapply(tabs.to.read, FUN=function(tab.name){
     tab <- as.data.table(read.xlsx(path.to.xlsx, sheetName = tab.name))
     # --- reformat colnames ---
-    split.cols <- strsplit(colnames(tab), split = "\\.\\.")
-    reformat.cols <- lapply(split.cols, FUN=function(col.split){
-      # --- remove trailing dot ---
-      col.split <- gsub(col.split, pattern="\\.$", replacement="", perl=T)
-      # ---------------------------
-      col.type <- gsub(tolower(col.split[1]), pattern="\\.", replacement="_", perl=T)
-      col.unit <- gsub(tolower(col.split[2]), pattern="\\.", replacement="/", perl=T)
-      # --- return ---
-      data.table(table=c(tab.name),
-                 column = as.character(col.type), 
-                 unit = as.character(col.unit))})
-    unit.table <- rbindlist(reformat.cols)
-    colnames(tab) <- unit.table$column
-    # --- return both ---
-    result <- list(units = unit.table, data = tab)
+    colnames(tab) <- tolower(gsub(x=colnames(tab), pattern = "\\.$|\\.\\.$", replacement = ""))
+    colnames(tab) <- gsub(x=colnames(tab), pattern = "\\.|\\.\\.", replacement = "_")
+    colnames(tab) <- gsub(x=colnames(tab), pattern= "sampling_date_dd_mon_yy", "sampling_date")
+    # -----------------------------------------------------------------------------------------
+    as.data.table(tab,keep.rownames=F)
   })
-  # --- create unit table ---
-  unit.store <- list()
-  data.store <- list()
-  for(x in 1:length(tab.store)){
-    curr <- tab.store[[x]]
-    unit.store[[x]] <- curr$units
-    data.store[[x]] <- curr$data
-  }
-  units <- rbindlist(unit.store)
   # --- convert to data table --- ## make this nicer loooking in the future
   general <- data.store[[1]]
   setup <- data.store[[2]]
   individual.data <- data.store[[3]]
-  individual.data$sampling_date <- as.factor(as.Date(individual.data$sampling_date, format = "%d-%m-%y"))
+  individual.data$sampling_date <- as.factor(as.Date(individual.data$sampling_date, 
+                                                     format = "%d-%m-%y"))
+  if(is.na(individual.data$sampling_date[1])) levels(individual.data$sampling_date) <- factor(1) 
+  names(individual.data) <- make.unique(names(individual.data))
+  individual.data
   #individual.data$sampling_date <- as.numeric(as.factor(as.Date(individual.data$sampling_date, format = "%d-%m-%y")))
   pen.data <- data.store[[4]]
   admin <- data.store[[5]]
   # --- import to patient sql file ---
   #dbWriteTable(conn, "general", general, overwrite=TRUE) # insert into BUGGED FIX LATER
   dbWriteTable(conn, "setup", setup, overwrite=TRUE) # insert into
-  dbWriteTable(conn, "units", units, overwrite=TRUE) # insert into
-  dbWriteTable(conn, "individual_data", individual.data, overwrite=TRUE, 
-               field.types=list(label="integer",
-                                card_id="text",
-                                animal_internal_id="text",
-                                sampling_date="integer")) # insert into
+  dbWriteTable(conn, "individual_data", individual.data, overwrite=TRUE) # insert into
   dbWriteTable(conn, "pen_data", pen.data, overwrite=TRUE) # insert into
   dbWriteTable(conn, "admin", admin, overwrite=TRUE) # insert into
   # --- disconnect ---

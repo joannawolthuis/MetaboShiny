@@ -13,6 +13,7 @@ patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
 mainmode <<- "stat"
 shinyOptions(progress.style="old")
 
+
 spinnyimg <- reactiveVal("www/electron.png")
 
 output$spinny <- renderText({spinnyimg()})
@@ -331,9 +332,10 @@ observe({
 observe({  
   shinyDirChoose(input, "get_work_dir", roots = getVolumes(), session = session)
   given_dir <- input$get_work_dir$path
+  print(given_dir)
   if(is.null(given_dir)) return()
   options$work_dir <<- paste(c(given_dir), collapse="/")
-  output$options$work_dir <- renderText(options$work_dir)
+  output$exp_dir <- renderText(options$work_dir)
   if(!dir.exists(options$work_dir)) dir.create(options$work_dir)
   # --- connect ---
   setOption(".conf", "work_dir", options$work_dir)
@@ -537,13 +539,12 @@ observeEvent(input$create_db,{
     setProgress(.50,message = "Creating experiment database file...")
     build.pat.db(patdb,
                  ppm = ppm,
-                 poslist = outlist_pos_renamed,
-                 neglist = outlist_neg_renamed,
+                 poslist = outlist_pos,
+                 neglist = outlist_neg,
                  overwrite = T)
     setProgress(.75,message = "Adding excel sheets to database...")
     exp_vars <<- load.excel(input$excel$datapath, patdb)})
 })
-
 
 observeEvent(input$import_db, {
   req(input$pat_db)
@@ -571,10 +572,12 @@ observeEvent(input$create_csv, {
   withProgress({
     setProgress(1/4)
     # create csv
+    print(length(add_search_list))
+    patdb
     tbl = get.csv(patdb,
                  time.series = if(mainmode == "time") T else F,
                  exp.condition = input$exp_var,
-                 group_adducts = T,
+                 group_adducts = if(length(add_search_list) == 0) F else T,
                  group_by = input$group_by,
                  which_dbs = add_search_list,
                  which_adducts = selected_adduct_list
@@ -601,7 +604,7 @@ observeEvent(input$create_csv, {
                       mainmode <<- "stat"
                     })
              },
-           stat = print("nothing to do for now"))
+           stat = {tbl.adj <- tbl[,-"Time"]})
         # -------------------------
     # save csv
     setProgress(2/4)
@@ -728,6 +731,9 @@ observeEvent(input$initialize,{
   ImputeVar(method = "min")
   ReplaceMin()
   FilterVariable(filter = input$filt_type,
+                 qcFilter = "F", 
+                 rsd = 25)
+  FilterVariable(filter = "iqr" ,
                  qcFilter = "F", 
                  rsd = 25)
   # ---- here facA/facB disappears?? ---

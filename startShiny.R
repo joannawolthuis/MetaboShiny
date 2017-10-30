@@ -31,3 +31,5 @@ setwd(wdir)
 suppressWarnings(
   runApp(".")
 )
+
+runApp(".")

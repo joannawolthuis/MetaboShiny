@@ -61,7 +61,7 @@ get_matches <- function(cpd = NA,
       JOIN db.extended cpd indexed by e_idx2
       ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
       AND mz.foundinmode = cpd.foundinmode
-      WHERE ABS(mz.[mzmed.pgrp] - $cpd) < 0.000000000001",width=10000, simplify=TRUE))
+      WHERE ABS(mz.mzmed - $cpd) < 0.000000000001",width=10000, simplify=TRUE))
     # 1. Find matches in range (reasonably fast <3)
     dbExecute(conn, query.one)
     #  2. get isotopes for these matchies (reverse search)
@@ -97,10 +97,7 @@ get_mzs <- function(baseformula, charge, chosen.db){
   # --- connect to db ---
   req("patdb")
   conn <- dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
-  print(baseformula)
-  print(charge)
   query.zero <- fn$paste("ATTACH '$chosen.db' AS db")
-  print(query.zero)
   dbExecute(conn, query.zero)
   # search combo of baseformula and charge matching your choice and find all possible mzvals and adducts
   query.one <-  fn$paste(strwrap(
@@ -110,14 +107,12 @@ get_mzs <- function(baseformula, charge, chosen.db){
     WHERE e.baseformula = '$baseformula' 
     AND e.basecharge = $charge"
     , width=10000, simplify=TRUE))
-  print(query.one)
-  
   dbExecute(conn, query.one)
   
   # join with patdb
   query.two <- fn$paste(strwrap(
     "CREATE TEMP TABLE isotopes AS
-    SELECT DISTINCT mz.[mzmed.pgrp], o.*
+    SELECT DISTINCT mz.mzmed, o.*
     FROM possible_options o
     JOIN mzranges rng
     ON o.fullmz BETWEEN rng.mzmin AND rng.mzmax
@@ -128,15 +123,14 @@ get_mzs <- function(baseformula, charge, chosen.db){
   dbExecute(conn, query.two)
   # isofilter and only in
   query.three <-  strwrap(
-    "SELECT DISTINCT iso.[mzmed.pgrp], adduct
+    "SELECT DISTINCT iso.mzmed, adduct
     FROM isotopes iso
     GROUP BY iso.adduct
     HAVING COUNT(iso.isoprevalence > 99.99999999999) > 0"
     , width=10000, simplify=TRUE)
-  print(query.three)
-  
   results <- dbGetQuery(conn,query.three)
-  print(results)
+  # --------
+  results
 }
 
 #' @export
@@ -172,7 +166,7 @@ get_all_matches <- function(exp.condition=NA,
      pathway = if(group_by == "pathway") ",pathway" else{""}
      # ------------------------
      join.query <- c(join.query, 
-      fn$paste(strwrap("SELECT DISTINCT mz.[mzmed.pgrp] as mz, 
+      fn$paste(strwrap("SELECT DISTINCT mz.mzmed as mz, 
                                         compoundname,
                                         identifier,
                                         $baseformquery, 
@@ -212,7 +206,6 @@ get_all_matches <- function(exp.condition=NA,
   print("Exec query two")
   dbExecute(pat.conn, query.two)
   summary = if(group_by == "pathway") "sum(abs(i.intensity)) as intensity" else{"sum(i.intensity) as intensity"}
-  
   query.collect <-  strwrap(fn$paste("select distinct i.filename, 
                                                       d.animal_internal_id, 
                                                       s.[$exp.condition] as label, 
@@ -233,5 +226,6 @@ get_all_matches <- function(exp.condition=NA,
                             simplify=TRUE)
   print("Exec query three")
   # ---------------------------
-  dbGetQuery(pat.conn, query.collect)
+  res <- dbGetQuery(pat.conn, query.collect)
+  res
 }
