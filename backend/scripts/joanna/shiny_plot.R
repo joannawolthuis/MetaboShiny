@@ -38,18 +38,29 @@ ggplotSummary <- function(cpd = curr_cpd, cols=c("Red", "Green")){
     ggplotly(plot, tooltip="Sample")
     #
   }else if(dataSet$design.type =="time"){ # time trend within phenotype
+    cpd = curr_cpd
     profile <- getProfile(cpd, mode="time")
     # -----------
     print(profile)
     # ggplot
-    plot <- ggplot(data=profile, aes(x=Time, y=Abundance, fill=Group, color=Group)) +
-      geom_boxplot(alpha=0.4, aes(group=Group)) +
+    # p <- plot_ly(profile, 
+    #              x = ~Time, 
+    #              y = ~Abundance, 
+    #              color = ~Group, 
+    #              type = "box", 
+    #              colors=cols, 
+    #              boxpoints = 'all'
+    #              ) %>%
+    #   layout(boxmode = "group")
+    # p
+    plot <- ggplot(data=profile, aes(x=Time, y=Abundance, group=interaction(Time, Group),fill=Group, color=Group)) +
+      geom_boxplot(alpha=0.4) +
       geom_point(aes(text=Sample),alpha=0.4, size = 2, shape = 1, position = position_dodge(width=0.1)) +
       theme_minimal(base_size = 10) +
       scale_fill_manual(values=cols) +
-      scale_color_manual(values=cols) + facet_wrap(~Group)
+      scale_color_manual(values=cols) 
     # ---------------
-    ggplotly(plot, tooltip="Sample")
+    ggplotly(plot, tooltip="Sample") %>% layout(boxmode = "group")
   }
   #
 }

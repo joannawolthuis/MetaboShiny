@@ -45,12 +45,9 @@ SetDesignType <-function(design){
 # format: rowp, rowu, colp, colu
 # label type: disc (for discrete) or cont (for continuous)
 Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
-
     dataSet$cls.type <- lbl.type;
     dataSet$format <- format;
-
     dat <- .readDataTable(filePath);
-
     # try to guess column numers and class labels (starts with #) from the top 20 rows
     if(class(dat) == "try-error") {
         AddErrMsg("Data format error. Failed to read in the data!");
@@ -113,7 +110,6 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
         if(substring(format,1,3)=="row"){ # sample in row
             msg<-c(msg, "Samples are in rows and features in columns");
             smpl.nms <-dat[,1];
-            dat[,1] <- NULL;
             print(lbl.type)
             if(lbl.type == "qc"){
                 rownames(dat) <- smpl.nms;
@@ -121,7 +117,7 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
                 dataSet$cmpd<-colnames(dat);
                 return(1);
             }
-            cls.lbl <- dat[,1];
+            cls.lbl <- dat[,2];
             conc <- dat[,-1];
             var.nms <- colnames(conc);
         }else{ # sample in col
@@ -133,8 +129,8 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
             conc<-t(dat[-1,]);
         }
     }
-    
     # free memory
+    
     dat <- NULL;
 
     msg<-c(msg, "The uploaded file is in comma separated values (.csv) format.");
@@ -227,7 +223,7 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
     cls.lbl <- ClearStrings(as.vector(cls.lbl));
 
     # now assign the dimension names
-    
+
     rownames(conc) <- smpl.nms;
     colnames(conc) <- var.nms;
   
@@ -256,7 +252,7 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
             dataSet$orig.cls <- dataSet$cls <- as.numeric(cls.lbl);
         }
     }
-    print(dataSet$orig.cls)
+
     # for the current being to support MSEA and MetPA
     if(dataSet$type == "conc"){
         dataSet$cmpd <- var.nms;

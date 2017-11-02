@@ -10,8 +10,8 @@ tables <- list()
 db_search_list <- c()
 color.function <- rainbow
 patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
-mainmode <<- "stat"
 shinyOptions(progress.style="old")
+mainmode <<- "stat"
 
 # -----------------------------------------------
 
@@ -121,7 +121,7 @@ stat.ui <- reactive({
                         helpText("Info text here")
                ),
                tabPanel("PCA", value = "pca", #icon=icon("cube"),
-                        plotlyOutput("plot_pca",width="100%"),
+                        plotlyOutput("plot_pca",height = "600px"),
                         fluidRow(column(3,
                                         selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:30),selected = "PC1",width="100%"),
                                         selectInput("pca_y", label = "Y axis:", choices = paste0("PC",1:30),selected = "PC2",width="100%"),
@@ -194,9 +194,9 @@ stat.ui <- reactive({
   })
 
 time.ui <- reactive({
-    navbarPage("Time Series", id="nav_time",
+    navbarPage("Time Series", id="tab_time",
                tabPanel("iPCA", value = "ipca", 
-                        plotlyOutput("plot_ipca",width="100%"),
+                        plotlyOutput("plot_ipca",height="600px"),
                         selectInput("ipca_factor", label = "Color based on:", choices =list("Time"="facA",
                                                                                             "Experimental group"="facB"),width="100%"),
                         fluidRow(column(3,
@@ -210,12 +210,12 @@ time.ui <- reactive({
                ),
                # =================================================================================
                tabPanel("MEBA", value="meba", 
-                        fluidRow(plotlyOutput('meba_specific_plot'),width="100%"),
+                        fluidRow(plotlyOutput('meba_specific_plot'),height="600px"),
                         fluidRow(div(DT::dataTableOutput('meba_tab', width="100%"),style='font-size:80%'))
                ),
                # =================================================================================
                tabPanel("ASCA", value="asca",
-                        fluidRow(plotlyOutput('asca_specific_plot', width="100%")),
+                        fluidRow(plotlyOutput('asca_specific_plot', height="600px")),
                         fluidRow(div(DT::dataTableOutput('asca_tab',width="100%"),style='font-size:80%'))
                )
                # =================================================================================
@@ -234,17 +234,15 @@ observeEvent(input$exp_type,{
   mainmode <<- modes[[1]]
   submode <<- modes[[2]]
   # ---------------------
-  print(mainmode)
-  # ---------------------
   if(mainmode == "time" & submode != "standard"){
-    output$exp_opt <- renderUI({optUI()})
     output$analUI <- renderUI({stat.ui()})
-    mainmode <<- "stat"
-    output$colourPickers <- renderUI({color.pickers()})
-  } else if(mainmode == "time" & submode == "standard"){
+    output$exp_opt <- renderUI({optUI()})
+  }
+  if(mainmode == "time" & submode == "standard"){
     output$exp_opt <- renderUI({})
     output$analUI <- renderUI({time.ui()})
   }
+  output$colourPickers <- renderUI({color.pickers()})
 })
 
 # -----------------
@@ -319,16 +317,6 @@ observeEvent(input$update_packages, {
 
 if(options$packages_installed == "N") return(NULL) # BREAK!!
   
-# ================ observers? =================
-# outlist_neg <- outlist_neg_renamed
-# outlist_pos <- outlist_pos_renamed
-# colnames(outlist_neg) <- gsub(colnames(outlist_neg), pattern = "\\.pgrp", replacement = "")
-# colnames(outlist_pos) <- gsub(colnames(outlist_pos), pattern = "\\.pgrp", replacement = "")
-# 
-# save(outlist_neg,file = file.path(options$work_dir, "euronutr_neg.RData"))
-# save(outlist_pos,file = file.path(options$work_dir, "euronutr_pos.RData"))
-
-
 observe({  
   shinyDirChoose(input, "get_db_dir", roots = c(home = '~'), session = session)
   if(is.null(input$get_db_dir)) return()
@@ -571,6 +559,7 @@ observeEvent(input$import_db, {
     list(src = filename, width = 20,
          height = 20)
   }, deleteFile = FALSE)
+  
 })
 
 # ==================== CREATE CSV =======================
@@ -668,11 +657,17 @@ observeEvent(input$import_dataset, {
   # -----------
   output$var_norm_plot <- renderPlot(PlotNormSummary())
   output$samp_norm_plot <- renderPlot(PlotSampleNormSummary())
-  output$analUI <- renderUI({
-    switch(dataSet$shinymode, 
-           time={time.ui()},
-           stat={stat.ui()})
-  })
+  # ===========
+  switch(dataSet$shinymode,
+         stat = {
+           output$exp_opt <- renderUI({optUI()})
+          output$analUI <- renderUI({stat.ui()})
+         },
+         time = {
+           output$exp_opt <- renderUI({})
+           output$analUI <- renderUI({time.ui()})
+         })
+  output$colourPickers <- renderUI({color.pickers()})
 })
   
 # ===================== METABOSTART ========================
@@ -740,6 +735,8 @@ observeEvent(input$initialize,{
                          "disc")
            }
          )
+  dataSet$cls.type
+  
   SanityCheckData()
   RemoveMissingPercent(percent = 0.5)
   ImputeVar(method = "min")
@@ -783,10 +780,10 @@ observeEvent(input$initialize,{
 })
 })
 
-observeEvent(input$nav_time, {
+observeEvent(input$tab_time, {
   if(input$nav_general != "analysis") return(NULL)
     # get excel table stuff.
-  switch(input$nav_time,
+  switch(input$tab_time,
          ipca = {
            # --------------------
            output$plot_ipca <- renderPlotly({
@@ -794,6 +791,7 @@ observeEvent(input$nav_time, {
                iPCA.Anal(file.path(options$work_dir, "ipca_3d_0_.json"))
              }
              fac.lvls <- unique(analSet$ipca$score[[input$ipca_factor]])
+             print(fac.lvls)
              chosen.colors <- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
              # ---------------
              df <- t(as.data.frame(analSet$ipca$score$xyz))
@@ -803,13 +801,51 @@ observeEvent(input$nav_time, {
              x.num <- as.numeric(gsub(x, pattern = "PC", replacement = ""))
              y.num <- as.numeric(gsub(y, pattern = "PC", replacement = ""))
              z.num <- as.numeric(gsub(z, pattern = "PC", replacement = ""))
+             # ---------------
+             plots <- plot_ly()
+             for(class in fac.lvls){
+               row = which(analSet$ipca$score[[input$ipca_factor]] == class)
+               print(row)
+               # ---------------------
+               xc=df[row, x.num]
+               yc=df[row, y.num]
+               zc=df[row, z.num]
+               # --- plot ellipse ---
+               o <- ellipse3d(cov(cbind(xc,yc,zc)), 
+                              centre=c(mean(xc), 
+                                       mean(yc), 
+                                       mean(zc)), 
+                              level = 0.95)
+               mesh <- c(list(x = o$vb[1, o$ib]/o$vb[4, o$ib], 
+                              y = o$vb[2, o$ib]/o$vb[4, o$ib], 
+                              z = o$vb[3, o$ib]/o$vb[4, o$ib]))
+               plots <- plots %>% add_trace(
+                 x=mesh$x, 
+                 y=mesh$y, 
+                 z=mesh$z, 
+                 type='mesh3d',
+                 alphahull=0,
+                 opacity=0.1
+               )
+             }
+             adj_plot <<- plotly_build(plots)
+             rgbcols <- toRGB(chosen.colors)
+             c = 1
+             for(i in seq_along(adj_plot$x$data)){
+               print(i)
+               item = adj_plot$x$data[[i]]
+               if(item$type == "mesh3d"){
+                 adj_plot$x$data[[i]]$color <- rgbcols[c]
+                 c = c + 1
+               }
+             }
              # --- render! ---
-             ipca_plot <<- plot_ly(hoverinfo = 'text',
-                     text = analSet$ipca$score$name ) %>%
+             ipca_plot <<- adj_plot %>%
                add_trace(
-                 x = df[,1], 
-                 y = df[,2], 
-                 z = df[,3], 
+                 x = df[,x.num], 
+                 y = df[,y.num], 
+                 z = df[,z.num], 
+                 opacity=1,
                  type = "scatter3d",
                  color= analSet$ipca$score[[input$ipca_factor]], colors=chosen.colors
                ) %>%  layout(scene = list(
@@ -822,12 +858,7 @@ observeEvent(input$nav_time, {
              # --- return ---
              ipca_plot
            })
-          
-           # but perform first...
-           updateSelectInput(session, "ipca_factor",
-                             choices = grep(names(json_pca$score), pattern = "^fac[A-Z]", value = T))
            # ------------------
-           
            ipca.table <- as.data.table(data.table(gsub(analSet$ipca$score$axis, pattern = "\\(.*$| ", replacement = ""),
                                                  gsub(analSet$ipca$score$axis, pattern = "PC\\d*| |\\(|%\\)", replacement = "")),
                                       keep.rownames = T)
@@ -1165,7 +1196,7 @@ lapply(res.update.tables, FUN=function(table){
     output[[paste0(table, "_specific_plot")]] <- renderPlotly({
       # --- ggplot ---
       if(table == 'meba'){
-        ggplotMeba(curr_cpd, draw.average, cols = color.vec())
+        ggplotMeba(curr_cpd, draw.average = T, cols = color.vec())
       }else{
         ggplotSummary(curr_cpd, cols = color.vec())
       }
@@ -1189,36 +1220,40 @@ observe({
   d <- event_data("plotly_click")
   req(d)
   # -----------------------------
-  switch(input$tab_stat,
-         tt = {
-           if('key' %not in% colnames(d)) return(NULL)
-           if(d$key %not in% names(analSet$tt$p.value)) return(NULL)
-           curr_cpd <<- d$key
-           output$tt_specific_plot <- renderPlotly({
-             # --- ggplot ---
-             ggplotSummary(curr_cpd, cols = color.vec())
-           })
-           },
-         fc = {
-           if('key' %not in% colnames(d)) return(NULL)
-           if(d$key %not in% names(analSet$fc$fc.log)) return(NULL)
-           curr_cpd <<- d$key
-           output$fc_specific_plot <- renderPlotly({
-             # --- ggplot ---
-             ggplotSummary(curr_cpd, cols = color.vec())
-           })
-         },
-         heatmap = {
-           if(!exists("hm_matrix")) return(NULL)
-           if(d$y > length(hm_matrix$matrix$rows)) return(NULL)
-           curr_cpd <<- hm_matrix$matrix$rows[d$y]
-             },
-         volc = {
-           if('key' %not in% colnames(d)) return(NULL)
-           if(d$key %not in% rownames(analSet$volcano$sig.mat)) return(NULL)
-           curr_cpd <<- d$key
-         })
-  # ----------------------------
+  switch(mainmode,
+         stat = {
+           switch(input$tab_stat,
+                  tt = {
+                    if('key' %not in% colnames(d)) return(NULL)
+                    if(d$key %not in% names(analSet$tt$p.value)) return(NULL)
+                    curr_cpd <<- d$key
+                    output$tt_specific_plot <- renderPlotly({
+                      # --- ggplot ---
+                      ggplotSummary(curr_cpd, cols = color.vec())
+                    })
+                  },
+                  fc = {
+                    if('key' %not in% colnames(d)) return(NULL)
+                    if(d$key %not in% names(analSet$fc$fc.log)) return(NULL)
+                    curr_cpd <<- d$key
+                    output$fc_specific_plot <- renderPlotly({
+                      # --- ggplot ---
+                      ggplotSummary(curr_cpd, cols = color.vec())
+                    })
+                  },
+                  heatmap = {
+                    if(!exists("hm_matrix")) return(NULL)
+                    if(d$y > length(hm_matrix$matrix$rows)) return(NULL)
+                    curr_cpd <<- hm_matrix$matrix$rows[d$y]
+                  },
+                  volc = {
+                    if('key' %not in% colnames(d)) return(NULL)
+                    if(d$key %not in% rownames(analSet$volcano$sig.mat)) return(NULL)
+                    curr_cpd <<- d$key
+                  })},
+         time = {NULL} # nothing here yet, any scatterplots?
+         )
+    # ----------------------------
   output$curr_cpd <- renderText(curr_cpd)
   if(input$autosearch & length(db_search_list) > 0){
     match_list <- lapply(db_search_list, FUN=function(match.table){
@@ -1320,7 +1355,7 @@ observeEvent(input$hits_tab_rows_selected,{
   if (is.null(curr_row)) return()
   # -----------------------------
   curr_cpd <<- hits_table[curr_row, mzmed.pgrp]
-  output$meba_specific_plot <- renderPlotly({ggplotMeba(curr_cpd, draw.average, cols = color.vec())})
+  output$meba_specific_plot <- renderPlotly({ggplotMeba(curr_cpd, draw.average=T, cols = color.vec())})
   output$asca_specific_plot <- renderPlotly({ggplotSummary(curr_cpd, cols = color.vec())})
   output$fc_specific_plot <- renderPlotly({ggplotSummary(curr_cpd, cols = color.vec())})
   output$tt_specific_plot <- renderPlotly({ggplotSummary(curr_cpd, cols = color.vec())})
