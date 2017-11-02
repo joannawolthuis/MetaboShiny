@@ -11,6 +11,8 @@ install.if.not <- function(package){
   }
 }
 
+patdb
+file.exists(patdb)
 # ----------------------------------
 
 base.packs <- c("pacman", "shiny", "DT", "data.table", "shinyFiles")
@@ -29,7 +31,6 @@ setwd(wdir)
 
 # ---------------------------------
 suppressWarnings(
-  runApp(".")
 )
 
 runApp(".")

@@ -101,12 +101,13 @@ library(SPARQL)
 library(KEGGREST)
 library(shinyBS)
 library(rhandsontable)
+library(rgl)
 sourceAll(file.path("backend", 
                     "scripts", 
                     "joanna"))
 data(isotopes, package = "enviPat")
 session_cl <<- makeCluster(detectCores())
-clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
+parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
   "isotopes",
   "subform.joanna", 
   "mergeform.joanna",

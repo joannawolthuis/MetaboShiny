@@ -7,7 +7,7 @@ shinyUI(fluidPage(theme = "metaboshiny.css",
                                         sidebarPanel(
                                           h1("File processing"),
                                           hr(),
-                                          shinyDirButton("dir", "Chose directory", "Pick"),
+                                          shinyDirButton("dir", "Choose directory", "Pick"),
                                           hr(),
                                           helpText("Convert .raw to .mzXML"),
                                           actionButton("convert", "Convert"),

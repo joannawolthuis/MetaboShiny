@@ -15,7 +15,6 @@ get.csv <- function(patdb,
   max.cols <- if(max.vals == -1) "unlimited" else max.vals + 3
   cat(fn$paste("Creating csv for metabolomics analysis with max $max.cols columns.
                 Chosen experimental conditon is '$exp.condition'.\n"))
-  patdb <- "/Users/jwolthuis/Documents/umc/turkey.db"
   conn <- dbConnect(RSQLite::SQLite(), patdb)
   #dbExecute(conn, "drop table if exists avg_intensities")
   # --- create table with averaged intensities for the triplicates ---
@@ -27,13 +26,15 @@ get.csv <- function(patdb,
   index.query <- "create index if not exists avg_index on avg_intensities(filename, mz)"
   # --- build result fetching query ---
   if(group_adducts){
-    if(is.null(which_adducts)) which_adducts <- c("M+H", "M-H", "M-Cl", "M+K", "M")
-    z = {get_all_matches(exp.condition, 
+    # if(is.null(which_adducts)) which_adducts <- c("M+H", "M-H", "M-Cl", "M+K", "M")
+    # if(is.null(which_adducts)) which_dbs <- c(file.path(options$db_dir, "chebi.full.db"))
+    # group_by = "baseformula"
+        z = get_all_matches(exp.condition, 
                          pat.conn = conn,
                          which_dbs,
                          which_adducts,
                          group_by)
-    }
+    
     z.dt <- as.data.table(z)
     cast.dt <- dcast.data.table(z.dt, 
                                 animal_internal_id + sampling_date + label ~ identifier, 
@@ -55,6 +56,7 @@ get.csv <- function(patdb,
                                            i.mz"),
                                     width=10000,
                                     simplify=TRUE))
+    z
     z.dt <- as.data.table(z)
     cast.dt <- dcast.data.table(z.dt, 
                                 animal_internal_id + sampling_date + label ~ identifier, 

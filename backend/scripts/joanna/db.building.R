@@ -686,8 +686,8 @@ build.pat.db <- function(db.name,
                         id="mzmed", 
                         variable="filename",
                         value="intensity")
-  filenames <- gsub(x=as.character(mzintensities$filename), "", pattern="_\\d*$", perl=T)
-  replicates <- gsub(x=as.character(mzintensities$filename), "", pattern=".*_(?=\\d*$)", perl=T)
+  filenames <- gsub(x=as.character(mzintensities$filename), "", pattern="[-_]\\d*$", perl=T)
+  replicates <- gsub(x=as.character(mzintensities$filename), "", pattern=".*[-_](?=\\d*$)", perl=T)
   # ------------------------
   mzintensities$filename <- filenames
   mzintensities$replicate <- replicates

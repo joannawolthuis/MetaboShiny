@@ -13,6 +13,7 @@ patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
 mainmode <<- "stat"
 shinyOptions(progress.style="old")
 
+# -----------------------------------------------
 
 spinnyimg <- reactiveVal("www/electron.png")
 
@@ -238,6 +239,8 @@ observeEvent(input$exp_type,{
   if(mainmode == "time" & submode != "standard"){
     output$exp_opt <- renderUI({optUI()})
     output$analUI <- renderUI({stat.ui()})
+    mainmode <<- "stat"
+    output$colourPickers <- renderUI({color.pickers()})
   } else if(mainmode == "time" & submode == "standard"){
     output$exp_opt <- renderUI({})
     output$analUI <- renderUI({time.ui()})
@@ -317,12 +320,23 @@ observeEvent(input$update_packages, {
 if(options$packages_installed == "N") return(NULL) # BREAK!!
   
 # ================ observers? =================
+# outlist_neg <- outlist_neg_renamed
+# outlist_pos <- outlist_pos_renamed
+# colnames(outlist_neg) <- gsub(colnames(outlist_neg), pattern = "\\.pgrp", replacement = "")
+# colnames(outlist_pos) <- gsub(colnames(outlist_pos), pattern = "\\.pgrp", replacement = "")
+# 
+# save(outlist_neg,file = file.path(options$work_dir, "euronutr_neg.RData"))
+# save(outlist_pos,file = file.path(options$work_dir, "euronutr_pos.RData"))
+
 
 observe({  
-  shinyDirChoose(input, "get_db_dir", roots = getVolumes(), session = session)
-  given_dir <- input$get_db_dir$path
+  shinyDirChoose(input, "get_db_dir", roots = c(home = '~'), session = session)
+  if(is.null(input$get_db_dir)) return()
+  dir <- reactive(input$get_db_dir)
+  home <- normalizePath("~")
+  given_dir <- file.path(home, paste(unlist(dir()$path[-1]), collapse = .Platform$file.sep))
   if(is.null(given_dir)) return()
-  options$db_dir <<- paste(c(given_dir), collapse="/")
+  options$db_dir <<- given_dir
   output$curr_db_dir <- renderText(options$db_dir)
   # --- connect ---
   setOption(".conf", "db_dir", options$db_dir)
@@ -330,11 +344,14 @@ observe({
 })
 
 observe({  
-  shinyDirChoose(input, "get_work_dir", roots = getVolumes(), session = session)
-  given_dir <- input$get_work_dir$path
+  shinyDirChoose(input, "get_work_dir", roots = c(home = '~'), session = session)
+  if(is.null(input$get_work_dir)) return()
+  dir <- reactive(input$get_work_dir)
+  home <- normalizePath("~")
+  given_dir <- file.path(home, paste(unlist(dir()$path[-1]), collapse = .Platform$file.sep))
   print(given_dir)
   if(is.null(given_dir)) return()
-  options$work_dir <<- paste(c(given_dir), collapse="/")
+  options$work_dir <<- given_dir
   output$exp_dir <- renderText(options$work_dir)
   if(!dir.exists(options$work_dir)) dir.create(options$work_dir)
   # --- connect ---
@@ -415,8 +432,6 @@ color.pickers <- reactive({
   })
 })
 
-output$colourPickers <- renderUI({color.pickers()})
-
 color.vec <- reactive({
   req(dataSet)
   # ----------
@@ -479,8 +494,8 @@ output$adduct_tab <- renderRHandsontable({
 
 observe({
   DF = adduct_tab_data()
-  shinyFileSave(input, "save_adducts", roots=getVolumes(), session=session)
-  fileinfo <- parseSavePath(getVolumes(), input$save_adducts)
+  shinyFileSave(input, "save_adducts", roots = c(home = '~'), session=session)
+  fileinfo <- parseSavePath(roots = c(home = '~'), input$save_adducts)
   if (nrow(fileinfo) > 0) {
     switch(fileinfo$type,
            csv = fwrite(file = fileinfo$datapath, x = DF)
@@ -572,7 +587,6 @@ observeEvent(input$create_csv, {
   withProgress({
     setProgress(1/4)
     # create csv
-    print(length(add_search_list))
     patdb
     tbl = get.csv(patdb,
                  time.series = if(mainmode == "time") T else F,
@@ -790,7 +804,7 @@ observeEvent(input$nav_time, {
              y.num <- as.numeric(gsub(y, pattern = "PC", replacement = ""))
              z.num <- as.numeric(gsub(z, pattern = "PC", replacement = ""))
              # --- render! ---
-             plot_ly(hoverinfo = 'text',
+             ipca_plot <<- plot_ly(hoverinfo = 'text',
                      text = analSet$ipca$score$name ) %>%
                add_trace(
                  x = df[,1], 
@@ -805,6 +819,8 @@ observeEvent(input$nav_time, {
                    title = analSet$ipca$score$axis[y.num]),
                  zaxis = list(
                    title = analSet$ipca$score$axis[z.num])))
+             # --- return ---
+             ipca_plot
            })
           
            # but perform first...
@@ -870,24 +886,65 @@ observeEvent(input$tab_stat, {
              y.var <- round(analSet$pca$variance[y] * 100.00, digits=1)
              z.var <- round(analSet$pca$variance[z] * 100.00, digits=1)
              fac.lvls <- unique(dataSet$filt.cls)
-             chosen.colors <- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
-             # ---------------
-             plot_ly(hoverinfo = 'text',
-                     text = rownames(df) ) %>%
-               add_trace(
-                 x = analSet$pca$x[,x], 
-                 y = analSet$pca$x[,y], 
-                 z = analSet$pca$x[,z], 
-                 type = "scatter3d",
-                 color= dataSet$filt.cls, colors=chosen.colors
-               ) %>%  layout(scene = list(
-                 xaxis = list(
-                   title = fn$paste("$x ($x.var %)")),
-                 yaxis = list(
-                   title = fn$paste("$y ($y.var %)")),
-                 zaxis = list(
-                   title = fn$paste("$z ($z.var %)"))))
-           })
+             chosen.colors <<- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
+             # --- add ellipses ---
+             classes <- dataSet$cls
+             plots <- plot_ly()
+             for(class in levels(classes)){
+               row = which(classes == class)
+               # ---------------------
+               xc=analSet$pca$x[row, x]
+               yc=analSet$pca$x[row, y]
+               zc=analSet$pca$x[row, z]
+               # --- plot ellipse ---
+               o <- ellipse3d(cov(cbind(xc,yc,zc)), 
+                                    centre=c(mean(xc), 
+                                             mean(yc), 
+                                             mean(zc)), 
+                                    level = 0.95)
+               mesh <- c(list(x = o$vb[1, o$ib]/o$vb[4, o$ib], 
+                               y = o$vb[2, o$ib]/o$vb[4, o$ib], 
+                               z = o$vb[3, o$ib]/o$vb[4, o$ib]))
+               plots = plots %>% add_trace(
+                 x=mesh$x, 
+                 y=mesh$y, 
+                 z=mesh$z, 
+                 type='mesh3d',
+                 alphahull=0,
+                 opacity=0.1
+                 )
+             }
+             adj_plot <<- plotly_build(plots)
+             rgbcols <- toRGB(chosen.colors)
+             c = 1
+             for(i in seq_along(adj_plot$x$data)){
+               print(i)
+               item = adj_plot$x$data[[i]]
+               if(item$type == "mesh3d"){
+                 adj_plot$x$data[[i]]$color <- rgbcols[c]
+                 c = c + 1
+                 }
+             }
+             # --- return ---
+             pca_plot <- adj_plot %>% add_trace(
+               hoverinfo = 'text',
+               text = rownames(df),
+               x = analSet$pca$x[,1], 
+               y = analSet$pca$x[,2], 
+               z = analSet$pca$x[,3], 
+               type = "scatter3d",
+               opacity=1,
+               color= dataSet$filt.cls, colors=chosen.colors
+             ) %>%  layout(scene = list(
+               xaxis = list(
+                 title = fn$paste("$x ($x.var %)")),
+               yaxis = list(
+                 title = fn$paste("$y ($y.var %)")),
+               zaxis = list(
+                 title = fn$paste("$z ($z.var %)"))))     
+             # --- return ---
+             pca_plot
+             })
            pca.table <- as.data.table(round(analSet$pca$variance * 100.00,
                                             digits = 2),
                                       keep.rownames = T)

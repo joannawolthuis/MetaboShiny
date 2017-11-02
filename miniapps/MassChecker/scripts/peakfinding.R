@@ -51,18 +51,63 @@ groupval.joanna <- function(peakmat,
   values_full
 }
 
-# =======================================================
+# ====== SCALE EXPERIMENTATION ========
 
-folder = "/Users/jwolthuis/PROCESSING_HPC/"
+scales = list(
+  a = seq(1,64,2),
+  b = seq(1,22,3),
+  c = seq(1,5,9),
+  d = seq(1,7)
+)
 
-sample_tab <- fread(file = "/Users/jwolthuis/Turkey_OKfiles.csv"
-)[,2:3]
+## ======= SOME EXPERIMENTATION =======
+# scales = list(
+#   a = seq(1,64,2),
+#   b = seq(1,22,3),
+#   c = seq(1,5,9),
+#   d = seq(1,7)
+# )
+# a, snthresh = 10, nearbyPeak=T: 12109
+# b, snthresh = 10, nearbyPeak=T: 10877
+# c, snthresh = 10, nearbyPeak=T: phail
+# d, snthresh = 10, nearbyPeak=T: 13637
 
-ok_filenames <- c(sample_tab[judgement == "OK", filenames])
+# a, snthresh = 10, nearbyPeak=F: 10251
+# b, snthresh = 10, nearbyPeak=F: 9749
+# c, snthresh = 10, nearbyPeak=F: phail
+# d, snthresh = 10, nearbyPeak=F: 13450
 
-filenames <- sapply(ok_filenames, FUN=function(fn){
-  paste0(folder, fn, sep="")
-})
+# a, snthresh = 3, nearbyPeak=T: 22890 <<<<<<< for now go w/ this
+# b, snthresh = 3, nearbyPeak=T: 20609
+# c, snthresh = 3, nearbyPeak=T: phail
+# d, snthresh = 3, nearbyPeak=T: 26071
+
+# a, snthresh = 3, nearbyPeak=F: 13496
+# b, snthresh = 3, nearbyPeak=F: 13965
+# c, snthresh = 3, nearbyPeak=F: phail
+# d, snthresh = 3, nearbyPeak=F: 23949
+
+testfile <- allfiles[1]
+
+for(scale in scales){
+  print(scale)
+  attempt <- 0
+  xset = NULL
+  startscans = c(10, 15, 20)
+  while( is.null(xset) && attempt < 3 ) {
+    attempt <- attempt + 1
+    try(
+      xset <- xcmsSet(method="MSW",
+                    files=testfile,
+                    scales=scale,
+                    snthresh=3,
+                    nearbyPeak=F)
+    )
+  }
+  if(!is.null(xset)) print(nrow(xset@peaks))
+}
+
+# =====================================
 
 # hpc : 
 nslots <- Sys.getenv( "NSLOTS" )
@@ -70,112 +115,65 @@ nslots = parallel::detectCores()
 
 print(fn$paste("Doing MSW peak calling with $nslots slots!"))
 
+allfiles = list.files("/Users/jwolthuis/PROCESSING_HPC", pattern = "\\.mzXML", full.names = T)
 #bpparam = SnowParam(workers = nslots, type = "SOCK")
 
+scales = list(
+  a = seq(1,64,2),
+  b = seq(1,22,3),
+  c = seq(1,5,9)
+)
+
+scale = seq(1,64,2)
+
 cl = parallel::makeCluster(4, "FORK", outfile="")
-stopCluster(cl)
+parallel::stopCluster(cl)
 
-xcmsItems_pos <- pblapply(seq_along(filenames), cl=cl, FUN=function(i){
+xcmsItems_pos <- pblapply(seq_along(allfiles), cl=cl, FUN=function(i){
   # --------------------------------------
-  print(i)
-  f <- filenames[i]
-  # # --------------------------------------
-  # while( is.null(rawF) && attemptA <= 3 ) {
-  # rawF <- NULL
-  # attemptA <- 1
-  #   attemptA <- attemptA + 1
-  #   try(
-  #     rawF <- xcmsRaw(f)
-  #   )
-  # }
-  #plot(rawF@tic)
-  #attemptB <- 0
+  f <- allfiles[i]
+  attempt <- 0
   # --------------------------------------
   xset = NULL
-  startscans = c(1, 10, 20)
+  startscans = c(10, 15, 20)
   # --------------------------------------
-  while( is.null(xset) && attemptB <= 3 ) {
-    attemptB <- attemptB + 1
+  while( is.null(xset) && attempt <= 3 ) {
+    attempt <- attempt + 1
     try(
-      xset <- xcmsSet(f,
-                      method="MSW",
-                      scanrange = c(startscans[attemptB]:150)
-      )  
+      xset <- xcmsSet(method="MSW",
+                      files=f,
+                      scales=scale,
+                      snthresh=3,
+                      nearbyPeak=T)
     )
   }
-  # --- return ---
+  if(!is.null(xset)) print(nrow(xset@peaks))
   xset
 })
 
 
-xcmsItems_neg <- pblapply(seq_along(filenames), cl=cl, FUN=function(i){
+xcmsItems_neg <- pblapply(seq_along(allfiles), cl=cl, FUN=function(i){
   # --------------------------------------
   print(i)
   f <- filenames[i]
   # --------------------------------------
-  # rawF <- NULL
-  # attemptA <- 1
-  # while( is.null(rawF) && attemptA <= 3 ) {
-  #   attemptA <- attemptA + 1
-  #   try(
-  #     rawF <- xcmsRaw(f)
-  #   )
-  # }
-  # plot(rawF@tic)
-  # --------------------------------------
   xset = NULL
-  attemptB <- 0
-  endscans = c(310, 305, 300)
+  attempt <- 0
+  endscans = c(300, 290, 280)
   # --------------------------------------
-  while( is.null(xset) && attemptB <= 3 ) {
-    attemptB <- attemptB + 1
+  while( is.null(xset) && attempt <= 3 ) {
+    attempt <- attempt + 1
     try(
       xset <- xcmsSet(f,
                       method="MSW",
-                      scanrange = c(151:endscans[attemptB])
+                      scales = scale,
+                      scanrange = c(151:endscans[attempt]),
+                      snthresh=3
       )  
     )
   }
   # --- return ---
-  xset
-})
-
-# --- why are some of these null??? SCANRANGE ---
-
-null_names <- which(sapply(xcmsItems_pos, is.null))
-null_filenames <- filenames[null_names]
-rawF <- xcmsRaw(null_filenames[1])
-xcmsItems_pos_nully <- pblapply(seq_along(null_filenames), cl=FALSE, FUN=function(i){
-  # --------------------------------------
-  print(i)
-  f <- null_filenames[i]
-  rawF <- NULL
-  attemptA <- 1
-  # --------------------------------------
-  while( is.null(rawF) && attemptA <= 3 ) {
-    attemptA <- attemptA + 1
-    try(
-      rawF <- xcmsRaw(f)
-     )
-   }
-  # --------------------------------------
-  plot(rawF@tic)
-  print(rawF@tic)
-  attemptB <- 1
-  xset = NULL
-  startscans = c(1, 10, 20)
-  # --------------------------------------
-  while( is.null(xset) && attemptB <= 3 ) {
-    attemptB <- attemptB + 1
-    try(
-      xset <- xcmsSet(f,
-                      method="MSW",
-                      scanrange = c(startscans[attemptB]:145),
-                      scales=c(1,4,9)
-      )  
-    )
-  }
-  # --- return ---
+  if(!is.null(xset)) print(nrow(xset@peaks))
   xset
 })
 
@@ -191,28 +189,46 @@ for(i in 2:length(xcmsItems_pos)){
   if(!is.null(xcmsItems_pos[[i]])) xset_pos <- c(xset_pos, xcmsItems_pos[[i]])else{print(xcmsItems_pos[[i]])}
 }
 
-for(xs in xcmsItems_pos_nully){
-  xset_pos <- c(xset_pos, xs)
-}
-
 # --------------------------------------
 
 print(fn$paste("Grouping..."))
 
-xset_pos_g <- group(xset_pos, 
+xset_neg@peaks
+
+xset_neg_g <- group(xset_neg,
                     method="mzClust",
                     mzppm=2)
+xset_neg_g@groups
+
+xset_pos_g <- group(xset_pos,
+                    method="mzClust")
+xset_pos_g@groups
+
+## ====================================
+
+xset_pos_g <- group(xset_pos,
+                    method="nearest")
+xset_pos_g@groups
+
+xset_neg_g <- group(xset_neg,
+                    method="nearest")
+xset_neg_g@groups
+
+
+xset_pos_g_clust <- group(xset_pos,
+                         method="mzClust")
+xset_pos_g_clust@groups
+
+xset_pos_g_density <- group(xset_pos,
+                          method="density")
+xset_pos_g_density@groups
+
 
 xset_neg_g <- group(xset_neg, 
-                    method="mzClust",
+                    method="density",
                     mzppm=2)
 
-# --------------------------------------
-
-# nslots <- Sys.getenv( "NSLOTS" )
-# nslots = parallel::detectCores()
-# print(fn$paste("Doing MSW peak filling with $nslots slots!"))
-# bpparam = SnowParam(workers = nslots, type = "SOCK")
+xset_pos_g@groups
 
 # --------------------------------------
 
