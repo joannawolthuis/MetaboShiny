@@ -1,6 +1,6 @@
-get_exp_vars <- function(){
+get_exp_vars <- function(from){
   conn <- dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
-  dbGetQuery(conn, "PRAGMA table_info(setup)")$name
+  dbGetQuery(conn, fn$paste("PRAGMA table_info($from)"))$name
 }
 
 get_times <- function(chosen.db){
@@ -77,7 +77,10 @@ get_matches <- function(cpd = NA,
       , width=10000, simplify=TRUE))
     dbExecute(conn, query.two)
     query.three <-strwrap (
-        "SELECT DISTINCT base.compoundname as Name, base.identifier as Identifier, iso.adduct as Adduct, base.description as Description 
+        "SELECT DISTINCT base.compoundname as Name, 
+                        base.identifier as Identifier, 
+                        iso.adduct as Adduct, 
+                        base.description as Description 
         FROM isotopes iso
         JOIN db.base base indexed by b_idx1
         ON base.baseformula = iso.baseformula AND
@@ -138,7 +141,8 @@ get_all_matches <- function(exp.condition=NA,
                             pat.conn=NA, 
                             which_dbs=NA, 
                             which_adducts=c("M+H", "M-H", "M"),
-                            group_by="baseformula"){
+                            group_by="baseformula",
+                            var_table="setup"){
   # --- connect to db ---
   # req("patdb")
   # available.dbs <- list.files(options$db_dir,pattern = ".full.db$",full.names = T)
@@ -213,17 +217,22 @@ get_all_matches <- function(exp.condition=NA,
   # a1 = dbGetQuery(pat.conn, fn$paste("SELECT distinct filename FROM avg_intensities"))
   # a2 = dbGetQuery(pat.conn, fn$paste("SELECT distinct card_id FROM individual_data"))
   summary = if(group_by == "pathway") "sum(abs(i.intensity)) as intensity" else{"sum(i.intensity) as intensity"}
+  
+  qa <- switch(var_table,
+               individual_data = fn$paste("d.[$exp.condition] as label"),
+               setup = fn$paste("s.[$exp.condition] as label")
+  )
+  
   query.collect <-  strwrap(fn$paste("select distinct i.filename, 
                                                       d.card_id, 
-                                                      s.[$exp.condition] as label, 
+                                                      $qa,
                                                       d.sampling_date, 
                                                       r.identifier as identifier, 
                                                       $summary
                                      from mzintensities i
                                      join individual_data d
                                      on i.filename = d.card_id
-                                     join setup s
-                                     on d.[group] = s.[group]
+                                     join setup s on d.[Group] = s.[Group]
                                      join results r
                                      on r.mz = i.mzmed
                                      group by d.card_id, 
@@ -231,6 +240,7 @@ get_all_matches <- function(exp.condition=NA,
                                      r.identifier"),
                             width=10000,
                             simplify=TRUE)
+  print(query.collect)
   print("Exec query three")
   res <- dbGetQuery(pat.conn, query.collect)
   # ---------------------------

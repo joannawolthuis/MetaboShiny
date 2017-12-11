@@ -159,6 +159,7 @@ stat.ui <- reactive({
                         
                ),
                # =================================================================================
+             {if(nvars == 2){
                tabPanel("T-test", value="tt", 
                         fluidRow(plotlyOutput('tt_specific_plot',width="100%")),
                         navbarPage("",
@@ -167,7 +168,7 @@ stat.ui <- reactive({
                                    ,tabPanel("", icon=icon("area-chart"),
                                              plotlyOutput('tt_overview_plot',height="300px")
                                    )
-                        )),
+                        ))
                tabPanel("Fold-change", value="fc",
                         fluidRow(plotlyOutput('fc_specific_plot',width="100%")),
                         navbarPage("",
@@ -176,21 +177,31 @@ stat.ui <- reactive({
                                    ,tabPanel("", icon=icon("area-chart"),
                                              plotlyOutput('fc_overview_plot',height="300px")
                                    )
-                        )),
+                        ))
+             }else{
+               tabPanel("ANOVA", value="aov",
+                        fluidRow(plotlyOutput('aov_specific_plot',width="100%")),
+                        navbarPage("",
+                                   tabPanel("", icon=icon("table"),
+                                            div(DT::dataTableOutput('aov_tab',width="100%"),style='font-size:80%'))
+                                   ,tabPanel("", icon=icon("area-chart"),
+                                             plotlyOutput('aov_overview_plot',height="300px")
+                                   )
+                        ))
+             }},
                tabPanel("Heatmap", value="heatmap",
                         plotlyOutput("heatmap",width="110%",height="700px"),
-                        br(),
-                        fluidRow(column(align="center",
+                        br(),{
+                        if(nvars == 2){fluidRow(column(align="center",
                                         width=12,switchButton(inputId = "heatmode",
                                                               label = "Use data from:", 
-                                                              value = TRUE, col = "BW", type = "TTFC"))
-                        )
-               ),
-               # =================================================================================
+                                                              value = TRUE, col = "BW", type = "TTFC")))}
+                        else{br()}
+                        }
+               ),{if(nvars == 2){
                tabPanel("Volcano", value="volc",
                         fluidRow(plotlyOutput('volc_plot',width="100%",height="600px"))
-                        #,fluidRow(div(DT::dataTableOutput('volc_tab'),style='font-size:80%'))
-               )
+                        )}else{NULL}}
     )
   })
 
@@ -583,13 +594,15 @@ observeEvent(input$create_csv, {
   withProgress({
     setProgress(1/4)
     # create csv
+    print(if(input$broadvars) "individual_data" else "setup")
     tbl <- get.csv(patdb,
                   time.series = if(mainmode == "time") T else F,
                   exp.condition = input$exp_var,
                   group_adducts = if(length(add_search_list) == 0) F else T,
                   group_by = input$group_by,
                   which_dbs = add_search_list,
-                  which_adducts = selected_adduct_list
+                  which_adducts = selected_adduct_list,
+                  var_table = if(input$broadvars) "individual_data" else "setup"
                   )
     # tbl <- get.csv(patdb,
     #                time.series = if(mainmode == "time") T else F,
@@ -688,9 +701,10 @@ observeEvent(input$import_dataset, {
 observeEvent(input$check_excel, {
   # get excel table stuff.
   updateSelectInput(session, "exp_var",
-                    choices = get_exp_vars()
+                    choices = get_exp_vars(if(input$broadvars) "individual_data" else "setup")
   )
 })
+
 
 ref.selector <- reactive({
   # -------------
@@ -800,7 +814,8 @@ observeEvent(input$initialize,{
            time={time.ui()},
            stat={stat.ui()})
     })
-  # --- ABS-ify if grouped by pathway --- (use glmnet ish thing later?) ---
+  # --- SET BI- OR MULTIVARIATE ---
+  nvars <<- length(levels(mSet$dataSet$cls))
 })
 })
 
@@ -908,6 +923,9 @@ observeEvent(input$tab_time, {
                        autoHideNavigation = T,
                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
            })
+         },
+         manova = {
+           NULL
          },
          asca = {
            if("asca" %not in% names(mSet$analSet)){
@@ -1083,15 +1101,24 @@ observeEvent(input$tab_stat, {
     })
          },
          heatmap = {
-           req(input$heatmode)
            req(input$color_ramp)
-           req(mSet$analSet$tt)
-           req(mSet$analSet$fc)
+           if(nvars > 2){
+             req(mSet$analSet$aov)
+             used.analysis <- "aov"
+           }else{
+             req(mSet$analSet$tt)
+             req(mSet$analSet$fc)
+             req(input$heatmode)
+             if(input$heatmode){
+               used.analysis <- "tt"
+             }else{
+               used.analysis <- "fc"
+             }
+           }
+           print("here-oo")
            # --- render ---
            output$heatmap <- renderPlotly({
-             x <- if(input$heatmode == TRUE){
-               mSet$dataSet$norm[,names(mSet$analSet$tt$inx.imp[mSet$analSet$tt$inx.imp == TRUE])]
-             } else{mSet$dataSet$norm[,names(mSet$analSet$fc$inx.imp[mSet$analSet$fc$inx.imp == TRUE])]}
+             x <- mSet$dataSet$norm[,names(mSet$analSet[[used.analysis]]$inx.imp[mSet$analSet[[used.analysis]]$inx.imp == TRUE])]
              final_matrix <- t(x)
              translator <- data.table(Sample=rownames(mSet$dataSet$norm),Group=mSet$dataSet$prenorm.cls)
              group_assignments <- translator[,"Group",on=colnames(final_matrix)]$Group
@@ -1107,6 +1134,7 @@ observeEvent(input$tab_stat, {
                        colors = color.function(256),
                        col_side_palette = function(n){
                          if(n == length(color.vec())) color.vec() else rainbow(n)
+                         rainbow(n)
                        },
                        subplot_widths = c(.9,.1),
                        subplot_heights =  c(.1,.05,.85),
@@ -1147,6 +1175,19 @@ observeEvent(input$tab_stat, {
              ggPlotFC(color.function, 20)
            })
            },
+         aov = {
+           mSet <- ANOVA.Anal(mSet, 
+                              thresh=0.05,
+                              nonpar = F)
+           output$aov_tab <- DT::renderDataTable({
+             # -------------
+             datatable(mSet$analSet$aov$sig.mat, 
+                       selection = 'single',
+                       autoHideNavigation = T,
+                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+             
+           })
+         },
          volc = {
            Volcano.Anal(FALSE, 2.0, 0, 0.75,F, 0.1, TRUE, "raw")
            output$volc_tab <- DT::renderDataTable({
@@ -1161,18 +1202,7 @@ observeEvent(input$tab_stat, {
              # --- ggplot ---
              ggPlotVolc(color.function, 20)
            })
-         },
-        anova = {
-          ANOVA.Anal()
-          output$anova_tab <- DT::renderDataTable({
-            # -------------
-            datatable(mSet$analSet$aov$sig.mat, 
-                      selection = 'single',
-                      autoHideNavigation = T,
-                      options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-            
-          })
-        })
+         })
 })
 
 observe({
@@ -1219,6 +1249,7 @@ observe({
 
 res.update.tables <<- c("tt", 
                         "fc", 
+                        "aov",
                         "asca", 
                         "meba",
                         "plsda_vip")
@@ -1233,6 +1264,7 @@ lapply(res.update.tables, FUN=function(table){
                                      tt = mSet$analSet$tt$sig.mat,
                                      fc = mSet$analSet$fc$sig.mat,
                                      asca = mSet$analSet$asca$sig.list$Model.ab,
+                                     aov = mSet$analSet$aov$sig.mat,
                                      meba = mSet$analSet$MB$stats,
                                      plsda_vip = plsda_tab)
                               , keep.rownames = T)[curr_row, rn]
@@ -1263,6 +1295,7 @@ lapply(res.update.tables, FUN=function(table){
 observe({
   d <- event_data("plotly_click")
   req(d)
+  print(d)
   # -----------------------------
   switch(mainmode,
          stat = {
@@ -1281,6 +1314,15 @@ observe({
                     if(d$key %not in% names(mSet$analSet$fc$fc.log)) return(NULL)
                     curr_cpd <<- d$key
                     output$fc_specific_plot <- renderPlotly({
+                      # --- ggplot ---
+                      ggplotSummary(curr_cpd, cols = color.vec())
+                    })
+                  },
+                  aov = {
+                    if('key' %not in% colnames(d)) return(NULL)
+                    if(d$key %not in% names(mSet$analSet$aov$p.value)) return(NULL)
+                    curr_cpd <<- d$key
+                    output$aov_specific_plot <- renderPlotly({
                       # --- ggplot ---
                       ggplotSummary(curr_cpd, cols = color.vec())
                     })
@@ -1404,6 +1446,7 @@ observeEvent(input$hits_tab_rows_selected,{
   output$asca_specific_plot <- renderPlotly({ggplotSummary(curr_cpd, cols = color.vec())})
   output$fc_specific_plot <- renderPlotly({ggplotSummary(curr_cpd, cols = color.vec())})
   output$tt_specific_plot <- renderPlotly({ggplotSummary(curr_cpd, cols = color.vec())})
+  output$aov_specific_plot <- renderPlotly({ggplotSummary(curr_cpd, cols = color.vec())})
   output$plsda_specific_plot <- renderPlotly({ggplotSummary(curr_cpd, cols = color.vec())})
   })
 

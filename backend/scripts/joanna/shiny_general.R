@@ -7,29 +7,32 @@ get_ref_vars <- function(fac="Label"){
   c(unique(csv[,..fac]))[[fac]]
 }
 
-getProfile <-function (varName, title=varName, mode="stat") {
+getProfile <- function(varName, title=varName, mode="stat"){
   # ---------------
   require(ggplot2)
+  print(varName)
+  print(colnames(mSet$dataSet$norm))
   # ---------------
-  varInx <- colnames(dataSet$norm) == varName;
-  var <- as.data.table(dataSet$norm, keep.rownames = T)[,varInx, with=FALSE];
-  samp.names <- rownames(dataSet$norm)
+  varInx <- colnames(mSet$dataSet$norm) == varName;
+  var <- as.data.table(mSet$dataSet$norm, 
+                       keep.rownames = T)[,varInx, with=FALSE];
+  samp.names <- rownames(mSet$dataSet$norm)
   # ---------------
   if(mode == "time"){
-    time.fac <<- dataSet$time.fac;
+    time.fac <<- mSet$dataSet$time.fac;
     translator <- data.table(
       index = 1:length(samp.names),
       Sample = gsub(x = samp.names, pattern = "_T\\d$", replacement=""),
-      Group = dataSet$facB,
+      Group = mSet$dataSet$facB,
       Time = time.fac,
-      Abundance = dataSet$norm[,varInx]
+      Abundance = mSet$dataSet$norm[,varInx]
     )
   }else if(mode == "stat"){
     translator <- data.table(
       index = 1:length(samp.names),
       Sample = gsub(x = samp.names, pattern = "T\\d$", replacement=""),
-      Group = dataSet$filt.cls,
-      Abundance = dataSet$norm[,varInx]
+      Group = mSet$dataSet$filt.cls,
+      Abundance = mSet$dataSet$norm[,varInx]
     )
   }
   # ---------------

@@ -84,8 +84,8 @@ ggplotSampleNormSummary <- function(mSet){
 
 
 #' @export
-ggplotMeba <- function(cpd, draw.average=T, cols=c("Red", "Green")){
-  cols <- if(is.null(cols))c("Blue","Pink") else(cols)
+ggplotMeba <- function(cpd, draw.average=T, cols=NULL){
+  cols <- if(is.null(cols)) cyan2yellow(length(levels(mSet$dataSet$cls))) else(cols)
   profile <- getProfile(cpd, mode="time")
   plot <- if(draw.average){
     ggplot(data=profile) +
@@ -110,8 +110,8 @@ blackwhite.colors <- function(n){
 }
 
 #' @export
-ggplotSummary <- function(cpd = curr_cpd, cols=c("Blue", "Pink")){
-  cols <- if(is.null(cols))c("Blue","Pink") else(cols)
+ggplotSummary <- function(cpd = curr_cpd, cols=NULL){
+  cols <- if(is.null(cols)) cyan2yellow(length(levels(mSet$dataSet$cls))) else(cols)
   if(substring(mSet$dataSet$format,4,5)!="ts"){
     # --- ggplot ---
     profile <- getProfile(cpd, mode="stat")
@@ -196,9 +196,6 @@ ggPlotVolc <- function(cf, n){
       theme_minimal(base_size = 10) +
       scale_colour_gradientn(colours = cf(n),guide=FALSE)
     ggplotly(plot, tooltip="cpd")
-    #abline (v = vcn$max.xthresh, lty=3);
-    #abline (v = vcn$min.xthresh, lty=3);
-    #abline (h = vcn$thresh.y, lty=3);
 }
 
 

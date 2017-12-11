@@ -6,7 +6,8 @@ get.csv <- function(patdb,
                     group_adducts = T,
                     which_dbs = file.path(options$db_dir, "kegg.full.db"),
                     which_adducts = c("M+H", "M-H", "M"),
-                    group_by = "mz"){
+                    group_by = "mz",
+                    var_table = "setup"){
   library(reshape2)
   library(DBI)
   library(RSQLite)
@@ -37,28 +38,35 @@ get.csv <- function(patdb,
                         pat.conn = conn,
                         which_dbs,
                         which_adducts,
-                        group_by)
+                        group_by,
+                        var_table)
     z.dt <- as.data.table(z)
     cast.dt <- dcast.data.table(z.dt, 
                                 card_id + sampling_date + label ~ identifier, 
                                 fun.aggregate = sum, 
                                 value.var = "intensity") # what to do w/ duplicates? 
   }else{
-    z = dbGetQuery(conn, strwrap(fn$paste("select distinct d.card_id, 
-                                           s.[$exp.condition] as label, 
-                                           d.sampling_date, 
-                                           i.mzmed as identifier,
-                                           i.intensity
-                                           from mzintensities i
-                                           join individual_data d
-                                           on i.filename = d.card_id
-                                           join setup s
-                                           on d.[Group] = s.[Group]
-                                           group by d.card_id, 
-                                           d.sampling_date, 
-                                           i.mzmed"),
-                                    width=10000,
-                                    simplify=TRUE))
+    qa <- switch(var_table,
+                 individual_data = fn$paste("d.[$exp.condition] as label"),
+                 setup = fn$paste("s.[$exp.condition] as label")
+                 )
+
+    query <- strwrap(fn$paste("select distinct d.card_id, 
+                                           $qa, 
+                              d.sampling_date, 
+                              i.mzmed as identifier,
+                              i.intensity
+                              from mzintensities i
+                              join individual_data d
+                              on i.filename = d.card_id
+                              join setup s on d.[Group] = s.[Group]
+                              group by d.card_id, 
+                              d.sampling_date, 
+                              i.mzmed"),
+                     width=10000,
+                     simplify=TRUE)
+    print(query)
+    z = dbGetQuery(conn, query)
     z.dt <- as.data.table(z)
     cast.dt <- dcast.data.table(z.dt, 
                                 card_id + sampling_date + label ~ identifier, 
