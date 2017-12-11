@@ -62,15 +62,15 @@ FC.Anal.paired<-function(fc.thresh=2, percent.thresh=0.75, cmp.type=0){
     fc.mat <-GetFC(T, cmp.type);
 
     count.thresh<-round(nrow(dataSet$norm)/2*percent.thresh);
-	mat.up <- fc.mat >= log(max.thresh,2);
-	mat.down <- fc.mat <= log(min.thresh,2);
-
-	count.up<-apply(mat.up, 2, sum);
- 	count.down<-apply(mat.down, 2, sum);
-	fc.all<-rbind(count.up, count.down);
-
- 	inx.up <- count.up>=count.thresh;
- 	inx.down <- count.down>=count.thresh;
+  	mat.up <- fc.mat >= log(max.thresh,2);
+  	mat.down <- fc.mat <= log(min.thresh,2);
+  
+  	count.up<-apply(mat.up, 2, sum);
+   	count.down<-apply(mat.down, 2, sum);
+  	fc.all<-rbind(count.up, count.down);
+  
+   	inx.up <- count.up>=count.thresh;
+   	inx.down <- count.down>=count.thresh;
 
     colnames(fc.all)<-colnames(dataSet$norm);
     rownames(fc.all)<-c("Count (up)", "Count (down)");
@@ -248,20 +248,16 @@ GetFC <- function(paired=FALSE, cmpType){
 ####################################
 
 Ttests.Anal<-function(nonpar=F, threshp=0.05, paired=FALSE, equal.var=TRUE){
-
     res <- GetTtestRes(paired, equal.var, nonpar);
     t.stat <- res[,1];
     p.value <- res[,2];
     names(t.stat) <- names(p.value)<-colnames(dataSet$norm);
-
     p.log <- -log10(p.value);
     fdr.p <- p.adjust(p.value, "fdr");
     inx.imp <- fdr.p <= threshp;
     # if there is no sig cmpds, it will be errors, need to improve
     msg <- NULL;
-    inx.imp
     current.msg <<- paste(c(msg, "A total of", sum(inx.imp), "significant features were found."), collapse=" ");
-    current.msg
     sig.num <- sum(inx.imp);
     if(sig.num > 0){
         sig.t <- t.stat[inx.imp];

@@ -1,15 +1,32 @@
 library(caret)
 library(data.table)
+library(xlsx)
 # --------------
 
-mat <- fread(input="/Users/jwolthuis/Google Drive/MetaboShiny/backend/appdata/euronutrition/Test.csv",header = T)
-head(mat)
+mat <- fread(input="/Users/jwolthuis/Google Drive/MetaboShiny/backend/appdata/brazil_chicken/BrazilFirstEight.csv",header = T)
+
+facsTable <- read.xlsx("~/Documents/umc/DSM_BR poultry worksheets/DSM_BR1_8.xlsx",sheetName = "Individual Data",header = T)
+
+pastytable <- as.data.table(facsTable[1:80,-c(1,3,4)])
+setkey(pastytable, "Card.ID")
+# reorder according
+endorder <- mat$Sample
+pastytable <- pastytable[endorder]
+pastytable <- apply(pastytable, MARGIN = 2, FUN=function(vec){
+ as.numeric(as.factor(vec))
+})
+
+# add to mat
+
+mat <- cbind(mat, pastytable[,-1])
+
+# ==================================
 
 mat$Label <- as.factor(mat$Label)
 
 inTrain <- createDataPartition(y = mat$Label,
                                ## the outcome data are needed
-                                  p = .75,
+                                  p = .6,
                                 ## The percentage of data in the training set
                                  list = FALSE)
 training <- mat[ inTrain,]
@@ -19,22 +36,28 @@ testing <- mat[-inTrain,]
 control <- trainControl(method="cv", number=2, returnResamp="all",
                        classProbs=TRUE, summaryFunction=twoClassSummary)
 
+colnames(training)[1:10]
 # train the model
 set.seed(849)
 
 model <- train(x = training[,-c(1,2)], 
                y = training$Label,
-               method = "glmnet",
+               method = "rf",
                trControl = control,
-               metric = "ROC",
-               tuneGrid = expand.grid(alpha = 1,
-                                      lambda = seq(0.001,0.1,by = 0.001)))
+               )
 
-# Using caret to perform CV
+# model <- train(x = training[,-c(1,2)], 
+#                y = training$Label,
+#                method = "glmnet",
+#                trControl = control,
+#                metric = "ROC",
+#                tuneGrid = expand.grid(alpha = 1,
+#                                       lambda = seq(0.001,0.1,by = 0.001)))
+
 
 model
 
-testPred <- predict(model , testing)
+testPred <- predict(model, testing)
 
 View(data.table(known = training$Label,
            prediction = testPred))

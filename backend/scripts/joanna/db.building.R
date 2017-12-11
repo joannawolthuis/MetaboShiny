@@ -500,7 +500,7 @@ build.extended.db <- function(dbname,
     continue.query <- strwrap("SELECT DISTINCT baseformula, charge FROM base b
                               WHERE NOT EXISTS(SELECT DISTINCT baseformula, charge 
                               FROM db.done d
-                              WHERE  b.baseformula = d.baseformula
+                              WHERE b.baseformula = d.baseformula
                               AND b.charge = d.basecharge)", width=10000, simplify=TRUE)
     total.formulae <- dbGetQuery(base.conn, fn$paste("SELECT Count(*)
                                                      FROM ($continue.query)"))
@@ -651,8 +651,43 @@ build.extended.db <- function(dbname,
   print("Indexing extended table...")
   dbExecute(full.conn, "create index e_idx1 on extended(baseformula, basecharge)")
   dbExecute(full.conn, "create index e_idx2 on extended(fullmz, foundinmode)")
+  # ====== range table =====
+  print("Adding range tables for raw peak grouping...")
+  ppm = 2 ### PPM HARD CODED HERE FOR NOW
+  # ------------------------
+  mzvals <- data.table(mzmed = total.table$fullmz,
+                       foundinmode = total.table$foundinmode)
+  mzranges <- data.table(mzmin = pbsapply(total.table$fullmz,cl=cl,
+                                        FUN=function(mz, ppm){
+                                          mz - mz * (ppm / 1E6)}, ppm=ppm),
+                         mzmax = pbsapply(total.table$fullmz,cl=cl,
+                                        FUN=function(mz, ppm){
+                                          mz + mz * (ppm / 1E6)}, ppm=ppm))
+  sql.make.meta <- strwrap("CREATE TABLE mzvals(
+                           ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                           mzmed decimal(30,13),
+                           foundinmode text)", width=10000, simplify=TRUE)
+  dbExecute(full.conn, sql.make.meta)
+  dbExecute(full.conn, "create index mzfind on mzvals(mzmed, foundinmode);")
+  # --- write vals to table ---
+  dbWriteTable(full.conn, "mzvals", mzvals, append=TRUE) # insert into
+  # --- make range table (choose if R*tree or not) ---
+  sql.make.rtree <- strwrap("CREATE VIRTUAL TABLE mzranges USING rtree(
+                            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                            mzmin decimal(30,13),
+                            mzmax decimal(30,13));"
+                            , width=10000, simplify=TRUE)
+  sql.make.normal <- strwrap("CREATE TABLE mzranges(
+                             ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                             mzmin decimal(30,13),
+                             mzmax decimal(30,13));", width=10000, simplify=TRUE)
+  dbExecute(full.conn, sql.make.rtree)
+  # --- write ranges to table ---
+  dbWriteTable(full.conn, "mzranges", mzranges, append=TRUE) # insert into
+  # --- cleanup ---
+  dbExecute(full.conn, "VACUUM")
+  # ==========================
   print("Disconnecting...")
-  # --------------
   dbDisconnect(base.conn)
   dbDisconnect(full.conn)
   on.exit(closepb(pb))
@@ -667,13 +702,18 @@ build.pat.db <- function(db.name,
                          rtree=TRUE,
                          ppm=2,
                          rmv.cols=c("mzmin", 
-                                    "mzmax")){
-  # db.name = "/Users/jwolthuis/Documents/umc/turkey.db"
+                                    "mzmax", 
+                                    "npeaks",
+                                    "fq.worst",
+                                    "fq.best",
+                                    "avg.int")){
+  # db.name = patdb
   # poslist = outlist_pos
   # neglist = outlist_neg
   # ------------------------
   ppm = as.numeric(ppm)
   # ------------------------
+  print(length(unique(poslist$mzmed)))
   mzvals <- data.table(mzmed = c(poslist$mzmed, neglist$mzmed),
                        foundinmode = c(rep("positive", nrow(poslist)), rep("negative", nrow(neglist))))
   mzranges <- data.table(mzmin = sapply(c(poslist$mzmed, neglist$mzmed), 
@@ -686,11 +726,15 @@ build.pat.db <- function(db.name,
                         id="mzmed", 
                         variable="filename",
                         value="intensity")
-  filenames <- gsub(x=as.character(mzintensities$filename), "", pattern="[-_]\\d*$", perl=T)
-  replicates <- gsub(x=as.character(mzintensities$filename), "", pattern=".*[-_](?=\\d*$)", perl=T)
+  
+  mzvals$foundinmode <- trimws(mzvals$foundinmode)
+  mzintensities$filename <- trimws(mzintensities$filename)
+  
+  #filenames <- gsub(x=as.character(mzintensities$filename), "", pattern="[-_]\\d*$", perl=T)
+  #replicates <- gsub(x=as.character(mzintensities$filename), "", pattern=".*[-_](?=\\d*$)", perl=T)
   # ------------------------
-  mzintensities$filename <- filenames
-  mzintensities$replicate <- replicates
+  #mzintensities$filename <- filenames
+  #mzintensities$replicate <- replicates
   # ------------------------
   if(overwrite==TRUE & file.exists(db.name)) file.remove(db.name)
   # --- reconnect / remake ---
@@ -700,8 +744,7 @@ build.pat.db <- function(db.name,
                           ID INTEGER PRIMARY KEY AUTOINCREMENT,
                           mzmed decimal(30,13),
                           filename text,
-                          intensity float,
-                          replicate int)", width=10000, simplify=TRUE)
+                          intensity float)", width=10000, simplify=TRUE)
   dbExecute(conn, sql.make.int)
   # --- write intensities to table and index ---
   dbWriteTable(conn, "mzintensities", mzintensities, append=TRUE) # insert into
@@ -760,14 +803,23 @@ load.excel <- function(path.to.xlsx,
   general <- data.store[[1]]
   setup <- data.store[[2]]
   individual.data <- data.store[[3]]
+  
   individual.data$sampling_date <- as.factor(as.Date(individual.data$sampling_date, 
                                                      format = "%d-%m-%y"))
   if(is.na(individual.data$sampling_date[1])) levels(individual.data$sampling_date) <- factor(1) 
-  names(individual.data) <- make.unique(names(individual.data))
-  individual.data
-  #individual.data$sampling_date <- as.numeric(as.factor(as.Date(individual.data$sampling_date, format = "%d-%m-%y")))
+  print(head(individual.data))
+  #names(individual.data) <- make.unique(names(individual.data))
+  #individual.data
+  individual.data$sampling_date <- as.numeric(as.factor(as.Date(individual.data$sampling_date, format = "%d-%m-%y")))
   pen.data <- data.store[[4]]
   admin <- data.store[[5]]
+  
+  setup <- as.data.table(apply(setup, MARGIN=2, trimws))
+  individual.data <- as.data.table(apply(individual.data, MARGIN=2, trimws))
+  general <- as.data.table(apply(general, MARGIN=2, trimws))
+  pen.data <- as.data.table(apply(pen.data, MARGIN=2, trimws))
+  admin <- as.data.table(apply(admin, MARGIN=2, trimws))
+  
   # --- import to patient sql file ---
   #dbWriteTable(conn, "general", general, overwrite=TRUE) # insert into BUGGED FIX LATER
   dbWriteTable(conn, "setup", setup, overwrite=TRUE) # insert into

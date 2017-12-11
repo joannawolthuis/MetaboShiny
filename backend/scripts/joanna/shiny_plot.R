@@ -1,6 +1,6 @@
 #' @export
 ggplotMeba <- function(cpd, draw.average=T, cols=c("Red", "Green")){
-  cols <- if(is.null(cols)) c("Red", "Green") else(cols)
+  cols <- if(is.null(cols))c("Blue","Pink") else(cols)
   profile <- getProfile(cpd, mode="time")
   plot <- if(draw.average){
     ggplot(data=profile) +
@@ -20,9 +20,13 @@ ggplotMeba <- function(cpd, draw.average=T, cols=c("Red", "Green")){
   ggplotly(plot, tooltip="Sample")
 }
 
+blackwhite.colors <- function(n){
+  gray.colors(n, start=0, end=1)
+}
+
 #' @export
-ggplotSummary <- function(cpd = curr_cpd, cols=c("Red", "Green")){
-  cols <- if(is.null(cols)) c("Red", "Green") else(cols)
+ggplotSummary <- function(cpd = curr_cpd, cols=c("Blue", "Pink")){
+  cols <- if(is.null(cols))c("Blue","Pink") else(cols)
   if(substring(dataSet$format,4,5)!="ts"){
     # --- ggplot ---
     profile <- getProfile(cpd, mode="stat")

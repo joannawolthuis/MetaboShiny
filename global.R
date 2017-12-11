@@ -47,7 +47,7 @@ setOption <- function(file.loc, key, value){
 
 # --- beta stuff ---
 
-mainmode <- if(exists("dataSet")) dataSet$shinymode else("stat")
+mainmode <<- if(exists("dataSet")) dataSet$shinymode else("stat")
 
 # === SOURCE OWN CODE ===
 
@@ -135,4 +135,3 @@ pos_adducts <<- wkz.adduct.confirmed[Ion_mode == "positive",
 neg_adducts <<- wkz.adduct.confirmed[Ion_mode == "negative",
                                      c("Name")]
 print("loaded global settings")
-

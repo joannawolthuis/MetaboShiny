@@ -32,15 +32,15 @@ get_matches <- function(cpd = NA,
   req("patdb")
    # change this to proper var later
   # 0. Attach db
-  if(!is.null(searchid)){
+  if(!is.null(searchid) && searchid != "mz"){
     conn <- dbConnect(RSQLite::SQLite(), chosen.db)
     cpd <- gsub(cpd, pattern = "http\\/\\/", replacement = "http:\\/\\/")
     query <- if(searchid == "pathway"){
-        fn$paste(strwrap("SELECT DISTINCT name as Name
-                        FROM pathways
-                         WHERE identifier = '$cpd'"
-                         , width=10000, simplify=TRUE))
-    }else{
+      fn$paste(strwrap("SELECT DISTINCT name as Name
+                       FROM pathways
+                       WHERE identifier = '$cpd'"
+                       , width=10000, simplify=TRUE))
+      } else{
       fn$paste(strwrap(
         "SELECT DISTINCT compoundname as Name, baseformula as 'Mol. Formula', identifier as Identifier, description as Description 
         FROM base indexed by b_idx1
@@ -77,7 +77,7 @@ get_matches <- function(cpd = NA,
       , width=10000, simplify=TRUE))
     dbExecute(conn, query.two)
     query.three <-strwrap (
-        "SELECT DISTINCT base.compoundname as Compound, base.identifier as Identifier, iso.adduct as Adduct, base.description as Description 
+        "SELECT DISTINCT base.compoundname as Name, base.identifier as Identifier, iso.adduct as Adduct, base.description as Description 
         FROM isotopes iso
         JOIN db.base base indexed by b_idx1
         ON base.baseformula = iso.baseformula AND
@@ -137,11 +137,16 @@ get_mzs <- function(baseformula, charge, chosen.db){
 get_all_matches <- function(exp.condition=NA, 
                             pat.conn=NA, 
                             which_dbs=NA, 
-                            which_adducts=NA,
-                            group_by=NA){
+                            which_adducts=c("M+H", "M-H", "M"),
+                            group_by="baseformula"){
   # --- connect to db ---
-  req("patdb")
-  available.dbs <- list.files(options$db_dir,pattern = ".full.db$",full.names = T)
+  # req("patdb")
+  # available.dbs <- list.files(options$db_dir,pattern = ".full.db$",full.names = T)
+  # which_dbs <- available.dbs
+  # group_by="mz"
+  # exp.condition="stool_condition"
+  # pat.conn =dbConnect(RSQLite::SQLite(),patdb)
+  # dbDisconnect(pat.conn)
   join.query <- c()
   # --- GET POOL OF ALL DBS ---
   for(i in seq_along(which_dbs)){
@@ -190,7 +195,7 @@ get_all_matches <- function(exp.condition=NA,
   query.one <- fn$paste(strwrap(
     "CREATE TEMP TABLE isotopes AS
     $union",width=10000, simplify=TRUE))
-    print("Exec query one")
+  print("Exec query one")
   dbExecute(pat.conn, query.one)
   adductfilter <- paste0("WHERE adduct = '", paste(which_adducts, collapse= "' OR adduct = '"), "'")
   idquery <- paste0("iso.", group_by)
@@ -205,27 +210,29 @@ get_all_matches <- function(exp.condition=NA,
     , width=10000, simplify=TRUE))
   print("Exec query two")
   dbExecute(pat.conn, query.two)
+  # a1 = dbGetQuery(pat.conn, fn$paste("SELECT distinct filename FROM avg_intensities"))
+  # a2 = dbGetQuery(pat.conn, fn$paste("SELECT distinct card_id FROM individual_data"))
   summary = if(group_by == "pathway") "sum(abs(i.intensity)) as intensity" else{"sum(i.intensity) as intensity"}
   query.collect <-  strwrap(fn$paste("select distinct i.filename, 
-                                                      d.animal_internal_id, 
+                                                      d.card_id, 
                                                       s.[$exp.condition] as label, 
                                                       d.sampling_date, 
                                                       r.identifier as identifier, 
                                                       $summary
-                                     from avg_intensities i
+                                     from mzintensities i
                                      join individual_data d
                                      on i.filename = d.card_id
                                      join setup s
                                      on d.[group] = s.[group]
                                      join results r
-                                     on r.mz = i.mz
-                                     group by d.animal_internal_id, 
+                                     on r.mz = i.mzmed
+                                     group by d.card_id, 
                                      d.sampling_date, 
                                      r.identifier"),
                             width=10000,
                             simplify=TRUE)
   print("Exec query three")
-  # ---------------------------
   res <- dbGetQuery(pat.conn, query.collect)
+  # ---------------------------
   res
-}
+  }

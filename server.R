@@ -12,6 +12,7 @@ color.function <- rainbow
 patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
 shinyOptions(progress.style="old")
 mainmode <<- "stat"
+ppm <<- 2
 
 # -----------------------------------------------
 
@@ -72,7 +73,7 @@ packages <<- c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
 
 options <- getOptions(".conf")
 
-default.text <- list(list(name='options$work_dir',text=options$work_dir),
+default.text <- list(list(name='work_dir',text=options$work_dir),
                      list(name='curr_db_dir',text=options$db_dir),
                      list(name='ppm',text=options$ppm),
                      list(name='analUI',text="Please choose an analysis mode!"),
@@ -381,7 +382,8 @@ observeEvent(input$color_ramp,{
                               "b2p"=cm.colors,
                               "bgy"=topo.colors,
                               "gyw"=terrain.colors,
-                              "ryw"=heat.colors)
+                              "ryw"=heat.colors,
+                              "bw"=blackwhite.colors)
     ax <- list(
       title = "",
       zeroline = FALSE,
@@ -425,7 +427,7 @@ color.vec <- reactive({
   # ----------
   switch(mainmode,
          time = {
-           if("facA" %not in% names(dataSet) & "facB" %not in% names(dataSet)) return(c("Red", "Green"))
+           if("facA" %not in% names(dataSet) & "facB" %not in% names(dataSet)) return(c("Blue", "Pink"))
            lbl.fac <- if(dataSet$facA.lbl == "Time") "facB" else "facA"
            facs <- dataSet[[lbl.fac]]
          },
@@ -537,8 +539,13 @@ observeEvent(input$create_db,{
   withProgress({
     setProgress(.25,message = "Loading outlists into memory...")
     req(input$outlist_neg, input$outlist_pos, input$excel)
-    load(input$outlist_neg$datapath, verbose=T)
-    load(input$outlist_pos$datapath, verbose=T)
+    #load(input$outlist_neg$datapath, verbose=T)
+    #load(input$outlist_pos$datapath, verbose=T)
+    #outlist_pos <- as.data.table(fread(file = "~/Downloads/HPC_downloads/data/brazil_2.1_flexdb/outlist_positive_brazilFirst8.csv", sep="\t", header=T))
+    View(head(outpgrlist))
+    outlist_pos <- as.data.table(fread(file = input$outlist_pos$datapath, sep="\t", header=T))
+    print(head(outlist_pos))
+    outlist_neg <- as.data.table(fread(file = input$outlist_neg$datapath, sep="\t", header=T))
     setProgress(.50,message = "Creating experiment database file...")
     build.pat.db(patdb,
                  ppm = ppm,
@@ -576,15 +583,20 @@ observeEvent(input$create_csv, {
   withProgress({
     setProgress(1/4)
     # create csv
-    patdb
-    tbl = get.csv(patdb,
-                 time.series = if(mainmode == "time") T else F,
-                 exp.condition = input$exp_var,
-                 group_adducts = if(length(add_search_list) == 0) F else T,
-                 group_by = input$group_by,
-                 which_dbs = add_search_list,
-                 which_adducts = selected_adduct_list
-                 )
+    tbl <- get.csv(patdb,
+                  time.series = if(mainmode == "time") T else F,
+                  exp.condition = input$exp_var,
+                  group_adducts = if(length(add_search_list) == 0) F else T,
+                  group_by = input$group_by,
+                  which_dbs = add_search_list,
+                  which_adducts = selected_adduct_list
+                  )
+    # tbl <- get.csv(patdb,
+    #                time.series = if(mainmode == "time") T else F,
+    #                exp.condition = "stool_condition",
+    #                group_adducts = F,
+    #                group_by = "mz",
+    #                which_dbs = avaliable.dbs)
     # --- experimental stuff ---
     switch(mainmode,
            time = {
@@ -609,6 +621,7 @@ observeEvent(input$create_csv, {
              },
            stat = {tbl.adj <- tbl[,-"Time"]})
         # -------------------------
+    export_tbl <<- tbl.adj
     # save csv
     setProgress(2/4)
     csv_loc <<- file.path(options$work_dir, paste0(options$proj_name,".csv"))
@@ -661,7 +674,7 @@ observeEvent(input$import_dataset, {
   switch(dataSet$shinymode,
          stat = {
            output$exp_opt <- renderUI({optUI()})
-          output$analUI <- renderUI({stat.ui()})
+           output$analUI <- renderUI({stat.ui()})
          },
          time = {
            output$exp_opt <- renderUI({})
@@ -735,8 +748,6 @@ observeEvent(input$initialize,{
                          "disc")
            }
          )
-  dataSet$cls.type
-  
   SanityCheckData()
   RemoveMissingPercent(percent = 0.5)
   ImputeVar(method = "min")
@@ -1085,8 +1096,12 @@ observeEvent(input$tab_stat, {
            })
            },
          tt = {
-           Ttests.Anal(F, 0.05, FALSE, TRUE)
-           output$tt_tab <- DT::renderDataTable({
+           Ttests.Anal(nonpar = F, 
+                       threshp = 0.05, 
+                       paired = F,
+                       equal.var = T)
+          which(analSet$tt$p.value < 0.05)
+          output$tt_tab <- DT::renderDataTable({
              # -------------
              datatable(analSet$tt$sig.mat, 
                        selection = 'single',
@@ -1128,7 +1143,18 @@ observeEvent(input$tab_stat, {
              # --- ggplot ---
              ggPlotVolc(color.function, 20)
            })
-         })
+         },
+        anova = {
+          ANOVA.Anal()
+          output$anova_tab <- DT::renderDataTable({
+            # -------------
+            datatable(analSet$aov$sig.mat, 
+                      selection = 'single',
+                      autoHideNavigation = T,
+                      options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+            
+          })
+        })
 })
 
 observe({
@@ -1287,6 +1313,7 @@ observeEvent(input$search_cpd, {
     match_list <- lapply(db_search_list, FUN=function(match.table){
       get_matches(curr_cpd, match.table, searchid=input$group_by)
     })
+    print(match_list)
     match_table <<- unique(as.data.table(rbindlist(match_list))[Name != ""])
     output$match_tab <- DT::renderDataTable({
       datatable(if(dataSet$grouping == 'pathway') match_table else{match_table[,-"Description"]},

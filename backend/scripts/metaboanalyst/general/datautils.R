@@ -110,14 +110,14 @@ Read.TextData<-function(filePath, format="rowu", lbl.type="disc"){
         if(substring(format,1,3)=="row"){ # sample in row
             msg<-c(msg, "Samples are in rows and features in columns");
             smpl.nms <-dat[,1];
-            print(lbl.type)
             if(lbl.type == "qc"){
                 rownames(dat) <- smpl.nms;
                 dataSet$orig<-dat;
                 dataSet$cmpd<-colnames(dat);
                 return(1);
             }
-            cls.lbl <- dat[,2];
+            dat[,1] <- NULL;
+            cls.lbl <- dat[,1];
             conc <- dat[,-1];
             var.nms <- colnames(conc);
         }else{ # sample in col

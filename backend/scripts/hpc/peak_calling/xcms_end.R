@@ -67,18 +67,24 @@ files = list.files(folder, pattern="\\.RData", full.names = T)
 
 # ----------------------------
 
-load(files[[1]])
+xset_neg_tot = NULL
+xset_pos_tot = NULL
 
-xset_pos_tot <- xset_pos
-xset_neg_tot <- xset_neg
-
-for(i in 2:length(files)){
+for(i in 1:length(files)){
     print(i)
     # --- RELOAD ---
     load(files[[i]])
     # --------------
-    if(!is.null(xset_neg)) xset_neg_tot <- c(xset_neg_tot, xset_neg) else{print(xset_neg)}
-    if(!is.null(xset_pos)) xset_pos_tot <- c(xset_pos_tot, xset_pos) else{print(xset_pos)}
+    if(is.null(xset_neg_tot)){
+      if(!is.null(xset_neg)) xset_neg_tot <- c(xset_neg) else{print(xset_neg)}
+    }else{
+      if(!is.null(xset_neg)) xset_neg_tot <- c(xset_neg_tot, xset_neg) else{print(xset_neg)}
+    }
+    if(is.null(xset_pos_tot)){
+      if(!is.null(xset_pos)) xset_pos_tot <- c(xset_pos) else{print(xset_pos)}
+    }else{
+      if(!is.null(xset_pos)) xset_pos_tot <- c(xset_pos_tot, xset_pos) else{print(xset_pos)}
+    }
 }
 
 # --------------------------------------
@@ -97,11 +103,9 @@ mzppm=2)
 
 print("Filling missing peaks...")
 
-xset_pos_gf <-fillPeaks(xset_pos_g,
-method="MSW")
+xset_pos_gf <-fillPeaks(xset_pos_g)
 
-xset_neg_gf <-fillPeaks(xset_neg_g,
-method="MSW")
+xset_neg_gf <-fillPeaks(xset_neg_g)
 
 # --------------------------------------
 

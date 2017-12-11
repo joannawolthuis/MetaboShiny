@@ -4,7 +4,7 @@ get.csv <- function(patdb,
                     exp.condition = "diet",
                     max.vals = -1,
                     group_adducts = T,
-                    which_dbs = NA,
+                    which_dbs = file.path(options$db_dir, "kegg.full.db"),
                     which_adducts = c("M+H", "M-H", "M"),
                     group_by = "mz"){
   library(reshape2)
@@ -12,54 +12,56 @@ get.csv <- function(patdb,
   library(RSQLite)
   library(data.table)
   # --- announce some stuff ---
+  adducts <- paste(which_adducts, collapse = ", ")
+  groupfac <- group_by
   max.cols <- if(max.vals == -1) "unlimited" else max.vals + 3
   cat(fn$paste("Creating csv for metabolomics analysis with max $max.cols columns.
-                Chosen experimental conditon is '$exp.condition'.\n"))
+                - Chosen experimental conditon is '$exp.condition'.
+                - Grouping by $groupfac
+                - Using adducts $adducts"))
   conn <- dbConnect(RSQLite::SQLite(), patdb)
   #dbExecute(conn, "drop table if exists avg_intensities")
   # --- create table with averaged intensities for the triplicates ---
-  make.query <- strwrap(fn$paste("create table if not exists avg_intensities as
-                                 select mzmed as mz, filename, avg(intensity) as intensity 
-                                 from mzintensities 
-                                 group by filename, mzmed"), width=10000, simplify=TRUE)
-  dbExecute(conn, make.query)
-  index.query <- "create index if not exists avg_index on avg_intensities(filename, mz)"
+  # make.query <- strwrap(fn$paste("create table if not exists avg_intensities as
+  #                                select mzmed as mz, filename, avg(intensity) as intensity 
+  #                                from mzintensities 
+  #                                group by filename, mzmed"), width=10000, simplify=TRUE)
+  # dbExecute(conn, make.query)
+  # index.query <- "create index if not exists avg_index on avg_intensities(filename, mz)"
   # --- build result fetching query ---
   if(group_adducts){
     # if(is.null(which_adducts)) which_adducts <- c("M+H", "M-H", "M-Cl", "M+K", "M")
     # if(is.null(which_adducts)) which_dbs <- c(file.path(options$db_dir, "chebi.full.db"))
     # group_by = "baseformula"
-        z = get_all_matches(exp.condition, 
-                         pat.conn = conn,
-                         which_dbs,
-                         which_adducts,
-                         group_by)
-    
+    z = get_all_matches(exp.condition, 
+                        pat.conn = conn,
+                        which_dbs,
+                        which_adducts,
+                        group_by)
     z.dt <- as.data.table(z)
     cast.dt <- dcast.data.table(z.dt, 
-                                animal_internal_id + sampling_date + label ~ identifier, 
+                                card_id + sampling_date + label ~ identifier, 
                                 fun.aggregate = sum, 
                                 value.var = "intensity") # what to do w/ duplicates? 
   }else{
-    z = dbGetQuery(conn, strwrap(fn$paste("select distinct d.animal_internal_id, 
+    z = dbGetQuery(conn, strwrap(fn$paste("select distinct d.card_id, 
                                            s.[$exp.condition] as label, 
                                            d.sampling_date, 
-                                           i.mz as identifier,
+                                           i.mzmed as identifier,
                                            i.intensity
-                                           from avg_intensities i
+                                           from mzintensities i
                                            join individual_data d
                                            on i.filename = d.card_id
                                            join setup s
                                            on d.[Group] = s.[Group]
-                                           group by d.animal_internal_id, 
+                                           group by d.card_id, 
                                            d.sampling_date, 
-                                           i.mz"),
+                                           i.mzmed"),
                                     width=10000,
                                     simplify=TRUE))
-    z
     z.dt <- as.data.table(z)
     cast.dt <- dcast.data.table(z.dt, 
-                                animal_internal_id + sampling_date + label ~ identifier, 
+                                card_id + sampling_date + label ~ identifier, 
                                 fun.aggregate = sum, 
                                 value.var = "intensity") # what to do w/ duplicates? 
   }

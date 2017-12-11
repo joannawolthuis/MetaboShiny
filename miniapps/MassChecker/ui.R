@@ -1,5 +1,3 @@
-
-
 shinyUI(fluidPage(theme = "metaboshiny.css",
                   navbarPage(title=h1("MassChecker"),
                              tabPanel(icon("battery-0"), 
