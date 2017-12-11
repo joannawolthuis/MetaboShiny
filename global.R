@@ -122,9 +122,11 @@ parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
   "regexpr",
   "regmatches"
 ))
-sourceAll(file.path("backend", 
-                    "scripts", 
-                    "metaboanalyst"))
+
+library(MetaboAnalystR)
+# sourceAll(file.path("backend", 
+#                     "scripts", 
+#                     "metaboanalyst"))
 
 source("./Rsource/SwitchButton.R")
 

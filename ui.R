@@ -227,9 +227,19 @@ shinyUI(fluidPage(theme = "metaboshiny.css",
                                       ), column(9,
                                                 navbarPage("Explore",
                                                            tabPanel("Variables", icon=icon("braille"),
-                                                                    plotOutput('var_norm_plot', width = '800px', height='800px')),
+                                                                    fluidRow(column(6,plotOutput("var1",height='300px')),
+                                                                             column(6,plotOutput("var3", height='300px'))
+                                                                             ),
+                                                                    fluidRow(column(6,plotOutput("var2", height='500px')),
+                                                                            column(6,plotOutput("var4", height='500px')))
+                                                                    ),
                                                            tabPanel("Samples", icon=icon("tint"),
-                                                                    plotOutput('samp_norm_plot', width = '800px', height='800px'))
+                                                                    fluidRow(column(6,plotOutput("samp1",height='300px')),
+                                                                             column(6,plotOutput("samp3", height='300px'))
+                                                                    ),
+                                                                    fluidRow(column(6,plotOutput("samp2", height='500px')),
+                                                                             column(6,plotOutput("samp4", height='500px')))
+                                                                    )
                                                 ))
                                       )),
                              # --------------------------------------------------------------------------------------------------------------------------------

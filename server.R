@@ -402,15 +402,15 @@ observeEvent(input$color_ramp,{
 
 
 color.pickers <- reactive({
-  req(dataSet)
+  req(mSet$dataSet)
   # -------------
   switch(mainmode,
          time = {
-           lbl.fac <- if(dataSet$facA.lbl == "Time") "facB" else "facA"
-           facs <- levels(dataSet[[lbl.fac]])
+           lbl.fac <- if(mSet$dataSet$facA.lbl == "Time") "facB" else "facA"
+           facs <- levels(mSet$dataSet[[lbl.fac]])
            },
          stat = {
-           facs <- levels(dataSet$filt.cls)
+           facs <- levels(mSet$dataSet$filt.cls)
   })
   default.colours <- rainbow(length(facs))
   # -------------
@@ -423,16 +423,16 @@ color.pickers <- reactive({
 })
 
 color.vec <- reactive({
-  req(dataSet)
+  req(mSet$dataSet)
   # ----------
   switch(mainmode,
          time = {
-           if("facA" %not in% names(dataSet) & "facB" %not in% names(dataSet)) return(c("Blue", "Pink"))
-           lbl.fac <- if(dataSet$facA.lbl == "Time") "facB" else "facA"
-           facs <- dataSet[[lbl.fac]]
+           if("facA" %not in% names(mSet$dataSet) & "facB" %not in% names(mSet$dataSet)) return(c("Blue", "Pink"))
+           lbl.fac <- if(mSet$dataSet$facA.lbl == "Time") "facB" else "facA"
+           facs <- mSet$dataSet[[lbl.fac]]
          },
          stat = {
-           facs <- dataSet$filt.cls
+           facs <- mSet$dataSet$filt.cls
          })
   default.colours <- rainbow(length(facs))
   # -------------
@@ -671,7 +671,7 @@ observeEvent(input$import_dataset, {
   output$var_norm_plot <- renderPlot(PlotNormSummary())
   output$samp_norm_plot <- renderPlot(PlotSampleNormSummary())
   # ===========
-  switch(dataSet$shinymode,
+  switch(mSet$dataSet$shinymode,
          stat = {
            output$exp_opt <- renderUI({optUI()})
            output$analUI <- renderUI({stat.ui()})
@@ -729,61 +729,74 @@ observeEvent(input$initialize,{
   setProgress(.1)
   # ------------------------------
   #Below is your R command history: 
-  switch(mainmode,
+  mSet <<- switch(mainmode,
          time = {
-           InitDataObjects("pktable",
-                           "ts",
-                           FALSE)
-           SetDesignType("time")
-           Read.TextData(csv_loc,
-                         "rowts",
-                         "disc")
+           mSet <<- InitDataObjects("pktable", 
+                                   "ts", 
+                                   FALSE)
+           mSet <<- Read.TextData(mSet, 
+                                 filePath = csv_loc,
+                                 "rowu", 
+                                 "disc")
+           mSet <<- SetDesignType(mSet,"time")
+           mSet
            },
          stat = {
-           InitDataObjects("pktable",
-                           "stat",
-                           FALSE)
-           Read.TextData(csv_loc, 
-                         "rowu", 
-                         "disc")
+           mSet <<- InitDataObjects("pktable", 
+                                   "stat", 
+                                   FALSE)
+           mSet <<- Read.TextData(mSet, 
+                                 filePath = csv_loc,
+                                 "rowu", 
+                                 "disc")
+           mSet
            }
          )
-  SanityCheckData()
-  RemoveMissingPercent(percent = 0.5)
-  ImputeVar(method = "min")
-  ReplaceMin()
-  FilterVariable(filter = input$filt_type,
-                 qcFilter = "F", 
-                 rsd = 25)
-  FilterVariable(filter = "iqr" ,
-                 qcFilter = "F", 
-                 rsd = 25)
+  mSet <<- SanityCheckData(mSet)
+  mSet <<- RemoveMissingPercent(mSet, percent = 0.5)
+  mSet <<- ImputeVar(mSet,
+                    method = "min")
+  mSet <<- ReplaceMin(mSet)
+  mSet <<- FilterVariable(mSet,
+                         filter = input$filt_type,
+                         qcFilter = "F", 
+                         rsd = 25)
   # ---- here facA/facB disappears?? ---
-  GetPrenormSmplNms()
-  GetPrenormFeatureNms()
-  GetPrenormClsNms()
-  UpdateGroupItems()
-  UpdateSampleItems()
-  UpdateFeatureItems()
+  # mSet <<- UpdateGroupItems(mSet)
+  # mSet <<- UpdateSampleItems(mSet)
+  # mSet <<- UpdateFeatureItems(mSet)
   # ------------------------------------
   setProgress(.2)
-  Normalization(rowNorm = input$norm_type,
-                transNorm = input$trans_type,
-                scaleNorm = input$scale_type,
-                ref = input$ref_var)
-  dataSet$grouping <<- input$group_by
-  dataSet$shinymode <<- mainmode
-  mainmode <<- dataSet$shinymode
+  mSet <<- Normalization(mSet,
+                        rowNorm = input$norm_type,
+                        transNorm = input$trans_type,
+                        scaleNorm = input$scale_type,
+                        ref = input$ref_var)
+  mSet$dataSet$grouping <<- input$group_by
+  mSet$dataSet$shinymode <<- mainmode
+  print(names(mSet$dataSet))
+  
+  mainmode <<- mSet$dataSet$shinymode
   # -------------------------------------
-  if(dataSet$grouping == "pathway"){dataSet$norm <- abs(dataSet$norm)}
+  if(mSet$dataSet$grouping == "pathway"){mSet$dataSet$norm <- abs(mSet$dataSet$norm)}
   setProgress(.3)
-  output$var_norm_plot <- renderPlot(PlotNormSummary())
+  varNormPlots <- ggplotNormSummary(mSet)
+  output$var1 <- renderPlot(varNormPlots$tl)
+  output$var2 <- renderPlot(varNormPlots$bl)
+  output$var3 <- renderPlot(varNormPlots$tr)
+  output$var4 <- renderPlot(varNormPlots$br)
+  
   setProgress(.4)
-  output$samp_norm_plot <- renderPlot(PlotSampleNormSummary())
-  dataSet$adducts <<- selected_adduct_list
+  sampNormPlots <-  ggplotSampleNormSummary(mSet)
+  output$samp1 <- renderPlot(sampNormPlots$tl)
+  output$samp2 <- renderPlot(sampNormPlots$bl)
+  output$samp3 <- renderPlot(sampNormPlots$tr)
+  output$samp4 <- renderPlot(sampNormPlots$br)
+  
+  mSet$dataSet$adducts <<- selected_adduct_list
   # ------------------------------------
   output$analUI <- renderUI({
-    switch(dataSet$shinymode, 
+    switch(mSet$dataSet$shinymode, 
            time={time.ui()},
            stat={stat.ui()})
     })
@@ -798,14 +811,14 @@ observeEvent(input$tab_time, {
          ipca = {
            # --------------------
            output$plot_ipca <- renderPlotly({
-             if("ipca" %not in% names(analSet)){
-               iPCA.Anal(file.path(options$work_dir, "ipca_3d_0_.json"))
+             if("ipca" %not in% names(mSet$analSet)){
+               iPCA.Anal(mSet, file.path(options$work_dir, "ipca_3d_0_.json"))
              }
-             fac.lvls <- unique(analSet$ipca$score[[input$ipca_factor]])
+             fac.lvls <- unique(mSet$analSet$ipca$score[[input$ipca_factor]])
              print(fac.lvls)
              chosen.colors <- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
              # ---------------
-             df <- t(as.data.frame(analSet$ipca$score$xyz))
+             df <- t(as.data.frame(mSet$analSet$ipca$score$xyz))
              x <- gsub(input$ipca_x,pattern = "\\(.*$", replacement = "")
              y <- gsub(input$ipca_y,pattern = "\\(.*$", replacement = "")
              z <- gsub(input$ipca_z,pattern = "\\(.*$", replacement = "")
@@ -815,7 +828,7 @@ observeEvent(input$tab_time, {
              # ---------------
              plots <- plot_ly()
              for(class in fac.lvls){
-               row = which(analSet$ipca$score[[input$ipca_factor]] == class)
+               row = which(mSet$analSet$ipca$score[[input$ipca_factor]] == class)
                print(row)
                # ---------------------
                xc=df[row, x.num]
@@ -858,20 +871,20 @@ observeEvent(input$tab_time, {
                  z = df[,z.num], 
                  opacity=1,
                  type = "scatter3d",
-                 color= analSet$ipca$score[[input$ipca_factor]], colors=chosen.colors
+                 color= mSet$analSet$ipca$score[[input$ipca_factor]], colors=chosen.colors
                ) %>%  layout(scene = list(
                  xaxis = list(
-                   title = analSet$ipca$score$axis[x.num]),
+                   title = mSet$analSet$ipca$score$axis[x.num]),
                  yaxis = list(
-                   title = analSet$ipca$score$axis[y.num]),
+                   title = mSet$analSet$ipca$score$axis[y.num]),
                  zaxis = list(
-                   title = analSet$ipca$score$axis[z.num])))
+                   title = mSet$analSet$ipca$score$axis[z.num])))
              # --- return ---
              ipca_plot
            })
            # ------------------
-           ipca.table <- as.data.table(data.table(gsub(analSet$ipca$score$axis, pattern = "\\(.*$| ", replacement = ""),
-                                                 gsub(analSet$ipca$score$axis, pattern = "PC\\d*| |\\(|%\\)", replacement = "")),
+           ipca.table <- as.data.table(data.table(gsub(mSet$analSet$ipca$score$axis, pattern = "\\(.*$| ", replacement = ""),
+                                                 gsub(mSet$analSet$ipca$score$axis, pattern = "PC\\d*| |\\(|%\\)", replacement = "")),
                                       keep.rownames = T)
            colnames(ipca.table) <- c("Principal Component", "% variance")
            output$ipca_tab <- DT::renderDataTable({
@@ -884,12 +897,12 @@ observeEvent(input$tab_time, {
            })
          },
          meba = {
-           if("MB" %not in% names(analSet)){
+           if("MB" %not in% names(mSet$analSet)){
             performMB(10, dir=options$work_dir)
            }
            output$meba_tab <- DT::renderDataTable({
              # -------------
-             datatable(analSet$MB$stats, 
+             datatable(mSet$analSet$MB$stats, 
                        selection = 'single',
                        colnames = c("Compound", "Hotelling/T2 score"),
                        autoHideNavigation = T,
@@ -897,13 +910,13 @@ observeEvent(input$tab_time, {
            })
          },
          asca = {
-           if("asca" %not in% names(analSet)){
+           if("asca" %not in% names(mSet$analSet)){
              Perform.ASCA(1, 1, 2, 2)
              CalculateImpVarCutoff(0.05, 0.9, dir=options$work_dir)
            }
            output$asca_tab <- DT::renderDataTable({
              # -------------
-             datatable(analSet$asca$sig.list$Model.ab, 
+             datatable(mSet$analSet$asca$sig.list$Model.ab, 
                        selection = 'single',
                        colnames = c("Compound", "Leverage", "SPE"),
                        autoHideNavigation = T,
@@ -918,26 +931,27 @@ observeEvent(input$tab_stat, {
   # get excel table stuff.
   switch(input$tab_stat,
          pca = {
-           PCA.Anal()
+           mSet <<- PCA.Anal(mSet)
            output$plot_pca <- renderPlotly({
-             df <- analSet$pca$x
+             df <- mSet$analSet$pca$x
              x <- input$pca_x
              y <- input$pca_y
              z <- input$pca_z
-             x.var <- round(analSet$pca$variance[x] * 100.00, digits=1)
-             y.var <- round(analSet$pca$variance[y] * 100.00, digits=1)
-             z.var <- round(analSet$pca$variance[z] * 100.00, digits=1)
-             fac.lvls <- unique(dataSet$filt.cls)
+             #x =1;y=2;z=3
+             x.var <- round(mSet$analSet$pca$variance[x] * 100.00, digits=1)
+             y.var <- round(mSet$analSet$pca$variance[y] * 100.00, digits=1)
+             z.var <- round(mSet$analSet$pca$variance[z] * 100.00, digits=1)
+             fac.lvls <- unique(mSet$dataSet$filt.cls)
              chosen.colors <<- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
              # --- add ellipses ---
-             classes <- dataSet$cls
+             classes <- mSet$dataSet$cls
              plots <- plot_ly()
              for(class in levels(classes)){
                row = which(classes == class)
                # ---------------------
-               xc=analSet$pca$x[row, x]
-               yc=analSet$pca$x[row, y]
-               zc=analSet$pca$x[row, z]
+               xc=mSet$analSet$pca$x[row, x]
+               yc=mSet$analSet$pca$x[row, y]
+               zc=mSet$analSet$pca$x[row, z]
                # --- plot ellipse ---
                o <- ellipse3d(cov(cbind(xc,yc,zc)), 
                                     centre=c(mean(xc), 
@@ -971,12 +985,12 @@ observeEvent(input$tab_stat, {
              pca_plot <- adj_plot %>% add_trace(
                hoverinfo = 'text',
                text = rownames(df),
-               x = analSet$pca$x[,1], 
-               y = analSet$pca$x[,2], 
-               z = analSet$pca$x[,3], 
+               x = mSet$analSet$pca$x[,1], 
+               y = mSet$analSet$pca$x[,2], 
+               z = mSet$analSet$pca$x[,3], 
                type = "scatter3d",
                opacity=1,
-               color= dataSet$filt.cls, colors=chosen.colors
+               color= mSet$dataSet$filt.cls, colors=chosen.colors
              ) %>%  layout(scene = list(
                xaxis = list(
                  title = fn$paste("$x ($x.var %)")),
@@ -987,7 +1001,7 @@ observeEvent(input$tab_stat, {
              # --- return ---
              pca_plot
              })
-           pca.table <- as.data.table(round(analSet$pca$variance * 100.00,
+           pca.table <- as.data.table(round(mSet$analSet$pca$variance * 100.00,
                                             digits = 2),
                                       keep.rownames = T)
            colnames(pca.table) <- c("Principal Component", "% variance")
@@ -1000,10 +1014,14 @@ observeEvent(input$tab_stat, {
                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
            })},
          plsda = {
-           PLSR.Anal()
-           PLSDA.CV("L",5, "Q2")
-           plsda.table <- as.data.table(round(analSet$plsr$Xvar 
-                                              / analSet$plsr$Xtotvar 
+           mSet <<- PLSR.Anal(mSet,
+                             F)
+           mSet <<- PLSDA.CV(mSet,
+                            "L",
+                            5, 
+                            "Q2")
+           plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar 
+                                              / mSet$analSet$plsr$Xtotvar 
                                               * 100.0,
                                               digits = 2),
                                         keep.rownames = T)
@@ -1020,18 +1038,18 @@ observeEvent(input$tab_stat, {
                                   `% variance`]
              z.var <- plsda.table[`Principal Component` == z, 
                                   `% variance`]
-             fac.lvls <- unique(dataSet$filt.cls)
-             colnames(analSet$plsr$Yscores) <- paste0("PC", 1:ncol(analSet$plsr$Yscores))
+             fac.lvls <- unique(mSet$dataSet$filt.cls)
+             colnames(mSet$analSet$plsr$Yscores) <- paste0("PC", 1:ncol(mSet$analSet$plsr$Yscores))
              chosen.colors <- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
              # ---------------
              plot_ly(hoverinfo = 'text',
-                     text = rownames(dataSet$norm)) %>%
+                     text = rownames(mSet$dataSet$norm)) %>%
                add_trace(
-                 x = analSet$plsr$Yscores[,x], 
-                 y = analSet$plsr$Yscores[,y], 
-                 z = analSet$plsr$Yscores[,z], 
+                 x = mSet$analSet$plsr$Yscores[,x], 
+                 y = mSet$analSet$plsr$Yscores[,y], 
+                 z = mSet$analSet$plsr$Yscores[,z], 
                  type = "scatter3d",
-                 color = dataSet$filt.cls, colors=chosen.colors
+                 color = mSet$dataSet$filt.cls, colors=chosen.colors
                ) %>%  layout(scene = list(
                  xaxis = list(
                    title = fn$paste("$x ($x.var %)")),
@@ -1052,8 +1070,8 @@ observeEvent(input$tab_stat, {
   })
   # -------------
   output$plsda_vip_tab <- DT::renderDataTable({
-    colnames(analSet$plsda$vip.mat) <- paste0("PC", 1:ncol(analSet$plsda$vip.mat))
-    compounds_pc <- as.data.table(analSet$plsda$vip.mat,keep.rownames = T)
+    colnames(mSet$analSet$plsda$vip.mat) <- paste0("PC", 1:ncol(mSet$analSet$plsda$vip.mat))
+    compounds_pc <- as.data.table(mSet$analSet$plsda$vip.mat,keep.rownames = T)
     ordered_pc <- setorderv(compounds_pc, input$plsda_vip_cmp, -1)
     plsda_tab <<- cbind(ordered_pc[1:50, c("rn")], 
                         Rank=c(1:50))
@@ -1067,15 +1085,15 @@ observeEvent(input$tab_stat, {
          heatmap = {
            req(input$heatmode)
            req(input$color_ramp)
-           req(analSet$tt)
-           req(analSet$fc)
+           req(mSet$analSet$tt)
+           req(mSet$analSet$fc)
            # --- render ---
            output$heatmap <- renderPlotly({
              x <- if(input$heatmode == TRUE){
-               dataSet$norm[,names(analSet$tt$inx.imp[analSet$tt$inx.imp == TRUE])]
-             } else{dataSet$norm[,names(analSet$fc$inx.imp[analSet$fc$inx.imp == TRUE])]}
+               mSet$dataSet$norm[,names(mSet$analSet$tt$inx.imp[mSet$analSet$tt$inx.imp == TRUE])]
+             } else{mSet$dataSet$norm[,names(mSet$analSet$fc$inx.imp[mSet$analSet$fc$inx.imp == TRUE])]}
              final_matrix <- t(x)
-             translator <- data.table(Sample=rownames(dataSet$norm),Group=dataSet$prenorm.cls)
+             translator <- data.table(Sample=rownames(mSet$dataSet$norm),Group=mSet$dataSet$prenorm.cls)
              group_assignments <- translator[,"Group",on=colnames(final_matrix)]$Group
              hm_matrix <<- heatmapr(final_matrix, 
                                     Colv=T, 
@@ -1100,10 +1118,10 @@ observeEvent(input$tab_stat, {
                        threshp = 0.05, 
                        paired = F,
                        equal.var = T)
-          which(analSet$tt$p.value < 0.05)
+          which(mSet$analSet$tt$p.value < 0.05)
           output$tt_tab <- DT::renderDataTable({
              # -------------
-             datatable(analSet$tt$sig.mat, 
+             datatable(mSet$analSet$tt$sig.mat, 
                        selection = 'single',
                        autoHideNavigation = T,
                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -1118,7 +1136,7 @@ observeEvent(input$tab_stat, {
            FC.Anal.unpaired(2.0, 1)
            output$fc_tab <- DT::renderDataTable({
              # -------------
-             datatable(analSet$fc$sig.mat, 
+             datatable(mSet$analSet$fc$sig.mat, 
                        selection = 'single',
                        autoHideNavigation = T,
                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -1133,7 +1151,7 @@ observeEvent(input$tab_stat, {
            Volcano.Anal(FALSE, 2.0, 0, 0.75,F, 0.1, TRUE, "raw")
            output$volc_tab <- DT::renderDataTable({
              # -------------
-             datatable(analSet$volc$sig.mat, 
+             datatable(mSet$analSet$volc$sig.mat, 
                        selection = 'single',
                        autoHideNavigation = T,
                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -1148,7 +1166,7 @@ observeEvent(input$tab_stat, {
           ANOVA.Anal()
           output$anova_tab <- DT::renderDataTable({
             # -------------
-            datatable(analSet$aov$sig.mat, 
+            datatable(mSet$analSet$aov$sig.mat, 
                       selection = 'single',
                       autoHideNavigation = T,
                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -1210,12 +1228,12 @@ lapply(res.update.tables, FUN=function(table){
     curr_row = input[[paste0(table, "_tab_rows_selected")]]
     # do nothing if not clicked yet, or the clicked cell is not in the 1st column
     if (is.null(curr_row)) return()
-    rownames(analSet$tt$sig.mat)
+    rownames(mSet$analSet$tt$sig.mat)
     curr_cpd <<- data.table(switch(table,
-                                     tt = analSet$tt$sig.mat,
-                                     fc = analSet$fc$sig.mat,
-                                     asca = analSet$asca$sig.list$Model.ab,
-                                     meba = analSet$MB$stats,
+                                     tt = mSet$analSet$tt$sig.mat,
+                                     fc = mSet$analSet$fc$sig.mat,
+                                     asca = mSet$analSet$asca$sig.list$Model.ab,
+                                     meba = mSet$analSet$MB$stats,
                                      plsda_vip = plsda_tab)
                               , keep.rownames = T)[curr_row, rn]
     output$curr_cpd <- renderText(curr_cpd)
@@ -1229,11 +1247,11 @@ lapply(res.update.tables, FUN=function(table){
     })
     if(input$autosearch & length(db_search_list > 0)){
       match_list <- lapply(db_search_list, FUN=function(match.table){
-        get_matches(curr_cpd, match.table, searchid=dataSet$grouping)
+        get_matches(curr_cpd, match.table, searchid=mSet$dataSet$grouping)
       })
       match_table <<- unique(as.data.table(rbindlist(match_list))[Name != ""])
       output$match_tab <- DT::renderDataTable({
-        datatable(if(dataSet$grouping == 'pathway') match_table else{match_table[,-"Description"]},
+        datatable(if(mSet$dataSet$grouping == 'pathway') match_table else{match_table[,-"Description"]},
                   selection = 'single',
                   autoHideNavigation = T,
                   options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -1251,7 +1269,7 @@ observe({
            switch(input$tab_stat,
                   tt = {
                     if('key' %not in% colnames(d)) return(NULL)
-                    if(d$key %not in% names(analSet$tt$p.value)) return(NULL)
+                    if(d$key %not in% names(mSet$analSet$tt$p.value)) return(NULL)
                     curr_cpd <<- d$key
                     output$tt_specific_plot <- renderPlotly({
                       # --- ggplot ---
@@ -1260,7 +1278,7 @@ observe({
                   },
                   fc = {
                     if('key' %not in% colnames(d)) return(NULL)
-                    if(d$key %not in% names(analSet$fc$fc.log)) return(NULL)
+                    if(d$key %not in% names(mSet$analSet$fc$fc.log)) return(NULL)
                     curr_cpd <<- d$key
                     output$fc_specific_plot <- renderPlotly({
                       # --- ggplot ---
@@ -1274,7 +1292,7 @@ observe({
                   },
                   volc = {
                     if('key' %not in% colnames(d)) return(NULL)
-                    if(d$key %not in% rownames(analSet$volcano$sig.mat)) return(NULL)
+                    if(d$key %not in% rownames(mSet$analSet$volcano$sig.mat)) return(NULL)
                     curr_cpd <<- d$key
                   })},
          time = {NULL} # nothing here yet, any scatterplots?
@@ -1287,7 +1305,7 @@ observe({
     })
     match_table <<- unique(as.data.table(rbindlist(match_list))[Name != ""])
     output$match_tab <- DT::renderDataTable({
-      datatable(if(dataSet$grouping == 'pathway') match_table else{match_table[,-"Description"]},
+      datatable(if(mSet$dataSet$grouping == 'pathway') match_table else{match_table[,-"Description"]},
                 selection = 'single',
                 autoHideNavigation = T,
                 options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -1316,7 +1334,7 @@ observeEvent(input$search_cpd, {
     print(match_list)
     match_table <<- unique(as.data.table(rbindlist(match_list))[Name != ""])
     output$match_tab <- DT::renderDataTable({
-      datatable(if(dataSet$grouping == 'pathway') match_table else{match_table[,-"Description"]},
+      datatable(if(mSet$dataSet$grouping == 'pathway') match_table else{match_table[,-"Description"]},
                 selection = 'single',
                 autoHideNavigation = T,
                 options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -1329,7 +1347,7 @@ observeEvent(input$match_tab_rows_selected,{
   curr_row <<- input$match_tab_rows_selected
   if (is.null(curr_row)) return()
   # -----------------------------
-  curr_def <<- if(dataSet$grouping == 'pathway') "Unavailable" else(match_table[curr_row,'Description'])
+  curr_def <<- if(mSet$dataSet$grouping == 'pathway') "Unavailable" else(match_table[curr_row,'Description'])
   output$curr_definition <- renderText(curr_def$Description)
   })
 
@@ -1392,6 +1410,8 @@ observeEvent(input$hits_tab_rows_selected,{
 # --- ON CLOSE ---
 session$onSessionEnded(function() {
   if(any(!is.na(session_cl))) stopCluster(session_cl)
-  #save(dataSet, analSet, file = file.path(options$work_dir, paste0(options$proj_name, ".RData")))
+  #save(mSet$dataSet, mSet$analSet, file = file.path(options$work_dir, paste0(options$proj_name, ".RData")))
 })
 })
+
+

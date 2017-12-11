@@ -35,8 +35,9 @@ install.if.not <- function(package){
       install.packages("devtools")
       # Step 2: Install MetaboAnalystR with documentation
       devtools::install_github("xia-lab/MetaboAnalystR", build_vignettes=TRUE)
+    }else{
+      install.packages(package)
     }
-    install.packages(package)
   }
 }
 
