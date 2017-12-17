@@ -9,7 +9,6 @@ get_ref_vars <- function(fac="Label"){
 
 getProfile <- function(varName, title=varName, mode="stat"){
   # ---------------
-  require(ggplot2)
   print(varName)
   print(colnames(mSet$dataSet$norm))
   # ---------------

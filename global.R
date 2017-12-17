@@ -4,7 +4,17 @@ options(stringsAsFactors = FALSE)
 if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
 
-# ------------------------
+# --- source ---
+
+library(shiny)
+library(shinyBS)
+library(shinyFiles)
+library(MetaboAnalystR)
+library(data.table)
+library(gsubfn)
+library(plotly)
+library(colorRamps)
+library(randomForest)
 
 sourceDir <- function(path, trace = TRUE, ...) {
   for (nm in list.files(path, pattern = "\\.[RrSsQq]$")) {
@@ -49,84 +59,18 @@ setOption <- function(file.loc, key, value){
 
 mainmode <<- if(exists("dataSet")) dataSet$shinymode else("stat")
 
-# === SOURCE OWN CODE ===
-
-sourceAll <- function(where, 
-                      which=c("general", "stats", "time", "enrich_path", "power_roc", "utils")){
-  p_load(compiler)
-  # ----------------------------
-  print("sourcing R code ... ");
-  for(i in 1:length(which)){
-    script.loc <- file.path(where, which[i])
-    print(script.loc)
-    files <- list.files(file.path(where, which[i]),full.names=TRUE, pattern=".R$");
-    print(files)
-    for(f in files){
-      print(f)
-      source(f)
-    }
-  }
-  return("TRUE");
-}
-
 # --------------------------
 options <- getOptions(".conf")
 
 sourceDir("backend/scripts/joanna")
 load("backend/umcfiles/adducts/AdductTableWKZ.RData")
+
 # === LOAD LIBRARIES ===
 
-library(RSQLite)
-library(DBI)
-library(reshape2)
-library(data.table)
-library(xlsx)
-library(plotly)
-library(preprocessCore)
-library(heatmaply)
-library(shinyFiles)
-library(colorRamps)
-library(grDevices)
-library(colourpicker)
-library(pacman)
-library(RSQLite)
-library(gsubfn)
-library(DBI)
-library(parallel)
-library(XML)
-library(minval)
-library(curl)
-library(enviPat)
-library(SPARQL)
-library(KEGGREST)
-library(shinyBS)
-library(rhandsontable)
-library(rgl)
-sourceAll(file.path("backend", 
-                    "scripts", 
-                    "joanna"))
-data(isotopes, package = "enviPat")
-session_cl <<- makeCluster(detectCores())
-parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
-  "isotopes",
-  "subform.joanna", 
-  "mergeform.joanna",
-  "multiform.joanna",
-  "check.ded.joanna",
-  "data.table",
-  "rbindlist",
-  "isopattern",
-  "keggFind",
-  "keggGet",
-  "kegg.charge",
-  "regexpr",
-  "regmatches"
-))
 
-library(MetaboAnalystR)
-# sourceAll(file.path("backend", 
-#                     "scripts", 
-#                     "metaboanalyst"))
+
+data(isotopes, package = "enviPat")
+session_cl <<- parallel::makeCluster(parallel::detectCores())
 
 source("./Rsource/SwitchButton.R")
 

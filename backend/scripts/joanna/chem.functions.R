@@ -1,10 +1,10 @@
 #' @export
 get.mw <- function(mol.formula, charge){
   # --------------------------------------
-  library(CIAAWconsensus)
-  library(CHNOSZ)
+  #library(CIAAWconsensus)
+  #library(CHNOSZ)
   # --------------------------------------
-  atom.masses <- ciaaw.mass
+  atom.masses <- CIAAWconsensus::ciaaw.mass
   sodium.row <- data.frame(
     isotope = '22Na',
     element = 'sodium',

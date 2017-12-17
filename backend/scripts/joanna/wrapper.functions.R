@@ -8,9 +8,6 @@ get.csv <- function(patdb,
                     which_adducts = c("M+H", "M-H", "M"),
                     group_by = "mz",
                     var_table = "setup"){
-  library(reshape2)
-  library(DBI)
-  library(RSQLite)
   library(data.table)
   # --- announce some stuff ---
   adducts <- paste(which_adducts, collapse = ", ")
@@ -20,7 +17,7 @@ get.csv <- function(patdb,
                 - Chosen experimental conditon is '$exp.condition'.
                 - Grouping by $groupfac
                 - Using adducts $adducts"))
-  conn <- dbConnect(RSQLite::SQLite(), patdb)
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
   #dbExecute(conn, "drop table if exists avg_intensities")
   # --- create table with averaged intensities for the triplicates ---
   # make.query <- strwrap(fn$paste("create table if not exists avg_intensities as
@@ -66,7 +63,7 @@ get.csv <- function(patdb,
                      width=10000,
                      simplify=TRUE)
     print(query)
-    z = dbGetQuery(conn, query)
+    z = RSQLite::dbGetQuery(conn, query)
     z.dt <- as.data.table(z)
     cast.dt <- dcast.data.table(z.dt, 
                                 card_id + sampling_date + label ~ identifier, 

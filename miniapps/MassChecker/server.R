@@ -176,6 +176,7 @@ READW - Nice converter that requires MSFileReader. Find a one-file executable pl
     })
   })
   
+
   observeEvent(input$make_report, {
     # create final report.
     # ------------------
@@ -246,3 +247,34 @@ READW - Nice converter that requires MSFileReader. Find a one-file executable pl
   output$files <- renderPrint(list.files(path(),pattern = "mzXML|raw"))
 }) 
 
+makeSampleNames <- function(dir, injfile){ # IMPLEMENT THIS W/ PEAKFINDING SOON
+  library(data.table)
+  
+  dir <- "/Users/jwolthuis/Downloads/Data/Project 2017-025 DSM feed-9 (SRUC-Ayr) - Saskia v Mil/RES-2017-11-14_DSM DBS Ayr Scotland/"
+  mzfiles <- list.files(file.path(dir, "MZXML"))
+  injfile <- xlsx::read.xlsx(file = "/Users/jwolthuis/Downloads/Data/Project 2017-025 DSM feed-9 (SRUC-Ayr) - Saskia v Mil/Injection list Ayr (Scotland).xlsx",
+                             sheetIndex = 1,colIndex = c(1:3),rowIndex = 1:length(mzfiles)/3 + 1)
+  df <- as.data.frame(injfile)
+  
+  filepfx <- gsub(mzfiles[[1]], 
+                  pattern = "_\\d*\\.mzXML", 
+                  replacement = "" )
+  
+  df.expanded <- df[rep(1:nrow(df),each=3),] # replicados
+  samplecount = nrow(df)
+  filenames <- paste(filepfx, c(1:nrow(df.expanded)), sep = "_")
+  filenames <- gsub(filenames,
+                    pattern="(_)([0-9])$",
+                    replacement="\\100\\2")
+  filenames <- gsub(filenames,
+                    pattern="(_)([0-9][0-9])$",
+                    replacement="\\10\\2")
+  df.w.filenames <- df.expanded
+  df.w.filenames$filename <- filenames
+  dt <- as.data.table(df.w.filenames)
+  
+  sampleNames <- dt[,c(3,2)]
+  colnames(sampleNames) <- c("File_Name", "Sample_Name")
+  
+  fwrite(sampleNames,file = file.path(dir, "sampleNames_UK.txt"),sep = "\t")
+}

@@ -9,8 +9,8 @@ build.base.db <- function(dbname=NA,
   # --- create .db file ---
   db <- file.path(outfolder, paste0(dbname, ".base.db"))
   if(file.exists(db)) file.remove(db)
-  conn <- dbConnect(RSQLite::SQLite(), db)
-  dbExecute(conn, statement = "create table base(compoundname text, description text, baseformula text, identifier text, charge text)")
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), db)
+  RSQLite::dbExecute(conn, statement = "create table base(compoundname text, description text, baseformula text, identifier text, charge text)")
   # --- create base ---
   function.of.choice <- switch(tolower(dbname),
                                internal = function(dbname){ # BOTH NOISE AND NORMAL
@@ -36,7 +36,7 @@ build.base.db <- function(dbname=NA,
                                  keep <- checked[warning == FALSE, which = TRUE]
                                  db.formatted <- db.formatted[keep]
                                  # --- write ---
-                                 dbWriteTable(conn, "base", db.formatted, append=TRUE)},
+                                 RSQLite::dbWriteTable(conn, "base", db.formatted, append=TRUE)},
                                noise = function(dbname){
                                  print("noisee")
                                  int.loc <- file.path(".", "backend","umcfiles", "internal")
@@ -49,13 +49,13 @@ build.base.db <- function(dbname=NA,
                                                             baseformula = as.character(noise.base.db[,2]), 
                                                             identifier=c("Noise"),
                                                             charge=c(0))
-                                 dbWriteTable(conn, "base", db.formatted, append=TRUE)
+                                 RSQLite::dbWriteTable(conn, "base", db.formatted, append=TRUE)
                                  ### do extended table and write to additional db (exception...)
                                  db.full <- file.path(outfolder, paste0(dbname, ".full.db"))
                                  if(file.exists(db.full)) file.remove(db.full)
-                                 full.conn <- dbConnect(RSQLite::SQLite(), db.full)
+                                 full.conn <- RSQLite::dbConnect(RSQLite::SQLite(), db.full)
                                  # --- create base table here too ---
-                                 dbExecute(full.conn, statement = "create table base(compoundname text, description text, baseformula text, identifier text, charge text)")
+                                 RSQLite::dbExecute(full.conn, statement = "create table base(compoundname text, description text, baseformula text, identifier text, charge text)")
                                  # --- create extended table ---
                                  sql.make.meta <- strwrap("CREATE TABLE IF NOT EXISTS extended(
                                                           baseformula text,
@@ -67,9 +67,9 @@ build.base.db <- function(dbname=NA,
                                                           totalcharge int,
                                                           isoprevalence float,
                                                           foundinmode text)", width=10000, simplify=TRUE)
-                                 dbExecute(full.conn, sql.make.meta)
+                                 RSQLite::dbExecute(full.conn, sql.make.meta)
                                  # -- reformat noise table ---
-                                 db.formatted.list <- pblapply(1:nrow(noise.base.db), FUN=function(x){
+                                 db.formatted.list <- pbapply::pblapply(1:nrow(noise.base.db), FUN=function(x){
                                    row <- c(noise.base.db[x,])
                                    print(row[1])
                                    # --- find adduct ---
@@ -99,22 +99,22 @@ build.base.db <- function(dbname=NA,
                                  # --- write to db ---
                                  db.formatted$compoundname <- as.character(strsplit(db.formatted$compoundname, 
                                                                                     split=", \\[.*\\][\\+-]"))
-                                 dbWriteTable(full.conn, 
+                                 RSQLite::dbWriteTable(full.conn, 
                                               "base", 
                                               db.formatted, 
                                               append=TRUE)
                                  print("heree")
                                  
-                                 dbWriteTable(full.conn, 
+                                 RSQLite::dbWriteTable(full.conn, 
                                               "extended", 
                                               db.formatted.full, 
                                               append=TRUE)
                                  print("heree")
                                  # --- index ---
-                                 dbExecute(full.conn, "create index b_idx1 on base(baseformula, charge)")
-                                 dbExecute(full.conn, "create index e_idx1 on extended(baseformula, basecharge)")
-                                 dbExecute(full.conn, "create index e_idx2 on extended(fullmz, foundinmode)")# -------------
-                                 dbDisconnect(full.conn)
+                                 RSQLite::dbExecute(full.conn, "create index b_idx1 on base(baseformula, charge)")
+                                 RSQLite::dbExecute(full.conn, "create index e_idx1 on extended(baseformula, basecharge)")
+                                 RSQLite::dbExecute(full.conn, "create index e_idx2 on extended(fullmz, foundinmode)")# -------------
+                                 RSQLite::dbDisconnect(full.conn)
                                },
                                hmdb = function(dbname){
                                  print("Downloading XML database...")
@@ -123,25 +123,25 @@ build.base.db <- function(dbname=NA,
                                  base.loc <- file.path(options$db_dir, "hmdb_source")
                                  if(!dir.exists(base.loc)) dir.create(base.loc)
                                  zip.file <- file.path(base.loc, "HMDB.zip")
-                                 download.file(file.url, zip.file)
-                                 unzip(zip.file, exdir = base.loc)
+                                 utils::download.file(file.url, zip.file)
+                                 utils::unzip(zip.file, exdir = base.loc)
                                  # --- go through xml ---
                                  print("Parsing XML...")
-                                 data <- xmlParse(file.path(base.loc,"hmdb_metabolites.xml"), useInternalNodes = T)
+                                 data <- XML::xmlParse(file.path(base.loc,"hmdb_metabolites.xml"), useInternalNodes = T)
                                  # --- xpath magic! :-) --- [NOTE: leaves out anything that doens't have formal charge available, another option would be to default to zero]
-                                 compoundnames <- getNodeSet(data, 
+                                 compoundnames <- XML::getNodeSet(data, 
                                                              "/*/pf:metabolite[pf:predicted_properties/pf:property[pf:kind='formal_charge']]/pf:name", 
                                                              c(pf = "http://www.hmdb.ca"))
-                                 formulae <- getNodeSet(data, 
+                                 formulae <- XML::getNodeSet(data, 
                                                         "/*/pf:metabolite[pf:predicted_properties/pf:property[pf:kind='formal_charge']]/pf:chemical_formula", 
                                                         c(pf = "http://www.hmdb.ca"))
-                                 identifiers <- getNodeSet(data, 
+                                 identifiers <- XML::getNodeSet(data, 
                                                            "/*/pf:metabolite[pf:predicted_properties/pf:property[pf:kind='formal_charge']]/pf:accession", 
                                                            c(pf = "http://www.hmdb.ca"))
-                                 charges <- getNodeSet(data, 
+                                 charges <- XML::getNodeSet(data, 
                                                        "/*/pf:metabolite/pf:predicted_properties/pf:property[pf:kind='formal_charge']/pf:value", 
                                                        c(pf = "http://www.hmdb.ca"))
-                                 description <- getNodeSet(data, 
+                                 description <- XML::getNodeSet(data, 
                                                            "/*/pf:metabolite[pf:predicted_properties/pf:property[pf:kind='formal_charge']]/pf:description", 
                                                            c(pf = "http://www.hmdb.ca"))
                                  # --- make nice big table ---
@@ -159,10 +159,11 @@ build.base.db <- function(dbname=NA,
                                  keep <- checked[warning == FALSE, which = TRUE]
                                  db.formatted <- db.formatted[keep]
                                  # ----------------------
-                                 dbWriteTable(conn, "base", db.formatted, append=TRUE)
+                                 RSQLite::dbWriteTable(conn, "base", db.formatted, append=TRUE)
                                },
                                chebi = function(dbname, ...){
-                                 db.full <- as.data.table(download.chebi.joanna(release = "latest", woAssociations = FALSE))
+                                 db.full <- as.data.table(download.chebi.joanna(release = "latest", 
+                                                                                woAssociations = FALSE))
                                  db.formatted <- unique(db.full[, list(compoundname = ChEBI, 
                                                                        description = DEFINITION,
                                                                        baseformula = FORMULA,
@@ -178,12 +179,12 @@ build.base.db <- function(dbname=NA,
                                  keep <- checked[warning == FALSE, which = TRUE]
                                  db.formatted <- db.formatted[keep]
                                  # ----------------------
-                                 dbWriteTable(conn, "base", db.formatted, append=TRUE)
+                                 RSQLite::dbWriteTable(conn, "base", db.formatted, append=TRUE)
                                }, 
                                wikipathways = function(dbname){
                                  chebi.loc <- file.path(options$db_dir, "chebi.full.db")
                                  # ---------------------------------------------------
-                                 chebi <- SPARQL(url="http://sparql.wikipathways.org/",
+                                 chebi <- SPARQL::SPARQL(url="http://sparql.wikipathways.org/",
                                                  query='prefix wp:      <http://vocabularies.wikipathways.org/wp#>
                                                         prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
                                                         prefix dcterms: <http://purl.org/dc/terms/>
@@ -206,13 +207,13 @@ build.base.db <- function(dbname=NA,
                                                         }
                                                         GROUP BY ?mb ?wp ?idurl ?pathway')
                                  chebi.ids <- gsub(chebi$results$csid, pattern = ".*:|>", replacement = "")
-                                 conn.chebi <- dbConnect(RSQLite::SQLite(), chebi.loc)
+                                 conn.chebi <- RSQLite::dbConnect(RSQLite::SQLite(), chebi.loc)
                                  chebi.join.table <- data.table(identifier = chebi.ids,
                                                                 description = chebi$results$description,
                                                                 widentifier = chebi$results$mb,
                                                                 pathway = chebi$results$pathway)
-                                 dbWriteTable(conn.chebi, "wikipathways", chebi.join.table, overwrite=TRUE)
-                                 db.formatted <- dbGetQuery(conn.chebi, "SELECT DISTINCT  b.compoundname, 
+                                 RSQLite::dbWriteTable(conn.chebi, "wikipathways", chebi.join.table, overwrite=TRUE)
+                                 db.formatted <- RSQLite::dbGetQuery(conn.chebi, "SELECT DISTINCT  b.compoundname, 
                                                                                           w.description,
                                                                                           b.baseformula, 
                                                                                           w.widentifier as identifier, 
@@ -222,7 +223,7 @@ build.base.db <- function(dbname=NA,
                                                                          JOIN wikipathways w
                                                                          ON b.identifier = w.identifier")
                                  # --- get pathway info ---
-                                 sparql.pathways <- SPARQL(url="http://sparql.wikipathways.org/",
+                                 sparql.pathways <- SPARQL::SPARQL(url="http://sparql.wikipathways.org/",
                                                  query='PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                                                         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
                                                         PREFIX dc:  <http://purl.org/dc/elements/1.1/>
@@ -242,9 +243,9 @@ build.base.db <- function(dbname=NA,
                                  db.formatted$pathway <- gsub(db.formatted$pathway, pattern = "<|_.*", replacement = "")
                                  db.pathways$identifier <- gsub(db.pathways$identifier, pattern = "<|>", replacement = "")
                                  # ---------------------------------
-                                 dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
-                                 dbWriteTable(conn, "pathways", db.pathways, overwrite=TRUE)
-                                 dbRemoveTable(conn.chebi, "wikipathways")
+                                 RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
+                                 RSQLite::dbWriteTable(conn, "pathways", db.pathways, overwrite=TRUE)
+                                 RSQLite::dbRemoveTable(conn.chebi, "wikipathways")
                                  # ---------------------------------
                                  # SOMETHING FOR THE UNIDENTIFIED ONES HERE...
                                  # no.chebi <- SPARQL(url="http://sparql.wikipathways.org/",
@@ -273,8 +274,8 @@ build.base.db <- function(dbname=NA,
                                  base.loc <- file.path(options$db_dir, "smpdb_source")
                                  if(!dir.exists(base.loc)) dir.create(base.loc)
                                  zip.file <- file.path(base.loc, "SMPDB.zip")
-                                 download.file(file.url, zip.file)
-                                 unzip(zip.file, exdir = base.loc)
+                                 utils::download.file(file.url, zip.file)
+                                 utils::unzip(zip.file, exdir = base.loc)
                                  # -------------------------------
                                  smpdb.tab <- fread(file.path(base.loc, "metabolites.csv"))
                                  # --- get charges ---
@@ -295,9 +296,9 @@ build.base.db <- function(dbname=NA,
                                  db.cpds <- db.cpds[keep]
                                  # --- get descriptions from hmdb!!! ---
                                  hmdb.loc <- file.path(options$db_dir, "hmdb.full.db")
-                                 conn.hmdb <- dbConnect(RSQLite::SQLite(), hmdb.loc)
-                                 dbWriteTable(conn.hmdb, "smpdb", db.cpds, overwrite=TRUE)
-                                 db.formatted <- dbGetQuery(conn.hmdb, "SELECT DISTINCT  
+                                 conn.hmdb <- RSQLite::dbConnect(RSQLite::SQLite(), hmdb.loc)
+                                 RSQLite::dbWriteTable(conn.hmdb, "smpdb", db.cpds, overwrite=TRUE)
+                                 db.formatted <- RSQLite::dbGetQuery(conn.hmdb, "SELECT DISTINCT  
                                                                         s.compoundname,
                                                                         b.description,
                                                                         s.baseformula, 
@@ -307,16 +308,16 @@ build.base.db <- function(dbname=NA,
                                                                         FROM smpdb s
                                                                         LEFT JOIN base b
                                                                         ON b.identifier = s.widentifier")
-                                 dbRemoveTable(conn.hmdb, "smpdb")
-                                 dbDisconnect(conn.hmdb)
+                                 RSQLite::dbRemoveTable(conn.hmdb, "smpdb")
+                                 RSQLite::dbDisconnect(conn.hmdb)
                                  # --- create ---
-                                 dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
-                                 dbWriteTable(conn, "pathways", db.pathways, overwrite=TRUE)
+                                 RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
+                                 RSQLite::dbWriteTable(conn, "pathways", db.pathways, overwrite=TRUE)
                                },
                                kegg = function(dbname){
                                  # ---------------
                                  batches <- split(0:2000, ceiling(seq_along(0:2000)/100))
-                                 cpds <- pblapply(batches, cl=cl, FUN=function(batch){
+                                 cpds <- pbapply::pblapply(batches, cl=cl, FUN=function(batch){
                                    names(keggFind("compound", batch, "mol_weight"))
                                  })
                                  cpd.ids <- Reduce(c, cpds)
@@ -327,8 +328,8 @@ build.base.db <- function(dbname=NA,
                                  # keggGet("M00121") # module
                                  # keggGet("H00201") # disease
                                  # --- GET COMPOUNDS ---
-                                 kegg.cpd.list <- pblapply(id.batches, cl=cl, FUN=function(batch){
-                                   rest.result <- keggGet(batch)
+                                 kegg.cpd.list <- pbapply::pblapply(id.batches, cl=cl, FUN=function(batch){
+                                   rest.result <- KEGGREST::keggGet(batch)
                                    # ---------------------------
                                    base.list <- lapply(rest.result, FUN=function(cpd){
                                      cpd$NAME_FILT <- gsub(cpd$NAME, pattern = ";", replacement = "")
@@ -353,8 +354,8 @@ build.base.db <- function(dbname=NA,
                                  # --- GET PATHWAYS ---
                                  pathways <- unique(db.cpds$pathway)
                                  pw.batches <- split(pathways, ceiling(seq_along(pathways)/10))
-                                 kegg.pw.list <- pblapply(pw.batches, cl=cl, FUN=function(batch){
-                                   rest.result <- keggGet(batch)
+                                 kegg.pw.list <- pbapply::pblapply(pw.batches, cl=cl, FUN=function(batch){
+                                   rest.result <- KEGGREST::keggGet(batch)
                                    # ---------------------------
                                    base.list <- lapply(rest.result, FUN=function(pw){
                                      data.table(identifier = as.character(pw$ENTRY),
@@ -370,10 +371,10 @@ build.base.db <- function(dbname=NA,
                                  # --- GET MODULES & DISEASES? (necessary for future?) ---
                                  # modules <- unique(db.cpds$module)
                                  # md.batches <- split(modules, ceiling(seq_along(modules)/10))
-                                 # dbWriteTable(conn, "modules", db.modules, overwrite=TRUE)
+                                 # RSQLite::dbWriteTable(conn, "modules", db.modules, overwrite=TRUE)
                                  # -------------------------------------------------------
-                                 dbWriteTable(conn, "base", db.cpds, overwrite=TRUE)
-                                 dbWriteTable(conn, "pathways", db.pathways, overwrite=TRUE)
+                                 RSQLite::dbWriteTable(conn, "base", db.cpds, overwrite=TRUE)
+                                 RSQLite::dbWriteTable(conn, "pathways", db.pathways, overwrite=TRUE)
                                },
                                pubchem = function(dbname, ...){
                                  # --- create working space ---
@@ -463,7 +464,7 @@ build.base.db <- function(dbname=NA,
                                })
   # --- execute ;) ---
   function.of.choice(dbname)
-  dbDisconnect(conn)
+  RSQLite::dbDisconnect(conn)
 }
 
 #' @export
@@ -480,43 +481,43 @@ build.extended.db <- function(dbname,
   full.db <- file.path(outfolder, paste0(dbname, ".full.db"))
   # ------------------------
   
-  full.conn <- dbConnect(RSQLite::SQLite(), full.db)
-  base.conn <- dbConnect(RSQLite::SQLite(), base.db)
+  full.conn <- RSQLite::dbConnect(RSQLite::SQLite(), full.db)
+  base.conn <- RSQLite::dbConnect(RSQLite::SQLite(), base.db)
   
-  if(!dbExistsTable(full.conn, "done") | continue == FALSE){
+  if(!RSQLite::dbExistsTable(full.conn, "done") | continue == FALSE){
     continue <- FALSE
-    dbDisconnect(full.conn)
+    RSQLite::dbDisconnect(full.conn)
     file.remove(full.db)
-    full.conn <- dbConnect(RSQLite::SQLite(), full.db)
+    full.conn <- RSQLite::dbConnect(RSQLite::SQLite(), full.db)
     # boot.null(boot.null(boot.null(boot.null(boot.null(boot.null(boot.null(boot)))))))  
   } 
   
   # ------------------------
-  dbExecute(full.conn, "PRAGMA journal_mode=wal") # THIS SHOULD HELP DB LOCKING if continue = ON
+  RSQLite::dbExecute(full.conn, "PRAGMA journal_mode=wal") # THIS SHOULD HELP DB LOCKING if continue = ON
   # ------------------------
   limit.query <- if(cpd.limit == -1) "" else fn$paste("LIMIT $cpd.limit")
   if(continue){
-    dbExecute(base.conn, fn$paste("ATTACH '$full.db' as db"))
+    RSQLite::dbExecute(base.conn, fn$paste("ATTACH '$full.db' as db"))
     continue.query <- strwrap("SELECT DISTINCT baseformula, charge FROM base b
                               WHERE NOT EXISTS(SELECT DISTINCT baseformula, charge 
                               FROM db.done d
                               WHERE b.baseformula = d.baseformula
                               AND b.charge = d.basecharge)", width=10000, simplify=TRUE)
-    total.formulae <- dbGetQuery(base.conn, fn$paste("SELECT Count(*)
+    total.formulae <- RSQLite::dbGetQuery(base.conn, fn$paste("SELECT Count(*)
                                                      FROM ($continue.query)"))
     formula.count <- total.formulae[1,]
-    results <- dbSendQuery(base.conn, continue.query)
+    results <- RSQLite::dbSendQuery(base.conn, continue.query)
   } else{
     # --- add base db to the new one ---
     print("Attaching base...")
-    dbExecute(full.conn, fn$paste("ATTACH '$base.db' AS tmp"))
-    dbExecute(full.conn, fn$paste("CREATE TABLE IF NOT EXISTS done(baseformula text, basecharge text)"))
-    dbExecute(full.conn, fn$paste("CREATE TABLE IF NOT EXISTS base AS SELECT * FROM tmp.base"))
-    if(dbExistsTable(base.conn, "pathways")){
-      dbExecute(full.conn, fn$paste("CREATE TABLE IF NOT EXISTS pathways AS SELECT * FROM tmp.pathways"))
+    RSQLite::dbExecute(full.conn, fn$paste("ATTACH '$base.db' AS tmp"))
+    RSQLite::dbExecute(full.conn, fn$paste("CREATE TABLE IF NOT EXISTS done(baseformula text, basecharge text)"))
+    RSQLite::dbExecute(full.conn, fn$paste("CREATE TABLE IF NOT EXISTS base AS SELECT * FROM tmp.base"))
+    if(RSQLite::dbExistsTable(base.conn, "pathways")){
+      RSQLite::dbExecute(full.conn, fn$paste("CREATE TABLE IF NOT EXISTS pathways AS SELECT * FROM tmp.pathways"))
     }
     print("Indexing base...")
-    dbExecute(full.conn, "CREATE INDEX IF NOT EXISTS b_idx1 on base(baseformula, charge)")
+    RSQLite::dbExecute(full.conn, "CREATE INDEX IF NOT EXISTS b_idx1 on base(baseformula, charge)")
     # ----------------------
     sql.make.meta <- strwrap("CREATE TABLE IF NOT EXISTS extended(
                              baseformula text,
@@ -528,13 +529,13 @@ build.extended.db <- function(dbname,
                              totalcharge int,
                              isoprevalence float,
                              foundinmode text)", width=10000, simplify=TRUE)
-    dbExecute(full.conn, sql.make.meta)
+    RSQLite::dbExecute(full.conn, sql.make.meta)
     # --------------------
     get.query <- fn$paste("SELECT DISTINCT b.baseformula, b.charge FROM base b $limit.query")
-    total.formulae <- dbGetQuery(base.conn, fn$paste("SELECT Count(*)
+    total.formulae <- RSQLite::dbGetQuery(base.conn, fn$paste("SELECT Count(*)
                                                      FROM ($get.query)"))
     formula.count <- total.formulae[1,]
-    results <- dbSendQuery(base.conn, get.query)
+    results <- RSQLite::dbSendQuery(base.conn, get.query)
   }
   # --- start pb ---
   pb <- startpb(0, formula.count)
@@ -543,10 +544,10 @@ build.extended.db <- function(dbname,
   # --- waow, my first while in R ---
   while(!dbHasCompleted(results)){
     # --- fetch part of results ---
-    partial.results <- as.data.table(dbFetch(results, fetch.limit))
+    partial.results <- as.data.table(RSQLite::dbFetch(results, fetch.limit))
     if(length(partial.results$baseformula) == 0) next
     # -----------------------
-    print(paste(dbGetRowCount(results), formula.count, sep=" / "))
+    print(paste(RSQLite::dbGetRowCount(results), formula.count, sep=" / "))
     # -----------------------
     checked.formulae <- as.data.table(check.chemform.joanna(isotopes, 
                                                             partial.results$baseformula))
@@ -599,7 +600,7 @@ build.extended.db <- function(dbname,
       backtrack <- backtrack[final.charge != 0]
       if(nrow(backtrack) == 0) return(NA)
       # --- get isotopes ---
-      isotopes <- isopattern(
+      isotopes <- enviPat::isopattern(
         isotopes,
         backtrack$final,
         threshold = 0.1,
@@ -637,20 +638,20 @@ build.extended.db <- function(dbname,
       # --- return ---
       meta.table
     }
-    tab.list <- parLapply(cl=cl, 1:nrow(adduct.table), fun=function(x) do.calc(x))
+    tab.list <- parallel::parLapply(cl=cl, 1:nrow(adduct.table), fun=function(x) do.calc(x))
     # --- progress bar... ---
-    setpb(pb, dbGetRowCount(results))
+    pbapply::setpb(pb, RSQLite::dbGetRowCount(results))
     total.table <- rbindlist(tab.list[!is.na(tab.list)])
     done.table <- unique(total.table[,c("baseformula", "basecharge")])
     # --- filter on m/z ===
-    dbWriteTable(full.conn, "extended", total.table, append=T)
-    dbWriteTable(full.conn, "done", done.table, append=T)
+    RSQLite::dbWriteTable(full.conn, "extended", total.table, append=T)
+    RSQLite::dbWriteTable(full.conn, "done", done.table, append=T)
   }
-  dbClearResult(results)
+  RSQLite::dbClearResult(results)
   # --- indexy ---
   print("Indexing extended table...")
-  dbExecute(full.conn, "create index e_idx1 on extended(baseformula, basecharge)")
-  dbExecute(full.conn, "create index e_idx2 on extended(fullmz, foundinmode)")
+  RSQLite::dbExecute(full.conn, "create index e_idx1 on extended(baseformula, basecharge)")
+  RSQLite::dbExecute(full.conn, "create index e_idx2 on extended(fullmz, foundinmode)")
   # ====== range table =====
   print("Adding range tables for raw peak grouping...")
   ppm = 2 ### PPM HARD CODED HERE FOR NOW
@@ -667,10 +668,10 @@ build.extended.db <- function(dbname,
                            ID INTEGER PRIMARY KEY AUTOINCREMENT,
                            mzmed decimal(30,13),
                            foundinmode text)", width=10000, simplify=TRUE)
-  dbExecute(full.conn, sql.make.meta)
-  dbExecute(full.conn, "create index mzfind on mzvals(mzmed, foundinmode);")
+  RSQLite::dbExecute(full.conn, sql.make.meta)
+  RSQLite::dbExecute(full.conn, "create index mzfind on mzvals(mzmed, foundinmode);")
   # --- write vals to table ---
-  dbWriteTable(full.conn, "mzvals", mzvals, append=TRUE) # insert into
+  RSQLite::dbWriteTable(full.conn, "mzvals", mzvals, append=TRUE) # insert into
   # --- make range table (choose if R*tree or not) ---
   sql.make.rtree <- strwrap("CREATE VIRTUAL TABLE mzranges USING rtree(
                             ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -681,15 +682,15 @@ build.extended.db <- function(dbname,
                              ID INTEGER PRIMARY KEY AUTOINCREMENT,
                              mzmin decimal(30,13),
                              mzmax decimal(30,13));", width=10000, simplify=TRUE)
-  dbExecute(full.conn, sql.make.rtree)
+  RSQLite::dbExecute(full.conn, sql.make.rtree)
   # --- write ranges to table ---
-  dbWriteTable(full.conn, "mzranges", mzranges, append=TRUE) # insert into
+  RSQLite::dbWriteTable(full.conn, "mzranges", mzranges, append=TRUE) # insert into
   # --- cleanup ---
-  dbExecute(full.conn, "VACUUM")
+  RSQLite::dbExecute(full.conn, "VACUUM")
   # ==========================
   print("Disconnecting...")
-  dbDisconnect(base.conn)
-  dbDisconnect(full.conn)
+  RSQLite::dbDisconnect(base.conn)
+  RSQLite::dbDisconnect(full.conn)
   on.exit(closepb(pb))
   print("Done! :-)")
 }
@@ -707,9 +708,7 @@ build.pat.db <- function(db.name,
                                     "fq.worst",
                                     "fq.best",
                                     "avg.int")){
-  # db.name = patdb
-  # poslist = outlist_pos
-  # neglist = outlist_neg
+
   # ------------------------
   ppm = as.numeric(ppm)
   # ------------------------
@@ -722,7 +721,7 @@ build.pat.db <- function(db.name,
                          mzmax = sapply(c(poslist$mzmed, neglist$mzmed), 
                                         FUN=function(mz, ppm){
                                           mz + mz * (ppm / 1E6)}, ppm=ppm))
-  mzintensities <- melt(as.data.table(rbind(poslist, neglist))[,(rmv.cols) := NULL], 
+  mzintensities <- reshape2::melt(as.data.table(rbind(poslist, neglist))[,(rmv.cols) := NULL], 
                         id="mzmed", 
                         variable="filename",
                         value="intensity")
@@ -738,26 +737,26 @@ build.pat.db <- function(db.name,
   # ------------------------
   if(overwrite==TRUE & file.exists(db.name)) file.remove(db.name)
   # --- reconnect / remake ---
-  conn <- dbConnect(RSQLite::SQLite(), db.name)
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), db.name)
   # ------------------------
   sql.make.int <- strwrap("CREATE TABLE mzintensities(
                           ID INTEGER PRIMARY KEY AUTOINCREMENT,
                           mzmed decimal(30,13),
                           filename text,
                           intensity float)", width=10000, simplify=TRUE)
-  dbExecute(conn, sql.make.int)
+  RSQLite::dbExecute(conn, sql.make.int)
   # --- write intensities to table and index ---
-  dbWriteTable(conn, "mzintensities", mzintensities, append=TRUE) # insert into
-  dbExecute(conn, "CREATE INDEX intindex ON mzintensities(filename,'mzmed',intensity)")
+  RSQLite::dbWriteTable(conn, "mzintensities", mzintensities, append=TRUE) # insert into
+  RSQLite::dbExecute(conn, "CREATE INDEX intindex ON mzintensities(filename,'mzmed',intensity)")
   # ------------------------
   sql.make.meta <- strwrap("CREATE TABLE mzvals(
                            ID INTEGER PRIMARY KEY AUTOINCREMENT,
                            mzmed decimal(30,13),
                            foundinmode text)", width=10000, simplify=TRUE)
-  dbExecute(conn, sql.make.meta)
-  dbExecute(conn, "create index mzfind on mzvals(mzmed, foundinmode);")
+  RSQLite::dbExecute(conn, sql.make.meta)
+  RSQLite::dbExecute(conn, "create index mzfind on mzvals(mzmed, foundinmode);")
   # --- write vals to table ---
-  dbWriteTable(conn, "mzvals", mzvals, append=TRUE) # insert into
+  RSQLite::dbWriteTable(conn, "mzvals", mzvals, append=TRUE) # insert into
   # --- make range table (choose if R*tree or not) ---
   sql.make.rtree <- strwrap("CREATE VIRTUAL TABLE mzranges USING rtree(
                             ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -768,13 +767,13 @@ build.pat.db <- function(db.name,
                              ID INTEGER PRIMARY KEY AUTOINCREMENT,
                              mzmin decimal(30,13),
                              mzmax decimal(30,13));", width=10000, simplify=TRUE)
-  dbExecute(conn, if(rtree) sql.make.rtree else sql.make.normal)
+  RSQLite::dbExecute(conn, if(rtree) sql.make.rtree else sql.make.normal)
   # --- write ranges to table ---
-  dbWriteTable(conn, "mzranges", mzranges, append=TRUE) # insert into
+  RSQLite::dbWriteTable(conn, "mzranges", mzranges, append=TRUE) # insert into
   # --- cleanup ---
-  dbExecute(conn, "VACUUM")
+  RSQLite::dbExecute(conn, "VACUUM")
   # ----------------
-  dbDisconnect(conn)
+  RSQLite::dbDisconnect(conn)
   print("Made!")}
 
 #' @export
@@ -788,10 +787,10 @@ load.excel <- function(path.to.xlsx,
   # --- connect to sqlite db ---
   # path.to.xlsx = "/Users/jwolthuis/Documents/umc/metaboshiny_all/ExcelSheetsDSM/TR/DSM_TR1.xlsx"
   # path.to.patdb = "/Users/jwolthuis/Documents/umc/turkey.db"
-  conn <- dbConnect(RSQLite::SQLite(), path.to.patdb)
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), path.to.patdb)
   # -------------------------------
-  data.store <- pblapply(tabs.to.read, FUN=function(tab.name){
-    tab <- as.data.table(read.xlsx(path.to.xlsx, sheetName = tab.name))
+  data.store <- pbapply::pblapply(tabs.to.read, FUN=function(tab.name){
+    tab <- as.data.table(xlsx::read.xlsx(path.to.xlsx, sheetName = tab.name))
     # --- reformat colnames ---
     colnames(tab) <- tolower(gsub(x=colnames(tab), pattern = "\\.$|\\.\\.$", replacement = ""))
     colnames(tab) <- gsub(x=colnames(tab), pattern = "\\.|\\.\\.", replacement = "_")
@@ -821,11 +820,11 @@ load.excel <- function(path.to.xlsx,
   admin <- as.data.table(apply(admin, MARGIN=2, trimws))
   
   # --- import to patient sql file ---
-  #dbWriteTable(conn, "general", general, overwrite=TRUE) # insert into BUGGED FIX LATER
-  dbWriteTable(conn, "setup", setup, overwrite=TRUE) # insert into
-  dbWriteTable(conn, "individual_data", individual.data, overwrite=TRUE) # insert into
-  dbWriteTable(conn, "pen_data", pen.data, overwrite=TRUE) # insert into
-  dbWriteTable(conn, "admin", admin, overwrite=TRUE) # insert into
+  #RSQLite::dbWriteTable(conn, "general", general, overwrite=TRUE) # insert into BUGGED FIX LATER
+  RSQLite::dbWriteTable(conn, "setup", setup, overwrite=TRUE) # insert into
+  RSQLite::dbWriteTable(conn, "individual_data", individual.data, overwrite=TRUE) # insert into
+  RSQLite::dbWriteTable(conn, "pen_data", pen.data, overwrite=TRUE) # insert into
+  RSQLite::dbWriteTable(conn, "admin", admin, overwrite=TRUE) # insert into
   # --- disconnect ---
-  dbDisconnect(conn)
+  RSQLite::dbDisconnect(conn)
 }
