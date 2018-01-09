@@ -82,8 +82,8 @@ ggplotSampleNormSummary <- function(mSet){
 
 
 #' @export
-ggplotMeba <- function(cpd, draw.average=T, cols=NULL){
-  cols <- if(is.null(cols)) cyan2yellow(length(levels(mSet$dataSet$cls))) else(cols)
+ggplotMeba <- function(cpd, draw.average=T, cols=NULL, cf){
+  cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
   profile <- getProfile(cpd, mode="time")
   plot <- if(draw.average){
     ggplot2::ggplot(data=profile) +
@@ -108,8 +108,8 @@ blackwhite.colors <- function(n){
 }
 
 #' @export
-ggplotSummary <- function(cpd = curr_cpd, cols=NULL){
-  cols <- if(is.null(cols)) cyan2yellow(length(levels(mSet$dataSet$cls))) else(cols)
+ggplotSummary <- function(cpd = curr_cpd, cols=NULL, cf){
+  cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
   if(substring(mSet$dataSet$format,4,5)!="ts"){
     # --- ggplot ---
     profile <- getProfile(cpd, mode="stat")

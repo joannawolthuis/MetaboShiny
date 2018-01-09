@@ -53,13 +53,13 @@ shinyServer(function(input, output, session) {
                                    column(width=6,div(DT::dataTableOutput('neg_add_tab',width="100%"),style='font-size:70%'))
                           ),
                           fluidRow(sardine(div(actionButton(inputId = "sel_all_adducts",
-                                                    label = "", icon=icon("circle")),style='font-size:70%')),
+                                                            label = "", icon=icon("circle")),style='font-size:70%')),
                                    sardine(div(actionButton(inputId = "sel_comm_adducts",
-                                                    label = "", icon=icon("check-circle-o")),style='font-size:70%')),
+                                                            label = "", icon=icon("check-circle-o")),style='font-size:70%')),
                                    sardine(div(actionButton(inputId = "sel_no_adducts",
-                                                    label = "", icon=icon("circle-o")),style='font-size:70%'))
+                                                            label = "", icon=icon("circle-o")),style='font-size:70%'))
                           ),br()
-
+                          
                  )
     )
   })
@@ -244,9 +244,11 @@ shinyServer(function(input, output, session) {
     navbarPage("Standard analysis", id="tab_stat",
                tabPanel("", value = "intro", icon=icon("comment-o"),
                         helpText("Info text here")
-               ),
+               ), # pca_legend
                tabPanel("PCA", value = "pca", #icon=icon("cube"),
-                        plotly::plotlyOutput("plot_pca",height = "600px"),
+                        fluidRow(column(10, plotly::plotlyOutput("plot_pca",height = "600px")),
+                                 column(2, br(),br(), br(),plotly::plotlyOutput("pca_legend",height = "400px"))
+                        ),
                         fluidRow(column(3,
                                         selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:30),selected = "PC1",width="100%"),
                                         selectInput("pca_y", label = "Y axis:", choices = paste0("PC",1:30),selected = "PC2",width="100%"),
@@ -297,7 +299,7 @@ shinyServer(function(input, output, session) {
                                                                               choices = c("ANOVA"="aov",
                                                                                           "PLS-DA"="plsda",
                                                                                           "RandomForest"="rf")
-                                                                              ),
+                                                                  ),
                                                                   selectInput('enrich_vals', 
                                                                               'Score threshold',
                                                                               choices = c("Significant"="sig", 
@@ -307,7 +309,7 @@ shinyServer(function(input, output, session) {
                                                                                           "Top 500"="t500")),
                                                                   hr(),
                                                                   actionButton("go_enrich", "Analyse", icon=icon("binoculars"))
-                                                                  ),
+                                      ),
                                       # ------------------
                                       mainPanel = mainPanel(align="center",
                                                             fluidRow(div(DT::dataTableOutput('enriched'),style='font-size:80%')),
@@ -406,7 +408,7 @@ shinyServer(function(input, output, session) {
                   options = list(pageLength = 5, dom = 'tp'), 
                   rownames = F)
   })
-
+  
   observeEvent(input$sel_all_adducts, {
     output$pos_add_tab <-DT::renderDataTable({
       # -------------
@@ -790,7 +792,20 @@ shinyServer(function(input, output, session) {
       list(src = filename, width = 20,
            height = 20)
     }, deleteFile = FALSE)
-    
+  })
+  
+  observeEvent(input$import_csv, {
+    req(input$pat_csv)
+    print(input$pat_csv)
+    csv_loc <<- input$pat_csv$datapath
+    print(csv_loc)
+    output$csv_upload_check <- renderImage({
+      # When input$n is 3, filename is ./images/image3.jpeg
+      filename <- normalizePath('www/yes.png')
+      # Return a list containing the filename and alt text
+      list(src = filename, width = 20,
+           height = 20)
+    }, deleteFile = FALSE)
   })
   
   # ==================== CREATE CSV =======================
@@ -912,7 +927,7 @@ shinyServer(function(input, output, session) {
   
   ref.selector <- reactive({
     # -------------
-    if(input$norm_type == "ProbNorm"){
+    if(input$norm_type == "ProbNorm" | input$norm_type == "CompNorm"){
       fluidRow(
         hr(),
         selectInput('ref_var', 
@@ -928,10 +943,15 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$check_csv, {
     req(csv_loc)
+    switch(input$norm_type,
+           ProbNorm=updateSelectInput(session, "ref_var",
+                                      choices = get_ref_vars(fac = "Label") # please add options for different times later, not difficult
+           ),
+           CompNorm=updateSelectInput(session, "ref_var",
+                                      choices = get_ref_cpds() # please add options for different times later, not difficult
+           ))
     # get excel table stuff.
-    updateSelectInput(session, "ref_var",
-                      choices = get_ref_vars(fac = "Label") # please add options for different times later, not difficult
-    )
+    
   })
   
   output$ref_select <- renderUI({ref.selector()})
@@ -941,6 +961,7 @@ shinyServer(function(input, output, session) {
     req(input$norm_type)
     req(input$trans_type)
     req(input$scale_type)
+    req(input$batch_corr)
     # match
     withProgress({
       # get curr values from: input$ exp_type, filt_type, norm_type, scale_type, trans_type (later)
@@ -1002,25 +1023,78 @@ shinyServer(function(input, output, session) {
                              transNorm = input$trans_type,
                              scaleNorm = input$scale_type,
                              ref = input$ref_var)
+      # ...
+      # mSet <<- Normalization(mSetObj = mSet, 
+      #                      rowNorm = "CompNorm", 
+      #                      transNorm = "LogNorm", 
+      #                      scaleNorm = "RangeNorm", 
+      #                      ref = "C15H13N1O2"
+      #                     #ratio=FALSE, 
+      #                     #ratioNum=20
+      #                     )
+      # ====
+      setProgress(.4)
+      
+      if(input$batch_corr){
+        
+        print("Correcting batch effect...")
+
+        smp <- rownames(mSet$dataSet$norm)
+        exp_lbl <- mSet$dataSet$cls
+        
+        # captures farm number only? (would need regmatches) (?<=[A-Z][A-Z])((1)(?=-\\d*)|(?=\\d*))
+        
+        csv <- as.data.table(cbind(Sample = smp, Label=gsub(smp, 
+                                                            pattern = "([A-Z][A-Z])|(-\\d*$)", 
+                                                            replacement = ""), 
+                                   mSet$dataSet$norm))
+
+        csv_pheno <- data.frame(sample = 1:nrow(csv),
+                                outcome = exp_lbl,
+                                batch = gsub(csv$Sample, 
+                                             pattern = "([A-Z][A-Z])|(-\\d*$)", 
+                                             replacement = ""),row.names = csv$Sample)
+        
+        mod = model.matrix(~as.factor(outcome), data=csv_pheno)
+        
+        # parametric adjustment
+        
+        csv_edata <-t(csv[,!c(1,2)])
+        
+        colnames(csv_edata) <- csv$Sample
+        
+        batch_normalized = sva::ComBat(dat=csv_edata, batch=csv_pheno$batch, mod=mod, par.prior=TRUE)
+        
+        # --- substitute in metaboanalyst matrix ---
+
+        mSet$dataSet$norm <<- as.data.frame(t(batch_normalized))
+      }
+      setProgress(.5)
+      
+      # --------------------------------------
+      
       mSet$dataSet$grouping <<- input$group_by
       # -------------------------------------
       if(mSet$dataSet$grouping == "pathway"){mSet$dataSet$norm <- abs(mSet$dataSet$norm)}
-      setProgress(.3)
+      
+      setProgress(.6)
       varNormPlots <- ggplotNormSummary(mSet)
       output$var1 <- renderPlot(varNormPlots$tl)
       output$var2 <- renderPlot(varNormPlots$bl)
       output$var3 <- renderPlot(varNormPlots$tr)
       output$var4 <- renderPlot(varNormPlots$br)
       
-      setProgress(.4)
+      setProgress(.7)
       sampNormPlots <-  ggplotSampleNormSummary(mSet)
       output$samp1 <- renderPlot(sampNormPlots$tl)
       output$samp2 <- renderPlot(sampNormPlots$bl)
       output$samp3 <- renderPlot(sampNormPlots$tr)
       output$samp4 <- renderPlot(sampNormPlots$br)
+      setProgress(.8)
       
       mSet$dataSet$adducts <<- selected_adduct_list
       update.UI()  
+      setProgress(.9)
     })
   })
   
@@ -1155,7 +1229,9 @@ shinyServer(function(input, output, session) {
     # get excel table stuff.
     switch(input$tab_stat,
            pca = {
-             mSet <<- PCA.Anal(mSet)
+             if(!"pca" %in% names(mSet$analSet)){
+               mSet <<- PCA.Anal(mSet)
+             }
              output$plot_pca <- plotly::renderPlotly({
                df <- mSet$analSet$pca$x
                x <- input$pca_x
@@ -1169,7 +1245,7 @@ shinyServer(function(input, output, session) {
                chosen.colors <<- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
                # --- add ellipses ---
                classes <- mSet$dataSet$cls
-               plots <- plotly::plot_ly()
+               plots <- plotly::plot_ly(showlegend = F)
                for(class in levels(classes)){
                  row = which(classes == class)
                  # ---------------------
@@ -1202,16 +1278,18 @@ shinyServer(function(input, output, session) {
                  item = adj_plot$x$data[[i]]
                  if(item$type == "mesh3d"){
                    adj_plot$x$data[[i]]$color <- rgbcols[c]
+                   adj_plot$x$data[[i]]$visible <- TRUE
                    c = c + 1
                  }
                }
                # --- return ---
-               pca_plot <- adj_plot %>% add_trace(
+               pca_plot <<- adj_plot %>% add_trace(
                  hoverinfo = 'text',
                  text = rownames(df),
                  x = mSet$analSet$pca$x[,1], 
                  y = mSet$analSet$pca$x[,2], 
                  z = mSet$analSet$pca$x[,3], 
+                 visible = rep(T, times=length(unique(mSet$dataSet$filt.cls))),
                  type = "scatter3d",
                  opacity=1,
                  color= mSet$dataSet$filt.cls, colors=chosen.colors
@@ -1221,10 +1299,27 @@ shinyServer(function(input, output, session) {
                  yaxis = list(
                    title = fn$paste("$y ($y.var %)")),
                  zaxis = list(
-                   title = fn$paste("$z ($z.var %)"))))     
+                   title = fn$paste("$z ($z.var %)")))) 
                # --- return ---
                pca_plot
              })
+             # === LEGEND ===
+             output$pca_legend <- plotly::renderPlotly({
+               frame <- data.table(x = c(1), 
+                                   y = unique(mSet$dataSet$filt.cls))
+               p <- ggplot(data=frame,
+                           aes(x, 
+                               y, 
+                               color=factor(y),
+                               fill=factor(y))) + 
+                 geom_point(shape = 21, size = 5, stroke = 5) +
+                 scale_colour_manual(values=chosen.colors) +
+                 theme_void() + 
+                 theme(legend.position="none")
+               # --- return ---
+               ggplotly(p, tooltip = NULL) %>% config(displayModeBar = F)
+             })
+             # ==============
              pca.table <- as.data.table(round(mSet$analSet$pca$variance * 100.00,
                                               digits = 2),
                                         keep.rownames = T)
@@ -1238,12 +1333,15 @@ shinyServer(function(input, output, session) {
                              options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
              })},
            plsda = {
-             mSet <<- PLSR.Anal(mSet,
-                                F)
-             mSet <<- PLSDA.CV(mSet,
-                               "L",
-                               5, 
-                               "Q2")
+             if(!"plsda" %in% names(mSet$analSet)){
+               
+               mSet <<- PLSR.Anal(mSet,
+                                  F)
+               mSet <<- PLSDA.CV(mSet,
+                                 "L",
+                                 5, 
+                                 "Q2")
+             }
              plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar 
                                                 / mSet$analSet$plsr$Xtotvar 
                                                 * 100.0,
@@ -1377,13 +1475,16 @@ shinyServer(function(input, output, session) {
              })
            },
            tt = {
-             mSet <<- Ttests.Anal(mSet,
-                                  nonpar = F, 
-                                  threshp = 0.1, 
-                                  paired = F,
-                                  equal.var = T)
-             res <- mSet$analSet$tt$sig.mat
-             if(is.null(res)) res <- data.table("No significant hits found")
+             if(!"tt" %in% names(mSet$analSet)){
+               
+               mSet <<- Ttests.Anal(mSet,
+                                    nonpar = F, 
+                                    threshp = 0.1, 
+                                    paired = F,
+                                    equal.var = T)
+             }
+             res <<- mSet$analSet$tt$sig.mat
+             if(is.null(res)) res <<- data.table("No significant hits found")
              output$tt_tab <-DT::renderDataTable({
                # -------------
                DT::datatable(res, 
@@ -1398,11 +1499,14 @@ shinyServer(function(input, output, session) {
              })
            },
            fc = {
-             mSet <<- FC.Anal.unpaired(mSet,
-                                       2.0, 
-                                       1)
-             res <- mSet$analSet$fc$sig.mat
-             if(is.null(res)) res <- data.table("No significant hits found")
+             if(!"fc" %in% names(mSet$analSet)){
+               
+               mSet <<- FC.Anal.unpaired(mSet,
+                                         2.0, 
+                                         1)
+             }
+             res <<- mSet$analSet$fc$sig.mat
+             if(is.null(res)) res <<- data.table("No significant hits found")
              output$fc_tab <-DT::renderDataTable({
                # -------------
                DT::datatable(res, 
@@ -1417,11 +1521,15 @@ shinyServer(function(input, output, session) {
              })
            },
            aov = {
-             mSet <<- ANOVA.Anal(mSet, 
-                                 thresh=0.05,
-                                 nonpar = F)
-             res <- mSet$analSet$aov$sig.mat
-             if(is.null(res)) res <- data.table("No significant hits found")
+             if(!"aov" %in% names(mSet$analSet)){
+               
+               mSet <<- ANOVA.Anal(mSet, 
+                                   thresh=0.05,
+                                   nonpar = F)
+             }
+             res <<- mSet$analSet$aov$sig.mat
+             print(res)
+             if(is.null(res)) res <<- data.table("No significant hits found")
              output$aov_tab <-DT::renderDataTable({
                # -------------
                DT::datatable(res, 
@@ -1432,7 +1540,9 @@ shinyServer(function(input, output, session) {
              })
            },
            rf={
-             mSet <<- RF.Anal(mSet, 500,7,1)
+             if(!"rf" %in% names(mSet$analSet)){
+               mSet <<- RF.Anal(mSet, 500,7,1)
+             }
              vip.score <<- as.data.table(mSet$analSet$rf$importance[, "MeanDecreaseAccuracy"],keep.rownames = T)
              colnames(vip.score) <<- c("rn", "accuracyDrop")
              output$rf_tab <-DT::renderDataTable({
@@ -1444,7 +1554,9 @@ shinyServer(function(input, output, session) {
              })
            },
            volc = {
-             mSet <<- Volcano.Anal(mSet,FALSE, 2.0, 0, 0.75,F, 0.1, TRUE, "raw")
+             if(!"volc" %in% names(mSet$analSet)){
+               mSet <<- Volcano.Anal(mSet,FALSE, 2.0, 0, 0.75,F, 0.1, TRUE, "raw")
+             }
              output$volc_tab <-DT::renderDataTable({
                # -------------
                DT::datatable(mSet$analSet$volc$sig.mat, 
@@ -1458,7 +1570,7 @@ shinyServer(function(input, output, session) {
                ggPlotVolc(color.function, 20)
              })
            }
-             )
+    )
   })
   
   observe({
@@ -1578,9 +1690,9 @@ shinyServer(function(input, output, session) {
       output[[paste0(table, "_specific_plot")]] <- plotly::renderPlotly({
         # --- ggplot ---
         if(table == 'meba'){
-          ggplotMeba(curr_cpd, draw.average = T, cols = color.vec())
+          ggplotMeba(curr_cpd, draw.average = T, cols = color.vec(),cf=color.function)
         }else{
-          ggplotSummary(curr_cpd, cols = color.vec())
+          ggplotSummary(curr_cpd, cols = color.vec(), cf=color.function)
         }
       })
       if(input$autosearch & length(db_search_list > 0)){
@@ -1598,19 +1710,39 @@ shinyServer(function(input, output, session) {
     })
   })
   
-  observe({
+  observeEvent(plotly::event_data("plotly_click"),{
     d <- plotly::event_data("plotly_click")
     req(d)
     print(d)
-    # -----------------------------
+    res <- pca_plot
+    # --------------------------------------------------------------
     switch(input$tab_stat,
+           pca = {
+             if(!"z" %in% names(d)){
+               which_group = 1
+               which_group <- d$curveNumber + 1
+               traceLoc <- length(unique(mSet$dataSet$filt.cls)) + 1
+               scatter <- pca_plot$x$attrs[[traceLoc]]
+               idx <- scatter$color == which_group
+               if(pca_plot$x$data[[which_group]]$visible == "legendonly"){
+                 pca_plot$x$data[[which_group]]$visible = TRUE
+                 scatter$visible[idx] <- T
+               }else{ # hide
+                 pca_plot$x$data[[which_group]]$visible = "legendonly"
+                 scatter$visible[idx] <- F
+               }
+               pca_plot$x$attrs[[traceLoc]] <- scatter
+               pca_plot <<- pca_plot
+               output$plot_pca <- plotly::renderPlotly({pca_plot})
+             }
+           },
            tt = {
              if('key' %not in% colnames(d)) return(NULL)
              if(d$key %not in% names(mSet$analSet$tt$p.value)) return(NULL)
              curr_cpd <<- d$key
              output$tt_specific_plot <- plotly::renderPlotly({
                # --- ggplot ---
-               ggplotSummary(curr_cpd, cols = color.vec())
+               ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
              })
            },
            fc = {
@@ -1619,7 +1751,7 @@ shinyServer(function(input, output, session) {
              curr_cpd <<- d$key
              output$fc_specific_plot <- plotly::renderPlotly({
                # --- ggplot ---
-               ggplotSummary(curr_cpd, cols = color.vec())
+               ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
              })
            },
            aov = {
@@ -1628,7 +1760,7 @@ shinyServer(function(input, output, session) {
              curr_cpd <<- d$key
              output$aov_specific_plot <- plotly::renderPlotly({
                # --- ggplot ---
-               ggplotSummary(curr_cpd, cols = color.vec())
+               ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
              })
            },
            rf = {
@@ -1637,7 +1769,7 @@ shinyServer(function(input, output, session) {
              curr_cpd <<- d$key
              output$rf_specific_plot <- plotly::renderPlotly({
                # --- ggplot ---
-               ggplotSummary(curr_cpd, cols = color.vec())
+               ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
              })
            },
            heatmap = {
@@ -1753,32 +1885,31 @@ shinyServer(function(input, output, session) {
     if (is.null(curr_row)) return()
     # -----------------------------
     curr_cpd <<- hits_table[curr_row, mzmed.pgrp]
-    output$meba_specific_plot <- plotly::renderPlotly({ggplotMeba(curr_cpd, draw.average=T, cols = color.vec())})
-    output$asca_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec())})
-    output$fc_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec())})
-    output$tt_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec())})
-    output$aov_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec())})
-    output$plsda_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec())})
+    output$meba_specific_plot <- plotly::renderPlotly({ggplotMeba(curr_cpd, draw.average=T, cols = color.vec(),cf=color.function)})
+    output$asca_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)})
+    output$fc_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)})
+    output$tt_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)})
+    output$aov_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)})
+    output$plsda_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)})
   })
   
   observeEvent(input$go_enrich,{
     withProgress({
       all_pathways <- lapply(enrich_db_list, FUN=function(db){
-        conn <- dbConnect(RSQLite::SQLite(), db) # change this to proper var later
+        conn <- RSQLite::dbConnect(RSQLite::SQLite(), db) # change this to proper var later
         dbname <- gsub(basename(db), pattern = "\\.full\\.db", replacement = "")
-        dbGetQuery(conn, "SELECT distinct * FROM pathways limit 10;")
-        gset <- dbGetQuery(conn,"SELECT DISTINCT c.baseformula AS cpd,
+        RSQLite::dbGetQuery(conn, "SELECT distinct * FROM pathways limit 10;")
+        gset <- RSQLite::dbGetQuery(conn,"SELECT DISTINCT c.baseformula AS cpd,
                            p.name as name
                            FROM pathways p
                            JOIN base c
                            ON c.pathway = p.identifier 
                            ")
-        dbDisconnect(conn)
+        RSQLite::dbDisconnect(conn)
         # --- returny ---
         gset$name <- paste(gset$name, " (", dbname, ")", sep="")
         gset
       })
-      head(all_pathways)
       setProgress(0.33)
       # --- only anova top 100 for now ---
       used.analysis <- input$enrich_stats
@@ -1793,7 +1924,7 @@ shinyServer(function(input, output, session) {
                           t100=vec[1:100],
                           t200=vec[1:200],
                           t500=vec[1:500]
-                          )
+        )
       }else{
         stat.tab <- switch(input$enrich_stats,
                            tt="p.value",
@@ -1812,7 +1943,7 @@ shinyServer(function(input, output, session) {
       gset_proc <<- piano::loadGSC(gset)
       setProgress(0.66)
       gsaRes <<- piano::runGSA(sigvals, 
-                              gsc = gset_proc)
+                               gsc = gset_proc)
       enrich_tab <<- piano::GSAsummaryTable(gsaRes)[,1:3]
       # --- render ---
       output$enriched <- DT::renderDataTable({
@@ -1833,6 +1964,6 @@ shinyServer(function(input, output, session) {
     R.utils::gcDLLs() # flush dlls
     #save(mSet$dataSet, mSet$analSet, file = file.path(options$work_dir, paste0(options$proj_name, ".RData")))
   })
-  })
+})
 
 

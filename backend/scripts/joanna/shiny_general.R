@@ -7,6 +7,15 @@ get_ref_vars <- function(fac="Label"){
   c(unique(csv[,..fac]))[[fac]]
 }
 
+get_ref_cpds <- function(){
+  req(csv_loc)
+  # csv_loc = "backend/appdata/euronutrition/Test.csv"
+  csv <- fread(csv_loc, sep="\t", header = T)[1,]
+  keep.colnames <- colnames(csv)[!colnames(csv) %in% c("Sample", "Label", "Time")]
+  # --- return ---
+  c(keep.colnames)
+}
+
 getProfile <- function(varName, title=varName, mode="stat"){
   # ---------------
   print(varName)

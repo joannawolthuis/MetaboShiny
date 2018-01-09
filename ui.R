@@ -1,8 +1,8 @@
 # Rely on the 'WorldPhones' dataset in the datasets
 # package (which generally comes preloaded).
 
-shinyUI(fluidPage(theme = "metaboshiny.css",
-                  navbarPage(title=h1("MetaboShiny"), inverse = T,
+shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle.js")),
+                  navbarPage(title=div(h1("MetaboShiny"),class="sparkley"), inverse = T,
                              id="nav_general",
                              windowTitle = "MetaboShiny",
                              tabPanel("", icon = icon("share-alt"), value="setup",
@@ -211,6 +211,7 @@ shinyUI(fluidPage(theme = "metaboshiny.css",
                                                                                                                                       "None"="none")),
                                                       selectInput('norm_type', 'What type of normalization do you want to do?', choices = list("Quantile normalization"="QuantileNorm",
                                                                                                                                                "By reference feature"="ProbNorm",
+                                                                                                                                               "By reference compound"="CompNorm",
                                                                                                                                                "Sum"="SumNorm",
                                                                                                                                                "Median"="MedianNorm",
                                                                                                                                                "None"="NULL")),
@@ -223,6 +224,8 @@ shinyUI(fluidPage(theme = "metaboshiny.css",
                                                                                                                                 "Pareto Scaling"="ParetoNorm",
                                                                                                                                 "Range scaling"="RangeNorm",
                                                                                                                                 "None"="NULL")),
+                                                      selectInput('batch_corr', 'Correct batch effect?', choices = list("Yes"=TRUE, 
+                                                                                                                             "No"=FALSE)),
                                                       actionButton("initialize", "Go", icon=icon("hand-o-right")),
                                                       hr(),
                                                       imageOutput("dataset_icon",inline = T),
@@ -364,8 +367,8 @@ shinyUI(fluidPage(theme = "metaboshiny.css",
                                       )
                              ), 
                              div(class="spinnylocation1",
-                                 div(class="plus", img(class="imagetop", src="colorfulatom.svg", width="120px", height="120px")),
-                                 div(class="minus", img(class="imagebottom", src="colorfulatom.svg", width="120px", height="120px"))
+                                 div(class="plus", img(class="imagetop", src="heart-research.png", width="120px", height="120px")),
+                                 div(class="minus", img(class="imagebottom", src="heart-research.png", width="120px", height="120px"))
                              ),
                              div(class="line")
                   )

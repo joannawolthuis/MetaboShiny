@@ -91,7 +91,7 @@ switchButton <- function(inputId, label, value=FALSE, col = "GB", type="TF") {
 #            tags$label(class="btn", "for"="btnControl", tags$img(src="http://placekitten.com.s3.amazonaws.com/homepage-samples/200/140.jpg", id="btnLeft"))
 #   )
 # )
-# 
+
 
 fadeImageButton <- function(inputId, img.path=NA,value=FALSE) {
   # ---------------
