@@ -139,38 +139,46 @@ shinyServer(function(input, output, session) {
                         )
                ),
                tabPanel("PLSDA", value = "plsda",
+                        fluidRow(
+                         selectInput("plsda_type", label="PLSDA subtype:", choices=list("Normal"="normal",
+                                                                                        "Orthogonal"="ortho",
+                                                                                        "Sparse"="sparse"), selected=1),
+                         actionButton("do_plsda",label="Go")
+                         ),
+                        hr(),
                         navbarPage("",
                                    tabPanel("", icon=icon("globe"),
-                                            plotly::plotlyOutput("plot_plsda",width="100%"),
-                                            fluidRow(column(3,
-                                                            selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:8),selected = "PC1",width="100%"),
-                                                            selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:8),selected = "PC2",width="100%"),
-                                                            selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:8),selected = "PC3",width="100%")
-                                            ), 
-                                            column(9, 
-                                                   div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')
-                                            ))),
-                                   tabPanel("", icon=icon("star-o"), 
-                                            plotly::plotlyOutput("plsda_vip_specific_plot",width="100%"),
-                                            fluidRow(column(3,
-                                                            selectInput("plsda_vip_cmp", label = "Compounds from:", choices = paste0("PC",1:5),selected = "PC1",width="100%")
-                                            ), 
-                                            column(9, 
-                                                   div(DT::dataTableOutput('plsda_vip_tab',width="100%"),style='font-size:80%')
-                                            ))
-                                            
+                                                     plotly::plotlyOutput("plot_plsda",width="100%"),
+                                                     fluidRow(column(3,
+                                                                     selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:8),selected = "PC1",width="100%"),
+                                                                     selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:8),selected = "PC2",width="100%"),
+                                                                     selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:8),selected = "PC3",width="100%")
+                                                     ), 
+                                                     column(9, 
+                                                            div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')
+                                                     ))),
+                                            tabPanel("", icon=icon("star-o"), 
+                                                     plotly::plotlyOutput("plsda_vip_specific_plot",width="100%"),
+                                                     fluidRow(column(3,
+                                                                     selectInput("plsda_vip_cmp", label = "Compounds from:", choices = paste0("PC",1:5),selected = "PC1",width="100%")
+                                                     ), 
+                                                     column(9, 
+                                                            div(DT::dataTableOutput('plsda_vip_tab',width="100%"),style='font-size:80%')
+                                                     ))
+                                                     
+                                            )
+                                   
+                                   
+                        )),
+               tabPanel("T-test", value="tt", 
+                        fluidRow(plotly::plotlyOutput('tt_specific_plot',width="100%")),
+                        navbarPage("",
+                                   tabPanel("", icon=icon("table"),
+                                            div(DT::dataTableOutput('tt_tab',width="100%"),style='font-size:80%'))
+                                   ,tabPanel("", icon=icon("area-chart"),
+                                             plotly::plotlyOutput('tt_overview_plot',height="300px")
                                    )
-                        )
-                        
-               ), tabPanel("T-test", value="tt", 
-                           fluidRow(plotly::plotlyOutput('tt_specific_plot',width="100%")),
-                           navbarPage("",
-                                      tabPanel("", icon=icon("table"),
-                                               div(DT::dataTableOutput('tt_tab',width="100%"),style='font-size:80%'))
-                                      ,tabPanel("", icon=icon("area-chart"),
-                                                plotly::plotlyOutput('tt_overview_plot',height="300px")
-                                      )
-                           )),
+                        )),
                tabPanel("Fold-change", value="fc",
                         fluidRow(plotly::plotlyOutput('fc_specific_plot',width="100%")),
                         navbarPage("",
@@ -258,6 +266,31 @@ shinyServer(function(input, output, session) {
                                div(DT::dataTableOutput('pca_tab',width="100%"),style='font-size:80%')
                         )
                         )
+               ),
+               tabPanel("PLSDA", value = "plsda",
+                        navbarPage("",
+                                   tabPanel("", icon=icon("globe"),
+                                            plotly::plotlyOutput("plot_plsda",width="100%"),
+                                            fluidRow(column(3,
+                                                            selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:8),selected = "PC1",width="100%"),
+                                                            selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:8),selected = "PC2",width="100%"),
+                                                            selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:8),selected = "PC3",width="100%")
+                                            ), 
+                                            column(9, 
+                                                   div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')
+                                            ))),
+                                   tabPanel("", icon=icon("star-o"), 
+                                            plotly::plotlyOutput("plsda_vip_specific_plot",width="100%"),
+                                            fluidRow(column(3,
+                                                            selectInput("plsda_vip_cmp", label = "Compounds from:", choices = paste0("PC",1:5),selected = "PC1",width="100%")
+                                            ), 
+                                            column(9, 
+                                                   div(DT::dataTableOutput('plsda_vip_tab',width="100%"),style='font-size:80%')
+                                            ))
+                                            
+                                   )
+                        )
+                        
                ),
                tabPanel("ANOVA", value="aov",
                         fluidRow(plotly::plotlyOutput('aov_specific_plot',width="100%")),
@@ -621,10 +654,10 @@ shinyServer(function(input, output, session) {
     default.colours <- rainbow(length(facs))
     # -------------
     lapply(seq_along(facs), function(i) {
-      colourInput(inputId = paste("col", i, sep="_"), 
-                  label = paste("Choose colour for", facs[i]), 
-                  value = default.colours[i],
-                  allowTransparent = T) 
+      colourpicker::colourInput(inputId = paste("col", i, sep="_"), 
+                                label = paste("Choose colour for", facs[i]), 
+                                value = default.colours[i],
+                                allowTransparent = T) 
     })
   })
   
@@ -1024,7 +1057,7 @@ shinyServer(function(input, output, session) {
                              scaleNorm = input$scale_type,
                              ref = input$ref_var)
       # ...
-      # mSet <<- Normalization(mSetObj = mSet, 
+      # mSet <<- Normalization(mSet = mSet, 
       #                      rowNorm = "CompNorm", 
       #                      transNorm = "LogNorm", 
       #                      scaleNorm = "RangeNorm", 
@@ -1035,40 +1068,42 @@ shinyServer(function(input, output, session) {
       # ====
       setProgress(.4)
       
-      if(input$batch_corr){
-        
-        print("Correcting batch effect...")
-
-        smp <- rownames(mSet$dataSet$norm)
-        exp_lbl <- mSet$dataSet$cls
-        
-        # captures farm number only? (would need regmatches) (?<=[A-Z][A-Z])((1)(?=-\\d*)|(?=\\d*))
-        
-        csv <- as.data.table(cbind(Sample = smp, Label=gsub(smp, 
-                                                            pattern = "([A-Z][A-Z])|(-\\d*$)", 
-                                                            replacement = ""), 
-                                   mSet$dataSet$norm))
-
-        csv_pheno <- data.frame(sample = 1:nrow(csv),
-                                outcome = exp_lbl,
-                                batch = gsub(csv$Sample, 
-                                             pattern = "([A-Z][A-Z])|(-\\d*$)", 
-                                             replacement = ""),row.names = csv$Sample)
-        
-        mod = model.matrix(~as.factor(outcome), data=csv_pheno)
-        
-        # parametric adjustment
-        
-        csv_edata <-t(csv[,!c(1,2)])
-        
-        colnames(csv_edata) <- csv$Sample
-        
-        batch_normalized = sva::ComBat(dat=csv_edata, batch=csv_pheno$batch, mod=mod, par.prior=TRUE)
-        
-        # --- substitute in metaboanalyst matrix ---
-
-        mSet$dataSet$norm <<- as.data.frame(t(batch_normalized))
-      }
+      try(
+        if(input$batch_corr){
+          
+          print("Correcting batch effect...")
+          
+          smp <- rownames(mSet$dataSet$norm)
+          exp_lbl <- mSet$dataSet$cls
+          
+          # captures farm number only? (would need regmatches) (?<=[A-Z][A-Z])((1)(?=-\\d*)|(?=\\d*))
+          
+          csv <- as.data.table(cbind(Sample = smp, Label=gsub(smp, 
+                                                              pattern = "([A-Z][A-Z])|(-\\d*$)", 
+                                                              replacement = ""), 
+                                     mSet$dataSet$norm))
+          
+          csv_pheno <- data.frame(sample = 1:nrow(csv),
+                                  outcome = exp_lbl,
+                                  batch = gsub(csv$Sample, 
+                                               pattern = "([A-Z][A-Z])|(-\\d*$)", 
+                                               replacement = ""),row.names = csv$Sample)
+          
+          mod = model.matrix(~as.factor(outcome), data=csv_pheno)
+          
+          # parametric adjustment
+          
+          csv_edata <-t(csv[,!c(1,2)])
+          
+          colnames(csv_edata) <- csv$Sample
+          
+          batch_normalized = sva::ComBat(dat=csv_edata, batch=csv_pheno$batch, mod=mod, par.prior=TRUE)
+          
+          # --- substitute in metaboanalyst matrix ---
+          
+          mSet$dataSet$norm <<- as.data.frame(t(batch_normalized))
+        }
+      )
       setProgress(.5)
       
       # --------------------------------------
@@ -1097,6 +1132,8 @@ shinyServer(function(input, output, session) {
       setProgress(.9)
     })
   })
+  
+  # MAIN EXECUTION OF ANALYSES
   
   observeEvent(input$tab_time, {
     if(input$nav_general != "analysis") return(NULL)
@@ -1143,7 +1180,8 @@ shinyServer(function(input, output, session) {
                    z=mesh$z, 
                    type='mesh3d',
                    alphahull=0,
-                   opacity=0.1
+                   opacity=0.1,
+                   hoverinfo="none"
                  )
                }
                adj_plot <<- plotly_build(plots)
@@ -1223,6 +1261,14 @@ shinyServer(function(input, output, session) {
            })
   })
   
+  # outliers
+  # 
+  # outliers <- names(which(abs(mSet$analSet$pca$x[,1]) > 50))
+  # # remove
+  # csv <- as.data.table(fread(csv_loc))
+  # csv_no_out <- csv[!Sample %in% outliers]
+  # fwrite(csv_no_out,file = "ayr_no_outliers.csv")
+  
   observeEvent(input$tab_stat, {
     if(input$nav_general != "analysis") return(NULL)
     nvars <<- length(levels(mSet$dataSet$cls))
@@ -1246,6 +1292,7 @@ shinyServer(function(input, output, session) {
                # --- add ellipses ---
                classes <- mSet$dataSet$cls
                plots <- plotly::plot_ly(showlegend = F)
+               
                for(class in levels(classes)){
                  row = which(classes == class)
                  # ---------------------
@@ -1267,7 +1314,8 @@ shinyServer(function(input, output, session) {
                    z=mesh$z, 
                    type='mesh3d',
                    alphahull=0,
-                   opacity=0.1
+                   opacity=0.1,
+                   hoverinfo="none"
                  )
                }
                adj_plot <<- plotly_build(plots)
@@ -1332,78 +1380,7 @@ shinyServer(function(input, output, session) {
                              autoHideNavigation = T,
                              options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
              })},
-           plsda = {
-             if(!"plsda" %in% names(mSet$analSet)){
-               
-               mSet <<- PLSR.Anal(mSet,
-                                  F)
-               mSet <<- PLSDA.CV(mSet,
-                                 "L",
-                                 5, 
-                                 "Q2")
-             }
-             plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar 
-                                                / mSet$analSet$plsr$Xtotvar 
-                                                * 100.0,
-                                                digits = 2),
-                                          keep.rownames = T)
-             colnames(plsda.table) <- c("Principal Component", "% variance")
-             plsda.table[, "Principal Component"] <- paste0("PC", 1:nrow(plsda.table))
-             # -----------
-             output$plot_plsda <- plotly::renderPlotly({
-               x <- input$plsda_x
-               y <- input$plsda_y
-               z <- input$plsda_z
-               x.var <- plsda.table[`Principal Component` == x, 
-                                    `% variance`]
-               y.var <- plsda.table[`Principal Component` == y, 
-                                    `% variance`]
-               z.var <- plsda.table[`Principal Component` == z, 
-                                    `% variance`]
-               fac.lvls <- unique(mSet$dataSet$filt.cls)
-               colnames(mSet$analSet$plsr$Yscores) <- paste0("PC", 1:ncol(mSet$analSet$plsr$Yscores))
-               chosen.colors <- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
-               # ---------------
-               plotly::plot_ly(hoverinfo = 'text',
-                               text = rownames(mSet$dataSet$norm)) %>%
-                 add_trace(
-                   x = mSet$analSet$plsr$Yscores[,x], 
-                   y = mSet$analSet$plsr$Yscores[,y], 
-                   z = mSet$analSet$plsr$Yscores[,z], 
-                   type = "scatter3d",
-                   color = mSet$dataSet$filt.cls, colors=chosen.colors
-                 ) %>%  layout(scene = list(
-                   xaxis = list(
-                     title = fn$paste("$x ($x.var %)")),
-                   yaxis = list(
-                     title = fn$paste("$y ($y.var %)")),
-                   zaxis = list(
-                     title = fn$paste("$z ($z.var %)")
-                   )
-                 ))
-             })
-             output$plsda_tab <-DT::renderDataTable({
-               req(plsda.table)
-               # -------------
-               DT::datatable(plsda.table, 
-                             selection = 'single',
-                             autoHideNavigation = T,
-                             options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-             })
-             # -------------
-             output$plsda_vip_tab <-DT::renderDataTable({
-               colnames(mSet$analSet$plsda$vip.mat) <- paste0("PC", 1:ncol(mSet$analSet$plsda$vip.mat))
-               compounds_pc <- as.data.table(mSet$analSet$plsda$vip.mat,keep.rownames = T)
-               ordered_pc <- setorderv(compounds_pc, input$plsda_vip_cmp, -1)
-               plsda_tab <<- cbind(ordered_pc[1:50, c("rn")], 
-                                   Rank=c(1:50))
-               # -------------
-               DT::datatable(plsda_tab,
-                             selection = 'single',
-                             autoHideNavigation = T,
-                             options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-             })
-           },
+           plsdaa = {NULL},
            heatmap_mult = {
              req(input$color_ramp)
              req(mSet$analSet$aov)
@@ -1436,10 +1413,11 @@ shinyServer(function(input, output, session) {
              })
            },
            heatmap_biv = {
-             req(input$color_ramp)
+             #req(input$color_ramp)
              req(mSet$analSet$tt)
              req(mSet$analSet$fc)
              req(input$heatmode)
+             
              if(input$heatmode){
                used.analysis <- "tt"
                used.values <- "p.value"
@@ -1571,6 +1549,117 @@ shinyServer(function(input, output, session) {
              })
            }
     )
+  })
+  
+  observeEvent(input$do_plsda, {
+    print("Doing plsda...")
+    print(input$plsda_type)
+    switch(input$plsda_type,
+           normal={
+             withProgress({
+               mSet <<- PLSR.Anal(mSet,
+                                  F)
+               setProgress(0.3)
+               mSet <<- PLSDA.CV(mSet,
+                                 "L",
+                                 5, 
+                                 "Q2")
+               setProgress(0.6)
+               # --- overview table ---
+               plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar 
+                                                  / mSet$analSet$plsr$Xtotvar 
+                                                  * 100.0,
+                                                  digits = 2),
+                                            keep.rownames = T)
+               colnames(plsda.table) <- c("Principal Component", "% variance")
+               plsda.table[, "Principal Component"] <- paste0("PC", 1:nrow(plsda.table))
+               setProgress(0.9)
+               # --- coordinates ---
+               coords <<- mSet$analSet$plsr$Yscores
+               colnames(coords) <<- paste0("PC", 1:ncol(coords))
+               # --- vip table ---
+               colnames(mSet$analSet$plsda$vip.mat) <- paste0("PC", 1:ncol(mSet$analSet$plsda$vip.mat))
+               compounds_pc <- as.data.table(mSet$analSet$plsda$vip.mat,keep.rownames = T)
+               ordered_pc <- setorderv(compounds_pc, input$plsda_vip_cmp, -1)
+               plsda_tab <<- cbind(ordered_pc[1:50, c("rn")], 
+                                   Rank=c(1:50))
+             })
+             },
+           sparse={
+             print("Not implemented yet")
+             # mSet <<- SPLSR.Anal(mSet, 5, 10, "same")
+             # spls3d <- list()
+             # plsda.table <- data.table("Principal Component" = paste0("PC", 1:length(mSet$analSet$splsr$explained_variance$X)), 
+             #                              "% variance" = round(100 * mSet$analSet$splsr$explained_variance$X, 2))
+             # coords <- data.frame(signif(mSet$analSet$splsr$variates$X, 5))
+             # compounds_pc <- as.data.table(abs(mSet$analSet$splsr$loadings$X),keep.rownames = T)
+             # compounds_pc_keep <- lapply(1:nrow(compounds_pc), FUN=function(i){
+             #   row <- compounds_pc[i,-1]
+             #   if(any(row > 0)){row} else NA
+             # })
+             # colnames(compounds_pc) <- paste0("PC", 1:ncol(compounds_pc))
+             # ordered_pc <- setorderv(compounds_pc, "PC1", -1)
+             # head(compounds_pc)
+             # plsda_tab <<- cbind(ordered_pc[1:50, c("rn")], 
+             #                     Rank=c(1:50))
+             ## TODO ##
+           },
+           ortho={
+             print("Not implemented yet")
+             # mSet <<- OPLSR.Anal(mSet, reg=TRUE)
+             ## TODO ##
+             
+           })
+    # -----------
+    output$plot_plsda <- plotly::renderPlotly({
+      x <- input$plsda_x
+      y <- input$plsda_y
+      z <- input$plsda_z
+      print(head(plsda.table))
+      x.var <- plsda.table[`Principal Component` == x, 
+                           `% variance`]
+      y.var <- plsda.table[`Principal Component` == y, 
+                           `% variance`]
+      z.var <- plsda.table[`Principal Component` == z, 
+                           `% variance`]
+      fac.lvls <- unique(mSet$dataSet$filt.cls)
+      chosen.colors <- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
+      # ---------------
+      plotly::plot_ly(hoverinfo = 'text',
+                      text = rownames(mSet$dataSet$norm)) %>%
+        add_trace(
+          x = coords[,x], 
+          y = coords[,y], 
+          z = coords[,z], 
+          type = "scatter3d",
+          color = mSet$dataSet$filt.cls, 
+          colors=chosen.colors
+        ) %>%  layout(scene = list(
+          xaxis = list(
+            title = fn$paste("$x ($x.var %)")),
+          yaxis = list(
+            title = fn$paste("$y ($y.var %)")),
+          zaxis = list(
+            title = fn$paste("$z ($z.var %)")
+          )
+        ))
+    })
+    output$plsda_tab <-DT::renderDataTable({
+      req(plsda.table)
+      # -------------
+      DT::datatable(plsda.table, 
+                    selection = 'single',
+                    autoHideNavigation = T,
+                    options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+    })
+    # -------------
+    output$plsda_vip_tab <-DT::renderDataTable({
+      # -------------
+      DT::datatable(plsda_tab,
+                    selection = 'single',
+                    autoHideNavigation = T,
+                    options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+    })
   })
   
   observe({
@@ -1900,11 +1989,11 @@ shinyServer(function(input, output, session) {
         dbname <- gsub(basename(db), pattern = "\\.full\\.db", replacement = "")
         RSQLite::dbGetQuery(conn, "SELECT distinct * FROM pathways limit 10;")
         gset <- RSQLite::dbGetQuery(conn,"SELECT DISTINCT c.baseformula AS cpd,
-                           p.name as name
-                           FROM pathways p
-                           JOIN base c
-                           ON c.pathway = p.identifier 
-                           ")
+                                    p.name as name
+                                    FROM pathways p
+                                    JOIN base c
+                                    ON c.pathway = p.identifier 
+                                    ")
         RSQLite::dbDisconnect(conn)
         # --- returny ---
         gset$name <- paste(gset$name, " (", dbname, ")", sep="")

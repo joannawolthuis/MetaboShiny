@@ -1,7 +1,10 @@
 shinyServer(function(input, output, session) {
   
   # dir
-  shinyDirChoose(input, 'dir', roots = c(home = '~'), filetypes = c('', 'txt'))
+  shinyDirChoose(input, 
+                 'dir', 
+                 roots = c(home = '~'), 
+                 filetypes = c('', 'txt'))
   dir <- reactive(input$dir)
   output$dir <- renderPrint(dir())
   
@@ -16,7 +19,7 @@ shinyServer(function(input, output, session) {
     }
     # -----------------------------------------------------------------
   })
-
+  
   observe({
     shinyFileSave(input, id='report_save_loc', roots = c(home = '~'), filetype=c('csv'))
     report_loc <- reactive(input$report_save_loc)
@@ -49,13 +52,13 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$convert, {
     "
-Requires the following:\
-WINE - 32 BITS INSTALL (please adjust your path below to the correct executable)
-     - PROPER WINEPREFIX (see below for example)
-MSFileReader - Thermo program, requires registration. Installs through wine.
-             - May need to 'install' the DLL's manually through wine.
-READW - Nice converter that requires MSFileReader. Find a one-file executable please!
---- This may be really tricky to get wo work, I feel lucky it works currently lol :I ---
+    Requires the following:\
+    WINE - 32 BITS INSTALL (please adjust your path below to the correct executable)
+    - PROPER WINEPREFIX (see below for example)
+    MSFileReader - Thermo program, requires registration. Installs through wine.
+    - May need to 'install' the DLL's manually through wine.
+    READW - Nice converter that requires MSFileReader. Find a one-file executable please!
+    --- This may be really tricky to get wo work, I feel lucky it works currently lol :I ---
     "
     minFiles = 0
     progr = 0
@@ -71,7 +74,7 @@ READW - Nice converter that requires MSFileReader. Find a one-file executable pl
         if(file.exists(OUTFILE)) next
         system(fn$paste(
           "env WINEPREFIX=/Users/jwolthuis/.wine32 $WINE '$READW' '$INFILE' '$OUTFILE'"
-          ))
+        ))
         progr <- progr + 1
         setProgress(message = paste(basename(INFILE), "converted", sep=": "),value = progr)
       }
@@ -94,7 +97,7 @@ READW - Nice converter that requires MSFileReader. Find a one-file executable pl
     })
   })
   
-
+  
   observeEvent(input$plot, {
     req(projname)
     # -----------
@@ -141,11 +144,11 @@ READW - Nice converter that requires MSFileReader. Find a one-file executable pl
       })
     })
     ticTable <<- data.table(filenames = gsub(tics, pattern = "\\.png", replacement = ".mzXML"),
-                           judgement = c("OK"))
+                            judgement = c("OK"))
     output$ticTable <- DT::renderDataTable({
       datatable(ticTable,
-      autoHideNavigation = T,
-      options = list(lengthMenu = c(10, 30, 50), pageLength = 30,scrollX=TRUE, scrollY=TRUE)
+                autoHideNavigation = T,
+                options = list(lengthMenu = c(10, 30, 50), pageLength = 30,scrollX=TRUE, scrollY=TRUE)
       ) %>% formatStyle(
         'judgement',
         target = 'row',
@@ -154,7 +157,7 @@ READW - Nice converter that requires MSFileReader. Find a one-file executable pl
     })
   })
   
-
+  
   observeEvent(input$submit, {
     nTics <- length(tics)
     judgement <<- sapply(1:nTics, FUN=function(i){
@@ -176,19 +179,19 @@ READW - Nice converter that requires MSFileReader. Find a one-file executable pl
     })
   })
   
-
+  
   observeEvent(input$make_report, {
     # create final report.
     # ------------------
     rawfiles <- data.table(RAW=list.files(path(),pattern = "raw"))
     rawfiles <- data.table(filenames=gsub(pattern = "\\.raw", 
-                                replacement = "",
-                                x = list.files("/Users/jwolthuis/PROCESSING_HPC/",
-                                               pattern = "raw")))
+                                          replacement = "",
+                                          x = list.files("/Users/jwolthuis/PROCESSING_HPC/",
+                                                         pattern = "raw")))
     ticSelection_subbed <- ticSelection
     ticSelection_subbed$filenames <- gsub(ticSelection_subbed$filenames,
-                                   pattern = "\\.mzXML", 
-                                   replacement = "")
+                                          pattern = "\\.mzXML", 
+                                          replacement = "")
     
     setkey(rawfiles,filenames)
     setkey(ticSelection_subbed,filenames)
@@ -200,9 +203,9 @@ READW - Nice converter that requires MSFileReader. Find a one-file executable pl
     set.seed(1)
     res_3 <- as.data.table(
       res_2 %>% 
-      mutate(OK=(judgement=="OK")) %>% 
-      group_by(Card.ID) %>%
-      summarise(OK=sum(OK))
+        mutate(OK=(judgement=="OK")) %>% 
+        group_by(Card.ID) %>%
+        summarise(OK=sum(OK))
     )
     # ===========
     warning_samples <- res_3[OK < 2]
@@ -222,7 +225,7 @@ READW - Nice converter that requires MSFileReader. Find a one-file executable pl
         backgroundColor = styleEqual(c('OK', 'BAD'), c('lightgreen', 'red'))
       )
     })
-    })
+  })
   
   observeEvent(input$save_report,{
     req(input$report_title)
@@ -242,39 +245,359 @@ READW - Nice converter that requires MSFileReader. Find a one-file executable pl
   observe({
     files <<- list.files(path(),pattern = "mzXML|raw")
     projname <<- gsub(basename(files[1]),pattern = ".*\\/|_\\d*.raw|_\\d*.mzXML", replacement = "")
-    })
+    outdir <<- file.path(path(), "results")
+  })
   
   output$files <- renderPrint(list.files(path(),pattern = "mzXML|raw"))
+  
+  observeEvent(input$create_sample_names, {
+    withProgress({
+      inj_path <- input$inj_loc$datapath
+      inj_path <- "~/Documents/umc/data/Data/Project 2017-026 DSM feed-10 (IMASDE-Madrid) - Saskia v Mil/Injection list IMASDE (Madrid, Spain).xlsx"
+      
+      mzfiles <- list.files(path(),pattern="\\.mzXML$")
+      
+      mzfiles <- list.files("~/Documents/umc/data/Data/Project 2017-026 DSM feed-10 (IMASDE-Madrid) - Saskia v Mil/RES-2017-11-15_DSM DBS Madrid/",
+                            pattern="\\.mzXML")
+      
+      injfile <- xlsx::read.xlsx(file = inj_path,
+                                 sheetIndex = 1,
+                                 colIndex = c(1:3),
+                                 rowIndex = 1:length(mzfiles)/3 + 1)
+      df <- as.data.frame(injfile)
+      i = 1
+      df <- data.table::rbindlist(lapply(1:nrow(df), FUN=function(i){
+        row <- df[i,]
+        if(row$sample == "QC"){
+          row$sample <- paste0("QC", i)
+          i <<- i + 1
+          }
+        # --- return ---
+        as.data.frame(row)
+      }))
+      
+      filepfx <- gsub(mzfiles[[1]], 
+                      pattern = "_\\d*\\.mzXML", 
+                      replacement = "" )
+      df.expanded <- df[rep(1:nrow(df),each=input$nrepl),] # replicados
+      samplecount = nrow(df)
+      filenames <- paste(filepfx, c(1:nrow(df.expanded)), sep = "_")
+      filenames <- gsub(filenames,
+                        pattern="(_)([0-9])$",
+                        replacement="\\100\\2")
+      filenames <- gsub(filenames,
+                        pattern="(_)([0-9][0-9])$",
+                        replacement="\\10\\2")
+      df.w.filenames <- df.expanded
+      df.w.filenames$filename <- filenames
+      dt <- as.data.table(df.w.filenames)
+      sampleNames <- dt[,c(3,2)]
+      colnames(sampleNames) <- c("File_Name", "Sample_Name")
+      output$sample_names <- renderDataTable(datatable(sampleNames))
+      fwrite(sampleNames,file = file.path(path(), "sampleNames.txt"),sep = "\t")
+    })
+  })
+  
+  observeEvent(input$do_step_1, {
+    run_step_1()
+  })
+  observeEvent(input$do_step_2, {
+    run_step_2()
+  })
+  observeEvent(input$do_step_3, {
+    run_step_3()
+  })
+  observeEvent(input$do_step_4, {
+    run_step_4()
+  })
+  observeEvent(input$do_step_5, {
+    run_step_5()
+  })
+  observeEvent(input$do_step_6, {
+    run_step_6()
+  })
+  observeEvent(input$do_step_7, {
+    run_step_7()
+  })
+  observeEvent(input$do_step_8, {
+    run_step_8()
+  })
+  
+  observeEvent(input$start_pipeline, {
+    ##############
+    run_step_1()
+    run_step_2()
+    run_step_3()
+    run_step_4()
+    run_step_5()
+    run_step_6()
+    run_step_7()
+    run_step_8()
+  })
+  
+  observe({
+    # --------------
+    cores <<- input$cores
+    nrepl <<- input$nrepl
+    trim <<- input$trim
+    dimsThresh <<- input$dimsThresh
+    resol <<- input$resol
+    thresh_pos <<- input$thresh_pos
+    thresh_neg <<- input$thresh_neg
+    # ---------------
+  })
+  
+  run_step_1 <- function(){
+    if(!dir.exists(outdir)) dir.create(outdir)
+    # ----------------------------------
+    generateBreaksFwhm(list.files(path(), 
+                                  pattern = "\\.mzXML",
+                                  full.names = T)[1], 
+                       outdir, 
+                       trim, 
+                       resol, 
+                       nrepl)
+    # ----------------------------------
+    updateCollapse(session, "pipeline", 
+                   style = list("Initial setup" = "success"))
+  }
+  
+  run_step_2 <- function(){
+    # make cluster obj
+    # --- cluster ---
+    cl <<- makeSOCKcluster(cores,
+                           outfile="~/mclog.txt")
+    registerDoSNOW(cl)
+    # -----------------
+    files = list.files(path(), 
+                       pattern = "\\.mzXML",
+                       full.names = T)
+    cfun <<- function(a, b) NULL
+    progress <<- function(i) setProgress(value = i / length(files),
+                            detail = paste("Done:", basename(files[i])))
+    opts <- list(progress=progress)
+    # ---------------
+    withProgress(message = "DIMS data extraction",{
+      i = 1
+      res <- foreach(i=1:length(files), .options.snow=opts, .export = c("DIMS", 
+                                                                       "dims", 
+                                                                       "outdir", 
+                                                                       "scriptdir",
+                                                                       "input", 
+                                                                       "aggregate", 
+                                                                       "dimsThresh",
+                                                                       "trim",
+                                                                       "resol"),
+                     .packages = "xcms",
+                           .verbose = T,
+              .combine=cfun) %dopar% {
+                print(files[i])
+                DIMS(files[i],
+                     scriptdir,
+                     outdir,
+                     trim,
+                     dimsThresh,
+                     resol)
+                print(paste("Finished file", files[i]))
+              }
+    })
+    stopCluster(cl)
+    updateCollapse(session, "pipeline", 
+                   style = list("DIMS data extraction" = "success"))
+  }
+  
+  run_step_3 <- function(){
+    averageTechReplicates(outdir, 
+                          nrepl, 
+                          dimsThresh,
+                          cores)
+    updateCollapse(session, "pipeline", 
+                   style = list("Average technical replicates" = "success"))
+  }
+  
+  run_step_4 <- function(){
+    # --- cluster ---
+    cl <<- makeSOCKcluster(cores,
+                           outfile="~/mclog.txt")
+    registerDoSNOW(cl)
+    # ---------------
+    for(scanmode in modes){
+      # PEAKFINDING
+      files = list.files(file.path(outdir, 
+                                 "average_pklist"),
+                       full.names = T,
+                       pattern= if(scanmode == "positive") "pos" else "neg") 
+      # -----------------
+      cfun <<- function(a, b) NULL
+      progress <<- function(i) setProgress(value = i / length(files),
+                                           detail = paste("Done:", basename(files[i])))
+      opts <- list(progress=progress)
+      # ---------------
+      withProgress(message = paste0("Peak finding (", scanmode, ")"),{
+        #length(files)
+        res <- switch(input$peak_calling,
+                      gaussian = {
+                        foreach(i=1:length(files), .options.snow=opts, .export = c("outdir", 
+                                                                          "scriptdir",
+                                                                          "resol",
+                                                                          "thresh_pos", 
+                                                                          "thresh_neg", 
+                                                                          "findPeaks.Gauss.HPC",
+                                                                          "peakFinding.2.0",
+                                                                          "searchMZRange",
+                                                                          "fitGaussianInit",
+                                                                          "generateGaussian",
+                                                                          "fitGaussian",
+                                                                          "getFwhm",
+                                                                          "getSD",
+                                                                          "optimizeGauss",
+                                                                          "getArea",
+                                                                          "fit2G_2",
+                                                                          "fit4G_2",
+                                                                          "fit4peaks",
+                                                                          "fitG_2",
+                                                                          "fit3G_2",
+                                                                          "fit1Peak",
+                                                                          "fit2peaks",
+                                                                          "fit3peaks",
+                                                                          "getFitQuality",
+                                                                          "checkOverlap",
+                                                                          "isWithinXppm",
+                                                                          "sumCurves"),
+                       .verbose = T,
+                       .combine=cfun) %dopar% {
+                         peakFinding.2.0(file = files[i],
+                                         scripts = scriptdir,
+                                         outdir = outdir,
+                                         scanmode = scanmode,
+                                         thresh = if(scanmode == "positive") thresh_pos else{thresh_neg},
+                                         resol = resol)
+                       } 
+                        }, 
+                      wavelet = {
+                        # foreach(i=1:length(files), .options.snow=opts, .export = c("outdir", 
+                        #                                                            "scriptdir",
+                        #                                                            "resol",
+                        #                                                            "thresh_pos", 
+                        #                                                            "thresh_neg"),
+                        #         .verbose = T,
+                        #         .packages = "MassSpecWavelet",
+                        #         .combine=cfun) %dopar% {
+                        #           peakFinding.wavelet(file = files[i],
+                        #                               scripts = scriptdir,
+                        #                               outdir = outdir,
+                        #                               scanmode = scanmode,
+                        #                               thresh = if(scanmode == "positive") thresh_pos else{thresh_neg},
+                        #                               resol = resol)
+                        #         }
+                        # })
+                        print("Not implemented yet")
+                        })
+        })
+    
+    }
+    updateCollapse(session, "pipeline", 
+                   style = list("Peak finding" = "success"))
+    stopCluster(cl)
+    }
+  
+  run_step_5 <- function(){
+    # ---------------
+    withProgress(message = "Collecting samples (I)", {
+      i = 0
+      for(scanmode in modes){
+        collectSamples(outdir,
+                       scanmode)
+        i = i + 0.5
+        setProgress(value = i, detail = toupper(scanmode))
+      }
+    })
+    # ---------------
+    updateCollapse(session, "pipeline", 
+                   style = list("Collect samples (I)" = "success"))
+  }
+  
+  run_step_6 <- function(){
+    for(scanmode in modes){
+      f <- file.path(outdir, "specpks_all", paste0(scanmode, ".RData"))
+      print(paste("Grouping on", basename(f)))
+      # -------------------
+      switch(input$peak_grouping,
+             hclust = {
+               groupingRestClust(outdir = outdir,
+                                 fileIn = f,
+                                 cores=input$cores,
+                                 scanmode = scanmode,
+                                 ppm = input$ppm)
+             },
+             meanshift = {
+               groupingRestBlur(outdir = outdir,
+                                fileIn = f,
+                                cores = input$cores,
+                                scanmode = scanmode,
+                                ppm = input$ppm)
+             })
+    }
+    updateCollapse(session, "pipeline", 
+                   style = list("Peak grouping" = "success"))
+  }
+  
+  run_step_7 <- function(){
+    for(scanmode in modes){ 
+      message("FILLING PEAKS")
+      f=file.path(outdir, 
+                  "grouping_rest", 
+                  if(scanmode == "positive") "positive.RData" else "negative.RData")
+      print(paste("Filling missing vals in file", basename(f)))
+      replaceZeros_lookup(file = f,
+                          type="rest",
+                          scanmode = scanmode,
+                          resol = resol,
+                          outdir = outdir,
+                          cores=cores,
+                          thresh = if(scanmode == "positive") thresh_pos else{thresh_neg},
+                          scriptDir = scriptdir)
+    }
+    updateCollapse(session, "pipeline", 
+                   style = list("Fill missing values" = "success"))
+    
+  }
+  
+  run_step_8 <- function(){
+    # -- FINAL ---
+    load(file.path(outdir, "repl.pattern.RData"))
+    i = 0
+    withProgress(message = "Collecting samples (II)...",{
+      for(scanmode in modes){
+        i <<- i + 0.5
+        setProgress(i, detail=paste("Collecting samples:", scanmode))
+        # --------------------
+        f=file.path(outdir, 
+                    "samplePeaksFilled", 
+                    if(scanmode == "positive") "positive_rest.RData" else "negative_rest.RData")
+        load(f)
+        colnames(outpgrlist) <- c("mzmed", "fq.best", "fq.worst", "npeaks", "mzmin", "mzmax",
+                                  switch(scanmode, 
+                                         positive=groupNames.pos, 
+                                         negative=groupNames.neg), 
+                                  "avg.int")
+        fwrite(x = outpgrlist,
+               file = file.path(outdir, 
+                                paste0("outlist_",scanmode,".csv")),
+               sep = "\t")
+        
+      }
+    })
+    
+    updateCollapse(session, "pipeline", 
+                   style = list("Collect samples (II)" = "success"))
+  }
+  
+  session$onSessionEnded(function() {
+    if(any(!is.na(cl))) parallel::stopCluster(cl)
+    R.utils::gcDLLs() # flush dlls
+    #save(mSet$dataSet, mSet$analSet, file = file.path(options$work_dir, paste0(options$proj_name, ".RData")))
+  })
+  
+# close server obj (must go last!!)
 }) 
-
-makeSampleNames <- function(dir, injfile){ # IMPLEMENT THIS W/ PEAKFINDING SOON
-  library(data.table)
-  
-  dir <- "/Users/jwolthuis/Downloads/Data/Project 2017-025 DSM feed-9 (SRUC-Ayr) - Saskia v Mil/RES-2017-11-14_DSM DBS Ayr Scotland/"
-  mzfiles <- list.files(file.path(dir, "MZXML"))
-  injfile <- xlsx::read.xlsx(file = "/Users/jwolthuis/Downloads/Data/Project 2017-025 DSM feed-9 (SRUC-Ayr) - Saskia v Mil/Injection list Ayr (Scotland).xlsx",
-                             sheetIndex = 1,colIndex = c(1:3),rowIndex = 1:length(mzfiles)/3 + 1)
-  df <- as.data.frame(injfile)
-  
-  filepfx <- gsub(mzfiles[[1]], 
-                  pattern = "_\\d*\\.mzXML", 
-                  replacement = "" )
-  
-  df.expanded <- df[rep(1:nrow(df),each=3),] # replicados
-  samplecount = nrow(df)
-  filenames <- paste(filepfx, c(1:nrow(df.expanded)), sep = "_")
-  filenames <- gsub(filenames,
-                    pattern="(_)([0-9])$",
-                    replacement="\\100\\2")
-  filenames <- gsub(filenames,
-                    pattern="(_)([0-9][0-9])$",
-                    replacement="\\10\\2")
-  df.w.filenames <- df.expanded
-  df.w.filenames$filename <- filenames
-  dt <- as.data.table(df.w.filenames)
-  
-  sampleNames <- dt[,c(3,2)]
-  colnames(sampleNames) <- c("File_Name", "Sample_Name")
-  
-  fwrite(sampleNames,file = file.path(dir, "sampleNames_UK.txt"),sep = "\t")
-}

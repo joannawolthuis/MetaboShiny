@@ -371,6 +371,6 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                  div(class="minus", img(class="imagebottom", src="heart-research.png", width="120px", height="120px"))
                              ),
                              div(class="line")
-                  )
+                            )
 )
 )

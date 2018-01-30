@@ -1,13 +1,21 @@
 library(shiny)
 library(shinyFiles)
+library(shinyBS)
 library(xcms)
 library(gsubfn)
 library(data.table)
 library(DT)
 library(xlsx)
+library(doSNOW)
+library(tools)
+library(MassSpecWavelet)
+
+# ---------------
 
 CheckFile<-function(file, type=".mzXML"){
-  print(paste("Loading File:", file, sep=""))
+  print(paste("Loading File:", 
+              file, 
+              sep=""))
   xr <- NULL
   attempt <- 1
   while( is.null(xr) && attempt <= 3 ) {
@@ -19,9 +27,15 @@ CheckFile<-function(file, type=".mzXML"){
   for(i in 1:length(xr@scanindex)){
     scan<-getScan(xr, scan=i)
     if(is.unsorted(scan[,"mz"]) == TRUE){
-      newfile<-sub(type, "-Fixed.mzdata", file, ignore.case=TRUE, fixed=TRUE)
+      newfile<-sub(type, "-Fixed.mzdata", 
+                   file, 
+                   ignore.case=TRUE, 
+                   fixed=TRUE)
       write.mzdata(xr, newfile)
-      file.copy(file, sub(type, ".OLD", file, ignore.case=TRUE))
+      file.copy(file, sub(type, 
+                          ".OLD", 
+                          file, 
+                          ignore.case=TRUE))
       unlink(file)
       return("corrupt")
       
@@ -49,6 +63,26 @@ fadeImageButton <- function(inputId, img.path=NA,value=FALSE) {
   )
 }
 
+scriptdir <<- "./scripts"
+scripts = list.files(path = scriptdir, 
+                     pattern = "\\.R",
+                     full.names = T,
+                     recursive = T)
+lapply(scripts, function(x){
+  print(basename(x))
+  source(x)
+})
 
+## DEFAULTS ##
+cores <<- 1
+nrepl <<- 3
+trim <<- 0.1
+dimsThresh <<- 100
+resol <<- 140000
+thresh_pos <<- 2000
+thresh_neg <<- 2000
+modes <<- c("positive", "negative")
+
+# -----------------
 
 sardine <- function(content) div(style="display: inline-block;vertical-align:top;", content)
