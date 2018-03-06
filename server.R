@@ -10,7 +10,7 @@ shinyServer(function(input, output, session) {
   shinyOptions(progress.style="old")
   ppm <<- 2
   nvars <<- 2
-  
+
   # -----------------------------------------------
   
   spinnyimg <- reactiveVal("www/electron.png")
@@ -122,7 +122,7 @@ shinyServer(function(input, output, session) {
   
   
   stat.ui.bivar <- reactive({
-    navbarPage("Standard analysis", id="tab_stat",
+    navbarPage(inverse=T,"Standard analysis", id="tab_stat",
                tabPanel("", value = "intro", icon=icon("comment-o"),
                         helpText("Info text here")
                ),
@@ -146,7 +146,7 @@ shinyServer(function(input, output, session) {
                          actionButton("do_plsda",label="Go")
                          ),
                         hr(),
-                        navbarPage("",
+                        navbarPage(inverse=T,"",
                                    tabPanel("", icon=icon("globe"),
                                                      plotly::plotlyOutput("plot_plsda",width="100%"),
                                                      fluidRow(column(3,
@@ -172,7 +172,7 @@ shinyServer(function(input, output, session) {
                         )),
                tabPanel("T-test", value="tt", 
                         fluidRow(plotly::plotlyOutput('tt_specific_plot',width="100%")),
-                        navbarPage("",
+                        navbarPage(inverse=T,"",
                                    tabPanel("", icon=icon("table"),
                                             div(DT::dataTableOutput('tt_tab',width="100%"),style='font-size:80%'))
                                    ,tabPanel("", icon=icon("area-chart"),
@@ -181,7 +181,7 @@ shinyServer(function(input, output, session) {
                         )),
                tabPanel("Fold-change", value="fc",
                         fluidRow(plotly::plotlyOutput('fc_specific_plot',width="100%")),
-                        navbarPage("",
+                        navbarPage(inverse=T,"",
                                    tabPanel("", icon=icon("table"),
                                             div(DT::dataTableOutput('fc_tab',width="100%"),style='font-size:80%'))
                                    ,tabPanel("", icon=icon("area-chart"),
@@ -191,7 +191,7 @@ shinyServer(function(input, output, session) {
                # =================================================================================
                tabPanel("RandomForest", value="rf",
                         fluidRow(plotly::plotlyOutput('rf_specific_plot',width="100%")),
-                        navbarPage("",
+                        navbarPage(inverse=T,"",
                                    tabPanel("", icon=icon("table"),
                                             div(DT::dataTableOutput('rf_tab',width="100%"),style='font-size:80%'))
                         )
@@ -249,7 +249,7 @@ shinyServer(function(input, output, session) {
   })
   
   stat.ui.multivar <- reactive({
-    navbarPage("Standard analysis", id="tab_stat",
+    navbarPage(inverse=T,"Standard analysis", id="tab_stat",
                tabPanel("", value = "intro", icon=icon("comment-o"),
                         helpText("Info text here")
                ), # pca_legend
@@ -268,7 +268,7 @@ shinyServer(function(input, output, session) {
                         )
                ),
                tabPanel("PLSDA", value = "plsda",
-                        navbarPage("",
+                        navbarPage(inverse=T,"",
                                    tabPanel("", icon=icon("globe"),
                                             plotly::plotlyOutput("plot_plsda",width="100%"),
                                             fluidRow(column(3,
@@ -294,7 +294,7 @@ shinyServer(function(input, output, session) {
                ),
                tabPanel("ANOVA", value="aov",
                         fluidRow(plotly::plotlyOutput('aov_specific_plot',width="100%")),
-                        navbarPage("",
+                        navbarPage(inverse=T,"",
                                    tabPanel("", icon=icon("table"),
                                             div(DT::dataTableOutput('aov_tab',width="100%"),style='font-size:80%'))
                                    ,tabPanel("", icon=icon("area-chart"),
@@ -304,7 +304,7 @@ shinyServer(function(input, output, session) {
                # =================================================================================
                tabPanel("RandomForest", value="rf",
                         fluidRow(plotly::plotlyOutput('rf_specific_plot',width="100%")),
-                        navbarPage("",
+                        navbarPage(inverse=T,"",
                                    tabPanel("", icon=icon("table"),
                                             div(DT::dataTableOutput('rf_tab',width="100%"),style='font-size:80%'))
                         )
@@ -355,7 +355,7 @@ shinyServer(function(input, output, session) {
   
   
   time.ui <- reactive({
-    navbarPage("Time Series", id="tab_time",
+    navbarPage(inverse=T,"Time Series", id="tab_time",
                tabPanel("iPCA", value = "ipca", 
                         plotly::plotlyOutput("plot_ipca",height="600px"),
                         selectInput("ipca_factor", label = "Color based on:", choices =list("Time"="facA",
@@ -571,7 +571,6 @@ shinyServer(function(input, output, session) {
     dir <- reactive(input$get_work_dir)
     home <- normalizePath("~")
     given_dir <- file.path(home, paste(unlist(dir()$path[-1]), collapse = .Platform$file.sep))
-    print(given_dir)
     if(is.null(given_dir)) return()
     options$work_dir <<- given_dir
     output$exp_dir <- renderText(options$work_dir)
@@ -632,7 +631,27 @@ shinyServer(function(input, output, session) {
         layout(xaxis = ax, yaxis = ax)
     })
   })
-  
+      
+  observeEvent(input$change_css, {
+    # input <- list(bar.col.1 = "ffc8c2", 
+    #               bar.col.2 = "e1897f", 
+    #               bar.col.3 = "ffffff", 
+    #               bar.col.4 = "ffffff",
+    #               font.1 = "Press Start 2P",
+    #               font.2 = "Raleway bold",
+    #               font.3 = "Raleway",
+    #               font.4 = "Raleway serif")
+    # --- connect ---
+    setOption(".conf", "col1", input$bar.col.1)
+    setOption(".conf", "col2", input$bar.col.2)
+    setOption(".conf", "col3", input$bar.col.3)
+    setOption(".conf", "col4", input$bar.col.4)
+    
+    setOption(".conf", "font1", input$font.1)
+    setOption(".conf", "font2", input$font.2)
+    setOption(".conf", "font3", input$font.3)
+    setOption(".conf", "font4", input$font.4)
+  })
   
   color.pickers <- reactive({
     req(mSet$dataSet)
@@ -760,6 +779,8 @@ shinyServer(function(input, output, session) {
   
   lapply(db_list, FUN=function(db){
     observeEvent(input[[paste0("build_", db)]], {
+      ncores = parallel::detectCores() - 1
+      session_cl = parallel::makeCluster(ncores)
       # ---------------------------
       withProgress({
         parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
@@ -768,15 +789,21 @@ shinyServer(function(input, output, session) {
           "mergeform.joanna",
           "multiform.joanna",
           "check.ded.joanna",
-          "data.table",
-          "rbindlist",
-          "isopattern",
-          "keggFind",
-          "keggGet",
-          "kegg.charge",
-          "regexpr",
-          "regmatches"
+          #"data.table",
+          #"rbindlist",
+          #"isopattern",
+          #"keggFind",
+          #"keggGet",
+          "kegg.charge"
+          #,"regexpr",
+          #"regmatches"
         ))
+        pkgs = c("data.table", "enviPat", "KEGGREST", "XML")
+        parallel::clusterCall(session_cl, function(pkgs) {
+          for (req in pkgs) {
+            require(req, character.only=TRUE)
+          }
+        }, pkgs = pkgs)
         #setProgress(message = "Working...")
         build.base.db(db, outfolder=options$db_dir)
         setProgress(0.5)
@@ -824,9 +851,7 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$import_csv, {
     req(input$pat_csv)
-    print(input$pat_csv)
     csv_loc <<- input$pat_csv$datapath
-    print(csv_loc)
     output$csv_upload_check <- renderImage({
       # When input$n is 3, filename is ./images/image3.jpeg
       filename <- normalizePath('www/yes.png')
@@ -845,7 +870,7 @@ shinyServer(function(input, output, session) {
     withProgress({
       setProgress(1/4)
       # create csv
-      print(if(input$broadvars) "individual_data" else "setup")
+      #print(if(input$broadvars) "individual_data" else "setup")
       tbl <- get.csv(patdb,
                      time.series = if(input$exp_type == "time_std") T else F,
                      exp.condition = input$exp_var,
@@ -1047,13 +1072,11 @@ shinyServer(function(input, output, session) {
                mSet
              }
       )
-      print("here?")
       mSet <<- SanityCheckData(mSet)
       #mSet <<- RemoveMissingPercent(mSet, percent = 0.5)
       mSet <<- ImputeVar(mSet,
                          method = "median")
       if(input$filt_type != "none"){
-        print("filtering")
         mSet <<- FilterVariable(mSet,
                                 filter = "rsd",#input$filt_type,
                                 qcFilter = "F", 
@@ -1125,7 +1148,6 @@ shinyServer(function(input, output, session) {
           # pcontrol <- empirical.controls(csv_edata,mod.pheno,mod0=NULL,n.sv=n.sv,type="norm")
           # irwsva.build(csv_edata, mod.pheno, mod0 = NULL, n.sv, B = 5)
           if(length(levels(batch)) == 1){
-            print("here-o")
             # batch_normalized = removeBatchEffect(x = csv_edata,
             #                                      design = mod.phen,
             #                                      batch = csv_pheno$farm)
@@ -1202,7 +1224,6 @@ shinyServer(function(input, output, session) {
                  iPCA.Anal(mSet, file.path(options$work_dir, "ipca_3d_0_.json"))
                }
                fac.lvls <- unique(mSet$analSet$ipca$score[[input$ipca_factor]])
-               print(fac.lvls)
                chosen.colors <- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
                # ---------------
                df <- t(as.data.frame(mSet$analSet$ipca$score$xyz))
@@ -1216,7 +1237,6 @@ shinyServer(function(input, output, session) {
                plots <- plotly::plot_ly()
                for(class in fac.lvls){
                  row = which(mSet$analSet$ipca$score[[input$ipca_factor]] == class)
-                 print(row)
                  # ---------------------
                  xc=df[row, x.num]
                  yc=df[row, y.num]
@@ -1244,7 +1264,6 @@ shinyServer(function(input, output, session) {
                rgbcols <- toRGB(chosen.colors)
                c = 1
                for(i in seq_along(adj_plot$x$data)){
-                 print(i)
                  item = adj_plot$x$data[[i]]
                  if(item$type == "mesh3d"){
                    adj_plot$x$data[[i]]$color <- rgbcols[c]
@@ -1378,7 +1397,6 @@ shinyServer(function(input, output, session) {
                rgbcols <- toRGB(chosen.colors)
                c = 1
                for(i in seq_along(adj_plot$x$data)){
-                 print(i)
                  item = adj_plot$x$data[[i]]
                  if(item$type == "mesh3d"){
                    adj_plot$x$data[[i]]$color <- rgbcols[c]
@@ -1562,7 +1580,6 @@ shinyServer(function(input, output, session) {
                                    nonpar = F)
              }
              res <<- mSet$analSet$aov$sig.mat
-             print(res)
              if(is.null(res)) res <<- data.table("No significant hits found")
              output$aov_tab <-DT::renderDataTable({
                # -------------
@@ -1671,7 +1688,6 @@ shinyServer(function(input, output, session) {
       x <- input$plsda_x
       y <- input$plsda_y
       z <- input$plsda_z
-      print(head(plsda.table))
       x.var <- plsda.table[`Principal Component` == x, 
                            `% variance`]
       y.var <- plsda.table[`Principal Component` == y, 
@@ -1767,7 +1783,6 @@ shinyServer(function(input, output, session) {
                              }
     )
     enrich_db_list <<- enrich_db_list[!is.na(enrich_db_list)]
-    print(enrich_db_list)
   })  
   
   observe({
@@ -1790,7 +1805,6 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$enriched_rows_selected, {
     curr_row = input$enriched_rows_selected
-    print(curr_row)
     # LOAD MEMBERS IN GROUP
     curr_pw <- enrich_tab[curr_row,]
     pw_memb_here <- gsaRes$gsc[[curr_pw$Name]]
@@ -1858,7 +1872,6 @@ shinyServer(function(input, output, session) {
   observeEvent(plotly::event_data("plotly_click"),{
     d <- plotly::event_data("plotly_click")
     req(d)
-    print(d)
     res <- pca_plot
     # --------------------------------------------------------------
     switch(input$tab_stat,
@@ -1961,7 +1974,6 @@ shinyServer(function(input, output, session) {
       match_list <- lapply(db_search_list, FUN=function(match.table){
         get_matches(curr_cpd, match.table, searchid=input$group_by)
       })
-      print(match_list)
       match_table <<- unique(as.data.table(rbindlist(match_list))[Name != ""])
       output$match_tab <-DT::renderDataTable({
         DT::datatable(if(mSet$dataSet$grouping == 'pathway') match_table else{match_table[,-"Description"]},

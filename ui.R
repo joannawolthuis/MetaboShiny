@@ -1,5 +1,8 @@
-shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle.js")),
-                  navbarPage(title=div(h1("MetaboShiny"),class="sparkley"), inverse = T,
+shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle.js"), 
+                                                      tags$style(type="text/css", bar.css)
+                                                      ),
+                  navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="text/css", font.css)),
+                                       class="sparkley"),
                              id="nav_general",
                              windowTitle = "MetaboShiny",
                              tabPanel("", icon = icon("share-alt"), value="setup",
@@ -231,7 +234,7 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                                       actionButton("import_dataset", "Import", icon = icon("hand-peace-o")),
                                                       imageOutput("dataset_upload_check",inline = T)
                                       ), column(9,
-                                                navbarPage("Explore",
+                                                navbarPage(inverse=TRUE,"Explore",
                                                            tabPanel("Variables", icon=icon("braille"),
                                                                     fluidRow(column(6,plotOutput("var1",height='300px')),
                                                                              column(6,plotOutput("var3", height='300px'))
@@ -276,7 +279,7 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                                                                            )
                                                                                 ),
                                                                                 hr(),
-                                                                                fluidRow(navbarPage("Search", id="tab_iden",
+                                                                                fluidRow(navbarPage(inverse=TRUE,"Search", id="tab_iden",
                                                                                                     tabPanel("Current", icon=icon("sort-numeric-asc"),
                                                                                                              actionButton("search_cpd", "Find hits", icon=icon("search")),
                                                                                                              hr(),
@@ -298,7 +301,7 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                                     )
                                       )),
                              tabPanel("",  icon = icon("cog"), value="options", 
-                                      navbarPage("Settings", id="tab_settings",
+                                      navbarPage(inverse=TRUE,"Settings", id="tab_settings",
                                                  tabPanel("Project", icon=icon("gift"),
                                                           textInput(inputId="proj_name", label="Project name", value = ''),
                                                           actionButton("set_proj_name", label="Apply"),
@@ -359,6 +362,35 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                                                     accept = c(".RData", ".csv")),
                                                           sardine(actionButton("import_adducts", "Import", icon = icon("hand-peace-o"))),
                                                           sardine(imageOutput("adduct_upload_check",inline = T))
+                                                 ),
+                                                 tabPanel("Aesthetic", icon=icon("eye-dropper"),
+                                                          h3("Change app settings"),
+                                                          hr(),
+                                                          h2("Navigation bar colours"),
+                                                          colourpicker::colourInput(inputId = "bar.col.1", 
+                                                                                    label = paste("Active background"), 
+                                                                                    value = options$col1,
+                                                                                    allowTransparent = FALSE),
+                                                          colourpicker::colourInput(inputId = "bar.col.2", 
+                                                                                    label = paste("Inactive background"), 
+                                                                                    value = options$col2,
+                                                                                    allowTransparent = FALSE),
+                                                          colourpicker::colourInput(inputId = "bar.col.3", 
+                                                                                    label = paste("Active tab"), 
+                                                                                    value = options$col3,
+                                                                                    allowTransparent = FALSE),
+                                                          colourpicker::colourInput(inputId = "bar.col.4", 
+                                                                                    label = paste("Inactive tab"), 
+                                                                                    value = options$col4,
+                                                                                    allowTransparent = FALSE),
+                                                          br(),
+                                                          h2("Fonts (Google fonts)"),
+                                                          textInput(inputId="font.1", label="h1", value = options$font1),
+                                                          textInput(inputId="font.2", label="h2", value = options$font2),
+                                                          textInput(inputId="font.3", label="h3", value = options$font3),
+                                                          textInput(inputId="font.4", label="body", value = options$font4),
+                                                          br(),
+                                                          actionButton("change_css", "Save settings (restart to apply)")
                                                  )
                                       )
                              ), 

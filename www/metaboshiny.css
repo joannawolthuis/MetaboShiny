@@ -1,34 +1,12 @@
-@import url('https://fonts.googleapis.com/css?family=Megrim|Raleway:bold,regular|Leckerli+One|Open+Sans');     
-
- h1 {
-margin: 2px;
-font-family:'Leckerli One';
-font-weight: 15;
-line-height: 0.5;
- }
-
- h2 {
-margin: 1px;
-font-family: 'Raleway', bold;
-font-weight: bold;
-font-size: 20pt;
-line-height: 1;
-}
-
- h3 {
-margin: 1px;
-font-family: 'Raleway';
-font-weight: bold;
-font-size: 15pt;
-line-height: 1;
-}
-
-body {
-  font-family:'Raleway', serif; 
-  font-size: 12pt;
-}
-
 /* progress bar */
+/* @import url('https://fonts.googleapis.com/css?family=Press+Start+2P|Raleway:bold|Raleway|Raleway:serif');   
+
+@import url('https://fonts.googleapis.com/css?family=Press+Start+2P|Raleway:bold,serif');
+h1 {  margin: 2px;  font-family: 'Press Start 2P' !important;  font-weight: 15;  line-height: 0.5;  }    
+h2 {  margin: 1px;  font-family: 'Raleway', bold !important;  font-weight: bold;  font-size: 20pt;  line-height: 1;  }    
+h3 {  margin: 1px;  font-family: 'Raleway' !important;  font-weight: bold;  font-size: 15pt;  line-height: 1;  }    
+body {  font-family: 'Raleway', serif !important;   font-size: 12pt;  }  
+*/
 
 .shiny-notification {
             height: 50px;
@@ -303,3 +281,4 @@ $buttonColor: rgba(255,255,255,1);
     
   }
 }
+

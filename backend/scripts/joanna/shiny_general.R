@@ -63,3 +63,4 @@ kegg.charge <- function(atomlist){
   }
   formal_charge
 }
+

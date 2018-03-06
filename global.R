@@ -14,6 +14,8 @@ library(data.table)
 library(gsubfn)
 library(plotly)
 library(colorRamps)
+library(enviPat)
+library(stringr)
 #library(randomForest)
 
 sourceDir <- function(path, trace = TRUE, ...) {
@@ -50,7 +52,7 @@ setOption <- function(file.loc, key, value){
     line <- paste(names(options)[i], options[i], sep=" = ")
     line
   })
-  print(new_options)
+  #print(new_options)
   writeLines(opt_conn, text = unlist(new_options))
   close(opt_conn)
 }
@@ -78,4 +80,8 @@ pos_adducts <<- wkz.adduct.confirmed[Ion_mode == "positive",
                                      c("Name")]
 neg_adducts <<- wkz.adduct.confirmed[Ion_mode == "negative",
                                      c("Name")]
+
+bar.css <<- nav.bar.css(options$col1, options$col2, options$col3, options$col4)
+font.css <<- font.css(options$font1, options$font2, options$font3, options$font4)
+
 print("loaded global settings")
