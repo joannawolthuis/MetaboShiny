@@ -1,3 +1,0 @@
-0	income	q
-1	price	q
-2	temp	q

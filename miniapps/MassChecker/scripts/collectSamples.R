@@ -54,15 +54,43 @@ collectSamples <- function(resultDir, scanmode){
   save(outlist, file=paste(outdir, paste(scanmode, "RData", sep="."), sep="/"))
   
 }
-# 
-# message("Start")
-# cat("==> reading arguments:\n", sep = "")
-# 
-# cmd_args = commandArgs(trailingOnly = TRUE)
-# 
-# for (arg in cmd_args) cat("  ", arg, "\n", sep="")
-# 
-# run(cmd_args[1], cmd_args[2])
-# #run("./results")
-# 
-# message("Ready")
+
+collectSamples_2 <- function(outdir, scanmode){
+  
+    #outdir = "/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML/results"
+  
+    pk_files <- list.files(file.path(outdir, "peaks"),
+                           pattern= paste0("_",scanmode,"\\.RData"),
+                           full.names = T)
+  
+    # Gather sub peaktables
+    peaktables <- pbapply::pblapply(pk_files, FUN=function(f){
+      load(f)
+      tbl <- data.table(mz = peaks@mass,
+                        intensity = peaks@intensity)
+      names(tbl) = c("mzmed", gsub(basename(f), 
+                                pattern="_(pos|neg)\\.RData", 
+                                replacement=""))
+      # --- return ---
+      tbl
+    })
+    
+    # set first table to merge w/ later
+    outlist = data.table::rbindlist(peaktables,fill = T,use.names = T)
+    
+    peaktables <- NULL
+    gc()
+    
+    outpgrlist <- rowsum(outlist, group = outlist$mzmed, na.rm = T, reorder = T)
+    
+    outlist <- NULL
+    gc()
+    
+    print(dim(outpgrlist))
+    
+    save(x=outpgrlist, 
+         file=file.path(outdir, "collected", paste0("peaks_",
+                                                      scanmode,
+                                                      ".RData")))
+}
+  

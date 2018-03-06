@@ -253,6 +253,7 @@ shinyServer(function(input, output, session) {
   observeEvent(input$create_sample_names, {
     withProgress({
       inj_path <- input$inj_loc$datapath
+      
       inj_path <- "~/Documents/umc/data/Data/Project 2017-026 DSM feed-10 (IMASDE-Madrid) - Saskia v Mil/Injection list IMASDE (Madrid, Spain).xlsx"
       
       mzfiles <- list.files(path(),pattern="\\.mzXML$")
@@ -319,9 +320,6 @@ shinyServer(function(input, output, session) {
   observeEvent(input$do_step_7, {
     run_step_7()
   })
-  observeEvent(input$do_step_8, {
-    run_step_8()
-  })
   
   observeEvent(input$start_pipeline, {
     ##############
@@ -332,7 +330,6 @@ shinyServer(function(input, output, session) {
     run_step_5()
     run_step_6()
     run_step_7()
-    run_step_8()
   })
   
   observe({
@@ -344,19 +341,28 @@ shinyServer(function(input, output, session) {
     resol <<- input$resol
     thresh_pos <<- input$thresh_pos
     thresh_neg <<- input$thresh_neg
+    ppm <<- input$ppm
     # ---------------
   })
   
   run_step_1 <- function(){
+    # -----------------------
     if(!dir.exists(outdir)) dir.create(outdir)
+    # -----------------------
+    sn <- data.table::fread(file.path(outdir, "../sampleNames.txt"))
+    sn$batch <- as.factor(gsub(sn$File_Name,
+                               pattern = "_\\d\\d\\d$",
+                               replacement=""))
+    data.table::fwrite(sn, file.path(outdir, "sampleNames.txt"))
     # ----------------------------------
-    generateBreaksFwhm(list.files(path(), 
-                                  pattern = "\\.mzXML",
-                                  full.names = T)[1], 
-                       outdir, 
-                       trim, 
-                       resol, 
-                       nrepl)
+    withProgress(message = "Creating signal bins",{
+      
+      generateBreaksFwhm_jw(mzmin = 70,
+                            mzmax = 600,
+                            cores = cores,
+                            resol=resol,
+                            outdir = outdir)
+    })
     # ----------------------------------
     updateCollapse(session, "pipeline", 
                    style = list("Initial setup" = "success"))
@@ -364,13 +370,17 @@ shinyServer(function(input, output, session) {
   
   run_step_2 <- function(){
     # make cluster obj
+    
+    dir.create(file.path(outdir, "spectra"),showWarnings = F)
+    
     # --- cluster ---
     cl <<- makeSOCKcluster(cores,
                            outfile="~/mclog.txt")
     registerDoSNOW(cl)
     # -----------------
-    files = list.files(path(), 
-                       pattern = "\\.mzXML",
+    filedir <<- path()
+    files = list.files(filedir, 
+                       pattern = "\\.raw",
                        full.names = T)
     cfun <<- function(a, b) NULL
     progress <<- function(i) setProgress(value = i / length(files),
@@ -379,26 +389,23 @@ shinyServer(function(input, output, session) {
     # ---------------
     withProgress(message = "DIMS data extraction",{
       i = 1
-      res <- foreach(i=1:length(files), .options.snow=opts, .export = c("DIMS", 
-                                                                       "dims", 
+      foreach(i=1:length(files), .options.snow=opts, .export = c("dims_raw", 
                                                                        "outdir", 
                                                                        "scriptdir",
-                                                                       "input", 
-                                                                       "aggregate", 
                                                                        "dimsThresh",
                                                                        "trim",
                                                                        "resol"),
-                     .packages = "xcms",
+                     .packages = c("MALDIquant","data.table","gsubfn"),
                            .verbose = T,
               .combine=cfun) %dopar% {
-                print(files[i])
-                DIMS(files[i],
-                     scriptdir,
-                     outdir,
-                     trim,
-                     dimsThresh,
-                     resol)
-                print(paste("Finished file", files[i]))
+                dims_raw(files[[i]],
+                         outdir,
+                         thresh=dimsThresh,
+                         trim=trim,
+                         resol=resol, 
+                         scriptdir, 
+                         mzmin=70, 
+                         mzmax=600)
               }
     })
     stopCluster(cl)
@@ -407,191 +414,192 @@ shinyServer(function(input, output, session) {
   }
   
   run_step_3 <- function(){
-    averageTechReplicates(outdir, 
-                          nrepl, 
-                          dimsThresh,
-                          cores)
-    updateCollapse(session, "pipeline", 
-                   style = list("Average technical replicates" = "success"))
+    
+    dir.create(file.path(outdir, "averaged"),showWarnings = F)
+    
+    averageTechReplicates_jw(outdir, 
+                             cores)
   }
   
   run_step_4 <- function(){
+    
+    dir.create(file.path(outdir, "peaks"),showWarnings = F)
+    
     # --- cluster ---
     cl <<- makeSOCKcluster(cores,
                            outfile="~/mclog.txt")
     registerDoSNOW(cl)
     # ---------------
-    for(scanmode in modes){
-      # PEAKFINDING
-      files = list.files(file.path(outdir, 
-                                 "average_pklist"),
-                       full.names = T,
-                       pattern= if(scanmode == "positive") "pos" else "neg") 
-      # -----------------
-      cfun <<- function(a, b) NULL
-      progress <<- function(i) setProgress(value = i / length(files),
-                                           detail = paste("Done:", basename(files[i])))
-      opts <- list(progress=progress)
-      # ---------------
-      withProgress(message = paste0("Peak finding (", scanmode, ")"),{
-        #length(files)
-        res <- switch(input$peak_calling,
-                      gaussian = {
-                        foreach(i=1:length(files), .options.snow=opts, .export = c("outdir", 
+    # PEAKFINDING
+    files = list.files(file.path(outdir, 
+                                 "averaged"),
+                       full.names = T)
+    #,pattern= if(scanmode == "positive") "pos" else "neg") 
+    # -----------------
+    cfun <<- function(a, b) NULL
+    progress <<- function(i) setProgress(value = i / length(files),
+                                         detail = paste("Done:", basename(files[i])))
+    opts <- list(progress=progress)
+    # ---------------
+    withProgress(message = paste0("Peak finding"),{
+      #length(files)
+      switch(input$peak_calling,
+             gaussian = { # NOOO
+               print("deactivated")
+               # foreach(i=1:length(files), .options.snow=opts, .export = c("outdir", 
+               #                                                            "scriptdir",
+               #                                                            "resol",
+               #                                                            "thresh_pos", 
+               #                                                            "thresh_neg", 
+               #                                                            "findPeaks.Gauss.HPC",
+               #                                                            "peakFinding.2.0",
+               #                                                            "searchMZRange",
+               #                                                            "fitGaussianInit",
+               #                                                            "generateGaussian",
+               #                                                            "fitGaussian",
+               #                                                            "getFwhm",
+               #                                                            "getSD",
+               #                                                            "optimizeGauss",
+               #                                                            "getArea",
+               #                                                            "fit2G_2",
+               #                                                            "fit4G_2",
+               #                                                            "fit4peaks",
+               #                                                            "fitG_2",
+               #                                                            "fit3G_2",
+               #                                                            "fit1Peak",
+               #                                                            "fit2peaks",
+               #                                                            "fit3peaks",
+               #                                                            "getFitQuality",
+               #                                                            "checkOverlap",
+               #                                                            "isWithinXppm",
+               #                                                            "sumCurves"),
+               #         .verbose = T,
+               #         .combine=cfun) %dopar% {
+               #           peakFinding.2.0(file = files[i],
+               #                           scripts = scriptdir,
+               #                           outdir = outdir,
+               #                           scanmode = scanmode,
+               #                           thresh = if(scanmode == "positive") thresh_pos else{thresh_neg},
+               #                           resol = resol)
+               #         } 
+             }, 
+             wavelet = {
+               # --------------------------
+               foreach(i=1:length(files), .options.snow=opts, .export = c("outdir",
                                                                           "scriptdir",
                                                                           "resol",
-                                                                          "thresh_pos", 
-                                                                          "thresh_neg", 
-                                                                          "findPeaks.Gauss.HPC",
-                                                                          "peakFinding.2.0",
-                                                                          "searchMZRange",
-                                                                          "fitGaussianInit",
-                                                                          "generateGaussian",
-                                                                          "fitGaussian",
-                                                                          "getFwhm",
-                                                                          "getSD",
-                                                                          "optimizeGauss",
-                                                                          "getArea",
-                                                                          "fit2G_2",
-                                                                          "fit4G_2",
-                                                                          "fit4peaks",
-                                                                          "fitG_2",
-                                                                          "fit3G_2",
-                                                                          "fit1Peak",
-                                                                          "fit2peaks",
-                                                                          "fit3peaks",
-                                                                          "getFitQuality",
-                                                                          "checkOverlap",
-                                                                          "isWithinXppm",
-                                                                          "sumCurves"),
+                                                                          "thresh_pos",
+                                                                          "thresh_neg",
+                                                                          "peakFinding.wavelet_2"),
                        .verbose = T,
+                       .packages = c("MassSpecWavelet", "data.table"),
                        .combine=cfun) %dopar% {
-                         peakFinding.2.0(file = files[i],
-                                         scripts = scriptdir,
-                                         outdir = outdir,
-                                         scanmode = scanmode,
-                                         thresh = if(scanmode == "positive") thresh_pos else{thresh_neg},
-                                         resol = resol)
-                       } 
-                        }, 
-                      wavelet = {
-                        # foreach(i=1:length(files), .options.snow=opts, .export = c("outdir", 
-                        #                                                            "scriptdir",
-                        #                                                            "resol",
-                        #                                                            "thresh_pos", 
-                        #                                                            "thresh_neg"),
-                        #         .verbose = T,
-                        #         .packages = "MassSpecWavelet",
-                        #         .combine=cfun) %dopar% {
-                        #           peakFinding.wavelet(file = files[i],
-                        #                               scripts = scriptdir,
-                        #                               outdir = outdir,
-                        #                               scanmode = scanmode,
-                        #                               thresh = if(scanmode == "positive") thresh_pos else{thresh_neg},
-                        #                               resol = resol)
-                        #         }
-                        # })
-                        print("Not implemented yet")
-                        })
-        })
-    
-    }
+                         scanmode = if(grepl(files[i],pattern = "_pos.RData")) "pos" else "neg"
+                         peakFinding.wavelet_2(file = files[i], 
+                                               scripts = scriptdir, 
+                                               outdir = outdir, 
+                                               thresh = if(scanmode == "pos") thresh_pos else{thresh_neg},
+                                               sig_noise = 3)
+                       }
+             })
+    })
     updateCollapse(session, "pipeline", 
                    style = list("Peak finding" = "success"))
     stopCluster(cl)
-    }
+  }
   
   run_step_5 <- function(){
-    # ---------------
-    withProgress(message = "Collecting samples (I)", {
+    
+    dir.create(file.path(outdir, "collected"),showWarnings = F)
+    
+    withProgress(message = "Collecting samples", {
       i = 0
       for(scanmode in modes){
-        collectSamples(outdir,
-                       scanmode)
+        collectSamples_2(outdir,
+                         scanmode)
         i = i + 0.5
         setProgress(value = i, detail = toupper(scanmode))
       }
     })
     # ---------------
     updateCollapse(session, "pipeline", 
-                   style = list("Collect samples (I)" = "success"))
+                   style = list("Collate samples" = "success"))
   }
   
   run_step_6 <- function(){
-    for(scanmode in modes){
-      f <- file.path(outdir, "specpks_all", paste0(scanmode, ".RData"))
-      print(paste("Grouping on", basename(f)))
-      # -------------------
-      switch(input$peak_grouping,
-             hclust = {
-               groupingRestClust(outdir = outdir,
-                                 fileIn = f,
-                                 cores=input$cores,
-                                 scanmode = scanmode,
-                                 ppm = input$ppm)
-             },
-             meanshift = {
-               groupingRestBlur(outdir = outdir,
-                                fileIn = f,
-                                cores = input$cores,
-                                scanmode = scanmode,
-                                ppm = input$ppm)
-             })
-    }
+    
+    dir.create(file.path(outdir, "grouped"),showWarnings = F)
+    
+    withProgress(message = "Grouping peaks", {
+      
+    # -------------------
+    switch(input$peak_grouping,
+           hclust = {
+             groupingRestClust_2(outdir = outdir,
+                                 cores=cores,
+                                 ppm = ppm)
+             # -------------
+           },
+           meanshift = {
+             groupingRestBlur(outdir = outdir,
+                              cores = input$cores,
+                              ppm = input$ppm,
+                              mode = mode)
+           })
+    })
     updateCollapse(session, "pipeline", 
                    style = list("Peak grouping" = "success"))
   }
   
   run_step_7 <- function(){
-    for(scanmode in modes){ 
-      message("FILLING PEAKS")
-      f=file.path(outdir, 
-                  "grouping_rest", 
-                  if(scanmode == "positive") "positive.RData" else "negative.RData")
-      print(paste("Filling missing vals in file", basename(f)))
-      replaceZeros_lookup(file = f,
-                          type="rest",
-                          scanmode = scanmode,
-                          resol = resol,
-                          outdir = outdir,
-                          cores=cores,
-                          thresh = if(scanmode == "positive") thresh_pos else{thresh_neg},
-                          scriptDir = scriptdir)
-    }
+    
+    dir.create(paste(outdir, 
+                     "filled", 
+                     sep="/"), 
+               showWarnings = FALSE)
+    
+    print(paste("Filling missing vals in file", basename(f)))
+      # replaceZeros_lookup(resol = resol,
+      #                     outdir = outdir,
+      #                     cores=cores,
+      #                     thresh_pos = thresh_pos,
+      #                     thresh_neg = thresh_neg,
+      #                     scriptDir = scriptdir)
+      replaceZeros_halfmax(resol, outdir, cores, scriptdir)
     updateCollapse(session, "pipeline", 
                    style = list("Fill missing values" = "success"))
     
   }
   
-  run_step_8 <- function(){
-    # -- FINAL ---
-    load(file.path(outdir, "repl.pattern.RData"))
-    i = 0
-    withProgress(message = "Collecting samples (II)...",{
-      for(scanmode in modes){
-        i <<- i + 0.5
-        setProgress(i, detail=paste("Collecting samples:", scanmode))
-        # --------------------
-        f=file.path(outdir, 
-                    "samplePeaksFilled", 
-                    if(scanmode == "positive") "positive_rest.RData" else "negative_rest.RData")
-        load(f)
-        colnames(outpgrlist) <- c("mzmed", "fq.best", "fq.worst", "npeaks", "mzmin", "mzmax",
-                                  switch(scanmode, 
-                                         positive=groupNames.pos, 
-                                         negative=groupNames.neg), 
-                                  "avg.int")
-        fwrite(x = outpgrlist,
-               file = file.path(outdir, 
-                                paste0("outlist_",scanmode,".csv")),
-               sep = "\t")
-        
-      }
-    })
-    
-    updateCollapse(session, "pipeline", 
-                   style = list("Collect samples (II)" = "success"))
-  }
+  # run_step_8 <- function(){
+  #   # -- FINAL ---
+  #   load(file.path(outdir, "repl.pattern.RData"))
+  #   i = 0
+  #   withProgress(message = "Collecting samples (II)...",{
+  #     for(scanmode in modes){
+  #       i <<- i + 0.5
+  #       setProgress(i, detail=paste("Collecting samples:", scanmode))
+  #       # --------------------
+  #       f=file.path(outdir, 
+  #                   "samplePeaksFilled", 
+  #                   if(scanmode == "positive") "positive_rest.RData" else "negative_rest.RData")
+  #       load(f)
+  #       colnames(outpgrlist) <- c("mzmed", "fq.best", "fq.worst", "npeaks", "mzmin", "mzmax",
+  #                                 switch(scanmode, 
+  #                                        positive=groupNames.pos, 
+  #                                        negative=groupNames.neg), 
+  #                                 "avg.int")
+  #       fwrite(x = outpgrlist,
+  #              file = file.path(outdir, 
+  #                               paste0("outlist_",scanmode,".csv")),
+  #              sep = "\t")
+  #       
+  #     }
+  #   })
+  #   
+  #   updateCollapse(session, "pipeline", 
+  #                  style = list("Collect samples (II)" = "success"))
+  # }
   
   session$onSessionEnded(function() {
     if(any(!is.na(cl))) parallel::stopCluster(cl)

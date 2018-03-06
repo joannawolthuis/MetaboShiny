@@ -91,14 +91,59 @@ generateBreaksFwhm <- function(file,outdir,trim,resol,nrepl){
   })
 }
 
+generateBreaksFwhm_jw <- function(mzmin=70, 
+                                  mzmax=600, 
+                                  cores=1,
+                                  resol=140000,
+                                  outdir){
+  
+  mzrange = c(mzmin, 
+              mzmax)
+  
+  lowMZ = mzrange[1]
+  highMZ = mzrange[2]
+  
+  nsegment = 2 * (highMZ-lowMZ)
+  segment = seq(from=lowMZ, to=highMZ, length.out=nsegment+1)
+  breaks.fwhm=NULL
+  breaks.fwhm.avg=NULL
 
-# message("Start")
-# cat("==> reading arguments:\n", sep = "")
-# 
-# cmd_args = commandArgs(trailingOnly = TRUE)
-# 
-# for (arg in cmd_args) cat("  ", arg, "\n", sep="")
-# 
-# run(cmd_args[1], cmd_args[2], as.numeric(cmd_args[3]), as.numeric(cmd_args[4]), as.numeric(cmd_args[5]))
-# 
-# message("Ready")
+  # --- cluster ---
+  cl <<- snow::makeSOCKcluster(cores,
+                         outfile="~/mclog.txt")
+  doSNOW::registerDoSNOW(cl)
+  # ---------------
+  progress <<- function(i) setProgress(value = i / nsegment)
+  opts <- list(progress=progress)
+  cfun <- function(a,b) c(a,b)
+  # ---------------
+  breaks.list <- foreach(i=1:nsegment, #.options.snow=opts,
+                         .packages = "data.table",
+                         .options.snow=opts,
+                         .verbose = T) %dopar% {
+                           startsegm <- segment[i]
+                           endsegm <- segment[i+1]
+                           resol.mz <- resol*(1/sqrt(2)^(log2(startsegm/200)))
+                           fwhmsegm <- startsegm/resol.mz
+                           break.fwhm <- seq(from = (startsegm + fwhmsegm),to = endsegm, by = 0.2*fwhmsegm)
+                           # --- avg ---
+                           range = seq(from = (startsegm+fwhmsegm),to=endsegm, by=0.2*fwhmsegm)
+                           deltaMZ = range[2] - range[1] 
+                           break.fwhm.avg <- range + 0.5 * deltaMZ
+                           # --- return ---
+                          list(st=break.fwhm, avg=break.fwhm.avg)
+                         }
+  
+  stopCluster(cl)
+  
+  # --------------
+  
+  breaks.fwhm <- unlist(lapply(breaks.list, function(x) x$st))
+  breaks.fwhm.avg <- unlist(lapply(breaks.list, function(x) x$avg))
+  
+  # --------------
+  
+  save(breaks.fwhm, breaks.fwhm.avg, file = file.path(outdir, "breaks.RData"))
+  
+}
+

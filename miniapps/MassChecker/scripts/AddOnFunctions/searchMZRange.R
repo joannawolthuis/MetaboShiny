@@ -63,7 +63,7 @@ searchMZRange <- function(range,values,int.factor,scale,resol,outdir,sampname,sc
           if (sum(y)==0) next
 
           rval = fitGaussianInit(x,y,int.factor,scale,resol,outdir,sampname, scanmode, plot,width,height,i,start,end)
-
+          
           if (rval$qual[1]==1) {
 
             rval = generateGaussian(x,y,resol,plot,scanmode,int.factor, width, height)

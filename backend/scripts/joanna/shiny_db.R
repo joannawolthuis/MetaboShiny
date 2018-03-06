@@ -1,6 +1,6 @@
 get_exp_vars <- function(from){
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
-  RSQLite::dbGetQuery(conn, fn$paste("PRAGMA table_info($from)"))$name
+  RSQLite::dbGetQuery(conn, gsubfn::fn$paste("PRAGMA table_info($from)"))$name
 }
 
 get_times <- function(chosen.db){
@@ -225,6 +225,7 @@ get_all_matches <- function(exp.condition=NA,
   
   query.collect <-  strwrap(fn$paste("select distinct i.filename, 
                                                       d.card_id, 
+                                                      b.batch,
                                                       $qa,
                                                       d.sampling_date, 
                                                       r.identifier as identifier, 
@@ -235,6 +236,8 @@ get_all_matches <- function(exp.condition=NA,
                                      join setup s on d.[Group] = s.[Group]
                                      join results r
                                      on r.mz = i.mzmed
+                                     join batchinfo b
+                                     on b.sample = d.card_id
                                      group by d.card_id, 
                                      d.sampling_date, 
                                      r.identifier"),

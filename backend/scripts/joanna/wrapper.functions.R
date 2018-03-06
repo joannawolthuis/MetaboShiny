@@ -39,7 +39,7 @@ get.csv <- function(patdb,
                         var_table)
     z.dt <- as.data.table(z)
     cast.dt <- dcast.data.table(z.dt, 
-                                card_id + sampling_date + label ~ identifier, 
+                                card_id + batch + sampling_date + label ~ identifier, 
                                 fun.aggregate = sum, 
                                 value.var = "intensity") # what to do w/ duplicates? 
   }else{
@@ -47,8 +47,7 @@ get.csv <- function(patdb,
                  individual_data = fn$paste("d.[$exp.condition] as label"),
                  setup = fn$paste("s.[$exp.condition] as label")
                  )
-
-    query <- strwrap(fn$paste("select distinct d.card_id, 
+    query <- strwrap(fn$paste("select distinct d.card_id, b.batch,
                                            $qa, 
                               d.sampling_date, 
                               i.mzmed as identifier,
@@ -57,6 +56,7 @@ get.csv <- function(patdb,
                               join individual_data d
                               on i.filename = d.card_id
                               join setup s on d.[Group] = s.[Group]
+                              join batchinfo b on b.sample = d.card_id
                               group by d.card_id, 
                               d.sampling_date, 
                               i.mzmed"),
@@ -66,15 +66,15 @@ get.csv <- function(patdb,
     z = RSQLite::dbGetQuery(conn, query)
     z.dt <- as.data.table(z)
     cast.dt <- dcast.data.table(z.dt, 
-                                card_id + sampling_date + label ~ identifier, 
+                                card_id + batch + sampling_date + label ~ identifier, 
                                 fun.aggregate = sum, 
                                 value.var = "intensity") # what to do w/ duplicates? 
   }
   # --- cast to right format ---
-  max.vals.final <- if(max.vals == -1) ncol(cast.dt) else max.vals + 3
+  max.vals.final <- if(max.vals == -1) ncol(cast.dt) else max.vals + 4
   small.set <- cast.dt[,1:(max.vals.final)]
   # --- name for metaboanalyst ---
-  names(small.set)[1:3] <- c("Sample", "Time", "Label")
+  names(small.set)[1:4] <- c("Sample", "Batch", "Time", "Label")
   # --- make time series if necessary (this factorizes sampling date) ---
   if(time.series){
       small.set$Time <- as.numeric(as.factor(as.Date(small.set$Time)))

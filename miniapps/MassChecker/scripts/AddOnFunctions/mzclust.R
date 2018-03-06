@@ -16,9 +16,10 @@ mzClustGeneric <- function(p,sampclass=NULL,
                            mzppm = 20,
                            mzabs = 0,
                            minsamp = 1,
-                           minfrac=0.5)
+                           minfrac=0.5,
+                           shinyprog=F)
 {
-  makeBin <- function(pos)
+  makeBin <- function(pos, shinyprog=shinyprog)
   {
     if(pos > numpeaks)
       return(list(pos=pos,bin=c(-1)))
@@ -35,9 +36,12 @@ mzClustGeneric <- function(p,sampclass=NULL,
     if(pos %% (numpeaks%/%100+1) == 0) {
       perc <- ((pos-1)/numpeaks) / 2
       # perc <- ((pos-1)/numpeaks*100) / 2
-      setProgress(perc, detail = "Clustering peaks...")
-      #cat(format(perc,digits=1,nsmall=2)," ")
-      #flush.console()
+      if(shinyprog){
+        setProgress(perc, detail = "Clustering peaks...")
+      }else{
+        cat(format(perc * 2,digits=1,nsmall=2)," ")
+        flush.console()
+      }
     }
     lst <- list(pos=pos,bin=bin)
     lst
@@ -101,7 +105,7 @@ mzClustGeneric <- function(p,sampclass=NULL,
   pord <- order(p[,1])
   pos <- c(1)
   binNumber <- 1
-  newbin <- makeBin(pos)
+  newbin <- makeBin(pos, shinyprog)
   binA <- newbin$bin
   pos <- newbin$pos
   while(1) {
@@ -110,11 +114,9 @@ mzClustGeneric <- function(p,sampclass=NULL,
                                          ncol = ncol(groupmat)))
       groupindex <- c(groupindex, vector("list", length(groupindex)))
     }
-    newbin <- makeBin(pos)
+    newbin <- makeBin(pos, shinyprog)
     binB <- newbin$bin
     pos <- newbin$pos
-    
-    
     
     if(binB[1] < 0) {
       out <- bin2output(binA)
@@ -171,8 +173,6 @@ mzClustGeneric <- function(p,sampclass=NULL,
       }
       binA <- binB
     }
-    
-    
   }
   colnames(groupmat) <- c("mzmed", "mzmin", "mzmax", "npeaks", classnames)
   

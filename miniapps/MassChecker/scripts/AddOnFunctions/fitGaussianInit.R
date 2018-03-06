@@ -1,7 +1,12 @@
 fitGaussianInit <- function(x,y,int.factor,scale,resol,outdir,sampname,scanmode,plot,width,height,i,start,end) {
 # scanmode="negative"
-  
+  print("x")
+  print(x)
   mz.range = x[length(x)] - x[1]
+  print("mzrange")
+  print(mz.range)
+  print("-----")
+  print(mz.range * int.factor)
   x2 = seq(x[1],x[length(x)],length=mz.range*int.factor)
   
 #   # diff(diff(x)) essentially computes the discrete analogue of the second derivative, so should be negative at local maxima.

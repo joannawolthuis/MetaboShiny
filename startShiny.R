@@ -1,4 +1,5 @@
 library(devtools)
+library(limma)
 
 # MetaboAnalyst Packages
 metanr_packages <- function(){

@@ -796,21 +796,16 @@ shinyServer(function(input, output, session) {
     patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
     # --------------------
     withProgress({
-      setProgress(.25,message = "Loading outlists into memory...")
+      setProgress(.1,message = "Loading outlists into memory...")
       req(input$outlist_neg, input$outlist_pos, input$excel)
-      
-      outlist_pos <- as.data.table(fread(file = input$outlist_pos$datapath, sep="\t", header=T))
-      outlist_neg <- as.data.table(fread(file = input$outlist_neg$datapath, sep="\t", header=T))
-      
-      setProgress(.50,message = "Creating experiment database file...")
-      
+
       build.pat.db(patdb,
                    ppm = ppm,
-                   poslist = outlist_pos,
-                   neglist = outlist_neg,
+                   pospath = input$outlist_pos$datapath,
+                   negpath = input$outlist_neg$datapath,
                    overwrite = T)
       
-      setProgress(.75,message = "Adding excel sheets to database...")
+      setProgress(.95,message = "Adding excel sheets to database...")
       
       exp_vars <<- load.excel(input$excel$datapath, patdb)})
   })
@@ -1006,9 +1001,22 @@ shinyServer(function(input, output, session) {
                mSet <<- InitDataObjects("pktable", 
                                         "stat", 
                                         FALSE)
+               # ------- load and re-save csv --------
+               #csv_loc = "/Users/jwolthuis/Analysis/BR/BR_FirstEight.csv"
+               #csv_loc = "/Users/jwolthuis/Analysis/SP/Spain1.csv"
+               
+               csv_temp = fread(csv_loc, data.table = T)
+               batch = csv_temp$Batch
+               if(is.null(batch)) batch = rep(1, length(mSet$dataSet$cls))
+               csv_loc <- file.path(options$work_dir, paste0(options$proj_name,"_noBatch.csv"))
+               #print(csv_loc)
+               fwrite(csv_temp[,-c("Batch")], csv_loc)
+               # -------------------------------------
                mSet <<- Read.TextData(mSet, 
                                       filePath = csv_loc,
                                       "rowu")
+               mSet$dataSet$batch <<- as.factor(batch)
+               # --------------------------------------
                mSet
              },
              time_std = {
@@ -1039,16 +1047,18 @@ shinyServer(function(input, output, session) {
                mSet
              }
       )
-      
+      print("here?")
       mSet <<- SanityCheckData(mSet)
-      mSet <<- RemoveMissingPercent(mSet, percent = 0.5)
+      #mSet <<- RemoveMissingPercent(mSet, percent = 0.5)
       mSet <<- ImputeVar(mSet,
-                         method = "min")
-      mSet <<- ReplaceMin(mSet)
-      mSet <<- FilterVariable(mSet,
-                              filter = input$filt_type,
-                              qcFilter = "F", 
-                              rsd = 25)
+                         method = "median")
+      if(input$filt_type != "none"){
+        print("filtering")
+        mSet <<- FilterVariable(mSet,
+                                filter = "rsd",#input$filt_type,
+                                qcFilter = "F", 
+                                rsd = 25) 
+      }
       # ------------------------------------
       setProgress(.2)
       mSet <<- Normalization(mSet,
@@ -1056,15 +1066,17 @@ shinyServer(function(input, output, session) {
                              transNorm = input$trans_type,
                              scaleNorm = input$scale_type,
                              ref = input$ref_var)
+      #print(ncol(mSet$dataSet$orig))
+      #print(ncol(mSet$dataSet$norm))
       # ...
-      # mSet <<- Normalization(mSet = mSet, 
-      #                      rowNorm = "CompNorm", 
-      #                      transNorm = "LogNorm", 
-      #                      scaleNorm = "RangeNorm", 
-      #                      ref = "C15H13N1O2"
-      #                     #ratio=FALSE, 
-      #                     #ratioNum=20
-      #                     )
+     # mSet <<- Normalization(mSet = mSet,
+     #                         rowNorm = "QuantileNorm",
+     #                         transNorm = "LogNorm",
+     #                         scaleNorm = "AutoNorm"
+     #                        # ref = "C15H13N1O2"
+     #                        #ratio=FALSE,
+     #                        #ratioNum=20
+     #                        )
       # ====
       setProgress(.4)
       
@@ -1075,29 +1087,71 @@ shinyServer(function(input, output, session) {
           
           smp <- rownames(mSet$dataSet$norm)
           exp_lbl <- mSet$dataSet$cls
-          
+          batch <- mSet$dataSet$batch
+
           # captures farm number only? (would need regmatches) (?<=[A-Z][A-Z])((1)(?=-\\d*)|(?=\\d*))
           
-          csv <- as.data.table(cbind(Sample = smp, Label=gsub(smp, 
-                                                              pattern = "([A-Z][A-Z])|(-\\d*$)", 
-                                                              replacement = ""), 
+          csv <- as.data.table(cbind(Sample = smp, 
+                                     Label=gsub(smp, 
+                                                pattern = "([A-Z][A-Z])|(-\\d*$)", 
+                                                replacement = ""), 
                                      mSet$dataSet$norm))
           
           csv_pheno <- data.frame(sample = 1:nrow(csv),
-                                  outcome = exp_lbl,
-                                  batch = gsub(csv$Sample, 
+                                  batch = as.factor(batch),
+                                  outcome = as.factor(exp_lbl),
+                                  farm = as.factor(gsub(csv$Sample, 
                                                pattern = "([A-Z][A-Z])|(-\\d*$)", 
-                                               replacement = ""),row.names = csv$Sample)
+                                               replacement = "")),row.names = csv$Sample)
+
+          mod.farm = model.matrix(~ farm + outcome, data=csv_pheno)
           
-          mod = model.matrix(~as.factor(outcome), data=csv_pheno)
+          mod.pheno = model.matrix(~ outcome, data=csv_pheno)
           
+
           # parametric adjustment
           
           csv_edata <-t(csv[,!c(1,2)])
           
           colnames(csv_edata) <- csv$Sample
           
-          batch_normalized = sva::ComBat(dat=csv_edata, batch=csv_pheno$batch, mod=mod, par.prior=TRUE)
+          #batch_normalized = sva::ComBat(dat=csv_edata, batch=csv_pheno$batch)
+          library(limma)
+          
+          nrow(mod.pheno)
+          ncol(csv_edata)
+          # n.sv = num.sv(csv_edata, mod.pheno,method = c("be", "leek"), vfilter = NULL, B = 20,
+          #        seed = NULL)
+          # pcontrol <- empirical.controls(csv_edata,mod.pheno,mod0=NULL,n.sv=n.sv,type="norm")
+          # irwsva.build(csv_edata, mod.pheno, mod0 = NULL, n.sv, B = 5)
+          if(length(levels(batch)) == 1){
+            print("here-o")
+            # batch_normalized = removeBatchEffect(x = csv_edata,
+            #                                      design = mod.phen,
+            #                                      batch = csv_pheno$farm)
+            batch_normalized= sva::ComBat(dat=csv_edata, 
+                                            batch=csv_pheno$farm, 
+                                            mod=mod.pheno, 
+                                            par.prior=TRUE)  
+          }else{
+            # batch_normalized= sva::ComBat(dat=csv_edata, 
+            #                               batch=csv_pheno$farm, 
+            #                               mod=mod.phen, 
+            #                               par.prior=TRUE)  
+            batch_normalized = removeBatchEffect(x = csv_edata,
+                                                 design = mod.pheno,
+                                                 batch = csv_pheno$batch,
+                                                 batch2 = csv_pheno$farm)
+          }
+
+          # batch_a= sva::ComBat(dat=csv_edata, 
+          #                                batch=csv_pheno$batch, 
+          #                                mod=mod.farm, 
+          #                                par.prior=TRUE)          
+          # batch_normalized = sva::ComBat(dat=batch_a, 
+          #                                batch=csv_pheno$farm, 
+          #                                mod=mod.phen, 
+          #                                par.prior=TRUE)
           
           # --- substitute in metaboanalyst matrix ---
           
@@ -1105,6 +1159,8 @@ shinyServer(function(input, output, session) {
         }
       )
       setProgress(.5)
+      
+      # outlier detection??
       
       # --------------------------------------
       
@@ -1926,13 +1982,14 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$browse_db,{
-    req(input$checkGroup)
+    req(db_search_list)
     # -------------------
-    cpd_list <- lapply(input$checkGroup, FUN=function(match.table){
+    cpd_list <- lapply(db_search_list, FUN=function(match.table){
       browse_db(match.table)
     })
     # ------------------
     browse_table <<- unique(as.data.table(rbindlist(cpd_list)))
+
     output$browse_tab <-DT::renderDataTable({
       DT::datatable(browse_table[,-c("Description", "Charge")],
                     selection = 'single',
@@ -1942,12 +1999,12 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$revsearch_cpd, {
-    req(input$checkGroup)
+    req(db_search_list)
     req(input$browse_tab_rows_selected)
     # -------------------
     search_cmd <- browse_table[curr_row,c('Formula', 'Charge')]
     # -------------------
-    cpd_list <- lapply(input$checkGroup, FUN=function(match.table){
+    cpd_list <- lapply(db_search_list, FUN=function(match.table){
       get_mzs(search_cmd$Formula, search_cmd$Charge, match.table)})
     # ------------------
     hits_table <<- unique(as.data.table(rbindlist(cpd_list)))
@@ -1961,11 +2018,19 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$browse_tab_rows_selected,{
     curr_row = input$browse_tab_rows_selected
+    curr_cpd = browse_table[curr_row, Formula]
     curr_row <<- input$browse_tab_rows_selected
     if (is.null(curr_row)) return()
     # -----------------------------
     curr_def <<- browse_table[curr_row,'Description']
     output$browse_definition <- renderText(curr_def$Description)
+    # --- search ---
+    output$meba_specific_plot <- plotly::renderPlotly({ggplotMeba(curr_cpd, draw.average=T, cols = color.vec(),cf=color.function)})
+    output$asca_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)})
+    output$fc_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)})
+    output$tt_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)})
+    output$aov_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)})
+    output$plsda_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)})
   })
   
   observeEvent(input$hits_tab_rows_selected,{

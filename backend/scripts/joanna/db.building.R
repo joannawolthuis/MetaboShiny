@@ -100,15 +100,15 @@ build.base.db <- function(dbname=NA,
                                  db.formatted$compoundname <- as.character(strsplit(db.formatted$compoundname, 
                                                                                     split=", \\[.*\\][\\+-]"))
                                  RSQLite::dbWriteTable(full.conn, 
-                                              "base", 
-                                              db.formatted, 
-                                              append=TRUE)
+                                                       "base", 
+                                                       db.formatted, 
+                                                       append=TRUE)
                                  print("heree")
                                  
                                  RSQLite::dbWriteTable(full.conn, 
-                                              "extended", 
-                                              db.formatted.full, 
-                                              append=TRUE)
+                                                       "extended", 
+                                                       db.formatted.full, 
+                                                       append=TRUE)
                                  print("heree")
                                  # --- index ---
                                  RSQLite::dbExecute(full.conn, "create index b_idx1 on base(baseformula, charge)")
@@ -130,20 +130,20 @@ build.base.db <- function(dbname=NA,
                                  data <- XML::xmlParse(file.path(base.loc,"hmdb_metabolites.xml"), useInternalNodes = T)
                                  # --- xpath magic! :-) --- [NOTE: leaves out anything that doens't have formal charge available, another option would be to default to zero]
                                  compoundnames <- XML::getNodeSet(data, 
-                                                             "/*/pf:metabolite[pf:predicted_properties/pf:property[pf:kind='formal_charge']]/pf:name", 
-                                                             c(pf = "http://www.hmdb.ca"))
+                                                                  "/*/pf:metabolite[pf:predicted_properties/pf:property[pf:kind='formal_charge']]/pf:name", 
+                                                                  c(pf = "http://www.hmdb.ca"))
                                  formulae <- XML::getNodeSet(data, 
-                                                        "/*/pf:metabolite[pf:predicted_properties/pf:property[pf:kind='formal_charge']]/pf:chemical_formula", 
-                                                        c(pf = "http://www.hmdb.ca"))
+                                                             "/*/pf:metabolite[pf:predicted_properties/pf:property[pf:kind='formal_charge']]/pf:chemical_formula", 
+                                                             c(pf = "http://www.hmdb.ca"))
                                  identifiers <- XML::getNodeSet(data, 
-                                                           "/*/pf:metabolite[pf:predicted_properties/pf:property[pf:kind='formal_charge']]/pf:accession", 
-                                                           c(pf = "http://www.hmdb.ca"))
+                                                                "/*/pf:metabolite[pf:predicted_properties/pf:property[pf:kind='formal_charge']]/pf:accession", 
+                                                                c(pf = "http://www.hmdb.ca"))
                                  charges <- XML::getNodeSet(data, 
-                                                       "/*/pf:metabolite/pf:predicted_properties/pf:property[pf:kind='formal_charge']/pf:value", 
-                                                       c(pf = "http://www.hmdb.ca"))
+                                                            "/*/pf:metabolite/pf:predicted_properties/pf:property[pf:kind='formal_charge']/pf:value", 
+                                                            c(pf = "http://www.hmdb.ca"))
                                  description <- XML::getNodeSet(data, 
-                                                           "/*/pf:metabolite[pf:predicted_properties/pf:property[pf:kind='formal_charge']]/pf:description", 
-                                                           c(pf = "http://www.hmdb.ca"))
+                                                                "/*/pf:metabolite[pf:predicted_properties/pf:property[pf:kind='formal_charge']]/pf:description", 
+                                                                c(pf = "http://www.hmdb.ca"))
                                  # --- make nice big table ---
                                  db.formatted <- data.table(
                                    compoundname = sapply(compoundnames, xmlValue),
@@ -185,27 +185,27 @@ build.base.db <- function(dbname=NA,
                                  chebi.loc <- file.path(options$db_dir, "chebi.full.db")
                                  # ---------------------------------------------------
                                  chebi <- SPARQL::SPARQL(url="http://sparql.wikipathways.org/",
-                                                 query='prefix wp:      <http://vocabularies.wikipathways.org/wp#>
-                                                        prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
-                                                        prefix dcterms: <http://purl.org/dc/terms/>
-                                                        prefix xsd:     <http://www.w3.org/2001/XMLSchema#>
-                                                        PREFIX wdt: <http://www.wikidata.org/prop/direct/>
-                                                        
-                                                        select  ?mb 
-                                                        (group_concat(distinct str(?labelLit);separator=", ") as ?label )
-                                                        ?idurl as ?csid 
-                                                        (group_concat(distinct ?pwTitle;separator=", ") as ?description)
-                                                        ?pathway
-                                                        where {
-                                                        ?mb a wp:Metabolite ;
-                                                        rdfs:label ?labelLit ;
-                                                        wp:bdbChEBI ?idurl ;
-                                                        dcterms:isPartOf ?pathway .
-                                                        ?pathway a wp:Pathway ;
-                                                        dc:title ?pwTitle .
-                                                        FILTER (BOUND(?idurl))
-                                                        }
-                                                        GROUP BY ?mb ?wp ?idurl ?pathway')
+                                                         query='prefix wp:      <http://vocabularies.wikipathways.org/wp#>
+                                                         prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+                                                         prefix dcterms: <http://purl.org/dc/terms/>
+                                                         prefix xsd:     <http://www.w3.org/2001/XMLSchema#>
+                                                         PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+                                                         
+                                                         select  ?mb 
+                                                         (group_concat(distinct str(?labelLit);separator=", ") as ?label )
+                                                         ?idurl as ?csid 
+                                                         (group_concat(distinct ?pwTitle;separator=", ") as ?description)
+                                                         ?pathway
+                                                         where {
+                                                         ?mb a wp:Metabolite ;
+                                                         rdfs:label ?labelLit ;
+                                                         wp:bdbChEBI ?idurl ;
+                                                         dcterms:isPartOf ?pathway .
+                                                         ?pathway a wp:Pathway ;
+                                                         dc:title ?pwTitle .
+                                                         FILTER (BOUND(?idurl))
+                                                         }
+                                                         GROUP BY ?mb ?wp ?idurl ?pathway')
                                  chebi.ids <- gsub(chebi$results$csid, pattern = ".*:|>", replacement = "")
                                  conn.chebi <- RSQLite::dbConnect(RSQLite::SQLite(), chebi.loc)
                                  chebi.join.table <- data.table(identifier = chebi.ids,
@@ -214,30 +214,30 @@ build.base.db <- function(dbname=NA,
                                                                 pathway = chebi$results$pathway)
                                  RSQLite::dbWriteTable(conn.chebi, "wikipathways", chebi.join.table, overwrite=TRUE)
                                  db.formatted <- RSQLite::dbGetQuery(conn.chebi, "SELECT DISTINCT  b.compoundname, 
-                                                                                          w.description,
-                                                                                          b.baseformula, 
-                                                                                          w.widentifier as identifier, 
-                                                                                          b.charge,
-                                                                                          w.pathway 
-                                                                         FROM base b
-                                                                         JOIN wikipathways w
-                                                                         ON b.identifier = w.identifier")
+                                                                     w.description,
+                                                                     b.baseformula, 
+                                                                     w.widentifier as identifier, 
+                                                                     b.charge,
+                                                                     w.pathway 
+                                                                     FROM base b
+                                                                     JOIN wikipathways w
+                                                                     ON b.identifier = w.identifier")
                                  # --- get pathway info ---
                                  sparql.pathways <- SPARQL::SPARQL(url="http://sparql.wikipathways.org/",
-                                                 query='PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-                                                        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-                                                        PREFIX dc:  <http://purl.org/dc/elements/1.1/>
-                                                        PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-                                                        PREFIX schema: <http://schema.org/>
-                                                        PREFIX wp:      <http://vocabularies.wikipathways.org/wp#>
-                                                        PREFIX dcterms:  <http://purl.org/dc/terms/>
-                                                        
-                                                        SELECT DISTINCT str(?titleLit) as ?name ?identifier ?ontology
-                                                        WHERE {
-                                                        ?pathway dc:title ?titleLit .
-                                                        ?pathway dc:identifier ?identifier .
-                                                        OPTIONAL {?pathway wp:ontologyTag ?ontology .}
-                                                        } ')
+                                                                   query='PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                                                                   PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                                                                   PREFIX dc:  <http://purl.org/dc/elements/1.1/>
+                                                                   PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+                                                                   PREFIX schema: <http://schema.org/>
+                                                                   PREFIX wp:      <http://vocabularies.wikipathways.org/wp#>
+                                                                   PREFIX dcterms:  <http://purl.org/dc/terms/>
+                                                                   
+                                                                   SELECT DISTINCT str(?titleLit) as ?name ?identifier ?ontology
+                                                                   WHERE {
+                                                                   ?pathway dc:title ?titleLit .
+                                                                   ?pathway dc:identifier ?identifier .
+                                                                   OPTIONAL {?pathway wp:ontologyTag ?ontology .}
+                                                                   } ')
                                  db.pathways <- sparql.pathways$results
                                  db.formatted$identifier <- gsub(db.formatted$identifier, pattern = "<|>", replacement = "")
                                  db.formatted$pathway <- gsub(db.formatted$pathway, pattern = "<|_.*", replacement = "")
@@ -299,15 +299,15 @@ build.base.db <- function(dbname=NA,
                                  conn.hmdb <- RSQLite::dbConnect(RSQLite::SQLite(), hmdb.loc)
                                  RSQLite::dbWriteTable(conn.hmdb, "smpdb", db.cpds, overwrite=TRUE)
                                  db.formatted <- RSQLite::dbGetQuery(conn.hmdb, "SELECT DISTINCT  
-                                                                        s.compoundname,
-                                                                        b.description,
-                                                                        s.baseformula, 
-                                                                        s.charge as charge,
-                                                                        s.identifier as identifier, 
-                                                                        s.pathway 
-                                                                        FROM smpdb s
-                                                                        LEFT JOIN base b
-                                                                        ON b.identifier = s.widentifier")
+                                                                     s.compoundname,
+                                                                     b.description,
+                                                                     s.baseformula, 
+                                                                     s.charge as charge,
+                                                                     s.identifier as identifier, 
+                                                                     s.pathway 
+                                                                     FROM smpdb s
+                                                                     LEFT JOIN base b
+                                                                     ON b.identifier = s.widentifier")
                                  RSQLite::dbRemoveTable(conn.hmdb, "smpdb")
                                  RSQLite::dbDisconnect(conn.hmdb)
                                  # --- create ---
@@ -504,7 +504,7 @@ build.extended.db <- function(dbname,
                               WHERE b.baseformula = d.baseformula
                               AND b.charge = d.basecharge)", width=10000, simplify=TRUE)
     total.formulae <- RSQLite::dbGetQuery(base.conn, fn$paste("SELECT Count(*)
-                                                     FROM ($continue.query)"))
+                                                              FROM ($continue.query)"))
     formula.count <- total.formulae[1,]
     results <- RSQLite::dbSendQuery(base.conn, continue.query)
   } else{
@@ -533,7 +533,7 @@ build.extended.db <- function(dbname,
     # --------------------
     get.query <- fn$paste("SELECT DISTINCT b.baseformula, b.charge FROM base b $limit.query")
     total.formulae <- RSQLite::dbGetQuery(base.conn, fn$paste("SELECT Count(*)
-                                                     FROM ($get.query)"))
+                                                              FROM ($get.query)"))
     formula.count <- total.formulae[1,]
     results <- RSQLite::dbSendQuery(base.conn, get.query)
   }
@@ -659,11 +659,11 @@ build.extended.db <- function(dbname,
   mzvals <- data.table(mzmed = total.table$fullmz,
                        foundinmode = total.table$foundinmode)
   mzranges <- data.table(mzmin = pbsapply(total.table$fullmz,cl=cl,
-                                        FUN=function(mz, ppm){
-                                          mz - mz * (ppm / 1E6)}, ppm=ppm),
+                                          FUN=function(mz, ppm){
+                                            mz - mz * (ppm / 1E6)}, ppm=ppm),
                          mzmax = pbsapply(total.table$fullmz,cl=cl,
-                                        FUN=function(mz, ppm){
-                                          mz + mz * (ppm / 1E6)}, ppm=ppm))
+                                          FUN=function(mz, ppm){
+                                            mz + mz * (ppm / 1E6)}, ppm=ppm))
   sql.make.meta <- strwrap("CREATE TABLE mzvals(
                            ID INTEGER PRIMARY KEY AUTOINCREMENT,
                            mzmed decimal(30,13),
@@ -697,47 +697,77 @@ build.extended.db <- function(dbname,
 
 #' @export
 build.pat.db <- function(db.name, 
-                         poslist, 
-                         neglist, 
+                         pospath, 
+                         negpath, 
                          overwrite=FALSE,
                          rtree=TRUE,
-                         ppm=2,
-                         rmv.cols=c("mzmin", 
-                                    "mzmax", 
-                                    "npeaks",
-                                    "fq.worst",
-                                    "fq.best",
-                                    "avg.int")){
-
+                         ppm=2){
+  
   # ------------------------
   ppm = as.numeric(ppm)
   # ------------------------
-  print(length(unique(poslist$mzmed)))
-  mzvals <- data.table(mzmed = c(poslist$mzmed, neglist$mzmed),
+  
+  #pospath = '/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML/results/specpks_grouped_mdq/grouped_pos.csv'
+  #negpath = '/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML/results/specpks_grouped_mdq/grouped_neg.csv'
+  
+  poslist <- fread(pospath,header = T)
+  neglist <- fread(negpath,header = T)
+  
+  keepcols <- intersect(colnames(poslist), colnames(neglist))
+  
+  poslist <- poslist[,..keepcols]
+  neglist <- neglist[,..keepcols]
+  
+  setProgress(.20)
+  
+  mzvals <- data.table(mzmed = c(as.numeric(poslist$mzmed), as.numeric(neglist$mzmed)),
                        foundinmode = c(rep("positive", nrow(poslist)), rep("negative", nrow(neglist))))
-  mzranges <- data.table(mzmin = sapply(c(poslist$mzmed, neglist$mzmed), 
+  
+  mzranges <- data.table(mzmin = sapply(c(as.numeric(poslist$mzmed), as.numeric(neglist$mzmed)), 
                                         FUN=function(mz, ppm){
                                           mz - mz * (ppm / 1E6)}, ppm=ppm),
-                         mzmax = sapply(c(poslist$mzmed, neglist$mzmed), 
+                         mzmax = sapply(c(as.numeric(poslist$mzmed), as.numeric(neglist$mzmed)), 
                                         FUN=function(mz, ppm){
                                           mz + mz * (ppm / 1E6)}, ppm=ppm))
-  mzintensities <- reshape2::melt(as.data.table(rbind(poslist, neglist))[,(rmv.cols) := NULL], 
-                        id="mzmed", 
-                        variable="filename",
-                        value="intensity")
   
+  # --- SAVE BATCH INFO (kinda ugly...  ; _;") --- 
+  
+  if(any(grepl("\\*", x = colnames(poslist)))){
+    samp_info = strsplit(colnames(poslist)[5:ncol(poslist)], "\\*")
+    batch_rows = lapply(samp_info, function(x) data.table(sample = x[3], batch = x[2]))
+    batch_info = rbindlist(batch_rows)
+    colnames(poslist) = gsub(colnames(poslist), pattern = "(\\*.*\\*)", replacement = "")
+    colnames(neglist) = gsub(colnames(poslist), pattern = "(\\*.*\\*)", replacement = "")
+    } else{
+    batch_info = data.table(sample = colnames(poslist)[5:ncol(poslist)], batch = c(NA))
+  }
+
+  # ------------------------------------------
+  
+  setProgress(.30)
+  
+  mzintensities_pos <- reshape2::melt(poslist,#[,(rmv.cols) := NULL], 
+                                      id="mzmed", 
+                                      variable="filename",
+                                      value="intensity")
+  mzintensities_neg <- reshape2::melt(neglist,#[,(rmv.cols) := NULL], 
+                                      id="mzmed", 
+                                      variable="filename",
+                                      value="intensity")
+  setProgress(.40)
+  
+  mzintensities = as.data.table(rbind(mzintensities_pos, mzintensities_neg))
   mzvals$foundinmode <- trimws(mzvals$foundinmode)
   mzintensities$filename <- trimws(mzintensities$filename)
   
-  #filenames <- gsub(x=as.character(mzintensities$filename), "", pattern="[-_]\\d*$", perl=T)
-  #replicates <- gsub(x=as.character(mzintensities$filename), "", pattern=".*[-_](?=\\d*$)", perl=T)
-  # ------------------------
-  #mzintensities$filename <- filenames
-  #mzintensities$replicate <- replicates
+  setProgress(.50)
+  
   # ------------------------
   if(overwrite==TRUE & file.exists(db.name)) file.remove(db.name)
   # --- reconnect / remake ---
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), db.name)
+  # ------------------------
+  RSQLite::dbWriteTable(conn, "batchinfo", batch_info, append=FALSE) # insert into
   # ------------------------
   sql.make.int <- strwrap("CREATE TABLE mzintensities(
                           ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -745,6 +775,9 @@ build.pat.db <- function(db.name,
                           filename text,
                           intensity float)", width=10000, simplify=TRUE)
   RSQLite::dbExecute(conn, sql.make.int)
+  
+  setProgress(.60)
+  
   # --- write intensities to table and index ---
   RSQLite::dbWriteTable(conn, "mzintensities", mzintensities, append=TRUE) # insert into
   RSQLite::dbExecute(conn, "CREATE INDEX intindex ON mzintensities(filename,'mzmed',intensity)")
@@ -755,6 +788,9 @@ build.pat.db <- function(db.name,
                            foundinmode text)", width=10000, simplify=TRUE)
   RSQLite::dbExecute(conn, sql.make.meta)
   RSQLite::dbExecute(conn, "create index mzfind on mzvals(mzmed, foundinmode);")
+  
+  setProgress(.70)
+  
   # --- write vals to table ---
   RSQLite::dbWriteTable(conn, "mzvals", mzvals, append=TRUE) # insert into
   # --- make range table (choose if R*tree or not) ---
@@ -768,10 +804,15 @@ build.pat.db <- function(db.name,
                              mzmin decimal(30,13),
                              mzmax decimal(30,13));", width=10000, simplify=TRUE)
   RSQLite::dbExecute(conn, if(rtree) sql.make.rtree else sql.make.normal)
+  setProgress(.80)
+  
   # --- write ranges to table ---
   RSQLite::dbWriteTable(conn, "mzranges", mzranges, append=TRUE) # insert into
   # --- cleanup ---
   RSQLite::dbExecute(conn, "VACUUM")
+  
+  setProgress(.90)
+  
   # ----------------
   RSQLite::dbDisconnect(conn)
   print("Made!")}
@@ -781,9 +822,10 @@ load.excel <- function(path.to.xlsx,
                        path.to.patdb = patdb,
                        tabs.to.read = c("General",
                                         "Setup",
-                                        "Individual Data",
-                                        "Pen Data",
-                                        "Admin")){
+                                        "Individual Data"
+                                        #,"Pen Data",
+                                        #"Admin"
+                                        )){
   # --- connect to sqlite db ---
   # path.to.xlsx = "/Users/jwolthuis/Documents/umc/metaboshiny_all/ExcelSheetsDSM/TR/DSM_TR1.xlsx"
   # path.to.patdb = "/Users/jwolthuis/Documents/umc/turkey.db"
@@ -810,21 +852,21 @@ load.excel <- function(path.to.xlsx,
   #names(individual.data) <- make.unique(names(individual.data))
   #individual.data
   individual.data$sampling_date <- as.numeric(as.factor(as.Date(individual.data$sampling_date, format = "%d-%m-%y")))
-  pen.data <- data.store[[4]]
-  admin <- data.store[[5]]
+  #pen.data <- data.store[[4]]
+  #admin <- data.store[[5]]
   
   setup <- as.data.table(apply(setup, MARGIN=2, trimws))
   individual.data <- as.data.table(apply(individual.data, MARGIN=2, trimws))
   general <- as.data.table(apply(general, MARGIN=2, trimws))
-  pen.data <- as.data.table(apply(pen.data, MARGIN=2, trimws))
-  admin <- as.data.table(apply(admin, MARGIN=2, trimws))
+  #pen.data <- as.data.table(apply(pen.data, MARGIN=2, trimws))
+  #admin <- as.data.table(apply(admin, MARGIN=2, trimws))
   
   # --- import to patient sql file ---
   #RSQLite::dbWriteTable(conn, "general", general, overwrite=TRUE) # insert into BUGGED FIX LATER
   RSQLite::dbWriteTable(conn, "setup", setup, overwrite=TRUE) # insert into
   RSQLite::dbWriteTable(conn, "individual_data", individual.data, overwrite=TRUE) # insert into
-  RSQLite::dbWriteTable(conn, "pen_data", pen.data, overwrite=TRUE) # insert into
-  RSQLite::dbWriteTable(conn, "admin", admin, overwrite=TRUE) # insert into
+  #RSQLite::dbWriteTable(conn, "pen_data", pen.data, overwrite=TRUE) # insert into
+  #RSQLite::dbWriteTable(conn, "admin", admin, overwrite=TRUE) # insert into
   # --- disconnect ---
   RSQLite::dbDisconnect(conn)
 }

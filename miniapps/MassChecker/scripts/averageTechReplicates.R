@@ -31,18 +31,24 @@ averageTechReplicates <- function(outdir, nrepl, dimsThresh=100, cores=1){
       }
       
       if (length(remove)==nrepl) removeFromGroup=c(removeFromGroup,i) 
-      if (!is.null(remove)) repl.pattern[[i]]=repl.pattern[[i]][-remove]
+      if (!is.null(remove)) repl.pattern[[i]] = repl.pattern[[i]][-remove]
     }
     
-    if (length(removeFromGroup)!=0) groupNames=groupNames[-removeFromGroup]
+    if (length(removeFromGroup)!=0) groupNames = groupNames[-removeFromGroup]
 
     return(list("pattern"=repl.pattern, "groupNames"=groupNames))
     
   }
   
   dir.create(paste(outdir, "specpks", sep="/"),showWarnings = F)
-  dir.create(paste(outdir, "Gaussian_fit", sep="/"),showWarnings = F)
+  #dir.create(paste(outdir, "aligned_spectra", sep="/"),showWarnings = F)
   dir.create(paste(outdir, "average_pklist", sep="/"),showWarnings = F)
+  
+  #cores=3
+  # --- cluster ---
+  cl <<- makeSOCKcluster(cores,
+                         outfile="~/mclog.txt")
+  registerDoSNOW(cl)
   
   # get repl.pattern
   load(paste(outdir, "init.RData", sep="/"))
@@ -50,10 +56,6 @@ averageTechReplicates <- function(outdir, nrepl, dimsThresh=100, cores=1){
   progress <<- function(i) setProgress(value = i / length(repl.pattern),
                                        detail = paste("Averaged replicates for", basename(groupNames[i])))
   opts <- list(progress=progress)
-  # --- cluster ---
-  cl <<- makeSOCKcluster(cores,
-                         outfile="~/mclog.txt")
-  registerDoSNOW(cl)
   # ---------------
   withProgress(message = "Average technical replicates",{
     to.remove <- foreach(i=1:length(repl.pattern), .options.snow=opts,
@@ -73,20 +75,20 @@ averageTechReplicates <- function(outdir, nrepl, dimsThresh=100, cores=1){
                      for (j in 1:length(tech_reps)){
                        load(paste(paste(outdir, "pklist/", sep="/"), tech_reps[j], ".RData", sep=""))
                        
-                       if (sum(pklist$neg[,1])<thresh2remove){
+                       if (sum(pklist$neg[,1]) < thresh2remove){
                          remove_neg=c(remove_neg, tech_reps[j])
                        } else {
-                         n_neg=n_neg+1
-                         sum_neg=sum_neg+pklist$neg  
+                         n_neg = n_neg + 1
+                         sum_neg = sum_neg + pklist$neg  
                        }
                        
                        techRepsArray.neg = cbind(techRepsArray.neg, pklist$neg)
                        
                        if (sum(pklist$pos[,1])<thresh2remove){
-                         remove_pos=c(remove_pos, tech_reps[j])
+                         remove_pos = c(remove_pos, tech_reps[j])
                        } else {
-                         n_pos=n_pos+1
-                         sum_pos=sum_pos+pklist$pos
+                         n_pos = n_pos+1
+                         sum_pos = sum_pos+pklist$pos
                        }
                        
                        techRepsArray.pos = cbind(techRepsArray.pos, pklist$pos)
@@ -142,3 +144,66 @@ averageTechReplicates <- function(outdir, nrepl, dimsThresh=100, cores=1){
 # run(cmd_args[1], as.numeric(cmd_args[2]))
 # 
 # message("Ready")
+
+averageTechReplicates_jw <- function(outdir, cores=1, thresh2remove = 5*10^8){
+  
+  sn <- data.table::fread(file.path(outdir, "sampleNames.txt"))
+  
+  repl.pattern = split(sn,f = sn$Sample_Name)
+  
+  # --- cluster ---
+  cl <<- makeSOCKcluster(cores,
+                         outfile="~/mclog.txt")
+  registerDoSNOW(cl)
+  
+  progress <<- function(i) setProgress(value = i / length(repl.pattern),
+                                       detail = paste("Averaged replicates for", unique(repl.pattern[[i]]$Sample_Name)))
+  opts <- list(progress=progress)
+  
+  # ---------------
+  withProgress(message = "Average technical replicates",{
+     #foreach(i=1:length(repl.pattern), .options.snow=opts, .verbose = T) %dopar% {
+        for(i in 1:length(repl.pattern)){
+                
+              repl.set <- repl.pattern[[i]]
+              
+              fn_pos = file.path(outdir, "averaged",
+                                 paste0(unique(repl.set$Sample_Name), "_pos.RData"))
+              fn_neg = file.path(outdir,"averaged",
+                                 paste0(unique(repl.set$Sample_Name), "_neg.RData"))
+              # -------------------------------
+              if(file.exists(fn_pos) & file.exists(fn_neg)) next
+              
+              print(unique(repl.set$Sample_Name))
+              
+              repl.spec <- lapply(1:nrow(repl.set), FUN=function(i){
+                f = file.path(outdir, "spectra", paste0(repl.set[i, "File_Name"], ".RData"))
+                print(f)
+                print(file.exists(f))
+                load(f)
+                # ----- create mass spectra -----
+                pos <- pklist$pos
+                neg <- pklist$neg
+                list(pos = pos, 
+                     neg = neg)
+              })
+              # ---------------
+              aligned <- MALDIquant::alignSpectra(lapply(repl.spec, function(x) x$pos))
+              averaged <- MALDIquant::averageMassSpectra(aligned,
+                                                         labels=repl.set$Sample_Name,
+                                                         method="mean")
+              averaged_old <- MALDIquant::averageMassSpectra(lapply(repl.spec, function(x) x$pos),
+                                                         labels=repl.set$Sample_Name,
+                                                         method="mean")
+              #if(sum(averaged[[1]]@intensity) >= thresh2remove) 
+              save(x=averaged, file=fn_pos)
+              averaged <- NULL # RESET
+              averaged <- MALDIquant::averageMassSpectra(lapply(repl.spec, function(x) x$neg),
+                                                         labels=repl.set$Sample_Name,
+                                                         method="mean")
+              #if(sum(averaged[[1]]@intensity) >= thresh2remove) 
+              save(x=averaged, file=fn_neg)
+            }
+  })
+  stopCluster(cl)
+}

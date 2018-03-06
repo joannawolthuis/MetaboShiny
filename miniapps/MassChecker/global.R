@@ -74,14 +74,15 @@ lapply(scripts, function(x){
 })
 
 ## DEFAULTS ##
-cores <<- 1
-nrepl <<- 3
-trim <<- 0.1
-dimsThresh <<- 100
-resol <<- 140000
-thresh_pos <<- 2000
-thresh_neg <<- 2000
-modes <<- c("positive", "negative")
+cores <- 1
+nrepl <- 3
+trim <- 0.1
+ppm = 2
+dimsThresh <- 100
+resol <- 140000
+thresh_pos <- 2000
+thresh_neg <- 2000
+modes <- c("pos", "neg")
 
 # -----------------
 

@@ -14,7 +14,7 @@ library(data.table)
 library(gsubfn)
 library(plotly)
 library(colorRamps)
-library(randomForest)
+#library(randomForest)
 
 sourceDir <- function(path, trace = TRUE, ...) {
   for (nm in list.files(path, pattern = "\\.[RrSsQq]$")) {
@@ -66,8 +66,6 @@ sourceDir("backend/scripts/joanna")
 load("backend/umcfiles/adducts/AdductTableWKZ.RData")
 
 # === LOAD LIBRARIES ===
-
-
 
 data(isotopes, package = "enviPat")
 session_cl <<- parallel::makeCluster(parallel::detectCores())

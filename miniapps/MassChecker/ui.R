@@ -101,18 +101,18 @@ shinyUI(fluidPage(theme = "metaboshiny.css",
                                                                                   <label class="control-label" for="peak_calling">Peak calling style</label>
                                                                                   <div class="shiny-options-group">
                                                                                   <label class="radio-inline">
-                                                                                  <input type="radio" name="peak_calling" value="gaussian" checked="checked"/>
+                                                                                  <input type="radio" name="peak_calling" value="gaussian"/>
                                                                                   <span><img src="gaussian.jpg" height="42" width="42"/></span>
                                                                                   </label>
                                                                                   <label class="radio-inline">
-                                                                                  <input type="radio" name="peak_calling" value="wavelet"/>
+                                                                                  <input type="radio" name="peak_calling" value="wavelet" checked="checked"/>
                                                                                   <span><img src="wavelet.png" height="42" width="42"/></span>
                                                                                   </label>
                                                                                   </div>
                                                                                   </div>')),
                                                                     radioButtons("peak_grouping",label = "Peak grouping style",choices = list("Mean shifting"="meanshift",
                                                                                                                                               "Hierarchical clustering"="hclust"),inline = T, 
-                                                                                 selected="meanshift"),
+                                                                                 selected="hclust"),
                                                                     actionButton('start_pipeline', 'Go', icon=icon("paw"),style='font-size:150%')
                                                                     )
                                                              )
@@ -132,7 +132,7 @@ shinyUI(fluidPage(theme = "metaboshiny.css",
                                                                bsCollapsePanel("Peak finding", 
                                                                                actionButton("do_step_4", 'Retry'),
                                                                                style = "warning"),
-                                                               bsCollapsePanel("Collect samples (I)", 
+                                                               bsCollapsePanel("Collate samples", 
                                                                                actionButton("do_step_5", 'Retry'),
                                                                                style = "warning"),
                                                                bsCollapsePanel("Peak grouping", 
@@ -140,10 +140,10 @@ shinyUI(fluidPage(theme = "metaboshiny.css",
                                                                                style = "warning"),
                                                                bsCollapsePanel("Fill missing values", 
                                                                                actionButton("do_step_7", 'Retry'),
-                                                                               style = "warning"),
-                                                               bsCollapsePanel("Collect samples (II)", 
-                                                                               actionButton("do_step_8", 'Retry'),
                                                                                style = "warning")
+                                                              #,bsCollapsePanel("Collect samples (II)", 
+                                                              #                 actionButton("do_step_8", 'Retry'),
+                                                              #                 style = "warning")
                                                     )
                                           )
                                           )

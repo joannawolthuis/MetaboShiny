@@ -1,6 +1,3 @@
-# Rely on the 'WorldPhones' dataset in the datasets
-# package (which generally comes preloaded).
-
 shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle.js")),
                   navbarPage(title=div(h1("MetaboShiny"),class="sparkley"), inverse = T,
                              id="nav_general",
@@ -15,7 +12,6 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                                                       helpText("Installed packages:"),
                                                                       div(DT::dataTableOutput('package_tab', width="100%"),style='font-size:80%'),
                                                                       br(),                                  
-                                                                      #                                        actionButton("install_packages", "Install", icon = icon("wrench")),
                                                                       actionButton("update_packages", "Update", icon = icon("star")),
                                                                       br(),br(),
                                                                       imageOutput("package_check")
@@ -225,7 +221,7 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                                                                                                                 "Range scaling"="RangeNorm",
                                                                                                                                 "None"="NULL")),
                                                       selectInput('batch_corr', 'Correct batch effect?', choices = list("Yes"=TRUE, 
-                                                                                                                             "No"=FALSE)),
+                                                                                                                         "No"=FALSE)),
                                                       actionButton("initialize", "Go", icon=icon("hand-o-right")),
                                                       hr(),
                                                       imageOutput("dataset_icon",inline = T),

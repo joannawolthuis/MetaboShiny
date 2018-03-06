@@ -3,12 +3,15 @@ ggplotNormSummary <- function(mSet){
   # 4 by 4 plot, based on random 20-30 picked 
   orig_data <- mSet$dataSet$orig
   norm_data <- mSet$dataSet$norm
+
+  sampsize = if(nrow(norm_data) > 20) 20 else nrow(norm_data)
+  which_cpds <- sample(colnames(norm_data), sampsize, replace = FALSE, prob = NULL)
+  which_samps <- sample(rownames(norm_data), sampsize, replace = FALSE, prob = NULL)
   
-  which_cpds <- sample(colnames(orig_data[4:ncol(orig_data)]), 20, replace = FALSE, prob = NULL)
-  which_samps <- sample(rownames(orig_data), 20, replace = FALSE, prob = NULL)
+  orig_melt <- reshape2::melt(orig_data[which_samps, which_cpds])
+  orig_melt[is.na(orig_melt)] <- 0
   
-  orig_melt <- reshape2::melt(orig_data[, which_cpds])
-  norm_melt <- reshape2::melt(norm_data[, which_cpds])
+  norm_melt <- reshape2::melt(norm_data[which_samps, which_cpds])
 
   plot <- ggplot2::ggplot(data=orig_melt) +
     ggplot2::theme_minimal(base_size = 10) #+ facet_grid(. ~ variable)
@@ -17,7 +20,7 @@ ggplotNormSummary <- function(mSet){
 
   RES2 <- plot + ggplot2::geom_boxplot(alpha=0.4,
                               ggplot2::aes(x=value,y=variable),
-                              color=rainbow(20), 
+                              color=rainbow(sampsize), 
                               alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(orig_melt$value)))
   
   plot <- ggplot2::ggplot(data=norm_melt) +
@@ -27,11 +30,10 @@ ggplotNormSummary <- function(mSet){
   
   RES4 <- plot + ggplot2::geom_boxplot(alpha=0.4,
                       ggplot2::aes(x=value,y=variable),
-                      color=rainbow(20), 
+                      color=rainbow(sampsize), 
                       alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(norm_melt$value)))
   
   list(tl=RES1, bl=RES2, tr=RES3, br=RES4)
-  
 } 
 
 ggplotSampleNormSummary <- function(mSet){
@@ -39,8 +41,10 @@ ggplotSampleNormSummary <- function(mSet){
   orig_data <- mSet$dataSet$orig
   norm_data <- mSet$dataSet$norm
   
+  sampsize = if(nrow(norm_data) > 20) 20 else nrow(norm_data)
+  
   which_samps <- sample(rownames(orig_data), 
-                        20, 
+                        sampsize, 
                         replace = FALSE, 
                         prob = NULL)
   
@@ -65,7 +69,7 @@ ggplotSampleNormSummary <- function(mSet){
   RES2 <- ggplot2::ggplot(data=orig_melt) +
     ggplot2::theme_minimal(base_size = 10) + ggplot2::geom_boxplot(alpha=0.4,
                       ggplot2::aes(x=value,y=Label),
-                      color=rainbow(20), 
+                      color=rainbow(sampsize), 
                       alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(orig_melt$value),text=Label))
 
   RES3 <- ggplot2::ggplot(data=norm_melt_sums) +
@@ -74,7 +78,7 @@ ggplotSampleNormSummary <- function(mSet){
   RES4 <- ggplot2::ggplot(data=norm_melt) +
     ggplot2::theme_minimal(base_size = 10) + ggplot2::geom_boxplot(alpha=0.4,
                       ggplot2::aes(x=value,y=Label),
-                      color=rainbow(20), 
+                      color=rainbow(sampsize), 
                       alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(norm_melt$value),text=Label))
    
   list(tl=RES1, bl=RES2, tr=RES3, br=RES4)
@@ -179,17 +183,16 @@ ggPlotFC <- function(cf, n){
   plotly::ggplotly(plot, tooltip="log2fc")
 }
 
-ggPlotVolc <- function(cf, n){
+ggPlotVolc <- function(cf=rainbow, n=256){
     vcn<-mSet$analSet$volcano;
-    dt <- as.data.table(cbind(vcn$fc.log, vcn$p.log), keep.rownames=T)
-    imp.inx<-(vcn$inx.up | vcn$inx.down) & vcn$inx.p;
-    colnames(dt) <- c("cpd", "log2FC", "minlog10P")
+    dt <- as.data.table(vcn$sig.mat[,c(2,4)],keep.rownames = T)
+    colnames(dt) <- c("cpd", "log2FC", "-log10P")
     plot <- ggplot2::ggplot() +
       #ggplot2::geom_point(data=dt[!imp.inx], ggplot2::aes(x=log2FC, y=minlog10P)) +
-      ggplot2::geom_point(data=dt[imp.inx], ggplot2::aes(x=log2FC, 
-                                       y=minlog10P,
+      ggplot2::geom_point(data=dt, ggplot2::aes(x=log2FC, 
+                                       y=`-log10P`,
                                        text=cpd,
-                                       color=abs(log2FC*minlog10P), 
+                                       color=abs(log2FC*`-log10P`), 
                                        key=cpd)) +
       ggplot2::theme_minimal(base_size = 10) +
       ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE)
