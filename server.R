@@ -1179,7 +1179,6 @@ shinyServer(function(input, output, session) {
       csv_loc_no_out <- gsub(pattern = "\\.csv", replacement = "_no_out.csv", x = csv_loc)
       
       if(batch_corr){
-        
         batch_table <- csv_temp_filt[,c("Sample",batches),with=FALSE]
         fwrite(csv_temp_filt[,-batches, with=FALSE], 
                csv_loc_no_out)  
@@ -1219,18 +1218,6 @@ shinyServer(function(input, output, session) {
                            method = input$miss_type)
       }
       
-      # -- save point here?? ---
-      
-      keep <- intersect(first_part$Sample, rownames(mSet$dataSet$procr))
-      first_part_no_out <- first_part[Sample %in% keep]
-      csv_filled = cbind(first_part_no_out, 
-                         mSet$dataSet$procr[match(rownames(mSet$dataSet$procr),
-                                                  first_part$Sample)]
-                         )
-      
-      csv_loc_filled <- gsub(pattern = "\\.csv", replacement = "_filled.csv", x = csv_loc)
-      
-      fwrite(csv_filled, file = csv_loc_filled)
       # ------------------------
       
       if(input$filt_type != "none"){
@@ -1249,6 +1236,21 @@ shinyServer(function(input, output, session) {
                             ref = input$ref_var
                             )
       
+      # -- save point here?? ---
+      
+      keep <- intersect(first_part$Sample, rownames(mSet$dataSet$norm))
+      first_part_no_out <- first_part[Sample %in% keep]
+      second_part_no_out <- mSet$dataSet$norm[match(rownames(mSet$dataSet$norm),
+                                                    first_part_no_out$Sample),]
+      csv_filled = cbind(first_part_no_out, 
+                         second_part_no_out
+      )
+      
+      print(dim(csv_filled))
+      
+      csv_loc_filled <- gsub(pattern = "\\.csv", replacement = "_filled.csv", x = csv_loc)
+      
+      fwrite(csv_filled, file = csv_loc_filled)
       #print(ncol(mSet$dataSet$orig))
       #print(ncol(mSet$dataSet$norm))
 
