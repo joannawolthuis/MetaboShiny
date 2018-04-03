@@ -420,190 +420,121 @@ load(f)
 vec <- averaged[[1]]@intensity
 names(vec) <- averaged[[1]]@mass
 rl <- rle(vec == 0)
-i1 <- rl$lengths>1 & rl$values
+i1 <- rl$lengths>2 & rl$values
 lst <- split(vec, rep(cumsum(c(TRUE, i1[-length(i1)])), rl$lengths)) 
 split_peaks = lapply(lst, function(x) x[which(x!=0)])
 
-library(mclust)
+peak_num <- pbapply::pblapply(split_peaks, FUN=function(peak){
+  if(length(peak) > 0){
+    tp <- pastecs::turnpoints(peak)
+    ncomp = length(which(tp$peaks))
+  }else{
+    ncomp = 0
+  } 
+  # ------
+  ncomp
+})
 
-find_peaks <- function (x, m = 3){
-  shape <- diff(sign(diff(x, na.pad = FALSE)))
-  pks <- sapply(which(shape < 0), FUN = function(i){
-    z <- i - m + 1
-    z <- ifelse(z > 0, z, 1)
-    w <- i + m + 1
-    w <- ifelse(w < length(x), w, length(x))
-    if(all(x[c(z : i, (i + 2) : w)] <= x[i + 1])) return(i + 1) else return(numeric(0))
-  })
-  pks <- unlist(pks)
-  pks
+
+# ----------
+
+multipeaks <- split_peaks[which(peak_num > 1)]
+mz_multi <- unlist(sapply(multipeaks, function(x) names(x)))
+spec_multi <- averaged
+idx <- which(mz_multi %in% spec_multi[[1]]@mass)
+spec_multi[[1]]@intensity[!idx] <- 0
+
+# ----------
+
+for(peak in multipeaks){
+  plot(names(peak), peak)
+  Sys.sleep(2)
 }
-# --- nvmfor now ---
 
-library(mclust)
+df <- matrix(data = spec_multi[[1]]@intensity,
+             ncol=1)
+rownames(df) <- spec_multi[[1]]@mass
 
-cl = makeCluster(3, "FORK")
+library(MassSpecWavelet)
 
-res <- pbapply::pblapply(1:length(split_peaks),cl=0, FUN=function(i){
-  #print(i/length(split_peaks) * 100.0)
-  #print(i)
+scales <- seq(1, 64, 3)
+wCoefs <- cwt(df, scales=scales, wavelet='mexh')
+localMax <- getLocalMaximumCWT(wCoefs,amp.Th = 1.5)
+
+# plotLocalMax(localMax,range = rng)
+
+rng <- c(17000,17010)
+
+{plot(rownames(df)[rng[[1]]:rng[[2]]], df[rng[[1]]:rng[[2]]])
+ lines(df[rng[[1]]:rng[[2]]]) 
+}
+
+image(rng[[1]]:rng[[2]], 1:16, wCoefs[rng[[1]]:rng[[2]],1:16],
+      col=terrain.colors(256),
+      axes=TRUE,
+      xlab='m/z index',
+      ylab='CWT coefficient scale',
+      main='CWT coefficients')
+
+ridgeList <- getRidge(localMax,minWinSize = 5)
+
+plotRidgeList(ridgeList, range = rng)
+
+majorPeakInfo <- identifyMajorPeaks(df, 
+                                    ridgeList, 
+                                    wCoefs, 
+                                    SNR.Th = sig_noise, 
+                                    peakScaleRange = 1,
+                                    nearbyPeak = T)
+
+cl = parallel::makeCluster(3, "FORK")
+
+i = 2
+
+peakfits <- pbapply::pblapply(which(peak_num > 1), cl=cl, FUN=function(i){
+  print(i)
   peak <- split_peaks[[i]]
+  ncomp <- unlist(peak_num)[i]
   
-  if(length(peak)>1){
-    #plot(names(peak),peak)
-    
+  peak_hist = NULL
+  
+  try({
     peak_hist = unlist(sapply(1:length(peak), FUN = function(j){
       counts = peak[j]
       mz = as.numeric(names(peak[j]))
       # --------------------
-      rep(x=mz, times=counts)
-    }))
-    
-    #hist(peak_hist, prob=T)
-
-    tp<-pastecs::turnpoints(peak)
-    ncomp = length(which(tp$peaks))
-    
-    #points(names(peak)[tp$peaks],peak[tp$peaks],col="red")
-    
-    if(ncomp > 1){
-      try({
-        mix <- Mclust(peak_hist, 
-                      G = ncomp,verbose = FALSE)   
-        
-        fit = list(lambda = mix$parameters$pro,
-                   mu =  mix$parameters$mean,
-                   sigma = if(length(mix$parameters$variance$sigmasq) == 1){
-                     rep(sqrt(mix$parameters$variance$sigmasq), length(mix$parameters$mean))
-                   }else{
-                     sqrt(mix$parameters$variance$sigmasq)
-                   })
-      })
-    }else{
-      fit = list(lambda = 1, mu = mean(peak_hist), sigma = sd(peak_hist))
-    }
-
-    # for(i in 1:length(fit$mu)){
-    #    curve(dnorm(x, mean = fit$mu[[i]],sd = fit$sigma[[i]]), col = i, add = TRUE)
-    # }
-    
-    peakmz = unique(fit$mu)
-    
-    N <- length(peak_hist)
-    draw <- sample(length(fit$lambda), N, replace=TRUE, prob=fit$lambda)
-
-    peakinfo <- lapply(1:length(peakmz), FUN=function(i){
-      mz = peakmz[i]
-      int = length(which(draw == i))
-      # ---------
-      data.table(mzmed = mz, 
-                 int = int)
-    })
-    if(length(peakinfo) > 1){
-      peakinfo <- rbindlist(peakinfo)
-    }
-    #print(peakinfo)
-    peakinfo
+      rep(x = mz, times = counts)
+    })) 
+  })
+ 
+  if(is.null(peak_hist)){
+    peak_hist = unlist(sapply(1:length(peak), FUN = function(j){
+      counts = peak[j]
+      mz = as.numeric(names(peak[j]))
+      # --------------------
+      rep(x = mz, times = counts/10)
+    })) 
   }
-  #Sys.sleep(2)
+  
+  mix <- NULL
+  
+  try({
+    mix <- mclust::Mclust(peak_hist,
+                            G = ncomp,
+                            verbose = FALSE)
+  })
+
+  mix
+  # try({
+  #   list(lambda = mix$parameters$pro,
+  #        mu =  mix$parameters$mean,
+  #        sigma = rep(sqrt(mix$parameters$variance$sigmasq), length(mix$parameters$mean)),
+  #        signal = length(peak_hist)
+  #   )    
+  # })
 })
 
-
-BIC <- mclustBIC(peak)
-Mclust(peak, x = BIC)
-
-
-hist(peak_hist, probability = T)
-for(i in 1:length(mix$lambda)){
-  curve(dnorm(x, mean = mix$mu[[i]],sd = mix$sigma[[i]]), col = i, add = TRUE)
-}
-
-npoints = length(peak_hist)
-
-probs <- mix$lambda
-m <- mix$mu
-s <- mix$sigma
-
-N <- length(peak_hist)
-grp <- sample(length(probs), N, replace=TRUE, prob=probs)
-x <- rnorm(N, m[grp], s[grp])
-hist(x)
-plot(density(x))
-hist(peak_hist)
-
-sampleMixture=function(prop,means,dev){
-  # Generate a uniformly distributed random number between 0 and 1
-  # in order to choose between the two component distributions
-  distTest=runif(1)
-  if(distTest<prop[1]){
-    # Then sample from the first component of the mixture
-    sample=rnorm(1,mean=means[1],sd=dev[1])
-    names(sample) = "1"
-  }else{
-    # Sample from the second component of the mixture
-    sample=rnorm(1,mean=means[2],sd=dev[2])
-    names(sample) = "2"
-  }
-  return(sample)
-}
-
-# Generate a single sample
-sampleMixture(probs, m, s)
-
-Mclust(peak_hist)
-# Generate 100 samples and plot resulting distribution
-samples=replicate(length(peak_hist),sampleMixture(probs, m, s))
-plot(density(samples))
-names(samples)
-length(which(names(samples) == "1"))
-
-# library(matconv)
-# hMaps <- makeFuncMaps(
-#   pathDict = system.file("extdata", "HiebelerDict.txt", package = "matconv"))
-# source(system.file("extdata", "defDataConv.R", package = "matconv"))
-# 
-# matfiles <- list.files("/Users/jwolthuis/Downloads/S2_File/m_files/",pattern = "\\.m$", full.names = T)
-# for(f in matfiles){
-#   code <- unlist(readLines(f))
-#   out <- mat2r(code, funcConverters = hMaps, dataConverters = dataConvs)
-#   newf <- gsub(pattern = "\\.m$", replacement = ".R", x = f)
-#   write(x =  out$rCode, file = newf)
-# }
-
-
-pbsapply(split_peaks, function(peak){
-  if(length(peak) > 0){
-    peak_hist = unlist(sapply(1:length(peak), FUN = function(i){
-      counts = peak[i]
-      mz = as.numeric(names(peak[i]))
-      times = counts/binsize
-      #print(mz)
-      multiplied = rep(x=mz, times=counts)
-      multiplied
-    }))
-    peakcount = length(find_peaks(peak, m=2))
-    print(paste("Found...", peakcount, "peak(s)!"))
-    hist(peak_hist, probability = T)
-    try({
-      mix <- mixtools::normalmixEM(peak_hist)
-      print(mix)
-      #plot(names(peak), peak)
-      #mixtools::plot.mixEM(mix,whichplots = 2)
-      for(i in 1:length(mix$lambda)){
-        curve(dnorm(x, mean = mix$mu[[i]],sd = mix$sigma[[i]]), col = i, add = TRUE)
-      }
-    })
-    # }else{
-    #   fit <- fitdistr(peak_hist, "normal")
-    #   para <- fit$estimate
-    #   hist(peak_hist, probability = T)
-    #  
-    # }
-    Sys.sleep(1)
-  }
-})
-
-
+peakfits[[1]]
 
 # ------------------------------------
 
@@ -722,7 +653,9 @@ for(mode in modes){
     peaks
   })
   
-  binned <- MALDIquant::binPeaks(l = peaktables, tolerance = 3E-6, method = "relaxed") 
+  binned <- MALDIquant::binPeaks(l = peaktables, 
+                                 tolerance = 1E-6, 
+                                 method = "relaxed") 
   names(binned) <- sapply(peaktables, function(x) x@metaData$sampname)
   
   peaktables <- NULL; gc()
@@ -763,6 +696,7 @@ for(mode in modes){
   
   print(mode)
   print(dim(outpgrlist))
+  print(dim(outpgrlist_filt))
   
   # remove all that only has
   #f =  file.path(resdir, "specpks_grouped_mdq", paste0("grouped_",mode,".RData"))

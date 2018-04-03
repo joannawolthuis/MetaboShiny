@@ -7,10 +7,13 @@ shinyServer(function(input, output, session) {
   db_search_list <- c()
   color.function <- rainbow
   patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
+  csv_loc <<- file.path(options$work_dir, paste0(options$proj_name, ".csv"))
   shinyOptions(progress.style="old")
   ppm <<- 2
   nvars <<- 2
-
+  ncores <<- parallel::detectCores() - 1
+  session_cl <<- parallel::makeCluster(ncores)
+  
   # -----------------------------------------------
   
   spinnyimg <- reactiveVal("www/electron.png")
@@ -26,9 +29,9 @@ shinyServer(function(input, output, session) {
                           fluidRow(
                             sardine(fadeImageButton("add_internal", img.path = "umcinternal.png")),
                             sardine(fadeImageButton("add_noise", img.path = "umcnoise.png")),
-                            sardine(fadeImageButton("add_hmdb", img.path = "hmdblogo.png")),
-                            sardine(fadeImageButton("add_chebi", img.path = "chebilogo.png")),br(),
-                            sardine(fadeImageButton("add_smpdb", img.path = "smpdb_logo_adj.png")),
+                            sardine(fadeImageButton("add_hmdb", img.path = "hmdblogo.png")),br(),
+                            sardine(fadeImageButton("add_chebi", img.path = "chebilogo.png")),
+                            sardine(fadeImageButton("add_metacyc", img.path = "metacyc.png")),
                             sardine(fadeImageButton("add_wikipathways", img.path = "wikipathways.png")),
                             sardine(fadeImageButton("add_kegg", img.path = "kegglogo.gif", value = T))
                           )),
@@ -41,7 +44,7 @@ shinyServer(function(input, output, session) {
                                            #"Compound name" = "compoundname",
                                            "Molecular formula" = "baseformula",
                                            "Mass/charge" = "mz"), 
-                                       selected = "baseformula",
+                                       selected = "mz",
                                        width="100%")                             ), 
                  tabPanel(icon("plus-square"), value="adducts",
                           br(),
@@ -92,13 +95,16 @@ shinyServer(function(input, output, session) {
                 "chebi", 
                 #"pubchem", 
                 "kegg",
-                "wikipathways",
-                "smpdb")
+                "metacyc",
+                "wikipathways"
+                #,"smpdb"
+                )
   
   images <<- list(list(name = 'cute_package', path = 'www/new-product.png', dimensions = c(80, 80)),
                   list(name = 'umc_logo_int', path = 'www/umcinternal.png', dimensions = c(120, 120)),
                   list(name = 'umc_logo_noise', path = 'www/umcnoise.png', dimensions = c(120, 120)),
                   list(name = 'hmdb_logo', path = 'www/hmdblogo.png', dimensions = c(150, 100)),
+                  list(name = 'metacyc_logo', path = 'www/metacyc.png', dimensions = c(300, 80)),
                   list(name = 'chebi_logo', path = 'www/chebilogo.png', dimensions = c(140, 140)),
                   list(name = 'wikipath_logo', path = 'www/wikipathways.png', dimensions = c(130, 150)),
                   list(name = 'kegg_logo', path = 'www/kegglogo.gif', dimensions = c(200, 150)),
@@ -122,11 +128,8 @@ shinyServer(function(input, output, session) {
   
   
   stat.ui.bivar <- reactive({
-    navbarPage(inverse=T,"Standard analysis", id="tab_stat",
-               tabPanel("", value = "intro", icon=icon("comment-o"),
-                        helpText("Info text here")
-               ),
-               tabPanel("PCA", value = "pca", #icon=icon("cube"),
+    navbarPage(inverse=T,h2("Standard analysis"), id="tab_stat",
+               tabPanel(h3("PCA"), value = "pca", #icon=icon("cube"),
                         plotly::plotlyOutput("plot_pca",height = "600px"),
                         fluidRow(column(3,
                                         selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:30),selected = "PC1",width="100%"),
@@ -138,7 +141,7 @@ shinyServer(function(input, output, session) {
                         )
                         )
                ),
-               tabPanel("PLSDA", value = "plsda",
+               tabPanel(h3("PLSDA"), value = "plsda",
                         fluidRow(
                          selectInput("plsda_type", label="PLSDA subtype:", choices=list("Normal"="normal",
                                                                                         "Orthogonal"="ortho",
@@ -170,7 +173,7 @@ shinyServer(function(input, output, session) {
                                    
                                    
                         )),
-               tabPanel("T-test", value="tt", 
+               tabPanel(h3("T-test"), value="tt", 
                         fluidRow(plotly::plotlyOutput('tt_specific_plot',width="100%")),
                         navbarPage(inverse=T,"",
                                    tabPanel("", icon=icon("table"),
@@ -179,7 +182,7 @@ shinyServer(function(input, output, session) {
                                              plotly::plotlyOutput('tt_overview_plot',height="300px")
                                    )
                         )),
-               tabPanel("Fold-change", value="fc",
+               tabPanel(h3("Fold-change"), value="fc",
                         fluidRow(plotly::plotlyOutput('fc_specific_plot',width="100%")),
                         navbarPage(inverse=T,"",
                                    tabPanel("", icon=icon("table"),
@@ -189,31 +192,33 @@ shinyServer(function(input, output, session) {
                                    )
                         )),
                # =================================================================================
-               tabPanel("RandomForest", value="rf",
+               tabPanel(h3("RandomForest"), value="rf",
                         fluidRow(plotly::plotlyOutput('rf_specific_plot',width="100%")),
                         navbarPage(inverse=T,"",
                                    tabPanel("", icon=icon("table"),
                                             div(DT::dataTableOutput('rf_tab',width="100%"),style='font-size:80%'))
                         )
                ),
-               tabPanel("Heatmap", value="heatmap_biv",
+               tabPanel(h3("Heatmap"), value="heatmap_biv",
                         plotly::plotlyOutput("heatmap",width="110%",height="700px"),
                         br(),
                         fluidRow(column(align="center",
                                         width=12,switchButton(inputId = "heatmode",
                                                               label = "Use data from:", 
                                                               value = TRUE, col = "BW", type = "TTFC"))
-                        )
+                        ),fluidRow(plotly::plotlyOutput('heatmap_specific_plot'),height="200px")
                ),
-               tabPanel("Volcano", value="volc",
-                        fluidRow(plotly::plotlyOutput('volc_plot',width="100%",height="600px"))),
-               tabPanel("Enrichment", value="enrich_biv",
+               tabPanel(h3("Volcano"), value="volc",
+                        fluidRow(plotly::plotlyOutput('volc_plot',width="100%",height="600px")),
+                        fluidRow(plotly::plotlyOutput('volc_specific_plot'),height="200px")
+               ),
+               tabPanel(h3("Enrichment"), value="enrich_biv",
                         sidebarLayout(position="left",
                                       sidebarPanel = sidebarPanel(align="center",
                                                                   fluidRow(
                                                                     tags$b("Pathway DBs"),br(),
-                                                                    sardine(fadeImageButton("enrich_smpdb", 
-                                                                                            img.path = "smpdb_logo_adj.png", 
+                                                                    sardine(fadeImageButton("enrich_metacyc", 
+                                                                                            img.path = "metacyc.png", 
                                                                                             value = T)),
                                                                     sardine(fadeImageButton("enrich_wikipathways", 
                                                                                             img.path = "wikipathways.png", 
@@ -242,18 +247,20 @@ shinyServer(function(input, output, session) {
                                       # ------------------
                                       mainPanel = mainPanel(align="center",
                                                             fluidRow(div(DT::dataTableOutput('enriched'),style='font-size:80%')),
-                                                            fluidRow(div(DT::dataTableOutput('enrich_pw_tab'),style='font-size:80%'))
+                                                            fluidRow(div(DT::dataTableOutput('enrich_pw_tab'),style='font-size:80%')),
+                                                            fluidRow(plotly::plotlyOutput('enrich_pw_specific_plot'),height="200px")
+                                                            
                                       ))
                )
     )
   })
   
   stat.ui.multivar <- reactive({
-    navbarPage(inverse=T,"Standard analysis", id="tab_stat",
+    navbarPage(inverse=T,h2("Standard analysis"), id="tab_stat",
                tabPanel("", value = "intro", icon=icon("comment-o"),
                         helpText("Info text here")
                ), # pca_legend
-               tabPanel("PCA", value = "pca", #icon=icon("cube"),
+               tabPanel(h3("PCA"), value = "pca", #icon=icon("cube"),
                         fluidRow(column(10, plotly::plotlyOutput("plot_pca",height = "600px")),
                                  column(2, br(),br(), br(),plotly::plotlyOutput("pca_legend",height = "400px"))
                         ),
@@ -267,7 +274,7 @@ shinyServer(function(input, output, session) {
                         )
                         )
                ),
-               tabPanel("PLSDA", value = "plsda",
+               tabPanel(h3("PLSDA"), value = "plsda",
                         navbarPage(inverse=T,"",
                                    tabPanel("", icon=icon("globe"),
                                             plotly::plotlyOutput("plot_plsda",width="100%"),
@@ -292,7 +299,7 @@ shinyServer(function(input, output, session) {
                         )
                         
                ),
-               tabPanel("ANOVA", value="aov",
+               tabPanel(h3("ANOVA"), value="aov",
                         fluidRow(plotly::plotlyOutput('aov_specific_plot',width="100%")),
                         navbarPage(inverse=T,"",
                                    tabPanel("", icon=icon("table"),
@@ -302,23 +309,24 @@ shinyServer(function(input, output, session) {
                                    )
                         )),
                # =================================================================================
-               tabPanel("RandomForest", value="rf",
+               tabPanel(h3("RandomForest"), value="rf",
                         fluidRow(plotly::plotlyOutput('rf_specific_plot',width="100%")),
                         navbarPage(inverse=T,"",
                                    tabPanel("", icon=icon("table"),
                                             div(DT::dataTableOutput('rf_tab',width="100%"),style='font-size:80%'))
                         )
                ),
-               tabPanel("Heatmap", value="heatmap_mult",
-                        plotly::plotlyOutput("heatmap",width="110%",height="700px")
+               tabPanel(h3("Heatmap"), value="heatmap_mult",
+                        plotly::plotlyOutput("heatmap",width="110%",height="700px"),
+                        fluidRow(plotly::plotlyOutput('heatmap_specific_plot'),height="200px")
                ),
-               tabPanel("Enrichment", value="enrich_multi",
+               tabPanel(h3("Enrichment"), value="enrich_multi",
                         sidebarLayout(position="left",
                                       sidebarPanel = sidebarPanel(align="center",
                                                                   fluidRow(
                                                                     tags$b("Pathway DBs"),br(),
-                                                                    sardine(fadeImageButton("enrich_smpdb", 
-                                                                                            img.path = "smpdb_logo_adj.png", 
+                                                                    sardine(fadeImageButton("enrich_metacyc", 
+                                                                                            img.path = "metacyc.png", 
                                                                                             value = T)),
                                                                     sardine(fadeImageButton("enrich_wikipathways", 
                                                                                             img.path = "wikipathways.png", 
@@ -346,7 +354,9 @@ shinyServer(function(input, output, session) {
                                       # ------------------
                                       mainPanel = mainPanel(align="center",
                                                             fluidRow(div(DT::dataTableOutput('enriched'),style='font-size:80%')),
-                                                            fluidRow(div(DT::dataTableOutput('enrich_pw_tab'),style='font-size:80%'))
+                                                            fluidRow(div(DT::dataTableOutput('enrich_pw_tab'),style='font-size:80%')),
+                                                            fluidRow(plotly::plotlyOutput('enrich_specific_plot'),height="200px")
+                                                            
                                       ))
                )
     )
@@ -355,8 +365,8 @@ shinyServer(function(input, output, session) {
   
   
   time.ui <- reactive({
-    navbarPage(inverse=T,"Time Series", id="tab_time",
-               tabPanel("iPCA", value = "ipca", 
+    navbarPage(inverse=T,h2("Time Series"), id="tab_time",
+               tabPanel(h3("iPCA"), value = "ipca", 
                         plotly::plotlyOutput("plot_ipca",height="600px"),
                         selectInput("ipca_factor", label = "Color based on:", choices =list("Time"="facA",
                                                                                             "Experimental group"="facB"),width="100%"),
@@ -370,12 +380,12 @@ shinyServer(function(input, output, session) {
                         ))
                ),
                # =================================================================================
-               tabPanel("MEBA", value="meba", 
+               tabPanel(h3("MEBA"), value="meba", 
                         fluidRow(plotly::plotlyOutput('meba_specific_plot'),height="600px"),
                         fluidRow(div(DT::dataTableOutput('meba_tab', width="100%"),style='font-size:80%'))
                ),
                # =================================================================================
-               tabPanel("ASCA", value="asca",
+               tabPanel(h3("ASCA"), value="asca",
                         fluidRow(plotly::plotlyOutput('asca_specific_plot', height="600px")),
                         fluidRow(div(DT::dataTableOutput('asca_tab',width="100%"),style='font-size:80%'))
                )
@@ -621,7 +631,8 @@ shinyServer(function(input, output, session) {
         zeroline = FALSE,
         showline = FALSE,
         showticklabels = FALSE,
-        showgrid = FALSE
+        showgrid = FALSE,
+        titlefont = list(size = 20)
       )
       # --- render ---
       plotly::plot_ly(z = volcano, 
@@ -630,6 +641,17 @@ shinyServer(function(input, output, session) {
                       showscale=FALSE)  %>%
         layout(xaxis = ax, yaxis = ax)
     })
+  })
+  
+  observeEvent(input$ggplot_theme,{
+    plot.theme <<- switch(input$ggplot_theme,
+                          bw=ggplot2::theme_bw,
+                          classic=ggplot2::theme_classic,
+                          gray=ggplot2::theme_gray,
+                          min=ggplot2::theme_minimal,
+                          dark=ggplot2::theme_dark,
+                          light=ggplot2::theme_light,
+                          line=ggplot2::theme_linedraw)
   })
       
   observeEvent(input$change_css, {
@@ -658,17 +680,17 @@ shinyServer(function(input, output, session) {
     # -------------
     switch(input$exp_type,
            stat = {
-             facs <- levels(mSet$dataSet$filt.cls)
+             facs <- levels(mSet$dataSet$cls)
            },
            time_std = {
              lbl.fac <- if(mSet$dataSet$facA.lbl == "Time") "facB" else "facA"
              facs <- levels(mSet$dataSet[[lbl.fac]])
            },
            time_fin = {
-             facs <- levels(mSet$dataSet$filt.cls)
+             facs <- levels(mSet$dataSet$cls)
            },
            time_min = {           
-             facs <- levels(mSet$dataSet$filt.cls)
+             facs <- levels(mSet$dataSet$cls)
            })
     default.colours <- rainbow(length(facs))
     # -------------
@@ -685,7 +707,7 @@ shinyServer(function(input, output, session) {
     # ----------
     switch(input$exp_type,
            stat = {
-             facs <- mSet$dataSet$filt.cls
+             facs <- mSet$dataSet$cls
            },
            time_std = {
              if("facA" %not in% names(mSet$dataSet) & "facB" %not in% names(mSet$dataSet)) return(c("Blue", "Pink"))
@@ -693,10 +715,10 @@ shinyServer(function(input, output, session) {
              facs <- mSet$dataSet[[lbl.fac]]
            },
            time_fin = {
-             facs <- mSet$dataSet$filt.cls
+             facs <- mSet$dataSet$cls
            },
            time_min = {           
-             facs <- mSet$dataSet$filt.cls
+             facs <- mSet$dataSet$cls
            })
     default.colours <- rainbow(length(facs))
     # -------------
@@ -731,7 +753,7 @@ shinyServer(function(input, output, session) {
       DF = hot_to_r(input$adduct_tab)
     } else {
       if (is.null(values[["DF"]]))
-        DF = wkz.adduct.confirmed
+        DF = adducts
       else
         DF = values[["DF"]]
     }
@@ -779,10 +801,20 @@ shinyServer(function(input, output, session) {
   
   lapply(db_list, FUN=function(db){
     observeEvent(input[[paste0("build_", db)]], {
-      ncores = parallel::detectCores() - 1
-      session_cl = parallel::makeCluster(ncores)
+      # ---------------------------
+      library(RCurl)
+      library(XML)
+      library(SPARQL)
       # ---------------------------
       withProgress({
+        
+        parallel::clusterEvalQ(session_cl, library(data.table))
+        parallel::clusterEvalQ(session_cl, library(enviPat))
+        parallel::clusterEvalQ(session_cl, library(KEGGREST))
+        parallel::clusterEvalQ(session_cl, library(RCurl))
+        parallel::clusterEvalQ(session_cl, library(SPARQL))
+        parallel::clusterEvalQ(session_cl, library(XML))
+        
         parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
           "isotopes",
           "subform.joanna", 
@@ -794,24 +826,27 @@ shinyServer(function(input, output, session) {
           #"isopattern",
           #"keggFind",
           #"keggGet",
-          "kegg.charge"
+          "kegg.charge",
           #,"regexpr",
-          #"regmatches"
+          #"regmatches",
+          "xmlParse",
+          "getURL"
         ))
-        pkgs = c("data.table", "enviPat", "KEGGREST", "XML")
-        parallel::clusterCall(session_cl, function(pkgs) {
-          for (req in pkgs) {
-            require(req, character.only=TRUE)
-          }
-        }, pkgs = pkgs)
+        
+        # pkgs = c("data.table", "enviPat", "KEGGREST", "XML", "SPARQL", "RCurl")
+        # parallel::clusterCall(session_cl, function(pkgs) {
+        #   for (req in pkgs) {
+        #     require(req, character.only = TRUE)
+        #   }
+        # }, pkgs = pkgs)
         #setProgress(message = "Working...")
         build.base.db(db, outfolder=options$db_dir)
         setProgress(0.5)
         build.extended.db(db, 
                           outfolder=options$db_dir,
-                          adduct.table = wkz.adduct.confirmed, 
+                          adduct.table = adducts, 
                           cl=session_cl, 
-                          fetch.limit=100)
+                          fetch.limit=200)
       })
     })
   })
@@ -870,15 +905,17 @@ shinyServer(function(input, output, session) {
     withProgress({
       setProgress(1/4)
       # create csv
+      # input = list(group_by = "mz", exp_type = "stat")
       #print(if(input$broadvars) "individual_data" else "setup")
       tbl <- get.csv(patdb,
                      time.series = if(input$exp_type == "time_std") T else F,
-                     exp.condition = input$exp_var,
+                     #exp.condition = input$exp_var,
                      group_adducts = if(length(add_search_list) == 0) F else T,
                      group_by = input$group_by,
                      which_dbs = add_search_list,
-                     which_adducts = selected_adduct_list,
-                     var_table = if(input$broadvars) "individual_data" else "setup"
+                     which_adducts = selected_adduct_list
+                     #,var_table = if(input$broadvars) "individual_data" else "setup",
+                     #batches = input$batch_var
       )
       
       # --- experimental stuff ---
@@ -905,26 +942,26 @@ shinyServer(function(input, output, session) {
              }
       )
       # -------------------------
-      export_tbl <<- tbl.adj
       # save csv
       setProgress(2/4)
       csv_loc <<- file.path(options$work_dir, paste0(options$proj_name,".csv"))
       fwrite(tbl.adj, csv_loc, sep="\t")
       # --- overview table ---
+      nvars <- length(tbl.adj[,1:(which(colnames(tbl.adj) == "$"))])
+      
       setProgress(3/4)
+      
       output$csv_tab <-DT::renderDataTable({
         overview_tab <- if(input$exp_type == "time_std"){
           t(data.table(keep.rownames = F,
-                       Identifiers = ncol(tbl.adj) - 3,
+                       Identifiers = ncol(tbl.adj) - nvars,
                        Samples = nrow(tbl.adj),
-                       Times = length(unique(tbl.adj$Time)),
-                       Groups = length(unique(tbl.adj$Label))
+                       Times = length(unique(tbl.adj$Time))
           ))
         } else{
           t(data.table(keep.rownames = F,
-                       Identifiers = ncol(tbl.adj) - 3,
-                       Samples = nrow(tbl.adj),
-                       Groups = length(unique(tbl.adj$Label))
+                       Identifiers = ncol(tbl.adj) - nvars,
+                       Samples = nrow(tbl.adj)
           )) 
         }
         # --- render ---
@@ -970,13 +1007,37 @@ shinyServer(function(input, output, session) {
   
   # ===================== METABOSTART ========================
   
-  observeEvent(input$check_excel, {
+  observeEvent(input$check_csv, {
+    # ----------------------
+    
+    csv <- fread(csv_loc, 
+                     header = T)
+    
+    nvars <- length(csv[,1:(which(colnames(csv) == "$"))])
+    
+    opts <<- colnames(csv[,1:(nvars - 1)])
+    
+    batch <<- which(sapply(1:(nvars - 1), function(x) length(unique(csv[,..x][[1]])) < nrow(csv)))
+    
     # get excel table stuff.
     updateSelectInput(session, "exp_var",
-                      choices = get_exp_vars(if(input$broadvars) "individual_data" else "setup")
+                      choices = opts[batch])
+    
+    updateSelectizeInput(session, "batch_var",
+                      choices = opts[batch],
+                      options = list(maxItems = 3L - (length(input$batch_var)))
     )
   })
   
+  # observeEvent(input$batch_var, {
+  #   maxI = ifelse(any(grepl(pattern = "Batch", x = input$batch_var)), 3L, 2L)
+  #   print(input$batch_var)
+  #   print(maxI)
+  #   updateSelectizeInput(session, "batch_var",
+  #                        choices = opts[batch],
+  #                        selected = input$batch_var,
+  #                        options = list(maxItems = maxI - (length(input$batch_var))))
+  # })
   
   ref.selector <- reactive({
     # -------------
@@ -1014,181 +1075,384 @@ shinyServer(function(input, output, session) {
     req(input$norm_type)
     req(input$trans_type)
     req(input$scale_type)
-    req(input$batch_corr)
+    #req(input$batch_corr)
     # match
     withProgress({
       # get curr values from: input$ exp_type, filt_type, norm_type, scale_type, trans_type (later)
       setProgress(.1)
       # ------------------------------
       #Below is your R command history: 
-      switch(input$exp_type,
-             stat = {
-               mSet <<- InitDataObjects("pktable", 
-                                        "stat", 
-                                        FALSE)
-               # ------- load and re-save csv --------
-               #csv_loc = "/Users/jwolthuis/Analysis/BR/BR_FirstEight.csv"
-               #csv_loc = "/Users/jwolthuis/Analysis/SP/Spain1.csv"
-               
-               csv_temp = fread(csv_loc, data.table = T)
-               batch = csv_temp$Batch
-               if(is.null(batch)) batch = rep(1, length(mSet$dataSet$cls))
-               csv_loc <- file.path(options$work_dir, paste0(options$proj_name,"_noBatch.csv"))
-               #print(csv_loc)
-               fwrite(csv_temp[,-c("Batch")], csv_loc)
-               # -------------------------------------
-               mSet <<- Read.TextData(mSet, 
-                                      filePath = csv_loc,
-                                      "rowu")
-               mSet$dataSet$batch <<- as.factor(batch)
-               # --------------------------------------
-               mSet
-             },
-             time_std = {
-               mSet <<- InitDataObjects("pktable", 
-                                        "ts", 
-                                        FALSE)
-               mSet <<- Read.TextData(mSet, 
-                                      filePath = csv_loc,
-                                      "rowu")
-               mSet
-             },
-             time_fin = {
-               mSet <<- InitDataObjects("pktable", 
-                                        "stat", 
-                                        FALSE)
-               mSet <<- Read.TextData(mSet, 
-                                      filePath = csv_loc,
-                                      "rowu")
-               mSet
-             },
-             time_min = {   
-               mSet <<- InitDataObjects("pktable", 
-                                        "stat", 
-                                        FALSE)
-               mSet <<- Read.TextData(mSet, 
-                                      filePath = csv_loc,
-                                      "rowu")
-               mSet
-             }
+      mSet <<- switch(input$exp_type,
+                     stat = {
+                     InitDataObjects("pktable", 
+                                       "stat", 
+                                       FALSE)
+                     },
+                     time_std = {
+                       InitDataObjects("pktable", 
+                                       "ts", 
+                                       FALSE)
+                     },
+                     time_fin = {
+                       InitDataObjects("pktable", 
+                                       "stat", 
+                                       FALSE)
+                     },
+                     time_min = {   
+                       InitDataObjects("pktable", 
+                                       "stat", 
+                                       FALSE)
+                     }
       )
+      
+     # print(names(mSet))
+      # ------- load and re-save csv --------
+      #csv_loc = "/Users/jwolthuis/Analysis/BR/BR_FirstEight.csv"
+      #csv_loc = "/Users/jwolthuis/Analysis/SP/Spain1.csv"
+      #csv_loc <- "/Users/jwolthuis/Analysis/SP/Brazil1.csv"
+      #csv_loc <- "/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML/results/specpks_grouped_mdq/grouped_pos.csv"
+      #csv_loc <- "/Users/jwolthuis/Analysis/SP/BrazilAndSpain.csv"
+      #f = fread(csv_loc, header = TRUE)
+      
+      csv_orig <- fread(csv_loc, 
+                       data.table = TRUE,
+                       header = T)
+      
+      nvars <- length(csv_orig[,1:(which(colnames(csv_orig) == "$"))])
+      
+      #unique(csv_orig[grep(x=csv_orig$Sample, pattern="QC"),c("Sample", "Batch", "Injection")])
+      
+      # --- batches ---
+
+      batches <- input$batch_var
+      condition <- input$exp_var
+      
+      if(is.null(batches)) batches <- ""
+      
+      batch_corr <- if(length(batches) == 1 & batches[1] == "") FALSE else TRUE
+
+      if("Batch" %in% batches){ batches = c(batches, "Injection") }
+      
+      first_part = csv_orig[,1:(nvars-1),with=FALSE]
+      first_part[first_part == ""] <- "Unknown"
+      
+      csv_temp <- cbind(first_part[,!duplicated(names(first_part)),with=FALSE],
+                        "Label" = first_part[,..condition][[1]],
+                        "$" = c(0),
+                        csv_orig[,-c(1:nvars),with=FALSE])
+      
+      nvars <- length(csv_temp[,1:(which(colnames(csv_temp) == "$"))])
+      
+      # --- remove the rest ---
+      
+      remove = setdiff(colnames(csv_temp)[1:nvars], c(batches, "Label","Batch","Sample","Time"))
+      remain = intersect(colnames(csv_temp)[1:nvars], c(batches, "Label","Batch","Sample","Time"))
+      
+      csv_subset <- csv_temp[, !remove, with=FALSE]
+      
+      # --- remove outliers? ---
+      print("Removing outliers...")
+      #csv_ints <- csv_subset[, lapply(.SD, as.numeric),]
+
+      sums <- rowSums(csv_subset[, -c(1:length(remain)),with=FALSE],na.rm = TRUE)
+      names(sums) <- csv_subset$Sample
+      outliers = c(car::Boxplot(as.data.frame(sums)))
+      
+      print(paste("Outliers removed (based on total signal):", paste(outliers, collapse=" and ")))
+      csv_temp_no_out <- csv_subset[!(Sample %in% outliers)]
+
+      batchview = if(condition == "Batch") TRUE else FALSE
+      
+      if(any(grepl("QC", csv_temp_no_out$Sample))){
+        print("hereee")
+        batch_table <- csv_temp_no_out[,c("Sample","Batch"),with=FALSE]
+        samps <- which(!grepl(csv_temp_no_out$Sample, pattern = "QC"))
+        batchnum <- unique(csv_temp_no_out[samps, "Batch"][[1]])
+        keep_samps <- batch_table[which(batch_table$Batch %in% batchnum),"Sample"][[1]]
+        batch_table <- batch_table[which(batch_table$Batch %in% batchnum)]
+        csv_temp_filt <- csv_temp_no_out[which(csv_temp_no_out$Sample %in% keep_samps), -"Batch"]
+      }
+       
+      print(csv_temp_filt[1:10,1:10])
+      print(unique(csv_temp_filt$Label))
+      
+      csv_loc_no_out <- gsub(pattern = "\\.csv", replacement = "_no_out.csv", x = csv_loc)
+      
+      if(batch_corr){
+        
+        batch_table <- csv_temp_filt[,c("Sample",batches),with=FALSE]
+        fwrite(csv_temp_filt[,-batches, with=FALSE], 
+               csv_loc_no_out)  
+      }else{
+        
+        batch_table <- csv_temp_filt[,c("Sample"),with=FALSE]
+        fwrite(csv_temp_filt, 
+               csv_loc_no_out)  
+      }
+
+      rownames(batch_table) <- batch_table$Sample
+      #batch_table <- batch_table[,-"Sample", with=FALSE]
+      #batchview = FALSE # CHANGE LATER!!
+      #MetaboAnalystR:::.readDataTable(csv_loc_no_out)
+      
+      csv = fread(csv_loc_no_out, header = TRUE)
+      print(unique(csv$Label))
+      # -------------------------------------
+      
+      mSet <<- Read.TextData(mSet, 
+                            filePath = csv_loc_no_out, 
+                            "rowu")
+      
+      mSet$dataSet$batches <<- batch_table
+
+      # ----------- sanity check ------------
+      
       mSet <<- SanityCheckData(mSet)
-      #mSet <<- RemoveMissingPercent(mSet, percent = 0.5)
-      mSet <<- ImputeVar(mSet,
-                         method = "median")
+      
+     # input = list(perc_limit = 50, miss_type = "colmin", filt_type = "iqr", norm_type = "QuantileNorm", trans_type = "LogNorm", scale_type = "AutoNorm", ref_var=NULL)
+      
+      mSet <<- RemoveMissingPercent(mSet, 
+                                    percent = input$perc_limit/100)
+
+      if(input$miss_type != "none"){
+        mSet <<- ImputeVar(mSet,
+                           method = input$miss_type)
+      }
+      
+      # -- save point here?? ---
+      
+      keep <- intersect(first_part$Sample, rownames(mSet$dataSet$procr))
+      first_part_no_out <- first_part[Sample %in% keep]
+      csv_filled = cbind(first_part_no_out, 
+                         mSet$dataSet$procr[match(rownames(mSet$dataSet$procr),
+                                                  first_part$Sample)]
+                         )
+      
+      csv_loc_filled <- gsub(pattern = "\\.csv", replacement = "_filled.csv", x = csv_loc)
+      
+      fwrite(csv_filled, file = csv_loc_filled)
+      # ------------------------
+      
       if(input$filt_type != "none"){
         mSet <<- FilterVariable(mSet,
-                                filter = "rsd",#input$filt_type,
-                                qcFilter = "F", 
-                                rsd = 25) 
+                                filter = input$filt_type,
+                                qcFilter = "F",
+                                rsd = 25)
       }
       # ------------------------------------
       setProgress(.2)
+      
       mSet <<- Normalization(mSet,
-                             rowNorm = input$norm_type,
-                             transNorm = input$trans_type,
-                             scaleNorm = input$scale_type,
-                             ref = input$ref_var)
+                            rowNorm = input$norm_type,
+                            transNorm = input$trans_type,
+                            scaleNorm = input$scale_type,
+                            ref = input$ref_var
+                            )
+      
       #print(ncol(mSet$dataSet$orig))
       #print(ncol(mSet$dataSet$norm))
-      # ...
-     # mSet <<- Normalization(mSet = mSet,
-     #                         rowNorm = "QuantileNorm",
-     #                         transNorm = "LogNorm",
-     #                         scaleNorm = "AutoNorm"
-     #                        # ref = "C15H13N1O2"
-     #                        #ratio=FALSE,
-     #                        #ratioNum=20
-     #                        )
+
+      # mSet <- Normalization(mSet = mSet,
+      #                       rowNorm = "QuantileNorm",
+      #                       transNorm = "LogNorm",
+      #                       scaleNorm = "AutoNorm"
+      #                       # ref = "C15H13N1O2"
+      #                       #ratio=FALSE,
+      #                       #ratioNum=20
+      #                       )
       # ====
+
       setProgress(.4)
       
-      try(
-        if(input$batch_corr){
+      #mSet <- mSet_beforebatch
+      
+      matr <- mSet$dataSet$norm
+      
+      smps <- rownames(mSet$dataSet$norm)
+      
+      qc_rows <- which(grepl(pattern = "QC", x = smps))
+      if(length(qc_rows) == 0) qc_rows = 1:length(smps)
+      
+      smpnames = smps[qc_rows]
+      # mSet$dataSet$qc <<- mSet$dataSet$norm[qc_rows,]
+      
+      if(batch_corr){
+        
+        if("Batch" %in% colnames(mSet$dataSet$batches)){
           
-          print("Correcting batch effect...")
+          # library(BatchCorrMetabolomics)
+          
+          mSet_before_qc <<- mSet
+          
+          # --- QC CORRECTION ---
+          
+          print("Correcting batch effect w/ QC...")
+          
+          corr_cols <- pbapply::pblapply(1:ncol(matr), FUN=function(i){
+            vec = matr[,i]
+            corr_vec = BatchCorrMetabolomics::doBC(Xvec = as.numeric(vec), 
+                                                   ref.idx = as.numeric(qc_rows), 
+                                                   batch.idx = as.numeric(mSet$dataSet$batches[match(smps, rownames(mSet$dataSet$batches)),"Batch"]),
+                                                   seq.idx = as.numeric(mSet$dataSet$batches[match(smps, rownames(mSet$dataSet$batches)),"Injection"]))
+            # ---------
+            corr_vec
+          })
+          
+          qc_corr_matrix <- as.data.frame(do.call(cbind, corr_cols))
+          
+          colnames(qc_corr_matrix) <- colnames(matr)
+          rownames(qc_corr_matrix) <- rownames(matr)
+          
+          mSet$dataSet$norm <<- as.data.frame(qc_corr_matrix)
+          
+        }
+        
+        if(!batchview){
+          mSet$dataSet$norm <<- mSet$dataSet$norm[!grepl(rownames(mSet$dataSet$norm),pattern= "QC"),]
+          mSet$dataSet$cls <<- mSet$dataSet$cls[which(!grepl(rownames(mSet$dataSet$norm),pattern= "QC")), drop = TRUE]
+          mSet$dataSet$batches <<- mSet$dataSet$batches[!grepl(mSet$dataSet$batches$Sample,pattern= "QC"),]
+          mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
+        }
+        
+        left_batch_vars <- grep(colnames(mSet$dataSet$batches), 
+                                pattern =  "Batch|Injection|Sample",
+                                value = T,
+                                invert = T)
+
+        if(length(left_batch_vars) > 2){ 
+          print("Can only correct for 2 batches...")
+        } else if(length(left_batch_vars) == 0){
+            NULL
+        } else{
           
           smp <- rownames(mSet$dataSet$norm)
           exp_lbl <- mSet$dataSet$cls
-          batch <- mSet$dataSet$batch
 
-          # captures farm number only? (would need regmatches) (?<=[A-Z][A-Z])((1)(?=-\\d*)|(?=\\d*))
+          print(paste("Batches:", left_batch_vars))
           
           csv <- as.data.table(cbind(Sample = smp, 
-                                     Label=gsub(smp, 
-                                                pattern = "([A-Z][A-Z])|(-\\d*$)", 
-                                                replacement = ""), 
+                                     Label = mSet$dataSet$cls,
                                      mSet$dataSet$norm))
           
-          csv_pheno <- data.frame(sample = 1:nrow(csv),
-                                  batch = as.factor(batch),
-                                  outcome = as.factor(exp_lbl),
-                                  farm = as.factor(gsub(csv$Sample, 
-                                               pattern = "([A-Z][A-Z])|(-\\d*$)", 
-                                               replacement = "")),row.names = csv$Sample)
-
-          mod.farm = model.matrix(~ farm + outcome, data=csv_pheno)
-          
-          mod.pheno = model.matrix(~ outcome, data=csv_pheno)
-          
-
-          # parametric adjustment
-          
-          csv_edata <-t(csv[,!c(1,2)])
-          
-          colnames(csv_edata) <- csv$Sample
-          
-          #batch_normalized = sva::ComBat(dat=csv_edata, batch=csv_pheno$batch)
-          library(limma)
-          
-          nrow(mod.pheno)
-          ncol(csv_edata)
-          # n.sv = num.sv(csv_edata, mod.pheno,method = c("be", "leek"), vfilter = NULL, B = 20,
-          #        seed = NULL)
-          # pcontrol <- empirical.controls(csv_edata,mod.pheno,mod0=NULL,n.sv=n.sv,type="norm")
-          # irwsva.build(csv_edata, mod.pheno, mod0 = NULL, n.sv, B = 5)
-          if(length(levels(batch)) == 1){
-            # batch_normalized = removeBatchEffect(x = csv_edata,
-            #                                      design = mod.phen,
-            #                                      batch = csv_pheno$farm)
-            batch_normalized= sva::ComBat(dat=csv_edata, 
-                                            batch=csv_pheno$farm, 
-                                            mod=mod.pheno, 
-                                            par.prior=TRUE)  
+          if(length(left_batch_vars) == 1){
+            csv_pheno <- data.frame(sample = 1:nrow(csv),
+                                    batch1 = mSet$dataSet$batches[match(smp, mSet$dataSet$batches$Sample),2][[1]],
+                                    batch2 = c(0),
+                                    outcome = as.factor(exp_lbl))            
           }else{
-            # batch_normalized= sva::ComBat(dat=csv_edata, 
-            #                               batch=csv_pheno$farm, 
-            #                               mod=mod.phen, 
-            #                               par.prior=TRUE)  
-            batch_normalized = removeBatchEffect(x = csv_edata,
-                                                 design = mod.pheno,
-                                                 batch = csv_pheno$batch,
-                                                 batch2 = csv_pheno$farm)
+            csv_pheno <- data.frame(sample = 1:nrow(csv),
+                                    batch1 = mSet$dataSet$batches[match(smp, mSet$dataSet$batches$Sample),2][[1]],
+                                    batch2 = mSet$dataSet$batches[match(smp, mSet$dataSet$batches$Sample),3][[1]],
+                                    outcome = as.factor(exp_lbl))
           }
 
-          # batch_a= sva::ComBat(dat=csv_edata, 
-          #                                batch=csv_pheno$batch, 
-          #                                mod=mod.farm, 
-          #                                par.prior=TRUE)          
-          # batch_normalized = sva::ComBat(dat=batch_a, 
-          #                                batch=csv_pheno$farm, 
-          #                                mod=mod.phen, 
-          #                                par.prior=TRUE)
+          print(head(csv_pheno))
           
-          # --- substitute in metaboanalyst matrix ---
+          #mod.batch = model.matrix(~ batch1 + batch2 + outcome, data=csv_pheno)
+          csv_edata <-t(csv[,!c(1,2)])
+          colnames(csv_edata) <- csv$Sample
           
-          mSet$dataSet$norm <<- as.data.frame(t(batch_normalized))
+          if(unique(csv_pheno$batch2) == 0){
+            batch_normalized= t(sva::ComBat(dat=csv_edata,
+                                          batch=csv_pheno$batch1
+                                          #mod=mod.pheno,
+                                          #par.prior=TRUE
+            ))
+            rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
+          }else{
+            # batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
+            #                                             #design = mod.pheno,
+            #                                             batch = csv_pheno$batch1,
+            #                                             batch2 =  NULL else csv_pheno$batch2))
+            rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
+            
+          }
+
+          mSet$dataSet$norm <<- as.data.frame(batch_normalized)
+          }
+        } else{
+          if(!batchview){
+            mSet$dataSet$norm <<- mSet$dataSet$norm[!grepl(rownames(mSet$dataSet$norm),pattern= "QC"),]
+            mSet$dataSet$cls <<- mSet$dataSet$cls[which(!grepl(rownames(mSet$dataSet$norm),pattern= "QC")), drop = TRUE]
+            mSet$dataSet$batches <<- mSet$dataSet$batches[!grepl(mSet$dataSet$batches$Sample,pattern= "QC"),]
+            mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
+          }
         }
-      )
+      
+      print(rownames(mSet$dataSet$norm))
+        # ================================================
+        # 
+        # print("Correcting batch effect w/ ComBat...")
+        # 
+        # smp <- rownames(mSet$dataSet$norm)
+        # exp_lbl <- mSet$dataSet$cls
+        # batches <- mSet$dataSet$batches
+        # 
+        # print(paste("Batches:", names(batches)))
+        # 
+        # # captures farm number only? (would need regmatches) (?<=[A-Z][A-Z])((1)(?=-\\d*)|(?=\\d*))
+        # 
+        # csv <- as.data.table(cbind(Sample = smp, 
+        #                            Label = gsub(smp, 
+        #                                       pattern = "([A-Z][A-Z])|(-\\d*$)", 
+        #                                       replacement = ""), 
+        #                            qc_corr_matrix))
+        # 
+        # if(length(batches) == 1){csv_pheno <- data.frame(sample = 1:nrow(csv),
+        #                                                  batch = batches[[1]],
+        #                                                  outcome = as.factor(exp_lbl)
+        #                                                  )
+        # 
+        # mod.pheno = model.matrix(~ outcome, data=csv_pheno)
+        # 
+        # mod.batch = model.matrix(~ batch + outcome, data=csv_pheno)
+        # csv_edata <-t(csv[,!c(1,2)])
+        # colnames(csv_edata) <- csv$Sample
+        # batch_normalized= sva::ComBat(dat=csv_edata,
+        #                               batch=csv_pheno$batch
+        #                               #mod=mod.pheno,
+        #                               #par.prior=TRUE
+        #                               )
+        # batch_normalized = limma::removeBatchEffect(x = csv_edata,
+        #                                             #design = mod.pheno,
+        #                                             batch = csv_pheno$batch)
+        # } else{csv_pheno <- data.frame(sample = 1:nrow(csv),
+        #                                batch1 = as.factor(batches[[1]]),
+        #                                batch2 = as.factor(batches[[2]]),
+        #                                outcome = as.factor(exp_lbl)
+        #                                )
+        # mod.batch = model.matrix(~ batch1 + batch2 + outcome, data=csv_pheno)
+        # csv_edata <-t(csv[,!c(1,2)])
+        # colnames(csv_edata) <- csv$Sample
+        # batch_normalized = limma::removeBatchEffect(x = csv_edata,
+        #                                             #design = mod.pheno,
+        #                                             batch = csv_pheno$batch1,
+        #                                             batch2 = csv_pheno$batch2)
+        # }
+        # 
+        # parametric adjustment
+        #
+        # --- substitute in metaboanalyst matrix ---
+        #mSet$dataSet$norm <<- as.data.frame(t(batch_normalized))
+
+      
       setProgress(.5)
       
-      # outlier detection??
+      # mSet$dataSet$grouping <<- input$group_by
       
-      # --------------------------------------
-      
-      mSet$dataSet$grouping <<- input$group_by
       # -------------------------------------
-      if(mSet$dataSet$grouping == "pathway"){mSet$dataSet$norm <- abs(mSet$dataSet$norm)}
+      # if(mSet$dataSet$grouping == "pathway"){
+      #   mSet$dataSet$norm <- abs(mSet$dataSet$norm)
+      # }
+      
+      
+      # csv_loc_norm <- gsub(pattern = "\\.csv", replacement = "_norm.csv", x = csv_loc)
+      # 
+      # csv <- as.data.table(cbind(Sample = rownames(mSet$dataSet$norm),
+      #                            Label = mSet$dataSet$cls,
+      #                            rownames(mSet$dataSet$norm)))
+      # 
+      # data.table::fwrite(csv, csv_loc_norm)
       
       setProgress(.6)
       varNormPlots <- ggplotNormSummary(mSet)
@@ -1208,7 +1472,8 @@ shinyServer(function(input, output, session) {
       mSet$dataSet$adducts <<- selected_adduct_list
       update.UI()  
       setProgress(.9)
-    })
+      
+      })
   })
   
   # MAIN EXECUTION OF ANALYSES
@@ -1224,7 +1489,7 @@ shinyServer(function(input, output, session) {
                  iPCA.Anal(mSet, file.path(options$work_dir, "ipca_3d_0_.json"))
                }
                fac.lvls <- unique(mSet$analSet$ipca$score[[input$ipca_factor]])
-               chosen.colors <- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
+               chosen.colors <- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(fac.lvls)
                # ---------------
                df <- t(as.data.frame(mSet$analSet$ipca$score$xyz))
                x <- gsub(input$ipca_x,pattern = "\\(.*$", replacement = "")
@@ -1281,10 +1546,13 @@ shinyServer(function(input, output, session) {
                    color= mSet$analSet$ipca$score[[input$ipca_factor]], colors=chosen.colors
                  ) %>%  layout(scene = list(
                    xaxis = list(
+                     titlefont = list(size = 20),
                      title = mSet$analSet$ipca$score$axis[x.num]),
                    yaxis = list(
+                     titlefont = list(size = 20),
                      title = mSet$analSet$ipca$score$axis[y.num]),
                    zaxis = list(
+                     titlefont = list(size = 20),
                      title = mSet$analSet$ipca$score$axis[z.num])))
                # --- return ---
                ipca_plot
@@ -1351,7 +1619,9 @@ shinyServer(function(input, output, session) {
     switch(input$tab_stat,
            pca = {
              if(!"pca" %in% names(mSet$analSet)){
-               mSet <<- PCA.Anal(mSet)
+               withProgress({
+                 mSet <<- PCA.Anal(mSet)
+               })
              }
              output$plot_pca <- plotly::renderPlotly({
                df <- mSet$analSet$pca$x
@@ -1362,8 +1632,9 @@ shinyServer(function(input, output, session) {
                x.var <- round(mSet$analSet$pca$variance[x] * 100.00, digits=1)
                y.var <- round(mSet$analSet$pca$variance[y] * 100.00, digits=1)
                z.var <- round(mSet$analSet$pca$variance[z] * 100.00, digits=1)
-               fac.lvls <- unique(mSet$dataSet$filt.cls)
-               chosen.colors <<- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
+               fac.lvls <- length(levels(mSet$dataSet$cls))
+               
+               chosen.colors <<- if(fac.lvls == length(color.vec())) color.vec() else rainbow(fac.lvls)
                # --- add ellipses ---
                classes <- mSet$dataSet$cls
                plots <- plotly::plot_ly(showlegend = F)
@@ -1411,16 +1682,19 @@ shinyServer(function(input, output, session) {
                  x = mSet$analSet$pca$x[,1], 
                  y = mSet$analSet$pca$x[,2], 
                  z = mSet$analSet$pca$x[,3], 
-                 visible = rep(T, times=length(unique(mSet$dataSet$filt.cls))),
+                 visible = rep(T, times=fac.lvls),
                  type = "scatter3d",
                  opacity=1,
-                 color= mSet$dataSet$filt.cls, colors=chosen.colors
+                 color= mSet$dataSet$cls, colors=chosen.colors
                ) %>%  layout(scene = list(
                  xaxis = list(
+                   titlefont = list(size = 20),
                    title = fn$paste("$x ($x.var %)")),
                  yaxis = list(
+                   titlefont = list(size = 20),
                    title = fn$paste("$y ($y.var %)")),
                  zaxis = list(
+                   titlefont = list(size = 20),
                    title = fn$paste("$z ($z.var %)")))) 
                # --- return ---
                pca_plot
@@ -1428,7 +1702,7 @@ shinyServer(function(input, output, session) {
              # === LEGEND ===
              output$pca_legend <- plotly::renderPlotly({
                frame <- data.table(x = c(1), 
-                                   y = unique(mSet$dataSet$filt.cls))
+                                   y = fac.lvls)
                p <- ggplot(data=frame,
                            aes(x, 
                                y, 
@@ -1461,29 +1735,30 @@ shinyServer(function(input, output, session) {
              used.analysis <- "aov"
              used.values <- "p.value"
              sourceTable <- sort(mSet$analSet[[used.analysis]][[used.values]])[1:100]
-             
-             output$heatmap <- plotly::renderPlotly({
-               x <- mSet$dataSet$norm[,names(sourceTable)]
-               final_matrix <- t(x)
-               translator <- data.table(Sample=rownames(mSet$dataSet$norm),Group=mSet$dataSet$prenorm.cls)
-               group_assignments <- translator[,"Group",on=colnames(final_matrix)]$Group
-               hm_matrix <<- heatmaply::heatmapr(final_matrix, 
-                                                 Colv=T, 
-                                                 Rowv=T,
-                                                 col_side_colors = group_assignments,
-                                                 k_row = NA)
-               heatmaply::heatmaply(hm_matrix,
-                                    Colv=F, Rowv=F,
-                                    branches_lwd = 0.3,
-                                    margins = c(60,0,NA,50),
-                                    colors = color.function(256),
-                                    col_side_palette = function(n){
-                                      if(n == length(color.vec())) color.vec() else rainbow(n)
-                                      rainbow(n)
-                                    },
-                                    subplot_widths = c(.9,.1),
-                                    subplot_heights =  c(.1,.05,.85),
-                                    column_text_angle = 90)
+             withProgress({
+               output$heatmap <- plotly::renderPlotly({
+                 x <- mSet$dataSet$norm[,names(sourceTable)]
+                 final_matrix <- t(x)
+                 translator <- data.table(Sample=rownames(mSet$dataSet$norm),Group=mSet$dataSet$prenorm.cls)
+                 group_assignments <- translator[,"Group",on=colnames(final_matrix)]$Group
+                 hm_matrix <<- heatmaply::heatmapr(final_matrix, 
+                                                   Colv=T, 
+                                                   Rowv=T,
+                                                   col_side_colors = group_assignments,
+                                                   k_row = NA)
+                 heatmaply::heatmaply(hm_matrix,
+                                      Colv=F, Rowv=F,
+                                      branches_lwd = 0.3,
+                                      margins = c(60,0,NA,50),
+                                      colors = color.function(256),
+                                      col_side_colors = function(n){
+                                        if(n == length(color.vec())) color.vec() else rainbow(n)
+                                        rainbow(n)
+                                      },
+                                      subplot_widths = c(.9,.1),
+                                      subplot_heights =  c(.1,.05,.85),
+                                      column_text_angle = 90)
+               })
              })
            },
            heatmap_biv = {
@@ -1502,38 +1777,42 @@ shinyServer(function(input, output, session) {
              #sourceTable <- mSet$analSet[[used.analysis]]$inx.imp[mSet$analSet[[used.analysis]]$inx.imp == TRUE]
              sourceTable <- sort(mSet$analSet[[used.analysis]][[used.values]])[1:100]
              # --- render ---
-             output$heatmap <- plotly::renderPlotly({
-               x <- mSet$dataSet$norm[,names(sourceTable)]
-               final_matrix <- t(x)
-               translator <- data.table(Sample=rownames(mSet$dataSet$norm),Group=mSet$dataSet$prenorm.cls)
-               group_assignments <- translator[,"Group",on=colnames(final_matrix)]$Group
-               hm_matrix <<- heatmaply::heatmapr(final_matrix, 
-                                                 Colv=T, 
-                                                 Rowv=T,
-                                                 col_side_colors = group_assignments,
-                                                 k_row = NA)
-               heatmaply::heatmaply(hm_matrix,
-                                    Colv=F, Rowv=F,
-                                    branches_lwd = 0.3,
-                                    margins = c(60,0,NA,50),
-                                    colors = color.function(256),
-                                    col_side_palette = function(n){
-                                      if(n == length(color.vec())) color.vec() else rainbow(n)
-                                      rainbow(n)
-                                    },
-                                    subplot_widths = c(.9,.1),
-                                    subplot_heights =  c(.1,.05,.85),
-                                    column_text_angle = 90)
+             withProgress({
+               output$heatmap <- plotly::renderPlotly({
+                 x <- mSet$dataSet$norm[,names(sourceTable)]
+                 final_matrix <- t(x)
+                 translator <- data.table(Sample=rownames(mSet$dataSet$norm),Group=mSet$dataSet$cls)
+                 group_assignments <- translator[,"Group",on=colnames(final_matrix)]$Group
+                 hm_matrix <<- heatmaply::heatmapr(final_matrix, 
+                                                   Colv=T, 
+                                                   Rowv=T,
+                                                   col_side_colors = group_assignments,
+                                                   k_row = NA)
+                 heatmaply::heatmaply(hm_matrix,
+                                      Colv=F, Rowv=F,
+                                      branches_lwd = 0.3,
+                                      margins = c(60,0,NA,50),
+                                      colors = color.function(256),
+                                      col_side_colors = function(n){
+                                        if(n == length(color.vec())) color.vec() else rainbow(n)
+                                        rainbow(n)
+                                      },
+                                      subplot_widths = c(.9,.1),
+                                      subplot_heights =  c(.1,.05,.85),
+                                      column_text_angle = 90)
+               })               
              })
            },
            tt = {
              if(!"tt" %in% names(mSet$analSet)){
-               
-               mSet <<- Ttests.Anal(mSet,
-                                    nonpar = F, 
-                                    threshp = 0.1, 
-                                    paired = F,
-                                    equal.var = T)
+               withProgress({
+                 mSet <<- Ttests.Anal.J(mSet,
+                                      nonpar = FALSE, 
+                                      threshp = 0.05, 
+                                      paired = FALSE,
+                                      equal.var = T,
+                                      multicorr = "BH")
+               })
              }
              res <<- mSet$analSet$tt$sig.mat
              if(is.null(res)) res <<- data.table("No significant hits found")
@@ -1552,10 +1831,11 @@ shinyServer(function(input, output, session) {
            },
            fc = {
              if(!"fc" %in% names(mSet$analSet)){
-               
-               mSet <<- FC.Anal.unpaired(mSet,
-                                         2.0, 
-                                         1)
+               withProgress({
+                 mSet <<- FC.Anal.unpaired(mSet,
+                                           2.0, 
+                                           1)                 
+               })
              }
              res <<- mSet$analSet$fc$sig.mat
              if(is.null(res)) res <<- data.table("No significant hits found")
@@ -1574,10 +1854,11 @@ shinyServer(function(input, output, session) {
            },
            aov = {
              if(!"aov" %in% names(mSet$analSet)){
-               
-               mSet <<- ANOVA.Anal(mSet, 
-                                   thresh=0.05,
-                                   nonpar = F)
+               withProgress({
+                 mSet <<- ANOVA.Anal(mSet, 
+                                     thresh=0.05,
+                                     nonpar = F)
+               })
              }
              res <<- mSet$analSet$aov$sig.mat
              if(is.null(res)) res <<- data.table("No significant hits found")
@@ -1592,7 +1873,9 @@ shinyServer(function(input, output, session) {
            },
            rf={
              if(!"rf" %in% names(mSet$analSet)){
-               mSet <<- RF.Anal(mSet, 500,7,1)
+               withProgress({
+                mSet <<- RF.Anal(mSet, 500,7,1)
+               })
              }
              vip.score <<- as.data.table(mSet$analSet$rf$importance[, "MeanDecreaseAccuracy"],keep.rownames = T)
              colnames(vip.score) <<- c("rn", "accuracyDrop")
@@ -1606,7 +1889,9 @@ shinyServer(function(input, output, session) {
            },
            volc = {
              if(!"volc" %in% names(mSet$analSet)){
-               mSet <<- Volcano.Anal(mSet,FALSE, 2.0, 0, 0.75,F, 0.1, TRUE, "raw")
+               withProgress({
+                 mSet <<- Volcano.Anal(mSet,FALSE, 2.0, 0, 0.75,F, 0.1, TRUE, "raw")
+               })
              }
              output$volc_tab <-DT::renderDataTable({
                # -------------
@@ -1694,8 +1979,8 @@ shinyServer(function(input, output, session) {
                            `% variance`]
       z.var <- plsda.table[`Principal Component` == z, 
                            `% variance`]
-      fac.lvls <- unique(mSet$dataSet$filt.cls)
-      chosen.colors <- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
+      fac.lvls <- unique(mSet$dataSet$cls)
+      chosen.colors <- if(fac.lvls == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
       # ---------------
       plotly::plot_ly(hoverinfo = 'text',
                       text = rownames(mSet$dataSet$norm)) %>%
@@ -1704,14 +1989,17 @@ shinyServer(function(input, output, session) {
           y = coords[,y], 
           z = coords[,z], 
           type = "scatter3d",
-          color = mSet$dataSet$filt.cls, 
+          color = mSet$dataSet$cls, 
           colors=chosen.colors
         ) %>%  layout(scene = list(
           xaxis = list(
+            titlefont = list(size = 20),
             title = fn$paste("$x ($x.var %)")),
           yaxis = list(
+            titlefont = list(size = 20),
             title = fn$paste("$y ($y.var %)")),
           zaxis = list(
+            titlefont = list(size = 20),
             title = fn$paste("$z ($z.var %)")
           )
         ))
@@ -1855,10 +2143,7 @@ shinyServer(function(input, output, session) {
         }
       })
       if(input$autosearch & length(db_search_list > 0)){
-        match_list <- lapply(db_search_list, FUN=function(match.table){
-          get_matches(curr_cpd, match.table, searchid=mSet$dataSet$grouping)
-        })
-        match_table <<- unique(as.data.table(rbindlist(match_list))[Name != ""])
+        match_table <<- multimatch(curr_cpd, db_search_list, mSet$dataSet$grouping)
         output$match_tab <-DT::renderDataTable({
           DT::datatable(if(mSet$dataSet$grouping == 'pathway') match_table else{match_table[,-"Description"]},
                         selection = 'single',
@@ -1872,14 +2157,13 @@ shinyServer(function(input, output, session) {
   observeEvent(plotly::event_data("plotly_click"),{
     d <- plotly::event_data("plotly_click")
     req(d)
-    res <- pca_plot
     # --------------------------------------------------------------
     switch(input$tab_stat,
            pca = {
              if(!"z" %in% names(d)){
                which_group = 1
                which_group <- d$curveNumber + 1
-               traceLoc <- length(unique(mSet$dataSet$filt.cls)) + 1
+               traceLoc <- length(unique(mSet$dataSet$cls)) + 1
                scatter <- pca_plot$x$attrs[[traceLoc]]
                idx <- scatter$color == which_group
                if(pca_plot$x$data[[which_group]]$visible == "legendonly"){
@@ -1930,23 +2214,37 @@ shinyServer(function(input, output, session) {
                ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
              })
            },
-           heatmap = {
+           heatmap_biv = {
              if(!exists("hm_matrix")) return(NULL)
              if(d$y > length(hm_matrix$matrix$rows)) return(NULL)
              curr_cpd <<- hm_matrix$matrix$rows[d$y]
+             output$heatmap_specific_plot <- plotly::renderPlotly({
+               # --- ggplot ---
+               ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
+             })
+           },
+           heatmap_mult = {
+             if(!exists("hm_matrix")) return(NULL)
+             if(d$y > length(hm_matrix$matrix$rows)) return(NULL)
+             curr_cpd <<- hm_matrix$matrix$rows[d$y]
+             output$heatmap_specific_plot <- plotly::renderPlotly({
+               # --- ggplot ---
+               ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
+             })
            },
            volc = {
              if('key' %not in% colnames(d)) return(NULL)
              if(d$key %not in% rownames(mSet$analSet$volcano$sig.mat)) return(NULL)
              curr_cpd <<- d$key
+             output$volc_specific_plot <- plotly::renderPlotly({
+               # --- ggplot ---
+               ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
+             })
            })
     # ----------------------------
     output$curr_cpd <- renderText(curr_cpd)
     if(input$autosearch & length(db_search_list) > 0){
-      match_list <- lapply(db_search_list, FUN=function(match.table){
-        get_matches(curr_cpd, match.table, searchid=input$group_by)
-      })
-      match_table <<- unique(as.data.table(rbindlist(match_list))[Name != ""])
+      match_table <<- multimatch(curr_cpd, db_search_list, mSet$dataSet$grouping)
       output$match_tab <-DT::renderDataTable({
         DT::datatable(if(mSet$dataSet$grouping == 'pathway') match_table else{match_table[,-"Description"]},
                       selection = 'single',
@@ -1971,12 +2269,9 @@ shinyServer(function(input, output, session) {
     req(db_search_list)
     # ----------------
     if(length(db_search_list) > 0){
-      match_list <- lapply(db_search_list, FUN=function(match.table){
-        get_matches(curr_cpd, match.table, searchid=input$group_by)
-      })
-      match_table <<- unique(as.data.table(rbindlist(match_list))[Name != ""])
+      match_table <<- multimatch(curr_cpd, db_search_list, mSet$dataSet$grouping)
       output$match_tab <-DT::renderDataTable({
-        DT::datatable(if(mSet$dataSet$grouping == 'pathway') match_table else{match_table[,-"Description"]},
+        DT::datatable(match_table[,-c("Description")],
                       selection = 'single',
                       autoHideNavigation = T,
                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -1989,7 +2284,7 @@ shinyServer(function(input, output, session) {
     curr_row <<- input$match_tab_rows_selected
     if (is.null(curr_row)) return()
     # -----------------------------
-    curr_def <<- if(mSet$dataSet$grouping == 'pathway') "Unavailable" else(match_table[curr_row,'Description'])
+    curr_def <<- match_table[curr_row,'Description']
     output$curr_definition <- renderText(curr_def$Description)
   })
   
@@ -2064,7 +2359,7 @@ shinyServer(function(input, output, session) {
       all_pathways <- lapply(enrich_db_list, FUN=function(db){
         conn <- RSQLite::dbConnect(RSQLite::SQLite(), db) # change this to proper var later
         dbname <- gsub(basename(db), pattern = "\\.full\\.db", replacement = "")
-        RSQLite::dbGetQuery(conn, "SELECT distinct * FROM pathways limit 10;")
+        #RSQLite::dbGetQuery(conn, "SELECT distinct * FROM pathways limit 10;")
         gset <- RSQLite::dbGetQuery(conn,"SELECT DISTINCT c.baseformula AS cpd,
                                     p.name as name
                                     FROM pathways p

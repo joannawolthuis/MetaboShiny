@@ -16,6 +16,8 @@ library(plotly)
 library(colorRamps)
 library(enviPat)
 library(stringr)
+library(BatchCorrMetabolomics)
+
 #library(randomForest)
 
 sourceDir <- function(path, trace = TRUE, ...) {
@@ -65,7 +67,8 @@ mainmode <<- if(exists("dataSet")) dataSet$shinymode else("stat")
 options <- getOptions(".conf")
 
 sourceDir("backend/scripts/joanna")
-load("backend/umcfiles/adducts/AdductTableWKZ.RData")
+#fwrite(adducts_adj, file = "backend/umcfiles/adducts/AdductTable1.0.csv")
+adducts <<- fread("backend/umcfiles/adducts/AdductTable1.0.csv", header = T)
 
 # === LOAD LIBRARIES ===
 
@@ -76,12 +79,16 @@ source("./Rsource/SwitchButton.R")
 
 sardine <- function(content) div(style="display: inline-block;vertical-align:top;", content)
 
-pos_adducts <<- wkz.adduct.confirmed[Ion_mode == "positive",
+pos_adducts <<- adducts[Ion_mode == "positive",
                                      c("Name")]
-neg_adducts <<- wkz.adduct.confirmed[Ion_mode == "negative",
+neg_adducts <<- adducts[Ion_mode == "negative",
                                      c("Name")]
+# interleave for sorting later ...
+add_idx <- order(c(seq_along(pos_adducts$Name), seq_along(neg_adducts$Name)))
+sort_order <<- unlist(c(pos_adducts$Name,neg_adducts$Name))[add_idx]
 
 bar.css <<- nav.bar.css(options$col1, options$col2, options$col3, options$col4)
 font.css <<- font.css(options$font1, options$font2, options$font3, options$font4)
+plot.theme <<- ggplot2::theme_minimal
 
 print("loaded global settings")

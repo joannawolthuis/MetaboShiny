@@ -22,3 +22,11 @@ getFwhm <- function(mu,resol) {
 
   return(fwhm)
 }
+
+resol = 140000
+fwhms <- pbapply::pbsapply(seq(70,600,0.1), getFwhm, resol=resol)
+
+psi_xval <- seq(-8, 8, length = 1024)
+
+wavelet.func <- (2/sqrt(3) * pi^(-0.25)) * (1 - psi_xval^2) * 
+  exp(-psi_xval^2/2)

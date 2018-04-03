@@ -62,30 +62,57 @@ peakFinding.wavelet_2 <- function(file,
                                   scripts, 
                                   outdir, 
                                   thresh, 
-                                  sig_noise=6e-7){
-    #file <- "/Users/jwolthuis/Documents/umc/data/Data/BrazilAndSpain/MZXML/results/averaged/1-10D_pos.RData"
+                                  sig_noise=0){
+    #file <- "/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML/results/averaged/1-10D_pos.RData"
+    
     # METADATA???
+
     load(file)
+    
+    # vec <- averaged[[1]]@intensity
+    # names(vec) <- averaged[[1]]@mass
+    # 
+    # zeros = which(vec == 0)
+    # 
+    # for(i in 1:length(zeros)){
+    #   curr = vec[i]
+    #   before = vec[i-1]
+    #   after = vec[i + 1]
+    #   if(before > 0 && after > 0) vec[i] = (before + after)/2
+    # }
+    # 
+    # averaged[[1]]@intensity <- vec
 
     fn = file.path(outdir, "peaks", basename(file))
 
     if(file.exists(fn)) return(NULL)
     
     sampname = gsub(basename(file), pattern = "_(pos|neg)\\.RData", replacement = "")
+    
     # ----------------
+    
     df <- matrix(data = averaged[[1]]@intensity,
                  ncol=1)
     rownames(df) <- averaged[[1]]@mass
     
+    # smoothed <- MALDIquant::smoothIntensity(averaged, method = "MovingAverage")
+    # df <- matrix(data = smoothed[[1]]@intensity,
+    #              ncol=1)
+    # rownames(df) <- smoothed[[1]]@mass
+    # 
+    # plot(df[1050:1150])
+    
+    # break up peaks
     
     try({
       
       # this has good explanations plz read properly later
       # http://matlab.izmiran.ru/help/toolbox/wavelet/
       
-      scales <- seq(1, 64, 3)
+      scales <- seq(1,5,0.5)
+      
       wCoefs <- cwt(df, scales=scales, wavelet='mexh')
-      localMax <- getLocalMaximumCWT(wCoefs,amp.Th = 1.5)
+      localMax <- getLocalMaximumCWT(wCoefs,amp.Th = 100)
 
       # plotLocalMax(localMax,range = rng)
       # image(rng[[1]]:rng[[2]], 1:5, wCoefs[rng[[1]]:rng[[2]],1:5], 
@@ -95,7 +122,7 @@ peakFinding.wavelet_2 <- function(file,
       #       ylab='CWT coefficient scale', 
       #       main='CWT coefficients')
       
-      ridgeList <- getRidge(localMax,minWinSize = 5)
+      ridgeList <- getRidge(localMax)
       
       # plotRidgeList(ridgeList, range = rng)
       
@@ -104,13 +131,13 @@ peakFinding.wavelet_2 <- function(file,
                                           wCoefs, 
                                           SNR.Th = sig_noise, 
                                           peakScaleRange = 1,
-                                          nearbyPeak = T)
+                                          nearbyPeak = FALSE)
       
       # seq(10, 1, by=-2)
       ## Plot the identified peaks
       # peakIndex <- majorPeakInfo$peakIndex
       # plotPeak(df, peakIndex, main=paste('Identified peaks with SNR >', 0))
-      # jumps <- seq(upto,nrow(df),by = 100)
+      # jumps <- seq(1,nrow(df),by = 100)
       # jumps <- seq(nrow(df), upto, by = -100)
       # 
       # peaki <- as.numeric(gsub(majorPeakInfo$peakCenterIndex, pattern = ".*_", replacement = ""))
@@ -118,7 +145,7 @@ peakFinding.wavelet_2 <- function(file,
       # for(i in 1:length(jumps)){
       #   rng = c(jumps[i], jumps[i+1])
       #   print(rng)
-      #   plot(df[rng[1]:rng[2],])
+      #   plotPeak(df,peakIndex = majorPeakInfo$peakCenterIndex, range=rng)
       #   lines(df[rng[1]:rng[2],])
       #   # --- how many peaks are here? ---
       #   peakc = length(which(peaki %between% c(min(rng), max(rng))))
@@ -150,9 +177,11 @@ peakFinding.wavelet_2 <- function(file,
       #                                                   majorPeakInfo, 
       #                                                   peakIndex = peakIndex)
       # ----------------
-      peaks = MALDIquant::createMassPeaks(mass = as.numeric(rownames(df)[majorPeakInfo$peakCenterIndex]),
-                              intensity = majorPeakInfo$peakValue,
-                              snr = majorPeakInfo$peakSNR,
+      keep <- which(df[majorPeakInfo$peakCenterIndex] > 0)
+      # ----------------
+      peaks = MALDIquant::createMassPeaks(mass = as.numeric(rownames(df)[keep]),
+                              intensity = majorPeakInfo$peakValue[keep],
+                              snr = majorPeakInfo$peakSNR[keep],
                               metaData = list(sample = sampname))
       # ----------------
       save(x=peaks, file=fn)

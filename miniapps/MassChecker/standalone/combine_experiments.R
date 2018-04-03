@@ -58,7 +58,7 @@ samples <- lapply(paths, FUN=function(excel){
   
   injcol <- 1:nrow(df_0)
   print(head(df_0))
-  sncol_idx <- readline(prompt = "Which column has your sample names? (enter integer) ->")
+  sncol_idx <- readline(prompt = "Which column has your sample names? (enter integer): ")
   sncol = df_0[,as.numeric(sncol_idx)]
 
   df_1 <- as.data.table(cbind(injcol, sncol))
@@ -101,28 +101,30 @@ samples <- lapply(paths, FUN=function(excel){
 library(data.table)
 sampleNames_all <- rbindlist(samples)
 
-inj = rep(1:(nrow(sampleNames_all)/replicates), each = replicates)
-sampleNames_all$Injection <- inj
-out <- split( sampleNames_all , f = sampleNames_all$Injection )
+sampleNames_all$Batch <- as.numeric(as.factor(gsub(sampleNames_all$File_Name,
+                                      pattern = "_\\d\\d\\d$",
+                                      replacement="")))
+#inj = rep(1:(nrow(sampleNames_all)/replicates), each = replicates)
+#sampleNames_all$Injection <- inj
+out <- split( sampleNames_all[Sample_Name == "QC"] , f = sampleNames_all[Sample_Name == "QC", c("Injection", "Batch")],drop = T)
+out 
 
 qcs = 1
+
 library(pbapply)
 cl=parallel::makeCluster(3, "FORK")
 parallel::stopCluster(cl)
+
 qc_fixed <- pblapply(out, cl=NULL,FUN=function(triple){
-  if(unique(triple$Sample_Name) == "QC"){
-    #
-    print(qcs)
-    triple$Sample_Name <- paste0("QC", qcs)
+  triple$Sample_Name <- paste0("QC", qcs)
     qcs <<- qcs + 1
     print(triple)
-  }
   # === RETURN ===
-  res = triple[,2:3]
+  res = triple[,1:4]
   res
 })
 
-final_sample_list <- rbindlist(qc_fixed)
+final_sample_list <- rbind(sampleNames_all[Sample_Name != "QC"], rbindlist(qc_fixed))
 
 # RENAME SPANISH SAMPLES LATER...
 

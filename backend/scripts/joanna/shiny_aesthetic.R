@@ -81,7 +81,7 @@ font.css <- function(font.h1 = "Press Start 2P",
   margin: 2px;
   font-family: '$font.h1';
   $font.h1.w
-  font-size: 20pt; 
+  font-size: 30pt; 
   line-height: 0.5;
   }
   

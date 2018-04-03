@@ -36,13 +36,13 @@ get_matches <- function(cpd = NA,
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), chosen.db)
     cpd <- gsub(cpd, pattern = "http\\/\\/", replacement = "http:\\/\\/")
     query <- if(searchid == "pathway"){
-      fn$paste(strwrap("SELECT DISTINCT name as Name
+      gsubfn::fn$paste(strwrap("SELECT DISTINCT name as Name
                        FROM pathways
                        WHERE identifier = '$cpd'"
                        , width=10000, simplify=TRUE))
       } else{
-      fn$paste(strwrap(
-        "SELECT DISTINCT compoundname as Name, baseformula as 'Mol. Formula', identifier as Identifier, description as Description 
+      gsubfn::fn$paste(strwrap(
+        "SELECT DISTINCT compoundname as Name, baseformula as 'Mol. Formula', identifier as Identifier, description as Description
         FROM base indexed by b_idx1
         WHERE $searchid = '$cpd'"
         , width=10000, simplify=TRUE))
@@ -51,9 +51,10 @@ get_matches <- function(cpd = NA,
     return(res)
   }else{
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
-    query.zero <- fn$paste("ATTACH '$chosen.db' AS db")
+    query.zero <- gsubfn::fn$paste("ATTACH '$chosen.db' AS db")
+    print(query.zero)
     RSQLite::dbExecute(conn, query.zero)
-    query.one <- fn$paste(strwrap(
+    query.one <- gsubfn::fn$paste(strwrap(
       "CREATE TEMP TABLE unfiltered AS
       SELECT cpd.baseformula, cpd.adduct
       FROM mzvals mz
@@ -65,7 +66,7 @@ get_matches <- function(cpd = NA,
     # 1. Find matches in range (reasonably fast <3)
     RSQLite::dbExecute(conn, query.one)
     #  2. get isotopes for these matchies (reverse search)
-    query.two <- fn$paste(strwrap(
+    query.two <- gsubfn::fn$paste(strwrap(
       "CREATE TEMP TABLE isotopes AS
       SELECT cpd.baseformula, cpd.adduct, cpd.isoprevalence, cpd.basecharge 
       FROM db.extended cpd indexed by e_idx1
@@ -79,7 +80,8 @@ get_matches <- function(cpd = NA,
     query.three <- strwrap(
         "SELECT DISTINCT base.compoundname as Name, 
                         base.identifier as Identifier, 
-                        iso.adduct as Adduct, 
+                        iso.adduct as Adduct,
+                        iso.isoprevalence as IsoPerc,
                         base.description as Description 
         FROM isotopes iso
         JOIN db.base base indexed by b_idx1
@@ -100,10 +102,10 @@ get_mzs <- function(baseformula, charge, chosen.db){
   # --- connect to db ---
   req("patdb")
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
-  query.zero <- fn$paste("ATTACH '$chosen.db' AS db")
+  query.zero <- gsubfn::fn$paste("ATTACH '$chosen.db' AS db")
   RSQLite::dbExecute(conn, query.zero)
   # search combo of baseformula and charge matching your choice and find all possible mzvals and adducts
-  query.one <-  fn$paste(strwrap(
+  query.one <-  gsubfn::fn$paste(strwrap(
     "CREATE TEMP TABLE possible_options AS
     SELECT DISTINCT e.fullmz, e.adduct, e.isoprevalence
     FROM db.extended e
@@ -113,7 +115,7 @@ get_mzs <- function(baseformula, charge, chosen.db){
   RSQLite::dbExecute(conn, query.one)
   
   # join with patdb
-  query.two <- fn$paste(strwrap(
+  query.two <- gsubfn::fn$paste(strwrap(
     "CREATE TEMP TABLE isotopes AS
     SELECT DISTINCT mz.mzmed, o.*
     FROM possible_options o
@@ -137,12 +139,14 @@ get_mzs <- function(baseformula, charge, chosen.db){
 }
 
 #' @export
-get_all_matches <- function(exp.condition=NA, 
+get_all_matches <- function(#exp.condition=NA, 
                             pat.conn=NA, 
                             which_dbs=NA, 
                             which_adducts=c("M+H", "M-H", "M"),
-                            group_by="baseformula",
-                            var_table="setup"){
+                            group_by="baseformula"
+                            #,var_table="setup"
+                            #,batches = NULL
+                            ){
   # --- connect to db ---
   # req("patdb")
   # available.RSQLite::dbs <- list.files(options$db_dir,pattern = ".full.db$",full.names = T)
@@ -158,7 +162,8 @@ get_all_matches <- function(exp.condition=NA,
      if(is.na(chosen.db)) next
     # --------------------------
      dbshort <- paste0("db", i)
-     RSQLite::dbExecute(pat.conn, fn$paste("ATTACH '$chosen.db' AS $dbshort"))
+     print(chosen.db)
+     RSQLite::dbExecute(pat.conn, gsubfn::fn$paste("ATTACH '$chosen.db' AS $dbshort"))
      # --- extended ---
      dbext <- paste0(dbshort, ".extended")
      extpfx <- paste0("dbext", i)
@@ -175,7 +180,7 @@ get_all_matches <- function(exp.condition=NA,
      pathway = if(group_by == "pathway") ",pathway" else{""}
      # ------------------------
      join.query <- c(join.query, 
-      fn$paste(strwrap("SELECT DISTINCT mz.mzmed as mz, 
+      gsubfn::fn$paste(strwrap("SELECT DISTINCT mz.mzmed as mz, 
                                         compoundname,
                                         identifier,
                                         $baseformquery, 
@@ -196,7 +201,7 @@ get_all_matches <- function(exp.condition=NA,
    }
   union <- paste(join.query, collapse = " UNION ")
   # ------------
-  query.one <- fn$paste(strwrap(
+  query.one <- gsubfn::fn$paste(strwrap(
     "CREATE TEMP TABLE isotopes AS
     $union",width=10000, simplify=TRUE))
   print("Exec query one")
@@ -204,7 +209,7 @@ get_all_matches <- function(exp.condition=NA,
   adductfilter <- paste0("WHERE adduct = '", paste(which_adducts, collapse= "' OR adduct = '"), "'")
   idquery <- paste0("iso.", group_by)
   # adductfilter <- paste0("WHERE adduct NOT REGEXP '[", paste(which_adducts, collapse="|"), "]'")
-  query.two <- fn$paste(strwrap(
+  query.two <- gsubfn::fn$paste(strwrap(
     "CREATE temp TABLE results AS
     SELECT DISTINCT iso.mz as mz, $idquery as Identifier, iso.adduct as Adduct
     FROM isotopes iso
@@ -214,20 +219,16 @@ get_all_matches <- function(exp.condition=NA,
     , width=10000, simplify=TRUE))
   print("Exec query two")
   RSQLite::dbExecute(pat.conn, query.two)
-  # a1 = RSQLite::dbGetQuery(pat.conn, fn$paste("SELECT distinct filename FROM avg_intensities"))
-  # a2 = RSQLite::dbGetQuery(pat.conn, fn$paste("SELECT distinct card_id FROM individual_data"))
+  # a1 = RSQLite::dbGetQuery(pat.conn, gsubfn::fn$paste("SELECT distinct filename FROM avg_intensities"))
+  # a2 = RSQLite::dbGetQuery(pat.conn, gsubfn::fn$paste("SELECT distinct card_id FROM individual_data"))
   summary = if(group_by == "pathway") "sum(abs(i.intensity)) as intensity" else{"sum(i.intensity) as intensity"}
   
-  qa <- switch(var_table,
-               individual_data = fn$paste("d.[$exp.condition] as label"),
-               setup = fn$paste("s.[$exp.condition] as label")
-  )
-  
-  query.collect <-  strwrap(fn$paste("select distinct i.filename, 
-                                                      d.card_id, 
-                                                      b.batch,
-                                                      $qa,
-                                                      d.sampling_date, 
+  # --- batch ---
+
+  query.collect <-  strwrap(gsubfn::fn$paste("select distinct i.filename, 
+                                                      d.*,
+                                                      s.*,
+                                                      b.*,
                                                       r.identifier as identifier, 
                                                       $summary
                                      from mzintensities i
@@ -248,4 +249,33 @@ get_all_matches <- function(exp.condition=NA,
   res <- RSQLite::dbGetQuery(pat.conn, query.collect)
   # ---------------------------
   res
+}
+
+multimatch <- function(cpd, dbs, searchid){
+  match_list <- lapply(dbs, FUN=function(match.table){
+    dbname <- gsub(basename(match.table), pattern = "\\.full\\.db", replacement = "")
+    print(dbname)
+    res <- get_matches(cpd, 
+                       match.table, 
+                       searchid=searchid)
+    if(nrow(res) > 0){
+      res = cbind(res, Source = c(dbname))
+    }
+  })
+  
+  if(is.null(unlist(match_list))) return(data.table(Name = "None",
+                                                    Description = "Unknown compound"))
+  
+  match_table <- (as.data.table(rbindlist(match_list))[Name != ""])
+  # --- sort ---
+  match_table <- match_table[order(match(match_table$Adduct, sort_order))]
+  # --- merge description and identifier ---
+  merged_cols <- paste(match_table$Source, paste0("(",match_table$Identifier,")."), match_table$Description)
+  match_table$Description <- merged_cols
+   # ----------------------------------------
+  if("IsoPerc" %in% colnames(match_table)){
+    match_table$IsoPerc <- round(match_table$IsoPerc, digits = 2)
+  }
+  # --- return ---
+  match_table[,-c("Source", "Identifier")]
   }

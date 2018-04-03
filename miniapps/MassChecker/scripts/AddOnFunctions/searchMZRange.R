@@ -9,17 +9,21 @@ searchMZRange <- function(range,values,int.factor,scale,resol,outdir,sampname,sc
   
   start=index[1]
   subRangeLength = 15
+  
+  pb <- pbapply::startpb(1, length(index))
 
   for (i in 1:length(index)){
+    pbapply::setpb(pb, i)
+    #print(paste(i / length(index) * 100.00, "%"))
   # for (i in 1:129000){
 
     if (i<length(index) & (index[i+1] - index[i]) > 1){
       
       end=index[i]
       
-    # start=395626
-    # end=395640
-    # i=25824
+      # start=395626
+      # end=395640
+      # i=25824
 
       # gaan met de banaan
       # 128836
@@ -30,9 +34,10 @@ searchMZRange <- function(range,values,int.factor,scale,resol,outdir,sampname,sc
       
       x = as.numeric(names(range)[c(start:end)])
       y = as.vector(range[c(start:end)])
-#       # Trim zeros
-#       x = as.vector(trimZeros(x,y)[[1]])
-#       y = as.vector(trimZeros(x,y)[[2]])
+      
+#     # Trim zeros
+#     x = as.vector(trimZeros(x,y)[[1]])
+#     y = as.vector(trimZeros(x,y)[[2]])
       
       if (length(y)!=0) {
         

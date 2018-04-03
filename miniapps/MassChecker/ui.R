@@ -107,9 +107,12 @@ shinyUI(fluidPage(theme = "metaboshiny.css",
                                                                                   <label class="radio-inline">
                                                                                   <input type="radio" name="peak_calling" value="wavelet" checked="checked"/>
                                                                                   <span><img src="wavelet.png" height="42" width="42"/></span>
-                                                                                  </label>
-                                                                                  </div>
-                                                                                  </div>')),
+                                                                                  </label>')),
+                                                                    # <label class="radio-inline">
+                                                                    #   <input type="radio" name="peak_calling" value="centroid" checked="checked"/>
+                                                                    #   <span><img src="centroid.png" height="42" width="42"/></span>
+                                                                    #   </label>
+                                                                    #   </div>
                                                                     radioButtons("peak_grouping",label = "Peak grouping style",choices = list("Mean shifting"="meanshift",
                                                                                                                                               "Hierarchical clustering"="hclust"),inline = T, 
                                                                                  selected="hclust"),

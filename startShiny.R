@@ -13,8 +13,8 @@ metanr_packages <- function(){
   
   if(length(new_pkgs)!=0){
     
-    source("https://bioconductor.org/biocLite.R")
-    biocLite(new_pkgs, dependencies = TRUE, ask = FALSE)
+    #source("https://bioconductor.org/biocLite.R")
+    BiocInstaller::biocLite(new_pkgs, dependencies = TRUE, ask = FALSE)
     print(c(new_pkgs, " packages added..."))
   }
   
@@ -51,7 +51,7 @@ for(package in base.packs){
 
 # bioconductor 
 
-source("https://bioconductor.org/biocLite.R")
+#source("https://bioconductor.org/biocLite.R")
 biocInstaller::biocLite(suppressUpdates = T)
 
 wdir <<- "/Users/jwolthuis/Google Drive/MetaboShiny"

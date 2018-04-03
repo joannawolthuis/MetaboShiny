@@ -87,12 +87,12 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                       column(3,  align="center",
                                              h2("KEGG"),
                                              helpText("Large pathway database with info on pathways in various organisms, involved enzymes, and connected disease phenotypes.")
-                                      ),
-                                      column(3,  align="center",
-                                             h2("SMPDB"),
-                                             helpText("The Small Molecule Pathway Database is a database containing > 700 small molecule pathways found in humans."),
-                                             h3(" - REQUIRES HMDB - ")
-                                      )), br(),
+                                      )
+                                      ,column(3,  align="center",
+                                             h2("MetaCyc"),
+                                             helpText("Large pathway database with over 10 000 available compounds. Spans several organisms!")
+                                      )
+                                      ), br(),
                                       fluidRow(column(3, align="center",
                                                       imageOutput("wikipath_logo",inline = T),
                                                       br(),br()
@@ -100,11 +100,12 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                       column(3,  align="center",
                                              imageOutput("kegg_logo",inline = T),
                                              br(),br()
-                                      ),
-                                      column(3,  align="center",
-                                             imageOutput("smpdb_logo",inline = T),
+                                      )
+                                      ,column(3,  align="center",
+                                             imageOutput("metacyc_logo",inline = T),
                                              br(),br()
-                                      )),
+                                      )
+                                      ),
                                       fluidRow(column(3, align="center",
                                                       actionButton("check_wikipathways", "Check", icon = icon("check")),
                                                       actionButton("build_wikipathways", "Build", icon = icon("wrench")),
@@ -115,12 +116,14 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                              actionButton("check_kegg", "Check", icon = icon("check")),
                                              actionButton("build_kegg", "Build", icon = icon("wrench")),
                                              br(),br(),
-                                             imageOutput("kegg_check",inline = T)),
+                                             imageOutput("kegg_check",inline = T))
+                                      ,
                                       column(3,  align="center",
-                                             actionButton("check_smpdb", "Check", icon = icon("check")),
-                                             actionButton("build_smpdb", "Build", icon = icon("wrench")),
+                                             actionButton("check_metacyc", "Check", icon = icon("check")),
+                                             actionButton("build_metacyc", "Build", icon = icon("wrench")),
                                              br(),br(),
-                                             imageOutput("smpdb_check",inline = T)))
+                                             imageOutput("metacyc_check",inline = T))
+                                      )
                                       # ----------------------------------------------------
                              ),
                              # --------------------------------------------------------------------------------------------------------------------------------
@@ -166,13 +169,6 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                              tabPanel("", icon=icon("file-text-o"), value="document",
                                       sidebarLayout(position="left",
                                                     sidebarPanel = sidebarPanel(align="center",
-                                                                                selectInput('exp_var', 'Which experimental variable do you want to look at?', choices = c("")),
-                                                                                sardine(switchButton(inputId = "broadvars",
-                                                                                                     label = "Confounders", 
-                                                                                                     value = FALSE, col = "BW", type = "OO")),br(),
-                                                                                actionButton("check_excel", "Get options", icon=icon("refresh")),
-
-                                                                                br(),br(),
                                                                                 selectInput('exp_type', 'What type of analysis do you want to do?', choices = list("Standard" = "stat",
                                                                                                                                                                    "Time series - standard" = "time_std", 
                                                                                                                                                                    "Time series - custom end" = "time_fin",
@@ -200,6 +196,13 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                              # --------------------------------------------------------------------------------------------------------------------------------
                              tabPanel("",  icon = icon("shower"), value="filter",
                                       fluidRow(column(3, aligh="center",
+                                                      selectInput('exp_var', 'Which variable do you want to look at?', choices = c("run")),
+                                                      selectizeInput('batch_var', 'What are your batch variables?', choices = c("run"), multiple=TRUE, options = list(maxItems = 2L)),
+                                                      actionButton("check_csv", "Get options", icon=icon("refresh")),
+                                                      hr(),
+                                                      sliderInput("perc_limit", label = "Max. missing feature percent", min = 0, 
+                                                                  max = 100, value = 50),
+                                                      # ------
                                                       selectInput('filt_type', 'How will you filter your m/z values?', choices = list("Interquantile range"="iqr",
                                                                                                                                       "Relative stdev"="rsd",
                                                                                                                                       "Non-parametric relative stdev"="nrsd",
@@ -207,7 +210,8 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                                                                                                                       "Standard deviation"="sd",
                                                                                                                                       "Median absolute deviation"="mad",
                                                                                                                                       "Median"="median",
-                                                                                                                                      "None"="none")),
+                                                                                                                                      "None"="none"),
+                                                                  selected = "none"),
                                                       selectInput('norm_type', 'What type of normalization do you want to do?', choices = list("Quantile normalization"="QuantileNorm",
                                                                                                                                                "By reference feature"="ProbNorm",
                                                                                                                                                "By reference compound"="CompNorm",
@@ -223,8 +227,18 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                                                                                                                 "Pareto Scaling"="ParetoNorm",
                                                                                                                                 "Range scaling"="RangeNorm",
                                                                                                                                 "None"="NULL")),
-                                                      selectInput('batch_corr', 'Correct batch effect?', choices = list("Yes"=TRUE, 
-                                                                                                                         "No"=FALSE)),
+                                                      selectInput('miss_type', 'How to deal with missing values?', choices = list("Feature minimum"="colmin",
+                                                                                                                                  "Total minimum"="min",
+                                                                                                                                 "KNN imputation"="knn",
+                                                                                                                                 "SVD imputation"="svdImpute",
+                                                                                                                                 "BPCA imputation"="bpca",
+                                                                                                                                 "PPCA imputation"="ppca",
+                                                                                                                                 "Median"="median",
+                                                                                                                                 "Mean"="mean",
+                                                                                                                                 "Leave them out"="exclude",
+                                                                                                                                 "Leave them alone"="none")),
+                                                      # selectInput('batch_corr', 'Correct batch effect?', choices = list("Yes"=TRUE, 
+                                                      #                                                                    "No"=FALSE)),
                                                       actionButton("initialize", "Go", icon=icon("hand-o-right")),
                                                       hr(),
                                                       imageOutput("dataset_icon",inline = T),
@@ -259,13 +273,13 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                                     ),
                                                     sidebarPanel = sidebarPanel(align="center",
                                                                                 bsCollapse(id = "dbSelect", open = "Settings",
-                                                                                           bsCollapsePanel(h3("Databases"), "",style = "info",
+                                                                                           bsCollapsePanel(h1("Databases"), "",#style = "info",
                                                                                                            fluidRow(#imageOutput("find_mol_icon",inline = T),
                                                                                                              sardine(fadeImageButton("search_internal", img.path = "umcinternal.png")),
                                                                                                              sardine(fadeImageButton("search_noise", img.path = "umcnoise.png")),
                                                                                                              sardine(fadeImageButton("search_hmdb", img.path = "hmdblogo.png")),
                                                                                                              sardine(fadeImageButton("search_chebi", img.path = "chebilogo.png")),br(),
-                                                                                                             sardine(fadeImageButton("search_smpdb", img.path = "smpdb_logo_adj.png")),
+                                                                                                             sardine(fadeImageButton("search_metacyc", img.path = "metacyc.png")),
                                                                                                              sardine(fadeImageButton("search_wikipathways", img.path = "wikipathways.png")),
                                                                                                              sardine(fadeImageButton("search_kegg", img.path = "kegglogo.gif")),
                                                                                                              #sardine(fadeImageButton("search_pubchem", img.path = "pubchemlogo.png")),
@@ -322,6 +336,15 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                                           textOutput("exp_dir")
                                                  ),
                                                  tabPanel("Graphics", icon=icon("paint-brush"),
+                                                          h2("Plot theme"),
+                                                          selectInput("ggplot_theme", label = "Theme", choices = list("Grid, white bg"="bw",
+                                                                                                                      "No grid, white bg"="classic",
+                                                                                                                    "Grid, gray bg"="gray",
+                                                                                                                    "Minimal"="min",
+                                                                                                                    "Grid, black bg"="dark",
+                                                                                                                    "Grid, white bg, gray axes"="light",
+                                                                                                                    "Line drawing"="line"),
+                                                                      selected = "Minimal"),
                                                           h2("Continuous data"),
                                                           selectInput("color_ramp", label = "Color scheme", choices = list("RAINBOW!"="rb",
                                                                                                                            "Yellow - blue"="y2b",
@@ -363,7 +386,7 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                                           sardine(actionButton("import_adducts", "Import", icon = icon("hand-peace-o"))),
                                                           sardine(imageOutput("adduct_upload_check",inline = T))
                                                  ),
-                                                 tabPanel("Aesthetic", icon=icon("eye-dropper"),
+                                                 tabPanel("Aesthetic", icon=icon("child"),
                                                           h3("Change app settings"),
                                                           hr(),
                                                           h2("Navigation bar colours"),

@@ -254,12 +254,12 @@ shinyServer(function(input, output, session) {
     withProgress({
       inj_path <- input$inj_loc$datapath
       
-      inj_path <- "~/Documents/umc/data/Data/Project 2017-026 DSM feed-10 (IMASDE-Madrid) - Saskia v Mil/Injection list IMASDE (Madrid, Spain).xlsx"
+      #inj_path <- "~/Documents/umc/data/Data/Project 2017-026 DSM feed-10 (IMASDE-Madrid) - Saskia v Mil/Injection list IMASDE (Madrid, Spain).xlsx"
       
       mzfiles <- list.files(path(),pattern="\\.mzXML$")
       
-      mzfiles <- list.files("~/Documents/umc/data/Data/Project 2017-026 DSM feed-10 (IMASDE-Madrid) - Saskia v Mil/RES-2017-11-15_DSM DBS Madrid/",
-                            pattern="\\.mzXML")
+      # mzfiles <- list.files("~/Documents/umc/data/Data/Project 2017-026 DSM feed-10 (IMASDE-Madrid) - Saskia v Mil/RES-2017-11-15_DSM DBS Madrid/",
+      #                       pattern="\\.mzXML")
       
       injfile <- xlsx::read.xlsx(file = inj_path,
                                  sheetIndex = 1,
@@ -428,6 +428,7 @@ shinyServer(function(input, output, session) {
     # --- cluster ---
     cl <<- makeSOCKcluster(cores,
                            outfile="~/mclog.txt")
+    print(cl)
     registerDoSNOW(cl)
     # ---------------
     # PEAKFINDING
@@ -500,6 +501,32 @@ shinyServer(function(input, output, session) {
                                                outdir = outdir, 
                                                thresh = if(scanmode == "pos") thresh_pos else{thresh_neg},
                                                sig_noise = 3)
+                       }
+             },
+             centroid = {
+               foreach(i=1:length(files), .options.snow=opts, .export = c("outdir",
+                                                                          "scriptdir",
+                                                                          "resol",
+                                                                          "thresh_pos",
+                                                                          "thresh_neg",
+                                                                          "peakFinding.wavelet_2"),
+                       .verbose = T,
+                       .packages = c("MALDIquant", "data.table"),
+                       .combine=cfun) %dopar% {
+                         # --- check if existing ---
+                         fn = file.path(outdir, "peaks", basename(files[i]))
+                         if(file.exists(fn)) return(NULL)
+                         # -------------------------
+                         scanmode = if(grepl(files[i],pattern = "_pos.RData")) "pos" else "neg"
+                         load(files[i])
+                         peaks <- MALDIquant::detectPeaks(averaged, halfWindowSize = 2)
+                         peaks_under_thresh <- which(peaks[[1]]@intensity < switch(scanmode, pos = thresh_pos, neg = thresh_neg))
+                         peaks[[1]]@snr <- peaks[[1]]@snr[-peaks_under_thresh]
+                         peaks[[1]]@mass <- peaks[[1]]@mass[-peaks_under_thresh]
+                         peaks[[1]]@intensity <- peaks[[1]]@intensity[-peaks_under_thresh]
+                         # --- save ---
+                         save(x=peaks, file=fn)
+                         # ------------
                        }
              })
     })

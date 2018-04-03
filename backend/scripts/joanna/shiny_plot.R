@@ -1,7 +1,7 @@
 #' @export
 ggplotNormSummary <- function(mSet){
   # 4 by 4 plot, based on random 20-30 picked 
-  orig_data <- mSet$dataSet$orig
+  orig_data <- mSet$dataSet$procr
   norm_data <- mSet$dataSet$norm
 
   sampsize = if(nrow(norm_data) > 20) 20 else nrow(norm_data)
@@ -14,7 +14,7 @@ ggplotNormSummary <- function(mSet){
   norm_melt <- reshape2::melt(norm_data[which_samps, which_cpds])
 
   plot <- ggplot2::ggplot(data=orig_melt) +
-    ggplot2::theme_minimal(base_size = 10) #+ facet_grid(. ~ variable)
+    plot.theme(base_size = 15) #+ facet_grid(. ~ variable)
   
   RES1 <- plot + ggplot2::geom_density(ggplot2::aes(x=value), colour="blue", fill="blue", alpha=0.4)
 
@@ -24,7 +24,7 @@ ggplotNormSummary <- function(mSet){
                               alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(orig_melt$value)))
   
   plot <- ggplot2::ggplot(data=norm_melt) +
-    ggplot2::theme_minimal(base_size = 10) #+ facet_grid(. ~ variable)
+    plot.theme(base_size = 15) #+ facet_grid(. ~ variable)
   
   RES3 <- plot + ggplot2::geom_density(ggplot2::aes(x=value), colour="pink", fill="pink", alpha=0.4)
   
@@ -64,19 +64,19 @@ ggplotSampleNormSummary <- function(mSet){
   norm_melt_sums$variable <- rownames(norm_melt_sums)
   
   RES1 <- ggplot2::ggplot(data=orig_melt_sums) +
-    ggplot2::theme_minimal(base_size = 10) + ggplot2::geom_density(ggplot2::aes(x=value), colour="blue", fill="blue", alpha=0.4)
+    plot.theme(base_size = 15) + ggplot2::geom_density(ggplot2::aes(x=value), colour="blue", fill="blue", alpha=0.4)
   
   RES2 <- ggplot2::ggplot(data=orig_melt) +
-    ggplot2::theme_minimal(base_size = 10) + ggplot2::geom_boxplot(alpha=0.4,
+    plot.theme(base_size = 15) + ggplot2::geom_boxplot(alpha=0.4,
                       ggplot2::aes(x=value,y=Label),
                       color=rainbow(sampsize), 
                       alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(orig_melt$value),text=Label))
 
   RES3 <- ggplot2::ggplot(data=norm_melt_sums) +
-    ggplot2::theme_minimal(base_size = 10) + ggplot2::geom_density(ggplot2::aes(x=value), colour="pink", fill="pink", alpha=0.4)
+    plot.theme(base_size = 15) + ggplot2::geom_density(ggplot2::aes(x=value), colour="pink", fill="pink", alpha=0.4)
   
   RES4 <- ggplot2::ggplot(data=norm_melt) +
-    ggplot2::theme_minimal(base_size = 10) + ggplot2::geom_boxplot(alpha=0.4,
+    plot.theme(base_size = 15) + ggplot2::geom_boxplot(alpha=0.4,
                       ggplot2::aes(x=value,y=Label),
                       color=rainbow(sampsize), 
                       alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(norm_melt$value),text=Label))
@@ -94,13 +94,13 @@ ggplotMeba <- function(cpd, draw.average=T, cols=NULL, cf){
       ggplot2::geom_line(size=0.3, ggplot2::aes(x=Time, y=Abundance, group=Sample, color=Group, text=Sample), alpha=0.4) +
       stat_summary(fun.y="mean", size=1.5, geom="line", ggplot2::aes(x=Time, y=Abundance, color=Group, group=Group)) +
       ggplot2::scale_x_discrete(expand = c(0, 0)) +
-      ggplot2::theme_minimal(base_size = 10) +
+      plot.theme(base_size = 15) +
       ggplot2::scale_color_manual(values=cols)
   } else{
     ggplot2::ggplot(data=profile) +
       ggplot2::geom_line(size=0.7, ggplot2::aes(x=Time, y=Abundance, group=Sample, color=Group, text=Sample)) +
       ggplot2::scale_x_discrete(expand = c(0, 0)) +
-      ggplot2::theme_minimal(base_size = 10) +
+      plot.theme(base_size = 15) +
       ggplot2::scale_color_manual(values=cols)
   }
   # ---------------
@@ -112,19 +112,34 @@ blackwhite.colors <- function(n){
 }
 
 #' @export
-ggplotSummary <- function(cpd = curr_cpd, cols=NULL, cf){
+ggplotSummary <- function(cpd = curr_cpd, cols=c("black", "pink"), cf=rainbow){
   cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
   if(substring(mSet$dataSet$format,4,5)!="ts"){
     # --- ggplot ---
     profile <- getProfile(cpd, mode="stat")
+    df_line <- data.table(x = c(1,2),
+                          y = rep(min(profile$Abundance - 0.1),2))
+    stars = ""
+    try({
+      pval <- mSet$analSet$tt$sig.mat[which(rownames(mSet$analSet$tt$sig.mat) == curr_cpd), "p.value"]
+      if(length(pval) == 0){
+        stars <- ""
+      }else{
+        if(pval > 0.05) stars <- "n.s."
+        else if(pval < 0.05 & pval > 0.01) stars <- "*"
+        else if(pval < 0.01 & pval > 0.001) stars <- "***"
+        else stars <- "****"
+      } 
+    })
     # -----------
     # ggplot
     plot <- ggplot2::ggplot(data=profile, ggplot2::aes(x=Group,y=Abundance, fill=Group, color=Group)) +
       ggplot2::geom_boxplot(alpha=0.4) +
       ggplot2::geom_point(ggplot2::aes(text=Sample),alpha=0.4, size = 2, shape = 1, position = position_dodge(width=0.1)) +
-      ggplot2::theme_minimal(base_size = 10) +
+      plot.theme(base_size = 15) +
       ggplot2::scale_fill_manual(values=cols) +
       ggplot2::scale_color_manual(values=cols)
+    plot <- plot + ggplot2::annotate("text", x = 1.5, y = min(profile$Abundance - 0.3), label = stars, size = 8, col = "black")
     # ---------------
     plotly::ggplotly(plot, tooltip="Sample")
     #
@@ -147,9 +162,10 @@ ggplotSummary <- function(cpd = curr_cpd, cols=NULL, cf){
     plot <- ggplot2::ggplot(data=profile, ggplot2::aes(x=Time, y=Abundance, group=interaction(Time, Group),fill=Group, color=Group)) +
       ggplot2::geom_boxplot(alpha=0.4) +
       ggplot2::geom_point(ggplot2::aes(text=Sample),alpha=0.4, size = 2, shape = 1, position = position_dodge(width=0.1)) +
-      ggplot2::theme_minimal(base_size = 10) +
+      plot.theme(base_size = 15) +
       ggplot2::scale_fill_manual(values=cols) +
-      ggplot2::scale_color_manual(values=cols) 
+      ggplot2::scale_color_manual(values=cols)+
+      geom_text(x = 1.5, y = 1, label = "***")
     # ---------------
     plotly::ggplotly(plot, tooltip="Sample") %>% layout(boxmode = "group")
   }
@@ -163,7 +179,8 @@ ggPlotTT <- function(cf, n){
   # ---------------------------
   plot <- ggplot2::ggplot(data=profile) +
     ggplot2::geom_point(ggplot2::aes(x=Peak, y=p,text=cpd, color=p, key=cpd)) +
-    ggplot2::theme_minimal(base_size = 10) +
+    plot.theme(base_size = 15) +
+    theme(axis.text=element_text(size=12)) +
     ggplot2::scale_colour_gradientn(colours = cf(n)) +
     ggplot2::scale_y_log10()
   plotly::ggplotly(plot, tooltip="cpd")
@@ -178,7 +195,7 @@ ggPlotFC <- function(cf, n){
   plot <- ggplot2::ggplot(data=profile) +
     ggplot2::geom_point(ggplot2::aes(x=Peak, y=log2fc, text=log2fc, color=log2fc, key=cpd)) +
     ggplot2::geom_abline(ggplot2::aes(intercept = 0, slope = 0)) +
-    ggplot2::theme_minimal(base_size = 10) +
+    plot.theme(base_size = 15) +
     ggplot2::scale_colour_gradientn(colours = cf(n))
   plotly::ggplotly(plot, tooltip="log2fc")
 }
@@ -194,7 +211,7 @@ ggPlotVolc <- function(cf=rainbow, n=256){
                                        text=cpd,
                                        color=abs(log2FC*`-log10P`), 
                                        key=cpd)) +
-      ggplot2::theme_minimal(base_size = 10) +
+      plot.theme(base_size = 15) +
       ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE)
     plotly::ggplotly(plot, tooltip="cpd")
 }

@@ -39,7 +39,7 @@ getProfile <- function(varName, title=varName, mode="stat"){
     translator <- data.table(
       index = 1:length(samp.names),
       Sample = gsub(x = samp.names, pattern = "T\\d$", replacement=""),
-      Group = mSet$dataSet$filt.cls,
+      Group = mSet$dataSet$cls,
       Abundance = mSet$dataSet$norm[,varInx]
     )
   }
@@ -63,4 +63,3 @@ kegg.charge <- function(atomlist){
   }
   formal_charge
 }
-
