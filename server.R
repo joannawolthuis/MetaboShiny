@@ -5,6 +5,7 @@ shinyServer(function(input, output, session) {
   tbl <<- NA
   tables <- list()
   db_search_list <- c()
+  theme_update(plot.title = element_text(hjust = 0.5))
   color.function <- rainbow
   patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
   csv_loc <<- file.path(options$work_dir, paste0(options$proj_name, ".csv"))
@@ -31,6 +32,7 @@ shinyServer(function(input, output, session) {
                             sardine(fadeImageButton("add_noise", img.path = "umcnoise.png")),
                             sardine(fadeImageButton("add_hmdb", img.path = "hmdblogo.png")),br(),
                             sardine(fadeImageButton("add_chebi", img.path = "chebilogo.png")),
+                            sardine(fadeImageButton("add_smpdb", img.path = "smpdb_logo_adj.png")),
                             sardine(fadeImageButton("add_metacyc", img.path = "metacyc.png")),
                             sardine(fadeImageButton("add_wikipathways", img.path = "wikipathways.png")),
                             sardine(fadeImageButton("add_kegg", img.path = "kegglogo.gif", value = T))
@@ -97,7 +99,7 @@ shinyServer(function(input, output, session) {
                 "kegg",
                 "metacyc",
                 "wikipathways"
-                #,"smpdb"
+                ,"smpdb"
                 )
   
   images <<- list(list(name = 'cute_package', path = 'www/new-product.png', dimensions = c(80, 80)),
@@ -130,7 +132,7 @@ shinyServer(function(input, output, session) {
   stat.ui.bivar <- reactive({
     navbarPage(inverse=T,h2("Standard analysis"), id="tab_stat",
                tabPanel(h3("PCA"), value = "pca", #icon=icon("cube"),
-                        plotly::plotlyOutput("plot_pca",height = "600px"),
+                        plotly::plotlyOutput("plot_pca",height = "600px", width="600px"),
                         fluidRow(column(3,
                                         selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:30),selected = "PC1",width="100%"),
                                         selectInput("pca_y", label = "Y axis:", choices = paste0("PC",1:30),selected = "PC2",width="100%"),
@@ -151,27 +153,32 @@ shinyServer(function(input, output, session) {
                         hr(),
                         navbarPage(inverse=T,"",
                                    tabPanel("", icon=icon("globe"),
-                                                     plotly::plotlyOutput("plot_plsda",width="100%"),
-                                                     fluidRow(column(3,
-                                                                     selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:8),selected = "PC1",width="100%"),
-                                                                     selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:8),selected = "PC2",width="100%"),
-                                                                     selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:8),selected = "PC3",width="100%")
-                                                     ), 
-                                                     column(9, 
-                                                            div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')
-                                                     ))),
-                                            tabPanel("", icon=icon("star-o"), 
-                                                     plotly::plotlyOutput("plsda_vip_specific_plot",width="100%"),
-                                                     fluidRow(column(3,
-                                                                     selectInput("plsda_vip_cmp", label = "Compounds from:", choices = paste0("PC",1:5),selected = "PC1",width="100%")
-                                                     ), 
-                                                     column(9, 
-                                                            div(DT::dataTableOutput('plsda_vip_tab',width="100%"),style='font-size:80%')
-                                                     ))
-                                                     
-                                            )
-                                   
-                                   
+                                                     plotly::plotlyOutput("plot_plsda_3d",height = "600px", width="600px")
+                                                     # ,fluidRow(column(3,
+                                                     #                 selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:3),selected = "PC1",width="100%"),
+                                                     #                 selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:3),selected = "PC2",width="100%"),
+                                                     #                 selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:3),selected = "PC3",width="100%")
+                                                     # )
+                                                     # ,
+                                                     # column(9,
+                                                     #        div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')
+                                                     # ))
+                                            ),
+                                   tabPanel("", icon=icon("area-chart"), 
+                                            plotOutput("plsda_cv_plot"),
+                                            plotOutput("plsda_perm_plot")
+                                            
+                                   ),
+                                   tabPanel("", icon=icon("star-o"), 
+                                            plotly::plotlyOutput("plsda_vip_specific_plot",width="100%"),
+                                            fluidRow(column(3,
+                                                            selectInput("plsda_vip_cmp", label = "Compounds from:", choices = paste0("PC",1:5),selected = "PC1",width="100%")
+                                            ), 
+                                            column(9, 
+                                                   div(DT::dataTableOutput('plsda_vip_tab',width="100%"),style='font-size:80%')
+                                            ))
+                                            
+                                   )
                         )),
                tabPanel(h3("T-test"), value="tt", 
                         fluidRow(plotly::plotlyOutput('tt_specific_plot',width="100%")),
@@ -584,6 +591,7 @@ shinyServer(function(input, output, session) {
     if(is.null(given_dir)) return()
     options$work_dir <<- given_dir
     output$exp_dir <- renderText(options$work_dir)
+    patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
     if(!dir.exists(options$work_dir)) dir.create(options$work_dir)
     # --- connect ---
     setOption(".conf", "work_dir", options$work_dir)
@@ -840,7 +848,7 @@ shinyServer(function(input, output, session) {
         #   }
         # }, pkgs = pkgs)
         #setProgress(message = "Working...")
-        build.base.db(db, outfolder=options$db_dir)
+        build.base.db(db, outfolder=options$db_dir, cl=session_cl)
         setProgress(0.5)
         build.extended.db(db, 
                           outfolder=options$db_dir,
@@ -1133,7 +1141,7 @@ shinyServer(function(input, output, session) {
 
       if("Batch" %in% batches){ batches = c(batches, "Injection") }
       
-      first_part = csv_orig[,1:(nvars-1),with=FALSE]
+      first_part <<- csv_orig[,1:(nvars-1),with=FALSE]
       first_part[first_part == ""] <- "Unknown"
       
       csv_temp <- cbind(first_part[,!duplicated(names(first_part)),with=FALSE],
@@ -1170,7 +1178,11 @@ shinyServer(function(input, output, session) {
         batchnum <- unique(csv_temp_no_out[samps, "Batch"][[1]])
         keep_samps <- batch_table[which(batch_table$Batch %in% batchnum),"Sample"][[1]]
         batch_table <- batch_table[which(batch_table$Batch %in% batchnum)]
-        csv_temp_filt <- csv_temp_no_out[which(csv_temp_no_out$Sample %in% keep_samps), -"Batch"]
+        if("Batch" %in% batches){
+          csv_temp_filt <- csv_temp_no_out[which(csv_temp_no_out$Sample %in% keep_samps),]
+        }else{
+          csv_temp_filt <- csv_temp_no_out[which(csv_temp_no_out$Sample %in% keep_samps), -"Batch"]
+        }
       }
        
       print(csv_temp_filt[1:10,1:10])
@@ -1243,10 +1255,7 @@ shinyServer(function(input, output, session) {
       second_part_no_out <- mSet$dataSet$norm[match(rownames(mSet$dataSet$norm),
                                                     first_part_no_out$Sample),]
       csv_filled = cbind(first_part_no_out, 
-                         second_part_no_out
-      )
-      
-      print(dim(csv_filled))
+                         second_part_no_out)
       
       csv_loc_filled <- gsub(pattern = "\\.csv", replacement = "_filled.csv", x = csv_loc)
       
@@ -1292,10 +1301,11 @@ shinyServer(function(input, output, session) {
           
           corr_cols <- pbapply::pblapply(1:ncol(matr), FUN=function(i){
             vec = matr[,i]
+            print(vec)
             corr_vec = BatchCorrMetabolomics::doBC(Xvec = as.numeric(vec), 
                                                    ref.idx = as.numeric(qc_rows), 
-                                                   batch.idx = as.numeric(mSet$dataSet$batches[match(smps, rownames(mSet$dataSet$batches)),"Batch"]),
-                                                   seq.idx = as.numeric(mSet$dataSet$batches[match(smps, rownames(mSet$dataSet$batches)),"Injection"]))
+                                                   batch.idx = as.numeric(mSet$dataSet$batches[match(smps, rownames(mSet$dataSet$batches)),"Batch"][[1]]),
+                                                   seq.idx = as.numeric(mSet$dataSet$batches[match(smps, rownames(mSet$dataSet$batches)),"Injection"][[1]]))
             # ---------
             corr_vec
           })
@@ -1336,40 +1346,36 @@ shinyServer(function(input, output, session) {
                                      Label = mSet$dataSet$cls,
                                      mSet$dataSet$norm))
           
+          csv_edata <-t(csv[,!c(1,2)])
+          colnames(csv_edata) <- csv$Sample
+          
           if(length(left_batch_vars) == 1){
             csv_pheno <- data.frame(sample = 1:nrow(csv),
-                                    batch1 = mSet$dataSet$batches[match(smp, mSet$dataSet$batches$Sample),2][[1]],
+                                    batch1 = mSet$dataSet$batches[match(smp, mSet$dataSet$batches$Sample),left_batch_vars[1], with=FALSE][[1]],
                                     batch2 = c(0),
-                                    outcome = as.factor(exp_lbl))            
+                                    outcome = as.factor(exp_lbl))     
+            batch_normalized= t(sva::ComBat(dat=csv_edata,
+                                            batch=csv_pheno$batch1
+                                            #mod=mod.pheno,
+                                            #par.prior=TRUE
+            ))
+            rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
           }else{
             csv_pheno <- data.frame(sample = 1:nrow(csv),
-                                    batch1 = mSet$dataSet$batches[match(smp, mSet$dataSet$batches$Sample),2][[1]],
-                                    batch2 = mSet$dataSet$batches[match(smp, mSet$dataSet$batches$Sample),3][[1]],
+                                    batch1 = mSet$dataSet$batches[match(smp, mSet$dataSet$batches$Sample), left_batch_vars[1], with=FALSE][[1]],
+                                    batch2 = mSet$dataSet$batches[match(smp, mSet$dataSet$batches$Sample), left_batch_vars[2], with=FALSE][[1]],
                                     outcome = as.factor(exp_lbl))
+            batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
+                                                        #design = mod.pheno,
+                                                        batch = csv_pheno$batch1,
+                                                        batch2 = csv_pheno$batch2))
+            rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
           }
 
           print(head(csv_pheno))
           
           #mod.batch = model.matrix(~ batch1 + batch2 + outcome, data=csv_pheno)
-          csv_edata <-t(csv[,!c(1,2)])
-          colnames(csv_edata) <- csv$Sample
           
-          if(unique(csv_pheno$batch2) == 0){
-            batch_normalized= t(sva::ComBat(dat=csv_edata,
-                                          batch=csv_pheno$batch1
-                                          #mod=mod.pheno,
-                                          #par.prior=TRUE
-            ))
-            rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
-          }else{
-            # batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
-            #                                             #design = mod.pheno,
-            #                                             batch = csv_pheno$batch1,
-            #                                             batch2 =  NULL else csv_pheno$batch2))
-            rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
-            
-          }
-
           mSet$dataSet$norm <<- as.data.frame(batch_normalized)
           }
         } else{
@@ -1382,79 +1388,9 @@ shinyServer(function(input, output, session) {
         }
       
       print(rownames(mSet$dataSet$norm))
-        # ================================================
-        # 
-        # print("Correcting batch effect w/ ComBat...")
-        # 
-        # smp <- rownames(mSet$dataSet$norm)
-        # exp_lbl <- mSet$dataSet$cls
-        # batches <- mSet$dataSet$batches
-        # 
-        # print(paste("Batches:", names(batches)))
-        # 
-        # # captures farm number only? (would need regmatches) (?<=[A-Z][A-Z])((1)(?=-\\d*)|(?=\\d*))
-        # 
-        # csv <- as.data.table(cbind(Sample = smp, 
-        #                            Label = gsub(smp, 
-        #                                       pattern = "([A-Z][A-Z])|(-\\d*$)", 
-        #                                       replacement = ""), 
-        #                            qc_corr_matrix))
-        # 
-        # if(length(batches) == 1){csv_pheno <- data.frame(sample = 1:nrow(csv),
-        #                                                  batch = batches[[1]],
-        #                                                  outcome = as.factor(exp_lbl)
-        #                                                  )
-        # 
-        # mod.pheno = model.matrix(~ outcome, data=csv_pheno)
-        # 
-        # mod.batch = model.matrix(~ batch + outcome, data=csv_pheno)
-        # csv_edata <-t(csv[,!c(1,2)])
-        # colnames(csv_edata) <- csv$Sample
-        # batch_normalized= sva::ComBat(dat=csv_edata,
-        #                               batch=csv_pheno$batch
-        #                               #mod=mod.pheno,
-        #                               #par.prior=TRUE
-        #                               )
-        # batch_normalized = limma::removeBatchEffect(x = csv_edata,
-        #                                             #design = mod.pheno,
-        #                                             batch = csv_pheno$batch)
-        # } else{csv_pheno <- data.frame(sample = 1:nrow(csv),
-        #                                batch1 = as.factor(batches[[1]]),
-        #                                batch2 = as.factor(batches[[2]]),
-        #                                outcome = as.factor(exp_lbl)
-        #                                )
-        # mod.batch = model.matrix(~ batch1 + batch2 + outcome, data=csv_pheno)
-        # csv_edata <-t(csv[,!c(1,2)])
-        # colnames(csv_edata) <- csv$Sample
-        # batch_normalized = limma::removeBatchEffect(x = csv_edata,
-        #                                             #design = mod.pheno,
-        #                                             batch = csv_pheno$batch1,
-        #                                             batch2 = csv_pheno$batch2)
-        # }
-        # 
-        # parametric adjustment
-        #
-        # --- substitute in metaboanalyst matrix ---
-        #mSet$dataSet$norm <<- as.data.frame(t(batch_normalized))
 
       
       setProgress(.5)
-      
-      # mSet$dataSet$grouping <<- input$group_by
-      
-      # -------------------------------------
-      # if(mSet$dataSet$grouping == "pathway"){
-      #   mSet$dataSet$norm <- abs(mSet$dataSet$norm)
-      # }
-      
-      
-      # csv_loc_norm <- gsub(pattern = "\\.csv", replacement = "_norm.csv", x = csv_loc)
-      # 
-      # csv <- as.data.table(cbind(Sample = rownames(mSet$dataSet$norm),
-      #                            Label = mSet$dataSet$cls,
-      #                            rownames(mSet$dataSet$norm)))
-      # 
-      # data.table::fwrite(csv, csv_loc_norm)
       
       setProgress(.6)
       varNormPlots <- ggplotNormSummary(mSet)
@@ -1681,9 +1617,9 @@ shinyServer(function(input, output, session) {
                pca_plot <<- adj_plot %>% add_trace(
                  hoverinfo = 'text',
                  text = rownames(df),
-                 x = mSet$analSet$pca$x[,1], 
-                 y = mSet$analSet$pca$x[,2], 
-                 z = mSet$analSet$pca$x[,3], 
+                 x = mSet$analSet$pca$x[,x], 
+                 y = mSet$analSet$pca$x[,y], 
+                 z = mSet$analSet$pca$x[,z], 
                  visible = rep(T, times=fac.lvls),
                  type = "scatter3d",
                  opacity=1,
@@ -1808,12 +1744,13 @@ shinyServer(function(input, output, session) {
            tt = {
              if(!"tt" %in% names(mSet$analSet)){
                withProgress({
-                 mSet <<- Ttests.Anal.J(mSet,
-                                      nonpar = FALSE, 
-                                      threshp = 0.05, 
-                                      paired = FALSE,
-                                      equal.var = T,
-                                      multicorr = "BH")
+                 mSet <<- Ttests.Anal(mSet,
+                                        nonpar = FALSE, 
+                                        threshp = 0.05, 
+                                        paired = FALSE,
+                                        equal.var = TRUE
+                                      #  multicorr = "BH"
+                                      )
                })
              }
              res <<- mSet$analSet$tt$sig.mat
@@ -1910,22 +1847,28 @@ shinyServer(function(input, output, session) {
            }
     )
   })
-  
+
   observeEvent(input$do_plsda, {
     print("Doing plsda...")
+    library(e1071)
     print(input$plsda_type)
     switch(input$plsda_type,
            normal={
              withProgress({
                mSet <<- PLSR.Anal(mSet,
-                                  F)
+                                  TRUE)
                setProgress(0.3)
-               mSet <<- PLSDA.CV(mSet,
-                                 "L",
-                                 5, 
-                                 "Q2")
+
+               mSet <<- PLSDA.CV(mSet,compNum = 3)
+               mSet <<- PLSDA.Permut(mSet,num = 100)
+               
+               output$plsda_cv_plot <- renderPlot({ggPlotClass(cf = cf)})
+               output$plsda_perm_plot <- renderPlot({ggPlotPerm(cf = cf)})
+               
+               print("here")
+               # - - - - - - - - - - - 
                setProgress(0.6)
-               # --- overview table ---
+               # - - overview table - -
                plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar 
                                                   / mSet$analSet$plsr$Xtotvar 
                                                   * 100.0,
@@ -1935,7 +1878,7 @@ shinyServer(function(input, output, session) {
                plsda.table[, "Principal Component"] <- paste0("PC", 1:nrow(plsda.table))
                setProgress(0.9)
                # --- coordinates ---
-               coords <<- mSet$analSet$plsr$Yscores
+               coords <<- mSet$analSet$plsr$scores
                colnames(coords) <<- paste0("PC", 1:ncol(coords))
                # --- vip table ---
                colnames(mSet$analSet$plsda$vip.mat) <- paste0("PC", 1:ncol(mSet$analSet$plsda$vip.mat))
@@ -1946,35 +1889,47 @@ shinyServer(function(input, output, session) {
              })
              },
            sparse={
-             print("Not implemented yet")
-             # mSet <<- SPLSR.Anal(mSet, 5, 10, "same")
-             # spls3d <- list()
-             # plsda.table <- data.table("Principal Component" = paste0("PC", 1:length(mSet$analSet$splsr$explained_variance$X)), 
-             #                              "% variance" = round(100 * mSet$analSet$splsr$explained_variance$X, 2))
-             # coords <- data.frame(signif(mSet$analSet$splsr$variates$X, 5))
-             # compounds_pc <- as.data.table(abs(mSet$analSet$splsr$loadings$X),keep.rownames = T)
-             # compounds_pc_keep <- lapply(1:nrow(compounds_pc), FUN=function(i){
-             #   row <- compounds_pc[i,-1]
-             #   if(any(row > 0)){row} else NA
-             # })
-             # colnames(compounds_pc) <- paste0("PC", 1:ncol(compounds_pc))
-             # ordered_pc <- setorderv(compounds_pc, "PC1", -1)
-             # head(compounds_pc)
-             # plsda_tab <<- cbind(ordered_pc[1:50, c("rn")], 
-             #                     Rank=c(1:50))
+             mSet <<- SPLSR.Anal(mSet, 5, 10, "same")
+             plsda.table <- data.table("Principal Component" = paste0("PC", 1:length(mSet$analSet$splsr$explained_variance$X)),
+                                          "% variance" = round(100 * mSet$analSet$splsr$explained_variance$X, 2))
+             coords <- data.frame(signif(mSet$analSet$splsr$variates$X, 5))
+             compounds_pc <- as.data.table(abs(mSet$analSet$splsr$loadings$X),keep.rownames = T)
+             colnames(compounds_pc)[2:ncol(compounds_pc)] <- paste0("PC", 1:(ncol(compounds_pc)-1))
+             ordered_pc <- setorderv(compounds_pc, "PC1", -1)
+             plsda_tab <<- cbind(ordered_pc[1:50, c("rn")],
+                                 Rank=c(1:50))
              ## TODO ##
            },
            ortho={
-             print("Not implemented yet")
-             # mSet <<- OPLSR.Anal(mSet, reg=TRUE)
-             ## TODO ##
+             mSet <<- OPLSR.Anal(mSet, reg=TRUE)
+             coords <- data.frame(signif(mSet$analSet$oplsda$coefficients, 5))
+             coords <- data.frame(mSet$analSet$oplsda$scoreMN,
+                                  mSet$analSet$oplsda$orthoScoreMN)
+             plsda.table = data.table('Principal Component'=c(paste0("PC", 1:4)))
+             compounds_pc <- as.data.table(abs(cbind(mSet$analSet$oplsda$loadingMN,
+                                                     mSet$analSet$oplsda$orthoLoadingMN)),
+                                           keep.rownames = T)
+             colnames(compounds_pc)[2:ncol(compounds_pc)] <- paste0("PC", 1:(ncol(compounds_pc)-1))
+             ordered_pc <- setorderv(compounds_pc, "PC1", -1)
+             plsda_tab <<- cbind(ordered_pc[1:50, c("rn")],
+                                 Rank=c(1:50))
+             
+             # mSet<-PlotOPLS2DScore(mSet, "opls_score2d_0_", "png", 72, width=NA, 1,2,0.95,1,0)
+             # mSet<-PlotOPLS.Splot(mSet, "opls_splot_0_", "png", 72, width=NA, "all");
+             # mSet<-PlotOPLS.MDL(mSet, "opls_mdl_0_", "png", 72, width=NA)
+             # mSet<-PlotOPLS.MDL(mSet, "opls_mdl_0_", "png", 72, width=NA)
+             # mSet<-PlotOPLS.Permutation(mSet, "opls_perm_1_", "png", 72, 100, width=NA)
+             # ## TODO ##
              
            })
     # -----------
-    output$plot_plsda <- plotly::renderPlotly({
-      x <- input$plsda_x
-      y <- input$plsda_y
-      z <- input$plsda_z
+    output$plot_plsda_3d <- plotly::renderPlotly({
+      # x <- input$plsda_x
+      # y <- input$plsda_y
+      # z <- input$plsda_z
+      x <- "PC1"
+      y <- "PC2"
+      z <- "PC3"
       x.var <- plsda.table[`Principal Component` == x, 
                            `% variance`]
       y.var <- plsda.table[`Principal Component` == y, 
@@ -1983,16 +1938,56 @@ shinyServer(function(input, output, session) {
                            `% variance`]
       fac.lvls <- unique(mSet$dataSet$cls)
       chosen.colors <- if(fac.lvls == length(color.vec())) color.vec() else rainbow(length(fac.lvls))
+      # --- add ellipses ---
+      classes <- mSet$dataSet$cls
+      plots <- plotly::plot_ly(showlegend = F)
+      
+      for(class in levels(classes)){
+        row = which(classes == class)
+        # ---------------------
+        xc=coords[row, x]
+        yc=coords[row, y]
+        zc=coords[row, z]
+        # --- plot ellipse ---
+        o <- rgl::ellipse3d(cov(cbind(xc,yc,zc)), 
+                            centre=c(mean(xc), 
+                                     mean(yc), 
+                                     mean(zc)), 
+                            level = 0.95)
+        mesh <- c(list(x = o$vb[1, o$ib]/o$vb[4, o$ib], 
+                       y = o$vb[2, o$ib]/o$vb[4, o$ib], 
+                       z = o$vb[3, o$ib]/o$vb[4, o$ib]))
+        plots = plots %>% add_trace(
+          x=mesh$x, 
+          y=mesh$y, 
+          z=mesh$z, 
+          type='mesh3d',
+          alphahull=0,
+          opacity=0.1,
+          hoverinfo="none"
+        )
+      }
+      adj_plot <<- plotly_build(plots)
+      rgbcols <- toRGB(chosen.colors)
+      c = 1
+      for(i in seq_along(adj_plot$x$data)){
+        item = adj_plot$x$data[[i]]
+        if(item$type == "mesh3d"){
+          adj_plot$x$data[[i]]$color <- rgbcols[c]
+          adj_plot$x$data[[i]]$visible <- TRUE
+          c = c + 1
+        }
+      }
       # ---------------
-      plotly::plot_ly(hoverinfo = 'text',
-                      text = rownames(mSet$dataSet$norm)) %>%
+      adj_plot %>%
         add_trace(
           x = coords[,x], 
           y = coords[,y], 
           z = coords[,z], 
           type = "scatter3d",
           color = mSet$dataSet$cls, 
-          colors=chosen.colors
+          colors=chosen.colors,
+          opacity=1
         ) %>%  layout(scene = list(
           xaxis = list(
             titlefont = list(size = 20),
@@ -2006,7 +2001,7 @@ shinyServer(function(input, output, session) {
           )
         ))
     })
-    output$plsda_tab <-DT::renderDataTable({
+    output$plsda_tab <- DT::renderDataTable({
       req(plsda.table)
       # -------------
       DT::datatable(plsda.table, 
@@ -2051,8 +2046,7 @@ shinyServer(function(input, output, session) {
                                   }
                                   else{NA}
                                 }
-                              }
-                              
+                              }        
     )
     add_search_list <<- add_search_list[!is.na(add_search_list)]
   })  

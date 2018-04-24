@@ -617,36 +617,40 @@ blocky <- function(table, dim=10) table[1:dim, 1:dim]
 modes = c("pos",
           "neg")
 
-sn <- fread(file.path(resdir, "sampleNames.txt"))
-sn$batch <- as.numeric(as.factor(gsub(sn$File_Name,
-                                      pattern = "_\\d\\d\\d$",
-                                      replacement="")))
+sn <- fread(file.path(resdir, "..", "sampleNames.txt"))
 sn_no_qc <- sn[!(Sample_Name %like% "QC")]
 sn_qc <- sn[(Sample_Name %like% "QC")]
 sn_adj <- as.data.table(unique(rbind(sn_no_qc, sn_qc)))
 
 # maldiquant method
 
-dir.create(file.path(resdir, "specpks_grouped_mdq"),
-           showWarnings = F)
-
 library(pbapply)
 library(data.table)
 library(MALDIquant)
 library(gsubfn)
 
+peak_in = "peaks_wavelet"
+peak_out = "specpks_grouped_wavelet"
+
+
+dir.create(file.path(resdir, peak_out),
+           showWarnings = F)
+
+
 for(mode in modes){
 
   # --- load file ---
-  fn =  file.path(resdir, "specpks_grouped_mdq", paste0("grouped_",mode,".RData"))
+  fn =  file.path(resdir, peak_out, paste0("grouped_",mode,".RData"))
   
-  pk_files <- list.files(file.path(resdir, "peaks"),
+  pk_files <- list.files(file.path(resdir, peak_in),
                          pattern= paste0("_",mode,"\\.RData"),
                          full.names = T)
   
   # Gather sub peaktables
   peaktables <- pblapply(pk_files, cl=0, FUN=function(f){
     load(f)
+    peaks <- if(grepl(peak_in, pattern = "gauss")) peaks_gauss else peaks
+    #peaks <- peaks_gauss
     peaks@metaData$sampname = gsub(basename(f), 
                                    pattern="_(pos|neg)\\.RData", 
                                    replacement="")
@@ -676,13 +680,20 @@ for(mode in modes){
   
   outlist = data.table::rbindlist(peaktables_binned, use.names = T, fill = TRUE)
 
+  peaktables_binned <- NULL; gc()
+  
   outpgrlist <- rowsum(outlist, group = outlist$mzmed, na.rm = T, reorder = T)
+  
+  outlist <- NULL; gc()
+  
   outpgrlist$mzmed <- rownames(outpgrlist)
   
   new_colnames = pbsapply(colnames(outpgrlist[,-1]), FUN=function(samp){
     rowsi = sn_adj[Sample_Name == samp]
-    batch = unique(rowsi$batch)
-    newName = gsubfn::fn$paste("*$batch*$samp")
+    print(rowsi)
+    batch = unique(rowsi$Batch)
+    inj = unique(rowsi$Injection)
+    newName = gsubfn::fn$paste("*$batch_$inj*$samp")
     newName
   })
   
@@ -691,18 +702,19 @@ for(mode in modes){
   outlist <- NULL; gc()
 
   outpgrlist[outpgrlist == 0] <- NA
+  #outpgrlist[,(1:ncol(outpgrlist)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
   
-  outpgrlist_filt <- outpgrlist[-which(rowMeans(is.na(outpgrlist[,-1])) > 0.6), ]
+  #outpgrlist_filt <- outpgrlist
+  outpgrlist_filt <- outpgrlist[-which(rowMeans(is.na(outpgrlist[,-1])) > 0.8), ]
   
   print(mode)
   print(dim(outpgrlist))
-  print(dim(outpgrlist_filt))
-  
+
   # remove all that only has
   #f =  file.path(resdir, "specpks_grouped_mdq", paste0("grouped_",mode,".RData"))
   #save(outpgrlist, file=f)
   data.table::fwrite(x = outpgrlist_filt,
-                     file = file.path(resdir, "specpks_grouped_mdq", paste0("grouped_",
+                     file = file.path(resdir, peak_out, paste0("grouped_",
                                                                mode,
                                                                ".csv")))
   

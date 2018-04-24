@@ -8,6 +8,7 @@
 **.xml
 **.zip
 **.png
+**.gz
 .Rproj.user
 /backend/db
 /backend/appdata/*

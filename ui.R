@@ -87,8 +87,11 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                       column(3,  align="center",
                                              h2("KEGG"),
                                              helpText("Large pathway database with info on pathways in various organisms, involved enzymes, and connected disease phenotypes.")
-                                      )
-                                      ,column(3,  align="center",
+                                      ),
+                                      column(3,  align="center",
+                                             h2("SMPDB"),
+                                             helpText("Small molecule pathway database. Compounds overlap with HMDB.")
+                                      ),column(3,  align="center",
                                              h2("MetaCyc"),
                                              helpText("Large pathway database with over 10 000 available compounds. Spans several organisms!")
                                       )
@@ -99,6 +102,10 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                       ),
                                       column(3,  align="center",
                                              imageOutput("kegg_logo",inline = T),
+                                             br(),br()
+                                      ),
+                                      column(3,  align="center",
+                                             imageOutput("smpdb_logo",inline = T),
                                              br(),br()
                                       )
                                       ,column(3,  align="center",
@@ -117,6 +124,12 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                              actionButton("build_kegg", "Build", icon = icon("wrench")),
                                              br(),br(),
                                              imageOutput("kegg_check",inline = T))
+                                      ,
+                                      column(3,  align="center",
+                                             actionButton("check_smpdb", "Check", icon = icon("check")),
+                                             actionButton("build_smpdb", "Build", icon = icon("wrench")),
+                                             br(),br(),
+                                             imageOutput("smpdb_check",inline = T))
                                       ,
                                       column(3,  align="center",
                                              actionButton("check_metacyc", "Check", icon = icon("check")),
@@ -279,6 +292,7 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                                                                                              sardine(fadeImageButton("search_noise", img.path = "umcnoise.png")),
                                                                                                              sardine(fadeImageButton("search_hmdb", img.path = "hmdblogo.png")),
                                                                                                              sardine(fadeImageButton("search_chebi", img.path = "chebilogo.png")),br(),
+                                                                                                             sardine(fadeImageButton("search_smpdb", img.path = "smpdb_logo_adj.png")),
                                                                                                              sardine(fadeImageButton("search_metacyc", img.path = "metacyc.png")),
                                                                                                              sardine(fadeImageButton("search_wikipathways", img.path = "wikipathways.png")),
                                                                                                              sardine(fadeImageButton("search_kegg", img.path = "kegglogo.gif")),

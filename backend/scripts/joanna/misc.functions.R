@@ -93,9 +93,30 @@ download.chebi.joanna <- function (release = "latest", woAssociations = FALSE) {
                                                          "formulas.tsv"), quiet = TRUE)
   formulas <- suppressWarnings(as.data.frame.array(read.delim2(paste0(chebi_download, 
                                                                       "formulas.tsv"))))
+  
+  message("Downloading structures ... ", appendLF = FALSE)
+  
+  utils::download.file(paste0(ftp, "structures.csv.gz"), paste0(chebi_download, 
+                                                                "structures.csv"), quiet = TRUE)
+  
+  message("DONE", appendLF = TRUE)
+  
+  structures <- suppressWarnings(as.data.frame.array(read.delim2(paste0(chebi_download, 
+                                                                        "structures.csv"), sep=",")))
+  # mol.rows <- which(structures$TYPE == "mol")
+  # inchi.rows <- which(structures$TYPE == "InChI")
+  # inchikey.rows <- which(structures$TYPE == "InChIKey")
+  
+  smile.rows <- which(structures$TYPE == "SMILES")
+
+  structures <- structures[smile.rows,]
+
+  # print(table(as.factor(structures$TYPE)))
+
   message("DONE", appendLF = TRUE)
   message("Building ChEBI ... ", appendLF = TRUE)
-  compounds <- compounds[compounds[, "STAR"] >= 3, ]
+  
+  #compounds <- compounds[compounds[, "STAR"] >= 3, ]
   latest <- compounds[, c("ID", "NAME", "DEFINITION")]
   old <- compounds[, c("ID", "PARENT_ID")]
   old <- merge(x = old, y = latest, by.x = "PARENT_ID", by.y = "ID")
@@ -107,6 +128,7 @@ download.chebi.joanna <- function (release = "latest", woAssociations = FALSE) {
                                 by.y = "COMPOUND_ID", all.x = TRUE)))
   ChEBI <- unique(DB[, c("ID", "NAME.x", "DEFINITION")])
   colnames(ChEBI) <- c("ID", "ChEBI", "DEFINITION")
+  
   message(" KEGG Associations ... ", appendLF = FALSE)
   KEGG <- unique(DB[DB[, "SOURCE"] == "KEGG COMPOUND", c("ID", 
                                                          "NAME.y")])
@@ -236,24 +258,28 @@ download.chebi.joanna <- function (release = "latest", woAssociations = FALSE) {
     message("NOT AVAILABLE FOR THIS RELEASE")
   }
   DB[DB == "null"] <- NA
+  
+  DB = merge(DB, structures[,-1], by.x = "ID",  by.y = "COMPOUND_ID", all.x = TRUE, incomparables = "unknown")
+  
   DB <- unique(DB[complete.cases(DB[, c("ID", "DEFINITION","ChEBI", "FORMULA.x", 
-                                        "MASS.x", "MONOISOTOPIC.x", "CHARGE.x")]), ])
+                                        "MASS.x", "MONOISOTOPIC.x", "CHARGE.x", "STRUCTURE")]), ])
   colnames(DB) <- c("ID", "DEFINITION","ChEBI", "KEGG", "IUPAC", "MetaCyc", 
-                    "ChEMBL", "FORMULA", "MASS", "MONOISOTOPIC", "CHARGE")
+                    "ChEMBL", "FORMULA", "MASS", "MONOISOTOPIC", "CHARGE", "STRUCTURE")
+
   if (woAssociations == TRUE) {
     compounds <- unique(rbind(setNames(DB[, c("ChEBI", "DEFINITION","FORMULA", 
                                               "MASS", "MONOISOTOPIC", "CHARGE")], c("NAME","DEFINITION","FORMULA", 
-                                                                                    "MASS", "MONOISOTOPIC", "CHARGE")), setNames(DB[, 
-                                                                                                                                    c("KEGG","DEFINITION", "FORMULA", "MASS", "MONOISOTOPIC", "CHARGE")], 
-                                                                                                                                 c("NAME", "DEFINITION","FORMULA", "MASS", "MONOISOTOPIC", "CHARGE")), 
+                                                                                    "MASS", "MONOISOTOPIC", "CHARGE","STRUCTURE")), setNames(DB[, 
+                                                                                                                                    c("KEGG","DEFINITION", "FORMULA", "MASS", "MONOISOTOPIC", "CHARGE","STRUCTURE")], 
+                                                                                                                                 c("NAME", "DEFINITION","FORMULA", "MASS", "MONOISOTOPIC", "CHARGE","STRUCTURE")), 
                               setNames(DB[, c("IUPAC", "DEFINITION","FORMULA", "MASS", "MONOISOTOPIC", 
                                               "CHARGE")], c("NAME", "DEFINITION","FORMULA", "MASS", "MONOISOTOPIC", 
                                                             "CHARGE")), setNames(DB[, c("MetaCyc", "DEFINITION","FORMULA", 
-                                                                                        "MASS", "MONOISOTOPIC", "CHARGE")], c("NAME", "DEFINITION",
-                                                                                                                              "FORMULA", "MASS", "MONOISOTOPIC", "CHARGE")), 
+                                                                                        "MASS", "MONOISOTOPIC", "CHARGE","STRUCTURE")], c("NAME", "DEFINITION",
+                                                                                                                              "FORMULA", "MASS", "MONOISOTOPIC", "CHARGE","STRUCTURE")), 
                               setNames(DB[, c("ChEMBL","DEFINITION", "FORMULA", "MASS", "MONOISOTOPIC", 
-                                              "CHARGE")], c("NAME", "DEFINITION","FORMULA", "MASS", "MONOISOTOPIC", 
-                                                            "CHARGE"))))
+                                              "CHARGE","STRUCTURE")], c("NAME", "DEFINITION","FORMULA", "MASS", "MONOISOTOPIC", 
+                                                            "CHARGE","STRUCTURE"))))
     compounds <- compounds[complete.cases(compounds), ]
     return(compounds)
   }
@@ -365,3 +391,18 @@ sdfStream.joanna <- function (input, output, append = FALSE, fct, Nlines = 10000
     }
   }
 }
+
+# plot molecules in R plot window instead of separate Java window
+plot.mol = function(molecule,width=500,height=500,marg=0,main='',style="bow") {
+  #curcumin = parse.smiles("O=C(\\C=C\\c1ccc(O)c(OC)c1)CC(=O)\\C=C\\c2cc(OC)c(O)cc2")[[1]] 
+  #rcdkplot(curcumin, style="cow")
+  par(mar=c(marg,marg,marg,marg)) # set margins to zero since this isn't a real plot
+  dept = get.depictor(width = width, height = height, zoom = 1.3, style = style, 
+                      annotate = "off", abbr = "on", suppressh = TRUE, 
+                      showTitle = FALSE, smaLimit = 100, sma = NULL) 
+  temp1 = view.image.2d(molecule, dept) # get Java representation into an image matrix. set number of pixels you want horiz and vertical
+  plot(NA,NA,xlim=c(1,10),ylim=c(1,10),xaxt='n',yaxt='n',xlab='',ylab='',main=main) # create an empty plot
+  rasterImage(temp1,1,1,10,10) # boundaries of raster: xmin, ymin, xmax, ymax. here i set them equal to plot boundaries
+}
+
+# first look at curcumin

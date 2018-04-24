@@ -11,15 +11,15 @@ brazil <- fread(input="/Users/jwolthuis/Analysis/SP/Brazil1_filled.csv",header =
 spain <- fread(input="/Users/jwolthuis/Analysis/SP/Spain1_filled.csv",header = T)
 brasp <-  fread(input="/Users/jwolthuis/Analysis/SP/BrazilAndSpain_filled.csv",header = T)
 
-brazil <- fread(input="/Users/jwolthuis/Analysis/SP/Brazil1.csv",header = T)
-spain <- fread(input="/Users/jwolthuis/Analysis/SP/Spain1.csv",header = T)
-brasp <-  fread(input="/Users/jwolthuis/Analysis/SP/BrazilAndSpain.csv",header = T)
+brazil <- fread(input="/Users/jwolthuis/Analysis/SP/Brazil_W.csv",header = T)
+spain <- fread(input="/Users/jwolthuis/Analysis/SP/Spain_W.csv",header = T)
+brasp <-  fread(input="/Users/jwolthuis/Analysis/SP/BrazilAndSpain_W.csv",header = T)
 #ned <- fread(input="/Users/jwolthuis/Analysis/SP/Ned2.csv",header = T)
 
-brazil[is.na(brazil)] <- 0
-spain[is.na(spain)] <- 0
+spain[,(1:ncol(spain)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
+brazil[,(1:ncol(brazil)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
 #ned[is.na(ned)] <- 0
-brasp[is.na(brasp)] <- 0
+brasp[,(1:ncol(brasp)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
 
 # ==================================
 
@@ -111,9 +111,17 @@ run_simulation <- function(curr, amin=0, amax=1, predictor = "Label"){
   list(auc = auc, alpha=a[my_alpha], roc = perf, cpds = variables, model = md_final, testX = as.matrix(testX), test_y = testY)
 }
 
-run_simulation_all_alpha <- function(curr, amin=0, amax=1, predictor = "Label"){
+run_simulation_all_alpha <- function(curr, amin=0, amax=1, predictor = "Label", l = "min"){
   
   nvars <- length(curr[,1:(which(colnames(curr) == "Injection"))])
+  
+  # first 4 are identifiers, leave alone 
+  
+
+  for (i in (4:nvars)) {
+    print(i)
+    curr[,i] <- as.numeric(as.factor(curr[,..i][[1]]))-1
+  }
   
   # ----------- remove qcs ----------
   
@@ -121,29 +129,29 @@ run_simulation_all_alpha <- function(curr, amin=0, amax=1, predictor = "Label"){
   
   # ---------------------------------
   
-  print(curr[,..predictor])
-  
-  curr[,predictor] <- as.factor(c(curr[,predictor,
-                                       with=FALSE])[[1]])
-  #curr <- data.table(curr)
-  
-  inTrain <- createDataPartition(y = c(curr[,predictor, 
-                                            with=FALSE])[[1]],
+  curr[,predictor] <- as.factor(c(curr[,..predictor])[[1]])
+
+  inTrain <- createDataPartition(y = c(curr[,..predictor])[[1]],
                                  ## the outcome data are needed
                                  p = .6,
                                  ## The percentage of data in the training set
                                  list = FALSE)
   trainY <- curr[inTrain, 
-                 predictor, 
-                 with=FALSE][[1]]
+                 ..predictor][[1]]
   
   family <- if(length(levels(as.factor(trainY))) > 2){"multinomial"} else("binomial")
+  print(family)
   
   training <- curr[ inTrain,]
   testing <- curr[-inTrain, ]
   
-  trainX <- apply(training[, -c(1:nvars), with=FALSE], 2, as.numeric)
-  testX <- apply(testing[, -c(1:nvars), with=FALSE], 2, as.numeric)
+  predIdx <- which(colnames(curr) == predictor | colnames(curr) %in% c("Group","Sample","$","X","Injection","Faecal_consistency_score"))
+  
+  trainX <- apply(training[, -c(1:4,predIdx), with=FALSE], 2, as.numeric)
+  testX <- apply(testing[, -c(1:4,predIdx), with=FALSE], 2, as.numeric)
+
+  print(colnames(trainX)[1:20])
+  print(colnames(testX)[1:20])
   
   testY <- testing[,predictor, 
                    with=FALSE][[1]]
@@ -152,7 +160,7 @@ run_simulation_all_alpha <- function(curr, amin=0, amax=1, predictor = "Label"){
   
   a <- seq(amin, amax, 0.2)
   
-  models <- pbapply::pblapply(a,  cl=cl, FUN=function(i, l = "min"){
+  models <- pbapply::pblapply(a,  cl=cl, FUN=function(i){
     
     print(i)
     lambda = paste0('lambda.', l)
@@ -169,47 +177,106 @@ run_simulation_all_alpha <- function(curr, amin=0, amax=1, predictor = "Label"){
                           type = "response", 
                           newx = testX, 
                           s = lambda)
-    roc <- ROCR::prediction(prediction,
-                            testY)
+    
+    # roc = switch(family,
+    #              binomial = {
+    #                roc <- ROCR::prediction(prediction,
+    #                                        testY)  
+    #              }, multinomial = {
+    #                
+    #              })
     # --------
 
-    list(alpha = i, lambda = cv2[[lambda]], model = md, prediction = prediction, roc = roc, labels = testY)
+    list(alpha = i, lambda = cv2[[lambda]], model = md, prediction = prediction, labels = testY)
   })
   models
 }
 # https://www.r-bloggers.com/variable-selection-with-elastic-net/ <<-- used this tutorial
 
-res_brasp_enet <- run_simulation_all_alpha(brasp, 0, 1, "Stool_condition")
-res_bra_enet <- run_simulation_all_alpha(brazil, 0, 1, "Stool_condition")
-res_sp_enet <- run_simulation_all_alpha(spain, 0, 1, "Stool_condition")
+res_brasp_stl <- run_simulation_all_alpha(brasp, 0, 1, "Stool_condition")
+res_bra_stl <- run_simulation_all_alpha(brazil, 0, 1, "Stool_condition")
+res_sp_stl <- run_simulation_all_alpha(spain, 0, 1, "Stool_condition")
 
-plot.many <- function(res.obj){
+res_brasp_bth <- run_simulation_all_alpha(brasp, 0, 1, "Batch")
+res_bra_bth <- run_simulation_all_alpha(brazil, 0, 1, "Batch")
+res_sp_bth <- run_simulation_all_alpha(spain, 0, 1, "Batch")
+
+res_bra_frm <- run_simulation_all_alpha(brazil, 0, 1, "Farm")
+res_sp_frm <- run_simulation_all_alpha(spain, 0, 1, "Farm")
+
+res_brasp_cnt <- run_simulation_all_alpha(brasp, 0, 1, "Country")
+
+
+
+plot.many <- function(res.obj, which_alpha = 1){
   predictions <- do.call("cbind", lapply(res.obj, function(x) x$prediction))
   colnames(predictions) <- sapply(res.obj, function(x) x$alpha)
   testY = res.obj[[1]]$labels
-  data <- data.frame(D = as.numeric(as.factor(testY))-1,
-                     D.str = testY)
-  data <- cbind(data, predictions)
-  roc_coord <- melt_roc(data, "D", m = 3:ncol(data))
-  ggplot(roc_coord, 
-         aes(d = D, m = M, color = name)) + 
-    geom_roc() + 
-    style_roc()
+  
+  if(length(unique(testY)) > 2){
+    
+    return("not supported yet")
+    # https://stats.stackexchange.com/questions/112383/roc-for-more-than-2-outcome-categories
+    #
+    # for (type.id in length(unique(testY))) {
+    #   type = as.factor(iris.train$Species == lvls[type.id])
+    #   
+    #   nbmodel = NaiveBayes(type ~ ., data=iris.train[, -5])
+    #   nbprediction = predict(nbmodel, iris.test[,-5], type='raw')
+    #   
+    #   score = nbprediction$posterior[, 'TRUE']
+    #   actual.class = iris.test$Species == lvls[type.id]
+    #   
+    #   pred = prediction(score, actual.class)
+    #   nbperf = performance(pred, "tpr", "fpr")
+    #   
+    #   roc.x = unlist(nbperf@x.values)
+    #   roc.y = unlist(nbperf@y.values)
+    #   lines(roc.y ~ roc.x, col=type.id+1, lwd=2)
+    #   
+    #   nbauc = performance(pred, "auc")
+    #   nbauc = unlist(slot(nbauc, "y.values"))
+    #   aucs[type.id] = nbauc
+    # }
+  }else{
+    data <- data.frame(D = as.numeric(as.factor(testY))-1,
+                       D.str = testY)
+    data <- cbind(data, predictions)
+    roc_coord <- plotROC::melt_roc(data, "D", m = 3:ncol(data))
+  }
+  names(roc_coord)[which(names(roc_coord) == "name")] <- "alpha"
+  
+  roc_coord <- roc_coord[roc_coord$alpha %in% which_alpha,]
+  # plot
+  ggplot2::ggplot(roc_coord, 
+                  ggplot2::aes(d = D, m = M, color = alpha)) + 
+    plotROC::geom_roc(labelsize=0,show.legend = TRUE) + 
+    plotROC::style_roc() + 
+    theme(axis.text=element_text(size=19),
+          axis.title=element_text(size=19,face="bold"),
+          legend.title=element_text(size=19),
+          legend.text=element_text(size=19))
 }
 
-plot.many(res_brasp_enet)
-plot.many(res_bra_enet)
-plot.many(res_sp_enet)
+plot.many(res_brasp_stl, which_alpha = c(0, 1))
+plot.many(res_bra_stl)
+plot.many(res_sp_stl)
 
-cpds <- res_brasp_enet[[6]]$model$beta
+#plot.many(res_brasp_bth)
+plot.many(res_bra_bth)
+plot.many(res_sp_bth)
+plot.many(res_brasp_cnt, which_alpha = c(0,1))
+
+
+cpds <- res_brasp_w_stl[[4]]$model$beta
 used <- which(cpds > 0)
 mz_ab <- rownames(cpds)[used]
 
-cpds <- res_bra_enet[[6]]$model$beta
+cpds <- res_bra_stl[[3]]$model$beta
 used <- which(cpds > 0)
 mz_a <- rownames(cpds)[used]
 
-cpds <- res_sp_enet[[6]]$model$beta
+cpds <- res_sp_stl[[2]]$model$beta
 used <- which(cpds > 0)
 mz_b <- rownames(cpds)[used]
 

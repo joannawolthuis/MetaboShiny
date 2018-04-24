@@ -66,8 +66,12 @@ shinyServer(function(input, output, session) {
     done = list.files(path(),pattern = "mzXML",full.names = T)
     maxFiles <- length(files) - length(done)
     READW <- file.path(getwd(),"exec/ReAdW.2016010.msfilereader.exe")
-    WINE <- "/Users/jwolthuis/brew/Cellar/wine/2.19_3/bin/wine"
+    WINE <- "
+    "
     # ----------------------
+    # files = c("/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML/RES_20171103_208.raw",
+    #           "/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML/RES_20171103_209.raw",
+    #           "/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML/RES_20171103_210.raw")
     withProgress(min = 0, max = maxFiles, {
       for(INFILE in files){
         OUTFILE = gsub(INFILE, pattern = "\\.raw$|\\.RAW$", replacement = "\\.mzXML")

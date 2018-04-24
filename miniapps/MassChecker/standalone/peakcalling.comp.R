@@ -20,8 +20,8 @@ query = "SELECT DISTINCT b.compoundname, b.baseformula, fullmz, adduct, foundinm
 
 standards <- as.data.table(RSQLite::dbGetQuery(conn, query))
 
-standards_pos_base <- standards[foundinmode == "positive"]
-standards_neg_base <- standards[foundinmode == "negative"]
+standards_pos <- standards[foundinmode == "positive"]
+standards_neg <- standards[foundinmode == "negative"]
 
 standards_pos_base <- standards_pos[adduct == "M+H"]
 standards_neg_base <- standards_pos[adduct == "M-H"]
@@ -63,11 +63,12 @@ df <- matrix(data = averaged[[1]]@intensity,
              ncol=1)
 rownames(df) <- averaged[[1]]@mass
 
+rng = c(500:600)
 
-plot(rownames(df)[rng],df[rng,])
+plot(rownames(df)[rng],df[rng,], xlab = "m/z", ylab="intensity",cex.lab=1.5)
 lines(rownames(df)[rng],df[rng,])
 
-scales <- seq(1, 64, 2)
+scales <- seq(1, 10, 0.1)
 sig_noise=6e-7
 wCoefs <- MassSpecWavelet::cwt(df, scales=scales, wavelet='mexh')
 localMax <- MassSpecWavelet::getLocalMaximumCWT(wCoefs,amp.Th = 500)
@@ -80,15 +81,15 @@ abline(h = 10)
 
 # --- find relationship between scale and mz ---
 
-known_peaks <- pastecs::turnpoints(df[rng,])
-npeaks <- length(which(known_peaks$peaks))
-
-range = 10
-for(peak in known_peaks){
-  plot(rownames(df)[peak-range:peak+range],df[peak-range:peak+range,])
-  lines(rownames(df)[peak-range:peak+range],df[peak-range:peak+range,])
-  Sys.sleep(2)
-}
+# known_peaks <- pastecs::turnpoints(df[rng,])
+# npeaks <- length(which(known_peaks$peaks))
+# 
+# range = 10
+# for(peak in known_peaks){
+#   plot(rownames(df)[peak-range:peak+range],df[peak-range:peak+range,])
+#   lines(rownames(df)[peak-range:peak+range],df[peak-range:peak+range,])
+#   Sys.sleep(2)
+# }
 # ----------------------------------------------
 
 ridgeList <- getRidge(localMax,minWinSize = 5)
@@ -105,8 +106,10 @@ peaks_wav = MALDIquant::createMassPeaks(mass = as.numeric(rownames(df)[majorPeak
                                         intensity = majorPeakInfo$peakValue,
                                         snr = majorPeakInfo$peakSNR)
 
-csv <- fread("/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML/results/specpks_grouped_mdq/grouped_pos.csv")
-csv[is.na(csv)] <- 0
+sampname = gsub(x = basename(current), pattern = "_(pos|neg)\\.RData", replacement = "")
+csv <- fread("/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML/results/specpks_grouped_wavelet/grouped_pos.csv")
+csv[,(1:ncol(csv)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
+
 mycol <- grepl(colnames(csv), pattern = sampname)
 peaks_wav = MALDIquant::createMassPeaks(mass = as.numeric(csv$mzmed),
                                         intensity = csv[,..mycol][[1]])
@@ -127,7 +130,6 @@ match_wav <- pbapply::pblapply(1:nrow(standards_pos_base), FUN=function(i){
 
 res_wav <- rbindlist(match_wav[!is.null(match_wav)])
 res_wav
-
 ### MALDIQUANT ###
 
 peaks_mald <- MALDIquant::detectPeaks(averaged[[1]], 
@@ -152,6 +154,190 @@ match_mald <- pbapply::pblapply(1:nrow(standards_pos_base), FUN=function(i){
 
 res_mald <- rbindlist(match_mald[!is.null(match_mald)])
 res_mald
+
+
+### GAUSS_ADJUSTED ###
+
+vec <- averaged[[1]]@intensity
+names(vec) <- averaged[[1]]@mass
+rl <- rle(vec == 0)
+i1 <- rl$lengths>2 & rl$values
+lst <- split(vec, rep(cumsum(c(TRUE, i1[-length(i1)])), rl$lengths)) 
+split_peaks = lapply(lst, function(x) x[which(x!=0)])
+
+peak_num <- pbapply::pblapply(split_peaks, FUN=function(peak){
+  if(length(peak) > 0){
+    tp <- pastecs::turnpoints(peak)
+    ncomp = length(which(tp$peaks))
+  }else{
+    ncomp = 0
+  } 
+  # ------
+  ncomp
+})
+
+# ----------
+
+tp_peaks <- pbapply::pblapply(split_peaks, cl=0, FUN=function(peak){
+  nested = FALSE
+  if(length(peak) > 0){
+    tp_all <- pastecs::turnpoints(peak)
+    xvals = peak
+    mu = peak[tp_all$peak]
+    #ncomp = length(which(tp$peaks))
+    #peak_mz = as.numeric(names(peak)[which(tp$peaks)])
+    if(length(which(tp_all$peaks)) > 1){
+      print("multiple")
+      nested = TRUE
+      # split
+      pits = which(tp_all$pits)
+      peaks = peak[tp_all$peaks]
+      split_split_peaks = lapply(1:length(pits), function(i){
+        pit = pits[i]
+        if(i == 1){
+          xvals = peak[1:pit]
+        }else if(i == length(pits)){
+          xvals = peak[pit:pits[length(pits)]]
+        }else{
+          xvals = peak[pits[i-1]:pit]
+        }
+        mu = intersect(names(xvals), names(peaks))
+        list(x = xvals, m = mu)
+      })
+      return(list(orig_xvals = peak, split_xvals = split_split_peaks))
+      #print(tp_all)
+    }else{
+      print("single")
+      return(list(orig_xvals = xvals, split_xvals = FALSE, m = mu))
+    }
+  }else{
+    return(list())
+  }
+  # ------
+  #list(peak, ncomp, peaks, dips)
+})
+
+# ---------------
+
+int.factor=1*10^5 # Number of x used to calc area under Gaussian (is not analytic) 
+
+peak_rows <- pbapply::pblapply(tp_peaks, cl=cl, function(res){
+  #sig = NULL
+  #try({
+  if(length(res$split_xvals) > 1){
+    rows <- lapply(res$split_xvals, function(peak){
+      try({
+        if(length(peak[['m']]) == 0){
+          NULL
+        }else{
+          vals = fitG_2(names(res$orig_xvals),
+                        res$orig_xvals,
+                        mu = peak$m,
+                        2,
+                        TRUE,
+                        lower = c(min(as.numeric(names(peak$x))), .Machine$double.xmin),
+                        upper = c(max(as.numeric(names(peak$x))), .Machine$double.xmax)
+          )
+          fwhm = getFwhm(vals$par[1], 140000)
+          sig = 0.42466090 * fwhm
+          area = getArea(mu = vals$par[1],
+                         resol = 140000,
+                         scale = vals$par[2],
+                         int.factor = int.factor,
+                         sigma = sig)
+          qual = getFitQuality(x = as.numeric(names(peak)),
+                               y = as.numeric(peak$x),
+                               muFirst = peak$m,
+                               muLast = vals$par[1],
+                               resol = 140000,
+                               scale = vals$par[2],
+                               sigma = sig,
+                               sumFit = vals$value)
+          data.table(mz = vals$par[1],
+                     intensity = area,
+                     qual = qual$fq_new)
+        }
+      })
+    })
+  }else{
+    if(length(res$m) == 0){
+      rows = list()
+    }else{
+      try({
+        vals = fitG_2(names(res$orig_xvals),
+                      res$orig_xvals,
+                      mu = res$m,
+                      2,
+                      TRUE,
+                      lower = c(min(as.numeric(names(res$orig_xvals))), .Machine$double.xmin),
+                      upper = c(max(as.numeric(names(res$orig_xvals))), .Machine$double.xmax)
+        )
+        fwhm = getFwhm(vals$par[1], 140000)
+        sig = 0.42466090 * fwhm
+        area = getArea(mu = vals$par[1],
+                       resol = 140000,
+                       scale = vals$par[2],
+                       int.factor = int.factor,
+                       sigma = sig)
+        qual = getFitQuality(x = as.numeric(names(res$orig_xvals)),
+                             y = as.numeric(res$orig_xvals),
+                             muFirst = res$m,
+                             muLast = vals$par[1],
+                             resol = 140000,
+                             scale = vals$par[2],
+                             sigma = sig,
+                             sumFit = vals$value)
+        tbl <- data.table(mz = vals$par[1],
+                          intensity = area,
+                          qual = qual$fq_new)
+        rows = list(tbl) 
+      })
+    }
+  }
+  if(length(rows) > 0){
+    tbl <- rbindlist(rows[sapply(rows, 
+                                 is.data.table)])
+    tbl    
+  }
+  
+  #})
+})
+
+tbl = rbindlist(peak_rows[sapply(peak_rows, is.data.table)])
+
+sampname = gsub(x = basename(current), pattern = "_(pos|neg)\\.RData", replacement = "")
+csv <- fread("/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML/results/specpks_grouped_mdq_gauss/grouped_pos.csv")
+csv[,(1:ncol(csv)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
+
+mycol <- grepl(colnames(csv), pattern = sampname)
+peaks_gauss = MALDIquant::createMassPeaks(mass = as.numeric(csv$mzmed),
+                                        intensity = csv[,..mycol][[1]])
+
+
+peaks_gauss = MALDIquant::createMassPeaks(mass = tbl$mz,
+                                          intensity = tbl$intensity,
+                                          metaData = list(qual=tbl$qual))
+
+match_gauss_2 <- pbapply::pblapply(1:nrow(standards_pos_base), FUN=function(i){
+  std <- standards_pos_base[i,]
+  peak <- std$fullmz
+  matches <- which(peaks_gauss@mass %between% c(peak - peak/(ppm*1e6), 
+                                               peak + peak/(ppm*1e6)))
+  print(matches)
+  if(length(matches) > 0){
+    paste_row <- data.table(match_mz = paste(peaks_gauss@mass[matches], collapse = ";"), 
+                            match_int = paste(peaks_gauss@intensity[matches],collapse=";"))
+    res <- cbind(std, paste_row)
+  }else{
+    paste_row <- data.table(match_mz = NA, 
+                            match_int = NA)
+    res <- cbind(std, paste_row)
+  }
+  res
+})
+
+res_gauss_2 <- rbindlist(match_gauss_2[!is.null(match_gauss_2)])
+res_gauss_2
 
 ### GAUSSIAN ###
 
@@ -448,12 +634,58 @@ peaks_mix <- pbapply::pblapply(1:length(multipeaks), cl=0, FUN=function(i){
   # peak_areas
 })
 
+# --- proFIAT ---
+
+sname = gsub(basename(current), pattern = "_(pos|neg)\\.RData", replacement= "")
+
+sn <- data.table::fread(file.path(outdir,
+                                  "sampleNames.txt"))
+files <- sn[Sample_Name == sname]
+
+BiocInstaller::biocLite("proFIA")
+
+library(proFIA) # DESIGNED FOR CENTROIDED DATA... MEMORY CANNOT HANDLE PROFILE DATA :-()
+
+if(require(plasFIA)){
+  path<-system.file(package="plasFIA","mzML")
+  
+  #Defining parameters for Orbitrap fusion.
+  ppm<-2
+  ppmgroup<-1
+  paral<-FALSE
+  fracGroup<-0.2
+  k<-2
+  maxo<-FALSE
+  
+  plasSet<-analyzeAcquisitionFIA(path,ppm=ppm,fracGroup=fracGroup,ppmgroup=ppmgroup,k=k,parallel=paral)
+  
+}
+#set <- analyzeAcquisitionFIA(file.path(outdir, "testpeaks"), ppm = ppm, noiseEstimation = FALSE, SNT=0)
+plasSet_2<-analyzeAcquisitionFIA(file.path(outdir, "testpeaks"),
+                                 ppm = ppm,
+                                 fracGroup = fracGroup,
+                                 ppmgroup = ppmgroup,
+                                 k = k,
+                                 parallel = paral)
+
+ppm = 2
+
+files <- list.files(file.path("/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML", "testpeaks"),full.names = TRUE)
+f = files[1]
+mzML
+
+
+set <- proFIAset(file.path(outdir, "testpeaks"), ppm, parallel = FALSE, BPPARAM = NULL,
+          noiseEstimation = TRUE)
+
 
 # --- compare all  ---
 
 perc_wav = 100 - (length(which(is.na(res_wav$match_mz))) / nrow(res_wav) * 100.00)
 perc_mald = 100 - (length(which(is.na(res_mald$match_mz))) / nrow(res_mald) * 100.00)
 perc_gauss = 100 - (length(which(is.na(res_gauss$match_mz))) / nrow(res_gauss) * 100.00)
+perc_gauss_2 = 100 - (length(which(is.na(res_gauss_2$match_mz))) / nrow(res_gauss_2) * 100.00)
+
 perc_proc = 100 - (length(which(is.na(res_proc$match_mz))) / nrow(res_proc) * 100.00)
 perc_tp = 100 - (length(which(is.na(res_tp$match_mz))) / nrow(res_tp) * 100.00)
 

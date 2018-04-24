@@ -216,4 +216,109 @@ ggPlotVolc <- function(cf=rainbow, n=256){
     plotly::ggplotly(plot, tooltip="cpd")
 }
 
+ggPlotPCApairs <- function(cols = c("black", "pink"), pc.num, type = "pca", cf = rainbow){
+  
+  cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
+  
+  ggplot <- function(...) ggplot2::ggplot(...) + scale_color_brewer(palette="Set1")
+  unlockBinding("ggplot",parent.env(asNamespace("GGally")))
+  assign("ggplot",ggplot,parent.env(asNamespace("GGally")))
+  
+  switch(type,
+         pca = {
+           pclabels <- paste0("PC", 1:pc.num, " (", round(100 * mSet$analSet$pca$variance[1:pc.num], 
+                                                         1), "%)")
+           pca_matr <- as.data.table(mSet$analSet$pca$x[, 1:pc.num])
+         },
+         plsca = {
+           pclabels <- paste0("PC", 1:ncol(mSet$analSet$plsr$scores), " (", round(mSet$analSet$plsr$Xvar 
+                                                         / mSet$analSet$plsr$Xtotvar 
+                                                         * 100.0,
+                                                         digits = 2), "%)")
+           pca_matr <- as.data.table(mSet$analSet$plsr$scores[, 1:pc.num])
+         },
+         oplsda = {
+           # pclabels <- paste0("PC", 1:ncol(mSet$analSet$oplsda), " (", round(mSet$analSet$plsr$Xvar 
+           #                                                                        / mSet$analSet$plsr$Xtotvar 
+           #                                                                        * 100.0,
+           #                                                                        digits = 2), "%)")
+           # pca_matr <- as.data.table(mSet$analSet$plsr$scores[, 1:pc.num])
+         },
+         splsda = {
+           # pclabels <- paste0("PC", 1:ncol(mSet$analSet$splsr$variates$X), " (", round(mSet$analSet$splsr$explained_variance
+           #                                                                   * 100.0,
+           #                                                                   digits = 2), "%)")
+           # pca_matr <- as.data.table(mSet$analSet$plsr$scores[, 1:pc.num])
+           # 
+           # mSet$analSet$splsr$variates
+           # 
+         }
+         )
+  colnames(pca_matr)  <- pclabels
+  pca_matr$class <- mSet$dataSet$cls
+  p <- GGally::ggpairs(pca_matr, 
+                       columns = c(1:(ncol(pca_matr)-1)),
+                       aes(colour = class, 
+                           alpha = 0.4),
+                       upper = list(continuous = wrap("density", alpha = 0.5), combo = "box"),
+                       lower = list(continuous = wrap("points", alpha = 0.3), combo = wrap("dot", alpha = 0.4)),
+                       diag = list(continuous = wrap("densityDiag"))
+  )
+  
+  for(i in 1:p$nrow) {
+    for(j in 1:p$ncol){
+      p[i,j] <- p[i,j] + 
+        scale_fill_manual(values=c(cols)) +
+        scale_color_manual(values=c(cols))  
+    }
+  }
+  
+    p
+    
+    plotly::ggplotly(p)
+  # }
+  # else {
+  #   pairs(mSet$analSet$pca$x[, 2:pc.num], labels = pclabels)
+  # }
+}
 
+ggPlotClass <- function(pls.type = "plsda", cf = "rainbow"){
+  res <- mSet$analSet$plsda$fit.info
+  colnames(res) <- 1:ncol(res)
+  # best.num <- mSet$analSet$plsda$best.num
+  # choice <- mSet$analSet$plsda$choice
+  df <- melt(res)
+  df$Component <- paste0("PC",df$Component)
+  colnames(df) <- c("Metric", "Component", "Value")
+  p <- ggplot(df, aes(x=Metric, y=Value, fill=Metric)) +
+    geom_bar(stat="identity") + 
+    theme_minimal() + 
+    plot.theme(base_size = 15) +
+    facet_grid(~Component) + 
+    scale_fill_manual(values=cf(3))
+  return(p)
+  }
+
+ggPlotPerm<- function(pls.type = "plsda", cf = "rainbow"){
+  bw.vec <- mSet$analSet$plsda$permut
+  len <- length(bw.vec)
+  df <- melt(bw.vec)
+  colnames(df) = "acc"
+  p <- ggplot(df) +
+    geom_histogram(mapping=aes(x=acc, y=..count.., fill=factor(..count..)),
+                   binwidth=0.01) +
+    scale_fill_manual(values=cf(20)) +
+    theme_minimal() + 
+    plot.theme(base_size = 15) + 
+    theme(legend.position="none",legend.title.align = 0.5)+
+    labs(title="PLSDA predictive value",x="Accuracy", y = "Permutations") +
+    geom_segment(data=df,
+                 color="black",
+                 x=bw.vec[1],
+                 xend=bw.vec[1],
+                 y=0,aes(yend=.1*nrow(df)),
+                 size=1.5,
+                 linetype=8)+
+    annotate("text",x=bw.vec[1],y=.11*nrow(df),label = mSet$analSet$plsda$permut.p, color="black",size=4)
+ return(p)
+}
