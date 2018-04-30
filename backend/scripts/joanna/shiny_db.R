@@ -42,7 +42,7 @@ get_matches <- function(cpd = NA,
                        , width=10000, simplify=TRUE))
       } else{
       gsubfn::fn$paste(strwrap(
-        "SELECT DISTINCT compoundname as Name, baseformula as 'Mol. Formula', identifier as Identifier, description as Description
+        "SELECT DISTINCT compoundname as Name, baseformula as 'Mol. Formula', identifier as Identifier, description as Description, structure as Structure
         FROM base indexed by b_idx1
         WHERE $searchid = '$cpd'"
         , width=10000, simplify=TRUE))
@@ -82,7 +82,8 @@ get_matches <- function(cpd = NA,
                         base.identifier as Identifier, 
                         iso.adduct as Adduct,
                         iso.isoprevalence as IsoPerc,
-                        base.description as Description 
+                        base.description as Description,
+                        base.structure as Structure
         FROM isotopes iso
         JOIN db.base base indexed by b_idx1
         ON base.baseformula = iso.baseformula AND

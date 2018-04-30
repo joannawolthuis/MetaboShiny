@@ -90,12 +90,18 @@ build.base.db <- function(dbname=NA,
                                  # --- write ---
                                  RSQLite::dbWriteTable(conn, "base", db.formatted, append=TRUE)},
                                noise = function(dbname){
-                                 print("noisee")
                                  int.loc <- file.path(".", "backend","umcfiles", "internal")
                                  # --- noise ---
                                  noise.base.db <- read.csv(file.path(int.loc, 
                                                                      "TheoreticalMZ_NegPos_yesNoise.txt"), 
                                                            sep="\t")
+                                 # - - structures? - - -
+                                 
+                                 names <- noise.base.db$CompoundName
+                                 names_stripped <- unique(gsub(pattern = " \\(.*$", replacement = "", x = names))
+                                 
+                                 # - - - - - - - - - - -
+                                 
                                  db.formatted <- data.table::data.table(compoundname = as.character(noise.base.db[,1]),
                                                                         description = as.character(str_match(noise.base.db[,1], "(?<=\\().+?(?=\\))")),
                                                                         baseformula = as.character(noise.base.db[,2]), 
@@ -108,7 +114,7 @@ build.base.db <- function(dbname=NA,
                                  if(file.exists(db.full)) file.remove(db.full)
                                  full.conn <- RSQLite::dbConnect(RSQLite::SQLite(), db.full)
                                  # --- create base table here too ---
-                                 RSQLite::dbExecute(full.conn, statement = "create table base(compoundname text, description text, baseformula text, identifier text, charge text)")
+                                 RSQLite::dbExecute(full.conn, statement = "create table base(compoundname text, description text, baseformula text, identifier text, charge text, structure text)")
                                  # --- create extended table ---
                                  sql.make.meta <- strwrap("CREATE TABLE IF NOT EXISTS extended(
                                                           baseformula text,
@@ -155,13 +161,11 @@ build.base.db <- function(dbname=NA,
                                                        "base", 
                                                        db.formatted, 
                                                        append=TRUE)
-                                 print("heree")
-                                 
+
                                  RSQLite::dbWriteTable(full.conn, 
                                                        "extended", 
                                                        db.formatted.full, 
                                                        append=TRUE)
-                                 print("heree")
                                  # --- index ---
                                  RSQLite::dbExecute(full.conn, "create index b_idx1 on base(baseformula, charge)")
                                  RSQLite::dbExecute(full.conn, "create index e_idx1 on extended(baseformula, basecharge)")
@@ -277,7 +281,8 @@ build.base.db <- function(dbname=NA,
                                                                      b.baseformula, 
                                                                      w.widentifier as identifier, 
                                                                      b.charge,
-                                                                     w.pathway 
+                                                                     w.pathway,
+                                                                     b.structure
                                                                      FROM base b
                                                                      JOIN wikipathways w
                                                                      ON b.identifier = w.identifier")
@@ -747,6 +752,50 @@ build.base.db <- function(dbname=NA,
                                  
                                  RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
 
+                               }, dimedb = function(dbname, ...){
+                                 files = c(#"structures.zip", 
+                                           "dimedb_pathways.zip", 
+                                           "dimedb_sources.zip",
+                                           "dimedb_pc_info.zip",
+                                           "dimedb_id_info.zip")
+                                 file.url <- "https://dimedb.ibers.aber.ac.uk/help/downloads/"
+                                 file.urls <- paste0(file.url, files)
+                                 # ----
+                                 print("Downloading files...")
+                                 base.loc <- file.path(options$db_dir, "dimedb_source")
+                                 if(!dir.exists(base.loc)) dir.create(base.loc)
+                                 pbapply::pbsapply(file.urls, function(url){
+                                   zip.file <- file.path(base.loc, basename(url))
+                                   utils::download.file(url, zip.file)
+                                   utils::unzip(zip.file, exdir = base.loc)  
+                                 })
+                                 atom <- fread(file.path(base.loc,"dimedb_pc_info.tsv"))
+                                 ids <- fread(file.path(base.loc,"dimedb_id_info.tsv"))
+                                 source <- fread(file.path(base.loc,"dimedb_sources.tsv"))
+                                 pathway <- fread(file.path(base.loc, "dimedb_pathways.tsv"))
+                                 
+                                 unique.inchi <- unique(ids$InChIKey)
+                                 
+                                 joined <- rbind(ids, atom)
+                                 casted <- reshape2::dcast(joined, InChIKey ~ Property, function(vec) paste0(vec, collapse=","))
+                                 
+                                 db.formatted <- data.table(compoundname = Hmisc::capitalize(tolower(casted$Name)), 
+                                                            description = do.call(paste0, c(casted[,c("IUPAC Name", "Synonym")], col="-")),
+                                                            baseformula = casted$`Molecular Formula`,
+                                                            identifier =  casted$InChIKey, 
+                                                            charge = casted$`Formal Charge`,
+                                                            structure = casted$SMILES,
+                                                            pathway = c(NA)
+                                 )
+                                 
+                                 # - - -
+                                 
+                                 db.formatted[which(db.formatted$description == "-")] <- c("Unknown")
+                                 db.formatted$description <- gsub(db.formatted$description, pattern = "^-|-$", replacement = "")
+                                 
+                                 # - - -
+                                 
+                                 RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
                                })
   # --- execute ;) ---
   function.of.choice(dbname)

@@ -24,7 +24,7 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                       # -- header row ---
                                       fluidRow(column(12, align="center",
                                                       h3("")
-                                      )),
+                                      )), # FIRST ROW
                                       # --- db check cols --- common pollutants found in DIMS.
                                       fluidRow(column(3, align="center",
                                                       h2("UMC Internal"),
@@ -79,7 +79,7 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                       )),
                                       br(),br(),
                                       # --- db check cols --- common pollutants found in DIMS.
-                                      fluidRow(column(3, align="center",
+                                      fluidRow(column(3, align="center", # SECOND ROW
                                                       h2("WikiPathways"),
                                                       helpText("Open source biological pathway database. Currently only partially available."),
                                                       h3(" - REQUIRES CHEBI - ")
@@ -136,7 +136,21 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                              actionButton("build_metacyc", "Build", icon = icon("wrench")),
                                              br(),br(),
                                              imageOutput("metacyc_check",inline = T))
-                                      )
+                                      ),br(),# THIRD ROW
+                                      fluidRow(column(3, align="center",
+                                                      h2("DIMEdb"),
+                                                      helpText("A direct infusion database of biologically relevant metabolite structures and annotations.")
+                                      )),
+                                      fluidRow(column(3, align="center",
+                                                      imageOutput("dimedb_logo",inline = T),
+                                                      br(),br()
+                                      )),
+                                      fluidRow(column(3, align="center",
+                                                      actionButton("check_dimedb", "Check", icon = icon("check")),
+                                                      actionButton("build_dimedb", "Build", icon = icon("wrench")),
+                                                      br(),br(),
+                                                      imageOutput("dimedb_check",inline = T)
+                                      ))
                                       # ----------------------------------------------------
                              ),
                              # --------------------------------------------------------------------------------------------------------------------------------
@@ -291,11 +305,12 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                                                                                              sardine(fadeImageButton("search_internal", img.path = "umcinternal.png")),
                                                                                                              sardine(fadeImageButton("search_noise", img.path = "umcnoise.png")),
                                                                                                              sardine(fadeImageButton("search_hmdb", img.path = "hmdblogo.png")),
-                                                                                                             sardine(fadeImageButton("search_chebi", img.path = "chebilogo.png")),br(),
+                                                                                                             sardine(fadeImageButton("search_chebi", img.path = "chebilogo.png")),
                                                                                                              sardine(fadeImageButton("search_smpdb", img.path = "smpdb_logo_adj.png")),
                                                                                                              sardine(fadeImageButton("search_metacyc", img.path = "metacyc.png")),
                                                                                                              sardine(fadeImageButton("search_wikipathways", img.path = "wikipathways.png")),
                                                                                                              sardine(fadeImageButton("search_kegg", img.path = "kegglogo.gif")),
+                                                                                                             sardine(fadeImageButton("search_dimedb", img.path = "dimedb.png")),
                                                                                                              #sardine(fadeImageButton("search_pubchem", img.path = "pubchemlogo.png")),
                                                                                                              br(),
                                                                                                              sardine(switchButton(inputId = "autosearch",
@@ -311,6 +326,9 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                                                                                     tabPanel("Current", icon=icon("sort-numeric-asc"),
                                                                                                              actionButton("search_cpd", "Find hits", icon=icon("search")),
                                                                                                              hr(),
+                                                                                                             bsCollapsePanel(h3("View structure"),"",
+                                                                                                                             plotOutput("curr_struct", height="310px"),style = "info"
+                                                                                                             ),
                                                                                                              div(DT::dataTableOutput('match_tab'),style='font-size:80%'),
                                                                                                              hr(),
                                                                                                              div(textOutput("curr_definition"))

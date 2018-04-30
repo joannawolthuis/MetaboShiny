@@ -30,12 +30,14 @@ shinyServer(function(input, output, session) {
                           fluidRow(
                             sardine(fadeImageButton("add_internal", img.path = "umcinternal.png")),
                             sardine(fadeImageButton("add_noise", img.path = "umcnoise.png")),
-                            sardine(fadeImageButton("add_hmdb", img.path = "hmdblogo.png")),br(),
+                            sardine(fadeImageButton("add_hmdb", img.path = "hmdblogo.png")),
                             sardine(fadeImageButton("add_chebi", img.path = "chebilogo.png")),
                             sardine(fadeImageButton("add_smpdb", img.path = "smpdb_logo_adj.png")),
                             sardine(fadeImageButton("add_metacyc", img.path = "metacyc.png")),
                             sardine(fadeImageButton("add_wikipathways", img.path = "wikipathways.png")),
-                            sardine(fadeImageButton("add_kegg", img.path = "kegglogo.gif", value = T))
+                            sardine(fadeImageButton("add_kegg", img.path = "kegglogo.gif", value = T)),
+                            sardine(fadeImageButton("add_dimedb", img.path = "dimedb.png"))
+                            
                           )),
                  tabPanel(icon("id-card-o"), value = "identifier",
                           br(),
@@ -99,7 +101,7 @@ shinyServer(function(input, output, session) {
                 "kegg",
                 "metacyc",
                 "wikipathways"
-                ,"smpdb"
+                ,"smpdb","dimedb"
                 )
   
   images <<- list(list(name = 'cute_package', path = 'www/new-product.png', dimensions = c(80, 80)),
@@ -112,6 +114,7 @@ shinyServer(function(input, output, session) {
                   list(name = 'kegg_logo', path = 'www/kegglogo.gif', dimensions = c(200, 150)),
                   list(name = 'pubchem_logo', path = 'www/pubchemlogo.png', dimensions = c(145, 90)),
                   list(name = 'smpdb_logo', path = 'www/smpdb_logo_adj.png', dimensions = c(200, 160)),
+                  list(name = 'dimedb_logo', path = 'www/dimedb_logo.png', dimensions = c(310, 120)),
                   list(name = 'pos_icon', path = 'www/handpos.png', dimensions = c(120, 120)),
                   list(name = 'neg_icon', path = 'www/handneg.png', dimensions = c(120, 120)),
                   list(name = 'excel_icon', path = 'www/excel.png', dimensions = c(120, 120)),
@@ -258,7 +261,43 @@ shinyServer(function(input, output, session) {
                                                             fluidRow(plotly::plotlyOutput('enrich_pw_specific_plot'),height="200px")
                                                             
                                       ))
-               )
+               ),tabPanel(h3("LasNet"), value = "lasnet",
+                          fluidRow(
+                            selectInput("enet_alpha", label="Elasticity:", choices=list("Normal"="normal",
+                                                                                           "Orthogonal"="ortho",
+                                                                                           "Sparse"="sparse"), selected=1),
+                            actionButton("do_lasnet",label="Go")
+                          ),
+                          hr(),
+                          navbarPage(inverse=T,"",
+                                     tabPanel("ROC", icon=icon("globe"),
+                                              plotly::plotlyOutput("plot_plsda_3d",height = "600px", width="600px")
+                                              # ,fluidRow(column(3,
+                                              #                 selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:3),selected = "PC1",width="100%"),
+                                              #                 selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:3),selected = "PC2",width="100%"),
+                                              #                 selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:3),selected = "PC3",width="100%")
+                                              # )
+                                              # ,
+                                              # column(9,
+                                              #        div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')
+                                              # ))
+                                     ),
+                                     tabPanel("", icon=icon("area-chart"), 
+                                              plotOutput("plsda_cv_plot"),
+                                              plotOutput("plsda_perm_plot")
+                                              
+                                     ),
+                                     tabPanel("", icon=icon("star-o"), 
+                                              plotly::plotlyOutput("plsda_vip_specific_plot",width="100%"),
+                                              fluidRow(column(3,
+                                                              selectInput("plsda_vip_cmp", label = "Compounds from:", choices = paste0("PC",1:5),selected = "PC1",width="100%")
+                                              ), 
+                                              column(9, 
+                                                     div(DT::dataTableOutput('plsda_vip_tab',width="100%"),style='font-size:80%')
+                                              ))
+                                              
+                                     )
+                          ))
     )
   })
   
@@ -2141,7 +2180,7 @@ shinyServer(function(input, output, session) {
       if(input$autosearch & length(db_search_list > 0)){
         match_table <<- multimatch(curr_cpd, db_search_list, mSet$dataSet$grouping)
         output$match_tab <-DT::renderDataTable({
-          DT::datatable(if(mSet$dataSet$grouping == 'pathway') match_table else{match_table[,-"Description"]},
+          DT::datatable(if(mSet$dataSet$grouping == 'pathway') match_table else{match_table[,-c("Description","Structure")]},
                         selection = 'single',
                         autoHideNavigation = T,
                         options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -2236,13 +2275,22 @@ shinyServer(function(input, output, session) {
                # --- ggplot ---
                ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
              })
+           },
+           lasnet = {
+             if('key' %not in% colnames(d)) return(NULL)
+             if(d$key %not in% names(mSet$analSet$lasnet$cpds)) return(NULL)
+             curr_cpd <<- d$key
+             output$tt_specific_plot <- plotly::renderPlotly({
+               # --- ggplot ---
+               ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
+             })
            })
     # ----------------------------
     output$curr_cpd <- renderText(curr_cpd)
     if(input$autosearch & length(db_search_list) > 0){
       match_table <<- multimatch(curr_cpd, db_search_list, mSet$dataSet$grouping)
       output$match_tab <-DT::renderDataTable({
-        DT::datatable(if(mSet$dataSet$grouping == 'pathway') match_table else{match_table[,-"Description"]},
+        DT::datatable(if(mSet$dataSet$grouping == 'pathway') match_table else{match_table[,-c("Description", "Structure")]},
                       selection = 'single',
                       autoHideNavigation = T,
                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -2267,7 +2315,7 @@ shinyServer(function(input, output, session) {
     if(length(db_search_list) > 0){
       match_table <<- multimatch(curr_cpd, db_search_list, mSet$dataSet$grouping)
       output$match_tab <-DT::renderDataTable({
-        DT::datatable(match_table[,-c("Description")],
+        DT::datatable(match_table[,-c("Description","Structure")],
                       selection = 'single',
                       autoHideNavigation = T,
                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -2282,6 +2330,8 @@ shinyServer(function(input, output, session) {
     # -----------------------------
     curr_def <<- match_table[curr_row,'Description']
     output$curr_definition <- renderText(curr_def$Description)
+    curr_struct <<- match_table[curr_row,'Structure'][[1]]
+    output$curr_struct <- renderPlot({plot.mol(curr_struct,style = "cow")})
   })
   
   observeEvent(input$browse_db,{

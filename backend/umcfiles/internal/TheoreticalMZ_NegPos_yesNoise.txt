@@ -1,4 +1,4 @@
-CompoundName	Composition	MNeg	Mpos
+CompoundName	Composition	MNeg	Mpos	
 Ammonium bicarbonate (salt)	NH5CO3	78.019667	80.03422
 Propylene glycol (plasticizer)	C3H8O2	75.045153	77.059706
 Dipropylene glycol (plasticizer)	C6H14O3	133.087018	135.101571
