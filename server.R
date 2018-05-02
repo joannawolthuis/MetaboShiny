@@ -262,44 +262,46 @@ shinyServer(function(input, output, session) {
                                                             
                                       ))
                )
-               # ,tabPanel(h3("LasNet"), value = "lasnet",
-               #            fluidRow(
-               #              selectInput("enet_alpha", label="Elasticity:", choices=list("Normal"="normal",
-               #                                                                             "Orthogonal"="ortho",
-               #                                                                             "Sparse"="sparse"), selected=1),
-               #              actionButton("do_lasnet",label="Go")
-               #            ),
-               #            hr(),
-               #            navbarPage(inverse=T,"",
-               #                       tabPanel("ROC", icon=icon("globe"),
-               #                                plotly::plotlyOutput("plot_plsda_3d",height = "600px", width="600px")
-               #                                # ,fluidRow(column(3,
-               #                                #                 selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:3),selected = "PC1",width="100%"),
-               #                                #                 selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:3),selected = "PC2",width="100%"),
-               #                                #                 selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:3),selected = "PC3",width="100%")
-               #                                # )
-               #                                # ,
-               #                                # column(9,
-               #                                #        div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')
-               #                                # ))
-               #                       ),
-               #                       tabPanel("", icon=icon("area-chart"), 
-               #                                plotOutput("plsda_cv_plot"),
-               #                                plotOutput("plsda_perm_plot")
-               #                                
-               #                       ),
-               #                       tabPanel("", icon=icon("star-o"), 
-               #                                plotly::plotlyOutput("plsda_vip_specific_plot",width="100%"),
-               #                                fluidRow(column(3,
-               #                                                selectInput("plsda_vip_cmp", label = "Compounds from:", choices = paste0("PC",1:5),selected = "PC1",width="100%")
-               #                                ), 
-               #                                column(9, 
-               #                                       div(DT::dataTableOutput('plsda_vip_tab',width="100%"),style='font-size:80%')
-               #                                ))
-               #                                
-               #                       )
-               #            ))
-    )
+               ,tabPanel(h3("LasNet"), value = "lasnet",
+                          fluidRow(
+                            column(width=1, h2("Ridge"),style = "margin-top: 25px;", align="right"),
+                            column(width=9,checkboxGroupInput("lasnet_alpha", "Alpha values",
+                                               choiceNames = 
+                                                 as.character(seq(0,1,0.1)),
+                                               choiceValues =
+                                                 seq(0,1,0.1),
+                                               selected = c(0, 0.2, 0.4, 0.6, 0.8, 1),
+                                               inline = TRUE), align="center"
+                                   ),
+                            column(width=1, h2("Lasso"), style = "margin-top: 25px;")),
+                         fluidRow(
+                            column(width=5,sliderInput("lasnet_trainfrac", 
+                                        label = "Percentage in training", 
+                                        min = 0,
+                                        max = 100,
+                                        step = 5,
+                                        value = 60, 
+                                        post = "%")),
+                            column(width=2, actionButton("do_lasnet",label="Go",width = "50px"),style = "margin-top: 35px;", align="left"),
+                            column(width=5,sliderInput("lasnet_folds", 
+                                        label = "Fold validation", 
+                                        min = 0,
+                                        max = 20,
+                                        step = 1,
+                                        value = 5, 
+                                        post = "x")
+                            )),
+                            
+                         hr()
+                         ,
+                         navbarPage(title="Results",id="lasnet",inverse=T,
+                                    tabPanel(title = "ROC",value = "",icon=icon("area-chart"),
+                                             plotOutput("lasnet_roc_plot",height = "600px")),
+                                    tabPanel("Model",value= "",icon=icon("table"),
+                                             plotlyOutput("lasnet_specific_plot"),
+                                             uiOutput("lasnet_table_ui"))
+                                    )
+    ))
   })
   
   stat.ui.multivar <- reactive({
@@ -2071,6 +2073,142 @@ shinyServer(function(input, output, session) {
     })
   })
   
+  observeEvent(input$do_lasnet, {
+    
+    plot.many <- function(res.obj = models, which_alpha = 1){
+      
+      predictions <- if(length(res.obj) > 1) do.call("cbind", lapply(res.obj, function(x) x$prediction)) else data.frame(res.obj[[1]]$prediction)
+      
+      colnames(predictions) <- if(length(res.obj) > 1) sapply(res.obj, function(x) x$alpha) else res.obj[[1]]$alpha
+      testY = res.obj[[1]]$labels
+      
+      if(length(unique(testY)) > 2){
+        
+        return("not supported yet")
+        # https://stats.stackexchange.com/questions/112383/roc-for-more-than-2-outcome-categories
+        #
+        # for (type.id in length(unique(testY))) {
+        #   type = as.factor(iris.train$Species == lvls[type.id])
+        #   
+        #   nbmodel = NaiveBayes(type ~ ., data=iris.train[, -5])
+        #   nbprediction = predict(nbmodel, iris.test[,-5], type='raw')
+        #   
+        #   score = nbprediction$posterior[, 'TRUE']
+        #   actual.class = iris.test$Species == lvls[type.id]
+        #   
+        #   pred = prediction(score, actual.class)
+        #   nbperf = performance(pred, "tpr", "fpr")
+        #   
+        #   roc.x = unlist(nbperf@x.values)
+        #   roc.y = unlist(nbperf@y.values)
+        #   lines(roc.y ~ roc.x, col=type.id+1, lwd=2)
+        #   
+        #   nbauc = performance(pred, "auc")
+        #   nbauc = unlist(slot(nbauc, "y.values"))
+        #   aucs[type.id] = nbauc
+        # }
+      }else{
+        data <- data.frame(D = as.numeric(as.factor(testY))-1,
+                           D.str = testY)
+        data <- cbind(data, predictions)
+        if(length(res.obj) > 1){
+          roc_coord <- plotROC::melt_roc(data, "D", m = 3:ncol(data))
+        }else{
+          roc_coord <- data.frame(D = rep(data[, "D"], length(3)), M = data[, 3], name = rep(names(data)[3], each = nrow(data)), stringsAsFactors = FALSE)
+          print(head(roc_coord))
+        }
+      }
+      
+      names(roc_coord)[which(names(roc_coord) == "name")] <- "alpha"
+      
+      roc_coord <- roc_coord[roc_coord$alpha %in% which_alpha,]
+      # plot
+      ggplot2::ggplot(roc_coord, 
+                      ggplot2::aes(d = D, m = M, color = alpha)) + 
+        plotROC::geom_roc(labelsize=0,show.legend = TRUE) + 
+        plotROC::style_roc() + 
+        theme(axis.text=element_text(size=19),
+              axis.title=element_text(size=19,face="bold"),
+              legend.title=element_text(size=19),
+              legend.text=element_text(size=19))
+    }
+    
+    withProgress({
+      # - - - use filtered data, but not normalized - - -
+      
+      curr <- as.data.table(mSetObj$dataSet$preproc)
+      curr[,(1:ncol(curr)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
+      
+      
+      config <- mSet$dataSet$batches[match(rownames(mSet$dataSet$preproc),mSet$dataSet$batches$Sample),]
+      config <- cbind(config, Label=mSet$dataSet$cls)
+      
+      curr <- cbind(config, curr)
+      
+      setProgress(0.2)
+      
+      # - - - - - - - - - - - - - - - - - - - - - - - - - 
+      
+      alphas <- input$lasnet_alpha
+      
+      #input = list(lasnet_alpha = c(0, 0.5, 1), lasnet_trainfrac = 0.6)
+      
+      models <- glmnet_all_alpha(curr = curr,
+                                 nvars = ncol(config) + 1, 
+                                 cl = 0,
+                                 a = alphas,
+                                 perc_train = input$lasnet_trainfrac/100,
+                                 nfold = input$lasnet_folds)
+      
+      setProgress(0.4)
+      
+      # - - store results in mset - - -
+      
+      output$lasnet_roc_plot <- renderPlot({ plot.many(models, which_alpha=alphas) })
+      
+      setProgress(0.6)
+      
+      lasnet_tables <<- lapply(models, function(x){
+        table = x$model$beta
+        keep = which(table[,1] > 0)
+        table = data.frame("beta" = table[keep,1], 
+                           "absbeta" = abs(table[keep,1]),
+                           row.names = rownames(table)[keep])
+      })
+      
+      names(lasnet_tables) <<- alphas
+      
+      setProgress(0.8)
+      
+      # - - plot ROC curves - - -
+      
+      lapply(1:length(lasnet_tables), function(i){
+        output[[paste0("alpha_", names(lasnet_tables)[i], "_lasnet_tab")]] <- DT::renderDataTable({
+          DT::datatable(data = as.data.frame(lasnet_tables[i]),
+                        selection = 'single',
+                        autoHideNavigation = T,
+                        options = list(lengthMenu = c(5, 10, 15), 
+                                       pageLength = 5))
+        })  
+      })
+      
+      #res.update.tables <<- c(res.update.tables, paste0("alpha_",names(lasnet_tables),"_lasnet"))
+      
+      setProgress(0.9)
+      
+      output$lasnet_table_ui <- renderUI({
+        do.call(tabsetPanel, c(id='t',lapply(1:length(lasnet_tables), function(i) {
+          tabPanel(
+            title=paste0("alpha=",names(lasnet_tables)[i]), 
+            div(DT::dataTableOutput(outputId = paste0("alpha_", names(lasnet_tables)[i], "_lasnet_tab")),style='font-size:80%')
+          )
+        })))
+      })
+      
+    })
+    
+  })
+  
   observe({
     # ---------------------------------
     db_search_list <- lapply(db_list, 
@@ -2137,7 +2275,8 @@ shinyServer(function(input, output, session) {
                           "asca", 
                           "meba",
                           "plsda_vip",
-                          "enrich_pw")
+                          "enrich_pw",
+                          paste0("alpha_", seq(0,1,0.2), "_lasnet"))
   
   observeEvent(input$enriched_rows_selected, {
     curr_row = input$enriched_rows_selected
@@ -2166,23 +2305,38 @@ shinyServer(function(input, output, session) {
     })  
   })
   
-  lapply(res.update.tables, FUN=function(table){
+  lapply(unique(res.update.tables), FUN=function(table){
     observeEvent(input[[paste0(table, "_tab_rows_selected")]], {
       curr_row = input[[paste0(table, "_tab_rows_selected")]]
       # do nothing if not clicked yet, or the clicked cell is not in the 1st column
       if (is.null(curr_row)) return()
-      curr_cpd <<- data.table(switch(table,
-                                     tt = mSet$analSet$tt$sig.mat,
-                                     fc = mSet$analSet$fc$sig.mat,
-                                     asca = mSet$analSet$asca$sig.list$Model.ab,
-                                     aov = mSet$analSet$aov$sig.mat,
-                                     rf = vip.score,
-                                     enrich_pw = enrich_overview_tab,
-                                     meba = mSet$analSet$MB$stats,
-                                     plsda_vip = plsda_tab)
-                              , keep.rownames = T)[curr_row, rn]
+      print("a click has been registered")
+      if(grepl(pattern = "lasnet",x = table)){
+        print("trigger")
+        alpha <- gsub("alpha|_|lasnet", "", table)
+        table = "lasnet"
+      }
+      curr_cpd <<- data.table::as.data.table(switch(table,
+                                                 tt = mSet$analSet$tt$sig.mat,
+                                                 fc = mSet$analSet$fc$sig.mat,
+                                                 asca = mSet$analSet$asca$sig.list$Model.ab,
+                                                 aov = mSet$analSet$aov$sig.mat,
+                                                 rf = vip.score,
+                                                 enrich_pw = enrich_overview_tab,
+                                                 meba = mSet$analSet$MB$stats,
+                                                 plsda_vip = plsda_tab,
+                                                 lasnet = lasnet_tables[[alpha]])
+                                          , keep.rownames = T)[curr_row, rn]
+      
+      if(grepl(pattern = "lasnet",x = table)){
+        outplot_name = "lasnet_specific_plot"
+      }else{
+        outplot_name = paste0(table, "_specific_plot")
+      }
+      
       output$curr_cpd <- renderText(curr_cpd)
-      output[[paste0(table, "_specific_plot")]] <- plotly::renderPlotly({
+      
+      output[[outplot_name]] <- plotly::renderPlotly({
         # --- ggplot ---
         if(table == 'meba'){
           ggplotMeba(curr_cpd, draw.average = T, cols = color.vec(),cf=color.function)
@@ -2293,7 +2447,7 @@ shinyServer(function(input, output, session) {
              if('key' %not in% colnames(d)) return(NULL)
              if(d$key %not in% names(mSet$analSet$lasnet$cpds)) return(NULL)
              curr_cpd <<- d$key
-             output$tt_specific_plot <- plotly::renderPlotly({
+             output$lasnet_specific_plot <- plotly::renderPlotly({
                # --- ggplot ---
                ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
              })
