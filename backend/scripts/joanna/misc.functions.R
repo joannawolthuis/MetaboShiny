@@ -403,13 +403,13 @@ plot.mol = function(smi,
     return(NULL)
   }
   #curcumin = parse.smiles("O=C(\\C=C\\c1ccc(O)c(OC)c1)CC(=O)\\C=C\\c2cc(OC)c(O)cc2")[[1]] 
-  molecule = parse.smiles(smi)[[1]]
+  molecule = rcdk::parse.smiles(smi)[[1]]
   #rcdkplot(curcumin, style="cow")
   par(mar=c(marg,marg,marg,marg)) # set margins to zero since this isn't a real plot
-  dept = get.depictor(width = width, height = height, zoom = 3, style = style, 
+  dept = rcdk::get.depictor(width = width, height = height, zoom = 3, style = style, 
                       annotate = "off", abbr = "on", suppressh = TRUE, 
                       showTitle = FALSE, smaLimit = 100, sma = NULL) 
-  temp1 = view.image.2d(molecule, dept) # get Java representation into an image matrix. set number of pixels you want horiz and vertical
+  temp1 = rcdk::view.image.2d(molecule, dept) # get Java representation into an image matrix. set number of pixels you want horiz and vertical
   
   # - - return - -
   # A temp file to save the output. It will be deleted after renderImage

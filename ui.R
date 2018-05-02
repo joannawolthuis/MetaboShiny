@@ -81,8 +81,7 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                       # --- db check cols --- common pollutants found in DIMS.
                                       fluidRow(column(3, align="center", # SECOND ROW
                                                       h2("WikiPathways"),
-                                                      helpText("Open source biological pathway database. Currently only partially available."),
-                                                      h3(" - REQUIRES CHEBI - ")
+                                                      helpText("Open source biological pathway database. Currently only partially available. Requires CHEBI to be built.")
                                       ),
                                       column(3,  align="center",
                                              h2("KEGG"),
@@ -156,7 +155,7 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                              # --------------------------------------------------------------------------------------------------------------------------------
                              tabPanel("", icon = icon("upload"), value="upload", ## this guy gives error???
                                       fluidRow(column(9, align="center", 
-                                                      h4("Create project"), 
+                                                      h2("Create project"), 
                                                       br()
                                       )
                                       ),
@@ -182,7 +181,7 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                       fluidRow(column(9, align="center",
                                                       actionButton("create_db", "Go", icon = icon("magic")),
                                                       br(),br(),hr(),
-                                                      h4("Import project"),
+                                                      h2("Import project"),
                                                       br(),
                                                       imageOutput("db_icon",inline = T),
                                                       br(),br(),
@@ -224,12 +223,12 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                              tabPanel("",  icon = icon("shower"), value="filter",
                                       fluidRow(column(3, aligh="center",
                                                       selectInput('exp_var', 'Which variable do you want to look at?', choices = c("run")),
+                                                      selectInput('samp_var', 'Which variable is your sample amount?', choices = c("")),
                                                       selectizeInput('batch_var', 'What are your batch variables?', choices = c("run"), multiple=TRUE, options = list(maxItems = 2L)),
                                                       actionButton("check_csv", "Get options", icon=icon("refresh")),
                                                       hr(),
                                                       sliderInput("perc_limit", label = "Max. missing feature percent", min = 0, 
                                                                   max = 100, value = 50),
-                                                      # ------
                                                       selectInput('filt_type', 'How will you filter your m/z values?', choices = list("Interquantile range"="iqr",
                                                                                                                                       "Relative stdev"="rsd",
                                                                                                                                       "Non-parametric relative stdev"="nrsd",
@@ -242,6 +241,7 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                                       selectInput('norm_type', 'What type of normalization do you want to do?', choices = list("Quantile normalization"="QuantileNorm",
                                                                                                                                                "By reference feature"="ProbNorm",
                                                                                                                                                "By reference compound"="CompNorm",
+                                                                                                                                               "By sample specific factor"="SpecNorm",
                                                                                                                                                "Sum"="SumNorm",
                                                                                                                                                "Median"="MedianNorm",
                                                                                                                                                "None"="NULL")),
@@ -300,7 +300,7 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                                     ),
                                                     sidebarPanel = sidebarPanel(align="center",
                                                                                 bsCollapse(id = "dbSelect", open = "Settings",
-                                                                                           bsCollapsePanel(h1("Databases"), "",#style = "info",
+                                                                                           bsCollapsePanel(h2("Database viewer"), "",#style = "info",
                                                                                                            fluidRow(#imageOutput("find_mol_icon",inline = T),
                                                                                                              sardine(fadeImageButton("search_internal", img.path = "umcinternal.png")),
                                                                                                              sardine(fadeImageButton("search_noise", img.path = "umcnoise.png")),
@@ -326,8 +326,8 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                                                                                     tabPanel("Current", icon=icon("sort-numeric-asc"),
                                                                                                              actionButton("search_cpd", "Find hits", icon=icon("search")),
                                                                                                              hr(),
-                                                                                                             bsCollapsePanel(h3("View structure"),"",
-                                                                                                                             plotOutput("curr_struct", height="310px"),style = "info"
+                                                                                                             bsCollapsePanel(h2("Structure viewer"),"",
+                                                                                                                             plotOutput("curr_struct", height="310px")
                                                                                                              ),
                                                                                                              div(DT::dataTableOutput('match_tab'),style='font-size:80%'),
                                                                                                              hr(),

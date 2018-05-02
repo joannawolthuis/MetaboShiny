@@ -81,7 +81,7 @@ font.css <- function(font.h1 = "Press Start 2P",
   margin: 2px;
   font-family: '$font.h1';
   $font.h1.w
-  font-size: 30pt; 
+  font-size: 33pt; 
   line-height: 0.5;
   }
   
@@ -89,7 +89,7 @@ font.css <- function(font.h1 = "Press Start 2P",
   margin: 1px;
   font-family: '$font.h2';
   $font.h2.w
-  font-size: 20pt;
+  font-size: 22pt;
   line-height: 1;
   }
   
@@ -104,7 +104,7 @@ font.css <- function(font.h1 = "Press Start 2P",
   body {
   font-family: '$font.body'; 
   $font.body.w
-  font-size: 12pt;
+  font-size: 13pt;
   }
 }"
   

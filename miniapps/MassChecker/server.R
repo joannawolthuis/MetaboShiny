@@ -394,11 +394,11 @@ shinyServer(function(input, output, session) {
     withProgress(message = "DIMS data extraction",{
       i = 1
       foreach(i=1:length(files), .options.snow=opts, .export = c("dims_raw", 
-                                                                       "outdir", 
-                                                                       "scriptdir",
-                                                                       "dimsThresh",
-                                                                       "trim",
-                                                                       "resol"),
+                                                                 "outdir", 
+                                                                 "scriptdir",
+                                                                 "dimsThresh",
+                                                                 "trim",
+                                                                 "resol"),
                      .packages = c("MALDIquant","data.table","gsubfn"),
                            .verbose = T,
               .combine=cfun) %dopar% {

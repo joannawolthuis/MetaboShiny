@@ -1042,8 +1042,8 @@ build.pat.db <- function(db.name,
   ppm = as.numeric(ppm)
   # ------------------------
   
-  pospath = '/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML/results/specpks_grouped_wavelet/grouped_pos.csv'
-  negpath = '/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML/results/specpks_grouped_wavelet/grouped_neg.csv'
+  #pospath = '/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML/results/specpks_grouped_wavelet/grouped_pos.csv'
+  #negpath = '/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML/results/specpks_grouped_wavelet/grouped_neg.csv'
   
   poslist <- fread(pospath,header = T)
   neglist <- fread(negpath,header = T)

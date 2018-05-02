@@ -261,43 +261,44 @@ shinyServer(function(input, output, session) {
                                                             fluidRow(plotly::plotlyOutput('enrich_pw_specific_plot'),height="200px")
                                                             
                                       ))
-               ),tabPanel(h3("LasNet"), value = "lasnet",
-                          fluidRow(
-                            selectInput("enet_alpha", label="Elasticity:", choices=list("Normal"="normal",
-                                                                                           "Orthogonal"="ortho",
-                                                                                           "Sparse"="sparse"), selected=1),
-                            actionButton("do_lasnet",label="Go")
-                          ),
-                          hr(),
-                          navbarPage(inverse=T,"",
-                                     tabPanel("ROC", icon=icon("globe"),
-                                              plotly::plotlyOutput("plot_plsda_3d",height = "600px", width="600px")
-                                              # ,fluidRow(column(3,
-                                              #                 selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:3),selected = "PC1",width="100%"),
-                                              #                 selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:3),selected = "PC2",width="100%"),
-                                              #                 selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:3),selected = "PC3",width="100%")
-                                              # )
-                                              # ,
-                                              # column(9,
-                                              #        div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')
-                                              # ))
-                                     ),
-                                     tabPanel("", icon=icon("area-chart"), 
-                                              plotOutput("plsda_cv_plot"),
-                                              plotOutput("plsda_perm_plot")
-                                              
-                                     ),
-                                     tabPanel("", icon=icon("star-o"), 
-                                              plotly::plotlyOutput("plsda_vip_specific_plot",width="100%"),
-                                              fluidRow(column(3,
-                                                              selectInput("plsda_vip_cmp", label = "Compounds from:", choices = paste0("PC",1:5),selected = "PC1",width="100%")
-                                              ), 
-                                              column(9, 
-                                                     div(DT::dataTableOutput('plsda_vip_tab',width="100%"),style='font-size:80%')
-                                              ))
-                                              
-                                     )
-                          ))
+               )
+               # ,tabPanel(h3("LasNet"), value = "lasnet",
+               #            fluidRow(
+               #              selectInput("enet_alpha", label="Elasticity:", choices=list("Normal"="normal",
+               #                                                                             "Orthogonal"="ortho",
+               #                                                                             "Sparse"="sparse"), selected=1),
+               #              actionButton("do_lasnet",label="Go")
+               #            ),
+               #            hr(),
+               #            navbarPage(inverse=T,"",
+               #                       tabPanel("ROC", icon=icon("globe"),
+               #                                plotly::plotlyOutput("plot_plsda_3d",height = "600px", width="600px")
+               #                                # ,fluidRow(column(3,
+               #                                #                 selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:3),selected = "PC1",width="100%"),
+               #                                #                 selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:3),selected = "PC2",width="100%"),
+               #                                #                 selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:3),selected = "PC3",width="100%")
+               #                                # )
+               #                                # ,
+               #                                # column(9,
+               #                                #        div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')
+               #                                # ))
+               #                       ),
+               #                       tabPanel("", icon=icon("area-chart"), 
+               #                                plotOutput("plsda_cv_plot"),
+               #                                plotOutput("plsda_perm_plot")
+               #                                
+               #                       ),
+               #                       tabPanel("", icon=icon("star-o"), 
+               #                                plotly::plotlyOutput("plsda_vip_specific_plot",width="100%"),
+               #                                fluidRow(column(3,
+               #                                                selectInput("plsda_vip_cmp", label = "Compounds from:", choices = paste0("PC",1:5),selected = "PC1",width="100%")
+               #                                ), 
+               #                                column(9, 
+               #                                       div(DT::dataTableOutput('plsda_vip_tab',width="100%"),style='font-size:80%')
+               #                                ))
+               #                                
+               #                       )
+               #            ))
     )
   })
   
@@ -1065,13 +1066,16 @@ shinyServer(function(input, output, session) {
     opts <<- colnames(csv[,1:(nvars - 1)])
     
     batch <<- which(sapply(1:(nvars - 1), function(x) length(unique(csv[,..x][[1]])) < nrow(csv)))
+
+    numi <<- which(sapply(1:(nvars - 1), function(x) is.numeric(csv[,..x][[1]])))
     
     # get excel table stuff.
     updateSelectInput(session, "exp_var",
                       choices = opts[batch])
-    
+    updateSelectInput(session, "samp_var",
+                      choices = opts)
     updateSelectizeInput(session, "batch_var",
-                      choices = opts[batch],
+                      choices = opts[numi],
                       options = list(maxItems = 3L - (length(input$batch_var)))
     )
   })
@@ -1131,6 +1135,7 @@ shinyServer(function(input, output, session) {
       #Below is your R command history: 
       mSet <<- switch(input$exp_type,
                      stat = {
+                     #  mSet<-
                      InitDataObjects("pktable", 
                                        "stat", 
                                        FALSE)
@@ -1159,6 +1164,8 @@ shinyServer(function(input, output, session) {
       #csv_loc <- "/Users/jwolthuis/Analysis/SP/Brazil1.csv"
       #csv_loc <- "/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML/results/specpks_grouped_mdq/grouped_pos.csv"
       #csv_loc <- "/Users/jwolthuis/Analysis/SP/BrazilAndSpain.csv"
+      #csv_loc <- "~/Analysis/SP/Gilbert_W.csv"
+      
       #f = fread(csv_loc, header = TRUE)
       
       csv_orig <- fread(csv_loc, 
@@ -1166,8 +1173,6 @@ shinyServer(function(input, output, session) {
                        header = T)
       
       nvars <- length(csv_orig[,1:(which(colnames(csv_orig) == "$"))])
-      
-      #unique(csv_orig[grep(x=csv_orig$Sample, pattern="QC"),c("Sample", "Batch", "Injection")])
       
       # --- batches ---
 
@@ -1181,7 +1186,7 @@ shinyServer(function(input, output, session) {
       if("Batch" %in% batches){ batches = c(batches, "Injection") }
       
       first_part <<- csv_orig[,1:(nvars-1),with=FALSE]
-      first_part[first_part == ""] <- "Unknown"
+      first_part[first_part == "" | is.null(first_part)] <- "Unknown"
       
       csv_temp <- cbind(first_part[,!duplicated(names(first_part)),with=FALSE],
                         "Label" = first_part[,..condition][[1]],
@@ -1199,7 +1204,6 @@ shinyServer(function(input, output, session) {
       
       # --- remove outliers? ---
       print("Removing outliers...")
-      #csv_ints <- csv_subset[, lapply(.SD, as.numeric),]
 
       sums <- rowSums(csv_subset[, -c(1:length(remain)),with=FALSE],na.rm = TRUE)
       names(sums) <- csv_subset$Sample
@@ -1222,10 +1226,9 @@ shinyServer(function(input, output, session) {
         }else{
           csv_temp_filt <- csv_temp_no_out[which(csv_temp_no_out$Sample %in% keep_samps), -"Batch"]
         }
+      }else{
+        csv_temp_filt <- csv_temp_no_out[, -"Batch"]
       }
-       
-      print(csv_temp_filt[1:10,1:10])
-      print(unique(csv_temp_filt$Label))
       
       csv_loc_no_out <- gsub(pattern = "\\.csv", replacement = "_no_out.csv", x = csv_loc)
       
@@ -1241,12 +1244,7 @@ shinyServer(function(input, output, session) {
       }
 
       rownames(batch_table) <- batch_table$Sample
-      #batch_table <- batch_table[,-"Sample", with=FALSE]
-      #batchview = FALSE # CHANGE LATER!!
-      #MetaboAnalystR:::.readDataTable(csv_loc_no_out)
       
-      csv = fread(csv_loc_no_out, header = TRUE)
-      print(unique(csv$Label))
       # -------------------------------------
       
       mSet <<- Read.TextData(mSet, 
@@ -1278,19 +1276,31 @@ shinyServer(function(input, output, session) {
                                 rsd = 25)
       }
       # ------------------------------------
+      
       setProgress(.2)
       
+      keep <- intersect(first_part$Sample, rownames(mSet$dataSet$preproc))
+      
+      first_part_no_out <<- first_part[Sample %in% keep]
+      
+      if(input$norm_type == "SpecNorm"){
+        print("here-o")
+        norm.vec <<- first_part_no_out[match(first_part_no_out$Sample,
+                                             rownames(mSet$dataSet$preproc)),][[input$samp_var]]
+        norm.vec <<- scale(x = norm.vec,center = 1)
+        print(norm.vec)
+      }else{
+        norm.vec <<- rep(1, length(mSet$dataSet$cls))
+      }
+      
       mSet <<- Normalization(mSet,
-                            rowNorm = input$norm_type,
-                            transNorm = input$trans_type,
-                            scaleNorm = input$scale_type,
-                            ref = input$ref_var
+                             rowNorm = input$norm_type,
+                             transNorm = input$trans_type,
+                             scaleNorm = input$scale_type,
+                             ref = input$ref_var
                             )
       
-      # -- save point here?? ---
-      
-      keep <- intersect(first_part$Sample, rownames(mSet$dataSet$norm))
-      first_part_no_out <- first_part[Sample %in% keep]
+
       second_part_no_out <- mSet$dataSet$norm[match(rownames(mSet$dataSet$norm),
                                                     first_part_no_out$Sample),]
       csv_filled = cbind(first_part_no_out, 
@@ -1522,6 +1532,7 @@ shinyServer(function(input, output, session) {
                    type = "scatter3d",
                    color= mSet$analSet$ipca$score[[input$ipca_factor]], colors=chosen.colors
                  ) %>%  layout(scene = list(
+                   aspectmode="cube",
                    xaxis = list(
                      titlefont = list(size = 20),
                      title = mSet$analSet$ipca$score$axis[x.num]),
@@ -1664,6 +1675,7 @@ shinyServer(function(input, output, session) {
                  opacity=1,
                  color= mSet$dataSet$cls, colors=chosen.colors
                ) %>%  layout(scene = list(
+                 aspectmode="cube",
                  xaxis = list(
                    titlefont = list(size = 20),
                    title = fn$paste("$x ($x.var %)")),
@@ -2028,6 +2040,7 @@ shinyServer(function(input, output, session) {
           colors=chosen.colors,
           opacity=1
         ) %>%  layout(scene = list(
+          aspectmode="cube",
           xaxis = list(
             titlefont = list(size = 20),
             title = fn$paste("$x ($x.var %)")),
