@@ -133,9 +133,9 @@ shinyServer(function(input, output, session) {
   
   
   stat.ui.bivar <- reactive({
-    navbarPage(inverse=T,h2("Standard analysis"), id="tab_stat",
+    navbarPage(inverse=F,h2("Standard analysis"), id="tab_stat",
                tabPanel(h3("PCA"), value = "pca", #icon=icon("cube"),
-                        plotly::plotlyOutput("plot_pca",height = "600px", width="600px"),
+                        fluidRow(column(12,align="center",plotly::plotlyOutput("plot_pca",height = "600px", width="600px"))),
                         fluidRow(column(3,
                                         selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:30),selected = "PC1",width="100%"),
                                         selectInput("pca_y", label = "Y axis:", choices = paste0("PC",1:30),selected = "PC2",width="100%"),
@@ -154,7 +154,7 @@ shinyServer(function(input, output, session) {
                          actionButton("do_plsda",label="Go")
                          ),
                         hr(),
-                        navbarPage(inverse=T,"",
+                        navbarPage(inverse=F,"",
                                    tabPanel("", icon=icon("globe"),
                                                      plotly::plotlyOutput("plot_plsda_3d",height = "600px", width="600px")
                                                      # ,fluidRow(column(3,
@@ -185,7 +185,7 @@ shinyServer(function(input, output, session) {
                         )),
                tabPanel(h3("T-test"), value="tt", 
                         fluidRow(plotly::plotlyOutput('tt_specific_plot',width="100%")),
-                        navbarPage(inverse=T,"",
+                        navbarPage(inverse=F,"",
                                    tabPanel("", icon=icon("table"),
                                             div(DT::dataTableOutput('tt_tab',width="100%"),style='font-size:80%'))
                                    ,tabPanel("", icon=icon("area-chart"),
@@ -194,7 +194,7 @@ shinyServer(function(input, output, session) {
                         )),
                tabPanel(h3("Fold-change"), value="fc",
                         fluidRow(plotly::plotlyOutput('fc_specific_plot',width="100%")),
-                        navbarPage(inverse=T,"",
+                        navbarPage(inverse=F,"",
                                    tabPanel("", icon=icon("table"),
                                             div(DT::dataTableOutput('fc_tab',width="100%"),style='font-size:80%'))
                                    ,tabPanel("", icon=icon("area-chart"),
@@ -204,7 +204,7 @@ shinyServer(function(input, output, session) {
                # =================================================================================
                tabPanel(h3("RandomForest"), value="rf",
                         fluidRow(plotly::plotlyOutput('rf_specific_plot',width="100%")),
-                        navbarPage(inverse=T,"",
+                        navbarPage(inverse=F,"",
                                    tabPanel("", icon=icon("table"),
                                             div(DT::dataTableOutput('rf_tab',width="100%"),style='font-size:80%'))
                         )
@@ -294,7 +294,7 @@ shinyServer(function(input, output, session) {
                             
                          hr()
                          ,
-                         navbarPage(title="Results",id="lasnet",inverse=T,
+                         navbarPage(title="Results",id="lasnet",inverse=F,
                                     tabPanel(title = "ROC",value = "",icon=icon("area-chart"),
                                              plotOutput("lasnet_roc_plot",height = "600px")),
                                     tabPanel("Model",value= "",icon=icon("table"),
@@ -305,7 +305,7 @@ shinyServer(function(input, output, session) {
   })
   
   stat.ui.multivar <- reactive({
-    navbarPage(inverse=T,h2("Standard analysis"), id="tab_stat",
+    navbarPage(inverse=F,h2("Standard analysis"), id="tab_stat",
                tabPanel("", value = "intro", icon=icon("comment-o"),
                         helpText("Info text here")
                ), # pca_legend
@@ -324,7 +324,7 @@ shinyServer(function(input, output, session) {
                         )
                ),
                tabPanel(h3("PLSDA"), value = "plsda",
-                        navbarPage(inverse=T,"",
+                        navbarPage(inverse=F,"",
                                    tabPanel("", icon=icon("globe"),
                                             plotly::plotlyOutput("plot_plsda",width="100%"),
                                             fluidRow(column(3,
@@ -350,7 +350,7 @@ shinyServer(function(input, output, session) {
                ),
                tabPanel(h3("ANOVA"), value="aov",
                         fluidRow(plotly::plotlyOutput('aov_specific_plot',width="100%")),
-                        navbarPage(inverse=T,"",
+                        navbarPage(inverse=F,"",
                                    tabPanel("", icon=icon("table"),
                                             div(DT::dataTableOutput('aov_tab',width="100%"),style='font-size:80%'))
                                    ,tabPanel("", icon=icon("area-chart"),
@@ -360,7 +360,7 @@ shinyServer(function(input, output, session) {
                # =================================================================================
                tabPanel(h3("RandomForest"), value="rf",
                         fluidRow(plotly::plotlyOutput('rf_specific_plot',width="100%")),
-                        navbarPage(inverse=T,"",
+                        navbarPage(inverse=F,"",
                                    tabPanel("", icon=icon("table"),
                                             div(DT::dataTableOutput('rf_tab',width="100%"),style='font-size:80%'))
                         )
@@ -414,7 +414,7 @@ shinyServer(function(input, output, session) {
   
   
   time.ui <- reactive({
-    navbarPage(inverse=T,h2("Time Series"), id="tab_time",
+    navbarPage(inverse=F,h2("Time Series"), id="tab_time",
                tabPanel(h3("iPCA"), value = "ipca", 
                         plotly::plotlyOutput("plot_ipca",height="600px"),
                         selectInput("ipca_factor", label = "Color based on:", choices =list("Time"="facA",
@@ -1075,9 +1075,9 @@ shinyServer(function(input, output, session) {
     updateSelectInput(session, "exp_var",
                       choices = opts[batch])
     updateSelectInput(session, "samp_var",
-                      choices = opts)
+                      choices = opts[numi])
     updateSelectizeInput(session, "batch_var",
-                      choices = opts[numi],
+                      choices = opts[batch],
                       options = list(maxItems = 3L - (length(input$batch_var)))
     )
   })
@@ -1184,7 +1184,9 @@ shinyServer(function(input, output, session) {
       if(is.null(batches)) batches <- ""
       
       batch_corr <- if(length(batches) == 1 & batches[1] == "") FALSE else TRUE
-
+      
+      print(batch_corr)
+      
       if("Batch" %in% batches){ batches = c(batches, "Injection") }
       
       first_part <<- csv_orig[,1:(nvars-1),with=FALSE]
@@ -1382,9 +1384,12 @@ shinyServer(function(input, output, session) {
                                 value = T,
                                 invert = T)
 
+        print(left_batch_vars)
+        
         if(length(left_batch_vars) > 2){ 
           print("Can only correct for 2 batches...")
         } else if(length(left_batch_vars) == 0){
+            print("No vars usable for ComBat...")
             NULL
         } else{
           
@@ -2134,16 +2139,20 @@ shinyServer(function(input, output, session) {
     }
     
     withProgress({
+      
       # - - - use filtered data, but not normalized - - -
       
-      curr <- as.data.table(mSetObj$dataSet$preproc)
+      curr <- as.data.table(mSet$dataSet$preproc)
       curr[,(1:ncol(curr)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
       
       
       config <- mSet$dataSet$batches[match(rownames(mSet$dataSet$preproc),mSet$dataSet$batches$Sample),]
+      config <- config[!is.na(config$Sample),]
+      keep_curr <- match(mSet$dataSet$batches$Sample,rownames(mSet$dataSet$preproc))
+      
       config <- cbind(config, Label=mSet$dataSet$cls)
       
-      curr <- cbind(config, curr)
+      curr <- cbind(config, curr[keep_curr])
       
       setProgress(0.2)
       
@@ -2151,32 +2160,43 @@ shinyServer(function(input, output, session) {
       
       alphas <- input$lasnet_alpha
       
-      #input = list(lasnet_alpha = c(0, 0.5, 1), lasnet_trainfrac = 0.6)
+      input = list(lasnet_alpha = 1, lasnet_trainfrac = 60)
       
       models <- glmnet_all_alpha(curr = curr,
                                  nvars = ncol(config) + 1, 
                                  cl = 0,
                                  a = alphas,
-                                 perc_train = input$lasnet_trainfrac/100,
-                                 nfold = input$lasnet_folds)
+                                 perc_train = input$lasnet_trainfrac/100)
       
       setProgress(0.4)
       
       # - - store results in mset - - -
       
       output$lasnet_roc_plot <- renderPlot({ plot.many(models, which_alpha=alphas) })
-      
+    
       setProgress(0.6)
       
       lasnet_tables <<- lapply(models, function(x){
         table = x$model$beta
         keep = which(table[,1] > 0)
-        table = data.frame("beta" = table[keep,1], 
+        table = data.frame("beta" = table[keep,1],
                            "absbeta" = abs(table[keep,1]),
                            row.names = rownames(table)[keep])
+        colnames(table) <- c("beta", "abs_beta")
+        # - - -
+        table
+      })
+      
+      lasnet_stab_tables <<- lapply(models, function(x){
+        table = data.frame("perc_chosen" = c(x$int_cv_feat))
+        rownames(table) <- names(x$int_cv_feat)
+        colnames(table) <- "perc_chosen"
+        # - - -
+        table
       })
       
       names(lasnet_tables) <<- alphas
+      names(lasnet_stab_tables) <<- alphas
       
       setProgress(0.8)
       
@@ -2190,18 +2210,26 @@ shinyServer(function(input, output, session) {
                         options = list(lengthMenu = c(5, 10, 15), 
                                        pageLength = 5))
         })  
+        output[[paste0("alpha_stab_", names(lasnet_tables)[i], "_lasnet_tab")]] <- DT::renderDataTable({
+          DT::datatable(data = as.data.frame(lasnet_stab_tables[i]),
+                        selection = 'single',
+                        autoHideNavigation = T,
+                        options = list(lengthMenu = c(5, 10, 15), 
+                                       pageLength = 5))
+        }) 
       })
       
-      #res.update.tables <<- c(res.update.tables, paste0("alpha_",names(lasnet_tables),"_lasnet"))
-      
+
       setProgress(0.9)
       
       output$lasnet_table_ui <- renderUI({
         do.call(tabsetPanel, c(id='t',lapply(1:length(lasnet_tables), function(i) {
           tabPanel(
             title=paste0("alpha=",names(lasnet_tables)[i]), 
-            div(DT::dataTableOutput(outputId = paste0("alpha_", names(lasnet_tables)[i], "_lasnet_tab")),style='font-size:80%')
-          )
+              tabsetPanel(id="t2", 
+                          tabPanel(title="final model",div(DT::dataTableOutput(outputId = paste0("alpha_", names(lasnet_tables)[i], "_lasnet_tab")),style='font-size:80%')),
+                          tabPanel(title="feature stats",div(DT::dataTableOutput(outputId = paste0("alpha_stab_", names(lasnet_tables)[i], "_lasnet_tab")),style='font-size:80%'))
+              ))
         })))
       })
       
@@ -2276,7 +2304,8 @@ shinyServer(function(input, output, session) {
                           "meba",
                           "plsda_vip",
                           "enrich_pw",
-                          paste0("alpha_", seq(0,1,0.2), "_lasnet"))
+                          paste0("alpha_", seq(0,1,0.2), "_lasnet"),
+                          paste0("alpha_stab_", seq(0,1,0.2), "_lasnet"))
   
   observeEvent(input$enriched_rows_selected, {
     curr_row = input$enriched_rows_selected
@@ -2313,8 +2342,16 @@ shinyServer(function(input, output, session) {
       print("a click has been registered")
       if(grepl(pattern = "lasnet",x = table)){
         print("trigger")
-        alpha <- gsub("alpha|_|lasnet", "", table)
-        table = "lasnet"
+        alpha <- gsub("alpha|stab|_|lasnet", "", table)
+        
+        if(!grepl(pattern = "stab",x = table)){
+          table <- "lasnet_a"
+        }else{
+          table <- "lasnet_b"
+        }
+        # - - -
+        print(alpha)
+        print(table)
       }
       curr_cpd <<- data.table::as.data.table(switch(table,
                                                  tt = mSet$analSet$tt$sig.mat,
@@ -2325,7 +2362,8 @@ shinyServer(function(input, output, session) {
                                                  enrich_pw = enrich_overview_tab,
                                                  meba = mSet$analSet$MB$stats,
                                                  plsda_vip = plsda_tab,
-                                                 lasnet = lasnet_tables[[alpha]])
+                                                 lasnet_a = lasnet_tables[[alpha]],
+                                                 lasnet_b = lasnet_stab_tables[[alpha]])
                                           , keep.rownames = T)[curr_row, rn]
       
       if(grepl(pattern = "lasnet",x = table)){

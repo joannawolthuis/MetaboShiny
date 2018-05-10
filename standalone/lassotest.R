@@ -7,6 +7,22 @@ library(parallel)
 
 # ============== OTHER ================
 
+dbs <- db_list
+paths = file.path(options$db_dir, paste0(dbs,".full.db"))
+cpd_list <- lapply(paths, FUN=function(match.table){
+  dbname <- gsub(basename(match.table), pattern = "\\.full\\.db", replacement = "")
+  print(dbname)
+  print(match.table)
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), match.table)
+  query <- gsubfn::fn$paste(strwrap(
+      "SELECT DISTINCT baseformula FROM base indexed by b_idx1"
+      , width=10000, simplify=TRUE))
+  
+  res <- RSQLite::dbGetQuery(conn, query)
+  res
+  })
+dim(unique(rbindlist(cpd_list)))
+
 brazil <- fread(input="/Users/jwolthuis/Analysis/SP/Brazil1_filled.csv",header = T)
 spain <- fread(input="/Users/jwolthuis/Analysis/SP/Spain1_filled.csv",header = T)
 brasp <-  fread(input="/Users/jwolthuis/Analysis/SP/BrazilAndSpain_filled.csv",header = T)
