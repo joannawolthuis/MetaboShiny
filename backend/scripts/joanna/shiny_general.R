@@ -16,15 +16,16 @@ get_ref_cpds <- function(){
   c(keep.colnames)
 }
 
-getProfile <- function(varName, title=varName, mode="stat"){
+getProfile <- function(varName, title=varName, sourceTable = mSet$dataSet$norm, mode="stat"){
   # ---------------
   print(varName)
-  print(colnames(mSet$dataSet$norm))
+  print(colnames(sourceTable))
   # ---------------
-  varInx <- colnames(mSet$dataSet$norm) == varName;
-  var <- as.data.table(mSet$dataSet$norm, 
+  varInx <- colnames(sourceTable) == varName;
+  print(which(varInx))
+  var <- as.data.table(sourceTable, 
                        keep.rownames = T)[,varInx, with=FALSE];
-  samp.names <- rownames(mSet$dataSet$norm)
+  samp.names <- rownames(sourceTable)
   # ---------------
   if(mode == "time"){
     time.fac <<- mSet$dataSet$time.fac;
@@ -33,14 +34,14 @@ getProfile <- function(varName, title=varName, mode="stat"){
       Sample = gsub(x = samp.names, pattern = "_T\\d$", replacement=""),
       Group = mSet$dataSet$facB,
       Time = time.fac,
-      Abundance = mSet$dataSet$norm[,varInx]
+      Abundance = sourceTable[,varInx]
     )
   }else if(mode == "stat"){
     translator <- data.table(
       index = 1:length(samp.names),
       Sample = gsub(x = samp.names, pattern = "T\\d$", replacement=""),
       Group = mSet$dataSet$cls,
-      Abundance = mSet$dataSet$norm[,varInx]
+      Abundance = sourceTable[,varInx]
     )
   }
   # ---------------
@@ -105,9 +106,6 @@ glmnet_all_alpha <- function(curr, nvars, cl = 0, a = c(0, 0.2, 0.4, 0.6, 0.8, 1
   training <- curr[ inTrain,]
   testing <- curr[-inTrain, ]
   
-  print(dim(testing))
-  print(dim(training))
-  
   predIdx <- which(colnames(curr) == predictor | colnames(curr) == "Sample")
   
   trainX <- apply(training[, -c(predIdx), with=FALSE], 2, as.numeric)
@@ -132,7 +130,7 @@ glmnet_all_alpha <- function(curr, nvars, cl = 0, a = c(0, 0.2, 0.4, 0.6, 0.8, 1
       c(names(inds)) 
     })
     
-    var_stability <- table(unlist(used_vars_per_lambda)) / 99 * 100
+    var_stability <- table(unlist(used_vars_per_lambda)) / length(used_vars_per_lambda) * 100
     var_stability <- var_stability[2:length(var_stability)]
     
     # - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -139,16 +139,27 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                       fluidRow(column(3, align="center",
                                                       h2("DIMEdb"),
                                                       helpText("A direct infusion database of biologically relevant metabolite structures and annotations.")
+                                      ),column(3, align="center",
+                                               h2("Wikidata"),
+                                               helpText("Central storage for the data of its Wikimedia sister projects including Wikipedia, Wikivoyage, Wikisource, and others.")
                                       )),
                                       fluidRow(column(3, align="center",
                                                       imageOutput("dimedb_logo",inline = T),
                                                       br(),br()
+                                      ),column(3, align="center",
+                                               imageOutput("wikidata_logo",inline = T),
+                                               br(),br()
                                       )),
                                       fluidRow(column(3, align="center",
                                                       actionButton("check_dimedb", "Check", icon = icon("check")),
                                                       actionButton("build_dimedb", "Build", icon = icon("wrench")),
                                                       br(),br(),
                                                       imageOutput("dimedb_check",inline = T)
+                                      ),column(3, align="center",
+                                               actionButton("check_wikidata", "Check", icon = icon("check")),
+                                               actionButton("build_wikidata", "Build", icon = icon("wrench")),
+                                               br(),br(),
+                                               imageOutput("wikidata_check",inline = T)
                                       ))
                                       # ----------------------------------------------------
                              ),
@@ -311,11 +322,13 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                                                                                              sardine(fadeImageButton("search_wikipathways", img.path = "wikipathways.png")),
                                                                                                              sardine(fadeImageButton("search_kegg", img.path = "kegglogo.gif")),
                                                                                                              sardine(fadeImageButton("search_dimedb", img.path = "dimedb.png")),
+                                                                                                             sardine(fadeImageButton("search_wikidata", img.path = "wikidata.png"))
                                                                                                              #sardine(fadeImageButton("search_pubchem", img.path = "pubchemlogo.png")),
-                                                                                                             br(),
-                                                                                                             sardine(switchButton(inputId = "autosearch",
-                                                                                                                                  label = "Autosearch", 
-                                                                                                                                  value = FALSE, col = "BW", type = "OO"))
+                                                                                                             #br(),
+                                                                                                             #sardine(fadeImageButton("select_all_db", img.path = "cart.png"))
+                                                                                                             # sardine(switchButton(inputId = "autosearch",
+                                                                                                             #                      label = "Autosearch", 
+                                                                                                             #                      value = FALSE, col = "BW", type = "OO"))
                                                                                                            ),
                                                                                                            h4("Current compound:"),
                                                                                                            verbatimTextOutput("curr_cpd") 

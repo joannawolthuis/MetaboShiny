@@ -11,6 +11,7 @@ shinyServer(function(input, output, session) {
   csv_loc <<- file.path(options$work_dir, paste0(options$proj_name, ".csv"))
   shinyOptions(progress.style="old")
   ppm <<- 2
+  cf <<- rainbow
   nvars <<- 2
   ncores <<- parallel::detectCores() - 1
   session_cl <<- parallel::makeCluster(ncores)
@@ -36,8 +37,8 @@ shinyServer(function(input, output, session) {
                             sardine(fadeImageButton("add_metacyc", img.path = "metacyc.png")),
                             sardine(fadeImageButton("add_wikipathways", img.path = "wikipathways.png")),
                             sardine(fadeImageButton("add_kegg", img.path = "kegglogo.gif", value = T)),
-                            sardine(fadeImageButton("add_dimedb", img.path = "dimedb.png"))
-                            
+                            sardine(fadeImageButton("add_dimedb", img.path = "dimedb.png")),
+                            sardine(fadeImageButton("add_wikidata", img.path = "wikidata.png"))
                           )),
                  tabPanel(icon("id-card-o"), value = "identifier",
                           br(),
@@ -101,8 +102,10 @@ shinyServer(function(input, output, session) {
                 "kegg",
                 "metacyc",
                 "wikipathways"
-                ,"smpdb","dimedb"
-                )
+                ,"smpdb",
+                "dimedb",
+                "wikidata"
+  )
   
   images <<- list(list(name = 'cute_package', path = 'www/new-product.png', dimensions = c(80, 80)),
                   list(name = 'umc_logo_int', path = 'www/umcinternal.png', dimensions = c(120, 120)),
@@ -115,6 +118,7 @@ shinyServer(function(input, output, session) {
                   list(name = 'pubchem_logo', path = 'www/pubchemlogo.png', dimensions = c(145, 90)),
                   list(name = 'smpdb_logo', path = 'www/smpdb_logo_adj.png', dimensions = c(200, 160)),
                   list(name = 'dimedb_logo', path = 'www/dimedb_logo.png', dimensions = c(310, 120)),
+                  list(name = 'wikidata_logo', path = 'www/wikidata.png', dimensions = c(250, 200)),
                   list(name = 'pos_icon', path = 'www/handpos.png', dimensions = c(120, 120)),
                   list(name = 'neg_icon', path = 'www/handneg.png', dimensions = c(120, 120)),
                   list(name = 'excel_icon', path = 'www/excel.png', dimensions = c(120, 120)),
@@ -148,25 +152,25 @@ shinyServer(function(input, output, session) {
                ),
                tabPanel(h3("PLSDA"), value = "plsda",
                         fluidRow(
-                         selectInput("plsda_type", label="PLSDA subtype:", choices=list("Normal"="normal",
-                                                                                        "Orthogonal"="ortho",
-                                                                                        "Sparse"="sparse"), selected=1),
-                         actionButton("do_plsda",label="Go")
-                         ),
+                          selectInput("plsda_type", label="PLSDA subtype:", choices=list("Normal"="normal",
+                                                                                         "Orthogonal"="ortho",
+                                                                                         "Sparse"="sparse"), selected=1),
+                          actionButton("do_plsda",label="Go")
+                        ),
                         hr(),
                         navbarPage(inverse=F,"",
                                    tabPanel("", icon=icon("globe"),
-                                                     plotly::plotlyOutput("plot_plsda_3d",height = "600px", width="600px")
-                                                     # ,fluidRow(column(3,
-                                                     #                 selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:3),selected = "PC1",width="100%"),
-                                                     #                 selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:3),selected = "PC2",width="100%"),
-                                                     #                 selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:3),selected = "PC3",width="100%")
-                                                     # )
-                                                     # ,
-                                                     # column(9,
-                                                     #        div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')
-                                                     # ))
-                                            ),
+                                            plotly::plotlyOutput("plot_plsda_3d",height = "600px", width="600px")
+                                            # ,fluidRow(column(3,
+                                            #                 selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:3),selected = "PC1",width="100%"),
+                                            #                 selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:3),selected = "PC2",width="100%"),
+                                            #                 selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:3),selected = "PC3",width="100%")
+                                            # )
+                                            # ,
+                                            # column(9,
+                                            #        div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')
+                                            # ))
+                                   ),
                                    tabPanel("", icon=icon("area-chart"), 
                                             plotOutput("plsda_cv_plot"),
                                             plotOutput("plsda_perm_plot")
@@ -263,35 +267,35 @@ shinyServer(function(input, output, session) {
                                       ))
                )
                ,tabPanel(h3("LasNet"), value = "lasnet",
-                          fluidRow(
-                            column(width=1, h2("Ridge"),style = "margin-top: 25px;", align="right"),
-                            column(width=9,checkboxGroupInput("lasnet_alpha", "Alpha values",
-                                               choiceNames = 
-                                                 as.character(seq(0,1,0.1)),
-                                               choiceValues =
-                                                 seq(0,1,0.1),
-                                               selected = c(0, 0.2, 0.4, 0.6, 0.8, 1),
-                                               inline = TRUE), align="center"
-                                   ),
-                            column(width=1, h2("Lasso"), style = "margin-top: 25px;")),
                          fluidRow(
-                            column(width=5,sliderInput("lasnet_trainfrac", 
-                                        label = "Percentage in training", 
-                                        min = 0,
-                                        max = 100,
-                                        step = 5,
-                                        value = 60, 
-                                        post = "%")),
-                            column(width=2, actionButton("do_lasnet",label="Go",width = "50px"),style = "margin-top: 35px;", align="left"),
-                            column(width=5,sliderInput("lasnet_folds", 
-                                        label = "Fold validation", 
-                                        min = 0,
-                                        max = 20,
-                                        step = 1,
-                                        value = 5, 
-                                        post = "x")
-                            )),
-                            
+                           column(width=1, h2("Ridge"),style = "margin-top: 25px;", align="right"),
+                           column(width=9,checkboxGroupInput("lasnet_alpha", "Alpha values",
+                                                             choiceNames = 
+                                                               as.character(seq(0,1,0.1)),
+                                                             choiceValues =
+                                                               seq(0,1,0.1),
+                                                             selected = c(0, 0.2, 0.4, 0.6, 0.8, 1),
+                                                             inline = TRUE), align="center"
+                           ),
+                           column(width=1, h2("Lasso"), style = "margin-top: 25px;")),
+                         fluidRow(
+                           column(width=5,sliderInput("lasnet_trainfrac", 
+                                                      label = "Percentage in training", 
+                                                      min = 0,
+                                                      max = 100,
+                                                      step = 5,
+                                                      value = 60, 
+                                                      post = "%")),
+                           column(width=2, actionButton("do_lasnet",label="Go",width = "50px"),style = "margin-top: 35px;", align="left"),
+                           column(width=5,sliderInput("lasnet_folds", 
+                                                      label = "Fold validation", 
+                                                      min = 0,
+                                                      max = 20,
+                                                      step = 1,
+                                                      value = 5, 
+                                                      post = "x")
+                           )),
+                         
                          hr()
                          ,
                          navbarPage(title="Results",id="lasnet",inverse=F,
@@ -300,8 +304,8 @@ shinyServer(function(input, output, session) {
                                     tabPanel("Model",value= "",icon=icon("table"),
                                              plotlyOutput("lasnet_specific_plot"),
                                              uiOutput("lasnet_table_ui"))
-                                    )
-    ))
+                         )
+               ))
   })
   
   stat.ui.multivar <- reactive({
@@ -703,7 +707,7 @@ shinyServer(function(input, output, session) {
                           light=ggplot2::theme_light,
                           line=ggplot2::theme_linedraw)
   })
-      
+  
   observeEvent(input$change_css, {
     # input <- list(bar.col.1 = "ffc8c2", 
     #               bar.col.2 = "e1897f", 
@@ -890,7 +894,7 @@ shinyServer(function(input, output, session) {
         #   }
         # }, pkgs = pkgs)
         #setProgress(message = "Working...")
-        build.base.db(db, outfolder=options$db_dir, cl=session_cl)
+        #build.base.db(db, outfolder=options$db_dir, cl=session_cl)
         setProgress(0.5)
         build.extended.db(db, 
                           outfolder=options$db_dir,
@@ -910,7 +914,7 @@ shinyServer(function(input, output, session) {
     withProgress({
       setProgress(.1,message = "Loading outlists into memory...")
       req(input$outlist_neg, input$outlist_pos, input$excel)
-
+      
       build.pat.db(patdb,
                    ppm = ppm,
                    pospath = input$outlist_pos$datapath,
@@ -1061,14 +1065,14 @@ shinyServer(function(input, output, session) {
     # ----------------------
     
     csv <- fread(csv_loc, 
-                     header = T)
+                 header = T)
     
     nvars <- length(csv[,1:(which(colnames(csv) == "$"))])
     
     opts <<- colnames(csv[,1:(nvars - 1)])
     
     batch <<- which(sapply(1:(nvars - 1), function(x) length(unique(csv[,..x][[1]])) < nrow(csv)))
-
+    
     numi <<- which(sapply(1:(nvars - 1), function(x) is.numeric(csv[,..x][[1]])))
     
     # get excel table stuff.
@@ -1077,8 +1081,8 @@ shinyServer(function(input, output, session) {
     updateSelectInput(session, "samp_var",
                       choices = opts[numi])
     updateSelectizeInput(session, "batch_var",
-                      choices = opts[batch],
-                      options = list(maxItems = 3L - (length(input$batch_var)))
+                         choices = opts[batch],
+                         options = list(maxItems = 3L - (length(input$batch_var)))
     )
   })
   
@@ -1136,30 +1140,30 @@ shinyServer(function(input, output, session) {
       # ------------------------------
       #Below is your R command history: 
       mSet <<- switch(input$exp_type,
-                     stat = {
-                     #  mSet<-
-                     InitDataObjects("pktable", 
-                                       "stat", 
-                                       FALSE)
-                     },
-                     time_std = {
-                       InitDataObjects("pktable", 
-                                       "ts", 
-                                       FALSE)
-                     },
-                     time_fin = {
-                       InitDataObjects("pktable", 
-                                       "stat", 
-                                       FALSE)
-                     },
-                     time_min = {   
-                       InitDataObjects("pktable", 
-                                       "stat", 
-                                       FALSE)
-                     }
+                      stat = {
+                        #  mSet<-
+                        InitDataObjects("pktable", 
+                                        "stat", 
+                                        FALSE)
+                      },
+                      time_std = {
+                        InitDataObjects("pktable", 
+                                        "ts", 
+                                        FALSE)
+                      },
+                      time_fin = {
+                        InitDataObjects("pktable", 
+                                        "stat", 
+                                        FALSE)
+                      },
+                      time_min = {   
+                        InitDataObjects("pktable", 
+                                        "stat", 
+                                        FALSE)
+                      }
       )
       
-     # print(names(mSet))
+      # print(names(mSet))
       # ------- load and re-save csv --------
       #csv_loc = "/Users/jwolthuis/Analysis/BR/BR_FirstEight.csv"
       #csv_loc = "/Users/jwolthuis/Analysis/SP/Spain1.csv"
@@ -1171,13 +1175,13 @@ shinyServer(function(input, output, session) {
       #f = fread(csv_loc, header = TRUE)
       
       csv_orig <- fread(csv_loc, 
-                       data.table = TRUE,
-                       header = T)
+                        data.table = TRUE,
+                        header = T)
       
       nvars <- length(csv_orig[,1:(which(colnames(csv_orig) == "$"))])
       
       # --- batches ---
-
+      
       batches <- input$batch_var
       condition <- input$exp_var
       
@@ -1208,14 +1212,14 @@ shinyServer(function(input, output, session) {
       
       # --- remove outliers? ---
       print("Removing outliers...")
-
+      
       sums <- rowSums(csv_subset[, -c(1:length(remain)),with=FALSE],na.rm = TRUE)
       names(sums) <- csv_subset$Sample
       outliers = c(car::Boxplot(as.data.frame(sums)))
       
       print(paste("Outliers removed (based on total signal):", paste(outliers, collapse=" and ")))
       csv_temp_no_out <- csv_subset[!(Sample %in% outliers)]
-
+      
       batchview = if(condition == "Batch") TRUE else FALSE
       
       if(any(grepl("QC", csv_temp_no_out$Sample))){
@@ -1246,26 +1250,26 @@ shinyServer(function(input, output, session) {
         fwrite(csv_temp_filt, 
                csv_loc_no_out)  
       }
-
+      
       rownames(batch_table) <- batch_table$Sample
       
       # -------------------------------------
       
       mSet <<- Read.TextData(mSet, 
-                            filePath = csv_loc_no_out, 
-                            "rowu")
+                             filePath = csv_loc_no_out, 
+                             "rowu")
       
       mSet$dataSet$batches <<- batch_table
-
+      
       # ----------- sanity check ------------
       
       mSet <<- SanityCheckData(mSet)
       
-     # input = list(perc_limit = 50, miss_type = "colmin", filt_type = "iqr", norm_type = "QuantileNorm", trans_type = "LogNorm", scale_type = "AutoNorm", ref_var=NULL)
+      # input = list(perc_limit = 50, miss_type = "colmin", filt_type = "iqr", norm_type = "QuantileNorm", trans_type = "LogNorm", scale_type = "AutoNorm", ref_var=NULL)
       
       mSet <<- RemoveMissingPercent(mSet, 
                                     percent = input$perc_limit/100)
-
+      
       if(input$miss_type != "none"){
         mSet <<- ImputeVar(mSet,
                            method = input$miss_type)
@@ -1274,6 +1278,7 @@ shinyServer(function(input, output, session) {
       # ------------------------
       
       if(input$filt_type != "none"){
+        print("filtering...")
         mSet <<- FilterVariable(mSet,
                                 filter = input$filt_type,
                                 qcFilter = "F",
@@ -1288,7 +1293,6 @@ shinyServer(function(input, output, session) {
       first_part_no_out <<- first_part[Sample %in% keep]
       
       if(input$norm_type == "SpecNorm"){
-        print("here-o")
         norm.vec <<- first_part_no_out[match(first_part_no_out$Sample,
                                              rownames(mSet$dataSet$preproc)),][[input$samp_var]]
         norm.vec <<- scale(x = norm.vec,center = 1)
@@ -1302,9 +1306,9 @@ shinyServer(function(input, output, session) {
                              transNorm = input$trans_type,
                              scaleNorm = input$scale_type,
                              ref = input$ref_var
-                            )
+      )
       
-
+      
       second_part_no_out <- mSet$dataSet$norm[match(rownames(mSet$dataSet$norm),
                                                     first_part_no_out$Sample),]
       csv_filled = cbind(first_part_no_out, 
@@ -1315,7 +1319,7 @@ shinyServer(function(input, output, session) {
       fwrite(csv_filled, file = csv_loc_filled)
       #print(ncol(mSet$dataSet$orig))
       #print(ncol(mSet$dataSet$norm))
-
+      
       # mSet <- Normalization(mSet = mSet,
       #                       rowNorm = "QuantileNorm",
       #                       transNorm = "LogNorm",
@@ -1325,7 +1329,7 @@ shinyServer(function(input, output, session) {
       #                       #ratioNum=20
       #                       )
       # ====
-
+      
       setProgress(.4)
       
       #mSet <- mSet_beforebatch
@@ -1383,19 +1387,19 @@ shinyServer(function(input, output, session) {
                                 pattern =  "Batch|Injection|Sample",
                                 value = T,
                                 invert = T)
-
+        
         print(left_batch_vars)
         
         if(length(left_batch_vars) > 2){ 
           print("Can only correct for 2 batches...")
         } else if(length(left_batch_vars) == 0){
-            print("No vars usable for ComBat...")
-            NULL
+          print("No vars usable for ComBat...")
+          NULL
         } else{
           
           smp <- rownames(mSet$dataSet$norm)
           exp_lbl <- mSet$dataSet$cls
-
+          
           print(paste("Batches:", left_batch_vars))
           
           csv <- as.data.table(cbind(Sample = smp, 
@@ -1422,29 +1426,29 @@ shinyServer(function(input, output, session) {
                                     batch2 = mSet$dataSet$batches[match(smp, mSet$dataSet$batches$Sample), left_batch_vars[2], with=FALSE][[1]],
                                     outcome = as.factor(exp_lbl))
             batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
-                                                        #design = mod.pheno,
-                                                        batch = csv_pheno$batch1,
-                                                        batch2 = csv_pheno$batch2))
+                                                          #design = mod.pheno,
+                                                          batch = csv_pheno$batch1,
+                                                          batch2 = csv_pheno$batch2))
             rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
           }
-
+          
           print(head(csv_pheno))
           
           #mod.batch = model.matrix(~ batch1 + batch2 + outcome, data=csv_pheno)
           
           mSet$dataSet$norm <<- as.data.frame(batch_normalized)
-          }
-        } else{
-          if(!batchview){
-            mSet$dataSet$norm <<- mSet$dataSet$norm[!grepl(rownames(mSet$dataSet$norm),pattern= "QC"),]
-            mSet$dataSet$cls <<- mSet$dataSet$cls[which(!grepl(rownames(mSet$dataSet$norm),pattern= "QC")), drop = TRUE]
-            mSet$dataSet$batches <<- mSet$dataSet$batches[!grepl(mSet$dataSet$batches$Sample,pattern= "QC"),]
-            mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
-          }
         }
+      } else{
+        if(!batchview){
+          mSet$dataSet$norm <<- mSet$dataSet$norm[!grepl(rownames(mSet$dataSet$norm),pattern= "QC"),]
+          mSet$dataSet$cls <<- mSet$dataSet$cls[which(!grepl(rownames(mSet$dataSet$norm),pattern= "QC")), drop = TRUE]
+          mSet$dataSet$batches <<- mSet$dataSet$batches[!grepl(mSet$dataSet$batches$Sample,pattern= "QC"),]
+          mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
+        }
+      }
       
       print(rownames(mSet$dataSet$norm))
-
+      
       
       setProgress(.5)
       
@@ -1467,7 +1471,7 @@ shinyServer(function(input, output, session) {
       update.UI()  
       setProgress(.9)
       
-      })
+    })
   })
   
   # MAIN EXECUTION OF ANALYSES
@@ -1803,12 +1807,12 @@ shinyServer(function(input, output, session) {
              if(!"tt" %in% names(mSet$analSet)){
                withProgress({
                  mSet <<- Ttests.Anal(mSet,
-                                        nonpar = FALSE, 
-                                        threshp = 0.05, 
-                                        paired = FALSE,
-                                        equal.var = TRUE
+                                      nonpar = FALSE, 
+                                      threshp = 0.05, 
+                                      paired = FALSE,
+                                      equal.var = TRUE
                                       #  multicorr = "BH"
-                                      )
+                 )
                })
              }
              res <<- mSet$analSet$tt$sig.mat
@@ -1871,7 +1875,7 @@ shinyServer(function(input, output, session) {
            rf={
              if(!"rf" %in% names(mSet$analSet)){
                withProgress({
-                mSet <<- RF.Anal(mSet, 500,7,1)
+                 mSet <<- RF.Anal(mSet, 500,7,1)
                })
              }
              vip.score <<- as.data.table(mSet$analSet$rf$importance[, "MeanDecreaseAccuracy"],keep.rownames = T)
@@ -1905,7 +1909,7 @@ shinyServer(function(input, output, session) {
            }
     )
   })
-
+  
   observeEvent(input$do_plsda, {
     print("Doing plsda...")
     library(e1071)
@@ -1916,7 +1920,7 @@ shinyServer(function(input, output, session) {
                mSet <<- PLSR.Anal(mSet,
                                   TRUE)
                setProgress(0.3)
-
+               
                mSet <<- PLSDA.CV(mSet,compNum = 3)
                mSet <<- PLSDA.Permut(mSet,num = 100)
                
@@ -1945,11 +1949,11 @@ shinyServer(function(input, output, session) {
                plsda_tab <<- cbind(ordered_pc[1:50, c("rn")], 
                                    Rank=c(1:50))
              })
-             },
+           },
            sparse={
              mSet <<- SPLSR.Anal(mSet, 5, 10, "same")
              plsda.table <- data.table("Principal Component" = paste0("PC", 1:length(mSet$analSet$splsr$explained_variance$X)),
-                                          "% variance" = round(100 * mSet$analSet$splsr$explained_variance$X, 2))
+                                       "% variance" = round(100 * mSet$analSet$splsr$explained_variance$X, 2))
              coords <- data.frame(signif(mSet$analSet$splsr$variates$X, 5))
              compounds_pc <- as.data.table(abs(mSet$analSet$splsr$loadings$X),keep.rownames = T)
              colnames(compounds_pc)[2:ncol(compounds_pc)] <- paste0("PC", 1:(ncol(compounds_pc)-1))
@@ -2078,6 +2082,69 @@ shinyServer(function(input, output, session) {
     })
   })
   
+  observeEvent(input$do_rf, {
+    
+    curr <- as.data.table(mSet$dataSet$preproc)
+    curr[,(1:ncol(curr)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
+    
+    config <- mSet$dataSet$batches[match(rownames(mSet$dataSet$preproc),mSet$dataSet$batches$Sample),]
+    config <- config[!is.na(config$Sample),]
+    keep_curr <- match(mSet$dataSet$batches$Sample,rownames(mSet$dataSet$preproc))
+    
+    config <- cbind(config, Label=mSet$dataSet$cls)
+    
+    curr <- cbind(config, curr[keep_curr])
+    
+    predictor = "Label"
+    
+    inTrain <- caret::createDataPartition(y = config$Label,
+                                          ## the outcome data are needed
+                                          p = 0.6,#input$rf_train_perc/100,
+                                          ## The percentage of data in the training set
+                                          list = FALSE)
+    trainY <- curr[inTrain, 
+                   ..predictor][[1]]
+    
+    training <- curr[ inTrain,]
+    testing <- curr[-inTrain, ]
+    
+    trainX <- apply(training[, -c(1:ncol(config)), with=FALSE], 2, as.numeric)
+    testX <- apply(testing[, -c(1:ncol(config)), with=FALSE], 2, as.numeric)
+    
+    testY <- testing[,predictor, 
+                     with=FALSE][[1]]
+    
+    model = randomForest::randomForest(trainX, trainY, ntree=500,importance=TRUE)
+    result <- randomForest::rfcv(trainX, trainY, cv.fold=10, recursive=TRUE)    
+    with(result, plot(n.var, error.cv, log="x", type="o", lwd=2))
+    
+    importance = as.data.table(model$importance, keep.rownames = T)
+    rf_tab <- importance[which(MeanDecreaseAccuracy > 0), c("rn", "MeanDecreaseAccuracy")]
+    rf_tab <- rf_tab[order(MeanDecreaseAccuracy, decreasing = T)]
+    rf_tab <<- data.frame(MDA = rf_tab$MeanDecreaseAccuracy, row.names = rf_tab$rn) 
+    
+    prediction <- stats::predict(model,
+                                 testX, "prob")[,2]
+    
+    data <- data.frame(D = as.numeric(as.factor(testY))-1,
+                       D.str = testY)
+    data <- cbind(data, prediction)
+    
+    roc_coord <- data.frame(D = rep(data[, "D"], length(3)), M = data[, 3], name = rep(names(data)[3], each = nrow(data)), stringsAsFactors = FALSE)
+    #roc_coord <- plotROC::melt_roc(data, "D", m = 3:ncol(data))
+    
+    ggplot2::ggplot(roc_coord, 
+                    ggplot2::aes(d = D, m = M, color = name)) + 
+      plotROC::geom_roc(labelsize=0,show.legend = TRUE) + 
+      plotROC::style_roc() + 
+      theme(axis.text=element_text(size=19),
+            axis.title=element_text(size=19,face="bold"),
+            legend.title=element_text(size=19),
+            legend.text=element_text(size=19))
+    
+    
+  })
+  
   observeEvent(input$do_lasnet, {
     
     plot.many <- function(res.obj = models, which_alpha = 1){
@@ -2119,7 +2186,10 @@ shinyServer(function(input, output, session) {
         if(length(res.obj) > 1){
           roc_coord <- plotROC::melt_roc(data, "D", m = 3:ncol(data))
         }else{
-          roc_coord <- data.frame(D = rep(data[, "D"], length(3)), M = data[, 3], name = rep(names(data)[3], each = nrow(data)), stringsAsFactors = FALSE)
+          roc_coord <- data.frame(D = rep(data[, "D"], length(3)),
+                                  M = data[, 3], 
+                                  name = rep(names(data)[3], each = nrow(data)), 
+                                  stringsAsFactors = FALSE)
           print(head(roc_coord))
         }
       }
@@ -2145,7 +2215,6 @@ shinyServer(function(input, output, session) {
       curr <- as.data.table(mSet$dataSet$preproc)
       curr[,(1:ncol(curr)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
       
-      
       config <- mSet$dataSet$batches[match(rownames(mSet$dataSet$preproc),mSet$dataSet$batches$Sample),]
       config <- config[!is.na(config$Sample),]
       keep_curr <- match(mSet$dataSet$batches$Sample,rownames(mSet$dataSet$preproc))
@@ -2158,9 +2227,9 @@ shinyServer(function(input, output, session) {
       
       # - - - - - - - - - - - - - - - - - - - - - - - - - 
       
-      alphas <- input$lasnet_alpha
-      
       input = list(lasnet_alpha = 1, lasnet_trainfrac = 60)
+      
+      alphas <- input$lasnet_alpha 
       
       models <- glmnet_all_alpha(curr = curr,
                                  nvars = ncol(config) + 1, 
@@ -2168,12 +2237,13 @@ shinyServer(function(input, output, session) {
                                  a = alphas,
                                  perc_train = input$lasnet_trainfrac/100)
       
-      setProgress(0.4)
+      #setProgress(0.4)
       
       # - - store results in mset - - -
       
-      output$lasnet_roc_plot <- renderPlot({ plot.many(models, which_alpha=alphas) })
-    
+      output$lasnet_roc_plot <- renderPlot({ plot.many(models, 
+                                                                             which_alpha = alphas) })
+      
       setProgress(0.6)
       
       lasnet_tables <<- lapply(models, function(x){
@@ -2219,17 +2289,17 @@ shinyServer(function(input, output, session) {
         }) 
       })
       
-
+      
       setProgress(0.9)
       
       output$lasnet_table_ui <- renderUI({
         do.call(tabsetPanel, c(id='t',lapply(1:length(lasnet_tables), function(i) {
           tabPanel(
             title=paste0("alpha=",names(lasnet_tables)[i]), 
-              tabsetPanel(id="t2", 
-                          tabPanel(title="final model",div(DT::dataTableOutput(outputId = paste0("alpha_", names(lasnet_tables)[i], "_lasnet_tab")),style='font-size:80%')),
-                          tabPanel(title="feature stats",div(DT::dataTableOutput(outputId = paste0("alpha_stab_", names(lasnet_tables)[i], "_lasnet_tab")),style='font-size:80%'))
-              ))
+            tabsetPanel(id="t2", 
+                        tabPanel(title="final model",div(DT::dataTableOutput(outputId = paste0("alpha_", names(lasnet_tables)[i], "_lasnet_tab")),style='font-size:80%')),
+                        tabPanel(title="feature stats",div(DT::dataTableOutput(outputId = paste0("alpha_stab_", names(lasnet_tables)[i], "_lasnet_tab")),style='font-size:80%'))
+            ))
         })))
       })
       
@@ -2354,17 +2424,17 @@ shinyServer(function(input, output, session) {
         print(table)
       }
       curr_cpd <<- data.table::as.data.table(switch(table,
-                                                 tt = mSet$analSet$tt$sig.mat,
-                                                 fc = mSet$analSet$fc$sig.mat,
-                                                 asca = mSet$analSet$asca$sig.list$Model.ab,
-                                                 aov = mSet$analSet$aov$sig.mat,
-                                                 rf = vip.score,
-                                                 enrich_pw = enrich_overview_tab,
-                                                 meba = mSet$analSet$MB$stats,
-                                                 plsda_vip = plsda_tab,
-                                                 lasnet_a = lasnet_tables[[alpha]],
-                                                 lasnet_b = lasnet_stab_tables[[alpha]])
-                                          , keep.rownames = T)[curr_row, rn]
+                                                    tt = mSet$analSet$tt$sig.mat,
+                                                    fc = mSet$analSet$fc$sig.mat,
+                                                    asca = mSet$analSet$asca$sig.list$Model.ab,
+                                                    aov = mSet$analSet$aov$sig.mat,
+                                                    rf = vip.score,
+                                                    enrich_pw = enrich_overview_tab,
+                                                    meba = mSet$analSet$MB$stats,
+                                                    plsda_vip = plsda_tab,
+                                                    lasnet_a = lasnet_tables[[alpha]],
+                                                    lasnet_b = lasnet_stab_tables[[alpha]])
+                                             , keep.rownames = T)[curr_row, rn]
       
       if(grepl(pattern = "lasnet",x = table)){
         outplot_name = "lasnet_specific_plot"
@@ -2382,15 +2452,15 @@ shinyServer(function(input, output, session) {
           ggplotSummary(curr_cpd, cols = color.vec(), cf=color.function)
         }
       })
-      if(input$autosearch & length(db_search_list > 0)){
-        match_table <<- multimatch(curr_cpd, db_search_list, mSet$dataSet$grouping)
-        output$match_tab <-DT::renderDataTable({
-          DT::datatable(if(mSet$dataSet$grouping == 'pathway') match_table else{match_table[,-c("Description","Structure")]},
-                        selection = 'single',
-                        autoHideNavigation = T,
-                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-        })  
-      }
+      # if(input$autosearch & length(db_search_list > 0)){
+      #   match_table <<- multimatch(curr_cpd, db_search_list, mSet$dataSet$grouping)
+      #   output$match_tab <-DT::renderDataTable({
+      #     DT::datatable(if(mSet$dataSet$grouping == 'pathway') match_table else{match_table[,-c("Description","Structure")]},
+      #                   selection = 'single',
+      #                   autoHideNavigation = T,
+      #                   options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+      #   })  
+      # }
     })
   })
   
@@ -2492,15 +2562,15 @@ shinyServer(function(input, output, session) {
            })
     # ----------------------------
     output$curr_cpd <- renderText(curr_cpd)
-    if(input$autosearch & length(db_search_list) > 0){
-      match_table <<- multimatch(curr_cpd, db_search_list, mSet$dataSet$grouping)
-      output$match_tab <-DT::renderDataTable({
-        DT::datatable(if(mSet$dataSet$grouping == 'pathway') match_table else{match_table[,-c("Description", "Structure")]},
-                      selection = 'single',
-                      autoHideNavigation = T,
-                      options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-      })  
-    }
+    # if(input$autosearch & length(db_search_list) > 0){
+    #   match_table <<- multimatch(curr_cpd, db_search_list, mSet$dataSet$grouping)
+    #   output$match_tab <-DT::renderDataTable({
+    #     DT::datatable(if(mSet$dataSet$grouping == 'pathway') match_table else{match_table[,-c("Description", "Structure")]},
+    #                   selection = 'single',
+    #                   autoHideNavigation = T,
+    #                   options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+    #   })  
+    # }
   })
   
   # --- find matches ---
@@ -2520,7 +2590,7 @@ shinyServer(function(input, output, session) {
     if(length(db_search_list) > 0){
       match_table <<- multimatch(curr_cpd, db_search_list, mSet$dataSet$grouping)
       output$match_tab <-DT::renderDataTable({
-        DT::datatable(match_table[,-c("Description","Structure")],
+        DT::datatable(match_table[,-c("description","structure")],
                       selection = 'single',
                       autoHideNavigation = T,
                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -2533,9 +2603,9 @@ shinyServer(function(input, output, session) {
     curr_row <<- input$match_tab_rows_selected
     if (is.null(curr_row)) return()
     # -----------------------------
-    curr_def <<- match_table[curr_row,'Description']
-    output$curr_definition <- renderText(curr_def$Description)
-    curr_struct <<- match_table[curr_row,'Structure'][[1]]
+    curr_def <<- match_table[curr_row,'description']
+    output$curr_definition <- renderText(curr_def$description)
+    curr_struct <<- match_table[curr_row,'structure'][[1]]
     output$curr_struct <- renderPlot({plot.mol(curr_struct,style = "cow")})
   })
   
@@ -2547,7 +2617,7 @@ shinyServer(function(input, output, session) {
     })
     # ------------------
     browse_table <<- unique(as.data.table(rbindlist(cpd_list)))
-
+    
     output$browse_tab <-DT::renderDataTable({
       DT::datatable(browse_table[,-c("Description", "Charge")],
                     selection = 'single',
@@ -2606,6 +2676,7 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$go_enrich,{
+    enrich_db_list <- paste0("./backend/db/", c("kegg", "wikipathways", "smpdb", "metacyc"), ".full.db")
     withProgress({
       all_pathways <- lapply(enrich_db_list, FUN=function(db){
         conn <- RSQLite::dbConnect(RSQLite::SQLite(), db) # change this to proper var later
@@ -2650,10 +2721,31 @@ shinyServer(function(input, output, session) {
                           t500=sort(mSet$analSet[[used.analysis]][[stat.tab]])[1:500]
         )        
       }
+      
       # -----------------------
       gset <- rbindlist(all_pathways)
       gset_proc <<- piano::loadGSC(gset)
       setProgress(0.66)
+      
+      # - - - - - - 
+      
+      sigvals <- rownames(lasnet_tables[[1]])
+      matches <- rbindlist(lapply(sigvals, function(mz){
+        subtables <- lapply(enrich_db_list, function(db){
+          matches = get_matches(mz, db, F, "mz")
+        }) 
+        tab <- rbindlist(subtables)
+        tab$mz = c(mz)
+        tab
+      }))
+      
+      lasnet_vals <- lasnet_tables[[1]]
+      lasnet_vals$mz <- rownames(lasnet_vals)
+      matches <- merge(matches, lasnet_vals, by = "mz")
+      sigvals <- unique(matches[, c("Baseformula", "beta")])
+      
+      # - - - - - -
+      
       gsaRes <<- piano::runGSA(sigvals, 
                                gsc = gset_proc)
       enrich_tab <<- piano::GSAsummaryTable(gsaRes)[,1:3]

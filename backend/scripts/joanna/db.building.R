@@ -287,6 +287,7 @@ build.base.db <- function(dbname=NA,
                                                                      JOIN wikipathways w
                                                                      ON b.identifier = w.identifier")
                                  # --- get pathway info ---
+                                 # -- R PACKAGE EXISTS: source("https://bioconductor.org/biocLite.R"); biocLite("rWikiPathways"); --
                                  sparql.pathways <- SPARQL::SPARQL(url="http://sparql.wikipathways.org/",
                                                                    query='PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                                                                    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -352,41 +353,42 @@ build.base.db <- function(dbname=NA,
                                      iatom <- rcdk::parse.smiles(smi)[[1]]
                                      charge = rcdk::get.total.charge(iatom)
                                    })
-                                   print(charge)
+                                   #print(charge)
                                    charge
                                  })
 
                                  charges[is.na(charges)] <- "0" # set all missing to zero
-                                 db.cpds <- data.table::data.table(compoundname = smpdb.tab$`Metabolite Name`,
-                                                                   baseformula = smpdb.tab$Formula,
-                                                                   identifier = smpdb.tab$`Metabolite ID`,
-                                                                   widentifier = gsub(smpdb.tab$`HMDB ID`, pattern = "(HMDB0*)", replacement = ""),
-                                                                   charge = charges,
-                                                                   structure = smpdb.tab$SMILES,
-                                                                   pathway = smpdb.tab$`SMPDB ID`)
+                                 db.formatted <- data.table::data.table(compoundname = smpdb.tab$`Metabolite Name`,
+                                                                        description = c("See HMDB for more info :-)"),
+                                                                        baseformula = smpdb.tab$Formula,
+                                                                        identifier = smpdb.tab$`Metabolite ID`,
+                                                                        #widentifier = gsub(smpdb.tab$`HMDB ID`, pattern = "(HMDB0*)", replacement = ""),
+                                                                        charge = charges,
+                                                                        structure = smpdb.tab$SMILES,
+                                                                        pathway = smpdb.tab$`SMPDB ID`)
                                  db.pathways <- data.table::data.table(name = smpdb.tab$`Pathway Name`,
                                                                        identifier = smpdb.tab$`SMPDB ID`)
                                  checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
-                                                                                            db.cpds$baseformula))
-                                 db.cpds$baseformula <- checked$new_formula
+                                                                                            db.formatted$baseformula))
+                                 db.formatted$baseformula <- checked$new_formula
                                  keep <- checked[warning == FALSE, which = TRUE]
-                                 db.cpds <- db.cpds[keep]
+                                 db.formatted <- db.formatted[keep]
                                  # --- get descriptions from hmdb!!! ---
-                                 hmdb.loc <- file.path(options$db_dir, "hmdb.full.db")
-                                 conn.hmdb <- RSQLite::dbConnect(RSQLite::SQLite(), hmdb.loc)
-                                 RSQLite::dbWriteTable(conn.hmdb, "smpdb", db.cpds, overwrite=TRUE)
-                                 db.formatted <- RSQLite::dbGetQuery(conn.hmdb, "SELECT DISTINCT  
-                                                                     s.compoundname,
-                                                                     b.description,
-                                                                     s.baseformula, 
-                                                                     s.charge as charge,
-                                                                     s.identifier as identifier, 
-                                                                     s.pathway 
-                                                                     FROM smpdb s
-                                                                     LEFT JOIN base b
-                                                                     ON b.identifier = s.widentifier")
-                                 RSQLite::dbRemoveTable(conn.hmdb, "smpdb")
-                                 RSQLite::dbDisconnect(conn.hmdb)
+                                 #hmdb.loc <- file.path(options$db_dir, "hmdb.full.db")
+                                 #conn.hmdb <- RSQLite::dbConnect(RSQLite::SQLite(), hmdb.loc)
+                                 #RSQLite::dbWriteTable(conn.hmdb, "smpdb", db.cpds, overwrite=TRUE)
+                                 # db.formatted <- RSQLite::dbGetQuery(conn.hmdb, "SELECT DISTINCT  
+                                 #                                     s.compoundname,
+                                 #                                     b.description,
+                                 #                                     s.baseformula, 
+                                 #                                     s.charge as charge,
+                                 #                                     s.identifier as identifier, 
+                                 #                                     s.pathway 
+                                 #                                     FROM smpdb s
+                                 #                                     LEFT JOIN base b
+                                 #                                     ON b.identifier = s.widentifier")
+                                 # RSQLite::dbRemoveTable(conn.hmdb, "smpdb")
+                                 #RSQLite::dbDisconnect(conn.hmdb)
                                  # --- create ---
                                  RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
                                  RSQLite::dbWriteTable(conn, "pathways", db.pathways, overwrite=TRUE)
@@ -642,12 +644,81 @@ build.base.db <- function(dbname=NA,
                                metabolights = function(dbname, ...){
                                  require(webchem)
                                  require(rcdk)
-                                 metabs = jsonlite::fromJSON(txt = "http://ftp.ebi.ac.uk/pub/databases/metabolights/compounds/MetabolitesReport.json",
-                                                             simplifyDataFrame = TRUE)
-                                 pathways = jsonlite::fromJSON(txt = "http://ftp.ebi.ac.uk/pub/databases/metabolights/compounds/reactome.json", 
-                                                               simplifyDataFrame = TRUE)
+                                 require(curl)
                                  
-                                 # file.url <- "ftp://ftp.ebi.ac.uk/pub/databases/metabolights/xml_feeds/unichem.tsv"
+                                 all_ids <- read.table("ftp://ftp.ebi.ac.uk/pub/databases/metabolights/eb-eye/unichem.tsv", sep="\t")
+                                 
+                                 colnames(all_ids) <- c("identifier", "inchi", "inchikey")
+                                 query <- all_ids$inchi[[1]]
+                                 
+                                 
+                                 token = "b7e19fad-46bd-48d3-80c1-765140acace1"
+                                 
+                                 cl = parallel::makeCluster(3, "FORK")
+                                 w.csid.rows <- pbapply::pblapply(1:nrow(all_ids), cl=0, function(i){
+                                   row = all_ids[i,]
+                                   inchi = row$inchikey
+                                   print(i/nrow(all_ids)*100)
+                                   try({
+                                     csid = webchem::cs_convert(inchi, from = c("inchikey"),
+                                                                to = c("csid"))[[1]]
+                                     info = webchem::cs_extcompinfo(csid,token=token)
+                                     smi = info$smiles
+                                     iatom <- rcdk::parse.smiles(smi)[[1]]
+                                     charge = rcdk::get.total.charge(iatom)
+                                     formula = rcdk::get.mol2formula(iatom, charge = charge)@string
+                                     # - - - - -
+                                     data.table::data.table(compoundname = info$common_name,
+                                                            baseformula = formula,
+                                                            description = "MetaboLights compound",
+                                                            identifier = row$identifier,
+                                                            structure = info$smiles)
+                                   })
+                                 })
+                                 
+                                 # metabs = jsonlite::fromJSON(txt = "http://ftp.ebi.ac.uk/pub/databases/metabolights/compounds/MetabolitesReport.json",
+                                 #                             simplifyDataFrame = TRUE)
+                                 # pathways = jsonlite::fromJSON(txt = "http://ftp.ebi.ac.uk/pub/databases/metabolights/compounds/reactome.json", 
+                                 #                               simplifyDataFrame = TRUE)
+                                 url = "ftp://ftp.ebi.ac.uk/pub/databases/metabolights/eb-eye/eb-eye_metabolights_complete.xml"
+                                 result <- XML::xmlParse()
+                                 tbl <- XML::xmlToList(url)
+                                 rootnode <- XML::xmlRoot(result)
+
+                                 # Find number of nodes in the root.
+                                 rootsize <- XML::xmlSize(rootnode)
+                                 
+                                 db.rows.from.study <- pbapply::pblapply(tbl$entries, function(study){
+                                   ids = sapply(study$cross_references, function(x) x[[1]])
+                                   ids = ids[grepl(x=ids, pattern = "MTBLC")]
+                                   names = sapply(study$additional_fields, function(x){
+                                     #print(x)
+                                     try(
+                                       {if(x[[2]] == "metabolite_name") x[[1]]
+                                       })
+                                     names <- unlist(names)
+                                     names <- grep(x = names, pattern = "Error", value = TRUE, invert = TRUE)
+                                   })
+                                   #print(names)
+                                   #print(unique(names)[,1])
+                                   if(length(ids)>0){
+                                     res <- data.table::data.table(identifier = unique(ids),
+                                                                   compoundname = unique(names)[,1])
+                                     print(res)
+                                     res
+                                   }
+                                 })
+                                 
+                                 joined <- data.table::rbindlist(db.rows.from.study)
+
+                                  # Print the result.
+                                 print(rootsize)
+                                 
+                                 rootnode
+                                                                  compoundnames <- XML::getNodeSet(metabs_all, 
+                                                                  "/cross_references/*")
+                                 
+                                  # file.url <- "ftp://ftp.ebi.ac.uk/pub/databases/metabolights/xml_feeds/unichem.tsv"
                                  # # ----
                                  # base.loc <- file.path(options$db_dir, "metabolights_source")
                                  # if(!dir.exists(base.loc)) dir.create(base.loc)
@@ -796,6 +867,134 @@ build.base.db <- function(dbname=NA,
                                  # - - -
                                  
                                  RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
+                               }, wikidata = function(dbname, ...){
+                                 # - - wikidata testing - -
+                                 
+                                 # GET ALL PREDICATES
+                                 # - - - - - - - - - - - - -
+                                 # SELECT * WHERE {
+                                 #   ?molecule wdt:P31 wd:Q11369.
+                                 #   ?molecule ?p ?o.
+                                 #   SERVICE wikibase:label { bd:serviceParam wikibase:language "en, de". }
+                                 # }
+                                 # SELECT * WHERE {
+                                 #   ?molecule wdt:P31 wd:Q11369.
+                                 #   ?molecule wdt:P274 ?formula.
+                                 #   SERVICE wikibase:label { bd:serviceParam wikibase:language "en, de". }
+                                 # }
+                                 # - - YAAY THIS WORKS - -
+                                 # SELECT ?chemical_compound ?chemical_compoundLabel ?chemical_formula ?chemical_compoundDescription ?canonical_SMILES ?roleLabel WHERE {
+                                 #   SERVICE wikibase:label { bd:serviceParam wikibase:language "en, de". }
+                                 #   ?chemical_compound wdt:P31 wd:Q11173.
+                                 #   ?chemical_compound wdt:P274 ?chemical_formula.
+                                 #   ?chemical_compound wdt:P233 ?canonical_SMILES.
+                                 #   ?chemical_compound wdt:P2868 ?role. 
+                                 # }
+                                 
+                                 sparql_query <- 'PREFIX wd: <http://www.wikidata.org/entity/>
+                                                  PREFIX wds: <http://www.wikidata.org/entity/statement/>
+                                                  PREFIX wdv: <http://www.wikidata.org/value/>
+                                                  PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+                                                  PREFIX wikibase: <http://wikiba.se/ontology#>
+                                                  PREFIX p: <http://www.wikidata.org/prop/>
+                                                  PREFIX ps: <http://www.wikidata.org/prop/statement/>
+                                                  PREFIX pq: <http://www.wikidata.org/prop/qualifier/>
+                                                  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                                                  PREFIX bd: <http://www.bigdata.com/rdf#>
+                                                  
+                                                  SELECT ?chemical_compound ?chemical_compoundLabel ?chemical_formula ?chemical_compoundDescription ?canonical_SMILES ?roleLabel WHERE {
+                                                  SERVICE wikibase:label { bd:serviceParam wikibase:language "en, de". }
+                                                  ?chemical_compound wdt:P31 wd:Q11173.
+                                                  ?chemical_compound wdt:P274 ?chemical_formula.
+                                                  ?chemical_compound wdt:P233 ?canonical_SMILES.
+                                                  OPTIONAL {?chemical_compound wdt:P2868 ?role.}}'
+                                 
+                                 db.1 <- WikidataQueryServiceR::query_wikidata(sparql_query, 
+                                                                               format = "simple")
+                                 
+                                 db.1$chemical_compound <- basename(db.1$chemical_compound)
+                                 db.1$chemical_compoundDescription[db.1$chemical_compoundDescription == "chemical compound"] <- NA
+                                 db.1$roleLabel[db.1$roleLabel == ""] <- NA
+                                 
+                                 # https://spark.apache.org/ for speed increases? is it useful locally? more an HPC thing?
+                                 
+                                 #cl = parallel::makeCluster(3, "FORK")
+                                 
+                                 charge.rows <- pbapply::pblapply(unique(db.1$canonical_SMILES), 
+                                                                  cl=cl, 
+                                                                  function(smi){
+                                   row = data.table(canonical_SMILES = smi,
+                                                    charge = 0)
+                                   # - - - - -
+                                   try({
+                                     iatom <- rcdk::parse.smiles(smi)[[1]]
+                                     charge = rcdk::get.total.charge(iatom)
+                                     row = data.table(canonical_SMILES = smi,
+                                                      charge =charge[[1]])
+                                   },silent = TRUE)
+                                   # - return -
+                                   row
+                                 })
+                                 
+                                 charge.dt <- rbindlist(charge.rows)
+                                 
+                                 db.2 <- merge(db.1, 
+                                               charge.dt, 
+                                               by = "canonical_SMILES", 
+                                               all.y = TRUE)
+                                 
+                                 # NOTE: tool - myFAIR, SOAR, EUDAT, JUNIPER (ML, can use R, jupyter notebooks?), GALAXY'S GUI/API CAN BE CHANGED??
+                                 
+                                 db.3 <- as.data.table(aggregate(db.2, by=list(db.2$chemical_compoundLabel), function(x) c(unique((x)))))
+                                 
+                                 db.3$description = apply(db.3[,c("roleLabel", "chemical_compoundDescription")], 1, FUN=function(x){
+                                   x <- unlist(x)
+                                   print(x)
+                                   paste(x[!is.na(x)], collapse=", ")
+                                 })
+                                 
+                                 db.formatted <<- data.table::data.table(compoundname = db.3$chemical_compoundLabel,
+                                                                        description = db.3$description,
+                                                                        baseformula = db.3$chemical_formula, 
+                                                                        identifier= db.3$chemical_compound,
+                                                                        charge= db.3$charge,
+                                                                        structure=db.3$canonical_SMILES)
+                                 
+                                 from = "\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089"
+                                 to = "0123456789"
+                                 db.formatted$baseformula <- chartr(from, to, db.formatted$baseformula)
+                                 
+                                 db.formatted$description[db.formatted$description == ""] <<- "Unknown"
+                                 
+                                 # - - write - -
+                                 
+                                 RSQLite::dbWriteTable(conn, "base", db.formatted[, lapply(.SD, as.character),], overwrite=TRUE)
+                                 
+                               }, knapsack = function(dbname, ...){
+                                 # TOO SLOW 
+                                 # url <- "http://kanaya.naist.jp/KNApSAcK/"
+                                 # response <- XML::htmlParse(url)
+                                 # tab <- as.data.table(XML::readHTMLTable(response)[[1]])
+                                 # metab_count <- as.numeric(gsub(tab[V1 == "metabolite", 2], pattern = " entries", replacement = ""))
+                                 # 
+                                 # url2 = "http://kanaya.naist.jp/knapsack_jsp/information.jsp?sname=C_ID&word=C00001001"
+                                 # response <- XML::htmlParse(url2)
+                                 # 
+                                 # 
+                                 # url <- "http://kanaya.naist.jp/knapsack_jsp/information.jsp?sname=C_ID&word="
+                                 # hrefs <- list()
+                                 # 
+                                 # max_digits = 8 #C00000001
+                                 # ids <- sapply(1:metab_count, function(i){
+                                 #   paste0("C", str_pad(i, max_digits, pad = "0"))
+                                 #   })
+                                 # cl = makeCluster(3, "FORK")
+                                 # responses = pbapply::pblapply(ids, cl=cl, function(id){
+                                 #   #print(id)
+                                 #   response <- XML::htmlParse(paste0(url,id))
+                                 #   # - - - return - - -
+                                 #   response
+                                 # })
                                })
   # --- execute ;) ---
   function.of.choice(dbname)

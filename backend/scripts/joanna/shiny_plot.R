@@ -112,11 +112,11 @@ blackwhite.colors <- function(n){
 }
 
 #' @export
-ggplotSummary <- function(cpd = curr_cpd, cols=c("black", "pink"), cf=rainbow){
+ggplotSummary <- function(cpd = curr_cpd, cols=c("black", "pink"), sourceTable = mSet$dataSet$norm, cf=rainbow){
   cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
   if(substring(mSet$dataSet$format,4,5)!="ts"){
     # --- ggplot ---
-    profile <- getProfile(cpd, mode="stat")
+    profile <- getProfile(cpd, mode="stat", sourceTable = sourceTable)
     df_line <- data.table(x = c(1,2),
                           y = rep(min(profile$Abundance - 0.1),2))
     stars = ""

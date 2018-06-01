@@ -318,3 +318,141 @@ for(i in 1:length(cpd_info)){
   readline(prompt="Press [enter] to continue")
 }
 
+
+
+# VENN DIAGRAM
+
+# - - - - - - - - - - - -
+
+copy_to_clipboard = function(x,sep="\t",col.names=T,...) {
+  write.table(x
+              ,file = pipe("pbcopy")
+              ,sep=sep
+              ,col.names = col.names
+              ,row.names = F
+              ,quote = F
+              ,...)
+  }
+#Venn diagram shenanigans
+# - - - - - - - - - - - -
+FOLD_CHANGE = rownames(mSet$analSet$fc$sig.mat)
+T_TEST = rownames(mSet$analSet$tt$sig.mat)
+LASSO_FINAL = rownames(lasnet_tables[[1]])
+LASSO_ALL = rownames(lasnet_stab_tables[[1]])
+RF = names(mSet$analSet$rf.sigmat[which(mSet$analSet$rf.sigmat > 0),])
+
+VennDiagram::venn.diagram(
+  x = list(FOLD_CHANGE , T_TEST , LASSO_FINAL, LASSO_ALL, RF),
+  category.names = c("FC" , "TT" , "LF", "LA", "RF"),
+  filename = '#15_venn_diagramm.png',
+  output = TRUE ,
+  imagetype="png" ,
+  height = 980 ,
+  width = 980 ,
+  resolution = 300,
+  # compression = "lzw",
+  lwd = 0.5,
+  lty = 'blank',
+  fill = c('yellow', 'purple', 'green', 'red', 'orange'),
+  cex = 0.6,
+  fontface = "bold",
+  fontfamily = "sans",
+  cat.cex = 0.6,
+  cat.fontface = "bold",
+  # cat.default.pos = "outer",
+  # cat.pos = c(-27, 27, 135, 140),
+  # cat.dist = c(0.055, 0.055, 0.085, 0.055),
+  cat.fontfamily = "sans"
+  # rotation = 1
+)
+
+intersect(intersect(LASSO_ALL, RF), T_TEST)
+cpds <- intersect(intersect(FOLD_CHANGE, RF), T_TEST)
+
+db = "/Users/jwolthuis/Google Drive/MetaboShiny/backend/db/wikidata.full.db"
+for(cpd in cpds){
+  print(get_matches(cpd, db, FALSE,"mz"))
+}
+
+# --- random forest testing ---
+
+curr <-  fread(input="/Users/jwolthuis/Analysis/SP/BrazilAndSpain_W.csv",header = T)
+#ned <- fread(input="/Users/jwolthuis/Analysis/SP/Ned2.csv",header = T)
+#ned[is.na(ned)] <- 0
+curr[,(1:ncol(curr)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
+
+# ----------- remove qcs ----------
+
+curr <- curr[which(!grepl(curr$Sample, pattern = "QC"))]
+
+# ---------------------------------
+
+library(caret)
+
+curr <- as.data.table(mSet$dataSet$preproc)
+curr[,(1:ncol(curr)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
+
+config <- mSet$dataSet$batches[match(rownames(mSet$dataSet$preproc),mSet$dataSet$batches$Sample),]
+config <- config[!is.na(config$Sample),]
+keep_curr <- match(mSet$dataSet$batches$Sample,rownames(mSet$dataSet$preproc))
+
+config <- cbind(config, Label=mSet$dataSet$cls)
+
+curr <- cbind(config, curr[keep_curr])
+
+predictor = "Label"
+inTrain <- caret::createDataPartition(y = config$Label,
+                               ## the outcome data are needed
+                               p = .6,
+                               ## The percentage of data in the training set
+                               list = FALSE)
+trainY <- curr[inTrain, 
+               ..predictor][[1]]
+
+training <- curr[ inTrain,]
+testing <- curr[-inTrain, ]
+
+predIdx <- which(colnames(curr) == predictor | colnames(curr) %in% c("Group","Batch", "Sample","$","X","Injection","Faecal_consistency_score", "Farm", "Country"))
+
+trainX <- apply(training[, -c(1:4,predIdx), with=FALSE], 2, as.numeric)
+testX <- apply(testing[, -c(1:4,predIdx), with=FALSE], 2, as.numeric)
+
+testY <- testing[,predictor, 
+                 with=FALSE][[1]]
+
+importance = model$importance
+
+predictions <- lapply(c(100, 500, 500, 1000, 10000), function(i){
+  model <- randomForest(x = trainX, y = trainY, importance = T, ntree = i) 
+  prediction_1 <- stats::predict(model,
+                                 testX, "prob")[,2]
+  prediction_1
+  #prediction_2 = ROCR::prediction(prediction_1, testY)
+  # - - - - - -
+  #prediction_2
+})
+
+# perf = ROCR::performance(prediction_2,"tpr","fpr")
+# #plot the curve
+# plot(perf,main="ROC Curve for Random Forest",col=2,lwd=2)
+# abline(a=0,b=1,lwd=2,lty=2,col="gray")
+
+
+data <- data.frame(D = as.numeric(as.factor(testY))-1,
+                   D.str = testY)
+predictions_all <- do.call("cbind", predictions)
+data <- cbind(data, predictions_all)
+
+roc_coord <- data.frame(D = rep(data[, "D"], length(3)), M = data[, 3], name = rep(names(data)[3], each = nrow(data)), stringsAsFactors = FALSE)
+roc_coord <- plotROC::melt_roc(data, "D", m = 3:ncol(data))
+
+print(head(roc_coord))
+
+ggplot2::ggplot(roc_coord, 
+                ggplot2::aes(d = D, m = M, color = name)) + 
+  plotROC::geom_roc(labelsize=0,show.legend = TRUE) + 
+  plotROC::style_roc() + 
+  theme(axis.text=element_text(size=19),
+        axis.title=element_text(size=19,face="bold"),
+        legend.title=element_text(size=19),
+        legend.text=element_text(size=19))

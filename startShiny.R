@@ -11,14 +11,14 @@ metanr_packages <- function(){
   
   new_pkgs <- subset(metr_pkgs, !(metr_pkgs %in% list_installed[, "Package"]))
   
-  if(length(new_pkgs)!=0){
+  if(length(new_pkgs) != 0){
     
     #source("https://bioconductor.org/biocLite.R")
     BiocInstaller::biocLite(new_pkgs, dependencies = TRUE, ask = FALSE)
     print(c(new_pkgs, " packages added..."))
   }
   
-  if((length(new_pkgs)<1)){
+  if((length(new_pkgs) < 1)){
     print("No new packages added...")
   }
 }
@@ -41,7 +41,7 @@ install.if.not <- function(package){
   }
 }
 
-# ----------------------------------
+# - - - - - - - - - - - - - - - - -
 
 base.packs <- c("pacman", "shiny", "DT", "data.table", "shinyFiles")
 
