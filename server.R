@@ -206,13 +206,13 @@ shinyServer(function(input, output, session) {
                                    )
                         )),
                # =================================================================================
-               tabPanel(h3("RandomForest"), value="rf",
-                        fluidRow(plotly::plotlyOutput('rf_specific_plot',width="100%")),
-                        navbarPage(inverse=F,"",
-                                   tabPanel("", icon=icon("table"),
-                                            div(DT::dataTableOutput('rf_tab',width="100%"),style='font-size:80%'))
-                        )
-               ),
+               # tabPanel(h3("RandomForest"), value="rf",
+               #          fluidRow(plotly::plotlyOutput('rf_specific_plot',width="100%")),
+               #          navbarPage(inverse=F,"",
+               #                     tabPanel("", icon=icon("table"),
+               #                              div(DT::dataTableOutput('rf_tab',width="100%"),style='font-size:80%'))
+               #          )
+               # ),
                tabPanel(h3("Heatmap"), value="heatmap_biv",
                         plotly::plotlyOutput("heatmap",width="110%",height="700px"),
                         br(),
@@ -266,44 +266,45 @@ shinyServer(function(input, output, session) {
                                                             
                                       ))
                )
-               ,tabPanel(h3("LasNet"), value = "lasnet",
+               ,tabPanel(h3("ML"), value = "ml",
                          fluidRow(
-                           column(width=1, h2("Ridge"),style = "margin-top: 25px;", align="right"),
-                           column(width=9,checkboxGroupInput("lasnet_alpha", "Alpha values",
-                                                             choiceNames = 
-                                                               as.character(seq(0,1,0.1)),
-                                                             choiceValues =
-                                                               seq(0,1,0.1),
-                                                             selected = c(0, 0.2, 0.4, 0.6, 0.8, 1),
-                                                             inline = TRUE), align="center"
-                           ),
-                           column(width=1, h2("Lasso"), style = "margin-top: 25px;")),
+                           column(width=12,
+                                  selectInput("ml_method", 
+                                              label = "Type:", 
+                                              selected = "rf", 
+                                              choices = list("Random Forest" = "rf",
+                                                             "Lasso" = "ls",
+                                                             "Group lasso" = "gls"),
+                                              multiple = F)
+                                  )
+                         ),
                          fluidRow(
-                           column(width=5,sliderInput("lasnet_trainfrac", 
+                           column(width=5,sliderInput("ml_trainfrac", 
                                                       label = "Percentage in training", 
-                                                      min = 0,
+                                                      min = 1,
                                                       max = 100,
-                                                      step = 5,
+                                                      step = 1,
                                                       value = 60, 
                                                       post = "%")),
-                           column(width=2, actionButton("do_lasnet",label="Go",width = "50px"),style = "margin-top: 35px;", align="left"),
-                           column(width=5,sliderInput("lasnet_folds", 
-                                                      label = "Fold validation", 
-                                                      min = 0,
-                                                      max = 20,
+                           column(width=2, actionButton("do_ml",label="Go",width = "50px"),style = "margin-top: 35px;", align="left"),
+                           column(width=5,sliderInput("ml_attempts", 
+                                                      label = "Attempts", 
+                                                      min = 1,
+                                                      max = 100,
                                                       step = 1,
-                                                      value = 5, 
+                                                      value = 20, 
                                                       post = "x")
                            )),
                          
                          hr()
                          ,
-                         navbarPage(title="Results",id="lasnet",inverse=F,
+                         navbarPage(title="Results",id="ml_results",inverse=F,
                                     tabPanel(title = "ROC",value = "",icon=icon("area-chart"),
-                                             plotOutput("lasnet_roc_plot",height = "600px")),
+                                             plotlyOutput("ml_roc",height = "600px"),
+                                             div(DT::dataTableOutput("ml_tab",width="100%"),style='font-size:80%')),
                                     tabPanel("Model",value= "",icon=icon("table"),
-                                             plotlyOutput("lasnet_specific_plot"),
-                                             uiOutput("lasnet_table_ui"))
+                                             plotlyOutput("ml_specific_plot"),
+                                             uiOutput("ml_table_ui"))
                          )
                ))
   })
@@ -361,14 +362,13 @@ shinyServer(function(input, output, session) {
                                              plotly::plotlyOutput('aov_overview_plot',height="300px")
                                    )
                         )),
-               # =================================================================================
-               tabPanel(h3("RandomForest"), value="rf",
-                        fluidRow(plotly::plotlyOutput('rf_specific_plot',width="100%")),
-                        navbarPage(inverse=F,"",
-                                   tabPanel("", icon=icon("table"),
-                                            div(DT::dataTableOutput('rf_tab',width="100%"),style='font-size:80%'))
-                        )
-               ),
+               # tabPanel(h3("RandomForest"), value="rf",
+               #          fluidRow(plotly::plotlyOutput('rf_specific_plot',width="100%")),
+               #          navbarPage(inverse=F,"",
+               #                     tabPanel("", icon=icon("table"),
+               #                              div(DT::dataTableOutput('rf_tab',width="100%"),style='font-size:80%'))
+               #          )
+               # ),
                tabPanel(h3("Heatmap"), value="heatmap_mult",
                         plotly::plotlyOutput("heatmap",width="110%",height="700px"),
                         fluidRow(plotly::plotlyOutput('heatmap_specific_plot'),height="200px")
@@ -1872,22 +1872,22 @@ shinyServer(function(input, output, session) {
                
              })
            },
-           rf={
-             if(!"rf" %in% names(mSet$analSet)){
-               withProgress({
-                 mSet <<- RF.Anal(mSet, 500,7,1)
-               })
-             }
-             vip.score <<- as.data.table(mSet$analSet$rf$importance[, "MeanDecreaseAccuracy"],keep.rownames = T)
-             colnames(vip.score) <<- c("rn", "accuracyDrop")
-             output$rf_tab <-DT::renderDataTable({
-               # -------------
-               DT::datatable(vip.score, 
-                             selection = 'single',
-                             autoHideNavigation = T,
-                             options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-             })
-           },
+           # rf={
+           #   if(!"rf" %in% names(mSet$analSet)){
+           #     withProgress({
+           #       mSet <<- RF.Anal(mSet, 500,7,1)
+           #     })
+           #   }
+           #   vip.score <<- as.data.table(mSet$analSet$rf$importance[, "MeanDecreaseAccuracy"],keep.rownames = T)
+           #   colnames(vip.score) <<- c("rn", "accuracyDrop")
+           #   output$rf_tab <-DT::renderDataTable({
+           #     # -------------
+           #     DT::datatable(vip.score, 
+           #                   selection = 'single',
+           #                   autoHideNavigation = T,
+           #                   options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+           #   })
+           # },
            volc = {
              if(!"volc" %in% names(mSet$analSet)){
                withProgress({
@@ -2145,166 +2145,105 @@ shinyServer(function(input, output, session) {
     
   })
   
-  observeEvent(input$do_lasnet, {
+  observeEvent(input$do_ml, {
     
-    plot.many <- function(res.obj = models, which_alpha = 1){
-      
-      predictions <- if(length(res.obj) > 1) do.call("cbind", lapply(res.obj, function(x) x$prediction)) else data.frame(res.obj[[1]]$prediction)
-      
-      colnames(predictions) <- if(length(res.obj) > 1) sapply(res.obj, function(x) x$alpha) else res.obj[[1]]$alpha
-      testY = res.obj[[1]]$labels
-      
-      if(length(unique(testY)) > 2){
-        
-        return("not supported yet")
-        # https://stats.stackexchange.com/questions/112383/roc-for-more-than-2-outcome-categories
-        #
-        # for (type.id in length(unique(testY))) {
-        #   type = as.factor(iris.train$Species == lvls[type.id])
-        #   
-        #   nbmodel = NaiveBayes(type ~ ., data=iris.train[, -5])
-        #   nbprediction = predict(nbmodel, iris.test[,-5], type='raw')
-        #   
-        #   score = nbprediction$posterior[, 'TRUE']
-        #   actual.class = iris.test$Species == lvls[type.id]
-        #   
-        #   pred = prediction(score, actual.class)
-        #   nbperf = performance(pred, "tpr", "fpr")
-        #   
-        #   roc.x = unlist(nbperf@x.values)
-        #   roc.y = unlist(nbperf@y.values)
-        #   lines(roc.y ~ roc.x, col=type.id+1, lwd=2)
-        #   
-        #   nbauc = performance(pred, "auc")
-        #   nbauc = unlist(slot(nbauc, "y.values"))
-        #   aucs[type.id] = nbauc
-        # }
-      }else{
-        data <- data.frame(D = as.numeric(as.factor(testY))-1,
-                           D.str = testY)
-        data <- cbind(data, predictions)
-        if(length(res.obj) > 1){
-          roc_coord <- plotROC::melt_roc(data, "D", m = 3:ncol(data))
-        }else{
-          roc_coord <- data.frame(D = rep(data[, "D"], length(3)),
-                                  M = data[, 3], 
-                                  name = rep(names(data)[3], each = nrow(data)), 
-                                  stringsAsFactors = FALSE)
-          print(head(roc_coord))
-        }
-      }
-      
-      names(roc_coord)[which(names(roc_coord) == "name")] <- "alpha"
-      
-      roc_coord <- roc_coord[roc_coord$alpha %in% which_alpha,]
-      # plot
-      ggplot2::ggplot(roc_coord, 
-                      ggplot2::aes(d = D, m = M, color = alpha)) + 
-        plotROC::geom_roc(labelsize=0,show.legend = TRUE) + 
-        plotROC::style_roc() + 
-        theme(axis.text=element_text(size=19),
-              axis.title=element_text(size=19,face="bold"),
-              legend.title=element_text(size=19),
-              legend.text=element_text(size=19))
-    }
+    # do_ml, ml_attempts, ml_trainfrac
     
     withProgress({
       
-      # - - - use filtered data, but not normalized - - -
+      # prepare matric
       
       curr <- as.data.table(mSet$dataSet$preproc)
+
       curr[,(1:ncol(curr)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
-      
+
       config <- mSet$dataSet$batches[match(rownames(mSet$dataSet$preproc),mSet$dataSet$batches$Sample),]
       config <- config[!is.na(config$Sample),]
-      keep_curr <- match(mSet$dataSet$batches$Sample,rownames(mSet$dataSet$preproc))
-      
       config <- cbind(config, Label=mSet$dataSet$cls)
-      
+
+      keep_curr <- match(mSet$dataSet$batches$Sample,rownames(mSet$dataSet$preproc))
+
       curr <- cbind(config, curr[keep_curr])
+
+      curr <- curr[which(!grepl(curr$Sample,
+                                pattern = "QC"))]
+      changeCols <- colnames(curr)[which(as.vector(curr[,lapply(.SD, class)]) == "character")]
+      curr[,(changeCols):= lapply(.SD, function(x) as.numeric(as.factor(x))), .SDcols = changeCols]
       
-      setProgress(0.2)
+      # train / test
       
-      # - - - - - - - - - - - - - - - - - - - - - - - - - 
+      inTrain <- caret::createDataPartition(y = config$Label,
+                                            ## the outcome data are needed
+                                            p = input$ml_trainfrac/100,
+                                            ## The percentage of data in the training set
+                                            list = FALSE)
+      # - - divide - -
       
-      input = list(lasnet_alpha = 1, lasnet_trainfrac = 60)
+      trainY <- mat[inTrain, 
+                    ..predictor][[1]]
+      testY <- mat[-inTrain,
+                   ..predictor][[1]]
       
-      alphas <- input$lasnet_alpha 
+      training <- mat[inTrain,-c("Sample", "Label")]
+      testing <- mat[-inTrain,-c("Sample", "Label")]
       
-      models <- glmnet_all_alpha(curr = curr,
-                                 nvars = ncol(config) + 1, 
-                                 cl = 0,
-                                 a = alphas,
-                                 perc_train = input$lasnet_trainfrac/100)
+      predIdx <- which(colnames(mat) %in% colnames(config))
       
-      #setProgress(0.4)
+      trainX <- apply(training, 2, as.numeric)
+      testX <- apply(testing, 2, as.numeric)
       
-      # - - store results in mset - - -
+      # build model
       
-      output$lasnet_roc_plot <- renderPlot({ plot.many(models, 
-                                                                             which_alpha = alphas) })
-      
-      setProgress(0.6)
-      
-      lasnet_tables <<- lapply(models, function(x){
-        table = x$model$beta
-        keep = which(table[,1] > 0)
-        table = data.frame("beta" = table[keep,1],
-                           "absbeta" = abs(table[keep,1]),
-                           row.names = rownames(table)[keep])
-        colnames(table) <- c("beta", "abs_beta")
-        # - - -
-        table
+      repeats <- pbapply::pblapply(1:input$ml_attempts, function(i){
+        switch(input$ml_method,
+               rf = {
+                 model = randomForest::randomForest(trainX, 
+                                                    trainY, 
+                                                    ntree = 500,
+                                                    importance=TRUE)
+                 
+                 prediction <- stats::predict(model, 
+                                              testX, 
+                                              "prob")[,2]
+                 
+                 list(type = "rf",
+                      model = model,
+                      prediction = prediction, 
+                      labels = testY)
+               }, 
+               ls = {
+                 nfold = length(trainY)
+                 
+                 family = "binomial"
+                 
+                 cv1 <- glmnet::cv.glmnet(trainX, trainY, family = family, nfold = nfold, type.measure = "auc", alpha = 1, keep = TRUE)
+                 
+                 cv2 <- data.frame(cvm = cv1$cvm[cv1$lambda == cv1[["lambda.min"]]], lambda = cv1[["lambda.min"]], alpha = 1)
+                 
+                 model <- glmnet::glmnet(as.matrix(trainX), trainY, family = family, lambda = cv2$lambda, alpha = cv2$alpha)
+                 
+                 prediction <- stats::predict(model,
+                                              type = "response", 
+                                              newx = testX, 
+                                              s = "lambda.min")#[,2] # add if necessary
+                 
+                 list(type = "ls",
+                      model = model,
+                      prediction = prediction, 
+                      labels = testY)
+               }, 
+               gls = {
+                 NULL
+               })
       })
       
-      lasnet_stab_tables <<- lapply(models, function(x){
-        table = data.frame("perc_chosen" = c(x$int_cv_feat))
-        rownames(table) <- names(x$int_cv_feat)
-        colnames(table) <- "perc_chosen"
-        # - - -
-        table
-      })
+      xvals <<- list(type = {unique(lapply(repeats, function(x) x$type))},
+                     models = {lapply(repeats, function(x) x$model)},
+                     predictions = {lapply(repeats, function(x) x$prediction)},
+                     labels = {lapply(repeats, function(x) x$labels)})
       
-      names(lasnet_tables) <<- alphas
-      names(lasnet_stab_tables) <<- alphas
-      
-      setProgress(0.8)
-      
-      # - - plot ROC curves - - -
-      
-      lapply(1:length(lasnet_tables), function(i){
-        output[[paste0("alpha_", names(lasnet_tables)[i], "_lasnet_tab")]] <- DT::renderDataTable({
-          DT::datatable(data = as.data.frame(lasnet_tables[i]),
-                        selection = 'single',
-                        autoHideNavigation = T,
-                        options = list(lengthMenu = c(5, 10, 15), 
-                                       pageLength = 5))
-        })  
-        output[[paste0("alpha_stab_", names(lasnet_tables)[i], "_lasnet_tab")]] <- DT::renderDataTable({
-          DT::datatable(data = as.data.frame(lasnet_stab_tables[i]),
-                        selection = 'single',
-                        autoHideNavigation = T,
-                        options = list(lengthMenu = c(5, 10, 15), 
-                                       pageLength = 5))
-        }) 
-      })
-      
-      
-      setProgress(0.9)
-      
-      output$lasnet_table_ui <- renderUI({
-        do.call(tabsetPanel, c(id='t',lapply(1:length(lasnet_tables), function(i) {
-          tabPanel(
-            title=paste0("alpha=",names(lasnet_tables)[i]), 
-            tabsetPanel(id="t2", 
-                        tabPanel(title="final model",div(DT::dataTableOutput(outputId = paste0("alpha_", names(lasnet_tables)[i], "_lasnet_tab")),style='font-size:80%')),
-                        tabPanel(title="feature stats",div(DT::dataTableOutput(outputId = paste0("alpha_stab_", names(lasnet_tables)[i], "_lasnet_tab")),style='font-size:80%'))
-            ))
-        })))
-      })
-      
+      output$ml_roc <- plotly::renderPlotly({plotly::ggplotly(ggPlotROC(xvals, input$ml_attempts, cf))})
     })
-    
   })
   
   observe({
@@ -2374,6 +2313,7 @@ shinyServer(function(input, output, session) {
                           "meba",
                           "plsda_vip",
                           "enrich_pw",
+                          "ml",
                           paste0("alpha_", seq(0,1,0.2), "_lasnet"),
                           paste0("alpha_stab_", seq(0,1,0.2), "_lasnet"))
   
@@ -2413,7 +2353,6 @@ shinyServer(function(input, output, session) {
       if(grepl(pattern = "lasnet",x = table)){
         print("trigger")
         alpha <- gsub("alpha|stab|_|lasnet", "", table)
-        
         if(!grepl(pattern = "stab",x = table)){
           table <- "lasnet_a"
         }else{
@@ -2426,6 +2365,7 @@ shinyServer(function(input, output, session) {
       curr_cpd <<- data.table::as.data.table(switch(table,
                                                     tt = mSet$analSet$tt$sig.mat,
                                                     fc = mSet$analSet$fc$sig.mat,
+                                                    ml = ml_tab,
                                                     asca = mSet$analSet$asca$sig.list$Model.ab,
                                                     aov = mSet$analSet$aov$sig.mat,
                                                     rf = vip.score,
@@ -2469,6 +2409,48 @@ shinyServer(function(input, output, session) {
     req(d)
     # --------------------------------------------------------------
     switch(input$tab_stat,
+           ml = {
+             print(d)
+             if("curveNumber" %in% names(d)){
+               attempt = d$curveNumber - 1
+               print(attempt) 
+               if(attempt > 1){
+                 ml_type <- xvals$type[[1]]
+                 model <- xvals$models[[attempt]]
+                 output$ml_tab <- switch(ml_type,
+                                         rf = {
+                                           importance = as.data.table(model$importance, keep.rownames = T)
+                                           rf_tab <- importance[which(MeanDecreaseAccuracy > 0), c("rn", "MeanDecreaseAccuracy")]
+                                           rf_tab <- rf_tab[order(MeanDecreaseAccuracy, decreasing = T)]
+                                           # - - - return - - -
+                                           ml_tab <<- data.frame(MDA = rf_tab$MeanDecreaseAccuracy, row.names = rf_tab$rn) 
+                                           DT::renderDataTable({
+                                             DT::datatable(rf_tab,
+                                                           selection = 'single',
+                                                           autoHideNavigation = T,
+                                                           options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+                                           })
+                                           },
+                                         ls = {
+                                           tab = model$beta
+                                           keep = which(tab[,1] > 0)
+                                           tab_new = data.frame("beta" = tab[keep,1],
+                                                                "absbeta" = abs(tab[keep,1]),
+                                                                row.names = rownames(tab)[keep])
+                                           colnames(tab_new) <- c("beta", "abs_beta")
+                                           ml_tab <<- tab_new[order(tab_new[,1],decreasing = TRUE),]
+                                           DT::renderDataTable({
+                                             DT::datatable(ls_tab,
+                                                           selection = 'single',
+                                                           autoHideNavigation = T,
+                                                           options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+                                             })
+                                         })
+               }
+             }else{
+               NULL
+             }
+           },
            pca = {
              if(!"z" %in% names(d)){
                which_group = 1

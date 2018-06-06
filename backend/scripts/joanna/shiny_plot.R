@@ -322,3 +322,111 @@ ggPlotPerm<- function(pls.type = "plsda", cf = "rainbow"){
     annotate("text",x=bw.vec[1],y=.11*nrow(df),label = mSet$analSet$plsda$permut.p, color="black",size=4)
  return(p)
 }
+
+plot.many <- function(res.obj = models, which_alpha = 1){
+  
+  predictions <- if(length(res.obj) > 1) do.call("cbind", lapply(res.obj, function(x) x$prediction)) else data.frame(res.obj[[1]]$prediction)
+  
+  colnames(predictions) <- if(length(res.obj) > 1) sapply(res.obj, function(x) x$alpha) else res.obj[[1]]$alpha
+  testY = res.obj[[1]]$labels
+  
+  if(length(unique(testY)) > 2){
+    
+    return("not supported yet")
+    # https://stats.stackexchange.com/questions/112383/roc-for-more-than-2-outcome-categories
+    #
+    # for (type.id in length(unique(testY))) {
+    #   type = as.factor(iris.train$Species == lvls[type.id])
+    #   
+    #   nbmodel = NaiveBayes(type ~ ., data=iris.train[, -5])
+    #   nbprediction = predict(nbmodel, iris.test[,-5], type='raw')
+    #   
+    #   score = nbprediction$posterior[, 'TRUE']
+    #   actual.class = iris.test$Species == lvls[type.id]
+    #   
+    #   pred = prediction(score, actual.class)
+    #   nbperf = performance(pred, "tpr", "fpr")
+    #   
+    #   roc.x = unlist(nbperf@x.values)
+    #   roc.y = unlist(nbperf@y.values)
+    #   lines(roc.y ~ roc.x, col=type.id+1, lwd=2)
+    #   
+    #   nbauc = performance(pred, "auc")
+    #   nbauc = unlist(slot(nbauc, "y.values"))
+    #   aucs[type.id] = nbauc
+    # }
+  }else{
+    data <- data.frame(D = as.numeric(as.factor(testY))-1,
+                       D.str = testY)
+    data <- cbind(data, predictions)
+    if(length(res.obj) > 1){
+      roc_coord <- plotROC::melt_roc(data, "D", m = 3:ncol(data))
+    }else{
+      roc_coord <- data.frame(D = rep(data[, "D"], length(3)),
+                              M = data[, 3], 
+                              name = rep(names(data)[3], each = nrow(data)), 
+                              stringsAsFactors = FALSE)
+      print(head(roc_coord))
+    }
+  }
+  
+  names(roc_coord)[which(names(roc_coord) == "name")] <- "alpha"
+  
+  roc_coord <- roc_coord[roc_coord$alpha %in% which_alpha,]
+  # plot
+  ggplot2::ggplot(roc_coord, 
+                  ggplot2::aes(d = D, m = M, color = alpha)) + 
+    plotROC::geom_roc(labelsize=0,show.legend = TRUE) + 
+    plotROC::style_roc() + 
+    theme(axis.text=element_text(size=19),
+          axis.title=element_text(size=19,face="bold"),
+          legend.title=element_text(size=19),
+          legend.text=element_text(size=19))
+}
+
+
+ggPlotROC <- function(xvals, attempts = 50, cf = rainbow){
+  
+  require(ROCR)
+  require(ggplot2)
+  require(data.table)
+  
+  pred <- ROCR::prediction(xvals$predictions, xvals$labels)
+  perf <- ROCR::performance(pred, "tpr", "fpr")
+  
+  # - - - old method - - -
+  # plot(perf,col="grey82",lty=3, cex.lab=1.3)
+  # plot(perf,lwd=3,avg="vertical",spread.estimate="boxplot",add=TRUE)
+  
+  perf.long <- rbindlist(lapply(1:length(perf@x.values), function(i){
+    xvals <- perf@x.values[[i]]
+    yvals <- perf@y.values[[i]]
+
+    # - - - - - - - - -
+    
+    res <- data.table::data.table(attempt = c(i),
+                                  FPR = xvals,
+                                  TPR = yvals)
+    res
+  }))
+  
+  cols = cf(attempts)
+  
+  ggplot(perf.long, aes(FPR,TPR)) +
+    coord_cartesian(xlim = c(.04,.96), ylim = c(.04,.96)) + 
+    stat_smooth(alpha=.2,color="black") + # fix later, needs to NOT GO ABOVE 1
+    geom_path(alpha=.5,
+              cex=.5,
+              aes(color = attempt, group = attempt)) +
+    # geom_abline(intercept=seq(0, 1, 25),
+    #             slope=1,
+    #             colour="gray",
+    #             alpha = 0.5) +
+    plot.theme(base_size = 10) +
+    ggplot2::scale_color_gradientn(colors = cols) +
+    theme(axis.text=element_text(size=10),
+          axis.title=element_text(size=19,face="bold"),
+          legend.title=element_text(size=15),
+          legend.text=element_text(size=12))
+  
+}
