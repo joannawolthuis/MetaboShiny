@@ -1244,6 +1244,9 @@ build.pat.db <- function(db.name,
   #pospath = '/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML/results/specpks_grouped_wavelet/grouped_pos.csv'
   #negpath = '/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML/results/specpks_grouped_wavelet/grouped_neg.csv'
   
+  #pospath <- "/Users/jwolthuis/Analysis/Pigs/BR11-20_NL1-2_pos.csv"
+  #negpath <- "/Users/jwolthuis/Analysis/Pigs/BR11-20_NL1-2_neg.csv"
+  
   poslist <- fread(pospath,header = T)
   neglist <- fread(negpath,header = T)
   
@@ -1252,6 +1255,7 @@ build.pat.db <- function(db.name,
   poslist <- as.data.table(apply(poslist, 2, gsub, patt=",", replace="."))
   neglist <- as.data.table(apply(neglist, 2, gsub, patt=",", replace="."))
   
+  colnames(poslist)
   # ------------------------------------
   
   keepcols <- intersect(colnames(poslist), colnames(neglist))
@@ -1266,8 +1270,6 @@ build.pat.db <- function(db.name,
   mzvals <- data.table::data.table(mzmed = c(as.numeric(poslist$mzmed), as.numeric(neglist$mzmed)),
                                    foundinmode = c(rep("positive", nrow(poslist)), rep("negative", nrow(neglist))))
   
-  
-  
   mzranges <- data.table::data.table(mzmin = sapply(c(as.numeric(poslist$mzmed), as.numeric(neglist$mzmed)), 
                                                     FUN=function(mz, ppm){
                                                       mz - mz * (ppm / 1E6)}, ppm=ppm),
@@ -1280,12 +1282,12 @@ build.pat.db <- function(db.name,
   if(any(grepl("\\*", x = colnames(poslist)))){
     samp_split = strsplit(colnames(poslist)[2:ncol(poslist)], "\\*")
     batch_split = strsplit(unlist(lapply(samp_split, function(x) x[2])), "\\_")
-    batch_info = data.table::data.table(sample = sapply(samp_split, function(x) x[3]),
-                                        batch = sapply(batch_split, function(x) x[1]),
-                                        injection = sapply(batch_split, function(x) x[2]))
+    batch_info = data.table::data.table(sample = sapply(samp_split, function(x) x[1]),
+                                        batch = sapply(samp_split, function(x) x[2]),
+                                        injection = sapply(samp_split, function(x) x[3]))
     print(batch_info)
-    colnames(poslist) = gsub(colnames(poslist), pattern = "(\\*.*\\*)", replacement = "")
-    colnames(neglist) = gsub(colnames(poslist), pattern = "(\\*.*\\*)", replacement = "")
+    colnames(poslist) = gsub(colnames(poslist), pattern = "(\\*.*$)", replacement = "")
+    colnames(neglist) = gsub(colnames(poslist), pattern = "(\\*.*$)", replacement = "")
   } else{
     batch_info = data.table::data.table(sample = colnames(poslist)[2:ncol(poslist)], batch = c(1))
   }
@@ -1333,7 +1335,10 @@ build.pat.db <- function(db.name,
   # --- write intensities to table and index ---
   RSQLite::dbWriteTable(conn, "mzintensities", mzintensities, append=TRUE) # insert into
   RSQLite::dbExecute(conn, "CREATE INDEX intindex ON mzintensities(filename,'mzmed',intensity)")
+  RSQLite::dbExecute(conn, "CREATE INDEX intindex2 ON mzintensities('mzmed')")
+  
   # ------------------------
+  
   sql.make.meta <- strwrap("CREATE TABLE mzvals(
                            ID INTEGER PRIMARY KEY AUTOINCREMENT,
                            mzmed decimal(30,13),
@@ -1372,7 +1377,7 @@ build.pat.db <- function(db.name,
 #' @export
 load.excel <- function(path.to.xlsx, 
                        path.to.patdb = patdb,
-                       tabs.to.read = c("General",
+                       tabs.to.read = c(#"General",
                                         "Setup",
                                         "Individual Data"
                                         #,"Pen Data",
@@ -1394,24 +1399,24 @@ load.excel <- function(path.to.xlsx,
     data.table::as.data.table(tab, keep.rownames=F)
   })
   # --- convert to data table --- ## make this nicer loooking in the future
-  general <- data.store[[1]]
-  setup <- data.store[[2]]
-  individual.data <- data.store[[3]]
+  #general <- data.store[[1]]
+  setup <- data.store[[1]]
+  individual.data <- data.store[[2]]
   
   # --- fill empty cells w/ na ---
   
   indx <- which(sapply(setup, is.character)) 
   for (j in indx) set(setup, i = grep("^$|^ $", setup[[j]]), j = j, value = NA_character_)
   
-  indx <- which(sapply(general, is.character)) 
-  for (j in indx) set(general, i = grep("^$|^ $", general[[j]]), j = j, value = NA_character_)
-  
+  # indx <- which(sapply(general, is.character)) 
+  # for (j in indx) set(general, i = grep("^$|^ $", general[[j]]), j = j, value = NA_character_)
+
   indx <- which(sapply(individual.data, is.character)) 
   for (j in indx) set(individual.data, i = grep("^$|^ $", individual.data[[j]]), j = j, value = NA_character_)
   
   # --- remove empty lines ---
   
-  general <- general[rowSums(is.na(general)) != ncol(general),]
+  #general <- general[rowSums(is.na(general)) != ncol(general),]
   setup <- setup[rowSums(is.na(setup)) != ncol(setup),]
   individual.data <- individual.data[rowSums(is.na(individual.data)) != ncol(individual.data),]
   
@@ -1428,7 +1433,7 @@ load.excel <- function(path.to.xlsx,
   
   setup <- data.table::as.data.table(apply(setup, MARGIN=2, trimws))
   individual.data <- data.table::as.data.table(apply(individual.data, MARGIN=2, trimws))
-  general <- data.table::as.data.table(apply(general, MARGIN=2, trimws))
+  #general <- data.table::as.data.table(apply(general, MARGIN=2, trimws))
   
   # --- add the QC samples ---
   

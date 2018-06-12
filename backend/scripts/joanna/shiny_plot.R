@@ -138,7 +138,8 @@ ggplotSummary <- function(cpd = curr_cpd, cols=c("black", "pink"), sourceTable =
       ggplot2::geom_point(ggplot2::aes(text=Sample),alpha=0.4, size = 2, shape = 1, position = position_dodge(width=0.1)) +
       plot.theme(base_size = 15) +
       ggplot2::scale_fill_manual(values=cols) +
-      ggplot2::scale_color_manual(values=cols)
+      ggplot2::scale_color_manual(values=cols) +
+      theme(legend.position="none")
     plot <- plot + ggplot2::annotate("text", x = 1.5, y = min(profile$Abundance - 0.3), label = stars, size = 8, col = "black")
     # ---------------
     plotly::ggplotly(plot, tooltip="Sample")
@@ -147,7 +148,7 @@ ggplotSummary <- function(cpd = curr_cpd, cols=c("black", "pink"), sourceTable =
     cpd = curr_cpd
     profile <- getProfile(cpd, mode="time")
     # -----------
-    print(profile)
+    #print(profile)
     # ggplot
     # p <- plot_ly(profile, 
     #              x = ~Time, 
@@ -165,6 +166,7 @@ ggplotSummary <- function(cpd = curr_cpd, cols=c("black", "pink"), sourceTable =
       plot.theme(base_size = 15) +
       ggplot2::scale_fill_manual(values=cols) +
       ggplot2::scale_color_manual(values=cols)+
+      theme(legend.position="none") +
       geom_text(x = 1.5, y = 1, label = "***")
     # ---------------
     plotly::ggplotly(plot, tooltip="Sample") %>% layout(boxmode = "group")
@@ -413,8 +415,8 @@ ggPlotROC <- function(xvals, attempts = 50, cf = rainbow){
   cols = cf(attempts)
   
   ggplot(perf.long, aes(FPR,TPR)) +
-    coord_cartesian(xlim = c(.04,.96), ylim = c(.04,.96)) + 
-    stat_smooth(alpha=.2,color="black") + # fix later, needs to NOT GO ABOVE 1
+    #stat_smooth(alpha=.2,color="black") + # fix later, needs to NOT GO ABOVE 1
+    stat_summary(aes(FPR, TPR), fun.y=mean, geom="line", colour="black", cex = 2) +
     geom_path(alpha=.5,
               cex=.5,
               aes(color = attempt, group = attempt)) +
@@ -426,7 +428,73 @@ ggPlotROC <- function(xvals, attempts = 50, cf = rainbow){
     ggplot2::scale_color_gradientn(colors = cols) +
     theme(axis.text=element_text(size=10),
           axis.title=element_text(size=19,face="bold"),
-          legend.title=element_text(size=15),
-          legend.text=element_text(size=12))
+          #legend.title=element_text(size=15),
+          #legend.text=element_text(size=12),
+          legend.position="none") +
+    #scale_y_continuous(limits=c(0,1)) +
+    coord_cartesian(xlim = c(.04,.96), ylim = c(.04,.96))
+}
+
+ggPlotBar <- function(repeats, attempts=50, color.function=rainbow, topn=50){
   
+  # - - - - - - - - - - - - -
+  
+  ml_type = repeats[[1]]$type
+  
+  print(ml_type)
+  
+  data <- switch(ml_type,
+                 rf = {
+                   res <- aggregate(. ~ rn, rbindlist(lapply(repeats, function(x) as.data.table(x$feats, keep.rownames=T))), mean)
+                   data <- res[order(res$MDA, decreasing = TRUE),]
+                   colnames(data) <- c("mz", "mda")
+                   # - - -
+                   data
+                 },
+                 ls = {
+                   feat_count <- lapply(repeats, function(x){
+                     beta <- x$model$beta
+                     feats <- which(beta[,1] > 0)
+                     names(feats)
+                   })
+                   feat_count_tab <- table(unlist(feat_count))
+                   feat_count_dt <- data.table::data.table(feat_count_tab)
+                   colnames(feat_count_dt) <- c("mz", "count")
+                   data <- feat_count_dt[order(feat_count_dt$count, decreasing = T)]
+                   # - - -
+                   data
+                 })
+  # data$mz <- round(as.numeric(data$mz), digits = 2)
+  data$mz <- factor(data$mz, levels=data$mz)
+  
+  ml_bar_tab <<- data
+  
+  print(data)
+  
+  if(ml_type == "ls"){
+    p <- ggplot(data[1:topn,], aes(mz,count))
+    p + geom_bar(stat = "identity", aes(fill = count)) +
+      geom_hline(aes(yintercept=attempts)) + 
+      scale_fill_gradientn(colors=color.function(20)) +
+      theme(legend.position="none",
+            axis.text=element_text(size=8),
+            axis.title=element_text(size=13,face="bold"),
+            #axis.title.x=element_blank(),
+            axis.text.x=element_blank(),
+            axis.ticks.x=element_blank()) +
+      labs(x="Top hits",y="Times chosen")
+    
+  }else{
+    p <- ggplot(data[1:topn,], aes(mz,mda))
+    p + geom_bar(stat = "identity", aes(fill = mda)) +
+      #geom_hline(aes(yintercept=attempts)) + 
+      scale_fill_gradientn(colors=color.function(20)) +
+      theme(legend.position="none",
+            axis.text=element_text(size=8),
+            axis.title=element_text(size=13,face="bold"),
+            #axis.title.x=element_blank(),
+            axis.text.x=element_blank(),
+            axis.ticks.x=element_blank())+
+      labs(x="Top hits",y="Mean Decrease Accuracy")
+  }
 }

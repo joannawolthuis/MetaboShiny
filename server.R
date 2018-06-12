@@ -268,7 +268,7 @@ shinyServer(function(input, output, session) {
                )
                ,tabPanel(h3("ML"), value = "ml",
                          fluidRow(
-                           column(width=12,
+                           column(width=4,
                                   selectInput("ml_method", 
                                               label = "Type:", 
                                               selected = "rf", 
@@ -276,10 +276,13 @@ shinyServer(function(input, output, session) {
                                                              "Lasso" = "ls",
                                                              "Group lasso" = "gls"),
                                               multiple = F)
-                                  )
+                           ),
+                           column(width=1, br(), tags$a(img(src="help.png"), href="https://regex101.com")),
+                           column(width=3, textInput("ml_train_regex", label = "Regex for train:")),
+                           column(width=3, textInput("ml_test_regex", label = "Regex for test:"))
                          ),
                          fluidRow(
-                           column(width=5,sliderInput("ml_trainfrac", 
+                           column(width=5,sliderInput("ml_train_perc", 
                                                       label = "Percentage in training", 
                                                       min = 1,
                                                       max = 100,
@@ -299,12 +302,23 @@ shinyServer(function(input, output, session) {
                          hr()
                          ,
                          navbarPage(title="Results",id="ml_results",inverse=F,
-                                    tabPanel(title = "ROC",value = "",icon=icon("area-chart"),
+                                    tabPanel(title = "ROC",value = "roc",icon=icon("area-chart"),
                                              plotlyOutput("ml_roc",height = "600px"),
                                              div(DT::dataTableOutput("ml_tab",width="100%"),style='font-size:80%')),
-                                    tabPanel("Model",value= "",icon=icon("table"),
-                                             plotlyOutput("ml_specific_plot"),
-                                             uiOutput("ml_table_ui"))
+                                    tabPanel("Model",value= "bar",icon=icon("table"),
+                                             fluidRow(plotlyOutput("ml_bar", width = "100%", height="300px")),
+                                             fluidRow(
+                                               column(5, sliderInput("ml_top_x",
+                                                                     label = "Show top:",
+                                                                     min = 10,
+                                                                     max = 100,
+                                                                     step=10,
+                                                                     value=20)),
+                                               column(7, plotlyOutput("ml_specific_plot", 
+                                                                 height="300px"))
+                                                      )
+                                             #,uiOutput("ml_table_ui")
+                                    )
                          )
                ))
   })
@@ -965,7 +979,7 @@ shinyServer(function(input, output, session) {
                      time.series = if(input$exp_type == "time_std") T else F,
                      #exp.condition = input$exp_var,
                      group_adducts = if(length(add_search_list) == 0) F else T,
-                     group_by = input$group_by,
+                     groupfac = input$group_by,
                      which_dbs = add_search_list,
                      which_adducts = selected_adduct_list
                      #,var_table = if(input$broadvars) "individual_data" else "setup",
@@ -1356,16 +1370,18 @@ shinyServer(function(input, output, session) {
           
           print("Correcting batch effect w/ QC...")
           
-          corr_cols <- pbapply::pblapply(1:ncol(matr), FUN=function(i){
+          #session_cl <- parallel::makeCluster(3)
+          
+          corr_cols <- pbapply::pblapply(1:ncol(matr), cl=0, FUN=function(i){
             vec = matr[,i]
-            print(vec)
+            #print(vec)
             corr_vec = BatchCorrMetabolomics::doBC(Xvec = as.numeric(vec), 
                                                    ref.idx = as.numeric(qc_rows), 
-                                                   batch.idx = as.numeric(mSet$dataSet$batches[match(smps, rownames(mSet$dataSet$batches)),"Batch"][[1]]),
+                                                   batch.idx = as.numeric(as.factor(mSet$dataSet$batches[match(smps, rownames(mSet$dataSet$batches)),"Batch"][[1]])),
                                                    seq.idx = as.numeric(mSet$dataSet$batches[match(smps, rownames(mSet$dataSet$batches)),"Injection"][[1]]))
             # ---------
             corr_vec
-          })
+          }, mSet = mSet, matr = matr, qc_rows = qc_rows)
           
           qc_corr_matrix <- as.data.frame(do.call(cbind, corr_cols))
           
@@ -2082,119 +2098,92 @@ shinyServer(function(input, output, session) {
     })
   })
   
-  observeEvent(input$do_rf, {
-    
-    curr <- as.data.table(mSet$dataSet$preproc)
-    curr[,(1:ncol(curr)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
-    
-    config <- mSet$dataSet$batches[match(rownames(mSet$dataSet$preproc),mSet$dataSet$batches$Sample),]
-    config <- config[!is.na(config$Sample),]
-    keep_curr <- match(mSet$dataSet$batches$Sample,rownames(mSet$dataSet$preproc))
-    
-    config <- cbind(config, Label=mSet$dataSet$cls)
-    
-    curr <- cbind(config, curr[keep_curr])
-    
-    predictor = "Label"
-    
-    inTrain <- caret::createDataPartition(y = config$Label,
-                                          ## the outcome data are needed
-                                          p = 0.6,#input$rf_train_perc/100,
-                                          ## The percentage of data in the training set
-                                          list = FALSE)
-    trainY <- curr[inTrain, 
-                   ..predictor][[1]]
-    
-    training <- curr[ inTrain,]
-    testing <- curr[-inTrain, ]
-    
-    trainX <- apply(training[, -c(1:ncol(config)), with=FALSE], 2, as.numeric)
-    testX <- apply(testing[, -c(1:ncol(config)), with=FALSE], 2, as.numeric)
-    
-    testY <- testing[,predictor, 
-                     with=FALSE][[1]]
-    
-    model = randomForest::randomForest(trainX, trainY, ntree=500,importance=TRUE)
-    result <- randomForest::rfcv(trainX, trainY, cv.fold=10, recursive=TRUE)    
-    with(result, plot(n.var, error.cv, log="x", type="o", lwd=2))
-    
-    importance = as.data.table(model$importance, keep.rownames = T)
-    rf_tab <- importance[which(MeanDecreaseAccuracy > 0), c("rn", "MeanDecreaseAccuracy")]
-    rf_tab <- rf_tab[order(MeanDecreaseAccuracy, decreasing = T)]
-    rf_tab <<- data.frame(MDA = rf_tab$MeanDecreaseAccuracy, row.names = rf_tab$rn) 
-    
-    prediction <- stats::predict(model,
-                                 testX, "prob")[,2]
-    
-    data <- data.frame(D = as.numeric(as.factor(testY))-1,
-                       D.str = testY)
-    data <- cbind(data, prediction)
-    
-    roc_coord <- data.frame(D = rep(data[, "D"], length(3)), M = data[, 3], name = rep(names(data)[3], each = nrow(data)), stringsAsFactors = FALSE)
-    #roc_coord <- plotROC::melt_roc(data, "D", m = 3:ncol(data))
-    
-    ggplot2::ggplot(roc_coord, 
-                    ggplot2::aes(d = D, m = M, color = name)) + 
-      plotROC::geom_roc(labelsize=0,show.legend = TRUE) + 
-      plotROC::style_roc() + 
-      theme(axis.text=element_text(size=19),
-            axis.title=element_text(size=19,face="bold"),
-            legend.title=element_text(size=19),
-            legend.text=element_text(size=19))
-    
-    
-  })
   
   observeEvent(input$do_ml, {
     
-    # do_ml, ml_attempts, ml_trainfrac
+    # do_ml, ml_attempts, ml_train_perc
     
     withProgress({
       
       # prepare matric
       
       curr <- as.data.table(mSet$dataSet$preproc)
-
+      
       curr[,(1:ncol(curr)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
-
+      
       config <- mSet$dataSet$batches[match(rownames(mSet$dataSet$preproc),mSet$dataSet$batches$Sample),]
       config <- config[!is.na(config$Sample),]
       config <- cbind(config, Label=mSet$dataSet$cls)
-
+      
       keep_curr <- match(mSet$dataSet$batches$Sample,rownames(mSet$dataSet$preproc))
-
+      
       curr <- cbind(config, curr[keep_curr])
-
+      
       curr <- curr[which(!grepl(curr$Sample,
                                 pattern = "QC"))]
       changeCols <- colnames(curr)[which(as.vector(curr[,lapply(.SD, class)]) == "character")]
       curr[,(changeCols):= lapply(.SD, function(x) as.numeric(as.factor(x))), .SDcols = changeCols]
       
-      # train / test
-      
-      inTrain <- caret::createDataPartition(y = config$Label,
-                                            ## the outcome data are needed
-                                            p = input$ml_trainfrac/100,
-                                            ## The percentage of data in the training set
-                                            list = FALSE)
-      # - - divide - -
-      
-      trainY <- mat[inTrain, 
-                    ..predictor][[1]]
-      testY <- mat[-inTrain,
-                   ..predictor][[1]]
-      
-      training <- mat[inTrain,-c("Sample", "Label")]
-      testing <- mat[-inTrain,-c("Sample", "Label")]
-      
-      predIdx <- which(colnames(mat) %in% colnames(config))
-      
-      trainX <- apply(training, 2, as.numeric)
-      testX <- apply(testing, 2, as.numeric)
-      
       # build model
       
       repeats <- pbapply::pblapply(1:input$ml_attempts, function(i){
+        # train / test
+        
+        print(input$ml_train_regex)
+        print(input$ml_test_regex)
+        
+        if(input$ml_train_regex != ""){
+          train_idx <- grep(config$Sample, pattern = input$ml_train_regex)
+          reTrain <- caret::createDataPartition(y = config[train_idx, Label],p = input$ml_train_perc/100)
+          inTrain <- train_idx[reTrain$Resample1]
+          
+          if(input$ml_test_regex != ""){
+            inTest <- grep(config$Sample, pattern = input$ml_test_regex)
+            #reTrain <- caret::createDataPartition(y = config[test_idx, Label],p = input$ml_train_perc/100)
+            #inTest <- train[reTrain$Resample1]
+          }else{
+            inTest <- setdiff(1:nrow(curr), train_idx)
+          }
+          
+        }else{
+          if(input$ml_test_regex != ""){
+            
+            test_idx <- grep(config$Sample, pattern = input$ml_test_regex)
+            train_idx <- setdiff(1:nrow(curr), test_idx)
+            
+            reTrain <- caret::createDataPartition(y = config[train_idx, Label],p = input$ml_train_perc/100)
+            inTrain <- train_idx[reTrain$Resample1]
+            
+          }else{
+            inTrain <- caret::createDataPartition(y = curr$Label,
+                                                  ## the outcome data are needed
+                                                  p = input$ml_train_perc/100,
+                                                  ## The percentage of data in the training set
+                                                  list = FALSE)
+            
+            inTest <- setdiff(1:nrow(curr), inTrain)
+          }
+        }
+        
+        print(inTrain)
+        print(inTest)
+        # - - divide - -
+        
+        predictor = "Label"
+        
+        trainY <- curr[inTrain, 
+                       ..predictor][[1]]
+        testY <- curr[inTest,
+                      ..predictor][[1]]
+        
+        training <- curr[inTrain,-c("Sample", "Label")]
+        testing <- curr[inTest,-c("Sample", "Label")]
+        
+        predIdx <- which(colnames(curr) %in% colnames(config))
+        
+        trainX <- apply(training, 2, as.numeric)
+        testX <- apply(testing, 2, as.numeric)
+        
         switch(input$ml_method,
                rf = {
                  model = randomForest::randomForest(trainX, 
@@ -2206,18 +2195,21 @@ shinyServer(function(input, output, session) {
                                               testX, 
                                               "prob")[,2]
                  
-                 list(type = "rf",
+                 importance = as.data.table(model$importance, keep.rownames = T)
+                 rf_tab <- importance[which(MeanDecreaseAccuracy > 0), c("rn", "MeanDecreaseAccuracy")]
+                 rf_tab <- rf_tab[order(MeanDecreaseAccuracy, decreasing = T)]
+                 rf_tab <- data.frame(MDA = rf_tab$MeanDecreaseAccuracy, row.names = rf_tab$rn) 
+                 list(type="rf",
+                      feats = as.data.table(rf_tab, keep.rownames = T), 
                       model = model,
-                      prediction = prediction, 
+                      prediction = prediction,
                       labels = testY)
                }, 
                ls = {
                  nfold = length(trainY)
-                 
                  family = "binomial"
                  
                  cv1 <- glmnet::cv.glmnet(trainX, trainY, family = family, nfold = nfold, type.measure = "auc", alpha = 1, keep = TRUE)
-                 
                  cv2 <- data.frame(cvm = cv1$cvm[cv1$lambda == cv1[["lambda.min"]]], lambda = cv1[["lambda.min"]], alpha = 1)
                  
                  model <- glmnet::glmnet(as.matrix(trainX), trainY, family = family, lambda = cv2$lambda, alpha = cv2$alpha)
@@ -2226,7 +2218,6 @@ shinyServer(function(input, output, session) {
                                               type = "response", 
                                               newx = testX, 
                                               s = "lambda.min")#[,2] # add if necessary
-                 
                  list(type = "ls",
                       model = model,
                       prediction = prediction, 
@@ -2243,6 +2234,8 @@ shinyServer(function(input, output, session) {
                      labels = {lapply(repeats, function(x) x$labels)})
       
       output$ml_roc <- plotly::renderPlotly({plotly::ggplotly(ggPlotROC(xvals, input$ml_attempts, cf))})
+      output$ml_bar <- plotly::renderPlotly({plotly::ggplotly(ggPlotBar(repeats, input$ml_attempts, cf, input$ml_top_x))})
+      
     })
   })
   
@@ -2411,9 +2404,8 @@ shinyServer(function(input, output, session) {
     switch(input$tab_stat,
            ml = {
              print(d)
-             if("curveNumber" %in% names(d)){
+             switch(input$ml_results, roc = {
                attempt = d$curveNumber - 1
-               print(attempt) 
                if(attempt > 1){
                  ml_type <- xvals$type[[1]]
                  model <- xvals$models[[attempt]]
@@ -2430,7 +2422,7 @@ shinyServer(function(input, output, session) {
                                                            autoHideNavigation = T,
                                                            options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
                                            })
-                                           },
+                                         },
                                          ls = {
                                            tab = model$beta
                                            keep = which(tab[,1] > 0)
@@ -2440,16 +2432,24 @@ shinyServer(function(input, output, session) {
                                            colnames(tab_new) <- c("beta", "abs_beta")
                                            ml_tab <<- tab_new[order(tab_new[,1],decreasing = TRUE),]
                                            DT::renderDataTable({
-                                             DT::datatable(ls_tab,
+                                             DT::datatable(ml_tab,
                                                            selection = 'single',
                                                            autoHideNavigation = T,
                                                            options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-                                             })
+                                           })
                                          })
+                 
                }
-             }else{
-               NULL
-             }
+               }, bar = {
+                 #print("here??")
+                 #d = list(x=1)
+                 curr_cpd <<- as.character(ml_bar_tab[d$x,"mz"][[1]])
+                 print(curr_cpd)
+                 output$ml_specific_plot <- plotly::renderPlotly({
+                   # --- ggplot ---
+                   ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
+                 })
+               })
            },
            pca = {
              if(!"z" %in% names(d)){
@@ -2572,7 +2572,7 @@ shinyServer(function(input, output, session) {
     if(length(db_search_list) > 0){
       match_table <<- multimatch(curr_cpd, db_search_list, mSet$dataSet$grouping)
       output$match_tab <-DT::renderDataTable({
-        DT::datatable(match_table[,-c("description","structure")],
+        DT::datatable(match_table[,-c("description","structure", "Structure", "baseformula")],
                       selection = 'single',
                       autoHideNavigation = T,
                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -2589,6 +2589,10 @@ shinyServer(function(input, output, session) {
     output$curr_definition <- renderText(curr_def$description)
     curr_struct <<- match_table[curr_row,'structure'][[1]]
     output$curr_struct <- renderPlot({plot.mol(curr_struct,style = "cow")})
+    curr_formula <<- match_table[curr_row,'baseformula'][[1]]
+    output$curr_formula <- renderText({curr_formula})
+    
+    
   })
   
   observeEvent(input$browse_db,{

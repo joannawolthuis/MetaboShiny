@@ -6,14 +6,14 @@ get.csv <- function(patdb,
                     group_adducts = T,
                     which_dbs = file.path(options$db_dir, "kegg.full.db"),
                     which_adducts = c("M+H", "M-H", "M"),
-                    group_by = "mz"
+                    groupfac = "mz"
                     #,var_table = "setup",
                     #batches = NULL
                     ){
   library(data.table)
   # --- announce some stuff ---
   adducts <- paste(which_adducts, collapse = ", ")
-  groupfac <- group_by
+  #groupfac <- group_by
   max.cols <- if(max.vals == -1) "unlimited" else max.vals + 3
   cat(gsubfn::fn$paste("Creating csv for metabolomics analysis with max $max.cols columns.
                 - Grouping by $groupfac
@@ -27,12 +27,19 @@ get.csv <- function(patdb,
                         pat.conn = conn,
                         which_dbs,
                         which_adducts,
-                        group_by
+                        groupfac
                         #,var_table,
                         #batches
                         )
 
   }else{
+    query <- strwrap(gsubfn::fn$paste("select distinct filename from mzintensities"))
+    in_csv <- RSQLite::dbGetQuery(conn, query)
+    query <- strwrap(gsubfn::fn$paste("select distinct card_id from individual_data"))
+    in_excel <- RSQLite::dbGetQuery(conn, query)
+    
+    intersect(in_csv$filename, in_excel$card_id)
+    
     query <- strwrap(gsubfn::fn$paste("select distinct d.*, s.*, b.*,
                               i.mzmed as identifier,
                               i.intensity
@@ -41,9 +48,10 @@ get.csv <- function(patdb,
                               on i.filename = d.card_id
                               join setup s on d.[Group] = s.[Group]
                               join batchinfo b on b.sample = d.card_id
-                              group by d.card_id, 
-                              d.sampling_date, 
+                              group by d.card_id,
                               i.mzmed"),
+                     #group by d.card_id, 
+                     #d.sampling_date, 
                      width=10000,
                      simplify=TRUE)
     z = RSQLite::dbGetQuery(conn, query)

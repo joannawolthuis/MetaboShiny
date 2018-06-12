@@ -58,10 +58,10 @@ get_matches <- function(cpd = NA,
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
     query.zero <- gsubfn::fn$paste("ATTACH '$chosen.db' AS db")
 
-    print("here??")
+    #ATTACH "/Users/jwolthuis/Google Drive/MetaboShiny/backend/db/hmdb.full.db" AS db
     #cpd = 178.01787
+    
     RSQLite::dbExecute(conn, query.zero)
-    print("here??")
     
     # --- OLD (don't touch!!!) ---
     
@@ -79,8 +79,8 @@ get_matches <- function(cpd = NA,
     # 1. Find matches in range (reasonably fast <3)
     RSQLite::dbExecute(conn, query.one)
     #  2. get isotopes for these matchies (reverse search)
-    
-    #RSQLite::dbExecute(conn,"drop table isotopes")
+
+        #RSQLite::dbExecute(conn,"drop table isotopes")
     
     query.two <- gsubfn::fn$paste(strwrap(
       "SELECT cpd.baseformula, cpd.adduct, cpd.isoprevalence, cpd.basecharge, int.* 
@@ -101,6 +101,7 @@ get_matches <- function(cpd = NA,
     p.cpd <- split(x = table, 
                    f = table$baseformula)
     
+    
     if(nrow(table) > 0){
       res_rows <- pbapply::pblapply(p.cpd, cl=session_cl, function(cpd_tab){
         if(any(cpd_tab$isoprevalence > 99.999999)){
@@ -119,14 +120,14 @@ get_matches <- function(cpd = NA,
           confidence = sum(unlist(score))/length(split.by.samp) * 100.00
           data.table::data.table(baseformula = formula,
                                  adduct = adduct,
-                                 confidence = confidence)  
+                                 confidence = round(confidence,digits = 2)) 
         }else{
           data.table::data.table()
         }
       })
       results <- data.table::rbindlist(res_rows[!is.na(res_rows)])
       
-      RSQLite::dbGetQuery(conn, "SELECT * FROM base limit 20;")
+      #RSQLite::dbGetQuery(conn, "SELECT * FROM base limit 20;")
       
       formula.matches <- data.table::rbindlist(lapply(unique(results$baseformula), function(formula){
         query <- gsubfn::fn$paste(strwrap("SELECT DISTINCT compoundname as name, baseformula, identifier, description, structure

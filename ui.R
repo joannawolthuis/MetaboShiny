@@ -340,6 +340,7 @@ shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle
                                                                                                              actionButton("search_cpd", "Find hits", icon=icon("search")),
                                                                                                              hr(),
                                                                                                              bsCollapsePanel(h2("Structure viewer"),"",
+                                                                                                                             textOutput("curr_formula"),
                                                                                                                              plotOutput("curr_struct", height="310px")
                                                                                                              ),
                                                                                                              div(DT::dataTableOutput('match_tab'),style='font-size:80%'),
