@@ -1,473 +1,502 @@
 shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle.js"), 
                                                       tags$style(type="text/css", bar.css)
-                                                      ),
-                  navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="text/css", font.css)),
-                                       class="sparkley"),
-                             id="nav_general",
-                             windowTitle = "MetaboShiny",
-                             tabPanel("", icon = icon("share-alt"), value="setup",
-                                      # --- db check cols ---
-                                      fluidRow(column(width=2),column(width=8, align="center",
-                                                                      h2("Setup"),
+),
+navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="text/css", font.css)),
+                                  class="sparkley"),
+           id="nav_general",
+           windowTitle = "MetaboShiny",
+           tabPanel("", icon = icon("share-alt"), value="setup",
+                    # --- db check cols ---
+                    fluidRow(column(width=2),column(width=8, align="center",
+                                                    h2("Setup"),
+                                                    br(),
+                                                    imageOutput("cute_package",inline = T),
+                                                    hr(),
+                                                    helpText("Installed packages:"),
+                                                    div(DT::dataTableOutput('package_tab', width="100%"),style='font-size:80%'),
+                                                    br(),                                  
+                                                    actionButton("update_packages", "Update", icon = icon("star")),
+                                                    br(),br(),
+                                                    imageOutput("package_check")
+                    ))),
+           # --------------------------------------------------------------------------------------------------------------------------------
+           tabPanel("", icon = icon("database"), value="database",
+                    # -- header row ---
+                    fluidRow(column(12, align="center",
+                                    h3("")
+                    )), # FIRST ROW
+                    # --- db check cols --- common pollutants found in DIMS.
+                    fluidRow(column(3, align="center",
+                                    h2("UMC Internal"),
+                                    helpText("Internal commonly known metabolites.")
+                    ),column(3, align="center",
+                             h2("UMC Noise"),
+                             helpText("Internal common pollutants found in DIMS using local method.")
+                    ),
+                    column(3,  align="center",
+                           h2("HMDB"),
+                           helpText("Metabolites commonly found in human biological samples.")
+                    ),column(3, align="center",
+                             h2("ChEBI"),
+                             helpText("A broad database with known chemicals of biological interest.")
+                    )), br(),
+                    fluidRow(column(3, align="center",
+                                    imageOutput("umc_logo_int",inline = T),
+                                    br(),br()
+                    ),column(3, align="center",
+                             imageOutput("umc_logo_noise",inline = T),
+                             br(),br()
+                    ),
+                    column(3,  align="center",
+                           imageOutput("hmdb_logo",inline = T),
+                           br(),br()
+                    ),
+                    column(3, align="center",
+                           imageOutput("chebi_logo",inline = T),
+                           br(),br()
+                    )),
+                    fluidRow(column(3, align="center",
+                                    actionButton("check_internal", "Check", icon = icon("check")),
+                                    actionButton("build_internal", "Build", icon = icon("wrench")),
+                                    br(),br(),
+                                    imageOutput("internal_check",inline = T)
+                    ),column(3, align="center",
+                             actionButton("check_noise", "Check", icon = icon("check")),
+                             actionButton("build_noise", "Build", icon = icon("wrench")),
+                             br(),br(),
+                             imageOutput("noise_check",inline = T)
+                    ),
+                    column(3,  align="center",
+                           actionButton("check_hmdb", "Check", icon = icon("check")),
+                           actionButton("build_hmdb", "Build", icon = icon("wrench")),
+                           br(),br(),
+                           imageOutput("hmdb_check",inline = T)),
+                    column(3, align="center",
+                           actionButton("check_chebi", "Check", icon = icon("check")),
+                           actionButton("build_chebi", "Build", icon = icon("wrench")),
+                           br(),br(),
+                           imageOutput("chebi_check",inline = T)
+                    )),
+                    br(),br(),
+                    # --- db check cols --- common pollutants found in DIMS.
+                    fluidRow(column(3, align="center", # SECOND ROW
+                                    h2("WikiPathways"),
+                                    helpText("Open source biological pathway database. Currently only partially available. Requires CHEBI to be built.")
+                    ),
+                    column(3,  align="center",
+                           h2("KEGG"),
+                           helpText("Large pathway database with info on pathways in various organisms, involved enzymes, and connected disease phenotypes.")
+                    ),
+                    column(3,  align="center",
+                           h2("SMPDB"),
+                           helpText("Small molecule pathway database. Compounds overlap with HMDB.")
+                    ),column(3,  align="center",
+                             h2("MetaCyc"),
+                             helpText("Large pathway database with over 10 000 available compounds. Spans several organisms!")
+                    )
+                    ), br(),
+                    fluidRow(column(3, align="center",
+                                    imageOutput("wikipath_logo",inline = T),
+                                    br(),br()
+                    ),
+                    column(3,  align="center",
+                           imageOutput("kegg_logo",inline = T),
+                           br(),br()
+                    ),
+                    column(3,  align="center",
+                           imageOutput("smpdb_logo",inline = T),
+                           br(),br()
+                    )
+                    ,column(3,  align="center",
+                            imageOutput("metacyc_logo",inline = T),
+                            br(),br()
+                    )
+                    ),
+                    fluidRow(column(3, align="center",
+                                    actionButton("check_wikipathways", "Check", icon = icon("check")),
+                                    actionButton("build_wikipathways", "Build", icon = icon("wrench")),
+                                    br(),br(),
+                                    imageOutput("wikipathways_check",inline = T)
+                    ),
+                    column(3,  align="center",
+                           actionButton("check_kegg", "Check", icon = icon("check")),
+                           actionButton("build_kegg", "Build", icon = icon("wrench")),
+                           br(),br(),
+                           imageOutput("kegg_check",inline = T))
+                    ,
+                    column(3,  align="center",
+                           actionButton("check_smpdb", "Check", icon = icon("check")),
+                           actionButton("build_smpdb", "Build", icon = icon("wrench")),
+                           br(),br(),
+                           imageOutput("smpdb_check",inline = T))
+                    ,
+                    column(3,  align="center",
+                           actionButton("check_metacyc", "Check", icon = icon("check")),
+                           actionButton("build_metacyc", "Build", icon = icon("wrench")),
+                           br(),br(),
+                           imageOutput("metacyc_check",inline = T))
+                    ),br(),# THIRD ROW
+                    fluidRow(column(3, align="center",
+                                    h2("DIMEdb"),
+                                    helpText("A direct infusion database of biologically relevant metabolite structures and annotations.")
+                    ),column(3, align="center",
+                             h2("Wikidata"),
+                             helpText("Central storage for the data of its Wikimedia sister projects including Wikipedia, Wikivoyage, Wikisource, and others.")
+                    )),
+                    fluidRow(column(3, align="center",
+                                    imageOutput("dimedb_logo",inline = T),
+                                    br(),br()
+                    ),column(3, align="center",
+                             imageOutput("wikidata_logo",inline = T),
+                             br(),br()
+                    )),
+                    fluidRow(column(3, align="center",
+                                    actionButton("check_dimedb", "Check", icon = icon("check")),
+                                    actionButton("build_dimedb", "Build", icon = icon("wrench")),
+                                    br(),br(),
+                                    imageOutput("dimedb_check",inline = T)
+                    ),column(3, align="center",
+                             actionButton("check_wikidata", "Check", icon = icon("check")),
+                             actionButton("build_wikidata", "Build", icon = icon("wrench")),
+                             br(),br(),
+                             imageOutput("wikidata_check",inline = T)
+                    ))
+                    # ----------------------------------------------------
+           ),
+           # --------------------------------------------------------------------------------------------------------------------------------
+           tabPanel("", icon = icon("upload"), value="upload", ## this guy gives error???
+                    fluidRow(column(9, align="center", 
+                                    h2("Create project"), 
+                                    br()
+                    )
+                    ),
+                    fluidRow(column(3,  align="center",
+                                    imageOutput("pos_icon",inline = T),
+                                    br(),br(),
+                                    fileInput("outlist_pos", "Positive outlist",
+                                              multiple = F,
+                                              accept = c(".RData"))),
+                             column(3,  align="center",
+                                    imageOutput("excel_icon",inline = T),
+                                    br(),br(),
+                                    fileInput("excel", "Excel workbook",
+                                              multiple = F,
+                                              accept = c(".xslx"))),
+                             column(3,  align="center",
+                                    imageOutput("neg_icon",inline = T),
+                                    br(),br(),
+                                    fileInput("outlist_neg", "Negative outlist",
+                                              multiple = F,
+                                              accept = c(".RData")))
+                    ),
+                    fluidRow(column(9, align="center",
+                                    actionButton("create_db", "Go", icon = icon("magic")),
+                                    br(),br(),hr(),
+                                    h2("Import project"),
+                                    br(),
+                                    imageOutput("db_icon",inline = T),
+                                    br(),br(),
+                                    fileInput("pat_db", "",
+                                              multiple = F,
+                                              accept = c(".db")),
+                                    actionButton("import_db", "Import", icon = icon("hand-peace-o")),
+                                    imageOutput("db_upload_check",inline = T)
+                    ))
+           ),
+           tabPanel("", icon=icon("file-text-o"), value="document",
+                    sidebarLayout(position="left",
+                                  sidebarPanel = sidebarPanel(align="center",
+                                                              selectInput('exp_type', 'What type of analysis do you want to do?', choices = list("Standard" = "stat",
+                                                                                                                                                 "Time series - standard" = "time_std", 
+                                                                                                                                                 "Time series - custom end" = "time_fin",
+                                                                                                                                                 "Time series - subtract" = "time_min"
+                                                              )),
+                                                              uiOutput("exp_opt"),
+                                                              # ------------------
+                                                              uiOutput("adductSettings"),
+                                                              # ------------------
+                                                              actionButton("create_csv", "Create CSV", icon=icon("file-text-o")),
+                                                              hr(),
+                                                              imageOutput("csv_icon",inline = T),
+                                                              br(),br(),
+                                                              fileInput("pat_csv", "Import CSV",
+                                                                        multiple = F,
+                                                                        accept = c(".csv")),
+                                                              actionButton("import_csv", "Import", icon = icon("hand-peace-o")),
+                                                              imageOutput("csv_upload_check",inline = T)
+                                  ),
+                                  mainPanel = mainPanel(align="center",
+                                                        fluidRow(div(DT::dataTableOutput('csv_tab'),style='font-size:80%'))
+                                  )
+                    )
+           ),
+           # --------------------------------------------------------------------------------------------------------------------------------
+           tabPanel("",  icon = icon("shower"), value="filter",
+                    fluidRow(column(3, aligh="center",
+                                    selectInput('exp_var', 'Which variable do you want to look at?', choices = c("run")),
+                                    selectInput('samp_var', 'Which variable is your sample amount?', choices = c("")),
+                                    selectizeInput('batch_var', 'What are your batch variables?', choices = c("run"), multiple=TRUE, options = list(maxItems = 2L)),
+                                    actionButton("check_csv", "Get options", icon=icon("refresh")),
+                                    hr(),
+                                    sliderInput("perc_limit", label = "Max. missing feature percent", min = 0, 
+                                                max = 100, value = 50),
+                                    selectInput('filt_type', 'How will you filter your m/z values?', choices = list("Interquantile range"="iqr",
+                                                                                                                    "Relative stdev"="rsd",
+                                                                                                                    "Non-parametric relative stdev"="nrsd",
+                                                                                                                    "Mean"="mean",
+                                                                                                                    "Standard deviation"="sd",
+                                                                                                                    "Median absolute deviation"="mad",
+                                                                                                                    "Median"="median",
+                                                                                                                    "None"="none"),
+                                                selected = "none"),
+                                    selectInput('norm_type', 'What type of normalization do you want to do?', choices = list("Quantile normalization"="QuantileNorm",
+                                                                                                                             "By reference feature"="ProbNorm",
+                                                                                                                             "By reference compound"="CompNorm",
+                                                                                                                             "By sample specific factor"="SpecNorm",
+                                                                                                                             "Sum"="SumNorm",
+                                                                                                                             "Median"="MedianNorm",
+                                                                                                                             "None"="NULL")),
+                                    uiOutput("ref_select"),
+                                    selectInput('trans_type', 'How will you transform your data?', choices = list("Log transform"="LogNorm",
+                                                                                                                  "Cubic root transform"="CrNorm",
+                                                                                                                  "None"="NULL")),
+                                    selectInput('scale_type', 'How will you scale your data?', choices = list("Autoscale"="AutoNorm",
+                                                                                                              "Mean-center"="MeanCenter",
+                                                                                                              "Pareto Scaling"="ParetoNorm",
+                                                                                                              "Range scaling"="RangeNorm",
+                                                                                                              "None"="NULL")),
+                                    selectInput('miss_type', 'How to deal with missing values?', choices = list("Feature minimum"="colmin",
+                                                                                                                "Total minimum"="min",
+                                                                                                                "KNN imputation"="knn",
+                                                                                                                "SVD imputation"="svdImpute",
+                                                                                                                "BPCA imputation"="bpca",
+                                                                                                                "PPCA imputation"="ppca",
+                                                                                                                "Median"="median",
+                                                                                                                "Mean"="mean",
+                                                                                                                "Leave them out"="exclude",
+                                                                                                                "Leave them alone"="none")),
+                                    # selectInput('batch_corr', 'Correct batch effect?', choices = list("Yes"=TRUE, 
+                                    #                                                                    "No"=FALSE)),
+                                    actionButton("initialize", "Go", icon=icon("hand-o-right")),
+                                    hr(),
+                                    imageOutput("dataset_icon",inline = T),
+                                    fileInput("pat_dataset", "Import dataset",
+                                              multiple = F,
+                                              accept = c(".RData")),
+                                    actionButton("import_dataset", "Import", icon = icon("hand-peace-o")),
+                                    imageOutput("dataset_upload_check",inline = T)
+                    ), column(9,
+                              navbarPage(inverse=TRUE,"Explore",
+                                         tabPanel("Variables", icon=icon("braille"),
+                                                  fluidRow(column(6,plotOutput("var1",height='300px')),
+                                                           column(6,plotOutput("var3", height='300px'))
+                                                  ),
+                                                  fluidRow(column(6,plotOutput("var2", height='500px')),
+                                                           column(6,plotOutput("var4", height='500px')))
+                                         ),
+                                         tabPanel("Samples", icon=icon("tint"),
+                                                  fluidRow(column(6,plotOutput("samp1",height='300px')),
+                                                           column(6,plotOutput("samp3", height='300px'))
+                                                  ),
+                                                  fluidRow(column(6,plotOutput("samp2", height='500px')),
+                                                           column(6,plotOutput("samp4", height='500px')))
+                                         )
+                              ))
+                    )),
+           # --------------------------------------------------------------------------------------------------------------------------------
+           tabPanel("",  icon = icon("bar-chart"), value = "analysis",# multiple options here :-)
+                    sidebarLayout(position="right",
+                                  mainPanel = mainPanel(
+                                    uiOutput("analUI")
+                                  ),
+                                  sidebarPanel = 
+                                    sidebarPanel(align="center",
+                                                 tabsetPanel(id = "search", #type = "pills",
+                                                             tabPanel(title=NULL, icon=icon("search"),
                                                                       br(),
-                                                                      imageOutput("cute_package",inline = T),
+                                                                      bsCollapse(id = "dbSelect", open = "Settings",
+                                                                                 bsCollapsePanel(h2("Database viewer"), "",#style = "info",
+                                                                                                 fluidRow(#imageOutput("find_mol_icon",inline = T),
+                                                                                                   sardine(fadeImageButton("search_internal", img.path = "umcinternal.png")),
+                                                                                                   sardine(fadeImageButton("search_noise", img.path = "umcnoise.png")),
+                                                                                                   sardine(fadeImageButton("search_hmdb", img.path = "hmdblogo.png")),
+                                                                                                   sardine(fadeImageButton("search_chebi", img.path = "chebilogo.png")),
+                                                                                                   sardine(fadeImageButton("search_smpdb", img.path = "smpdb_logo_adj.png")),
+                                                                                                   sardine(fadeImageButton("search_metacyc", img.path = "metacyc.png")),
+                                                                                                   sardine(fadeImageButton("search_wikipathways", img.path = "wikipathways.png")),
+                                                                                                   sardine(fadeImageButton("search_kegg", img.path = "kegglogo.gif")),
+                                                                                                   sardine(fadeImageButton("search_dimedb", img.path = "dimedb.png")),
+                                                                                                   sardine(fadeImageButton("search_wikidata", img.path = "wikidata.png"))
+                                                                                                   #sardine(fadeImageButton("search_pubchem", img.path = "pubchemlogo.png")),
+                                                                                                   #br(),
+                                                                                                   #sardine(fadeImageButton("select_all_db", img.path = "cart.png"))
+                                                                                                   # sardine(switchButton(inputId = "autosearch",
+                                                                                                   #                      label = "Autosearch", 
+                                                                                                   #                      value = FALSE, col = "BW", type = "OO"))
+                                                                                                 ),
+                                                                                                 h4("Current compound:"),
+                                                                                                 verbatimTextOutput("curr_cpd") 
+                                                                                 )
+                                                                      ),
                                                                       hr(),
-                                                                      helpText("Installed packages:"),
-                                                                      div(DT::dataTableOutput('package_tab', width="100%"),style='font-size:80%'),
-                                                                      br(),                                  
-                                                                      actionButton("update_packages", "Update", icon = icon("star")),
-                                                                      br(),br(),
-                                                                      imageOutput("package_check")
-                                      ))),
-                             # --------------------------------------------------------------------------------------------------------------------------------
-                             tabPanel("", icon = icon("database"), value="database",
-                                      # -- header row ---
-                                      fluidRow(column(12, align="center",
-                                                      h3("")
-                                      )), # FIRST ROW
-                                      # --- db check cols --- common pollutants found in DIMS.
-                                      fluidRow(column(3, align="center",
-                                                      h2("UMC Internal"),
-                                                      helpText("Internal commonly known metabolites.")
-                                      ),column(3, align="center",
-                                               h2("UMC Noise"),
-                                               helpText("Internal common pollutants found in DIMS using local method.")
-                                      ),
-                                      column(3,  align="center",
-                                             h2("HMDB"),
-                                             helpText("Metabolites commonly found in human biological samples.")
-                                      ),column(3, align="center",
-                                               h2("ChEBI"),
-                                               helpText("A broad database with known chemicals of biological interest.")
-                                      )), br(),
-                                      fluidRow(column(3, align="center",
-                                                      imageOutput("umc_logo_int",inline = T),
-                                                      br(),br()
-                                      ),column(3, align="center",
-                                               imageOutput("umc_logo_noise",inline = T),
-                                               br(),br()
-                                      ),
-                                      column(3,  align="center",
-                                             imageOutput("hmdb_logo",inline = T),
-                                             br(),br()
-                                      ),
-                                      column(3, align="center",
-                                             imageOutput("chebi_logo",inline = T),
-                                             br(),br()
-                                      )),
-                                      fluidRow(column(3, align="center",
-                                                      actionButton("check_internal", "Check", icon = icon("check")),
-                                                      actionButton("build_internal", "Build", icon = icon("wrench")),
-                                                      br(),br(),
-                                                      imageOutput("internal_check",inline = T)
-                                      ),column(3, align="center",
-                                               actionButton("check_noise", "Check", icon = icon("check")),
-                                               actionButton("build_noise", "Build", icon = icon("wrench")),
-                                               br(),br(),
-                                               imageOutput("noise_check",inline = T)
-                                      ),
-                                      column(3,  align="center",
-                                             actionButton("check_hmdb", "Check", icon = icon("check")),
-                                             actionButton("build_hmdb", "Build", icon = icon("wrench")),
-                                             br(),br(),
-                                             imageOutput("hmdb_check",inline = T)),
-                                      column(3, align="center",
-                                             actionButton("check_chebi", "Check", icon = icon("check")),
-                                             actionButton("build_chebi", "Build", icon = icon("wrench")),
-                                             br(),br(),
-                                             imageOutput("chebi_check",inline = T)
-                                      )),
-                                      br(),br(),
-                                      # --- db check cols --- common pollutants found in DIMS.
-                                      fluidRow(column(3, align="center", # SECOND ROW
-                                                      h2("WikiPathways"),
-                                                      helpText("Open source biological pathway database. Currently only partially available. Requires CHEBI to be built.")
-                                      ),
-                                      column(3,  align="center",
-                                             h2("KEGG"),
-                                             helpText("Large pathway database with info on pathways in various organisms, involved enzymes, and connected disease phenotypes.")
-                                      ),
-                                      column(3,  align="center",
-                                             h2("SMPDB"),
-                                             helpText("Small molecule pathway database. Compounds overlap with HMDB.")
-                                      ),column(3,  align="center",
-                                             h2("MetaCyc"),
-                                             helpText("Large pathway database with over 10 000 available compounds. Spans several organisms!")
-                                      )
-                                      ), br(),
-                                      fluidRow(column(3, align="center",
-                                                      imageOutput("wikipath_logo",inline = T),
-                                                      br(),br()
-                                      ),
-                                      column(3,  align="center",
-                                             imageOutput("kegg_logo",inline = T),
-                                             br(),br()
-                                      ),
-                                      column(3,  align="center",
-                                             imageOutput("smpdb_logo",inline = T),
-                                             br(),br()
-                                      )
-                                      ,column(3,  align="center",
-                                             imageOutput("metacyc_logo",inline = T),
-                                             br(),br()
-                                      )
-                                      ),
-                                      fluidRow(column(3, align="center",
-                                                      actionButton("check_wikipathways", "Check", icon = icon("check")),
-                                                      actionButton("build_wikipathways", "Build", icon = icon("wrench")),
-                                                      br(),br(),
-                                                      imageOutput("wikipathways_check",inline = T)
-                                      ),
-                                      column(3,  align="center",
-                                             actionButton("check_kegg", "Check", icon = icon("check")),
-                                             actionButton("build_kegg", "Build", icon = icon("wrench")),
-                                             br(),br(),
-                                             imageOutput("kegg_check",inline = T))
-                                      ,
-                                      column(3,  align="center",
-                                             actionButton("check_smpdb", "Check", icon = icon("check")),
-                                             actionButton("build_smpdb", "Build", icon = icon("wrench")),
-                                             br(),br(),
-                                             imageOutput("smpdb_check",inline = T))
-                                      ,
-                                      column(3,  align="center",
-                                             actionButton("check_metacyc", "Check", icon = icon("check")),
-                                             actionButton("build_metacyc", "Build", icon = icon("wrench")),
-                                             br(),br(),
-                                             imageOutput("metacyc_check",inline = T))
-                                      ),br(),# THIRD ROW
-                                      fluidRow(column(3, align="center",
-                                                      h2("DIMEdb"),
-                                                      helpText("A direct infusion database of biologically relevant metabolite structures and annotations.")
-                                      ),column(3, align="center",
-                                               h2("Wikidata"),
-                                               helpText("Central storage for the data of its Wikimedia sister projects including Wikipedia, Wikivoyage, Wikisource, and others.")
-                                      )),
-                                      fluidRow(column(3, align="center",
-                                                      imageOutput("dimedb_logo",inline = T),
-                                                      br(),br()
-                                      ),column(3, align="center",
-                                               imageOutput("wikidata_logo",inline = T),
-                                               br(),br()
-                                      )),
-                                      fluidRow(column(3, align="center",
-                                                      actionButton("check_dimedb", "Check", icon = icon("check")),
-                                                      actionButton("build_dimedb", "Build", icon = icon("wrench")),
-                                                      br(),br(),
-                                                      imageOutput("dimedb_check",inline = T)
-                                      ),column(3, align="center",
-                                               actionButton("check_wikidata", "Check", icon = icon("check")),
-                                               actionButton("build_wikidata", "Build", icon = icon("wrench")),
-                                               br(),br(),
-                                               imageOutput("wikidata_check",inline = T)
-                                      ))
-                                      # ----------------------------------------------------
-                             ),
-                             # --------------------------------------------------------------------------------------------------------------------------------
-                             tabPanel("", icon = icon("upload"), value="upload", ## this guy gives error???
-                                      fluidRow(column(9, align="center", 
-                                                      h2("Create project"), 
-                                                      br()
-                                      )
-                                      ),
-                                      fluidRow(column(3,  align="center",
-                                                      imageOutput("pos_icon",inline = T),
-                                                      br(),br(),
-                                                      fileInput("outlist_pos", "Positive outlist",
-                                                                multiple = F,
-                                                                accept = c(".RData"))),
-                                               column(3,  align="center",
-                                                      imageOutput("excel_icon",inline = T),
-                                                      br(),br(),
-                                                      fileInput("excel", "Excel workbook",
-                                                                multiple = F,
-                                                                accept = c(".xslx"))),
-                                               column(3,  align="center",
-                                                      imageOutput("neg_icon",inline = T),
-                                                      br(),br(),
-                                                      fileInput("outlist_neg", "Negative outlist",
-                                                                multiple = F,
-                                                                accept = c(".RData")))
-                                      ),
-                                      fluidRow(column(9, align="center",
-                                                      actionButton("create_db", "Go", icon = icon("magic")),
-                                                      br(),br(),hr(),
-                                                      h2("Import project"),
-                                                      br(),
-                                                      imageOutput("db_icon",inline = T),
-                                                      br(),br(),
-                                                      fileInput("pat_db", "",
-                                                                multiple = F,
-                                                                accept = c(".db")),
-                                                      actionButton("import_db", "Import", icon = icon("hand-peace-o")),
-                                                      imageOutput("db_upload_check",inline = T)
-                                      ))
-                             ),
-                             tabPanel("", icon=icon("file-text-o"), value="document",
-                                      sidebarLayout(position="left",
-                                                    sidebarPanel = sidebarPanel(align="center",
-                                                                                selectInput('exp_type', 'What type of analysis do you want to do?', choices = list("Standard" = "stat",
-                                                                                                                                                                   "Time series - standard" = "time_std", 
-                                                                                                                                                                   "Time series - custom end" = "time_fin",
-                                                                                                                                                                   "Time series - subtract" = "time_min"
-                                                                                )),
-                                                                                uiOutput("exp_opt"),
-                                                                                # ------------------
-                                                                                uiOutput("adductSettings"),
-                                                                                # ------------------
-                                                                                actionButton("create_csv", "Create CSV", icon=icon("file-text-o")),
-                                                                                hr(),
-                                                                                imageOutput("csv_icon",inline = T),
-                                                                                br(),br(),
-                                                                                fileInput("pat_csv", "Import CSV",
-                                                                                           multiple = F,
-                                                                                           accept = c(".csv")),
-                                                                                actionButton("import_csv", "Import", icon = icon("hand-peace-o")),
-                                                                                imageOutput("csv_upload_check",inline = T)
-                                                    ),
-                                                    mainPanel = mainPanel(align="center",
-                                                                          fluidRow(div(DT::dataTableOutput('csv_tab'),style='font-size:80%'))
-                                                    )
-                                      )
-                             ),
-                             # --------------------------------------------------------------------------------------------------------------------------------
-                             tabPanel("",  icon = icon("shower"), value="filter",
-                                      fluidRow(column(3, aligh="center",
-                                                      selectInput('exp_var', 'Which variable do you want to look at?', choices = c("run")),
-                                                      selectInput('samp_var', 'Which variable is your sample amount?', choices = c("")),
-                                                      selectizeInput('batch_var', 'What are your batch variables?', choices = c("run"), multiple=TRUE, options = list(maxItems = 2L)),
-                                                      actionButton("check_csv", "Get options", icon=icon("refresh")),
-                                                      hr(),
-                                                      sliderInput("perc_limit", label = "Max. missing feature percent", min = 0, 
-                                                                  max = 100, value = 50),
-                                                      selectInput('filt_type', 'How will you filter your m/z values?', choices = list("Interquantile range"="iqr",
-                                                                                                                                      "Relative stdev"="rsd",
-                                                                                                                                      "Non-parametric relative stdev"="nrsd",
-                                                                                                                                      "Mean"="mean",
-                                                                                                                                      "Standard deviation"="sd",
-                                                                                                                                      "Median absolute deviation"="mad",
-                                                                                                                                      "Median"="median",
-                                                                                                                                      "None"="none"),
-                                                                  selected = "none"),
-                                                      selectInput('norm_type', 'What type of normalization do you want to do?', choices = list("Quantile normalization"="QuantileNorm",
-                                                                                                                                               "By reference feature"="ProbNorm",
-                                                                                                                                               "By reference compound"="CompNorm",
-                                                                                                                                               "By sample specific factor"="SpecNorm",
-                                                                                                                                               "Sum"="SumNorm",
-                                                                                                                                               "Median"="MedianNorm",
-                                                                                                                                               "None"="NULL")),
-                                                      uiOutput("ref_select"),
-                                                      selectInput('trans_type', 'How will you transform your data?', choices = list("Log transform"="LogNorm",
-                                                                                                                                    "Cubic root transform"="CrNorm",
-                                                                                                                                    "None"="NULL")),
-                                                      selectInput('scale_type', 'How will you scale your data?', choices = list("Autoscale"="AutoNorm",
-                                                                                                                                "Mean-center"="MeanCenter",
-                                                                                                                                "Pareto Scaling"="ParetoNorm",
-                                                                                                                                "Range scaling"="RangeNorm",
-                                                                                                                                "None"="NULL")),
-                                                      selectInput('miss_type', 'How to deal with missing values?', choices = list("Feature minimum"="colmin",
-                                                                                                                                  "Total minimum"="min",
-                                                                                                                                 "KNN imputation"="knn",
-                                                                                                                                 "SVD imputation"="svdImpute",
-                                                                                                                                 "BPCA imputation"="bpca",
-                                                                                                                                 "PPCA imputation"="ppca",
-                                                                                                                                 "Median"="median",
-                                                                                                                                 "Mean"="mean",
-                                                                                                                                 "Leave them out"="exclude",
-                                                                                                                                 "Leave them alone"="none")),
-                                                      # selectInput('batch_corr', 'Correct batch effect?', choices = list("Yes"=TRUE, 
-                                                      #                                                                    "No"=FALSE)),
-                                                      actionButton("initialize", "Go", icon=icon("hand-o-right")),
-                                                      hr(),
-                                                      imageOutput("dataset_icon",inline = T),
-                                                      fileInput("pat_dataset", "Import dataset",
-                                                                multiple = F,
-                                                                accept = c(".RData")),
-                                                      actionButton("import_dataset", "Import", icon = icon("hand-peace-o")),
-                                                      imageOutput("dataset_upload_check",inline = T)
-                                      ), column(9,
-                                                navbarPage(inverse=TRUE,"Explore",
-                                                           tabPanel("Variables", icon=icon("braille"),
-                                                                    fluidRow(column(6,plotOutput("var1",height='300px')),
-                                                                             column(6,plotOutput("var3", height='300px'))
-                                                                             ),
-                                                                    fluidRow(column(6,plotOutput("var2", height='500px')),
-                                                                            column(6,plotOutput("var4", height='500px')))
-                                                                    ),
-                                                           tabPanel("Samples", icon=icon("tint"),
-                                                                    fluidRow(column(6,plotOutput("samp1",height='300px')),
-                                                                             column(6,plotOutput("samp3", height='300px'))
-                                                                    ),
-                                                                    fluidRow(column(6,plotOutput("samp2", height='500px')),
-                                                                             column(6,plotOutput("samp4", height='500px')))
-                                                                    )
-                                                ))
-                                      )),
-                             # --------------------------------------------------------------------------------------------------------------------------------
-                             tabPanel("",  icon = icon("bar-chart"), value = "analysis",# multiple options here :-)
-                                      sidebarLayout(position="right",
-                                                    mainPanel = mainPanel(
-                                                      uiOutput("analUI")
-                                                    ),
-                                                    sidebarPanel = sidebarPanel(align="center",
-                                                                                bsCollapse(id = "dbSelect", open = "Settings",
-                                                                                           bsCollapsePanel(h2("Database viewer"), "",#style = "info",
-                                                                                                           fluidRow(#imageOutput("find_mol_icon",inline = T),
-                                                                                                             sardine(fadeImageButton("search_internal", img.path = "umcinternal.png")),
-                                                                                                             sardine(fadeImageButton("search_noise", img.path = "umcnoise.png")),
-                                                                                                             sardine(fadeImageButton("search_hmdb", img.path = "hmdblogo.png")),
-                                                                                                             sardine(fadeImageButton("search_chebi", img.path = "chebilogo.png")),
-                                                                                                             sardine(fadeImageButton("search_smpdb", img.path = "smpdb_logo_adj.png")),
-                                                                                                             sardine(fadeImageButton("search_metacyc", img.path = "metacyc.png")),
-                                                                                                             sardine(fadeImageButton("search_wikipathways", img.path = "wikipathways.png")),
-                                                                                                             sardine(fadeImageButton("search_kegg", img.path = "kegglogo.gif")),
-                                                                                                             sardine(fadeImageButton("search_dimedb", img.path = "dimedb.png")),
-                                                                                                             sardine(fadeImageButton("search_wikidata", img.path = "wikidata.png"))
-                                                                                                             #sardine(fadeImageButton("search_pubchem", img.path = "pubchemlogo.png")),
-                                                                                                             #br(),
-                                                                                                             #sardine(fadeImageButton("select_all_db", img.path = "cart.png"))
-                                                                                                             # sardine(switchButton(inputId = "autosearch",
-                                                                                                             #                      label = "Autosearch", 
-                                                                                                             #                      value = FALSE, col = "BW", type = "OO"))
-                                                                                                           ),
-                                                                                                           h4("Current compound:"),
-                                                                                                           verbatimTextOutput("curr_cpd") 
-                                                                                           )
-                                                                                ),
-                                                                                hr(),
-                                                                                fluidRow(navbarPage(inverse=TRUE,"Search", id="tab_iden",
-                                                                                                    tabPanel("Current", icon=icon("sort-numeric-asc"),
-                                                                                                             actionButton("search_cpd", "Find hits", icon=icon("search")),
-                                                                                                             hr(),
-                                                                                                             bsCollapsePanel(h2("Structure viewer"),"",
-                                                                                                                             textOutput("curr_formula"),
-                                                                                                                             plotOutput("curr_struct", height="310px")
-                                                                                                             ),
-                                                                                                             div(DT::dataTableOutput('match_tab'),style='font-size:80%'),
-                                                                                                             hr(),
-                                                                                                             div(textOutput("curr_definition"))
-                                                                                                    ),
-                                                                                                    tabPanel("Target", icon=icon("sort-alpha-asc"),
-                                                                                                             actionButton("browse_db", "Browse compounds", icon=icon("eye")),
-                                                                                                             hr(),
-                                                                                                             div(DT::dataTableOutput('browse_tab'),style='font-size:80%'),
-                                                                                                             hr(),
-                                                                                                             div(textOutput("browse_definition"),style='font-size:80%'),
-                                                                                                             hr(),
-                                                                                                             actionButton("revsearch_cpd", "Find hits", icon=icon("search")),
-                                                                                                             hr(),
-                                                                                                             div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
-                                                                                                    )))
-                                                    )
-                                      )),
-                             tabPanel("",  icon = icon("cog"), value="options", 
-                                      navbarPage(inverse=TRUE,"Settings", id="tab_settings",
-                                                 tabPanel("Project", icon=icon("gift"),
-                                                          textInput(inputId="proj_name", label="Project name", value = ''),
-                                                          actionButton("set_proj_name", label="Apply"),
-                                                          helpText("This name will be used in all save files."),
-                                                          textOutput("proj_name")
-                                                 ),
-                                                 tabPanel("Storage", icon=icon("folder-open-o"),
-                                                          shinyDirButton("get_db_dir", "Choose a database directory" ,
-                                                                         title = "Browse",
-                                                                         buttonType = "default", class = NULL),
-                                                          helpText("Your databases will be stored here. 500GB recommended for all (without pubchem ±3GB)"),
-                                                          textOutput("curr_db_dir"),
-                                                          hr(),
-                                                          shinyDirButton("get_work_dir", "Choose a working directory" ,
-                                                                         title = "Browse",
-                                                                         buttonType = "default", class = NULL),
-                                                          helpText("Your results will be stored here for later access."),
-                                                          textOutput("exp_dir")
-                                                 ),
-                                                 tabPanel("Graphics", icon=icon("paint-brush"),
-                                                          h2("Plot theme"),
-                                                          selectInput("ggplot_theme", label = "Theme", choices = list("Grid, white bg"="bw",
-                                                                                                                      "No grid, white bg"="classic",
-                                                                                                                    "Grid, gray bg"="gray",
-                                                                                                                    "Minimal"="min",
-                                                                                                                    "Grid, black bg"="dark",
-                                                                                                                    "Grid, white bg, gray axes"="light",
-                                                                                                                    "Line drawing"="line"),
-                                                                      selected = "Minimal"),
-                                                          h2("Continuous data"),
-                                                          selectInput("color_ramp", label = "Color scheme", choices = list("RAINBOW!"="rb",
-                                                                                                                           "Yellow - blue"="y2b",
-                                                                                                                           "Matlab 1"="ml1",
-                                                                                                                           "Matlab 2 "="ml2",
-                                                                                                                           "Magenta - Green"="m2g",
-                                                                                                                           "Cyan - yellow"="c2y",
-                                                                                                                           "Blue - yellow"="b2y",
-                                                                                                                           "Green - red"="g2r",
-                                                                                                                           "Blue - green"="b2g",
-                                                                                                                           "Blue - red"="b2r",
-                                                                                                                           "Blue - pink (pastel)"="b2p",
-                                                                                                                           "Blue - green - yellow"="bgy",
-                                                                                                                           "Green - yellow - white"="gyw",
-                                                                                                                           "Red - yellow - white"="ryw",
-                                                                                                                           "Grayscale"="bw")
-                                                          ),
-                                                          fluidRow(plotly::plotlyOutput("ramp_plot",inline = T, width="100%")),
-                                                          h2("Discrete data"),
-                                                          uiOutput("colourPickers")
-                                                 ),
-                                                 tabPanel("Statistics", icon=icon("bar-chart-o"), 
-                                                          textInput(inputId="ppm", label="PPM", value = '', width = "50px"),
-                                                          actionButton("set_ppm", label="Apply"),
-                                                          helpText("Parts per million window for matching. Please re-import outlists and excel file after changing this!"),
-                                                          textOutput("ppm")),
-                                                 tabPanel("Adducts", icon=icon("plus-square"),
-                                                          h3("Current adduct table:"),
-                                                          rhandsontable::rHandsontableOutput("adduct_tab", width=800, height=600),
-                                                          shinySaveButton("save_adducts", 
-                                                                          "Save changed table", 
-                                                                          "Save file as ...", 
-                                                                          filetype=list(RData="RData", csv="csv")
-                                                          ),
-                                                          hr(),
-                                                          fileInput("add_tab", "Import adduct table",
-                                                                    multiple = F,
-                                                                    accept = c(".RData", ".csv")),
-                                                          sardine(actionButton("import_adducts", "Import", icon = icon("hand-peace-o"))),
-                                                          sardine(imageOutput("adduct_upload_check",inline = T))
-                                                 ),
-                                                 tabPanel("Aesthetic", icon=icon("child"),
-                                                          h3("Change app settings"),
-                                                          hr(),
-                                                          h2("Navigation bar colours"),
-                                                          colourpicker::colourInput(inputId = "bar.col.1", 
-                                                                                    label = paste("Active background"), 
-                                                                                    value = options$col1,
-                                                                                    allowTransparent = FALSE),
-                                                          colourpicker::colourInput(inputId = "bar.col.2", 
-                                                                                    label = paste("Inactive background"), 
-                                                                                    value = options$col2,
-                                                                                    allowTransparent = FALSE),
-                                                          colourpicker::colourInput(inputId = "bar.col.3", 
-                                                                                    label = paste("Active tab"), 
-                                                                                    value = options$col3,
-                                                                                    allowTransparent = FALSE),
-                                                          colourpicker::colourInput(inputId = "bar.col.4", 
-                                                                                    label = paste("Inactive tab"), 
-                                                                                    value = options$col4,
-                                                                                    allowTransparent = FALSE),
-                                                          br(),
-                                                          h2("Fonts (Google fonts)"),
-                                                          textInput(inputId="font.1", label="h1", value = options$font1),
-                                                          textInput(inputId="font.2", label="h2", value = options$font2),
-                                                          textInput(inputId="font.3", label="h3", value = options$font3),
-                                                          textInput(inputId="font.4", label="body", value = options$font4),
-                                                          br(),
-                                                          actionButton("change_css", "Save settings (restart to apply)")
-                                                 )
-                                      )
-                             ), 
-                             div(class="spinnylocation1",
-                                 div(class="plus", img(class="imagetop", src="heart-research.png", width="120px", height="120px")),
-                                 div(class="minus", img(class="imagebottom", src="heart-research.png", width="120px", height="120px"))
-                             ),
-                             div(class="line")
-                            )
+                                                                      fluidRow( # navbarPage(inverse=TRUE,"Search", id="tab_iden",
+                                                                               tabsetPanel(id="tab_iden", # type="pills",
+                                                                                          tabPanel(title=NULL, icon=icon("paw"),
+                                                                                                   br(),
+                                                                                                   actionButton("search_cpd", "Find hits", icon=icon("search")),
+                                                                                                   hr(),
+                                                                                                   bsCollapsePanel(h2("Structure viewer"),"",
+                                                                                                                   textOutput("curr_formula"),
+                                                                                                                   plotOutput("curr_struct", height="310px")
+                                                                                                   ),
+                                                                                                   div(DT::dataTableOutput('match_tab'),style='font-size:80%'),
+                                                                                                   hr(),
+                                                                                                   div(textOutput("curr_definition"))
+                                                                                          ),
+                                                                                          tabPanel(title=NULL, icon=icon("binoculars"),
+                                                                                                   br(),
+                                                                                                   actionButton("browse_db", "Browse compounds", icon=icon("eye")),
+                                                                                                   hr(),
+                                                                                                   div(DT::dataTableOutput('browse_tab'),style='font-size:80%'),
+                                                                                                   hr(),
+                                                                                                   div(textOutput("browse_definition"),style='font-size:80%'),
+                                                                                                   hr(),
+                                                                                                   actionButton("revsearch_cpd", "Find hits", icon=icon("search")),
+                                                                                                   hr(),
+                                                                                                   div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
+                                                                                          )))
+                                                                      ),
+                                                             tabPanel(title=NULL, icon=icon("link"),
+                                                                      br(),
+                                                                      helpText("You can use this tab to find overlapping hits between analyses."),
+                                                                      # - - - select candidates - - -
+                                                                      
+                                                                      checkboxGroupInput("venn_members", label = "Please choose which to combine", choices = list(
+                                                                        "T-test" = "tt",
+                                                                        "Fold-change" = "fc",
+                                                                        "Lasso" = "ls",
+                                                                        "Random Forest" = "rf",
+                                                                        "Volcano" = "volc"
+                                                                      ), selected = c("tt", "fc"), inline = T),
+                                                                      
+                                                                      uiOutput("venn_ml_ui"),
+                                                                      
+                                                                      sliderInput("venn_tophits", label = "Only include top", min = 1, max = 200, post = " hits", value=20),
+                                                                      
+                                                                      # - - - - - - - - - - - - - - -
+                                                                      actionButton("build_venn", label = "Find overlap"),
+                                                                      plotly::plotlyOutput("venn")
+                                                                      ))
+                                    )
+                    )),
+           tabPanel("",  icon = icon("cog"), value="options", 
+                    navbarPage(inverse=TRUE,"Settings", id="tab_settings",
+                               tabPanel("Project", icon=icon("gift"),
+                                        textInput(inputId="proj_name", label="Project name", value = ''),
+                                        actionButton("set_proj_name", label="Apply"),
+                                        helpText("This name will be used in all save files."),
+                                        textOutput("proj_name")
+                               ),
+                               tabPanel("Storage", icon=icon("folder-open-o"),
+                                        shinyDirButton("get_db_dir", "Choose a database directory" ,
+                                                       title = "Browse",
+                                                       buttonType = "default", class = NULL),
+                                        helpText("Your databases will be stored here. 500GB recommended for all (without pubchem ±3GB)"),
+                                        textOutput("curr_db_dir"),
+                                        hr(),
+                                        shinyDirButton("get_work_dir", "Choose a working directory" ,
+                                                       title = "Browse",
+                                                       buttonType = "default", class = NULL),
+                                        helpText("Your results will be stored here for later access."),
+                                        textOutput("exp_dir")
+                               ),
+                               tabPanel("Graphics", icon=icon("paint-brush"),
+                                        h2("Plot theme"),
+                                        selectInput("ggplot_theme", label = "Theme", choices = list("Grid, white bg"="bw",
+                                                                                                    "No grid, white bg"="classic",
+                                                                                                    "Grid, gray bg"="gray",
+                                                                                                    "Minimal"="min",
+                                                                                                    "Grid, black bg"="dark",
+                                                                                                    "Grid, white bg, gray axes"="light",
+                                                                                                    "Line drawing"="line"),
+                                                    selected = "Minimal"),
+                                        h2("Continuous data"),
+                                        selectInput("color_ramp", label = "Color scheme", choices = list("RAINBOW!"="rb",
+                                                                                                         "Yellow - blue"="y2b",
+                                                                                                         "Matlab 1"="ml1",
+                                                                                                         "Matlab 2 "="ml2",
+                                                                                                         "Magenta - Green"="m2g",
+                                                                                                         "Cyan - yellow"="c2y",
+                                                                                                         "Blue - yellow"="b2y",
+                                                                                                         "Green - red"="g2r",
+                                                                                                         "Blue - green"="b2g",
+                                                                                                         "Blue - red"="b2r",
+                                                                                                         "Blue - pink (pastel)"="b2p",
+                                                                                                         "Blue - green - yellow"="bgy",
+                                                                                                         "Green - yellow - white"="gyw",
+                                                                                                         "Red - yellow - white"="ryw",
+                                                                                                         "Grayscale"="bw")
+                                        ),
+                                        fluidRow(plotly::plotlyOutput("ramp_plot",inline = T, width="100%")),
+                                        h2("Discrete data"),
+                                        uiOutput("colourPickers")
+                               ),
+                               tabPanel("Statistics", icon=icon("bar-chart-o"), 
+                                        textInput(inputId="ppm", label="PPM", value = '', width = "50px"),
+                                        actionButton("set_ppm", label="Apply"),
+                                        helpText("Parts per million window for matching. Please re-import outlists and excel file after changing this!"),
+                                        textOutput("ppm")),
+                               tabPanel("Adducts", icon=icon("plus-square"),
+                                        h3("Current adduct table:"),
+                                        rhandsontable::rHandsontableOutput("adduct_tab", width=800, height=600),
+                                        shinySaveButton("save_adducts", 
+                                                        "Save changed table", 
+                                                        "Save file as ...", 
+                                                        filetype=list(RData="RData", csv="csv")
+                                        ),
+                                        hr(),
+                                        fileInput("add_tab", "Import adduct table",
+                                                  multiple = F,
+                                                  accept = c(".RData", ".csv")),
+                                        sardine(actionButton("import_adducts", "Import", icon = icon("hand-peace-o"))),
+                                        sardine(imageOutput("adduct_upload_check",inline = T))
+                               ),
+                               tabPanel("Aesthetic", icon=icon("child"),
+                                        h3("Change app settings"),
+                                        hr(),
+                                        h2("Navigation bar colours"),
+                                        colourpicker::colourInput(inputId = "bar.col.1", 
+                                                                  label = paste("Active background"), 
+                                                                  value = options$col1,
+                                                                  allowTransparent = FALSE),
+                                        colourpicker::colourInput(inputId = "bar.col.2", 
+                                                                  label = paste("Inactive background"), 
+                                                                  value = options$col2,
+                                                                  allowTransparent = FALSE),
+                                        colourpicker::colourInput(inputId = "bar.col.3", 
+                                                                  label = paste("Active tab"), 
+                                                                  value = options$col3,
+                                                                  allowTransparent = FALSE),
+                                        colourpicker::colourInput(inputId = "bar.col.4", 
+                                                                  label = paste("Inactive tab"), 
+                                                                  value = options$col4,
+                                                                  allowTransparent = FALSE),
+                                        br(),
+                                        h2("Fonts (Google fonts)"),
+                                        textInput(inputId="font.1", label="h1", value = options$font1),
+                                        textInput(inputId="font.2", label="h2", value = options$font2),
+                                        textInput(inputId="font.3", label="h3", value = options$font3),
+                                        textInput(inputId="font.4", label="body", value = options$font4),
+                                        br(),
+                                        actionButton("change_css", "Save settings (restart to apply)")
+                               )
+                    )
+           ), 
+           div(class="spinnylocation1",
+               div(class="plus", img(class="imagetop", src="heart-research.png", width="120px", height="120px")),
+               div(class="minus", img(class="imagebottom", src="heart-research.png", width="120px", height="120px"))
+           ),
+           div(class="line")
+)
 )
 )

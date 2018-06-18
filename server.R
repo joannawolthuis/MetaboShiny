@@ -315,8 +315,8 @@ shinyServer(function(input, output, session) {
                                                                      step=10,
                                                                      value=20)),
                                                column(7, plotlyOutput("ml_specific_plot", 
-                                                                 height="300px"))
-                                                      )
+                                                                      height="300px"))
+                                             )
                                              #,uiOutput("ml_table_ui")
                                     )
                          )
@@ -1226,11 +1226,11 @@ shinyServer(function(input, output, session) {
       
       # --- remove outliers? ---
       print("Removing outliers...")
-      
+
       sums <- rowSums(csv_subset[, -c(1:length(remain)),with=FALSE],na.rm = TRUE)
       names(sums) <- csv_subset$Sample
       outliers = c(car::Boxplot(as.data.frame(sums)))
-      
+
       print(paste("Outliers removed (based on total signal):", paste(outliers, collapse=" and ")))
       csv_temp_no_out <- csv_subset[!(Sample %in% outliers)]
       
@@ -1348,45 +1348,44 @@ shinyServer(function(input, output, session) {
       
       #mSet <- mSet_beforebatch
       
-      matr <- mSet$dataSet$norm
-      
+      #devtools::install_git("https://gitlab.com/CarlBrunius/batchCorr.git")
+
       smps <- rownames(mSet$dataSet$norm)
       
       qc_rows <- which(grepl(pattern = "QC", x = smps))
-      if(length(qc_rows) == 0) qc_rows = 1:length(smps)
       
-      smpnames = smps[qc_rows]
-      # mSet$dataSet$qc <<- mSet$dataSet$norm[qc_rows,]
-      
+      # - - - - - - - - - - - - - - - - - - - - - - -
+
       if(batch_corr){
         
-        if("Batch" %in% colnames(mSet$dataSet$batches)){
+        if("Batch" %in% colnames(mSet$dataSet$batches) & length(qc_rows) > 0){
           
-          # library(BatchCorrMetabolomics)
+          smpnames = smps[qc_rows]
           
-          mSet_before_qc <<- mSet
+          batch.idx = as.numeric(as.factor(mSet$dataSet$batches[match(smps, rownames(mSet$dataSet$batches)),"Batch"][[1]]))
+          seq.idx = as.numeric(mSet$dataSet$batches[match(smps, rownames(mSet$dataSet$batches)),"Injection"][[1]])
           
           # --- QC CORRECTION ---
           
-          print("Correcting batch effect w/ QC...")
+          print("Correcting batch effect w/ QC samples...")
           
-          #session_cl <- parallel::makeCluster(3)
-          
-          corr_cols <- pbapply::pblapply(1:ncol(matr), cl=0, FUN=function(i){
-            vec = matr[,i]
+          corr_cols <- pbapply::pblapply(1:ncol(mSet$dataSet$norm), function(i){
+            #print(i/ncol(mSet$dataSet$norm) * 100)
+            vec = mSet$dataSet$norm[,i]
             #print(vec)
             corr_vec = BatchCorrMetabolomics::doBC(Xvec = as.numeric(vec), 
                                                    ref.idx = as.numeric(qc_rows), 
-                                                   batch.idx = as.numeric(as.factor(mSet$dataSet$batches[match(smps, rownames(mSet$dataSet$batches)),"Batch"][[1]])),
-                                                   seq.idx = as.numeric(mSet$dataSet$batches[match(smps, rownames(mSet$dataSet$batches)),"Injection"][[1]]))
+                                                   batch.idx = batch.idx,
+                                                   seq.idx = seq.idx)
             # ---------
             corr_vec
-          }, mSet = mSet, matr = matr, qc_rows = qc_rows)
+          })
           
+          print("Done! :-)")
           qc_corr_matrix <- as.data.frame(do.call(cbind, corr_cols))
           
-          colnames(qc_corr_matrix) <- colnames(matr)
-          rownames(qc_corr_matrix) <- rownames(matr)
+          colnames(qc_corr_matrix) <- colnames(mSet$dataSet$norm)
+          rownames(qc_corr_matrix) <- rownames(mSet$dataSet$norm)
           
           mSet$dataSet$norm <<- as.data.frame(qc_corr_matrix)
           
@@ -1761,6 +1760,8 @@ shinyServer(function(input, output, session) {
                                                    Colv=T, 
                                                    Rowv=T,
                                                    col_side_colors = group_assignments,
+                                                   #dist_method = ..., # use dbscan?
+                                                   #hclust_method = ..., ???
                                                    k_row = NA)
                  heatmaply::heatmaply(hm_matrix,
                                       Colv=F, Rowv=F,
@@ -2126,11 +2127,23 @@ shinyServer(function(input, output, session) {
       
       # build model
       
+      
+      # equalize the country counts
+      
+      #input = list(ml_train_regex = "^NL", ml_test_regex = "", ml_train_perc = 60)
+      
+      
+      # - - - - - - - - - - - - - -
+      
       repeats <- pbapply::pblapply(1:input$ml_attempts, function(i){
         # train / test
         
         print(input$ml_train_regex)
         print(input$ml_test_regex)
+        
+        ml_train_regex <<-input$ml_train_regex
+        ml_test_regex <<- input$ml_test_regex
+        
         
         if(input$ml_train_regex != ""){
           train_idx <- grep(config$Sample, pattern = input$ml_train_regex)
@@ -2144,7 +2157,6 @@ shinyServer(function(input, output, session) {
           }else{
             inTest <- setdiff(1:nrow(curr), train_idx)
           }
-          
         }else{
           if(input$ml_test_regex != ""){
             
@@ -2153,6 +2165,7 @@ shinyServer(function(input, output, session) {
             
             reTrain <- caret::createDataPartition(y = config[train_idx, Label],p = input$ml_train_perc/100)
             inTrain <- train_idx[reTrain$Resample1]
+            inTest <- test_idx
             
           }else{
             inTrain <- caret::createDataPartition(y = curr$Label,
@@ -2165,8 +2178,26 @@ shinyServer(function(input, output, session) {
           }
         }
         
-        print(inTrain)
-        print(inTest)
+        # # resize to make somewhat even
+        # 
+        # storage = list(inTrain = inTrain, inTest = inTest)
+        # 
+        # if(length(storage$inTrain) < length(storage$inTest)){
+        #   perc_keep <- length(storage$inTrain)/length(storage$inTest) * 100.00
+        #   storage$inTest <- caret::createDataPartition(y = curr[inTrain,Label],
+        #                                        ## the outcome data are needed
+        #                                        p = perc_keep/100,
+        #                                        ## The percentage of data in the training set
+        #                                        list = FALSE)[,1][[1]]
+        #   } else{
+        #   perc_keep <- length(storage$inTest)/length(storage$inTrain) * 100.00
+        #   storage$inTrain <- caret::createDataPartition(y = curr[inTrain,Label],
+        #                                        ## the outcome data are needed
+        #                                        p = perc_keep/100,
+        #                                        ## The percentage of data in the training set
+        #                                        list = FALSE)[,1][[1]]
+        # }
+        
         # - - divide - -
         
         predictor = "Label"
@@ -2227,6 +2258,11 @@ shinyServer(function(input, output, session) {
                  NULL
                })
       })
+      
+      if(!"ml" %in% names(mSet$analSet)){
+        print("wiping")
+        mSet$analSet$ml <<- list(ls=list(), rf=list())
+        }
       
       xvals <<- list(type = {unique(lapply(repeats, function(x) x$type))},
                      models = {lapply(repeats, function(x) x$model)},
@@ -2388,7 +2424,7 @@ shinyServer(function(input, output, session) {
       # if(input$autosearch & length(db_search_list > 0)){
       #   match_table <<- multimatch(curr_cpd, db_search_list, mSet$dataSet$grouping)
       #   output$match_tab <-DT::renderDataTable({
-      #     DT::datatable(if(mSet$dataSet$grouping == 'pathway') match_table else{match_table[,-c("Description","Structure")]},
+      #     DT::datatable(if(mSet$dataSet$grouping == 'pathway') match_table else{match_table[,-c("description","structure")]},
       #                   selection = 'single',
       #                   autoHideNavigation = T,
       #                   options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -2440,16 +2476,16 @@ shinyServer(function(input, output, session) {
                                          })
                  
                }
-               }, bar = {
-                 #print("here??")
-                 #d = list(x=1)
-                 curr_cpd <<- as.character(ml_bar_tab[d$x,"mz"][[1]])
-                 print(curr_cpd)
-                 output$ml_specific_plot <- plotly::renderPlotly({
-                   # --- ggplot ---
-                   ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
-                 })
+             }, bar = {
+               #print("here??")
+               #d = list(x=1)
+               curr_cpd <<- as.character(ml_bar_tab[d$x,"mz"][[1]])
+               print(curr_cpd)
+               output$ml_specific_plot <- plotly::renderPlotly({
+                 # --- ggplot ---
+                 ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
                })
+             })
            },
            pca = {
              if(!"z" %in% names(d)){
@@ -2572,7 +2608,7 @@ shinyServer(function(input, output, session) {
     if(length(db_search_list) > 0){
       match_table <<- multimatch(curr_cpd, db_search_list, mSet$dataSet$grouping)
       output$match_tab <-DT::renderDataTable({
-        DT::datatable(match_table[,-c("description","structure", "Structure", "baseformula")],
+        DT::datatable(match_table[,-c("description","structure", "baseformula")],
                       selection = 'single',
                       autoHideNavigation = T,
                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -2748,6 +2784,137 @@ shinyServer(function(input, output, session) {
     })
   })
   
+  # --- combine tab ---
+
+  observeEvent(input$venn_members, {
+    
+    if("ls" %in% input$venn_members | "rf" %in% input$venn_members){
+      uiElements <- lapply(intersect(c("rf", "ls"), input$venn_members), function(name){
+        options <- switch(name,
+                          tt = NULL,
+                          fc = NULL,
+                          ls = names(mSet$analSet$ml$ls),
+                          rf = names(mSet$analSet$ml$rf),
+                          volc = NULL)
+        
+        descriptions = sapply(stringr::str_split(options, pattern="\\|"), function(option){
+          train = option[[1]]
+          test = option[[2]]
+          if(train == "") train = "all"
+          if(test == "") test = "all"
+          gsubfn::fn$paste("Train: $train - Test: $test")
+        })
+        
+        names(options) <- descriptions
+        
+        shorthand = switch(name,
+                           ls = "lasso",
+                           rf = "random forest")
+        selectizeInput(inputId = paste0(name,"_choice"), 
+                       label = gsubfn::fn$paste("Which $shorthand run:"), 
+                       choices = options)
+      })
+      
+      output$venn_ml_ui <- renderUI({uiElements})
+    }else{
+      output$venn_ml_ui <- renderUI({br()})
+    }
+  })
+    
+  observeEvent(input$build_venn, {
+
+    # - - - cats - - -
+    
+    top = input$venn_tophits
+    
+    tables <- lapply(input$venn_members, function(name){
+      
+      print(name)
+      
+      print(input$ls_choice)
+      print(input$rf_choice)
+      
+      tbl <- switch(name,
+                    tt = rownames(mSet$analSet$tt$sig.mat[order(mSet$analSet$tt$sig.mat[,2], decreasing = F),]),
+                    fc = rownames(mSet$analSet$fc$sig.mat[order(abs(mSet$analSet$fc$sig.mat[,2]), decreasing = F),]),
+                    ls = mSet$analSet$ml$ls[[input$ls_choice]][order(mSet$analSet$ml$ls[[input$ls_choice]]$count, decreasing = T),]$mz,
+                    rf = mSet$analSet$ml$rf[[input$rf_choice]][order(mSet$analSet$ml$rf[[input$rf_choice]]$mda, decreasing = T),]$mz,
+                    volc = rownames(mSet$analSet$volcano$sig.mat))
+      # - - - sort - - -
+      
+      if(length(tbl) < top){
+        tbl
+      }else{
+        tbl[1:top]
+      }
+    })
+      
+    print(tables)
+    
+    intersections = length(tables)
+    
+    #categories <- c("tt", "fc", "ls", "rf")
+    categories <- input$venn_members
+    
+    names(tables) <- categories
+    
+    venn.plot = VennDiagram::venn.diagram(x = tables,
+                                         filename = NULL)
+    
+    # - - - - - - - - -
+    
+    # venn.plot <- switch(intersections,
+    #                     1 = draw.pairwise.venn(area1 = 22, area2 = 20, cross.area = 11, category = categories),
+    #                     2 = ...,
+    #                     3 = ...,
+    #                     4 = draw.quintuple.venn(areas$1, areas$2, areas$3, areas$4),
+    #                     5 = ...)
+                                                                                                                                                           
+    items <- strsplit(as.character(venn.plot), split = ",")[[1]]
+    
+    circ_values <- data.frame(
+      id = 1:length(grep(items, pattern="polygon"))
+      # value = c(3, 3.1, 3.1, 3.2, 3.15, 3.5)
+    )
+    txt_values <- data.frame(
+      id = grep(items, pattern="text"),
+      value = unlist(lapply(grep(items, pattern="text"), function(i) venn.plot[[i]]$label)),
+      bold = unlist(lapply(grep(items, pattern="text"), function(i) venn.plot[[i]]$label)) %in% categories
+    )
+    
+    x_c = unlist(lapply(grep(items, pattern="polygon"), function(i) venn.plot[[i]]$x))
+    y_c = unlist(lapply(grep(items, pattern="polygon"), function(i) venn.plot[[i]]$y))
+    
+    x_t = unlist(lapply(grep(items, pattern="text"), function(i) venn.plot[[i]]$x))
+    y_t = unlist(lapply(grep(items, pattern="text"), function(i) venn.plot[[i]]$y))
+    
+    positions_c <- data.frame(
+      id = rep(circ_values$id, each = length(x_c)/length(circ_values$id)),
+      x = x_c,
+      y = y_c
+    )
+    
+    positions_t <- data.frame(
+      id = rep(txt_values$id, each = length(x_t)/length(txt_values$id)),
+      x = x_t,
+      y = y_t
+    )
+    
+    datapoly <- merge(circ_values, positions_c, by=c("id"))
+    datatxt <- merge(txt_values, positions_t, by=c("id"))
+    
+    p <- ggplot(datapoly, 
+                aes(x = x, 
+                    y = y)) + geom_polygon(colour="black", alpha=0.5, aes(fill=id, group=id)) +
+         geom_text(mapping = aes(x=x, y=y, label=value), data = datatxt[!(datatxt$value %in% categories),], size = 5) +
+         geom_text(mapping = aes(x=x, y=y, label=value), data = datatxt[datatxt$value %in% categories,], fontface="bold", size = 7) +
+         theme_void() +
+         theme(legend.position="none") +
+         scale_fill_gradientn(colours = cf(intersections))
+    
+    output$venn <- plotly::renderPlotly({ggplotly(p,tooltip = "label")})
+    
+  })
   # --- ON CLOSE ---
   session$onSessionEnded(function() {
     if(any(!is.na(session_cl))) parallel::stopCluster(session_cl)

@@ -469,7 +469,11 @@ ggPlotBar <- function(repeats, attempts=50, color.function=rainbow, topn=50){
   
   ml_bar_tab <<- data
   
-  print(data)
+  lname <- paste0(ml_train_regex,"|", ml_test_regex)
+  print(lname)
+  mSet$analSet$ml[[ml_type]][[lname]] <<- data
+  
+  print(mSet$analSet$ml)
   
   if(ml_type == "ls"){
     p <- ggplot(data[1:topn,], aes(mz,count))
