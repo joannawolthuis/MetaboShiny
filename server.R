@@ -140,14 +140,18 @@ shinyServer(function(input, output, session) {
     navbarPage(inverse=F,h2("Standard analysis"), id="tab_stat",
                tabPanel(h3("PCA"), value = "pca", #icon=icon("cube"),
                         fluidRow(column(12,align="center",plotly::plotlyOutput("plot_pca",height = "600px", width="600px"))),
+                        hr(),
                         fluidRow(column(3,
-                                        selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:30),selected = "PC1",width="100%"),
-                                        selectInput("pca_y", label = "Y axis:", choices = paste0("PC",1:30),selected = "PC2",width="100%"),
-                                        selectInput("pca_z", label = "Z axis:", choices = paste0("PC",1:30),selected = "PC3",width="100%")
-                        ), 
-                        column(9, 
-                               div(DT::dataTableOutput('pca_tab',width="100%"),style='font-size:80%')
-                        )
+                                        selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:20),selected = "PC1",width="100%"),
+                                        selectInput("pca_y", label = "Y axis:", choices = paste0("PC",1:20),selected = "PC2",width="100%"),
+                                        selectInput("pca_z", label = "Z axis:", choices = paste0("PC",1:20),selected = "PC3",width="100%")),
+                                 column(9,
+                                        tabsetPanel(id="pca_2", 
+                                                    tabPanel(title="Table", 
+                                                             div(DT::dataTableOutput('pca_tab',width="100%"),style='font-size:80%')),
+                                                    tabPanel(title="Scree",
+                                                             plotOutput("pca_scree"))
+                                        ))
                         )
                ),
                tabPanel(h3("PLSDA"), value = "plsda",
@@ -160,7 +164,7 @@ shinyServer(function(input, output, session) {
                         hr(),
                         navbarPage(inverse=F,"",
                                    tabPanel("", icon=icon("globe"),
-                                            plotly::plotlyOutput("plot_plsda_3d",height = "600px", width="600px")
+                                            plotly::plotlyOutput("plot_plsda_3d", height="800px")
                                             # ,fluidRow(column(3,
                                             #                 selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:3),selected = "PC1",width="100%"),
                                             #                 selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:3),selected = "PC2",width="100%"),
@@ -203,8 +207,8 @@ shinyServer(function(input, output, session) {
                                             div(DT::dataTableOutput('fc_tab',width="100%"),style='font-size:80%'))
                                    ,tabPanel("", icon=icon("area-chart"),
                                              plotly::plotlyOutput('fc_overview_plot',height="300px")
-                                   )
-                        )),
+                                   ))
+                        ),
                # =================================================================================
                # tabPanel(h3("RandomForest"), value="rf",
                #          fluidRow(plotly::plotlyOutput('rf_specific_plot',width="100%")),
@@ -278,8 +282,9 @@ shinyServer(function(input, output, session) {
                                               multiple = F)
                            ),
                            column(width=1, br(), tags$a(img(src="help.png"), href="https://regex101.com")),
-                           column(width=3, textInput("ml_train_regex", label = "Regex for train:")),
-                           column(width=3, textInput("ml_test_regex", label = "Regex for test:"))
+                           column(width=2, textInput("ml_train_regex", label = "Regex for train:")),
+                           column(width=2, textInput("ml_test_regex", label = "Regex for test:")),
+                           column(width=2, textInput("ml_name", label="Name:"))
                          ),
                          fluidRow(
                            column(width=5,sliderInput("ml_train_perc", 
@@ -1225,14 +1230,19 @@ shinyServer(function(input, output, session) {
       csv_subset <- csv_temp[, !remove, with=FALSE]
       
       # --- remove outliers? ---
-      print("Removing outliers...")
-
-      sums <- rowSums(csv_subset[, -c(1:length(remain)),with=FALSE],na.rm = TRUE)
-      names(sums) <- csv_subset$Sample
-      outliers = c(car::Boxplot(as.data.frame(sums)))
-
-      print(paste("Outliers removed (based on total signal):", paste(outliers, collapse=" and ")))
-      csv_temp_no_out <- csv_subset[!(Sample %in% outliers)]
+      if(input$remove_outliers){
+        print("Removing outliers...")
+        
+        sums <- rowSums(csv_subset[, -c(1:length(remain)),with=FALSE],na.rm = TRUE)
+        names(sums) <- csv_subset$Sample
+        outliers = c(car::Boxplot(as.data.frame(sums)))
+        
+        print(paste("Outliers removed (based on total signal):", paste(outliers, collapse=" and ")))
+        csv_temp_no_out <- csv_subset[!(Sample %in% outliers)]
+      } else{
+        csv_temp_no_out <- csv_subset
+      }
+      
       
       batchview = if(condition == "Batch") TRUE else FALSE
       
@@ -1637,6 +1647,23 @@ shinyServer(function(input, output, session) {
                  mSet <<- PCA.Anal(mSet)
                })
              }
+             # CAN use sparse PCA? linear combinations of just a few orig dimensions.
+             output$pca_scree <- renderPlot({
+               df <- data.table(
+                 pc = 1:length(names(mSet$analSet$pca$variance)),
+                 var = mSet$analSet$pca$variance)
+               p <- ggplot2::ggplot(data=df[1:20,]) + ggplot2::geom_line(mapping = aes(x=pc, y=var, colour=var), cex=3) + 
+                    plot.theme(base_size = 10) +
+                    ggplot2::scale_colour_gradientn(colours = cf(256)) +
+                    theme(axis.text=element_text(size=10),
+                          axis.title=element_text(size=19,face="bold"),
+                          #legend.title=element_text(size=15),
+                          #legend.text=element_text(size=12),
+                          legend.position="none")
+               # - - - - - 
+               p
+               #ggplotly(p)
+             })
              output$plot_pca <- plotly::renderPlotly({
                df <- mSet$analSet$pca$x
                x <- input$pca_x
@@ -2003,12 +2030,11 @@ shinyServer(function(input, output, session) {
            })
     # -----------
     output$plot_plsda_3d <- plotly::renderPlotly({
-      # x <- input$plsda_x
-      # y <- input$plsda_y
-      # z <- input$plsda_z
+
       x <- "PC1"
       y <- "PC2"
       z <- "PC3"
+      
       x.var <- plsda.table[`Principal Component` == x, 
                            `% variance`]
       y.var <- plsda.table[`Principal Component` == y, 
@@ -2054,6 +2080,7 @@ shinyServer(function(input, output, session) {
         if(item$type == "mesh3d"){
           adj_plot$x$data[[i]]$color <- rgbcols[c]
           adj_plot$x$data[[i]]$visible <- TRUE
+          adj_plot$x$data[[i]]$hoverinfo <- "none"
           c = c + 1
         }
       }
@@ -2066,7 +2093,9 @@ shinyServer(function(input, output, session) {
           type = "scatter3d",
           color = mSet$dataSet$cls, 
           colors=chosen.colors,
-          opacity=1
+          opacity=1,
+          hoverinfo = 'text',
+          text = rownames(mSet$dataSet$norm)
         ) %>%  layout(scene = list(
           aspectmode="cube",
           xaxis = list(
@@ -2104,6 +2133,9 @@ shinyServer(function(input, output, session) {
     
     # do_ml, ml_attempts, ml_train_perc
     
+    # -- NOTE : CHECK IF AUC INCREASES W/ INCREASING TRAINING SET SIZE --- !!!!!!!!!!!!!!!!
+    # 'saturation point'
+    
     withProgress({
       
       # prepare matric
@@ -2122,24 +2154,15 @@ shinyServer(function(input, output, session) {
       
       curr <- curr[which(!grepl(curr$Sample,
                                 pattern = "QC"))]
-      changeCols <- colnames(curr)[which(as.vector(curr[,lapply(.SD, class)]) == "character")]
-      curr[,(changeCols):= lapply(.SD, function(x) as.numeric(as.factor(x))), .SDcols = changeCols]
       
-      # build model
+      configCols <- which(!(colnames(curr) %in% colnames(mSet$dataSet$norm)))
+      mzCols <- which(colnames(curr) %in% colnames(mSet$dataSet$norm))
       
-      
-      # equalize the country counts
-      
-      #input = list(ml_train_regex = "^NL", ml_test_regex = "", ml_train_perc = 60)
-      
-      
-      # - - - - - - - - - - - - - -
+      curr[,(configCols):= lapply(.SD, function(x) as.factor(x)), .SDcols = configCols]
+      curr[,(mzCols):= lapply(.SD, function(x) as.numeric(x)), .SDcols = mzCols]
       
       repeats <- pbapply::pblapply(1:input$ml_attempts, function(i){
         # train / test
-        
-        print(input$ml_train_regex)
-        print(input$ml_test_regex)
         
         ml_train_regex <<-input$ml_train_regex
         ml_test_regex <<- input$ml_test_regex
@@ -2170,7 +2193,7 @@ shinyServer(function(input, output, session) {
           }else{
             inTrain <- caret::createDataPartition(y = curr$Label,
                                                   ## the outcome data are needed
-                                                  p = input$ml_train_perc/100,
+                                                  p = 0.6,#input$ml_train_perc/100,
                                                   ## The percentage of data in the training set
                                                   list = FALSE)
             
@@ -2212,8 +2235,8 @@ shinyServer(function(input, output, session) {
         
         predIdx <- which(colnames(curr) %in% colnames(config))
         
-        trainX <- apply(training, 2, as.numeric)
-        testX <- apply(testing, 2, as.numeric)
+        #trainX <- apply(training, 2, as.numeric)
+        #testX <- apply(testing, 2, as.numeric)
         
         switch(input$ml_method,
                rf = {
@@ -2263,6 +2286,8 @@ shinyServer(function(input, output, session) {
         print("wiping")
         mSet$analSet$ml <<- list(ls=list(), rf=list())
         }
+      
+      ml_name <<- input$ml_name
       
       xvals <<- list(type = {unique(lapply(repeats, function(x) x$type))},
                      models = {lapply(repeats, function(x) x$model)},
@@ -2400,9 +2425,7 @@ shinyServer(function(input, output, session) {
                                                     rf = vip.score,
                                                     enrich_pw = enrich_overview_tab,
                                                     meba = mSet$analSet$MB$stats,
-                                                    plsda_vip = plsda_tab,
-                                                    lasnet_a = lasnet_tables[[alpha]],
-                                                    lasnet_b = lasnet_stab_tables[[alpha]])
+                                                    plsda_vip = plsda_tab)
                                              , keep.rownames = T)[curr_row, rn]
       
       if(grepl(pattern = "lasnet",x = table)){
@@ -2788,30 +2811,26 @@ shinyServer(function(input, output, session) {
 
   observeEvent(input$venn_members, {
     
-    if("ls" %in% input$venn_members | "rf" %in% input$venn_members){
-      uiElements <- lapply(intersect(c("rf", "ls"), input$venn_members), function(name){
+    print(input$venn_members)
+    print(intersect(c("rf", "ls"), input$venn_members))
+    
+    if("ls" %in% input$venn_members | "rf" %in% input$venn_members | "plsda" %in% input$venn_members){
+      uiElements <- lapply(intersect(c("rf", "ls", "plsda"), input$venn_members), function(name){
         options <- switch(name,
                           tt = NULL,
                           fc = NULL,
                           ls = names(mSet$analSet$ml$ls),
                           rf = names(mSet$analSet$ml$rf),
-                          volc = NULL)
-        
-        descriptions = sapply(stringr::str_split(options, pattern="\\|"), function(option){
-          train = option[[1]]
-          test = option[[2]]
-          if(train == "") train = "all"
-          if(test == "") test = "all"
-          gsubfn::fn$paste("Train: $train - Test: $test")
-        })
-        
-        names(options) <- descriptions
+                          volc = NULL,
+                          plsda = c("PC1", "PC2", "PC3"))
         
         shorthand = switch(name,
                            ls = "lasso",
-                           rf = "random forest")
-        selectizeInput(inputId = paste0(name,"_choice"), 
-                       label = gsubfn::fn$paste("Which $shorthand run:"), 
+                           rf = "random forest",
+                           plsda = "PLSDA")
+        selectInput(inputId = paste0(name,"_choice"), 
+                       label = gsubfn::fn$paste("Which $shorthand group(s):"), 
+                       multiple=TRUE,
                        choices = options)
       })
       
@@ -2827,66 +2846,102 @@ shinyServer(function(input, output, session) {
     
     top = input$venn_tophits
     
-    tables <- lapply(input$venn_members, function(name){
-      
-      print(name)
-      
-      print(input$ls_choice)
-      print(input$rf_choice)
-      
-      tbl <- switch(name,
-                    tt = rownames(mSet$analSet$tt$sig.mat[order(mSet$analSet$tt$sig.mat[,2], decreasing = F),]),
-                    fc = rownames(mSet$analSet$fc$sig.mat[order(abs(mSet$analSet$fc$sig.mat[,2]), decreasing = F),]),
-                    ls = mSet$analSet$ml$ls[[input$ls_choice]][order(mSet$analSet$ml$ls[[input$ls_choice]]$count, decreasing = T),]$mz,
-                    rf = mSet$analSet$ml$rf[[input$rf_choice]][order(mSet$analSet$ml$rf[[input$rf_choice]]$mda, decreasing = T),]$mz,
-                    volc = rownames(mSet$analSet$volcano$sig.mat))
-      # - - - sort - - -
-      
-      if(length(tbl) < top){
-        tbl
-      }else{
-        tbl[1:top]
-      }
-    })
-      
-    print(tables)
-    
-    intersections = length(tables)
-    
-    #categories <- c("tt", "fc", "ls", "rf")
     categories <- input$venn_members
+
+    tables <- lapply(categories, function(name){
+      
+      tbls <- switch(name,
+                     tt = list(rownames(mSet$analSet$tt$sig.mat[order(mSet$analSet$tt$sig.mat[,2], decreasing = F),])),
+                     fc = list(rownames(mSet$analSet$fc$sig.mat[order(abs(mSet$analSet$fc$sig.mat[,2]), decreasing = F),])),
+                     ls = {
+                       tbls_ls <- lapply(input$ls_choice, function(name){
+                         mSet$analSet$ml$ls[[name]][order(mSet$analSet$ml$ls[[name]]$count, decreasing = T),]$mz})
+                       names(tbls_ls) <- input$ls_choice
+                       # - - - 
+                       tbls_ls
+                     },
+                     rf = {
+                       tbls_rf <- lapply(input$rf_choice, function(name){
+                         mSet$analSet$ml$rf[[name]][order(mSet$analSet$ml$rf[[name]]$mda, decreasing = T),]$mz})
+                       names(tbls_rf) <- input$rf_choice
+                       # - - -
+                       tbls_rf
+                     },
+                     plsda = {
+                       tbls_plsda <- lapply(input$plsda_choice, function(name){
+                         compounds_pc <- as.data.table(mSet$analSet$plsda$vip.mat,keep.rownames = T)
+                         colnames(compounds_pc) <- c("rn", paste0("PC", 1:3))
+                         ordered_pc <- setorderv(compounds_pc, name, -1)
+                         ordered_pc[, c("rn")][[1]]               
+                       })
+                       names(tbls_plsda) <- paste0("pls_", input$plsda_choice)
+                       # - - -
+                       tbls_plsda
+                     },
+                     volc = list(rownames(mSet$analSet$volcano$sig.mat)))
+      
+      # - - - - - - - 
+      # FIX NAMES!!!
+      
+      tbls_top <- lapply(tbls, function(tbl){
+        if(length(tbl) < top){
+          tbl
+        }else{
+          tbl[1:top]
+        }
+      })
+      
+      # - - return - -
+      tbls_top
+    })
     
     names(tables) <- categories
+    # - - unlist - -
     
-    venn.plot = VennDiagram::venn.diagram(x = tables,
-                                         filename = NULL)
+    flattenlist <- function(x){  
+      morelists <- sapply(x, function(xprime) class(xprime)[1]=="list")
+      out <- c(x[!morelists], unlist(x[morelists], recursive=FALSE, use.names = T))
+      if(sum(morelists)){ 
+        Recall(out)
+      }else{
+        return(out)
+      }
+    }
+    
+    flattened <<- flattenlist(tables)
+    names(flattened) <<- gsub(x = names(flattened), pattern = "(.*\\.)(.*$)", replacement = "\\2")
+
+    circles = length(flattened)
+    
+    # - - - - - - --
+    
+    print(length(flattened))
+    
+    venn.plot <- VennDiagram::venn.diagram(x = flattened,
+                                           filename = NULL)
     
     # - - - - - - - - -
-    
-    # venn.plot <- switch(intersections,
-    #                     1 = draw.pairwise.venn(area1 = 22, area2 = 20, cross.area = 11, category = categories),
-    #                     2 = ...,
-    #                     3 = ...,
-    #                     4 = draw.quintuple.venn(areas$1, areas$2, areas$3, areas$4),
-    #                     5 = ...)
                                                                                                                                                            
     items <- strsplit(as.character(venn.plot), split = ",")[[1]]
     
-    circ_values <- data.frame(
+    circ_values <<- data.frame(
       id = 1:length(grep(items, pattern="polygon"))
-      # value = c(3, 3.1, 3.1, 3.2, 3.15, 3.5)
+      #,value = c(3, 3.1, 3.1, 3.2, 3.15, 3.5)
     )
+    
     txt_values <- data.frame(
       id = grep(items, pattern="text"),
-      value = unlist(lapply(grep(items, pattern="text"), function(i) venn.plot[[i]]$label)),
-      bold = unlist(lapply(grep(items, pattern="text"), function(i) venn.plot[[i]]$label)) %in% categories
-    )
+      value = unlist(lapply(grep(items, pattern="text"), function(i) venn.plot[[i]]$label))
+      )
+    
+    txt_values$value <- gsub(x = txt_values$value, pattern = "(.*\\.)(.*$)", replacement = "\\2")
+    categories <- c(categories, input$rf_choice, input$ls_choice, input$plsda_choice)
     
     x_c = unlist(lapply(grep(items, pattern="polygon"), function(i) venn.plot[[i]]$x))
     y_c = unlist(lapply(grep(items, pattern="polygon"), function(i) venn.plot[[i]]$y))
     
     x_t = unlist(lapply(grep(items, pattern="text"), function(i) venn.plot[[i]]$x))
-    y_t = unlist(lapply(grep(items, pattern="text"), function(i) venn.plot[[i]]$y))
+    y_t = unlist(lapply(grep(items, pattern="text"), function(i)venn.plot[[i]]$y))
     
     positions_c <- data.frame(
       id = rep(circ_values$id, each = length(x_c)/length(circ_values$id)),
@@ -2903,18 +2958,63 @@ shinyServer(function(input, output, session) {
     datapoly <- merge(circ_values, positions_c, by=c("id"))
     datatxt <- merge(txt_values, positions_t, by=c("id"))
     
+    numbers <- datatxt[!(datatxt$value %in% names(flattened)),]
+    headers <- datatxt[(datatxt$value %in% names(flattened)),]
+    
+    if(circles == 2){
+      occur <- table(numbers$y)
+      newy <- names(occur[occur == max(occur)])
+      # - - -
+      numbers$y <- as.numeric(c(newy))
+    }
+    
     p <- ggplot(datapoly, 
                 aes(x = x, 
                     y = y)) + geom_polygon(colour="black", alpha=0.5, aes(fill=id, group=id)) +
-         geom_text(mapping = aes(x=x, y=y, label=value), data = datatxt[!(datatxt$value %in% categories),], size = 5) +
-         geom_text(mapping = aes(x=x, y=y, label=value), data = datatxt[datatxt$value %in% categories,], fontface="bold", size = 7) +
+         geom_text(mapping = aes(x=x, y=y, label=value), data = numbers, size = 5) +
+         geom_text(mapping = aes(x=x, y=y, label=value), data = headers, fontface="bold", size = 7) +
          theme_void() +
-         theme(legend.position="none") +
-         scale_fill_gradientn(colours = cf(intersections))
+         theme(legend.position="none") + 
+         scale_fill_gradientn(colours = cf(circles)) +
+         coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
     
-    output$venn <- plotly::renderPlotly({ggplotly(p,tooltip = "label")})
+    
+    output$venn_plot <- plotly::renderPlotly({ggplotly(p, tooltip = "label") %>% layout(plot_bgcolor='transparent') %>% 
+        layout(paper_bgcolor='transparent')
+      })
+    
+    # updateSelectizeInput(session, "batch_var",
+    #                      choices = opts[batch],
+    #                      options = list(maxItems = 3L - (length(input$batch_var)))
+                         
+    updateSelectizeInput(session, "intersect_venn", choices = names(flattened))
     
   })
+  
+  observeEvent(input$intersect_venn, {
+    print(input$intersect_venn)
+    if(length(input$intersect_venn) > 1){
+      venn_overlap <<- Reduce("intersect", lapply(input$intersect_venn, function(x){
+        flattened[[x]]
+      })
+      )
+      print(venn_overlap)
+    }
+    output$venn_tab <- DT::renderDataTable({
+      # -------------
+      DT::datatable(data.table(mz = venn_overlap), 
+                    selection = 'single',
+                    autoHideNavigation = T,
+                    options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+    })
+  })
+  
+  observeEvent(input$venn_tab_rows_selected, {
+    #wanted.adducts.pos <- pos_adducts[input$pos_add_tab_rows_selected, "Name"]
+    curr_cpd <<- venn_overlap[input$venn_tab_rows_selected]
+    output$curr_cpd <- renderText(curr_cpd)
+  })
+  
   # --- ON CLOSE ---
   session$onSessionEnded(function() {
     if(any(!is.na(session_cl))) parallel::stopCluster(session_cl)

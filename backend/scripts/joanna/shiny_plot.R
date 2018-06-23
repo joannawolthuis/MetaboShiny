@@ -432,6 +432,7 @@ ggPlotROC <- function(xvals, attempts = 50, cf = rainbow){
           #legend.text=element_text(size=12),
           legend.position="none") +
     #scale_y_continuous(limits=c(0,1)) +
+    coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE) + 
     coord_cartesian(xlim = c(.04,.96), ylim = c(.04,.96))
 }
 
@@ -469,7 +470,11 @@ ggPlotBar <- function(repeats, attempts=50, color.function=rainbow, topn=50){
   
   ml_bar_tab <<- data
   
-  lname <- paste0(ml_train_regex,"|", ml_test_regex)
+  if(ml_name != ""){
+    lname = ml_name
+  }else{
+    lname <- paste0(ml_train_regex,"|", ml_test_regex)
+  }
   print(lname)
   mSet$analSet$ml[[ml_type]][[lname]] <<- data
   

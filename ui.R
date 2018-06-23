@@ -275,6 +275,9 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                                 "Mean"="mean",
                                                                                                                 "Leave them out"="exclude",
                                                                                                                 "Leave them alone"="none")),
+                                    switchButton(inputId = "remove_outliers",
+                                                                          label = "Exclude outliers?", 
+                                                                          value = TRUE, col = "BW", type = "YN"),
                                     # selectInput('batch_corr', 'Correct batch effect?', choices = list("Yes"=TRUE, 
                                     #                                                                    "No"=FALSE)),
                                     actionButton("initialize", "Go", icon=icon("hand-o-right")),
@@ -376,7 +379,8 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                         "Fold-change" = "fc",
                                                                         "Lasso" = "ls",
                                                                         "Random Forest" = "rf",
-                                                                        "Volcano" = "volc"
+                                                                        "Volcano" = "volc",
+                                                                        "PLS-DA" = "plsda"
                                                                       ), selected = c("tt", "fc"), inline = T),
                                                                       
                                                                       uiOutput("venn_ml_ui"),
@@ -385,7 +389,9 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                       
                                                                       # - - - - - - - - - - - - - - -
                                                                       actionButton("build_venn", label = "Find overlap"),
-                                                                      plotly::plotlyOutput("venn")
+                                                                      plotly::plotlyOutput("venn_plot",inline = F),
+                                                                      selectInput("intersect_venn", label = "Show overlap between:", selected = 1,choices = "",multiple = T),
+                                                                      div(DT::dataTableOutput('venn_tab'),style='font-size:80%')
                                                                       ))
                                     )
                     )),
