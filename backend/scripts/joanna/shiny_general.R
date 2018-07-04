@@ -64,3 +64,18 @@ kegg.charge <- function(atomlist){
   }
   formal_charge
 }
+
+mape <- function(actual,pred){
+  mape <- mean(abs((actual - pred)/actual))*100
+  return (mape)
+}
+
+flattenlist <- function(x){  
+  morelists <- sapply(x, function(xprime) class(xprime)[1]=="list")
+  out <- c(x[!morelists], unlist(x[morelists], recursive=FALSE, use.names = T))
+  if(sum(morelists)){ 
+    Recall(out)
+  }else{
+    return(out)
+  }
+}

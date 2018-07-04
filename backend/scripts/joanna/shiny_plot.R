@@ -400,7 +400,7 @@ ggPlotROC <- function(xvals, attempts = 50, cf = rainbow){
   # plot(perf,col="grey82",lty=3, cex.lab=1.3)
   # plot(perf,lwd=3,avg="vertical",spread.estimate="boxplot",add=TRUE)
   
-  perf.long <- rbindlist(lapply(1:length(perf@x.values), function(i){
+  perf.long <<- rbindlist(lapply(1:length(perf@x.values), function(i){
     xvals <- perf@x.values[[i]]
     yvals <- perf@y.values[[i]]
 
@@ -412,11 +412,15 @@ ggPlotROC <- function(xvals, attempts = 50, cf = rainbow){
     res
   }))
   
+  print(perf.long)
+  
   cols = cf(attempts)
+  
+  #nbins <- length(perf.long$TPR)
   
   ggplot(perf.long, aes(FPR,TPR)) +
     #stat_smooth(alpha=.2,color="black") + # fix later, needs to NOT GO ABOVE 1
-    stat_summary(aes(FPR, TPR), fun.y=mean, geom="line", colour="black", cex = 2) +
+    stat_summary_bin(aes(FPR, TPR), fun.y=mean, geom="line", colour="black", cex = 2) +
     geom_path(alpha=.5,
               cex=.5,
               aes(color = attempt, group = attempt)) +

@@ -2,6 +2,8 @@ shinyServer(function(input, output, session) {
   
   # ================================= DEFAULTS ===================================
   
+  source('./backend/scripts/joanna/shiny_general.R')
+  
   tbl <<- NA
   tables <- list()
   db_search_list <- c()
@@ -16,6 +18,10 @@ shinyServer(function(input, output, session) {
   ncores <<- parallel::detectCores() - 1
   session_cl <<- parallel::makeCluster(ncores)
   
+  parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
+    "mape",
+    "flattenlist"
+  ))
   # -----------------------------------------------
   
   spinnyimg <- reactiveVal("www/electron.png")
@@ -294,7 +300,9 @@ shinyServer(function(input, output, session) {
                                                       step = 1,
                                                       value = 60, 
                                                       post = "%")),
-                           column(width=2, actionButton("do_ml",label="Go",width = "50px"),style = "margin-top: 35px;", align="left"),
+                           column(width=2, 
+                                  switchButton(inputId = "ml_saturation", label = "SatMode", value = FALSE, col = "BW", type = "OO"),
+                                  actionButton("do_ml",label="Go",width = "50px"),style = "margin-top: 35px;", align="left"),
                            column(width=5,sliderInput("ml_attempts", 
                                                       label = "Attempts", 
                                                       min = 1,
@@ -903,7 +911,9 @@ shinyServer(function(input, output, session) {
           #,"regexpr",
           #"regmatches",
           "xmlParse",
-          "getURL"
+          "getURL",
+          "mape",
+          "flattenlist"
         ))
         
         # pkgs = c("data.table", "enviPat", "KEGGREST", "XML", "SPARQL", "RCurl")
@@ -1295,10 +1305,28 @@ shinyServer(function(input, output, session) {
                                     percent = input$perc_limit/100)
       
       if(input$miss_type != "none"){
+        # if(input$miss_type == "regr"){
+          #require(mice)
+          #base <- mSet$dataSet$orig
+          #base <- mSet$dataSet$preproc
+          #imp <- mice(base, printFlag = TRUE)
+          #mSet$dataSet$norm <<- imp
+        # }else if(input$miss_type == "rf"){
+        #   imp <<- randomForest::rfImpute(Species ~ ., iris.na)
+        #   
+        #   data(iris)
+        #   iris.na <- iris
+        #   set.seed(111)
+        #   ## artificially drop some data values.
+        #   for (i in 1:4) iris.na[sample(150, sample(20)), i] <- NA
+        #   set.seed(222)
+        #   iris.imputed <- randomForest::rfImpute(x=iris.na, y=iris.na$Species)
+        #   
+        # }else{
         mSet <<- ImputeVar(mSet,
                            method = input$miss_type)
+        #}
       }
-      
       # ------------------------
       
       if(input$filt_type != "none"){
@@ -1329,8 +1357,7 @@ shinyServer(function(input, output, session) {
                              rowNorm = input$norm_type,
                              transNorm = input$trans_type,
                              scaleNorm = input$scale_type,
-                             ref = input$ref_var
-      )
+                             ref = input$ref_var)
       
       
       second_part_no_out <- mSet$dataSet$norm[match(rownames(mSet$dataSet$norm),
@@ -1456,8 +1483,6 @@ shinyServer(function(input, output, session) {
                                                           batch2 = csv_pheno$batch2))
             rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
           }
-          
-          print(head(csv_pheno))
           
           #mod.batch = model.matrix(~ batch1 + batch2 + outcome, data=csv_pheno)
           
@@ -2133,8 +2158,10 @@ shinyServer(function(input, output, session) {
     
     # do_ml, ml_attempts, ml_train_perc
     
+    
     # -- NOTE : CHECK IF AUC INCREASES W/ INCREASING TRAINING SET SIZE --- !!!!!!!!!!!!!!!!
     # 'saturation point'
+    #switchButton(inputId = "ml_saturation", label = "SatMode", value = FALSE, col = "BW", type = "OO"),
     
     withProgress({
       
@@ -2161,65 +2188,42 @@ shinyServer(function(input, output, session) {
       curr[,(configCols):= lapply(.SD, function(x) as.factor(x)), .SDcols = configCols]
       curr[,(mzCols):= lapply(.SD, function(x) as.numeric(x)), .SDcols = mzCols]
       
-      repeats <- pbapply::pblapply(1:input$ml_attempts, function(i){
+      print(input$ml_attempts)
+
+      goes = as.numeric(input$ml_attempts)
+      
+      print(goes)
+      
+      repeats <- pbapply::pblapply(1:goes, function(i){
         # train / test
         
         ml_train_regex <<-input$ml_train_regex
         ml_test_regex <<- input$ml_test_regex
         
+        ml_train_perc <- input$ml_train_perc/100
         
-        if(input$ml_train_regex != ""){
-          train_idx <- grep(config$Sample, pattern = input$ml_train_regex)
-          reTrain <- caret::createDataPartition(y = config[train_idx, Label],p = input$ml_train_perc/100)
-          inTrain <- train_idx[reTrain$Resample1]
-          
-          if(input$ml_test_regex != ""){
-            inTest <- grep(config$Sample, pattern = input$ml_test_regex)
-            #reTrain <- caret::createDataPartition(y = config[test_idx, Label],p = input$ml_train_perc/100)
-            #inTest <- train[reTrain$Resample1]
-          }else{
-            inTest <- setdiff(1:nrow(curr), train_idx)
-          }
-        }else{
-          if(input$ml_test_regex != ""){
-            
-            test_idx <- grep(config$Sample, pattern = input$ml_test_regex)
-            train_idx <- setdiff(1:nrow(curr), test_idx)
-            
-            reTrain <- caret::createDataPartition(y = config[train_idx, Label],p = input$ml_train_perc/100)
-            inTrain <- train_idx[reTrain$Resample1]
-            inTest <- test_idx
-            
-          }else{
-            inTrain <- caret::createDataPartition(y = curr$Label,
-                                                  ## the outcome data are needed
-                                                  p = 0.6,#input$ml_train_perc/100,
-                                                  ## The percentage of data in the training set
-                                                  list = FALSE)
-            
-            inTest <- setdiff(1:nrow(curr), inTrain)
-          }
+        print(i)
+        print(ml_train_perc)
+      
+        if(ml_train_regex == "" & ml_test_regex == ""){ # BOTH ARE NOT DEFINED
+          test_idx = caret::createDataPartition(y = curr$Label, p = ml_train_perc, list = FALSE)
+          train_idx = setdiff(1:nrow(curr), train_idx)
+        }else if(ml_train_regex != ""){ #ONLY TRAIN IS DEFINED
+          train_idx = grep(config$Sample, pattern = input$ml_train_regex)
+          test_idx = setdiff(1:nrow(curr), train_idx)
+        }else{ # ONLY TEST IS DEFINED
+          test_idx = grep(config$Sample, pattern = input$ml_test_regex)
+          train_idx = setdiff(1:nrow(curr), test_idx)
         }
         
-        # # resize to make somewhat even
-        # 
-        # storage = list(inTrain = inTrain, inTest = inTest)
-        # 
-        # if(length(storage$inTrain) < length(storage$inTest)){
-        #   perc_keep <- length(storage$inTrain)/length(storage$inTest) * 100.00
-        #   storage$inTest <- caret::createDataPartition(y = curr[inTrain,Label],
-        #                                        ## the outcome data are needed
-        #                                        p = perc_keep/100,
-        #                                        ## The percentage of data in the training set
-        #                                        list = FALSE)[,1][[1]]
-        #   } else{
-        #   perc_keep <- length(storage$inTest)/length(storage$inTrain) * 100.00
-        #   storage$inTrain <- caret::createDataPartition(y = curr[inTrain,Label],
-        #                                        ## the outcome data are needed
-        #                                        p = perc_keep/100,
-        #                                        ## The percentage of data in the training set
-        #                                        list = FALSE)[,1][[1]]
-        # }
+        # - - - re-split - - -
+        reTrain <- caret::createDataPartition(y = config[train_idx, Label], p = ml_train_perc)
+        inTrain <- train_idx[reTrain$Resample1]
+        reTest <- caret::createDataPartition(y = config[test_idx, Label], p = ml_train_perc)
+        inTest <- test_idx[reTest$Resample1]
+  
+        print(inTrain)
+        print(inTest)
         
         # - - divide - -
         
@@ -2238,15 +2242,18 @@ shinyServer(function(input, output, session) {
         #trainX <- apply(training, 2, as.numeric)
         #testX <- apply(testing, 2, as.numeric)
         
+        training <- data.matrix(gdata::drop.levels(training))
+        testing <- data.matrix(gdata::drop.levels(testing))
+        
         switch(input$ml_method,
                rf = {
-                 model = randomForest::randomForest(trainX, 
-                                                    trainY, 
+                 model = randomForest::randomForest(x = training, 
+                                                    y = trainY, 
                                                     ntree = 500,
                                                     importance=TRUE)
                  
                  prediction <- stats::predict(model, 
-                                              testX, 
+                                              testing, 
                                               "prob")[,2]
                  
                  importance = as.data.table(model$importance, keep.rownames = T)
@@ -2263,14 +2270,14 @@ shinyServer(function(input, output, session) {
                  nfold = length(trainY)
                  family = "binomial"
                  
-                 cv1 <- glmnet::cv.glmnet(trainX, trainY, family = family, nfold = nfold, type.measure = "auc", alpha = 1, keep = TRUE)
+                 cv1 <- glmnet::cv.glmnet(training, trainY, family = family, nfold = nfold, type.measure = "auc", alpha = 1, keep = TRUE)
                  cv2 <- data.frame(cvm = cv1$cvm[cv1$lambda == cv1[["lambda.min"]]], lambda = cv1[["lambda.min"]], alpha = 1)
                  
-                 model <- glmnet::glmnet(as.matrix(trainX), trainY, family = family, lambda = cv2$lambda, alpha = cv2$alpha)
+                 model <- glmnet::glmnet(as.matrix(training), trainY, family = family, lambda = cv2$lambda, alpha = cv2$alpha)
                  
                  prediction <- stats::predict(model,
                                               type = "response", 
-                                              newx = testX, 
+                                              newx = testing, 
                                               s = "lambda.min")#[,2] # add if necessary
                  list(type = "ls",
                       model = model,
@@ -2897,16 +2904,6 @@ shinyServer(function(input, output, session) {
     
     names(tables) <- categories
     # - - unlist - -
-    
-    flattenlist <- function(x){  
-      morelists <- sapply(x, function(xprime) class(xprime)[1]=="list")
-      out <- c(x[!morelists], unlist(x[morelists], recursive=FALSE, use.names = T))
-      if(sum(morelists)){ 
-        Recall(out)
-      }else{
-        return(out)
-      }
-    }
     
     flattened <<- flattenlist(tables)
     names(flattened) <<- gsub(x = names(flattened), pattern = "(.*\\.)(.*$)", replacement = "\\2")

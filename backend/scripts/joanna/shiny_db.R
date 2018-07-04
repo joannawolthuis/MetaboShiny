@@ -60,6 +60,7 @@ get_matches <- function(cpd = NA,
 
     #ATTACH "/Users/jwolthuis/Google Drive/MetaboShiny/backend/db/hmdb.full.db" AS db
     #cpd = 178.01787
+    #cpd = curr_cpd
     
     RSQLite::dbExecute(conn, query.zero)
     
@@ -83,7 +84,7 @@ get_matches <- function(cpd = NA,
         #RSQLite::dbExecute(conn,"drop table isotopes")
     
     query.two <- gsubfn::fn$paste(strwrap(
-      "SELECT cpd.baseformula, cpd.adduct, cpd.isoprevalence, cpd.basecharge, int.* 
+      "SELECT cpd.baseformula,cpd.fullformula, cpd.adduct, cpd.isoprevalence, cpd.basecharge, int.* 
       FROM db.extended cpd indexed by e_idx1
       JOIN unfiltered u
       ON u.baseformula = cpd.baseformula
@@ -98,29 +99,61 @@ get_matches <- function(cpd = NA,
     
     table <- table[complete.cases(table),]
     
-    p.cpd <- split(x = table, 
+    p.cpd <<- split(x = table, 
                    f = table$baseformula)
     
     
     if(nrow(table) > 0){
-      res_rows <- pbapply::pblapply(p.cpd, cl=session_cl, function(cpd_tab){
+      res_rows <- pbapply::pblapply(p.cpd, cl=NULL, function(cpd_tab){
         if(any(cpd_tab$isoprevalence > 99.999999)){
           formula = unique(cpd_tab$baseformula)
           adduct = unique(cpd_tab$adduct)
           # - - - - - - - - -
           sorted <- unique(cpd_tab[order(cpd_tab$isoprevalence, 
-                                         decreasing = FALSE),])
+                                         decreasing = TRUE),])
           split.by.samp <- split(sorted, 
                                  sorted$filename)
           # - - - - - - - - - 
+          
           score <- sapply(split.by.samp, function(samp_tab){
             samp_tab <- data.table::as.data.table(samp_tab)
-            if(samp_tab[isoprevalence == max(samp_tab$isoprevalence),intensity] == max(samp_tab$intensity)) 1 else 0
+            
+            print(samp_tab)
+            if(nrow(samp_tab) == 1){
+              res = NA
+            }else{
+              maxint <- samp_tab[isoprevalence == max(isoprevalence),]$intensity
+              
+              predicted = (samp_tab[-(isoprevalence == max(isoprevalence)),]$intensity / maxint ) * 
+                samp_tab[isoprevalence == max(isoprevalence),]$isoprevalence
+              actual = samp_tab[-(isoprevalence == max(isoprevalence)),]$isoprevalence
+              
+              print(predicted)
+              print(actual)
+              # - - -
+              
+              # print(samp_tab)
+              # print(actual)
+              # print(predicted)
+              res = mape(actual = actual, pred = predicted)
+              #print(res)
+              #print("- - -")
+            }
+            res
+            # if(samp_tab[isoprevalence == max(samp_tab$isoprevalence),intensity] == max(samp_tab$intensity)) 1 else 0
           })
-          confidence = sum(unlist(score))/length(split.by.samp) * 100.00
+          
+          print(unlist(score))
+          if(all(is.na(unlist(score)))){mean_error = "???"}else{
+            mean_error <- round(sum(unlist(score),na.rm = T)/length(unique(table$filename)), digits=2)
+          }
+          
+          if(mean_error == 0) print(score)
+          #confidence = sum(unlist(score))/length(split.by.samp) * 100.00
           data.table::data.table(baseformula = formula,
                                  adduct = adduct,
-                                 confidence = round(confidence,digits = 2)) 
+                                 error = mean_error #round(confidence,digits = 2)
+                                 ) 
         }else{
           data.table::data.table()
         }
