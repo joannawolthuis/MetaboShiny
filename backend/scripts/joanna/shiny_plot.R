@@ -284,7 +284,7 @@ ggPlotPCApairs <- function(cols = c("black", "pink"), pc.num, type = "pca", cf =
   # }
 }
 
-ggPlotClass <- function(pls.type = "plsda", cf = "rainbow"){
+ggPlotClass <- function(pls.type = "plsda", cf = "rainbow", pcs = 3){
   res <- mSet$analSet$plsda$fit.info
   colnames(res) <- 1:ncol(res)
   # best.num <- mSet$analSet$plsda$best.num
@@ -297,7 +297,7 @@ ggPlotClass <- function(pls.type = "plsda", cf = "rainbow"){
     theme_minimal() + 
     plot.theme(base_size = 15) +
     facet_grid(~Component) + 
-    scale_fill_manual(values=cf(3))
+    scale_fill_manual(values=cf(pcs))
   return(p)
   }
 

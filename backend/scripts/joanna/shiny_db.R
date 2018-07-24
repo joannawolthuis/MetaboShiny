@@ -81,10 +81,10 @@ get_matches <- function(cpd = NA,
     RSQLite::dbExecute(conn, query.one)
     #  2. get isotopes for these matchies (reverse search)
 
-        #RSQLite::dbExecute(conn,"drop table isotopes")
+    #RSQLite::dbExecute(conn,"drop table isotopes")
     
     query.two <- gsubfn::fn$paste(strwrap(
-      "SELECT cpd.baseformula,cpd.fullformula, cpd.adduct, cpd.isoprevalence, cpd.basecharge, int.* 
+      "SELECT cpd.baseformula, cpd.fullformula, cpd.adduct, cpd.fullmz, cpd.isoprevalence, cpd.basecharge, int.*
       FROM db.extended cpd indexed by e_idx1
       JOIN unfiltered u
       ON u.baseformula = cpd.baseformula
@@ -97,64 +97,85 @@ get_matches <- function(cpd = NA,
     
     table <- RSQLite::dbGetQuery(conn,query.two)
     
-    table <- table[complete.cases(table),]
+    table <- as.data.table(table[complete.cases(table),])
     
-    p.cpd <<- split(x = table, 
-                   f = table$baseformula)
-    
+    p.cpd <- split(x = table, 
+                   f = list(table$baseformula, table$adduct))
     
     if(nrow(table) > 0){
-      res_rows <- pbapply::pblapply(p.cpd, cl=NULL, function(cpd_tab){
+      res_rows <- pbapply::pblapply(p.cpd, cl=session_cl, function(cpd_tab){
+        
+        # aggregate multimz matches
+        
+        # cpd_tab <- data.table::setDT(cpd_tab)[, .(mzmed = mean(mzmed), intensity = sum(intensity)), 
+        #                       by=.(baseformula, fullformula, adduct, isoprevalence, filename)]
+        # 
+        # formula = unique(cpd_tab$baseformula)
+        # adduct = unique(cpd_tab$adduct)
+        
+        cpd_tab <- data.table::setDT(cpd_tab)[, .(mzmed = mean(mzmed), intensity = sum(intensity)),
+                                  by=.(baseformula, fullmz, fullformula, adduct, isoprevalence, filename)]
+        
+        formula = unique(cpd_tab$baseformula)
+        adduct = unique(cpd_tab$adduct)
+
+        # https://assets.thermofisher.com/TFS-Assets/CMD/Reference-Materials/pp-absoluteidq-qexactive-ms-targeted-metabolic-lipid-metabolomics2017-en.pdf
+        
         if(any(cpd_tab$isoprevalence > 99.999999)){
-          formula = unique(cpd_tab$baseformula)
-          adduct = unique(cpd_tab$adduct)
-          # - - - - - - - - -
-          sorted <- unique(cpd_tab[order(cpd_tab$isoprevalence, 
-                                         decreasing = TRUE),])
+         
+           # - - - - - - - - -
+          
+          sorted <- data.table::as.data.table(unique(cpd_tab[order(cpd_tab$isoprevalence, 
+                                         decreasing = TRUE),]))
+          
           split.by.samp <- split(sorted, 
-                                 sorted$filename)
+                                 sorted[,"filename"])
           # - - - - - - - - - 
           
           score <- sapply(split.by.samp, function(samp_tab){
-            samp_tab <- data.table::as.data.table(samp_tab)
             
-            print(samp_tab)
+            samp_tab <- data.table::as.data.table(samp_tab)
+
             if(nrow(samp_tab) == 1){
-              res = NA
+              res = 0
             }else{
-              maxint <- samp_tab[isoprevalence == max(isoprevalence),]$intensity
+              # maxint <- samp_tab[isoprevalence == max(isoprevalence),]$intensity
+              # 
+              # predicted = (samp_tab[-(isoprevalence == max(isoprevalence)),]$intensity / maxint ) * 
+              #   samp_tab[isoprevalence == max(isoprevalence),]$isoprevalence
+              # actual = samp_tab[-(isoprevalence == max(isoprevalence)),]$isoprevalence
+              # 
+              # # - - -
+              # 
+              # deltaSignal = abs(predicted - actual);
+              # percentageDifference = deltaSignal / actual # Percent by element.
+              # meanPctDiff = mean(percentageDifference) #Average percentage over all elements.
+              # res = meanPctDiff * 100.0
               
-              predicted = (samp_tab[-(isoprevalence == max(isoprevalence)),]$intensity / maxint ) * 
-                samp_tab[isoprevalence == max(isoprevalence),]$isoprevalence
-              actual = samp_tab[-(isoprevalence == max(isoprevalence)),]$isoprevalence
+              theor_mat <- samp_tab[,c("fullmz", "isoprevalence")]
+              theor <- matrix(ncol = nrow(theor_mat), nrow = 2, data = c(theor_mat$fullmz, theor_mat$isoprevalence),byrow = T)
               
-              print(predicted)
-              print(actual)
-              # - - -
+              obs_mat <- samp_tab[,c("mzmed", "intensity")]
+              obs <- matrix(ncol = nrow(obs_mat), nrow = 2, data = c(obs_mat$mzmed, obs_mat$intensity),byrow = T)
+            
+              theor[2,] <- theor[2,]/sum(theor[2,])
+              obs[2,] <- obs[2,]/sum(obs[2,])
               
-              # print(samp_tab)
-              # print(actual)
-              # print(predicted)
-              res = mape(actual = actual, pred = predicted)
-              #print(res)
-              #print("- - -")
+              res <- InterpretMSSpectrum::mScore(obs=obs, the=theor, dppm = 1, int_prec = 0.225)
+              
             }
             res
-            # if(samp_tab[isoprevalence == max(samp_tab$isoprevalence),intensity] == max(samp_tab$intensity)) 1 else 0
           })
           
-          print(unlist(score))
-          if(all(is.na(unlist(score)))){mean_error = "???"}else{
-            mean_error <- round(sum(unlist(score),na.rm = T)/length(unique(table$filename)), digits=2)
-          }
+          mean_error <- round(mean(score, na.rm=TRUE), digits = 1)
           
           if(mean_error == 0) print(score)
+          print(formula)
           #confidence = sum(unlist(score))/length(split.by.samp) * 100.00
           data.table::data.table(baseformula = formula,
                                  adduct = adduct,
-                                 error = mean_error #round(confidence,digits = 2)
-                                 ) 
-        }else{
+                                score = as.numeric(mean_error))
+         }else{
           data.table::data.table()
         }
       })

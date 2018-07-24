@@ -267,6 +267,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                               "None"="NULL")),
                                     selectInput('miss_type', 'How to deal with missing values?', choices = list("Feature minimum"="colmin",
                                                                                                                 "Total minimum"="min",
+                                                                                                                "Random forest"="rf",
                                                                                                                 #"Impute w/ regression"="regr",
                                                                                                                 "KNN imputation"="knn",
                                                                                                                 "SVD imputation"="svdImpute",
@@ -280,8 +281,6 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                     switchButton(inputId = "remove_outliers",
                                                                           label = "Exclude outliers?", 
                                                                           value = TRUE, col = "BW", type = "YN"),
-                                    # selectInput('batch_corr', 'Correct batch effect?', choices = list("Yes"=TRUE, 
-                                    #                                                                    "No"=FALSE)),
                                     actionButton("initialize", "Go", icon=icon("hand-o-right")),
                                     hr(),
                                     imageOutput("dataset_icon",inline = T),
@@ -371,6 +370,33 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                    div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
                                                                                           )))
                                                                       ),
+                                                             tabPanel(title=NULL, icon=icon("bookmark"),
+                                                                      br(),
+                                                                      helpText("You can use this tab to save specific analyses for later."),
+                                                                      fileInput("import_analysis", "Import .metshi file",
+                                                                                multiple = F,
+                                                                                accept = c(".metshi")),
+                                                                      actionButton("import_intersect", "Import", icon = icon("box-open")),
+                                                                      textInput("metshi_name", "Name for newly generated analyses:",value = ""),
+                                                                      fluidRow(column(5, 
+                                                                                      DT::dataTableOutput("metshi_from")
+                                                                                      ),
+                                                                               column(2,
+                                                                                      br(),br(),br(),br(),br(),
+                                                                                      fluidRow(actionButton("to_metshi", label="", icon = icon("arrow-right"))),
+                                                                                      fluidRow(actionButton("rmv_metshi", label="", icon = icon("times")))                                                                                      ),
+                                                                               column(5,
+                                                                                      DT::dataTableOutput("metshi_to")
+                                                                                      )
+                                                                               ),
+                                                                      br(),
+                                                                      #textOutput({renderText(names(mSet$analSet))}),
+                                                                      shinySaveButton("save_metshi", 
+                                                                                      "Save current analysis", 
+                                                                                      "Save file as ...", 
+                                                                                      filetype=list("metshi")
+                                                                                      )
+                                                                      ),
                                                              tabPanel(title=NULL, icon=icon("link"),
                                                                       br(),
                                                                       helpText("You can use this tab to find overlapping hits between analyses."),
@@ -387,7 +413,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                       
                                                                       uiOutput("venn_ml_ui"),
                                                                       
-                                                                      sliderInput("venn_tophits", label = "Only include top", min = 1, max = 200, post = " hits", value=20),
+                                                                      sliderInput("venn_tophits", label = "Only include top", min = 1, max = 1000, post = " hits", value=20),
                                                                       
                                                                       # - - - - - - - - - - - - - - -
                                                                       actionButton("build_venn", label = "Find overlap"),

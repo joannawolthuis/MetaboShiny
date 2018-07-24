@@ -38,7 +38,7 @@ get.csv <- function(patdb,
     query <- strwrap(gsubfn::fn$paste("select distinct card_id from individual_data"))
     in_excel <- RSQLite::dbGetQuery(conn, query)
     
-    intersect(in_csv$filename, in_excel$card_id)
+    #intersect(in_csv$filename, in_excel$card_id)
     
     query <- strwrap(gsubfn::fn$paste("select distinct d.*, s.*, b.*,
                               i.mzmed as identifier,
@@ -58,7 +58,7 @@ get.csv <- function(patdb,
   }
   RSQLite::dbDisconnect(conn)
   z.dt <- as.data.table(z)
-  nvars = ncol(z.dt) - 3
+  nvars = ncol(z.dt) - 2
   cast.dt <- dcast.data.table(z.dt, 
                               formula = ... ~ identifier,
                               fun.aggregate = sum, 

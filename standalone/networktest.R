@@ -132,22 +132,37 @@ post_set(PN, "IL-4")
 
 # - - - infer from mz - - -
 
-source <- mSet$dataSet$norm[,1:20]
+source <- mSet$dataSet$norm
 
-#install.packages("bnlearn")
+require(GeneNet)
 
-library(bnlearn)
-library(Rgraphviz)
+inferred.pcor <- ggm.estimate.pcor(source)
+xtest.results <- network.test.edges(inferred.pcor)
+xtest.results[1:20,]
 
-hist(as.matrix(source))
-plot(source[, 1], source[,2])
+# extract network containing edges with prob > 0.9 (i.e. local fdr < 0.1)
+net <- extract.network(xtest.results, cutoff.ggm=0.99)
+head(net)
 
-#heatmap(t(as.matrix(source)), col=colorRampPalette(c("blue", "white", "red"))(100), scale="row")
+# try to visualize??
 
-dsachs = discretize(source, method = "hartemink", breaks = 3, ibreaks = 60, idisc = "quantile")
-## model average
-boot = boot.strength(data = dsachs, R = 500, algorithm = "tabu", algorithm.args=list(tabu = 50))
-boot[(boot$strength >= 0.85) & (boot$direction >= 0.5), ]
-plot(boot)
-avg.boot = averaged.network(boot, threshold = 0.85)
-graphviz.plot(avg.boot)
+all_edges <- net[1:5,]
+edges_reformat <- unlist(lapply(1:nrow(all_edges), function(j){
+  unlist(all_edges[j,c("node1", "node2")])
+}))
+
+g <- igraph::make_graph(edges = edges_reformat, directed = TRUE)
+
+igraph::plot.igraph(g)
+
+# how many are significant based on FDR cutoff Q=0.05 ?
+num.significant.1 <- sum(xtest.results$qval <= 0.05)
+xtest.results[1:num.significant.1,]
+
+# how many are significant based on "local fdr" cutoff (prob > 0.9) ?
+num.significant.2 <- sum(xtest.results$prob > 0.9)
+xtest.results[test.results$prob > 0.9,]
+
+# parameters of the mixture distribution used to compute p-values etc.
+c <- fdrtool(sm2vec(inferred.pcor), statistic="correlation")
+c$param

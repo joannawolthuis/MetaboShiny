@@ -4,25 +4,29 @@ shinyServer(function(input, output, session) {
   
   source('./backend/scripts/joanna/shiny_general.R')
   
-  tbl <<- NA
+  tbl <- NA
   tables <- list()
   db_search_list <- c()
   theme_update(plot.title = element_text(hjust = 0.5))
   color.function <- rainbow
   patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
-  csv_loc <<- file.path(options$work_dir, paste0(options$proj_name, ".csv"))
+  csv_loc <- file.path(options$work_dir, paste0(options$proj_name, ".csv"))
   shinyOptions(progress.style="old")
-  ppm <<- 2
-  cf <<- rainbow
-  nvars <<- 2
-  ncores <<- parallel::detectCores() - 1
-  session_cl <<- parallel::makeCluster(ncores)
+  ppm <- 2
+  cf <- rainbow
+  nvars <- 2
+  ncores <- parallel::detectCores() - 1
+  session_cl <- parallel::makeCluster(ncores)
+  metshi <<- list()
   
   parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
     "mape",
     "flattenlist"
   ))
-  # -----------------------------------------------
+  
+  parallel::clusterEvalQ(session_cl, library(data.table))
+  
+  # - - - - - - - - - - - - -
   
   spinnyimg <- reactiveVal("www/electron.png")
   
@@ -88,7 +92,9 @@ shinyServer(function(input, output, session) {
                  "globaltest", "GlobalAncova", "Rgraphviz","KEGGgraph",
                  "preprocessCore", "genefilter", "pheatmap", "igraph",
                  "RJSONIO", "SSPA", "caTools", "ROCR", "pROC", "sva", "rJava",
-                 "colorRamps", "grDevices", "KEGGREST", "manhattanly")
+                 "colorRamps", "grDevices", "KEGGREST", "manhattanly", 
+                 "BatchCorrMetabolomics", "R.utils", "rgl", "glmnet", "caret",
+                 "RandomForest", "TSPred", "VennDiagram", "rcdk")
   
   options <- getOptions(".conf")
   
@@ -214,7 +220,7 @@ shinyServer(function(input, output, session) {
                                    ,tabPanel("", icon=icon("area-chart"),
                                              plotly::plotlyOutput('fc_overview_plot',height="300px")
                                    ))
-                        ),
+               ),
                # =================================================================================
                # tabPanel(h3("RandomForest"), value="rf",
                #          fluidRow(plotly::plotlyOutput('rf_specific_plot',width="100%")),
@@ -622,7 +628,7 @@ shinyServer(function(input, output, session) {
   observeEvent(input$update_packages, {
     req(packages)
     # ----------
-    p_load(char = packages, update = T, character.only = T)
+    pacman::p_load(char = packages, update = T, character.only = T)
     # ---------- 
     firstRun <<- F
     setOption(".conf", "packages_installed", "Y")
@@ -634,8 +640,8 @@ shinyServer(function(input, output, session) {
            height = 70)
     }, deleteFile = FALSE)
     # --- restart ---??
-    stopApp()
-    runApp(".")
+    #stopApp()
+    #runApp(".")
   })
   
   
@@ -889,7 +895,6 @@ shinyServer(function(input, output, session) {
       # ---------------------------
       withProgress({
         
-        parallel::clusterEvalQ(session_cl, library(data.table))
         parallel::clusterEvalQ(session_cl, library(enviPat))
         parallel::clusterEvalQ(session_cl, library(KEGGREST))
         parallel::clusterEvalQ(session_cl, library(RCurl))
@@ -916,15 +921,15 @@ shinyServer(function(input, output, session) {
           "flattenlist"
         ))
         
-        # pkgs = c("data.table", "enviPat", "KEGGREST", "XML", "SPARQL", "RCurl")
-        # parallel::clusterCall(session_cl, function(pkgs) {
-        #   for (req in pkgs) {
-        #     require(req, character.only = TRUE)
-        #   }
-        # }, pkgs = pkgs)
-        #setProgress(message = "Working...")
-        #build.base.db(db, outfolder=options$db_dir, cl=session_cl)
-        setProgress(0.5)
+        pkgs = c("data.table", "enviPat", "KEGGREST", "XML", "SPARQL", "RCurl")
+        parallel::clusterCall(session_cl, function(pkgs) {
+          for (req in pkgs) {
+            require(req, character.only = TRUE)
+          }
+        }, pkgs = pkgs)
+        shiny::setProgress(session=session, message = "Working...")
+        build.base.db(db, outfolder=options$db_dir, cl=session_cl)
+        shiny::setProgress(session=session, 0.5)
         build.extended.db(db, 
                           outfolder=options$db_dir,
                           adduct.table = adducts, 
@@ -941,7 +946,8 @@ shinyServer(function(input, output, session) {
     patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
     # --------------------
     withProgress({
-      setProgress(.1,message = "Loading outlists into memory...")
+      shiny::setProgress(session=session, value= .1,message = "Loading outlists into memory...")
+      
       req(input$outlist_neg, input$outlist_pos, input$excel)
       
       build.pat.db(patdb,
@@ -950,7 +956,7 @@ shinyServer(function(input, output, session) {
                    negpath = input$outlist_neg$datapath,
                    overwrite = T)
       
-      setProgress(.95,message = "Adding excel sheets to database...")
+      shiny::setProgress(session=session, value= .95,message = "Adding excel sheets to database...")
       
       exp_vars <<- load.excel(input$excel$datapath, patdb)})
   })
@@ -970,6 +976,7 @@ shinyServer(function(input, output, session) {
   observeEvent(input$import_csv, {
     req(input$pat_csv)
     csv_loc <<- input$pat_csv$datapath
+    print(csv_loc)
     output$csv_upload_check <- renderImage({
       # When input$n is 3, filename is ./images/image3.jpeg
       filename <- normalizePath('www/yes.png')
@@ -986,7 +993,7 @@ shinyServer(function(input, output, session) {
     req(options$work_dir)
     # ---------
     withProgress({
-      setProgress(1/4)
+      shiny::setProgress(session=session, value= 1/4)
       # create csv
       # input = list(group_by = "mz", exp_type = "stat")
       #print(if(input$broadvars) "individual_data" else "setup")
@@ -1026,13 +1033,13 @@ shinyServer(function(input, output, session) {
       )
       # -------------------------
       # save csv
-      setProgress(2/4)
+      shiny::setProgress(session=session, value= 2/4)
       csv_loc <<- file.path(options$work_dir, paste0(options$proj_name,".csv"))
       fwrite(tbl.adj, csv_loc, sep="\t")
       # --- overview table ---
       nvars <- length(tbl.adj[,1:(which(colnames(tbl.adj) == "$"))])
       
-      setProgress(3/4)
+      shiny::setProgress(session=session, value= 3/4)
       
       output$csv_tab <-DT::renderDataTable({
         overview_tab <- if(input$exp_type == "time_std"){
@@ -1093,6 +1100,9 @@ shinyServer(function(input, output, session) {
   observeEvent(input$check_csv, {
     # ----------------------
     
+    print(csv_loc)
+    
+    #csv_loc <- "/Users/jwolthuis/Analysis/SP/CHK_0718.csv"
     csv <- fread(csv_loc, 
                  header = T)
     
@@ -1165,7 +1175,7 @@ shinyServer(function(input, output, session) {
     # match
     withProgress({
       # get curr values from: input$ exp_type, filt_type, norm_type, scale_type, trans_type (later)
-      setProgress(.1)
+      shiny::setProgress(session=session, value= .1)
       # ------------------------------
       #Below is your R command history: 
       mSet <<- switch(input$exp_type,
@@ -1203,9 +1213,15 @@ shinyServer(function(input, output, session) {
       
       #f = fread(csv_loc, header = TRUE)
       
+      print(csv_loc)
+      
       csv_orig <- fread(csv_loc, 
                         data.table = TRUE,
                         header = T)
+      
+      print(csv_orig[1:10,1:20])
+      
+      csv_orig$Sample <- gsub(csv_orig$Sample, pattern=" ", replacement="")
       
       nvars <- length(csv_orig[,1:(which(colnames(csv_orig) == "$"))])
       
@@ -1246,13 +1262,18 @@ shinyServer(function(input, output, session) {
         sums <- rowSums(csv_subset[, -c(1:length(remain)),with=FALSE],na.rm = TRUE)
         names(sums) <- csv_subset$Sample
         outliers = c(car::Boxplot(as.data.frame(sums)))
-        
         print(paste("Outliers removed (based on total signal):", paste(outliers, collapse=" and ")))
-        csv_temp_no_out <- csv_subset[!(Sample %in% outliers)]
+        csv_temp_no_out <- csv_subset[!(Sample %in% outliers),]
       } else{
         csv_temp_no_out <- csv_subset
       }
       
+      # # - - - low signal samples - - -
+      
+      complete.perc <- rowMeans(!is.na(csv_temp_no_out))
+      keep <- which(complete.perc > .2)
+      print(keep)
+      csv_temp_no_out <- csv_temp_no_out[keep,]
       
       batchview = if(condition == "Batch") TRUE else FALSE
       
@@ -1268,7 +1289,7 @@ shinyServer(function(input, output, session) {
         }else{
           csv_temp_filt <- csv_temp_no_out[which(csv_temp_no_out$Sample %in% keep_samps), -"Batch"]
         }
-      }else{
+      }else{ 
         csv_temp_filt <- csv_temp_no_out[, -"Batch"]
       }
       
@@ -1279,7 +1300,6 @@ shinyServer(function(input, output, session) {
         fwrite(csv_temp_filt[,-batches, with=FALSE], 
                csv_loc_no_out)  
       }else{
-        
         batch_table <- csv_temp_filt[,c("Sample"),with=FALSE]
         fwrite(csv_temp_filt, 
                csv_loc_no_out)  
@@ -1295,42 +1315,49 @@ shinyServer(function(input, output, session) {
       
       mSet$dataSet$batches <<- batch_table
       
-      # ----------- sanity check ------------
+      # - - - sanity check - - -
       
       mSet <<- SanityCheckData(mSet)
       
-      # input = list(perc_limit = 50, miss_type = "colmin", filt_type = "iqr", norm_type = "QuantileNorm", trans_type = "LogNorm", scale_type = "AutoNorm", ref_var=NULL)
-      
+      #input <- list(perc_limit = 80)
+     # mSet$dataSet$preproc[mSet$dataSet$preproc=='NA'] <- NA
+
       mSet <<- RemoveMissingPercent(mSet, 
                                     percent = input$perc_limit/100)
       
       if(input$miss_type != "none"){
-        # if(input$miss_type == "regr"){
-          #require(mice)
+        if(input$miss_type == "pmm"){
+          require(mice)
           #base <- mSet$dataSet$orig
-          #base <- mSet$dataSet$preproc
-          #imp <- mice(base, printFlag = TRUE)
+          base <- mSet$dataSet$preproc
+          imp <- mice::mice(base, printFlag = TRUE)
           #mSet$dataSet$norm <<- imp
-        # }else if(input$miss_type == "rf"){
-        #   imp <<- randomForest::rfImpute(Species ~ ., iris.na)
-        #   
-        #   data(iris)
-        #   iris.na <- iris
-        #   set.seed(111)
-        #   ## artificially drop some data values.
-        #   for (i in 1:4) iris.na[sample(150, sample(20)), i] <- NA
-        #   set.seed(222)
-        #   iris.imputed <- randomForest::rfImpute(x=iris.na, y=iris.na$Species)
-        #   
-        # }else{
-        mSet <<- ImputeVar(mSet,
-                           method = input$miss_type)
-        #}
+        }else if(input$miss_type == "rf"){
+          samples <- rownames(mSet$dataSet$preproc)
+          
+          w.missing <- mSet$dataSet$preproc
+          w.missing <- apply(w.missing, 2, as.numeric)
+          library(doParallel)
+          #cl <- makeCluster(3)
+          registerDoParallel(session_cl)
+          
+          imp <- missForest::missForest(w.missing, parallelize = "variables")
+          #w.missing <- cbind(w.missing, Sample = c(1))
+          #imp <- randomForest::rfImpute(Sample ~ ., data = w.missing)
+          #rownames(imp) <- samples
+          mSet$dataSet$procr <<- imp
+          # - - - - - - - - - - - - 
+        }else{
+          mSet <<- ImputeVar(mSet,
+                             method = #"knn"
+                              input$miss_type
+                            )
+        }
       }
       # ------------------------
       
       if(input$filt_type != "none"){
-        print("filtering...")
+        print("Filtering...")
         mSet <<- FilterVariable(mSet,
                                 filter = input$filt_type,
                                 qcFilter = "F",
@@ -1338,7 +1365,7 @@ shinyServer(function(input, output, session) {
       }
       # ------------------------------------
       
-      setProgress(.2)
+      shiny::setProgress(session=session, value= .2)
       
       keep <- intersect(first_part$Sample, rownames(mSet$dataSet$preproc))
       
@@ -1358,7 +1385,6 @@ shinyServer(function(input, output, session) {
                              transNorm = input$trans_type,
                              scaleNorm = input$scale_type,
                              ref = input$ref_var)
-      
       
       second_part_no_out <- mSet$dataSet$norm[match(rownames(mSet$dataSet$norm),
                                                     first_part_no_out$Sample),]
@@ -1381,18 +1407,18 @@ shinyServer(function(input, output, session) {
       #                       )
       # ====
       
-      setProgress(.4)
+      shiny::setProgress(session=session, value= .4)
       
       #mSet <- mSet_beforebatch
       
       #devtools::install_git("https://gitlab.com/CarlBrunius/batchCorr.git")
-
+      
       smps <- rownames(mSet$dataSet$norm)
       
       qc_rows <- which(grepl(pattern = "QC", x = smps))
       
       # - - - - - - - - - - - - - - - - - - - - - - -
-
+      
       if(batch_corr){
         
         if("Batch" %in% colnames(mSet$dataSet$batches) & length(qc_rows) > 0){
@@ -1500,26 +1526,26 @@ shinyServer(function(input, output, session) {
       print(rownames(mSet$dataSet$norm))
       
       
-      setProgress(.5)
+      shiny::setProgress(session=session, value= .5)
       
-      setProgress(.6)
+      shiny::setProgress(session=session, value= .6)
       varNormPlots <- ggplotNormSummary(mSet)
       output$var1 <- renderPlot(varNormPlots$tl)
       output$var2 <- renderPlot(varNormPlots$bl)
       output$var3 <- renderPlot(varNormPlots$tr)
       output$var4 <- renderPlot(varNormPlots$br)
       
-      setProgress(.7)
+      shiny::setProgress(session=session, value= .7)
       sampNormPlots <-  ggplotSampleNormSummary(mSet)
       output$samp1 <- renderPlot(sampNormPlots$tl)
       output$samp2 <- renderPlot(sampNormPlots$bl)
       output$samp3 <- renderPlot(sampNormPlots$tr)
       output$samp4 <- renderPlot(sampNormPlots$br)
-      setProgress(.8)
+      shiny::setProgress(session=session, value= .8)
       
       mSet$dataSet$adducts <<- selected_adduct_list
       update.UI()  
-      setProgress(.9)
+      shiny::setProgress(session=session, value= .9)
       
     })
   })
@@ -1678,13 +1704,13 @@ shinyServer(function(input, output, session) {
                  pc = 1:length(names(mSet$analSet$pca$variance)),
                  var = mSet$analSet$pca$variance)
                p <- ggplot2::ggplot(data=df[1:20,]) + ggplot2::geom_line(mapping = aes(x=pc, y=var, colour=var), cex=3) + 
-                    plot.theme(base_size = 10) +
-                    ggplot2::scale_colour_gradientn(colours = cf(256)) +
-                    theme(axis.text=element_text(size=10),
-                          axis.title=element_text(size=19,face="bold"),
-                          #legend.title=element_text(size=15),
-                          #legend.text=element_text(size=12),
-                          legend.position="none")
+                 plot.theme(base_size = 10) +
+                 ggplot2::scale_colour_gradientn(colours = cf(256)) +
+                 theme(axis.text=element_text(size=10),
+                       axis.title=element_text(size=19,face="bold"),
+                       #legend.title=element_text(size=15),
+                       #legend.text=element_text(size=12),
+                       legend.position="none")
                # - - - - - 
                p
                #ggplotly(p)
@@ -1988,17 +2014,17 @@ shinyServer(function(input, output, session) {
              withProgress({
                mSet <<- PLSR.Anal(mSet,
                                   TRUE)
-               setProgress(0.3)
+               shiny::setProgress(session=session, value= 0.3)
                
-               mSet <<- PLSDA.CV(mSet,compNum = 3)
-               mSet <<- PLSDA.Permut(mSet,num = 100)
+               mSet <<- PLSDA.CV(mSet,compNum = 5)
+               mSet <<- PLSDA.Permut(mSet,num = 300)
                
                output$plsda_cv_plot <- renderPlot({ggPlotClass(cf = cf)})
                output$plsda_perm_plot <- renderPlot({ggPlotPerm(cf = cf)})
                
                print("here")
                # - - - - - - - - - - - 
-               setProgress(0.6)
+               shiny::setProgress(session=session, value= 0.6)
                # - - overview table - -
                plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar 
                                                   / mSet$analSet$plsr$Xtotvar 
@@ -2007,10 +2033,10 @@ shinyServer(function(input, output, session) {
                                             keep.rownames = T)
                colnames(plsda.table) <- c("Principal Component", "% variance")
                plsda.table[, "Principal Component"] <- paste0("PC", 1:nrow(plsda.table))
-               setProgress(0.9)
+               shiny::setProgress(session=session, value= 0.9)
                # --- coordinates ---
-               coords <<- mSet$analSet$plsr$scores
-               colnames(coords) <<- paste0("PC", 1:ncol(coords))
+               coords <- mSet$analSet$plsr$scores
+               colnames(coords) <- paste0("PC", 1:ncol(coords))
                # --- vip table ---
                colnames(mSet$analSet$plsda$vip.mat) <- paste0("PC", 1:ncol(mSet$analSet$plsda$vip.mat))
                compounds_pc <- as.data.table(mSet$analSet$plsda$vip.mat,keep.rownames = T)
@@ -2055,7 +2081,7 @@ shinyServer(function(input, output, session) {
            })
     # -----------
     output$plot_plsda_3d <- plotly::renderPlotly({
-
+      
       x <- "PC1"
       y <- "PC2"
       z <- "PC3"
@@ -2189,7 +2215,7 @@ shinyServer(function(input, output, session) {
       curr[,(mzCols):= lapply(.SD, function(x) as.numeric(x)), .SDcols = mzCols]
       
       print(input$ml_attempts)
-
+      
       goes = as.numeric(input$ml_attempts)
       
       print(goes)
@@ -2204,24 +2230,35 @@ shinyServer(function(input, output, session) {
         
         print(i)
         print(ml_train_perc)
-      
+        
         if(ml_train_regex == "" & ml_test_regex == ""){ # BOTH ARE NOT DEFINED
           test_idx = caret::createDataPartition(y = curr$Label, p = ml_train_perc, list = FALSE)
-          train_idx = setdiff(1:nrow(curr), train_idx)
-        }else if(ml_train_regex != ""){ #ONLY TRAIN IS DEFINED
-          train_idx = grep(config$Sample, pattern = input$ml_train_regex)
-          test_idx = setdiff(1:nrow(curr), train_idx)
-        }else{ # ONLY TEST IS DEFINED
-          test_idx = grep(config$Sample, pattern = input$ml_test_regex)
           train_idx = setdiff(1:nrow(curr), test_idx)
+          inTrain = train_idx
+          inTest = test_idx
+        }else if(ml_train_regex != ""){ #ONLY TRAIN IS DEFINED
+          train_idx = grep(config$Sample, pattern = ml_train_regex)
+          test_idx = setdiff(1:nrow(curr), train_idx)
+          reTrain <- caret::createDataPartition(y = config[train_idx, Label], p = ml_train_perc)
+          inTrain <- train_idx[reTrain$Resample1]
+          inTest = test_idx
+        }else{ # ONLY TEST IS DEFINED
+          test_idx = grep(config$Sample, pattern = ml_test_regex)
+          train_idx = setdiff(1:nrow(curr), test_idx)
+          reTrain <- caret::createDataPartition(y = config[train_idx, Label], p = ml_train_perc)
+          inTrain <- train_idx[reTrain$Resample1]
+          
+          inTest <- test_idx
+          #reTest <- caret::createDataPartition(y = config[test_idx, Label], p = ml_train_perc)
+          #inTest <- test_idx[reTest$Resample1]
         }
         
         # - - - re-split - - -
-        reTrain <- caret::createDataPartition(y = config[train_idx, Label], p = ml_train_perc)
-        inTrain <- train_idx[reTrain$Resample1]
-        reTest <- caret::createDataPartition(y = config[test_idx, Label], p = ml_train_perc)
-        inTest <- test_idx[reTest$Resample1]
-  
+        #reTrain <- caret::createDataPartition(y = config[train_idx, Label], p = ml_train_perc)
+        #inTrain <- train_idx[reTrain$Resample1]
+        #reTest <- caret::createDataPartition(y = config[test_idx, Label], p = ml_train_perc)
+        #inTest <- test_idx[reTest$Resample1]
+        
         print(inTrain)
         print(inTest)
         
@@ -2292,7 +2329,7 @@ shinyServer(function(input, output, session) {
       if(!"ml" %in% names(mSet$analSet)){
         print("wiping")
         mSet$analSet$ml <<- list(ls=list(), rf=list())
-        }
+      }
       
       ml_name <<- input$ml_name
       
@@ -2745,7 +2782,7 @@ shinyServer(function(input, output, session) {
         gset$name <- paste(gset$name, " (", dbname, ")", sep="")
         gset
       })
-      setProgress(0.33)
+      shiny::setProgress(session=session, value= 0.33)
       # --- only anova top 100 for now ---
       used.analysis <- input$enrich_stats
       if(used.analysis == "rf"){
@@ -2777,7 +2814,7 @@ shinyServer(function(input, output, session) {
       # -----------------------
       gset <- rbindlist(all_pathways)
       gset_proc <<- piano::loadGSC(gset)
-      setProgress(0.66)
+      shiny::setProgress(session=session, value= 0.66)
       
       # - - - - - - 
       
@@ -2810,12 +2847,15 @@ shinyServer(function(input, output, session) {
                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
         
       })
-      setProgress(1)
+      shiny::setProgress(session=session, value= 1)
     })
   })
   
+  
+  # === META ANALYSIS ===
+  
   # --- combine tab ---
-
+  
   observeEvent(input$venn_members, {
     
     print(input$venn_members)
@@ -2836,9 +2876,9 @@ shinyServer(function(input, output, session) {
                            rf = "random forest",
                            plsda = "PLSDA")
         selectInput(inputId = paste0(name,"_choice"), 
-                       label = gsubfn::fn$paste("Which $shorthand group(s):"), 
-                       multiple=TRUE,
-                       choices = options)
+                    label = gsubfn::fn$paste("Which $shorthand group(s):"), 
+                    multiple=TRUE,
+                    choices = options)
       })
       
       output$venn_ml_ui <- renderUI({uiElements})
@@ -2846,15 +2886,18 @@ shinyServer(function(input, output, session) {
       output$venn_ml_ui <- renderUI({br()})
     }
   })
-    
+  
   observeEvent(input$build_venn, {
-
+    
     # - - - cats - - -
     
     top = input$venn_tophits
     
     categories <- input$venn_members
-
+    
+    #top = 200
+    #categories = c("tt", "fc")
+    
     tables <- lapply(categories, function(name){
       
       tbls <- switch(name,
@@ -2907,7 +2950,7 @@ shinyServer(function(input, output, session) {
     
     flattened <<- flattenlist(tables)
     names(flattened) <<- gsub(x = names(flattened), pattern = "(.*\\.)(.*$)", replacement = "\\2")
-
+    
     circles = length(flattened)
     
     # - - - - - - --
@@ -2918,7 +2961,7 @@ shinyServer(function(input, output, session) {
                                            filename = NULL)
     
     # - - - - - - - - -
-                                                                                                                                                           
+    
     items <- strsplit(as.character(venn.plot), split = ",")[[1]]
     
     circ_values <<- data.frame(
@@ -2929,7 +2972,7 @@ shinyServer(function(input, output, session) {
     txt_values <- data.frame(
       id = grep(items, pattern="text"),
       value = unlist(lapply(grep(items, pattern="text"), function(i) venn.plot[[i]]$label))
-      )
+    )
     
     txt_values$value <- gsub(x = txt_values$value, pattern = "(.*\\.)(.*$)", replacement = "\\2")
     categories <- c(categories, input$rf_choice, input$ls_choice, input$plsda_choice)
@@ -2968,22 +3011,23 @@ shinyServer(function(input, output, session) {
     p <- ggplot(datapoly, 
                 aes(x = x, 
                     y = y)) + geom_polygon(colour="black", alpha=0.5, aes(fill=id, group=id)) +
-         geom_text(mapping = aes(x=x, y=y, label=value), data = numbers, size = 5) +
-         geom_text(mapping = aes(x=x, y=y, label=value), data = headers, fontface="bold", size = 7) +
-         theme_void() +
-         theme(legend.position="none") + 
-         scale_fill_gradientn(colours = cf(circles)) +
-         coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
+      geom_text(mapping = aes(x=x, y=y, label=value), data = numbers, size = 5) +
+      geom_text(mapping = aes(x=x, y=y, label=value), data = headers, fontface="bold", size = 7) +
+      theme_void() +
+      theme(legend.position="none") + 
+      scale_fill_gradientn(colours = cf(circles)) +
+      coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
     
     
-    output$venn_plot <- plotly::renderPlotly({ggplotly(p, tooltip = "label") %>% layout(plot_bgcolor='transparent') %>% 
-        layout(paper_bgcolor='transparent')
-      })
+    output$venn_plot <- plotly::renderPlotly({ggplotly(p, tooltip = "label")
+      #%>% layout(plot_bgcolor='transparent')
+      #%>% layout(paper_bgcolor='transparent')
+    })
     
     # updateSelectizeInput(session, "batch_var",
     #                      choices = opts[batch],
     #                      options = list(maxItems = 3L - (length(input$batch_var)))
-                         
+    
     updateSelectizeInput(session, "intersect_venn", choices = names(flattened))
     
   })
@@ -3005,6 +3049,62 @@ shinyServer(function(input, output, session) {
                     options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
     })
   })
+  
+  
+  output$metshi_from <- DT::renderDataTable({
+    # -------------
+    DT::datatable(data.table(experiment = metshi_tables$from), 
+                  selection = 'single',
+                  autoHideNavigation = T,
+                  options = list(lengthMenu = c(5, 10, 15), pageLength = 5, dom = 't'))
+  })
+  
+  
+  # - - - SAVING YOUR ANALYSES IN A .metshi FILE - - -
+  
+  # metshi_tables <- reactiveValues(from=names(mSet$analSet),
+  #                                 to=c())
+  # 
+  # observeEvent(input$to_metshi, {
+  #   analysis <- names(mSet$analSet)[input$metshi_from_rows_selected]
+  #   print("adding:")
+  #   print(analysis)
+  #   
+  #   new_name <- if(input$metshi_name != "") paste0("_", input$metshi_name) else ""
+  #   metshi[[paste0(analysis, new_name)]] <<- mSet$analSet[[analysis]]
+  #   
+  #   isolate(metshi_tables$to <- names(metshi))
+  #   
+  # })
+  # 
+  # 
+  # output$metshi_to <- DT::renderDataTable({
+  #   # - - - - - - - - - - - - -
+  #   DT::datatable(data.table(experiment = if(length(metshi_tables$to) > 0) metshi_tables$to else "..."), 
+  #                 selection = 'single',
+  #                 autoHideNavigation = T,
+  #                 options = list(lengthMenu = c(5, 10, 15), 
+  #                                pageLength = 5,
+  #                                dom = 't'))
+  # })
+  # 
+  # 
+  # observeEvent(input$rmv_metshi, {
+  #   rmv <- input$metshi_to_rows_selected
+  #   metshi <<- metshi[-rmv]
+  #   isolate(metshi_tables$to <- names(metshi))
+  # })
+  # 
+  # observe({
+  #   shinyFileSave(input, "save_metshi", roots = c(home = '~'), session=session)
+  #   print(input$save_metshi)
+  #   fileinfo <- parseSavePath(roots = c(home = '~'), input$save_metshi)
+  #   if (nrow(fileinfo) > 0) {
+  #     save(metshi, file = fileinfo$datapath)
+  #   }
+  # })
+  
+  # - - - - - - - - - - - - - - - - - - - - - - - - - -
   
   observeEvent(input$venn_tab_rows_selected, {
     #wanted.adducts.pos <- pos_adducts[input$pos_add_tab_rows_selected, "Name"]

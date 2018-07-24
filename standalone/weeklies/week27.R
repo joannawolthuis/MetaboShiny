@@ -327,3 +327,22 @@ ggplot2::ggplot(data = data) +
 
 
 # ---
+
+library(ChemmineR)
+
+dyn.load("/usr/local/opt/open-babel/lib/libopenbabel.5.dylib")
+smiset <- ChemmineR::loadSmiles(curr_struct)
+a=ChemmineR::smiles2sdf(smiles = as.character(curr_struct))
+## Import SDFset sample set
+data(sdfsample)
+(sdfset <- sdfsample)
+
+data("smisample")
+
+(sdf <- smiles2sdf(smisample[1:4]))
+
+
+## Plot single compound structure
+plotStruc(sdfset[[1]])
+
+sdf.visualize(sdfset)
