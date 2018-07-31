@@ -166,41 +166,53 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
            # --------------------------------------------------------------------------------------------------------------------------------
            tabPanel("", icon = icon("upload"), value="upload", ## this guy gives error???
                     fluidRow(column(9, align="center", 
-                                    h2("Create project"), 
-                                    br()
-                    )
+                                    h2("Create project"))),
+                    hr(),
+                    tabsetPanel(id="new_proj",selected = "From DB",
+                               tabPanel(id="db", title="From DB",
+                                        br(),br(),
+                                        fluidRow(
+                                          column(3, align="center",
+                                                        imageOutput("db_icon", inline = T),
+                                                        br(),br()
+                                                ),
+                                                column(3, align="center",
+                                                       br(),br(),
+                                                        imageOutput("excel_icon",inline = T)
+                                                        )
+                                                 ), 
+                                        fluidRow(
+                                          column(3, align="center",
+                                                 shinyFilesButton('database', 'DATABASE', 'Please select an database file', FALSE)
+                                          ),
+                                          column(3, align="center",
+                                                 shinyFilesButton('excel', 'METADATA', 'Please select an excel file', FALSE)
+                                          )
+                                        )
+                                        ),
+                               tabPanel(id="csv", title="From CSV",
+                                        br(),br(),
+                                        fluidRow(column(3,  align="center",
+                                                        imageOutput("pos_icon",inline = T),
+                                                        br(),br(),
+                                                        shinyFilesButton('outlist_pos', 'POSITIVE PEAKS', 'Please select a csv file', FALSE)
+                                        ),
+                                        column(3,  align="center",
+                                               imageOutput("excel_icon_2",inline = T),
+                                               br(),br(),
+                                               shinyFilesButton('excel', 'METADATA', 'Please select an excel file', FALSE)
+                                        ),
+                                        column(3,  align="center",
+                                               imageOutput("neg_icon",inline = T),
+                                               br(),br(),
+                                               shinyFilesButton('outlist_neg', 'NEGATIVE PEAKS', 'Please select a csv file', FALSE)
+                                        )
+                                        )
+                                        )
                     ),
-                    fluidRow(column(3,  align="center",
-                                    imageOutput("pos_icon",inline = T),
-                                    br(),br(),
-                                    fileInput("outlist_pos", "Positive outlist",
-                                              multiple = F,
-                                              accept = c(".RData"))),
-                             column(3,  align="center",
-                                    imageOutput("excel_icon",inline = T),
-                                    br(),br(),
-                                    fileInput("excel", "Excel workbook",
-                                              multiple = F,
-                                              accept = c(".xslx"))),
-                             column(3,  align="center",
-                                    imageOutput("neg_icon",inline = T),
-                                    br(),br(),
-                                    fileInput("outlist_neg", "Negative outlist",
-                                              multiple = F,
-                                              accept = c(".RData")))
-                    ),
+                    hr(),
                     fluidRow(column(9, align="center",
-                                    actionButton("create_db", "Go", icon = icon("magic")),
-                                    br(),br(),hr(),
-                                    h2("Import project"),
-                                    br(),
-                                    imageOutput("db_icon",inline = T),
-                                    br(),br(),
-                                    fileInput("pat_db", "",
-                                              multiple = F,
-                                              accept = c(".db")),
-                                    actionButton("import_db", "Import", icon = icon("hand-peace-o")),
-                                    imageOutput("db_upload_check",inline = T)
+                                    actionButton("create_db", "Go", icon = icon("magic"))
                     ))
            ),
            tabPanel("", icon=icon("file-text-o"), value="document",

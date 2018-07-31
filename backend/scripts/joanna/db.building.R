@@ -1193,37 +1193,37 @@ build.extended.db <- function(dbname,
   RSQLite::dbExecute(full.conn, "create index e_idx2 on extended(fullmz, foundinmode)")
   # ====== range table =====
   print("Adding range tables for raw peak grouping...")
-  ppm = 2 ### PPM HARD CODED HERE FOR NOW
-  # ------------------------
-  mzvals <- data.table::data.table(mzmed = total.table$fullmz,
-                                   foundinmode = total.table$foundinmode)
-  mzranges <- data.table::data.table(mzmin = pbapply::pbsapply(total.table$fullmz,cl=cl,
-                                                               FUN=function(mz, ppm){
-                                                                 mz - mz * (ppm / 1E6)}, ppm=ppm),
-                                     mzmax = pbapply::pbsapply(total.table$fullmz,cl=cl,
-                                                               FUN=function(mz, ppm){
-                                                                 mz + mz * (ppm / 1E6)}, ppm=ppm))
-  sql.make.meta <- strwrap("CREATE TABLE mzvals(
-                           ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                           mzmed decimal(30,13),
-                           foundinmode text)", width=10000, simplify=TRUE)
-  RSQLite::dbExecute(full.conn, sql.make.meta)
-  RSQLite::dbExecute(full.conn, "create index mzfind on mzvals(mzmed, foundinmode);")
-  # --- write vals to table ---
-  RSQLite::dbWriteTable(full.conn, "mzvals", mzvals, append=TRUE) # insert into
-  # --- make range table (choose if R*tree or not) ---
-  sql.make.rtree <- strwrap("CREATE VIRTUAL TABLE mzranges USING rtree(
-                            ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                            mzmin decimal(30,13),
-                            mzmax decimal(30,13));"
-                            , width=10000, simplify=TRUE)
-  sql.make.normal <- strwrap("CREATE TABLE mzranges(
-                             ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                             mzmin decimal(30,13),
-                             mzmax decimal(30,13));", width=10000, simplify=TRUE)
-  RSQLite::dbExecute(full.conn, sql.make.rtree)
-  # --- write ranges to table ---
-  RSQLite::dbWriteTable(full.conn, "mzranges", mzranges, append=TRUE) # insert into
+  # ppm = 2 ### PPM HARD CODED HERE FOR NOW
+  # # ------------------------
+  # mzvals <- data.table::data.table(mzmed = total.table$fullmz,
+  #                                  foundinmode = total.table$foundinmode)
+  # mzranges <- data.table::data.table(mzmin = pbapply::pbsapply(total.table$fullmz,cl=cl,
+  #                                                              FUN=function(mz, ppm){
+  #                                                                mz - mz * (ppm / 1E6)}, ppm=ppm),
+  #                                    mzmax = pbapply::pbsapply(total.table$fullmz,cl=cl,
+  #                                                              FUN=function(mz, ppm){
+  #                                                                mz + mz * (ppm / 1E6)}, ppm=ppm))
+  # sql.make.meta <- strwrap("CREATE TABLE mzvals(
+  #                          ID INTEGER PRIMARY KEY AUTOINCREMENT,
+  #                          mzmed decimal(30,13),
+  #                          foundinmode text)", width=10000, simplify=TRUE)
+  # RSQLite::dbExecute(full.conn, sql.make.meta)
+  # RSQLite::dbExecute(full.conn, "create index mzfind on mzvals(mzmed, foundinmode);")
+  # # --- write vals to table ---
+  # RSQLite::dbWriteTable(full.conn, "mzvals", mzvals, append=TRUE) # insert into
+  # # --- make range table (choose if R*tree or not) ---
+  # sql.make.rtree <- strwrap("CREATE VIRTUAL TABLE mzranges USING rtree(
+  #                           ID INTEGER PRIMARY KEY AUTOINCREMENT,
+  #                           mzmin decimal(30,13),
+  #                           mzmax decimal(30,13));"
+  #                           , width=10000, simplify=TRUE)
+  # sql.make.normal <- strwrap("CREATE TABLE mzranges(
+  #                            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+  #                            mzmin decimal(30,13),
+  #                            mzmax decimal(30,13));", width=10000, simplify=TRUE)
+  # RSQLite::dbExecute(full.conn, sql.make.rtree)
+  # # --- write ranges to table ---
+  # RSQLite::dbWriteTable(full.conn, "mzranges", mzranges, append=TRUE) # insert into
   # --- cleanup ---
   RSQLite::dbExecute(full.conn, "VACUUM")
   # ==========================
@@ -1246,38 +1246,8 @@ build.pat.db <- function(db.name,
   ppm = as.numeric(ppm)
   # ------------------------
   
-  #pospath = '/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML/results/specpks_grouped_wavelet/grouped_pos.csv'
-  #negpath = '/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML/results/specpks_grouped_wavelet/grouped_neg.csv'
-  # 
-  # db.name <- options$proj_name
-  # pospath <- "/Users/jwolthuis/Downloads/hpc/farms_chick_pos_2ppm.csv"
-  # negpath <- "/Users/jwolthuis/Downloads/hpc/farms_chick_neg_2ppm.csv"
-  # ppm=2
-  # rtree=T
-  # overwrite=TRUE
-  
   poslist <- fread(pospath,header = T)
   neglist <- fread(negpath,header = T)
-  
-  # --- remove peaks w more than 90% missing ---
-  
-  perc = 0.8
-  
-  print(dim(poslist))
-  print(dim(neglist))
-  
-  poslist <- poslist[-which(rowMeans(is.na(poslist[,-1])) > perc), ]
-  neglist <- neglist[-which(rowMeans(is.na(neglist[,-1])) > perc), ]
-  
-  print(dim(poslist))
-  print(dim(neglist))
-  
-  gc()
-  
-  # --- fix comma's if necessary ... ---
-  
-  #poslist <- as.data.table(apply(poslist, 2, gsub, patt=",", replace="."))
-  #neglist <- as.data.table(apply(neglist, 2, gsub, patt=",", replace="."))
   
   # ------------------------------------
   
@@ -1315,7 +1285,6 @@ build.pat.db <- function(db.name,
                                      mzmax = sapply(c(as.numeric(poslist$mzmed), as.numeric(neglist$mzmed)), 
                                                     FUN=function(mz, ppm){
                                                       mz + mz * (ppm / 1E6)}, ppm=ppm))
-  
   
   mzvals$foundinmode <- trimws(mzvals$foundinmode)
   
@@ -1360,17 +1329,25 @@ build.pat.db <- function(db.name,
   #mzintensities = rbind(poslist, neglist)
   
   # ------------------------
+  
   if(overwrite==TRUE & file.exists(db.name)) file.remove(db.name)
+  
   # --- reconnect / remake ---
+  
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), db.name)
+  
   # ------------------------
+  
   RSQLite::dbWriteTable(conn, "batchinfo", batch_info, append=FALSE) # insert into
+  
   # ------------------------
+  
   sql.make.int <- strwrap("CREATE TABLE mzintensities(
                           ID INTEGER PRIMARY KEY AUTOINCREMENT,
                           mzmed decimal(30,13),
                           filename text,
                           intensity float)", width=10000, simplify=TRUE)
+  
   RSQLite::dbExecute(conn, sql.make.int)
   
   setProgress(.60)
@@ -1395,6 +1372,7 @@ build.pat.db <- function(db.name,
   
   # --- write vals to table ---
   RSQLite::dbWriteTable(conn, "mzvals", mzvals, append=TRUE) # insert into
+  
   # --- make range table (choose if R*tree or not) ---
   sql.make.rtree <- strwrap("CREATE VIRTUAL TABLE mzranges USING rtree(
                             ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1406,6 +1384,7 @@ build.pat.db <- function(db.name,
                              mzmin decimal(30,13),
                              mzmax decimal(30,13));", width=10000, simplify=TRUE)
   RSQLite::dbExecute(conn, if(rtree) sql.make.rtree else sql.make.normal)
+  
   setProgress(.80)
   
   # --- write ranges to table ---

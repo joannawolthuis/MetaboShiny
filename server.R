@@ -4,6 +4,12 @@ shinyServer(function(input, output, session) {
   
   source('./backend/scripts/joanna/shiny_general.R')
   
+  home <- normalizePath("~")
+  volumes <- c('R Installation'=R.home(),
+               'Home'=home,
+               'Downloads'=file.path(home, "Downloads"),
+               'Desktop'=file.path(home, "Desktop")
+               )
   tbl <- NA
   tables <- list()
   db_search_list <- c()
@@ -134,7 +140,8 @@ shinyServer(function(input, output, session) {
                   list(name = 'pos_icon', path = 'www/handpos.png', dimensions = c(120, 120)),
                   list(name = 'neg_icon', path = 'www/handneg.png', dimensions = c(120, 120)),
                   list(name = 'excel_icon', path = 'www/excel.png', dimensions = c(120, 120)),
-                  list(name = 'db_icon', path = 'www/office.png', dimensions = c(100, 100)),
+                  list(name = 'excel_icon_2', path = 'www/excel.png', dimensions = c(120, 120)),
+                  list(name = 'db_icon', path = 'www/servers.png', dimensions = c(150, 150)),
                   list(name = 'csv_icon', path = 'www/office.png', dimensions = c(100, 100)),
                   list(name = 'dataset_icon', path = 'www/office.png', dimensions = c(100, 100))
   )
@@ -305,9 +312,10 @@ shinyServer(function(input, output, session) {
                                                       max = 100,
                                                       step = 1,
                                                       value = 60, 
-                                                      post = "%")),
+                                                      post = "%"),
+                                  selectInput("ml_folds", label="Fold CV",choices = c("5", "10", "20", "50", "LOOCV"),multiple = F)),
                            column(width=2, 
-                                  switchButton(inputId = "ml_saturation", label = "SatMode", value = FALSE, col = "BW", type = "OO"),
+                                  #switchButton(inputId = "ml_saturation", label = "SatMode", value = FALSE, col = "BW", type = "OO"),
                                   actionButton("do_ml",label="Go",width = "50px"),style = "margin-top: 35px;", align="left"),
                            column(width=5,sliderInput("ml_attempts", 
                                                       label = "Attempts", 
@@ -352,9 +360,9 @@ shinyServer(function(input, output, session) {
                                  column(2, br(),br(), br(),plotly::plotlyOutput("pca_legend",height = "400px"))
                         ),
                         fluidRow(column(3,
-                                        selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:30),selected = "PC1",width="100%"),
-                                        selectInput("pca_y", label = "Y axis:", choices = paste0("PC",1:30),selected = "PC2",width="100%"),
-                                        selectInput("pca_z", label = "Z axis:", choices = paste0("PC",1:30),selected = "PC3",width="100%")
+                                        selectInput("pca_x", label = "X axis:", choices = paste0("PC", 1:30),selected = "PC1",width="100%"),
+                                        selectInput("pca_y", label = "Y axis:", choices = paste0("PC", 1:30),selected = "PC2",width="100%"),
+                                        selectInput("pca_z", label = "Z axis:", choices = paste0("PC", 1:30),selected = "PC3",width="100%")
                         ), 
                         column(9, 
                                div(DT::dataTableOutput('pca_tab',width="100%"),style='font-size:80%')
@@ -647,12 +655,20 @@ shinyServer(function(input, output, session) {
   
   if(options$packages_installed == "N") return(NULL) # BREAK!!
   
+  observe({
+    shinyFileChoose(input, 'outlist_pos', roots=volumes, filetypes=c('csv'))
+    shinyFileChoose(input, 'outlist_neg', roots=volumes, filetypes=c('csv'))
+    shinyFileChoose(input, 'excel', roots=volumes, filetypes=c('xls', 'xlsm', 'xlsx'))
+    shinyFileChoose(input, 'database', roots=volumes, filetypes=c('sqlite3', 'db', 'sqlite'))
+  })
+  
   observe({  
-    shinyDirChoose(input, "get_db_dir", roots = c(home = '~'), session = session)
+    shinyDirChoose(input, "get_db_dir", roots=volumes, session = session)
     if(is.null(input$get_db_dir)) return()
-    dir <- reactive(input$get_db_dir)
-    home <- normalizePath("~")
-    given_dir <- file.path(home, paste(unlist(dir()$path[-1]), collapse = .Platform$file.sep))
+    #dir <- reactive(input$get_db_dir)
+    #home <- normalizePath("~")
+    given_dir <- parseDirPath(volumes, input$get_db_dir)
+    #given_dir <- file.path(home, paste(unlist(dir()$path[-1]), collapse = .Platform$file.sep))
     if(is.null(given_dir)) return()
     options$db_dir <<- given_dir
     output$curr_db_dir <- renderText(options$db_dir)
@@ -662,11 +678,12 @@ shinyServer(function(input, output, session) {
   })
   
   observe({  
-    shinyDirChoose(input, "get_work_dir", roots = c(home = '~'), session = session)
+    shinyDirChoose(input, "get_work_dir", roots =volumes, session = session)
     if(is.null(input$get_work_dir)) return()
-    dir <- reactive(input$get_work_dir)
-    home <- normalizePath("~")
-    given_dir <- file.path(home, paste(unlist(dir()$path[-1]), collapse = .Platform$file.sep))
+    #dir <- reactive(input$get_work_dir)
+    #home <- normalizePath("~")
+    #given_dir <- file.path(home, paste(unlist(dir()$path[-1]), collapse = .Platform$file.sep))
+    given_dir <- parseDirPath(volumes, input$get_db_dir)
     if(is.null(given_dir)) return()
     options$work_dir <<- given_dir
     output$exp_dir <- renderText(options$work_dir)
@@ -942,23 +959,49 @@ shinyServer(function(input, output, session) {
   # ================== DATA IMPORT ===========================
   
   observeEvent(input$create_db,{
+    
+    print("Working...")
     # --------------------
     patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
     # --------------------
     withProgress({
+      
       shiny::setProgress(session=session, value= .1,message = "Loading outlists into memory...")
       
-      req(input$outlist_neg, input$outlist_pos, input$excel)
+      print("hre")
       
-      build.pat.db(patdb,
-                   ppm = ppm,
-                   pospath = input$outlist_pos$datapath,
-                   negpath = input$outlist_neg$datapath,
-                   overwrite = T)
+      print(input$new_proj)
       
-      shiny::setProgress(session=session, value= .95,message = "Adding excel sheets to database...")
-      
-      exp_vars <<- load.excel(input$excel$datapath, patdb)})
+      switch(input$new_proj,
+             `From DB` = {
+               
+               req(input$database, input$excel)
+               
+               db_path <- parseFilePaths(volumes, input$database)$datapath
+               
+               file.copy(db_path, patdb)
+               
+               shiny::setProgress(session=session, value= .50,message = "Adding excel sheets to database...")
+               
+               exp_vars <- load.excel(parseFilePaths(volumes, input$excel)$datapath, patdb)
+               print("done")
+             },
+             `From CSV` = {
+               
+               req(input$outlist_neg, input$outlist_pos, input$excel)
+               
+               build.pat.db(patdb,
+                            ppm = ppm,
+                            pospath = parseFilePaths(volumes, input$outlist_pos)$datapath,
+                            negpath = parseFilePaths(volumes, input$outlist_neg)$datapath,
+                            overwrite = T)
+               
+               shiny::setProgress(session=session, value= .95,message = "Adding excel sheets to database...")
+               
+               exp_vars <<- load.excel(parseFilePaths(volumes, input$excel)$datapath, patdb)}
+             )
+             
+      })
   })
   
   observeEvent(input$import_db, {
@@ -1037,20 +1080,25 @@ shinyServer(function(input, output, session) {
       csv_loc <<- file.path(options$work_dir, paste0(options$proj_name,".csv"))
       fwrite(tbl.adj, csv_loc, sep="\t")
       # --- overview table ---
-      nvars <- length(tbl.adj[,1:(which(colnames(tbl.adj) == "$"))])
+      
+      as.numi <- as.numeric(colnames(tbl.adj)[1:100])
+      
+      exp.vars <- which(is.na(as.numi))
+      
+      #nvars <- length(tbl.adj[,1:(which(colnames(tbl.adj) == "$"))])
       
       shiny::setProgress(session=session, value= 3/4)
       
       output$csv_tab <-DT::renderDataTable({
         overview_tab <- if(input$exp_type == "time_std"){
           t(data.table(keep.rownames = F,
-                       Identifiers = ncol(tbl.adj) - nvars,
+                       Identifiers = ncol(tbl.adj) - length(exp.vars),
                        Samples = nrow(tbl.adj),
                        Times = length(unique(tbl.adj$Time))
           ))
         } else{
           t(data.table(keep.rownames = F,
-                       Identifiers = ncol(tbl.adj) - nvars,
+                       Identifiers = ncol(tbl.adj) - length(exp.vars),
                        Samples = nrow(tbl.adj)
           )) 
         }
@@ -1064,37 +1112,6 @@ shinyServer(function(input, output, session) {
     update.UI()
   })
   
-  # load previous dataset
-  
-  observeEvent(input$import_dataset, {
-    req(input$pat_dataset)
-    # -----------------------------------
-    data_loc <<- input$pat_dataset$datapath
-    output$dataset_upload_check <- renderImage({
-      # When input$n is 3, filename is ./images/image3.jpeg
-      filename <- normalizePath('www/yes.png')
-      # Return a list containing the filename and alt text
-      list(src = filename, width = 20,
-           height = 20)
-    }, deleteFile = FALSE)
-    # -----------
-    load(data_loc, envir = .GlobalEnv)
-    # -----------
-    output$var_norm_plot <- renderPlot(PlotNormSummary())
-    output$samp_norm_plot <- renderPlot(PlotSampleNormSummary())
-    # ===========
-    switch(mSet$dataSet$shinymode,
-           stat = {
-             output$exp_opt <- renderUI({optUI()})
-             output$analUI <- renderUI({stat.ui()})
-           },
-           time = {
-             output$exp_opt <- renderUI({})
-             output$analUI <- renderUI({time.ui()})
-           })
-    output$colourPickers <- renderUI({color.pickers()})
-  })
-  
   # ===================== METABOSTART ========================
   
   observeEvent(input$check_csv, {
@@ -1106,13 +1123,15 @@ shinyServer(function(input, output, session) {
     csv <- fread(csv_loc, 
                  header = T)
     
-    nvars <- length(csv[,1:(which(colnames(csv) == "$"))])
+    as.numi <- as.numeric(colnames(csv)[1:100])
     
-    opts <<- colnames(csv[,1:(nvars - 1)])
+    exp.vars <- which(is.na(as.numi))
     
-    batch <<- which(sapply(1:(nvars - 1), function(x) length(unique(csv[,..x][[1]])) < nrow(csv)))
+    opts <<- colnames(csv[,..exp.vars])
     
-    numi <<- which(sapply(1:(nvars - 1), function(x) is.numeric(csv[,..x][[1]])))
+    batch <<- which(sapply(exp.vars, function(x) length(unique(csv[,..x][[1]])) < nrow(csv)))
+    
+    numi <<- which(sapply(exp.vars, function(x) is.numeric(csv[,..x][[1]])))
     
     # get excel table stuff.
     updateSelectInput(session, "exp_var",
@@ -1124,16 +1143,6 @@ shinyServer(function(input, output, session) {
                          options = list(maxItems = 3L - (length(input$batch_var)))
     )
   })
-  
-  # observeEvent(input$batch_var, {
-  #   maxI = ifelse(any(grepl(pattern = "Batch", x = input$batch_var)), 3L, 2L)
-  #   print(input$batch_var)
-  #   print(maxI)
-  #   updateSelectizeInput(session, "batch_var",
-  #                        choices = opts[batch],
-  #                        selected = input$batch_var,
-  #                        options = list(maxItems = maxI - (length(input$batch_var))))
-  # })
   
   ref.selector <- reactive({
     # -------------
@@ -1204,14 +1213,10 @@ shinyServer(function(input, output, session) {
       
       # print(names(mSet))
       # ------- load and re-save csv --------
-      #csv_loc = "/Users/jwolthuis/Analysis/BR/BR_FirstEight.csv"
-      #csv_loc = "/Users/jwolthuis/Analysis/SP/Spain1.csv"
-      #csv_loc <- "/Users/jwolthuis/Analysis/SP/Brazil1.csv"
-      #csv_loc <- "/Users/jwolthuis/Documents/umc/data/Data/BrSpIt/MZXML/results/specpks_grouped_mdq/grouped_pos.csv"
-      #csv_loc <- "/Users/jwolthuis/Analysis/SP/BrazilAndSpain.csv"
-      #csv_loc <- "~/Analysis/SP/Gilbert_W.csv"
       
       #f = fread(csv_loc, header = TRUE)
+      
+      #csv_loc <- "/Users/jwolthuis/Analysis/SP/Brazil_CHICKENS.csv"
       
       print(csv_loc)
       
@@ -1221,9 +1226,21 @@ shinyServer(function(input, output, session) {
       
       print(csv_orig[1:10,1:20])
       
+      # replace all 0's with NA
+      
+      print("Converting zeroes to NA...")
+      
+      csv_orig[,(1:ncol(csv_orig)) := lapply(.SD,function(x){ifelse(x == 0,NA,x)})]
+      
+      # - - -
+      
       csv_orig$Sample <- gsub(csv_orig$Sample, pattern=" ", replacement="")
       
-      nvars <- length(csv_orig[,1:(which(colnames(csv_orig) == "$"))])
+      as.numi <- as.numeric(colnames(csv_orig)[1:100])
+      
+      exp.vars <- which(is.na(as.numi))
+      
+      #nvars <- length(csv_orig[,1:(which(colnames(csv_orig) == "$"))])
       
       # --- batches ---
       
@@ -1234,24 +1251,20 @@ shinyServer(function(input, output, session) {
       
       batch_corr <- if(length(batches) == 1 & batches[1] == "") FALSE else TRUE
       
-      print(batch_corr)
-      
       if("Batch" %in% batches){ batches = c(batches, "Injection") }
       
-      first_part <<- csv_orig[,1:(nvars-1),with=FALSE]
+      first_part <<- csv_orig[,..exp.vars, with=FALSE]
       first_part[first_part == "" | is.null(first_part)] <- "Unknown"
       
       csv_temp <- cbind(first_part[,!duplicated(names(first_part)),with=FALSE],
                         "Label" = first_part[,..condition][[1]],
                         "$" = c(0),
-                        csv_orig[,-c(1:nvars),with=FALSE])
-      
-      nvars <- length(csv_temp[,1:(which(colnames(csv_temp) == "$"))])
+                        csv_orig[,-..exp.vars,with=FALSE])
       
       # --- remove the rest ---
       
-      remove = setdiff(colnames(csv_temp)[1:nvars], c(batches, "Label","Batch","Sample","Time"))
-      remain = intersect(colnames(csv_temp)[1:nvars], c(batches, "Label","Batch","Sample","Time"))
+      remove = setdiff(colnames(csv_temp)[exp.vars], c(batches, "Label","Batch","Sample","Time"))
+      remain = intersect(colnames(csv_temp)[exp.vars], c(batches, "Label","Batch","Sample","Time"))
       
       csv_subset <- csv_temp[, !remove, with=FALSE]
       
@@ -1267,6 +1280,10 @@ shinyServer(function(input, output, session) {
       } else{
         csv_temp_no_out <- csv_subset
       }
+      
+      # - - - remove peaks that are missingin all - - -
+      
+      csv_temp_no_out <- csv_temp_no_out[,which(unlist(lapply(csv_temp_no_out, function(x)!all(is.na(x))))),with=F]
       
       # # - - - low signal samples - - -
       
@@ -1305,6 +1322,8 @@ shinyServer(function(input, output, session) {
                csv_loc_no_out)  
       }
       
+      print(batch_table)
+      
       rownames(batch_table) <- batch_table$Sample
       
       # -------------------------------------
@@ -1341,7 +1360,9 @@ shinyServer(function(input, output, session) {
           #cl <- makeCluster(3)
           registerDoParallel(session_cl)
           
-          imp <- missForest::missForest(w.missing, parallelize = "variables")
+          imp <- missForest::missForest(w.missing, 
+                                        parallelize = "forests",
+                                        verbose = T)
           #w.missing <- cbind(w.missing, Sample = c(1))
           #imp <- randomForest::rfImpute(Sample ~ ., data = w.missing)
           #rownames(imp) <- samples
@@ -1878,23 +1899,33 @@ shinyServer(function(input, output, session) {
                  final_matrix <- t(x)
                  translator <- data.table(Sample=rownames(mSet$dataSet$norm),Group=mSet$dataSet$cls)
                  group_assignments <- translator[,"Group",on=colnames(final_matrix)]$Group
-                 hm_matrix <<- heatmaply::heatmapr(final_matrix, 
-                                                   Colv=T, 
-                                                   Rowv=T,
-                                                   col_side_colors = group_assignments,
-                                                   k_row = NA)
-                 heatmaply::heatmaply(hm_matrix,
-                                      Colv=F, Rowv=F,
+                 #hm_matrix <- heatmaply::heatmapr(final_matrix, 
+                 #                                 Colv=T, 
+                 #                                 Rowv=T,
+                                                   #col_side_colors = ,
+                 #                                 k_row = NA)
+                 
+                 # x <- mtcars
+                 # # different colors
+                 # heatmaply(x, colors = heat.colors(200))
+                 # # using special scale_fill_gradient_fun colors
+                 # heatmaply(x, scale_fill_gradient_fun = scale_color_gradient())
+                 
+                 print(color.vec())
+                 
+                 heatmaply::heatmaply(final_matrix
+                                      ,Colv=T, Rowv=T,
                                       branches_lwd = 0.3,
                                       margins = c(60,0,NA,50),
-                                      colors = color.function(256),
-                                      col_side_colors = function(n){
-                                        if(n == length(color.vec())) color.vec() else rainbow(n)
-                                        rainbow(n)
-                                      },
+                                      #scale_fill_gradient_fun = scale_color_gradient(),
+                                      colors = cf(256),
+                                      col_side_colors = group_assignments,
                                       subplot_widths = c(.9,.1),
+                                      #subplot_heights =  c(.15,.85),
                                       subplot_heights =  c(.1,.05,.85),
-                                      column_text_angle = 90)
+                                      column_text_angle = 90,
+                                      ColSideColors=color.vec()
+                                      )
                })               
              })
            },
@@ -2191,6 +2222,7 @@ shinyServer(function(input, output, session) {
     
     withProgress({
       
+      setProgress(value = 0)
       # prepare matric
       
       curr <- as.data.table(mSet$dataSet$preproc)
@@ -2282,6 +2314,8 @@ shinyServer(function(input, output, session) {
         training <- data.matrix(gdata::drop.levels(training))
         testing <- data.matrix(gdata::drop.levels(testing))
         
+        setProgress(value = i/goes)
+        
         switch(input$ml_method,
                rf = {
                  model = randomForest::randomForest(x = training, 
@@ -2304,10 +2338,16 @@ shinyServer(function(input, output, session) {
                       labels = testY)
                }, 
                ls = {
-                 nfold = length(trainY)
+
+                 nfold = switch(input$ml_folds, 
+                                "5" = 5,
+                                "10" = 10,
+                                "20" = 20,
+                                "50" = 50,
+                                "LOOCV" = length(trainY))
                  family = "binomial"
                  
-                 cv1 <- glmnet::cv.glmnet(training, trainY, family = family, nfold = nfold, type.measure = "auc", alpha = 1, keep = TRUE)
+                 cv1 <- glmnet::cv.glmnet(training, trainY, family = family, type.measure = "auc", alpha = 1, keep = TRUE, nfolds=nfold)
                  cv2 <- data.frame(cvm = cv1$cvm[cv1$lambda == cv1[["lambda.min"]]], lambda = cv1[["lambda.min"]], alpha = 1)
                  
                  model <- glmnet::glmnet(as.matrix(training), trainY, family = family, lambda = cv2$lambda, alpha = cv2$alpha)
@@ -3119,5 +3159,3 @@ shinyServer(function(input, output, session) {
     #save(mSet$dataSet, mSet$analSet, file = file.path(options$work_dir, paste0(options$proj_name, ".RData")))
   })
 })
-
-

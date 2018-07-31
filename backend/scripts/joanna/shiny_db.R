@@ -30,8 +30,7 @@ get_matches <- function(cpd = NA,
 {
   # --- connect to db -=
   req("patdb")
-  # change this to proper var later
-  #print(searchid)
+  
   # 0. Attach db
   if(!is.null(searchid) && searchid != "mz"){
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), chosen.db)
@@ -53,7 +52,7 @@ get_matches <- function(cpd = NA,
   }else{
     
     #patdb = "/Users/jwolthuis/Analysis/SP/BrazilAndSpain_W.db"
-    #chosen.db <- "/Users/jwolthuis/Google Drive/MetaboShiny/backend/db/wikidata.full.db"
+    chosen.db <- "/Users/jwolthuis/Google Drive/MetaboShiny/backend/db/internal.full.db"
     
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
     query.zero <- gsubfn::fn$paste("ATTACH '$chosen.db' AS db")
@@ -66,32 +65,48 @@ get_matches <- function(cpd = NA,
     
     # --- OLD (don't touch!!!) ---
     
-    #RSQLite::dbExecute(conn, "drop table unfiltered")
+    
+    RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS unfiltered")
+    
+    # query.one <- gsubfn::fn$paste(strwrap(
+    #   "CREATE TEMP TABLE unfiltered AS
+    #   SELECT cpd.baseformula, cpd.adduct
+    #   FROM mzvals mz
+    #   JOIN mzranges rng ON rng.ID = mz.ID
+    #   JOIN db.extended cpd indexed by e_idx2
+    #   ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
+    #   AND mz.foundinmode = cpd.foundinmode
+    #   WHERE ABS(mz.mzmed - $cpd) < 0.000000000001
+    #   GROUP BY cpd.baseformula, cpd.adduct",width=10000, simplify=TRUE))
     
     query.one <- gsubfn::fn$paste(strwrap(
       "CREATE TEMP TABLE unfiltered AS
-      SELECT cpd.baseformula, cpd.adduct
+      SELECT cpd.baseformula as baseformula, cpd.adduct as adduct
       FROM mzvals mz
       JOIN mzranges rng ON rng.ID = mz.ID
       JOIN db.extended cpd indexed by e_idx2
       ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
       AND mz.foundinmode = cpd.foundinmode
-      WHERE ABS(mz.mzmed - $cpd) < 0.000000000001",width=10000, simplify=TRUE))
+      WHERE $cpd BETWEEN rng.mzmin AND rng.mzmax
+      GROUP BY cpd.baseformula, cpd.adduct",width=10000, simplify=TRUE))
+    
     # 1. Find matches in range (reasonably fast <3)
     RSQLite::dbExecute(conn, query.one)
     #  2. get isotopes for these matchies (reverse search)
 
     #RSQLite::dbExecute(conn,"drop table isotopes")
     
+  #  "CREATE INDEX e_idx3 ON db.extended(baseformula, adduct, fullmz)" # works somehwat but similarly to e_idx1
+
     query.two <- gsubfn::fn$paste(strwrap(
-      "SELECT cpd.baseformula, cpd.fullformula, cpd.adduct, cpd.fullmz, cpd.isoprevalence, cpd.basecharge, int.*
+      "SELECT cpd.baseformula, cpd.fullformula, cpd.adduct, cpd.fullmz, cpd.isoprevalence, int.mzmed, int.filename, int.intensity
       FROM db.extended cpd indexed by e_idx1
       JOIN unfiltered u
       ON u.baseformula = cpd.baseformula
       AND u.adduct = cpd.adduct
       JOIN mzranges rng
       ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
-      JOIN mzintensities int
+      JOIN mzintensities int indexed by intindex2
       ON int.mzmed BETWEEN rng.mzmin AND rng.mzmax"
       , width=10000, simplify=TRUE))
     
@@ -174,7 +189,7 @@ get_matches <- function(cpd = NA,
           #confidence = sum(unlist(score))/length(split.by.samp) * 100.00
           data.table::data.table(baseformula = formula,
                                  adduct = adduct,
-                                score = as.numeric(mean_error))
+                                 score = as.numeric(mean_error))
          }else{
           data.table::data.table()
         }

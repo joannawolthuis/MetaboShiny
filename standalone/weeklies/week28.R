@@ -51,6 +51,11 @@ cl <- parallel::makeCluster(3, "FORK")
 
 require(data.table)
 
+which_score = "chisq"
+which_combine = "mean"
+normalize = TRUE
+
+
 if(nrow(table) > 0){
   res_rows <- pbapply::pblapply(p.cpd, cl=NULL, function(cpd_tab){
     
@@ -172,14 +177,9 @@ if(nrow(table) > 0){
       data.table::data.table()
     }
   })
-  
-  which_score = "chisq"
-  which_combine = "mean"
-  normalize = TRUE
-  
+
   results <- rbindlist(res_rows)
   results <- results[complete.cases(results),]
-  
   
   #results_cocharm_norm <- results
   #results_mape_norm <- results
@@ -191,9 +191,8 @@ if(nrow(table) > 0){
   
   require(ggplot2)
   
-  curr_results <- results_chisq_norm
   # - for score from package - 
-  ggplot(curr_results, aes(score,
+  ggplot(results, aes(score,
                       group = adduct,
                       fill = adduct)) +
     ggtitle("IS isotopic distribution") +
@@ -202,21 +201,21 @@ if(nrow(table) > 0){
     #geom_rect(aes(xmin=0, xmax=50, ymin=0, ymax=1.00), color="red", alpha=0.5, fill="red") +
     #geom_vline(xintercept = 0.05, color = "black") +
     #geom_histogram(aes(y=..ncount..), alpha=0.6, bins=2) +
-    #scale_x_log10() +
+    scale_x_log10() +
     facet_wrap(~adduct)
   
   # - for pvals from chisq -
-  # ggplot(results, aes(`p value`, 
-  #                     group = adduct,
-  #                     fill = adduct)) +
-  #   ggtitle("IS isotopic distribution") +
-  #   theme(plot.title=element_text(size=30, face="bold")) + 
-  #   geom_density(aes(y=..scaled..), alpha=0.6) +
-  #   #geom_vline(xintercept = 0.001, color = "red") +
-  #   geom_vline(xintercept = 0.05, color = "red") +
-  #   #geom_histogram(aes(y=..ncount..), alpha=0.6, bins=2) +
-  #   #scale_x_log10() +
-  #   facet_wrap(~adduct)
+  ggplot(results, aes(score,
+                      group = adduct,
+                      fill = adduct)) +
+    ggtitle("IS isotopic distribution") +
+    theme(plot.title=element_text(size=30, face="bold")) +
+    geom_density(aes(y=..scaled..), alpha=0.6) +
+    geom_vline(xintercept = 0.001, color = "red") +
+    geom_vline(xintercept = 0.05, color = "green") +
+    #geom_histogram(aes(y=..ncount..), alpha=0.6, bins=2) +
+    #scale_x_log10() +
+    facet_wrap(~adduct)
   
 }else{
   data.table::data.table() 

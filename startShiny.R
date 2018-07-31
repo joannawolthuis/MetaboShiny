@@ -10,10 +10,9 @@ library(limma)
 
 # MetaboAnalyst Packages
 metanr_packages <- function(){
-  
+  # - - - - - - - - - - - - - -
   metr_pkgs <- c("Rserve", "BatchCorrMetabolomics", "RColorBrewer", "xtable", "som", "ROCR", "RJSONIO", "gplots", "e1071", "caTools", "igraph", "randomForest", "Cairo", "pls", "pheatmap", "lattice", "rmarkdown", "knitr", "data.table", "pROC", "Rcpp", "caret", "ellipse",
                  "scatterplot3d", "impute", "rhandsontable", "pcaMethods", "siggenes", "globaltest", "GlobalAncova", "Rgraphviz", "KEGGgraph", "preprocessCore", "genefilter", "SSPA", "sva")
-  
   list_installed <- installed.packages()
   
   new_pkgs <- subset(metr_pkgs, !(metr_pkgs %in% list_installed[, "Package"]))
