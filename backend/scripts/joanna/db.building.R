@@ -975,6 +975,154 @@ build.base.db <- function(dbname=NA,
                                  
                                  RSQLite::dbWriteTable(conn, "base", db.formatted[, lapply(.SD, as.character),], overwrite=TRUE)
                                  
+                               },vmh = function(dbname, ...){
+                                 
+                                 api_url <- "https://vmh.uni.lu/_api/metabolites/"
+                                 
+                                 pagerange = 150
+                                 # get the first page
+                                 
+                                 table_list <- pbapply::pblapply(1:pagerange, function(i){
+                                   tbl = NA
+                                   try({
+                                     url = gsubfn::fn$paste("http://vmh.uni.lu/_api/metabolites/?page=$i")
+                                     print(url)
+                                     r <- httr::GET(url, httr::accept(".json"))
+                                     lst <- jsonlite::fromJSON(httr::content(r, "text"))
+                                     tbl <- lst[[4]]
+                                     Sys.sleep(.1)
+                                   })
+                                   # - - return - - 
+                                   tbl
+                                 })
+                                 
+                                 table_main <- data.table::rbindlist(table_list[!is.na(table_list)])
+                                 
+                                 db.formatted <- data.table::data.table(compoundname = table_main$fullName,
+                                                                        description = table_main$description,
+                                                                        baseformula = table_main$chargedFormula, 
+                                                                        identifier= table_main$reconMap,
+                                                                        charge= table_main$charge,
+                                                                        structure= table_main$smile,
+                                                                        isHuman = table_main$isHuman,
+                                                                        isMicrobe = table_main$isMicrobe)
+                                 
+                                 missing.desc <- which(db.formatted$description == "<NA>" | db.formatted$description == "" | is.na(db.formatted$description))
+                                 replacements <- table_main$synonyms # use synonum instead
+                                 db.formatted$description[missing.desc] <- replacements[missing.desc]
+                                 missing.desc <- which(db.formatted$description == "<NA>" | db.formatted$description == "" | is.na(db.formatted$description))
+                                 db.formatted$description[missing.desc] <- c("Unknown")
+                                 
+                                 descriptions <- sapply(1:nrow(table_main), function(i){
+                                   
+                                   row = table_main[i,]
+                                   
+                                   if(row$isHuman & row$isMicrobe){
+                                     suffix = "Found in humans and microbes."
+                                   }else if(row$isHuman & !row$isMicrobe){
+                                     suffix = "Found in humans."
+                                   }else{
+                                     suffix = "Found in microbes"
+                                   }
+                                   
+                                   if(length(row$description) > 1){
+                                     if(substring(row$description, nchar(row$description)) == "."){
+                                       paste0(row$description," -- ", suffix, " -- ")
+                                     }else{
+                                       paste0(row$description, ". -- ", suffix, " -- ")
+                                     }
+                                   }else{
+                                     paste0(row$description," -- ", suffix, " -- ")
+                                   }
+                                 })
+                                 
+                                 db.formatted$description <- descriptions
+                                 
+                                 # check integrity of formulae
+                                 
+                                 checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
+                                                                                            db.formatted$baseformula))
+                                 db.formatted$baseformula <- checked$new_formula
+                                 wrong <- checked[warning == TRUE, which = TRUE]
+                                 fine.compounds <- db.formatted[-wrong,]
+                                 wack.compounds <- db.formatted[wrong,]
+                                 
+                                 # find formula and charge of some molecules through SMILES
+                                 
+                                 structs <- wack.compounds$structure
+                                 
+                                 charges_formulae <- pbapply::pblapply(structs, function(smi){
+                                   print(smi)
+                                   res = list(charge = NA, formula = NA)
+                                   try({
+                                     iatom <- rcdk::parse.smiles(smi)[[1]]
+                                     charge = rcdk::get.total.charge(iatom)
+                                     formula = rcdk::get.mol2formula(iatom)
+                                     res = list(charge = charge[[1]], formula = formula@string)
+                                   })
+                                   print(res)
+                                   # - - return - - 
+                                   res
+                                 })
+                                 
+                                 formulae <- sapply(charges_formulae, function(x) x$formula)
+                                 charges <- sapply(charges_formulae, function(x) x$charge)
+                                 
+                                 found.formula <- which(!is.na(formulae))
+                                 found.charges <- which(!is.na(charges))
+                                 
+                                 wack.compounds$baseformula[found.formula] <- formulae[found.formula]
+                                 wack.compounds$charge[found.charges] <- charges[found.charges]
+                                 
+                                 # find leftovers 
+                                 
+                                 checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
+                                                                                            wack.compounds$baseformula))
+                                 wrong <- checked[warning == TRUE, which = TRUE]
+                                 last.wack.compounds <- wack.compounds[wrong,]
+                                 fixed.compounds <- wack.compounds[-wrong,]
+
+                                 # fix halogens
+                                 
+                                 halogens <- c("F1"="fluoride", "Cl1"="chloride", "Br1"="bromide", "I1"="iodide", "At1"="astatide")
+                                 w.halogens <- grep(x=last.wack.compounds$baseformula, "X")
+                                 
+                                 halogen.fixed.list <- pbapply::pblapply(w.halogens, function(i){
+                                   row <- last.wack.compounds[i,]
+                                   rows <- lapply(names(halogens), function(X){
+                                     new.row <- row
+                                     new.row$baseformula = gsub(new.row$baseformula, pattern="X", replacement=X)
+                                     new.row$compoundname = paste0(new.row$compoundname, "-", halogens[[X]])
+                                     print(new.row)
+                                     # - - return - - 
+                                     new.row
+                                   })
+                                   # - - -
+                                   rows
+                                 })
+                                 
+                                 halogen.compounds <- data.table::rbindlist(halogen.fixed.list)
+                                 
+                                 # - - residual compounds - - 
+                                 
+                                 w.residual <- grep(x=last.wack.compounds$baseformula, "FULL")
+                                 
+                                 residuals <- last.wack.compounds[w.residual,]
+                                 
+                                 
+                                 # - - totals - - 
+                                 
+                                 subtables <- list(
+                                   fine.compounds,
+                                   fixed.compounds,
+                                   halogen.compounds,
+                                   noresid.compounds
+                                 )
+                                 
+                                 # - - write - - 
+                                 
+                                 RSQLite::dbWriteTable(conn, "base", db.formatted[, lapply(.SD, as.character),], overwrite=TRUE)
+                                 
                                }, knapsack = function(dbname, ...){
                                  # TOO SLOW 
                                  # url <- "http://kanaya.naist.jp/KNApSAcK/"

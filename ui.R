@@ -1,6 +1,7 @@
 shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle.js"), 
                                                       tags$style(type="text/css", bar.css)
 ),
+shinyalert::useShinyalert(),
 navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="text/css", font.css)),
                                   class="sparkley"),
            id="nav_general",
@@ -142,12 +143,20 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                     ),column(3, align="center",
                              h2("Wikidata"),
                              helpText("Central storage for the data of its Wikimedia sister projects including Wikipedia, Wikivoyage, Wikisource, and others.")
-                    )),
+                    ),column(3, align="center",
+                             h2("VMH"),
+                             helpText("Virtual Metabolic Human (VMH) hosts ReconMap, an extensive network of human metabolism, and bacterial metabolites.")
+                    )
+                    
+                    ),
                     fluidRow(column(3, align="center",
                                     imageOutput("dimedb_logo",inline = T),
                                     br(),br()
                     ),column(3, align="center",
                              imageOutput("wikidata_logo",inline = T),
+                             br(),br()
+                    ),column(3, align="center",
+                             imageOutput("vmh_logo",inline = T),
                              br(),br()
                     )),
                     fluidRow(column(3, align="center",
@@ -160,6 +169,12 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                              actionButton("build_wikidata", "Build", icon = icon("wrench")),
                              br(),br(),
                              imageOutput("wikidata_check",inline = T)
+                    ),
+                    column(3, align="center",
+                           actionButton("check_vmh", "Check", icon = icon("check")),
+                           actionButton("build_vmh", "Build", icon = icon("wrench")),
+                           br(),br(),
+                           imageOutput("vmh_check",inline = T)
                     ))
                     # ----------------------------------------------------
            ),
@@ -342,7 +357,8 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                    sardine(fadeImageButton("search_wikipathways", img.path = "wikipathways.png")),
                                                                                                    sardine(fadeImageButton("search_kegg", img.path = "kegglogo.gif")),
                                                                                                    sardine(fadeImageButton("search_dimedb", img.path = "dimedb.png")),
-                                                                                                   sardine(fadeImageButton("search_wikidata", img.path = "wikidata.png"))
+                                                                                                   sardine(fadeImageButton("search_wikidata", img.path = "wikidata.png")),
+                                                                                                   sardine(fadeImageButton("search_vmh", img.path = "vmh.png"))
                                                                                                    #sardine(fadeImageButton("search_pubchem", img.path = "pubchemlogo.png")),
                                                                                                    #br(),
                                                                                                    #sardine(fadeImageButton("select_all_db", img.path = "cart.png"))
@@ -523,10 +539,11 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                )
                     )
            ), 
-           tabPanel(title = "Quit", value="stop", icon = icon("circle-o-notch")),
+           #actionButton("test", "test"),
+           tabPanel(title = "Quit", value="stop", icon = icon("times-circle")),
            div(class="spinnylocation1",
-               div(class="plus", img(class="imagetop", src="heart-research.png", width="120px", height="120px")),
-               div(class="minus", img(class="imagebottom", src="heart-research.png", width="120px", height="120px"))
+               div(class="plus", img(class="imagetop", src="unicorn.png", width="120px", height="120px")),
+               div(class="minus", img(class="imagebottom", src="unicorn.png", width="120px", height="120px"))
            ),
            div(class="line")
 )

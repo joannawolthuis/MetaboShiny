@@ -287,21 +287,22 @@ get_all_matches <- function(#exp.condition=NA,
   #,batches = NULL
 ){
   # --- connect to db ---
-  # req("patdb")
-  # available.RSQLite::dbs <- list.files(options$db_dir,pattern = ".full.db$",full.names = T)
-  # which_dbs <- available.dbs
-  # group_by="mz"
-  # exp.condition="stool_condition"
-  # pat.conn =RSQLite::dbConnect(RSQLite::SQLite(),patdb)
-  # RSQLite::dbDisconnect(pat.conn)
   join.query <- c()
+  
   # --- GET POOL OF ALL DBS ---
   for(i in seq_along(which_dbs)){
     chosen.db <- which_dbs[i]
+    
+    print(paste("Looking for matches in", chosen.db))
+    
     if(is.na(chosen.db)) next
     # --------------------------
     dbshort <- paste0("db", i)
 
+    try({
+      RSQLite::dbExecute(pat.conn, gsubfn::fn$paste("DETACH $dbshort"))
+    })
+    
     RSQLite::dbExecute(pat.conn, gsubfn::fn$paste("ATTACH '$chosen.db' AS $dbshort"))
     # --- extended ---
     dbext <- paste0(dbshort, ".extended")
@@ -319,7 +320,7 @@ get_all_matches <- function(#exp.condition=NA,
     pathway = if(group_by == "pathway") ",pathway" else{""}
     # ------------------------
     join.query <- c(join.query, 
-                    gsubfn::fn$paste(strwrap("SELECT DISTINCT mz.mzmed as mz, 
+                    gsubfn::fn$paste(strwrap("SELECT mz.mzmed as mz, 
                                              compoundname,
                                              identifier,
                                              $baseformquery, 
@@ -338,8 +339,13 @@ get_all_matches <- function(#exp.condition=NA,
                     )
                     )
   }
+  print(join.query)
+  
   union <- paste(join.query, collapse = " UNION ")
   # ------------
+  RSQLite::dbExecute(pat.conn, gsubfn::fn$paste("DROP TABLE IF EXISTS isotopes"))
+  RSQLite::dbExecute(pat.conn, gsubfn::fn$paste("DROP TABLE IF EXISTS results"))
+  
   query.one <- gsubfn::fn$paste(strwrap(
     "CREATE TEMP TABLE isotopes AS
     $union",width=10000, simplify=TRUE))

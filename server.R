@@ -12,6 +12,7 @@ shinyServer(function(input, output, session) {
                'Downloads'=file.path(home, "Downloads"),
                'Desktop'=file.path(home, "Desktop")
                )
+  
   ifelse(exists("match_table"), remove(match_table), NA)
   tbl <- NA
   match_table <- NA
@@ -25,6 +26,9 @@ shinyServer(function(input, output, session) {
   ppm <- 2
   cf <- rainbow
   nvars <- 2
+  
+  if(any(!is.na(session_cl))) parallel::stopCluster(session_cl)
+  
   ncores <- parallel::detectCores() - 1
   session_cl <- parallel::makeCluster(ncores)
   metshi <<- list()
@@ -58,7 +62,9 @@ shinyServer(function(input, output, session) {
                             sardine(fadeImageButton("add_wikipathways", img.path = "wikipathways.png")),
                             sardine(fadeImageButton("add_kegg", img.path = "kegglogo.gif", value = T)),
                             sardine(fadeImageButton("add_dimedb", img.path = "dimedb.png")),
-                            sardine(fadeImageButton("add_wikidata", img.path = "wikidata.png"))
+                            sardine(fadeImageButton("add_wikidata", img.path = "wikidata.png")),
+                            sardine(fadeImageButton("add_vmh", img.path = "vmh.png"))
+                            
                           )),
                  tabPanel(icon("id-card-o"), value = "identifier",
                           br(),
@@ -126,7 +132,8 @@ shinyServer(function(input, output, session) {
                 "wikipathways"
                 ,"smpdb",
                 "dimedb",
-                "wikidata"
+                "wikidata",
+                "vmh"
   )
   
   images <<- list(list(name = 'cute_package', path = 'www/new-product.png', dimensions = c(80, 80)),
@@ -141,6 +148,7 @@ shinyServer(function(input, output, session) {
                   list(name = 'smpdb_logo', path = 'www/smpdb_logo_adj.png', dimensions = c(200, 160)),
                   list(name = 'dimedb_logo', path = 'www/dimedb_logo.png', dimensions = c(310, 120)),
                   list(name = 'wikidata_logo', path = 'www/wikidata.png', dimensions = c(250, 200)),
+                  list(name = 'vmh_logo', path = 'www/vmh.png', dimensions = c(250, 200)),
                   list(name = 'pos_icon', path = 'www/handpos.png', dimensions = c(120, 120)),
                   list(name = 'neg_icon', path = 'www/handneg.png', dimensions = c(120, 120)),
                   list(name = 'excel_icon', path = 'www/excel.png', dimensions = c(120, 120)),
@@ -3105,10 +3113,26 @@ shinyServer(function(input, output, session) {
   # --- ON CLOSE ---
   observe({
     if (input$nav_general == "stop"){
-      print("closing metaboShiny ~ヾ(＾∇＾)")
-      if(any(!is.na(session_cl))) parallel::stopCluster(session_cl)
-      R.utils::gcDLLs() # flush dlls
-      stopApp() 
+      shinyalert::shinyalert(title = "Question", 
+                             text = "Do you want to close metaboShiny?", 
+                             type = "warning",
+                             #imageUrl = "www/question.png", 
+                             showCancelButton = T, 
+                             cancelButtonText = "No",
+                             showConfirmButton = T, 
+                             confirmButtonText = "Yes",
+                             callbackR = function(x) {if(x == TRUE){
+                               print("closing metaboShiny ~ヾ(＾∇＾)")
+                               if(any(!is.na(session_cl))) parallel::stopCluster(session_cl)
+                               R.utils::gcDLLs() # flush dlls
+                               stopApp() 
+                             }else{
+                               NULL
+                             }
+                               }
+                             #,imageHeight = 300, 
+                             #imageWidth = 300
+                             )
     }
   })
 })
