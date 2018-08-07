@@ -7,7 +7,6 @@ get_times <- function(chosen.db){
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), chosen.db) # change this to proper var later
   # --- browse ---
   result <- RSQLite::dbGetQuery(conn, "SELECT DISTINCT sampling_date as Date FROM individual_data WHERE sampling_date != ''")
-  print(result$Date)
   times <- as.numeric(as.factor(as.Date(result$Date)))
   # --- result ---
   times
@@ -29,6 +28,7 @@ get_matches <- function(cpd = NA,
                         searchid)
 {
   # --- connect to db -=
+  
   req("patdb")
   
   # 0. Attach db
@@ -49,229 +49,193 @@ get_matches <- function(cpd = NA,
     }
     res <- RSQLite::dbGetQuery(conn, query)
     return(res)
+    
   }else{
     
-    #patdb = "/Users/jwolthuis/Analysis/SP/BrazilAndSpain_W.db"
-    chosen.db <- "/Users/jwolthuis/Google Drive/MetaboShiny/backend/db/internal.full.db"
-    
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
-    query.zero <- gsubfn::fn$paste("ATTACH '$chosen.db' AS db")
 
-    #ATTACH "/Users/jwolthuis/Google Drive/MetaboShiny/backend/db/hmdb.full.db" AS db
-    #cpd = 178.01787
-    #cpd = curr_cpd
+    cpd = curr_cpd
     
-    RSQLite::dbExecute(conn, query.zero)
+    RSQLite::dbExecute(conn, gsubfn::fn$paste("ATTACH '$chosen.db' AS db"))
     
-    # --- OLD (don't touch!!!) ---
-    
-    
-    RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS unfiltered")
-    
-    # query.one <- gsubfn::fn$paste(strwrap(
-    #   "CREATE TEMP TABLE unfiltered AS
-    #   SELECT cpd.baseformula, cpd.adduct
-    #   FROM mzvals mz
-    #   JOIN mzranges rng ON rng.ID = mz.ID
-    #   JOIN db.extended cpd indexed by e_idx2
-    #   ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
-    #   AND mz.foundinmode = cpd.foundinmode
-    #   WHERE ABS(mz.mzmed - $cpd) < 0.000000000001
-    #   GROUP BY cpd.baseformula, cpd.adduct",width=10000, simplify=TRUE))
-    
-    query.one <- gsubfn::fn$paste(strwrap(
-      "CREATE TEMP TABLE unfiltered AS
-      SELECT cpd.baseformula as baseformula, cpd.adduct as adduct
-      FROM mzvals mz
-      JOIN mzranges rng ON rng.ID = mz.ID
-      JOIN db.extended cpd indexed by e_idx2
-      ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
-      AND mz.foundinmode = cpd.foundinmode
-      WHERE $cpd BETWEEN rng.mzmin AND rng.mzmax
-      GROUP BY cpd.baseformula, cpd.adduct",width=10000, simplify=TRUE))
-    
-    # 1. Find matches in range (reasonably fast <3)
-    RSQLite::dbExecute(conn, query.one)
-    #  2. get isotopes for these matchies (reverse search)
 
-    #RSQLite::dbExecute(conn,"drop table isotopes")
-    
-  #  "CREATE INDEX e_idx3 ON db.extended(baseformula, adduct, fullmz)" # works somehwat but similarly to e_idx1
+    withProgress({
 
-    query.two <- gsubfn::fn$paste(strwrap(
-      "SELECT cpd.baseformula, cpd.fullformula, cpd.adduct, cpd.fullmz, cpd.isoprevalence, int.mzmed, int.filename, int.intensity
-      FROM db.extended cpd indexed by e_idx1
-      JOIN unfiltered u
-      ON u.baseformula = cpd.baseformula
-      AND u.adduct = cpd.adduct
-      JOIN mzranges rng
-      ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
-      JOIN mzintensities int indexed by intindex2
-      ON int.mzmed BETWEEN rng.mzmin AND rng.mzmax"
-      , width=10000, simplify=TRUE))
-    
-    table <- RSQLite::dbGetQuery(conn,query.two)
-    
-    table <- as.data.table(table[complete.cases(table),])
-    
-    p.cpd <- split(x = table, 
-                   f = list(table$baseformula, table$adduct))
-    
-    if(nrow(table) > 0){
-      res_rows <- pbapply::pblapply(p.cpd, cl=session_cl, function(cpd_tab){
+      if(!DBI::dbExistsTable(conn, "unfiltered"))
+      {
+        # create
+        RSQLite::dbExecute(conn, gsubfn::fn$paste(strwrap(
+          "CREATE TABLE unfiltered AS
+          SELECT DISTINCT cpd.baseformula as baseformula, cpd.fullformula, cpd.adduct as adduct, cpd.isoprevalence as isoprevalence, cpd.basecharge as charge
+          FROM mzvals mz
+          JOIN mzranges rng ON rng.ID = mz.ID
+          JOIN db.extended cpd indexed by e_idx2
+          ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
+          AND mz.foundinmode = cpd.foundinmode
+          WHERE $cpd BETWEEN rng.mzmin AND rng.mzmax",width=10000, simplify=TRUE)))
         
-        # aggregate multimz matches
-        
-        # cpd_tab <- data.table::setDT(cpd_tab)[, .(mzmed = mean(mzmed), intensity = sum(intensity)), 
-        #                       by=.(baseformula, fullformula, adduct, isoprevalence, filename)]
-        # 
-        # formula = unique(cpd_tab$baseformula)
-        # adduct = unique(cpd_tab$adduct)
-        
-        cpd_tab <- data.table::setDT(cpd_tab)[, .(mzmed = mean(mzmed), intensity = sum(intensity)),
-                                  by=.(baseformula, fullmz, fullformula, adduct, isoprevalence, filename)]
-        
-        formula = unique(cpd_tab$baseformula)
-        adduct = unique(cpd_tab$adduct)
+      } else{
+        # append
+        RSQLite::dbExecute(conn, gsubfn::fn$paste(strwrap(
+          "INSERT INTO unfiltered
+          SELECT DISTINCT cpd.baseformula as baseformula, cpd.fullformula, cpd.adduct as adduct, cpd.isoprevalence as isoprevalence, cpd.basecharge as charge
+          FROM mzvals mz
+          JOIN mzranges rng ON rng.ID = mz.ID
+          JOIN db.extended cpd indexed by e_idx2
+          ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
+          AND mz.foundinmode = cpd.foundinmode
+          WHERE $cpd BETWEEN rng.mzmin AND rng.mzmax",width=10000, simplify=TRUE)))
+      }     
 
-        # https://assets.thermofisher.com/TFS-Assets/CMD/Reference-Materials/pp-absoluteidq-qexactive-ms-targeted-metabolic-lipid-metabolomics2017-en.pdf
-        
-        if(any(cpd_tab$isoprevalence > 99.999999)){
-         
-           # - - - - - - - - -
-          
-          sorted <- data.table::as.data.table(unique(cpd_tab[order(cpd_tab$isoprevalence, 
-                                         decreasing = TRUE),]))
-          
-          split.by.samp <- split(sorted, 
-                                 sorted[,"filename"])
-          # - - - - - - - - - 
-          
-          score <- sapply(split.by.samp, function(samp_tab){
-            
-            samp_tab <- data.table::as.data.table(samp_tab)
-
-            if(nrow(samp_tab) == 1){
-              res = 0
-            }else{
-              # maxint <- samp_tab[isoprevalence == max(isoprevalence),]$intensity
-              # 
-              # predicted = (samp_tab[-(isoprevalence == max(isoprevalence)),]$intensity / maxint ) * 
-              #   samp_tab[isoprevalence == max(isoprevalence),]$isoprevalence
-              # actual = samp_tab[-(isoprevalence == max(isoprevalence)),]$isoprevalence
-              # 
-              # # - - -
-              # 
-              # deltaSignal = abs(predicted - actual);
-              # percentageDifference = deltaSignal / actual # Percent by element.
-              # meanPctDiff = mean(percentageDifference) #Average percentage over all elements.
-              # res = meanPctDiff * 100.0
-              
-              theor_mat <- samp_tab[,c("fullmz", "isoprevalence")]
-              theor <- matrix(ncol = nrow(theor_mat), nrow = 2, data = c(theor_mat$fullmz, theor_mat$isoprevalence),byrow = T)
-              
-              obs_mat <- samp_tab[,c("mzmed", "intensity")]
-              obs <- matrix(ncol = nrow(obs_mat), nrow = 2, data = c(obs_mat$mzmed, obs_mat$intensity),byrow = T)
-            
-              theor[2,] <- theor[2,]/sum(theor[2,])
-              obs[2,] <- obs[2,]/sum(obs[2,])
-              
-              res <- InterpretMSSpectrum::mScore(obs=obs, the=theor, dppm = 1, int_prec = 0.225)
-              
-            }
-            res
-          })
-          
-          mean_error <- round(mean(score, na.rm=TRUE), digits = 1)
-          
-          if(mean_error == 0) print(score)
-          print(formula)
-          #confidence = sum(unlist(score))/length(split.by.samp) * 100.00
-          data.table::data.table(baseformula = formula,
-                                 adduct = adduct,
-                                 score = as.numeric(mean_error))
-         }else{
-          data.table::data.table()
-        }
-      })
-      results <- data.table::rbindlist(res_rows[!is.na(res_rows)])
+      # 1. Find matches in range (reasonably fast <3)
+      setProgress(value = 0.4)
       
-      #RSQLite::dbGetQuery(conn, "SELECT * FROM base limit 20;")
-      
-      formula.matches <- data.table::rbindlist(lapply(unique(results$baseformula), function(formula){
-        query <- gsubfn::fn$paste(strwrap("SELECT DISTINCT compoundname as name, baseformula, identifier, description, structure
-                                          FROM base indexed by b_idx1
-                                          WHERE baseformula = '$formula'",width=10000, simplify=TRUE))
-        RSQLite::dbGetQuery(conn, query)
-      }))
-      res=data.table::data.table()
-      try({
-        res <- merge(formula.matches, results, by = "baseformula") 
-        })
-    res      
-    }else{
-      data.table::data.table() 
-    }
+      if(!DBI::dbExistsTable(conn, "isotopes")){
+        # create
+        RSQLite::dbExecute(conn,
+                           "CREATE TABLE isotopes AS
+                           SELECT DISTINCT cpd.* 
+                           FROM db.extended cpd
+                           JOIN unfiltered u
+                           ON u.baseformula = cpd.baseformula
+                           AND u.adduct = cpd.adduct")
+      }else{
+        # append
+        RSQLite::dbExecute(conn,
+                           "INSERT INTO isotopes
+                           SELECT cpd.* 
+                           FROM db.extended cpd
+                           JOIN unfiltered u
+                           ON u.baseformula = cpd.baseformula
+                           AND u.adduct = cpd.adduct")
+      }
+    })
     
-    # --- TESTING ----
+    results <- DBI::dbGetQuery(conn, "SELECT b.compoundname as name, 
+                                      b.baseformula,
+                                      u.adduct,
+                                      u.isoprevalence,
+                                      b.identifier,
+                                      b.description, 
+                                      b.structure 
+                                      FROM unfiltered u
+                                      JOIN db.base b
+                                      ON u.baseformula = b.baseformula
+                                      AND u.charge = b.charge")
     
-    # RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS unfiltered")
-    # RSQLite::dbExecute(conn, gsubfn::fn$paste(strwrap(
-    #   "CREATE TEMP TABLE unfiltered AS
-    #   SELECT mz.mzmed, cpd.fullmz, cpd.baseformula, cpd.adduct, cpd.isoprevalence
-    #   FROM mzvals mz
-    #   JOIN mzranges rng ON rng.ID = mz.ID
-    #   JOIN db.extended cpd indexed by e_idx2
-    #   ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
-    #   AND mz.foundinmode = cpd.foundinmode
-    #   WHERE ABS(mz.mzmed - $cpd) < 0.000001",width=10000, simplify=TRUE)))
-    # 
-    # table <- RSQLite::dbGetQuery(conn, 
-    # "SELECT cpd.baseformula, cpd.adduct, cpd.isoprevalence, int.mzmed, int.filename, int.intensity
-    # FROM unfiltered u
-    # JOIN db.extended cpd
-    # ON u.baseformula = cpd.baseformula
-    # AND u.adduct = cpd.adduct
-    # JOIN mzranges rng
-    # ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
-    # JOIN mzvals mz
-    # on rng.id = mz.id
-    # JOIN mzintensities int
-    # ON mz.mzmed = int.mzmed")
-    # 
-    # table <- table[complete.cases(table),]
-    # p.cpd <- split(x = table, 
-    #                f = table$baseformula)
+    DBI::dbDisconnect(conn)
     
-    # keep <- pbapply::pblapply(p.cpd, function(cpd_tab){
-    #   print(cpd_tab)
-    #   if(any(cpd_tab$isoprevalence > 99.999999)){
-    #     cpd_tab
-    #   }else(
-    #     NA
-    #     )})
-    #continue <- keep[!is.na(keep)]
+    # - - return - - 
     
-    # res_rows <- lapply(p.cpd, function(cpd_tab){
-    #   formula = unique(cpd_tab$baseformula)
-    #   adduct = unique(cpd_tab$adduct)
-    #   # - - - - - - - - -
-    #   sorted <- unique(cpd_tab[order(cpd_tab$isoprevalence, 
-    #                                  decreasing = FALSE),])
-    #   split.by.samp <- split(sorted, 
-    #                          sorted$filename)
-    #   # - - - - - - - - - 
-    #   score <- sapply(split.by.samp, function(samp_tab){
-    #     samp_tab <- data.table::as.data.table(samp_tab)
-    #     if(samp_tab[isoprevalence == max(samp_tab$isoprevalence),intensity] == max(samp_tab$intensity)) 1 else 0
-    #   })
-    #   confidence = sum(unlist(score))/length(split.by.samp) * 100.00
-    #   data.table::data.table(baseformula = formula,
-    #                          adduct = adduct,
-    #                          confidence = confidence)
-    # })
-    # data.table::rbindlist(res_rows)
+    results
+    
   }}
+
+score.isos <- function(patdb, method="mscore"){
+  
+  #if(!exists("match_table")) return(NULL)
+  
+  withProgress({
+    
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
+  
+  setProgress(value = 0.6)
+  
+  table <- RSQLite::dbGetQuery(conn,gsubfn::fn$paste(strwrap(
+    "SELECT int.mzmed, iso.baseformula, iso.adduct, iso.fullmz, iso.fullformula, iso.isoprevalence, int.filename, int.intensity
+    FROM isotopes iso
+    JOIN mzranges rng
+    ON iso.fullmz BETWEEN rng.mzmin AND rng.mzmax
+    JOIN mzintensities int
+    ON int.mzmed BETWEEN rng.mzmin AND rng.mzmax
+    WHERE int.filename NOT LIKE 'QC%'"
+    , width=10000, simplify=TRUE)))
+  
+  setProgress(value = 0.8)
+  
+  table <- as.data.table(table[complete.cases(table),])
+  
+  table <- data.table::setDT(table)[, .(mzmed = mean(mzmed), intensity = sum(intensity)),
+                                    by=.(baseformula, fullmz, fullformula, adduct, isoprevalence, filename)]
+  p.cpd <- split(x = table, 
+                 f = list(table$baseformula, table$adduct))
+  
+  i <<- 0
+  
+  res_rows <- pbapply::pblapply(p.cpd, cl=0, function(cpd_tab){
+      
+      formula = unique(cpd_tab$baseformula)
+      adduct = unique(cpd_tab$adduct)
+      
+      # https://assets.thermofisher.com/TFS-Assets/CMD/Reference-Materials/pp-absoluteidq-qexactive-ms-targeted-metabolic-lipid-metabolomics2017-en.pdf
+      
+      if(any(cpd_tab$isoprevalence > 99.999999)){
+        
+        # - - - - - - - - -
+        
+        sorted <- data.table::as.data.table(unique(cpd_tab[order(cpd_tab$isoprevalence, 
+                                                                 decreasing = TRUE),]))
+        
+        split.by.samp <- split(sorted, 
+                               sorted[,"filename"])
+        # - - - - - - - - - 
+        
+        score <- sapply(split.by.samp, function(samp_tab){
+          
+          samp_tab <- data.table::as.data.table(samp_tab)
+          
+          if(nrow(samp_tab) == 1){
+            res = 0
+          }else{
+            
+            theor_mat <- samp_tab[,c("fullmz", "isoprevalence")]
+            theor <- matrix(ncol = nrow(theor_mat), nrow = 2, data = c(theor_mat$fullmz, theor_mat$isoprevalence),byrow = T)
+            
+            obs_mat <- samp_tab[,c("mzmed", "intensity")]
+            obs <- matrix(ncol = nrow(obs_mat), nrow = 2, data = c(obs_mat$mzmed, obs_mat$intensity),byrow = T)
+            
+            theor[2,] <- theor[2,]/sum(theor[2,])
+            obs[2,] <- obs[2,]/sum(obs[2,])
+            
+            res <- switch(method,
+                          mape={
+                            actual = obs[2,]
+                            theor = theor[2,]
+                            deltaSignal = abs(theor - actual)
+                            percentageDifference = deltaSignal / actual * 100# Percent by element.
+                            # - - -
+                            mean(percentageDifference) #Average percentage over all elements.
+                          },
+                          mscore={
+                            InterpretMSSpectrum::mScore(obs=obs, the=theor, dppm = 1, int_prec = 0.225)
+                            },
+                          sirius={NULL},
+                          chisq={
+                            test <- chisq.test( obs[2,], p = theor[2,], rescale.p = T)
+                            # - - -
+                            as.numeric(test$p.value)
+                          }
+                          )
+            
+          }
+          res
+        })
+        
+        i <<- i + 1
+        setProgress(value = 0.8 + i * (.2/length(cpd_tab)))
+        
+        mean_error <- round(mean(score, na.rm=TRUE), digits = 1)
+        
+        data.table::data.table(baseformula = formula,
+                               adduct = adduct,
+                               score = as.numeric(mean_error))
+      }else{
+        data.table::data.table()
+      } 
+      })
+    })
+    rbindlist(res_rows)
+  }
 
 #' @export
 get_mzs <- function(baseformula, charge, chosen.db){
@@ -299,8 +263,7 @@ get_mzs <- function(baseformula, charge, chosen.db){
     ON o.fullmz BETWEEN rng.mzmin AND rng.mzmax
     JOIN mzvals mz
     ON rng.ID = mz.ID", width=10000, simplify=TRUE))
-  print(query.two)
-  
+
   RSQLite::dbExecute(conn, query.two)
   # isofilter and only in
   query.three <-  strwrap(
@@ -338,7 +301,7 @@ get_all_matches <- function(#exp.condition=NA,
     if(is.na(chosen.db)) next
     # --------------------------
     dbshort <- paste0("db", i)
-    print(chosen.db)
+
     RSQLite::dbExecute(pat.conn, gsubfn::fn$paste("ATTACH '$chosen.db' AS $dbshort"))
     # --- extended ---
     dbext <- paste0(dbshort, ".extended")
@@ -380,7 +343,7 @@ get_all_matches <- function(#exp.condition=NA,
   query.one <- gsubfn::fn$paste(strwrap(
     "CREATE TEMP TABLE isotopes AS
     $union",width=10000, simplify=TRUE))
-  print("Exec query one")
+
   RSQLite::dbExecute(pat.conn, query.one)
   adductfilter <- paste0("WHERE adduct = '", paste(which_adducts, collapse= "' OR adduct = '"), "'")
   idquery <- paste0("iso.", group_by)
@@ -393,10 +356,9 @@ get_all_matches <- function(#exp.condition=NA,
     GROUP BY mz
     HAVING COUNT(iso.isoprevalence > 99.99999999999) > 0"
     , width=10000, simplify=TRUE))
-  print("Exec query two")
+  
   RSQLite::dbExecute(pat.conn, query.two)
-  # a1 = RSQLite::dbGetQuery(pat.conn, gsubfn::fn$paste("SELECT distinct filename FROM avg_intensities"))
-  # a2 = RSQLite::dbGetQuery(pat.conn, gsubfn::fn$paste("SELECT distinct card_id FROM individual_data"))
+  
   summary = if(group_by == "pathway") "sum(abs(i.intensity)) as intensity" else{"sum(i.intensity) as intensity"}
   
   # --- batch ---
@@ -420,17 +382,26 @@ get_all_matches <- function(#exp.condition=NA,
                                              r.identifier"),
                             width=10000,
                             simplify=TRUE)
-  print(query.collect)
-  print("Exec query three")
+
   res <- RSQLite::dbGetQuery(pat.conn, query.collect)
   # ---------------------------
   res
 }
 
 multimatch <- function(cpd, dbs, searchid){
+  
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
+  DBI::dbExecute(conn, "DROP TABLE IF EXISTS unfiltered")
+  DBI::dbExecute(conn, "DROP TABLE IF EXISTS isotopes")
+  DBI::dbDisconnect(conn)
+  
+  if(exists("match_table")){
+    match_table <<- match_table[,-"score"]
+  }
+  
   match_list <- lapply(dbs, FUN=function(match.table){
     dbname <- gsub(basename(match.table), pattern = "\\.full\\.db", replacement = "")
-    print(dbname)
+
     res <- get_matches(cpd, 
                        match.table, 
                        searchid=searchid)

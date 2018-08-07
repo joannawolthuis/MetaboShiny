@@ -1,3 +1,5 @@
+# for future reference: https://www.r-bloggers.com/deploying-desktop-apps-with-r/ :-)
+
 shinyServer(function(input, output, session) {
   
   # ================================= DEFAULTS ===================================
@@ -10,7 +12,9 @@ shinyServer(function(input, output, session) {
                'Downloads'=file.path(home, "Downloads"),
                'Desktop'=file.path(home, "Desktop")
                )
+  ifelse(exists("match_table"), remove(match_table), NA)
   tbl <- NA
+  match_table <- NA
   tables <- list()
   db_search_list <- c()
   theme_update(plot.title = element_text(hjust = 0.5))
@@ -956,21 +960,46 @@ shinyServer(function(input, output, session) {
     })
   })
   
+  observeEvent(input$score_iso, {
+
+    req(input$iso_score_method)
+    
+    if(!data.table::is.data.table(match_table)) return(NULL)
+    
+    if("score" %in% colnames(match_table)){
+      match_table <<- match_table[,-"score"]
+    }
+    
+    # - - - 
+    
+    
+    
+    score_table <- score.isos(patdb, method=input$iso_score_method) 
+    
+    match_table <<- match_table[score_table, on = c("baseformula", "adduct")]
+    
+    output$match_tab <-DT::renderDataTable({
+      DT::datatable(match_table[,-c("description","structure", "baseformula")],
+                    selection = 'single',
+                    autoHideNavigation = T,
+                    options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+    })  
+  })
+  
   # ================== DATA IMPORT ===========================
   
   observeEvent(input$create_db,{
     
-    print("Working...")
+    
     # --------------------
+    
     patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
+    
     # --------------------
+    
     withProgress({
       
       shiny::setProgress(session=session, value= .1,message = "Loading outlists into memory...")
-      
-      print("hre")
-      
-      print(input$new_proj)
       
       switch(input$new_proj,
              `From DB` = {
@@ -979,12 +1008,19 @@ shinyServer(function(input, output, session) {
                
                db_path <- parseFilePaths(volumes, input$database)$datapath
                
-               file.copy(db_path, patdb)
+               db_path <- "/Users/jwolthuis/Downloads/farms_chick_2ppm.db"
                
-               shiny::setProgress(session=session, value= .50,message = "Adding excel sheets to database...")
+               file.copy(db_path, patdb, overwrite = T)
+               
+               shiny::setProgress(session=session, value= .30)
                
                exp_vars <- load.excel(parseFilePaths(volumes, input$excel)$datapath, patdb)
-               print("done")
+               
+               shiny::setProgress(session=session, value= .60)
+               
+               #reindex.pat.db(patdb)
+               
+               
              },
              `From CSV` = {
                
@@ -1019,7 +1055,7 @@ shinyServer(function(input, output, session) {
   observeEvent(input$import_csv, {
     req(input$pat_csv)
     csv_loc <<- input$pat_csv$datapath
-    print(csv_loc)
+    
     output$csv_upload_check <- renderImage({
       # When input$n is 3, filename is ./images/image3.jpeg
       filename <- normalizePath('www/yes.png')
@@ -1039,7 +1075,7 @@ shinyServer(function(input, output, session) {
       shiny::setProgress(session=session, value= 1/4)
       # create csv
       # input = list(group_by = "mz", exp_type = "stat")
-      #print(if(input$broadvars) "individual_data" else "setup")
+      #
       tbl <- get.csv(patdb,
                      time.series = if(input$exp_type == "time_std") T else F,
                      #exp.condition = input$exp_var,
@@ -1117,7 +1153,7 @@ shinyServer(function(input, output, session) {
   observeEvent(input$check_csv, {
     # ----------------------
     
-    print(csv_loc)
+    
     
     #csv_loc <- "/Users/jwolthuis/Analysis/SP/CHK_0718.csv"
     csv <- fread(csv_loc, 
@@ -1211,24 +1247,24 @@ shinyServer(function(input, output, session) {
                       }
       )
       
-      # print(names(mSet))
+      # 
       # ------- load and re-save csv --------
       
       #f = fread(csv_loc, header = TRUE)
       
       #csv_loc <- "/Users/jwolthuis/Analysis/SP/Brazil_CHICKENS.csv"
       
-      print(csv_loc)
+      
       
       csv_orig <- fread(csv_loc, 
                         data.table = TRUE,
                         header = T)
       
-      print(csv_orig[1:10,1:20])
+      
       
       # replace all 0's with NA
       
-      print("Converting zeroes to NA...")
+      
       
       csv_orig[,(1:ncol(csv_orig)) := lapply(.SD,function(x){ifelse(x == 0,NA,x)})]
       
@@ -1270,12 +1306,12 @@ shinyServer(function(input, output, session) {
       
       # --- remove outliers? ---
       if(input$remove_outliers){
-        print("Removing outliers...")
+        
         
         sums <- rowSums(csv_subset[, -c(1:length(remain)),with=FALSE],na.rm = TRUE)
         names(sums) <- csv_subset$Sample
         outliers = c(car::Boxplot(as.data.frame(sums)))
-        print(paste("Outliers removed (based on total signal):", paste(outliers, collapse=" and ")))
+        
         csv_temp_no_out <- csv_subset[!(Sample %in% outliers),]
       } else{
         csv_temp_no_out <- csv_subset
@@ -1289,13 +1325,13 @@ shinyServer(function(input, output, session) {
       
       complete.perc <- rowMeans(!is.na(csv_temp_no_out))
       keep <- which(complete.perc > .2)
-      print(keep)
+      
       csv_temp_no_out <- csv_temp_no_out[keep,]
       
       batchview = if(condition == "Batch") TRUE else FALSE
       
       if(any(grepl("QC", csv_temp_no_out$Sample))){
-        print("hereee")
+        
         batch_table <- csv_temp_no_out[,c("Sample","Batch"),with=FALSE]
         samps <- which(!grepl(csv_temp_no_out$Sample, pattern = "QC"))
         batchnum <- unique(csv_temp_no_out[samps, "Batch"][[1]])
@@ -1322,7 +1358,7 @@ shinyServer(function(input, output, session) {
                csv_loc_no_out)  
       }
       
-      print(batch_table)
+      
       
       rownames(batch_table) <- batch_table$Sample
       
@@ -1378,7 +1414,7 @@ shinyServer(function(input, output, session) {
       # ------------------------
       
       if(input$filt_type != "none"){
-        print("Filtering...")
+        
         mSet <<- FilterVariable(mSet,
                                 filter = input$filt_type,
                                 qcFilter = "F",
@@ -1396,7 +1432,7 @@ shinyServer(function(input, output, session) {
         norm.vec <<- first_part_no_out[match(first_part_no_out$Sample,
                                              rownames(mSet$dataSet$preproc)),][[input$samp_var]]
         norm.vec <<- scale(x = norm.vec,center = 1)
-        print(norm.vec)
+        
       }else{
         norm.vec <<- rep(1, length(mSet$dataSet$cls))
       }
@@ -1415,8 +1451,8 @@ shinyServer(function(input, output, session) {
       csv_loc_filled <- gsub(pattern = "\\.csv", replacement = "_filled.csv", x = csv_loc)
       
       fwrite(csv_filled, file = csv_loc_filled)
-      #print(ncol(mSet$dataSet$orig))
-      #print(ncol(mSet$dataSet$norm))
+      #
+      #
       
       # mSet <- Normalization(mSet = mSet,
       #                       rowNorm = "QuantileNorm",
@@ -1451,12 +1487,12 @@ shinyServer(function(input, output, session) {
           
           # --- QC CORRECTION ---
           
-          print("Correcting batch effect w/ QC samples...")
+          
           
           corr_cols <- pbapply::pblapply(1:ncol(mSet$dataSet$norm), function(i){
-            #print(i/ncol(mSet$dataSet$norm) * 100)
+            #
             vec = mSet$dataSet$norm[,i]
-            #print(vec)
+            #
             corr_vec = BatchCorrMetabolomics::doBC(Xvec = as.numeric(vec), 
                                                    ref.idx = as.numeric(qc_rows), 
                                                    batch.idx = batch.idx,
@@ -1465,7 +1501,7 @@ shinyServer(function(input, output, session) {
             corr_vec
           })
           
-          print("Done! :-)")
+          
           qc_corr_matrix <- as.data.frame(do.call(cbind, corr_cols))
           
           colnames(qc_corr_matrix) <- colnames(mSet$dataSet$norm)
@@ -1487,19 +1523,18 @@ shinyServer(function(input, output, session) {
                                 value = T,
                                 invert = T)
         
-        print(left_batch_vars)
+        
         
         if(length(left_batch_vars) > 2){ 
-          print("Can only correct for 2 batches...")
+          NULL
         } else if(length(left_batch_vars) == 0){
-          print("No vars usable for ComBat...")
           NULL
         } else{
           
           smp <- rownames(mSet$dataSet$norm)
           exp_lbl <- mSet$dataSet$cls
           
-          print(paste("Batches:", left_batch_vars))
+          
           
           csv <- as.data.table(cbind(Sample = smp, 
                                      Label = mSet$dataSet$cls,
@@ -1544,7 +1579,7 @@ shinyServer(function(input, output, session) {
         }
       }
       
-      print(rownames(mSet$dataSet$norm))
+      
       
       
       shiny::setProgress(session=session, value= .5)
@@ -1911,7 +1946,7 @@ shinyServer(function(input, output, session) {
                  # # using special scale_fill_gradient_fun colors
                  # heatmaply(x, scale_fill_gradient_fun = scale_color_gradient())
                  
-                 print(color.vec())
+                 
                  
                  heatmaply::heatmaply(final_matrix
                                       ,Colv=T, Rowv=T,
@@ -2037,9 +2072,9 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$do_plsda, {
-    print("Doing plsda...")
+    
     library(e1071)
-    print(input$plsda_type)
+    
     switch(input$plsda_type,
            normal={
              withProgress({
@@ -2053,7 +2088,7 @@ shinyServer(function(input, output, session) {
                output$plsda_cv_plot <- renderPlot({ggPlotClass(cf = cf)})
                output$plsda_perm_plot <- renderPlot({ggPlotPerm(cf = cf)})
                
-               print("here")
+               
                # - - - - - - - - - - - 
                shiny::setProgress(session=session, value= 0.6)
                # - - overview table - -
@@ -2246,11 +2281,11 @@ shinyServer(function(input, output, session) {
       curr[,(configCols):= lapply(.SD, function(x) as.factor(x)), .SDcols = configCols]
       curr[,(mzCols):= lapply(.SD, function(x) as.numeric(x)), .SDcols = mzCols]
       
-      print(input$ml_attempts)
+      
       
       goes = as.numeric(input$ml_attempts)
       
-      print(goes)
+      
       
       repeats <- pbapply::pblapply(1:goes, function(i){
         # train / test
@@ -2260,8 +2295,8 @@ shinyServer(function(input, output, session) {
         
         ml_train_perc <- input$ml_train_perc/100
         
-        print(i)
-        print(ml_train_perc)
+        
+        
         
         if(ml_train_regex == "" & ml_test_regex == ""){ # BOTH ARE NOT DEFINED
           test_idx = caret::createDataPartition(y = curr$Label, p = ml_train_perc, list = FALSE)
@@ -2291,8 +2326,8 @@ shinyServer(function(input, output, session) {
         #reTest <- caret::createDataPartition(y = config[test_idx, Label], p = ml_train_perc)
         #inTest <- test_idx[reTest$Resample1]
         
-        print(inTrain)
-        print(inTest)
+        
+        
         
         # - - divide - -
         
@@ -2367,7 +2402,7 @@ shinyServer(function(input, output, session) {
       })
       
       if(!"ml" %in% names(mSet$analSet)){
-        print("wiping")
+        
         mSet$analSet$ml <<- list(ls=list(), rf=list())
       }
       
@@ -2487,9 +2522,9 @@ shinyServer(function(input, output, session) {
       curr_row = input[[paste0(table, "_tab_rows_selected")]]
       # do nothing if not clicked yet, or the clicked cell is not in the 1st column
       if (is.null(curr_row)) return()
-      print("a click has been registered")
+      
       if(grepl(pattern = "lasnet",x = table)){
-        print("trigger")
+        
         alpha <- gsub("alpha|stab|_|lasnet", "", table)
         if(!grepl(pattern = "stab",x = table)){
           table <- "lasnet_a"
@@ -2497,8 +2532,8 @@ shinyServer(function(input, output, session) {
           table <- "lasnet_b"
         }
         # - - -
-        print(alpha)
-        print(table)
+        
+        
       }
       curr_cpd <<- data.table::as.data.table(switch(table,
                                                     tt = mSet$analSet$tt$sig.mat,
@@ -2528,15 +2563,6 @@ shinyServer(function(input, output, session) {
           ggplotSummary(curr_cpd, cols = color.vec(), cf=color.function)
         }
       })
-      # if(input$autosearch & length(db_search_list > 0)){
-      #   match_table <<- multimatch(curr_cpd, db_search_list, mSet$dataSet$grouping)
-      #   output$match_tab <-DT::renderDataTable({
-      #     DT::datatable(if(mSet$dataSet$grouping == 'pathway') match_table else{match_table[,-c("description","structure")]},
-      #                   selection = 'single',
-      #                   autoHideNavigation = T,
-      #                   options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-      #   })  
-      # }
     })
   })
   
@@ -2546,7 +2572,7 @@ shinyServer(function(input, output, session) {
     # --------------------------------------------------------------
     switch(input$tab_stat,
            ml = {
-             print(d)
+             
              switch(input$ml_results, roc = {
                attempt = d$curveNumber - 1
                if(attempt > 1){
@@ -2584,10 +2610,10 @@ shinyServer(function(input, output, session) {
                  
                }
              }, bar = {
-               #print("here??")
+               #
                #d = list(x=1)
                curr_cpd <<- as.character(ml_bar_tab[d$x,"mz"][[1]])
-               print(curr_cpd)
+               
                output$ml_specific_plot <- plotly::renderPlotly({
                  # --- ggplot ---
                  ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
@@ -2687,15 +2713,6 @@ shinyServer(function(input, output, session) {
            })
     # ----------------------------
     output$curr_cpd <- renderText(curr_cpd)
-    # if(input$autosearch & length(db_search_list) > 0){
-    #   match_table <<- multimatch(curr_cpd, db_search_list, mSet$dataSet$grouping)
-    #   output$match_tab <-DT::renderDataTable({
-    #     DT::datatable(if(mSet$dataSet$grouping == 'pathway') match_table else{match_table[,-c("Description", "Structure")]},
-    #                   selection = 'single',
-    #                   autoHideNavigation = T,
-    #                   options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-    #   })  
-    # }
   })
   
   # --- find matches ---
@@ -2898,9 +2915,6 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$venn_members, {
     
-    print(input$venn_members)
-    print(intersect(c("rf", "ls"), input$venn_members))
-    
     if("ls" %in% input$venn_members | "rf" %in% input$venn_members | "plsda" %in% input$venn_members){
       uiElements <- lapply(intersect(c("rf", "ls", "plsda"), input$venn_members), function(name){
         options <- switch(name,
@@ -2995,8 +3009,6 @@ shinyServer(function(input, output, session) {
     
     # - - - - - - --
     
-    print(length(flattened))
-    
     venn.plot <- VennDiagram::venn.diagram(x = flattened,
                                            filename = NULL)
     
@@ -3063,23 +3075,16 @@ shinyServer(function(input, output, session) {
       #%>% layout(plot_bgcolor='transparent')
       #%>% layout(paper_bgcolor='transparent')
     })
-    
-    # updateSelectizeInput(session, "batch_var",
-    #                      choices = opts[batch],
-    #                      options = list(maxItems = 3L - (length(input$batch_var)))
-    
     updateSelectizeInput(session, "intersect_venn", choices = names(flattened))
-    
   })
   
   observeEvent(input$intersect_venn, {
-    print(input$intersect_venn)
+
     if(length(input$intersect_venn) > 1){
       venn_overlap <<- Reduce("intersect", lapply(input$intersect_venn, function(x){
         flattened[[x]]
       })
       )
-      print(venn_overlap)
     }
     output$venn_tab <- DT::renderDataTable({
       # -------------
@@ -3090,72 +3095,20 @@ shinyServer(function(input, output, session) {
     })
   })
   
-  
-  output$metshi_from <- DT::renderDataTable({
-    # -------------
-    DT::datatable(data.table(experiment = metshi_tables$from), 
-                  selection = 'single',
-                  autoHideNavigation = T,
-                  options = list(lengthMenu = c(5, 10, 15), pageLength = 5, dom = 't'))
-  })
-  
-  
-  # - - - SAVING YOUR ANALYSES IN A .metshi FILE - - -
-  
-  # metshi_tables <- reactiveValues(from=names(mSet$analSet),
-  #                                 to=c())
-  # 
-  # observeEvent(input$to_metshi, {
-  #   analysis <- names(mSet$analSet)[input$metshi_from_rows_selected]
-  #   print("adding:")
-  #   print(analysis)
-  #   
-  #   new_name <- if(input$metshi_name != "") paste0("_", input$metshi_name) else ""
-  #   metshi[[paste0(analysis, new_name)]] <<- mSet$analSet[[analysis]]
-  #   
-  #   isolate(metshi_tables$to <- names(metshi))
-  #   
-  # })
-  # 
-  # 
-  # output$metshi_to <- DT::renderDataTable({
-  #   # - - - - - - - - - - - - -
-  #   DT::datatable(data.table(experiment = if(length(metshi_tables$to) > 0) metshi_tables$to else "..."), 
-  #                 selection = 'single',
-  #                 autoHideNavigation = T,
-  #                 options = list(lengthMenu = c(5, 10, 15), 
-  #                                pageLength = 5,
-  #                                dom = 't'))
-  # })
-  # 
-  # 
-  # observeEvent(input$rmv_metshi, {
-  #   rmv <- input$metshi_to_rows_selected
-  #   metshi <<- metshi[-rmv]
-  #   isolate(metshi_tables$to <- names(metshi))
-  # })
-  # 
-  # observe({
-  #   shinyFileSave(input, "save_metshi", roots = c(home = '~'), session=session)
-  #   print(input$save_metshi)
-  #   fileinfo <- parseSavePath(roots = c(home = '~'), input$save_metshi)
-  #   if (nrow(fileinfo) > 0) {
-  #     save(metshi, file = fileinfo$datapath)
-  #   }
-  # })
-  
   # - - - - - - - - - - - - - - - - - - - - - - - - - -
   
   observeEvent(input$venn_tab_rows_selected, {
-    #wanted.adducts.pos <- pos_adducts[input$pos_add_tab_rows_selected, "Name"]
     curr_cpd <<- venn_overlap[input$venn_tab_rows_selected]
     output$curr_cpd <- renderText(curr_cpd)
   })
   
   # --- ON CLOSE ---
-  session$onSessionEnded(function() {
-    if(any(!is.na(session_cl))) parallel::stopCluster(session_cl)
-    R.utils::gcDLLs() # flush dlls
-    #save(mSet$dataSet, mSet$analSet, file = file.path(options$work_dir, paste0(options$proj_name, ".RData")))
+  observe({
+    if (input$nav_general == "stop"){
+      print("closing metaboShiny ~ヾ(＾∇＾)")
+      if(any(!is.na(session_cl))) parallel::stopCluster(session_cl)
+      R.utils::gcDLLs() # flush dlls
+      stopApp() 
+    }
   })
 })

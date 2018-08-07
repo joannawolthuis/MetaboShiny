@@ -331,7 +331,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                              tabPanel(title=NULL, icon=icon("search"),
                                                                       br(),
                                                                       bsCollapse(id = "dbSelect", open = "Settings",
-                                                                                 bsCollapsePanel(h2("Database viewer"), "",#style = "info",
+                                                                                 bsCollapsePanel(h2("Databases"), "",#style = "info",
                                                                                                  fluidRow(#imageOutput("find_mol_icon",inline = T),
                                                                                                    sardine(fadeImageButton("search_internal", img.path = "umcinternal.png")),
                                                                                                    sardine(fadeImageButton("search_noise", img.path = "umcnoise.png")),
@@ -352,19 +352,31 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                  ),
                                                                                                  h4("Current compound:"),
                                                                                                  verbatimTextOutput("curr_cpd") 
+                                                                                 ),
+                                                                                 bsCollapsePanel(h2("Isotope scoring"), "",#style = "info",
+                                                                                                 selectInput("iso_score_method", "Which method used to score compounds of same weight?", selected="mscore", 
+                                                                                                             choices=list("M-score"="mscore",
+                                                                                                                          "Chi-square"="chisq",
+                                                                                                                          "Mean absolute percentage error"="mape",
+                                                                                                                          "SIRIUS"="sirius"))
                                                                                  )
                                                                       ),
                                                                       hr(),
                                                                       fluidRow( # navbarPage(inverse=TRUE,"Search", id="tab_iden",
                                                                                tabsetPanel(id="tab_iden", # type="pills",
                                                                                           tabPanel(title=NULL, icon=icon("paw"),
-                                                                                                   br(),
-                                                                                                   actionButton("search_cpd", "Find hits", icon=icon("search")),
                                                                                                    hr(),
                                                                                                    bsCollapsePanel(h2("Structure viewer"),"",
                                                                                                                    textOutput("curr_formula"),
                                                                                                                    plotOutput("curr_struct", height="310px")
                                                                                                    ),
+                                                                                                   # scoring buttons here..
+                                                                                                   fluidRow(
+                                                                                                     actionButton("search_cpd", "", icon=icon("search")),
+                                                                                                     actionButton("score_iso", "", icon=icon("bar-chart")),
+                                                                                                     actionButton("score_net", "", icon=icon("arrows-alt")),
+                                                                                                     align="center"),
+                                                                                                   br(),
                                                                                                    div(DT::dataTableOutput('match_tab'),style='font-size:80%'),
                                                                                                    hr(),
                                                                                                    div(textOutput("curr_definition"))
@@ -381,33 +393,6 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                    hr(),
                                                                                                    div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
                                                                                           )))
-                                                                      ),
-                                                             tabPanel(title=NULL, icon=icon("bookmark"),
-                                                                      br(),
-                                                                      helpText("You can use this tab to save specific analyses for later."),
-                                                                      fileInput("import_analysis", "Import .metshi file",
-                                                                                multiple = F,
-                                                                                accept = c(".metshi")),
-                                                                      actionButton("import_intersect", "Import", icon = icon("box-open")),
-                                                                      textInput("metshi_name", "Name for newly generated analyses:",value = ""),
-                                                                      fluidRow(column(5, 
-                                                                                      DT::dataTableOutput("metshi_from")
-                                                                                      ),
-                                                                               column(2,
-                                                                                      br(),br(),br(),br(),br(),
-                                                                                      fluidRow(actionButton("to_metshi", label="", icon = icon("arrow-right"))),
-                                                                                      fluidRow(actionButton("rmv_metshi", label="", icon = icon("times")))                                                                                      ),
-                                                                               column(5,
-                                                                                      DT::dataTableOutput("metshi_to")
-                                                                                      )
-                                                                               ),
-                                                                      br(),
-                                                                      #textOutput({renderText(names(mSet$analSet))}),
-                                                                      shinySaveButton("save_metshi", 
-                                                                                      "Save current analysis", 
-                                                                                      "Save file as ...", 
-                                                                                      filetype=list("metshi")
-                                                                                      )
                                                                       ),
                                                              tabPanel(title=NULL, icon=icon("link"),
                                                                       br(),
@@ -538,6 +523,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                )
                     )
            ), 
+           tabPanel(title = "Quit", value="stop", icon = icon("circle-o-notch")),
            div(class="spinnylocation1",
                div(class="plus", img(class="imagetop", src="heart-research.png", width="120px", height="120px")),
                div(class="minus", img(class="imagebottom", src="heart-research.png", width="120px", height="120px"))

@@ -1235,12 +1235,62 @@ build.extended.db <- function(dbname,
 }
 
 #' @export
+reindex.pat.db <- function(db.path){
+  
+  # - NECESSARY WHEN COPYING DB - 
+  
+  print(db.path)
+  
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), db.path)
+  
+  # - create indices - 
+  
+  RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS intindex")
+  RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS intindex2")
+  RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS mzfind")
+  RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS int_2")
+  
+  RSQLite::dbExecute(conn, "CREATE INDEX intindex ON mzintensities(filename,'mzmed',intensity)")
+  RSQLite::dbExecute(conn, "CREATE INDEX intindex2 ON mzintensities('mzmed')")
+  RSQLite::dbExecute(conn, "CREATE INDEX int_2 on mzintensities(mzmed, filename, intensity)")
+  RSQLite::dbExecute(conn, "CREATE INDEX mzfind on mzvals(mzmed, foundinmode);")
+  
+  # - re-create rtree -
+  
+  mzranges <- as.data.table(RSQLite::dbGetQuery(conn, "SELECT mzmin, mzmax FROM mzranges"))
+  
+  RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS mzranges")
+  
+  sql.make.rtree <- strwrap("CREATE VIRTUAL TABLE mzranges USING rtree(
+                            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                            mzmin decimal(30,13),
+                            mzmax decimal(30,13));"
+                            , width=10000, simplify=TRUE)
+  
+  RSQLite::dbExecute(conn, sql.make.rtree)
+                     
+  RSQLite::dbWriteTable(conn, "mzranges", mzranges, append=TRUE) # insert into
+  
+  # - - - - - - - - - -
+  
+  RSQLite::dbExecute(conn, "VACUUM")
+  RSQLite::dbExecute(conn, "ANALYZE")
+  
+  RSQLite::dbDisconnect(conn)
+  
+  print("done")
+  
+}
+
+#' @export
 build.pat.db <- function(db.name, 
                          pospath, 
                          negpath, 
                          overwrite=FALSE,
                          rtree=TRUE,
+                         make.full = TRUE,
                          ppm=2){
+  
   
   # ------------------------
   ppm = as.numeric(ppm)
