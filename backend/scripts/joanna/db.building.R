@@ -1001,11 +1001,26 @@ build.base.db <- function(dbname=NA,
                                  db.formatted <- data.table::data.table(compoundname = table_main$fullName,
                                                                         description = table_main$description,
                                                                         baseformula = table_main$chargedFormula, 
-                                                                        identifier= table_main$reconMap,
+                                                                        identifier= table_main$reconMap3,
                                                                         charge= table_main$charge,
                                                                         structure= table_main$smile,
                                                                         isHuman = table_main$isHuman,
                                                                         isMicrobe = table_main$isMicrobe)
+                                 
+                                 #filter for weights that are way too much w/ weird formulas
+                                 
+                                 mzlimit=6000 # for now...
+                                 
+                                 checked <- check.chemform.joanna(isotopes, db.formatted$baseformula)
+                                 keep <- which(checked$monoisotopic_mass %between% c(0, mzlimit))
+                                 
+                                 db.formatted <- db.formatted[keep,]
+                                 
+                                 # - - - - - - - - - - - - - - - - - - - 
+                                 
+                                 missing.id <- which(is.na(db.formatted$identifier))
+                                 replacements <- table_main$reconMap # use synonum instead
+                                 db.formatted$identifier[missing.id] <- replacements[missing.id]
                                  
                                  missing.desc <- which(db.formatted$description == "<NA>" | db.formatted$description == "" | is.na(db.formatted$description))
                                  replacements <- table_main$synonyms # use synonum instead
@@ -1038,6 +1053,46 @@ build.base.db <- function(dbname=NA,
                                  
                                  db.formatted$description <- descriptions
                                  
+                                 db.formatted <- db.formatted[,-c("isHuman", "isMicrobe")]
+                                 
+                                 # find formula and charge of some molecules through SMILES
+                                 
+                                 structs <- db.formatted$structure
+                                 
+                                charges_formulae <- pbapply::pblapply(structs, function(smi){
+                                     res = list(charge = NA, formula = NA)
+                                     try({
+                                       iatom <- rcdk::parse.smiles(smi)[[1]]
+                                       charge = rcdk::get.total.charge(iatom)
+                                       formula = rcdk::get.mol2formula(iatom)
+                                       res = list(charge = charge[[1]], formula = formula@string)
+                                     })
+                                     # - - return - -
+                                     res
+                                   })
+                                 
+                                 formulae <- sapply(charges_formulae, function(x) x$formula)
+                                 charges <- sapply(charges_formulae, function(x) x$charge)
+                                 
+                                 found.formula <- which(!is.na(formulae))
+                                 found.charges <- which(!is.na(charges))
+                                 
+                                 db.formatted$baseformula[found.formula] <- formulae[found.formula]
+                                 db.formatted$charge[found.charges] <- charges[found.charges]
+                                 
+                                 # check duplicated formulae and give same ID (no better solution for now..)
+                                 
+                                 duplicates <- split(db.formatted, by=c("baseformula", "charge"))
+                                 
+                                 no.duplicates <- which(sapply(duplicates, nrow) == 1)
+                                 has.duplicates <- which(sapply(duplicates, nrow) > 1)
+                                 
+                                 single.groups <- duplicates[no.duplicates]
+                                 duplicate.groups <- duplicates[has.duplicates]
+                                 
+                                 filled.duplicate.groups <- pbapply::pblapply(duplicate.groups, function(group){
+                                   if(length(unique(group$identifier)) == 1){print(group)}
+                                 })
                                  # check integrity of formulae
                                  
                                  checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
@@ -1047,77 +1102,52 @@ build.base.db <- function(dbname=NA,
                                  fine.compounds <- db.formatted[-wrong,]
                                  wack.compounds <- db.formatted[wrong,]
                                  
-                                 # find formula and charge of some molecules through SMILES
-                                 
-                                 structs <- wack.compounds$structure
-                                 
-                                 charges_formulae <- pbapply::pblapply(structs, function(smi){
-                                   print(smi)
-                                   res = list(charge = NA, formula = NA)
-                                   try({
-                                     iatom <- rcdk::parse.smiles(smi)[[1]]
-                                     charge = rcdk::get.total.charge(iatom)
-                                     formula = rcdk::get.mol2formula(iatom)
-                                     res = list(charge = charge[[1]], formula = formula@string)
-                                   })
-                                   print(res)
-                                   # - - return - - 
-                                   res
-                                 })
-                                 
-                                 formulae <- sapply(charges_formulae, function(x) x$formula)
-                                 charges <- sapply(charges_formulae, function(x) x$charge)
-                                 
-                                 found.formula <- which(!is.na(formulae))
-                                 found.charges <- which(!is.na(charges))
-                                 
-                                 wack.compounds$baseformula[found.formula] <- formulae[found.formula]
-                                 wack.compounds$charge[found.charges] <- charges[found.charges]
-                                 
-                                 # find leftovers 
-                                 
-                                 checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
-                                                                                            wack.compounds$baseformula))
-                                 wrong <- checked[warning == TRUE, which = TRUE]
-                                 last.wack.compounds <- wack.compounds[wrong,]
-                                 fixed.compounds <- wack.compounds[-wrong,]
-
                                  # fix halogens
                                  
                                  halogens <- c("F1"="fluoride", "Cl1"="chloride", "Br1"="bromide", "I1"="iodide", "At1"="astatide")
                                  w.halogens <- grep(x=last.wack.compounds$baseformula, "X")
                                  
                                  halogen.fixed.list <- pbapply::pblapply(w.halogens, function(i){
+                                   
                                    row <- last.wack.compounds[i,]
-                                   rows <- lapply(names(halogens), function(X){
-                                     new.row <- row
-                                     new.row$baseformula = gsub(new.row$baseformula, pattern="X", replacement=X)
-                                     new.row$compoundname = paste0(new.row$compoundname, "-", halogens[[X]])
-                                     print(new.row)
-                                     # - - return - - 
-                                     new.row
-                                   })
-                                   # - - -
-                                   rows
+                                   
+                                   if(row$baseformula == "X"){
+                                     print("yeah skip this one")
+                                     return(NA)
+                                   }else{
+                                     rows <- lapply(names(halogens), function(X){
+                                       new.row <- row
+                                       new.row$baseformula = gsub(x = new.row$baseformula, pattern="X", replacement=X)
+                                       new.row$compoundname = paste0(new.row$compoundname, " + ", halogens[[X]])
+                                       new.row$structure = NA
+                                       # - - return - - 
+                                       new.row
+                                     })
+                                     # - - -
+                                     rows
+                                   }
+                                   data.table::rbindlist(rows)
                                  })
                                  
-                                 halogen.compounds <- data.table::rbindlist(halogen.fixed.list)
-                                 
+                                 halogen.compounds <- data.table::rbindlist(halogen.fixed.list[!is.na(halogen.fixed.list)])
+
                                  # - - residual compounds - - 
                                  
                                  w.residual <- grep(x=last.wack.compounds$baseformula, "FULL")
                                  
                                  residuals <- last.wack.compounds[w.residual,]
                                  
+                                 # how to fix these?? they're always attached to something... skip for now
                                  
                                  # - - totals - - 
                                  
                                  subtables <- list(
                                    fine.compounds,
                                    fixed.compounds,
-                                   halogen.compounds,
-                                   noresid.compounds
+                                   halogen.compounds
                                  )
+                                 
+                                 db.formatted <- unique(rbindlist(subtables))
                                  
                                  # - - write - - 
                                  
@@ -1155,13 +1185,23 @@ build.base.db <- function(dbname=NA,
 }
 
 #' @export
-build.extended.db <- function(dbname, 
-                              outfolder, 
-                              adduct.table, 
-                              continue=F, 
-                              cl=0, 
-                              fetch.limit=-1,
-                              cpd.limit=-1){
+build.extended.db <- function(dbname,
+                              outfolder,
+                              adduct.table,
+                              continue = F,
+                              cl = 0,
+                              fetch.limit = -1,
+                              cpd.limit = -1){
+  # ------------------------
+  
+  # build.base.db("internal")
+  # dbname = "noise"
+  # outfolder = options$db_dir
+  # adduct.table = adducts
+  # continue = F
+  # cpd.limit = 100
+  # fetch.limit = 100
+  
   # ------------------------
   data(isotopes, package = "enviPat")
   base.db <- file.path(outfolder, paste0(dbname, ".base.db"))
@@ -1234,8 +1274,12 @@ build.extended.db <- function(dbname,
     partial.results <- data.table::as.data.table(RSQLite::dbFetch(results, fetch.limit))
     if(length(partial.results$baseformula) == 0) next
     # -----------------------
+    
+    #print(partial.results$baseformula)
+    
     print(paste(RSQLite::dbGetRowCount(results), formula.count, sep=" / "))
     # -----------------------
+    
     checked.formulae <- data.table::as.data.table(check.chemform.joanna(isotopes, 
                                                                         partial.results$baseformula))
     # -----------------------------
@@ -1251,6 +1295,9 @@ build.extended.db <- function(dbname,
     do.calc <- function(x){
       row <- adduct.table[x,]
       name <- row$Name
+      
+      #print(paste("--- CURRENT ADDUCT:", name, "---"))
+      
       adduct <- row$Formula_add
       deduct <- row$Formula_ded
       # --- fix booleans ---
@@ -1286,8 +1333,20 @@ build.extended.db <- function(dbname,
       backtrack$final.charge <- c(as.numeric(backtrack$charge)) + c(as.numeric(row$Charge))
       backtrack <- backtrack[final.charge != 0]
       if(nrow(backtrack) == 0) return(NA)
+      
       # --- get isotopes ---
-      isotopes <- enviPat::isopattern(
+      
+      # base_mzs <- enviPat::isopattern(
+      #   isotopes,
+      #   backtrack$baseformula, #backtrack$final,
+      #   threshold = 0.1,
+      #   plotit = FALSE,
+      #   charge = FALSE, #backtrack$final.charge,
+      #   algo = 2,
+      #   verbose = FALSE
+      # )
+      
+      isotables <- enviPat::isopattern(
         isotopes,
         backtrack$final,
         threshold = 0.1,
@@ -1296,8 +1355,27 @@ build.extended.db <- function(dbname,
         algo = 2,
         verbose = FALSE
       )
-      # -------------------------
-      isolist <- lapply(isotopes, function(isotable){
+      
+      # for(i in 1:length(full_mzs)){
+      #   match = all(full_mzs[[i]][,"abundance"] == base_mzs[[i]][,"abundance"])
+      #   # - - -
+      #   if(!match){
+      #     print(nrow(base_mzs[[i]]))
+      #     # print(gsubfn::fn$paste("--- M ---"))
+      #     # print(base_mzs[[i]])
+      #     # print(gsubfn::fn$paste("--- $name ---"))
+      #     # print(full_mzs[[i]])
+      #     # replace
+      #     full_mzs[[i]] <- full_mzs[[i]][1:nrow(base_mzs[[i]]),]
+      #     full_mzs[[i]][,"abundance"] <- full_mzs[[i]][,"abundance"]
+      #   }
+      #   #print(full_mzs[[i]])
+      # }
+      # print("here???")
+    # -------------------------
+      
+      isolist <- lapply(isotables, function(isotable){
+        #print(isotable)
         if(isotable[[1]] == "error") return(NA)
         iso.dt <- data.table::data.table(isotable, fill=TRUE)
         result <- iso.dt[,1:2]
@@ -1305,11 +1383,16 @@ build.extended.db <- function(dbname,
         # --- return ---
         result
       })
+
       isolist.nonas <- isolist[!is.na(isolist)]
       isotable <- rbindlist(isolist.nonas)
+      
+
       keep.isos <- names(isolist.nonas)
+      
       # --- remove 'backtrack' rows that couldn't be calculated ---
       backtrack.final <- backtrack[final %in% keep.isos]
+      
       # --------------------
       repeat.times <- c(unlist(lapply(isolist.nonas, FUN=function(list) nrow(list)), use.names = FALSE))
       meta.table <- data.table::data.table(baseformula = rep(backtrack.final$baseformula, repeat.times),
@@ -1325,6 +1408,8 @@ build.extended.db <- function(dbname,
       # --- return ---
       meta.table
     }
+    tab.list <- pbapply::pblapply(cl=NULL, 1:nrow(adduct.table), FUN=function(x) do.calc(x))
+    
     tab.list <- parallel::parLapply(cl=cl, 1:nrow(adduct.table), fun=function(x) do.calc(x))
     # --- progress bar... ---
     pbapply::setpb(pb, RSQLite::dbGetRowCount(results))
@@ -1536,7 +1621,8 @@ build.pat.db <- function(db.name,
   
   # ------------------------
   
-  RSQLite::dbWriteTable(conn, "batchinfo", batch_info, append=FALSE) # insert into
+  #RSQLite::dbCreateTable()
+  RSQLite::dbWriteTable(conn, "batchinfo", batch_info, overwrite=T) # insert into
   
   # ------------------------
   
@@ -1606,9 +1692,8 @@ load.excel <- function(path.to.xlsx,
                          #"Admin"
                        )){
   # --- connect to sqlite db ---
-  #path.to.xlsx = "/Users/jwolthuis/Google Drive/MetaboShiny/backend/appdata/brazil_chicken/DSM_BR1_10.xlsx"
-  #path.to.patdb = "/Users/jwolthuis/Analysis/SP/1_"
-  #path.to.xlsx = "/Users/jwolthuis/Desktop/"
+  #path.to.patdb = "/Users/jwolthuis/Analysis/...
+  #path.to.xlsx = "/Users/jwolthuis/Desktop/..."
   
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), path.to.patdb)
   # -------------------------------

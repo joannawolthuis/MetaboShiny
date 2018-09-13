@@ -53,20 +53,24 @@ get_matches <- function(cpd = NA,
   }else{
     
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
-
+    
     cpd = curr_cpd
     
     RSQLite::dbExecute(conn, gsubfn::fn$paste("ATTACH '$chosen.db' AS db"))
     
-
     withProgress({
-
+      
       if(!DBI::dbExistsTable(conn, "unfiltered"))
       {
         # create
         RSQLite::dbExecute(conn, gsubfn::fn$paste(strwrap(
           "CREATE TABLE unfiltered AS
-          SELECT DISTINCT cpd.baseformula as baseformula, cpd.fullformula, cpd.adduct as adduct, cpd.isoprevalence as isoprevalence, cpd.basecharge as charge
+          SELECT DISTINCT cpd.baseformula as baseformula, 
+          cpd.fullformula, 
+          cpd.adduct as adduct, 
+          cpd.isoprevalence as isoprevalence, 
+          cpd.basecharge as charge, 
+          (ABS($cpd - cpd.fullmz) / $cpd)/1e6 AS dppm
           FROM mzvals mz
           JOIN mzranges rng ON rng.ID = mz.ID
           JOIN db.extended cpd indexed by e_idx2
@@ -78,7 +82,12 @@ get_matches <- function(cpd = NA,
         # append
         RSQLite::dbExecute(conn, gsubfn::fn$paste(strwrap(
           "INSERT INTO unfiltered
-          SELECT DISTINCT cpd.baseformula as baseformula, cpd.fullformula, cpd.adduct as adduct, cpd.isoprevalence as isoprevalence, cpd.basecharge as charge
+          SELECT DISTINCT cpd.baseformula as baseformula, 
+          cpd.fullformula, 
+          cpd.adduct as adduct, 
+          cpd.isoprevalence as isoprevalence, 
+          cpd.basecharge as charge, 
+          (ABS($cpd - cpd.fullmz) / $cpd)/1e6 AS dppm
           FROM mzvals mz
           JOIN mzranges rng ON rng.ID = mz.ID
           JOIN db.extended cpd indexed by e_idx2
@@ -86,7 +95,7 @@ get_matches <- function(cpd = NA,
           AND mz.foundinmode = cpd.foundinmode
           WHERE $cpd BETWEEN rng.mzmin AND rng.mzmax",width=10000, simplify=TRUE)))
       }     
-
+      
       # 1. Find matches in range (reasonably fast <3)
       setProgress(value = 0.4)
       
@@ -94,7 +103,7 @@ get_matches <- function(cpd = NA,
         # create
         RSQLite::dbExecute(conn,
                            "CREATE TABLE isotopes AS
-                           SELECT DISTINCT cpd.* 
+                           SELECT DISTINCT cpd.*
                            FROM db.extended cpd
                            JOIN unfiltered u
                            ON u.baseformula = cpd.baseformula
@@ -103,33 +112,72 @@ get_matches <- function(cpd = NA,
         # append
         RSQLite::dbExecute(conn,
                            "INSERT INTO isotopes
-                           SELECT cpd.* 
+                           SELECT cpd.*
                            FROM db.extended cpd
                            JOIN unfiltered u
                            ON u.baseformula = cpd.baseformula
                            AND u.adduct = cpd.adduct")
       }
-    })
+      
+      if(!DBI::dbExistsTable(conn, "adducts")){
+        # create
+        RSQLite::dbExecute(conn,
+                           "CREATE TABLE adducts AS
+                           SELECT DISTINCT cpd.*
+                           FROM db.extended cpd
+                           JOIN unfiltered u
+                           ON u.baseformula = cpd.baseformula")
+      }else{
+        # append
+        RSQLite::dbExecute(conn,
+                           "INSERT INTO adducts
+                           SELECT cpd.*
+                           FROM db.extended cpd
+                           JOIN unfiltered u
+                           ON u.baseformula = cpd.baseformula")
+      }
     
-    results <- DBI::dbGetQuery(conn, "SELECT b.compoundname as name, 
-                                      b.baseformula,
-                                      u.adduct,
-                                      u.isoprevalence,
-                                      b.identifier,
-                                      b.description, 
-                                      b.structure 
-                                      FROM unfiltered u
-                                      JOIN db.base b
-                                      ON u.baseformula = b.baseformula
-                                      AND u.charge = b.charge")
+      })
     
+    # - - - save adducts too - - - 
+    
+    
+    results <- DBI::dbGetQuery(conn, "SELECT 
+                               b.compoundname as name, 
+                               b.baseformula,
+                               u.adduct,
+                               u.isoprevalence as perciso,
+                               u.dppm,
+                               b.identifier,
+                               b.description, 
+                               b.structure 
+                               FROM unfiltered u
+                               JOIN db.base b
+                               ON u.baseformula = b.baseformula
+                               AND u.charge = b.charge")
+    
+    results$perciso <- round(results$perciso, 2)
+    results$dppm <- signif(results$dppm, 2)
+    
+    colnames(results)[which(colnames(results) == "dppm")] <- "Δppm"
+    colnames(results)[which(colnames(results) == "perciso")] <- "%iso"
+    
+    round_df <- function(df, digits) {
+      nums <- vapply(df, is.numeric, FUN.VALUE = logical(1))
+      
+      df[,nums] <- round(df[,nums], digits = digits)
+      
+      (df)
+    }
+    
+  
     DBI::dbDisconnect(conn)
     
     # - - return - - 
     
     results
     
-  }}
+      }}
 
 score.isos <- function(patdb, method="mscore"){
   
@@ -137,32 +185,32 @@ score.isos <- function(patdb, method="mscore"){
   
   withProgress({
     
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
-  
-  setProgress(value = 0.6)
-  
-  table <- RSQLite::dbGetQuery(conn,gsubfn::fn$paste(strwrap(
-    "SELECT int.mzmed, iso.baseformula, iso.adduct, iso.fullmz, iso.fullformula, iso.isoprevalence, int.filename, int.intensity
-    FROM isotopes iso
-    JOIN mzranges rng
-    ON iso.fullmz BETWEEN rng.mzmin AND rng.mzmax
-    JOIN mzintensities int
-    ON int.mzmed BETWEEN rng.mzmin AND rng.mzmax
-    WHERE int.filename NOT LIKE 'QC%'"
-    , width=10000, simplify=TRUE)))
-  
-  setProgress(value = 0.8)
-  
-  table <- as.data.table(table[complete.cases(table),])
-  
-  table <- data.table::setDT(table)[, .(mzmed = mean(mzmed), intensity = sum(intensity)),
-                                    by=.(baseformula, fullmz, fullformula, adduct, isoprevalence, filename)]
-  p.cpd <- split(x = table, 
-                 f = list(table$baseformula, table$adduct))
-  
-  i <<- 0
-  
-  res_rows <- pbapply::pblapply(p.cpd, cl=0, function(cpd_tab){
+    conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
+    
+    setProgress(value = 0.6)
+    
+    table <- RSQLite::dbGetQuery(conn,gsubfn::fn$paste(strwrap(
+      "SELECT int.mzmed, iso.baseformula, iso.adduct, iso.fullmz, iso.fullformula, iso.isoprevalence, int.filename, int.intensity
+      FROM isotopes iso
+      JOIN mzranges rng
+      ON iso.fullmz BETWEEN rng.mzmin AND rng.mzmax
+      JOIN mzintensities int
+      ON int.mzmed BETWEEN rng.mzmin AND rng.mzmax
+      WHERE int.filename NOT LIKE 'QC%'"
+      , width=10000, simplify=TRUE)))
+    
+    setProgress(value = 0.8)
+    
+    table <- as.data.table(table[complete.cases(table),])
+    
+    table <- data.table::setDT(table)[, .(mzmed = mean(mzmed), intensity = sum(intensity)),
+                                      by=.(baseformula, fullmz, fullformula, adduct, isoprevalence, filename)]
+    p.cpd <- split(x = table, 
+                   f = list(table$baseformula, table$adduct))
+    
+    i <<- 0
+    
+    res_rows <- pbapply::pblapply(p.cpd, cl=0, function(cpd_tab){
       
       formula = unique(cpd_tab$baseformula)
       adduct = unique(cpd_tab$adduct)
@@ -208,14 +256,14 @@ score.isos <- function(patdb, method="mscore"){
                           },
                           mscore={
                             InterpretMSSpectrum::mScore(obs=obs, the=theor, dppm = 1, int_prec = 0.225)
-                            },
+                          },
                           sirius={NULL},
                           chisq={
                             test <- chisq.test( obs[2,], p = theor[2,], rescale.p = T)
                             # - - -
                             as.numeric(test$p.value)
                           }
-                          )
+            )
             
           }
           res
@@ -232,10 +280,10 @@ score.isos <- function(patdb, method="mscore"){
       }else{
         data.table::data.table()
       } 
-      })
     })
-    rbindlist(res_rows)
-  }
+  })
+  rbindlist(res_rows)
+}
 
 #' @export
 get_mzs <- function(baseformula, charge, chosen.db){
@@ -263,7 +311,7 @@ get_mzs <- function(baseformula, charge, chosen.db){
     ON o.fullmz BETWEEN rng.mzmin AND rng.mzmax
     JOIN mzvals mz
     ON rng.ID = mz.ID", width=10000, simplify=TRUE))
-
+  
   RSQLite::dbExecute(conn, query.two)
   # isofilter and only in
   query.three <-  strwrap(
@@ -298,7 +346,7 @@ get_all_matches <- function(#exp.condition=NA,
     if(is.na(chosen.db)) next
     # --------------------------
     dbshort <- paste0("db", i)
-
+    
     try({
       RSQLite::dbExecute(pat.conn, gsubfn::fn$paste("DETACH $dbshort"))
     })
@@ -349,7 +397,7 @@ get_all_matches <- function(#exp.condition=NA,
   query.one <- gsubfn::fn$paste(strwrap(
     "CREATE TEMP TABLE isotopes AS
     $union",width=10000, simplify=TRUE))
-
+  
   RSQLite::dbExecute(pat.conn, query.one)
   adductfilter <- paste0("WHERE adduct = '", paste(which_adducts, collapse= "' OR adduct = '"), "'")
   idquery <- paste0("iso.", group_by)
@@ -388,7 +436,7 @@ get_all_matches <- function(#exp.condition=NA,
                                              r.identifier"),
                             width=10000,
                             simplify=TRUE)
-
+  
   res <- RSQLite::dbGetQuery(pat.conn, query.collect)
   # ---------------------------
   res
@@ -407,7 +455,7 @@ multimatch <- function(cpd, dbs, searchid){
   
   match_list <- lapply(dbs, FUN=function(match.table){
     dbname <- gsub(basename(match.table), pattern = "\\.full\\.db", replacement = "")
-
+    
     res <- get_matches(cpd, 
                        match.table, 
                        searchid=searchid)

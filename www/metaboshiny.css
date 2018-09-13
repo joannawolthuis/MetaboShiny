@@ -222,7 +222,7 @@ body {  font-family: 'Raleway', serif !important;   font-size: 12pt;  }
   -webkit-animation:spin 30s linear infinite;
   -moz-animation:spin 30s linear infinite;
   animation:spin 30s linear infinite;
-  /* filter: invert(100%); */
+  filter: invert(100%);
   margin-top: 20px;
   margin-left: 15px;
 }

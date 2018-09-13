@@ -136,7 +136,7 @@ shinyServer(function(input, output, session) {
                 "vmh"
   )
   
-  images <<- list(list(name = 'cute_package', path = 'www/new-product.png', dimensions = c(80, 80)),
+  images <<- list(list(name = 'cute_package', path = 'www/cat.png', dimensions = c(80, 80)),
                   list(name = 'umc_logo_int', path = 'www/umcinternal.png', dimensions = c(120, 120)),
                   list(name = 'umc_logo_noise', path = 'www/umcnoise.png', dimensions = c(120, 120)),
                   list(name = 'hmdb_logo', path = 'www/hmdblogo.png', dimensions = c(150, 100)),
@@ -1016,7 +1016,7 @@ shinyServer(function(input, output, session) {
                
                db_path <- parseFilePaths(volumes, input$database)$datapath
                
-               db_path <- "/Users/jwolthuis/Downloads/farms_chick_2ppm.db"
+               #db_path <- "/Users/jwolthuis/Downloads/hpc/farms_pig_2ppm.db"
                
                file.copy(db_path, patdb, overwrite = T)
                
@@ -1027,7 +1027,6 @@ shinyServer(function(input, output, session) {
                shiny::setProgress(session=session, value= .60)
                
                #reindex.pat.db(patdb)
-               
                
              },
              `From CSV` = {
@@ -1233,7 +1232,7 @@ shinyServer(function(input, output, session) {
       #Below is your R command history: 
       mSet <<- switch(input$exp_type,
                       stat = {
-                        #  mSet<-
+                        #mSet<- #DEBUG
                         InitDataObjects("pktable", 
                                         "stat", 
                                         FALSE)
@@ -1260,21 +1259,15 @@ shinyServer(function(input, output, session) {
       
       #f = fread(csv_loc, header = TRUE)
       
-      #csv_loc <- "/Users/jwolthuis/Analysis/SP/Brazil_CHICKENS.csv"
-      
-      
+      #csv_loc <- "/Users/jwolthuis/Analysis/SP/CHICKENS.csv" #DEBUG
       
       csv_orig <- fread(csv_loc, 
                         data.table = TRUE,
                         header = T)
       
-      
-      
       # replace all 0's with NA
       
-      
-      
-      csv_orig[,(1:ncol(csv_orig)) := lapply(.SD,function(x){ifelse(x == 0,NA,x)})]
+      csv_orig[,(1:ncol(csv_orig)) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)})]
       
       # - - -
       
@@ -1284,10 +1277,20 @@ shinyServer(function(input, output, session) {
       
       exp.vars <- which(is.na(as.numi))
       
-      #nvars <- length(csv_orig[,1:(which(colnames(csv_orig) == "$"))])
-      
       # --- batches ---
       
+      # input <- list(batch_var = "Batch",
+      #               exp_var = "Stool_condition",
+      #               perc_limit = .99,
+      #               filt_type = "none",
+      #               miss_type = "rf",
+      #               norm_type = "QuantileNorm",
+      #               trans_type = "LogNorm",
+      #               scale_type = "AutoNorm",
+      #               ref_var = "none",
+      #               remove_outliers = TRUE
+      #               )
+    
       batches <- input$batch_var
       condition <- input$exp_var
       
@@ -1302,21 +1305,21 @@ shinyServer(function(input, output, session) {
       
       csv_temp <- cbind(first_part[,!duplicated(names(first_part)),with=FALSE],
                         "Label" = first_part[,..condition][[1]],
-                        "$" = c(0),
+                        #"$" = c(0),
                         csv_orig[,-..exp.vars,with=FALSE])
       
       # --- remove the rest ---
       
-      remove = setdiff(colnames(csv_temp)[exp.vars], c(batches, "Label","Batch","Sample","Time"))
-      remain = intersect(colnames(csv_temp)[exp.vars], c(batches, "Label","Batch","Sample","Time"))
+      #remove = setdiff(colnames(csv_temp)[exp.vars], c(batches, "Label","Batch","Sample","Time"))
+      #remain = intersect(colnames(csv_temp)[exp.vars], c(batches, "Label","Batch","Sample","Time"))
       
-      csv_subset <- csv_temp[, !remove, with=FALSE]
+      csv_subset <- csv_temp
       
       # --- remove outliers? ---
       if(input$remove_outliers){
         
         
-        sums <- rowSums(csv_subset[, -c(1:length(remain)),with=FALSE],na.rm = TRUE)
+        sums <- rowSums(csv_subset[, -exp.vars,with=FALSE],na.rm = TRUE)
         names(sums) <- csv_subset$Sample
         outliers = c(car::Boxplot(as.data.frame(sums)))
         
@@ -1325,66 +1328,72 @@ shinyServer(function(input, output, session) {
         csv_temp_no_out <- csv_subset
       }
       
-      # - - - remove peaks that are missingin all - - -
+      # - - - remove peaks that are missing in all - - -
       
       csv_temp_no_out <- csv_temp_no_out[,which(unlist(lapply(csv_temp_no_out, function(x)!all(is.na(x))))),with=F]
       
       # # - - - low signal samples - - -
       
       complete.perc <- rowMeans(!is.na(csv_temp_no_out))
-      keep <- which(complete.perc > .2)
+      keep_samps <- csv_temp_no_out$Sample[which(complete.perc > .2)]
       
-      csv_temp_no_out <- csv_temp_no_out[keep,]
+      csv_temp_no_out <- csv_temp_no_out[Sample %in% keep_samps,]
+      
+      covar_table <- first_part[Sample %in% keep_samps,]
       
       batchview = if(condition == "Batch") TRUE else FALSE
       
       if(any(grepl("QC", csv_temp_no_out$Sample))){
-        
-        batch_table <- csv_temp_no_out[,c("Sample","Batch"),with=FALSE]
+        #covar_table <- csv_temp_no_out[,c("Sample","Batch"),with=FALSE]
         samps <- which(!grepl(csv_temp_no_out$Sample, pattern = "QC"))
         batchnum <- unique(csv_temp_no_out[samps, "Batch"][[1]])
-        keep_samps <- batch_table[which(batch_table$Batch %in% batchnum),"Sample"][[1]]
-        batch_table <- batch_table[which(batch_table$Batch %in% batchnum)]
-        if("Batch" %in% batches){
-          csv_temp_filt <- csv_temp_no_out[which(csv_temp_no_out$Sample %in% keep_samps),]
-        }else{
-          csv_temp_filt <- csv_temp_no_out[which(csv_temp_no_out$Sample %in% keep_samps), -"Batch"]
-        }
+        keep_samps_post_qc <- covar_table[which(covar_table$Batch %in% batchnum),"Sample"][[1]]
+        covar_table <- covar_table[which(covar_table$Batch %in% batchnum),]
+        #if("Batch" %in% batches){
+        csv_temp_filt <- csv_temp_no_out[which(csv_temp_no_out$Sample %in% keep_samps_post_qc),]
+        #}else{
+        #  csv_temp_filt <- csv_temp_no_out[which(csv_temp_no_out$Sample %in% keep_samps), -"Batch"]
+        #}
       }else{ 
-        csv_temp_filt <- csv_temp_no_out[, -"Batch"]
+        csv_temp_filt <- csv_temp_no_out#[, -"Batch"]
       }
       
       csv_loc_no_out <- gsub(pattern = "\\.csv", replacement = "_no_out.csv", x = csv_loc)
       
-      if(batch_corr){
-        batch_table <- csv_temp_filt[,c("Sample",batches),with=FALSE]
-        fwrite(csv_temp_filt[,-batches, with=FALSE], 
-               csv_loc_no_out)  
-      }else{
-        batch_table <- csv_temp_filt[,c("Sample"),with=FALSE]
-        fwrite(csv_temp_filt, 
-               csv_loc_no_out)  
-      }
+      # remove all except sample and time in saved csv
+      exp_var_names <- colnames(csv_temp_filt)[exp.vars]
+      keep_cols <- c("Sample", "Label")# "Group", "Time")
+      remove <- which(!(exp_var_names %in% keep_cols))
       
+      print(colnames(csv_temp_filt)[-remove][1:10])
+      print(dim(csv_temp_filt[,-remove, with=FALSE]))
       
+      fwrite(csv_temp_filt[,-remove, with=FALSE], 
+             csv_loc_no_out)
       
-      rownames(batch_table) <- batch_table$Sample
+      # if(batch_corr){
+      #   #covar_table <- csv_temp_filt[,c("Sample",batches),with=FALSE]
+      #   fwrite(csv_temp_filt[,-batches, with=FALSE], 
+      #          csv_loc_no_out)  
+      # }else{
+      #   #covar_table <- csv_temp_filt[,c("Sample"),with=FALSE]
+      # 
+      # }
+      
+      rownames(covar_table) <- covar_table$Sample
       
       # -------------------------------------
       
       mSet <<- Read.TextData(mSet, 
-                             filePath = csv_loc_no_out, 
-                             "rowu")
+                            filePath = csv_loc_no_out, 
+                            "rowu")
       
-      mSet$dataSet$batches <<- batch_table
+      mSet$dataSet$covars <<- covar_table
       
       # - - - sanity check - - -
       
       mSet <<- SanityCheckData(mSet)
       
-      #input <- list(perc_limit = 80)
-     # mSet$dataSet$preproc[mSet$dataSet$preproc=='NA'] <- NA
-
       mSet <<- RemoveMissingPercent(mSet, 
                                     percent = input$perc_limit/100)
       
@@ -1398,25 +1407,34 @@ shinyServer(function(input, output, session) {
         }else if(input$miss_type == "rf"){
           samples <- rownames(mSet$dataSet$preproc)
           
-          w.missing <- mSet$dataSet$preproc
+          w.missing <- mSet$dataSet$preproc#[,1:50]
           w.missing <- apply(w.missing, 2, as.numeric)
           library(doParallel)
-          #cl <- makeCluster(3)
+          #session_cl <- makeCluster(3)
           registerDoParallel(session_cl)
           
+          auto.mtry <- floor(sqrt(ncol(mSet$dataSet$preproc)))
+          
+          mtry <- ifelse(auto.mtry > 100, 100, auto.mtry)
+          
+          print(mtry)
+          
           imp <- missForest::missForest(w.missing, 
-                                        parallelize = "forests",
-                                        verbose = T)
+                                        parallelize = "variables",
+                                        verbose = T,
+                                        ntree = 10,
+                                        mtry = mtry)
           #w.missing <- cbind(w.missing, Sample = c(1))
           #imp <- randomForest::rfImpute(Sample ~ ., data = w.missing)
           #rownames(imp) <- samples
-          mSet$dataSet$procr <<- imp
+          mSet$dataSet$procr <<- imp$ximp
+          rownames(mSet$dataSet$procr) <<- rownames(mSet$dataSet$preproc)
           # - - - - - - - - - - - - 
         }else{
           mSet <<- ImputeVar(mSet,
-                             method = #"knn"
+                             method = # "knn"
                               input$miss_type
-                            )
+                              )
         }
       }
       # ------------------------
@@ -1432,14 +1450,14 @@ shinyServer(function(input, output, session) {
       
       shiny::setProgress(session=session, value= .2)
       
-      keep <- intersect(first_part$Sample, rownames(mSet$dataSet$preproc))
+      #keep <- intersect(csv_temp_no_out$Sample, rownames(mSet$dataSet$preproc))
       
-      first_part_no_out <<- first_part[Sample %in% keep]
+      #first_part_no_out <<- first_part[Sample %in% keep]
       
       if(input$norm_type == "SpecNorm"){
-        norm.vec <<- first_part_no_out[match(first_part_no_out$Sample,
-                                             rownames(mSet$dataSet$preproc)),][[input$samp_var]]
-        norm.vec <<- scale(x = norm.vec,center = 1)
+        norm.vec <<- mSet$dataSet$covars[match(mSet$dataSet$covars$Sample,
+                                               rownames(mSet$dataSet$preproc)),][[input$samp_var]]
+        norm.vec <<- scale(x = norm.vec, center = 1)
         
       }else{
         norm.vec <<- rep(1, length(mSet$dataSet$cls))
@@ -1451,16 +1469,14 @@ shinyServer(function(input, output, session) {
                              scaleNorm = input$scale_type,
                              ref = input$ref_var)
       
-      second_part_no_out <- mSet$dataSet$norm[match(rownames(mSet$dataSet$norm),
-                                                    first_part_no_out$Sample),]
-      csv_filled = cbind(first_part_no_out, 
-                         second_part_no_out)
+      # FOR SEPERATE ML PURPOSES
+      csv_filled = cbind(mSet$dataSet$covars, 
+                         mSet$dataSet$norm[match(rownames(mSet$dataSet$norm),
+                                                 mSet$dataSet$covars$Sample),])
       
       csv_loc_filled <- gsub(pattern = "\\.csv", replacement = "_filled.csv", x = csv_loc)
       
       fwrite(csv_filled, file = csv_loc_filled)
-      #
-      #
       
       # mSet <- Normalization(mSet = mSet,
       #                       rowNorm = "QuantileNorm",
@@ -1470,6 +1486,7 @@ shinyServer(function(input, output, session) {
       #                       #ratio=FALSE,
       #                       #ratioNum=20
       #                       )
+      
       # ====
       
       shiny::setProgress(session=session, value= .4)
@@ -1486,16 +1503,14 @@ shinyServer(function(input, output, session) {
       
       if(batch_corr){
         
-        if("Batch" %in% colnames(mSet$dataSet$batches) & length(qc_rows) > 0){
+        if("Batch" %in% input$batch_var & length(qc_rows) > 0){
           
           smpnames = smps[qc_rows]
           
-          batch.idx = as.numeric(as.factor(mSet$dataSet$batches[match(smps, rownames(mSet$dataSet$batches)),"Batch"][[1]]))
-          seq.idx = as.numeric(mSet$dataSet$batches[match(smps, rownames(mSet$dataSet$batches)),"Injection"][[1]])
+          batch.idx = as.numeric(as.factor(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$Sample),"Batch"][[1]]))
+          seq.idx = as.numeric(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$Sample),"Injection"][[1]])
           
           # --- QC CORRECTION ---
-          
-          
           
           corr_cols <- pbapply::pblapply(1:ncol(mSet$dataSet$norm), function(i){
             #
@@ -1509,7 +1524,6 @@ shinyServer(function(input, output, session) {
             corr_vec
           })
           
-          
           qc_corr_matrix <- as.data.frame(do.call(cbind, corr_cols))
           
           colnames(qc_corr_matrix) <- colnames(mSet$dataSet$norm)
@@ -1522,16 +1536,14 @@ shinyServer(function(input, output, session) {
         if(!batchview){
           mSet$dataSet$norm <<- mSet$dataSet$norm[!grepl(rownames(mSet$dataSet$norm),pattern= "QC"),]
           mSet$dataSet$cls <<- mSet$dataSet$cls[which(!grepl(rownames(mSet$dataSet$norm),pattern= "QC")), drop = TRUE]
-          mSet$dataSet$batches <<- mSet$dataSet$batches[!grepl(mSet$dataSet$batches$Sample,pattern= "QC"),]
+          #mSet$dataSet$covars <<- mSet$dataSet$covars[!grepl(mSet$dataSet$covars$Sample,pattern= "QC"),]
           mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
         }
         
-        left_batch_vars <- grep(colnames(mSet$dataSet$batches), 
+        left_batch_vars <- grep(input$batch_var, 
                                 pattern =  "Batch|Injection|Sample",
                                 value = T,
                                 invert = T)
-        
-        
         
         if(length(left_batch_vars) > 2){ 
           NULL
@@ -1542,8 +1554,6 @@ shinyServer(function(input, output, session) {
           smp <- rownames(mSet$dataSet$norm)
           exp_lbl <- mSet$dataSet$cls
           
-          
-          
           csv <- as.data.table(cbind(Sample = smp, 
                                      Label = mSet$dataSet$cls,
                                      mSet$dataSet$norm))
@@ -1553,7 +1563,7 @@ shinyServer(function(input, output, session) {
           
           if(length(left_batch_vars) == 1){
             csv_pheno <- data.frame(sample = 1:nrow(csv),
-                                    batch1 = mSet$dataSet$batches[match(smp, mSet$dataSet$batches$Sample),left_batch_vars[1], with=FALSE][[1]],
+                                    batch1 = mSet$dataSet$covars[match(smp, mSet$dataSet$covars$Sample),left_batch_vars[1], with=FALSE][[1]],
                                     batch2 = c(0),
                                     outcome = as.factor(exp_lbl))     
             batch_normalized= t(sva::ComBat(dat=csv_edata,
@@ -1564,8 +1574,8 @@ shinyServer(function(input, output, session) {
             rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
           }else{
             csv_pheno <- data.frame(sample = 1:nrow(csv),
-                                    batch1 = mSet$dataSet$batches[match(smp, mSet$dataSet$batches$Sample), left_batch_vars[1], with=FALSE][[1]],
-                                    batch2 = mSet$dataSet$batches[match(smp, mSet$dataSet$batches$Sample), left_batch_vars[2], with=FALSE][[1]],
+                                    batch1 = mSet$dataSet$covars[match(smp, mSet$dataSet$covars$Sample), left_batch_vars[1], with=FALSE][[1]],
+                                    batch2 = mSet$dataSet$covars[match(smp, mSet$dataSet$covars$Sample), left_batch_vars[2], with=FALSE][[1]],
                                     outcome = as.factor(exp_lbl))
             batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
                                                           #design = mod.pheno,
@@ -1582,13 +1592,17 @@ shinyServer(function(input, output, session) {
         if(!batchview){
           mSet$dataSet$norm <<- mSet$dataSet$norm[!grepl(rownames(mSet$dataSet$norm),pattern= "QC"),]
           mSet$dataSet$cls <<- mSet$dataSet$cls[which(!grepl(rownames(mSet$dataSet$norm),pattern= "QC")), drop = TRUE]
-          mSet$dataSet$batches <<- mSet$dataSet$batches[!grepl(mSet$dataSet$batches$Sample,pattern= "QC"),]
+          mSet$dataSet$covars <<- mSet$dataSet$covars[!grepl(mSet$dataSet$covars$Sample,pattern= "QC"),]
           mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
         }
       }
       
+      # REORDER COVARS
+      #mSet$dataSet$covars$Sample == rownames(mSet$dataSet$norm)
       
-      
+      mSet$dataSet$covars <<- mSet$dataSet$covars[match(rownames(mSet$dataSet$norm), 
+                                                        mSet$dataSet$covars$Sample), 
+                                                  -"#"]
       
       shiny::setProgress(session=session, value= .5)
       
@@ -2086,6 +2100,9 @@ shinyServer(function(input, output, session) {
     switch(input$plsda_type,
            normal={
              withProgress({
+               
+               require(caret)
+
                mSet <<- PLSR.Anal(mSet,
                                   TRUE)
                shiny::setProgress(session=session, value= 0.3)
@@ -2272,16 +2289,26 @@ shinyServer(function(input, output, session) {
       
       curr[,(1:ncol(curr)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
       
-      config <- mSet$dataSet$batches[match(rownames(mSet$dataSet$preproc),mSet$dataSet$batches$Sample),]
+      config <- mSet$dataSet$covars[match(mSet$dataSet$covars$Sample,rownames(mSet$dataSet$preproc)),]
       config <- config[!is.na(config$Sample),]
       config <- cbind(config, Label=mSet$dataSet$cls)
       
-      keep_curr <- match(mSet$dataSet$batches$Sample,rownames(mSet$dataSet$preproc))
+      # bye bye NAs
+      
+      config <- config[,!apply(is.na(config), 2, any), with=FALSE]
+      
+      
+      # - - - - - -
+      keep_curr <- match(mSet$dataSet$covars$Sample,rownames(mSet$dataSet$preproc))
       
       curr <- cbind(config, curr[keep_curr])
       
       curr <- curr[which(!grepl(curr$Sample,
                                 pattern = "QC"))]
+      
+      # remove cols with all NA
+      
+      curr <- curr[,colSums(is.na(curr))<nrow(curr),with=FALSE]
       
       configCols <- which(!(colnames(curr) %in% colnames(mSet$dataSet$norm)))
       mzCols <- which(colnames(curr) %in% colnames(mSet$dataSet$norm))
@@ -2289,22 +2316,16 @@ shinyServer(function(input, output, session) {
       curr[,(configCols):= lapply(.SD, function(x) as.factor(x)), .SDcols = configCols]
       curr[,(mzCols):= lapply(.SD, function(x) as.numeric(x)), .SDcols = mzCols]
       
-      
-      
       goes = as.numeric(input$ml_attempts)
       
-      
-      
       repeats <- pbapply::pblapply(1:goes, function(i){
+        
         # train / test
         
-        ml_train_regex <<-input$ml_train_regex
+        ml_train_regex <<- input$ml_train_regex
         ml_test_regex <<- input$ml_test_regex
         
         ml_train_perc <- input$ml_train_perc/100
-        
-        
-        
         
         if(ml_train_regex == "" & ml_test_regex == ""){ # BOTH ARE NOT DEFINED
           test_idx = caret::createDataPartition(y = curr$Label, p = ml_train_perc, list = FALSE)
@@ -2334,9 +2355,6 @@ shinyServer(function(input, output, session) {
         #reTest <- caret::createDataPartition(y = config[test_idx, Label], p = ml_train_perc)
         #inTest <- test_idx[reTest$Resample1]
         
-        
-        
-        
         # - - divide - -
         
         predictor = "Label"
@@ -2346,8 +2364,12 @@ shinyServer(function(input, output, session) {
         testY <- curr[inTest,
                       ..predictor][[1]]
         
-        training <- curr[inTrain,-c("Sample", "Label")]
-        testing <- curr[inTest,-c("Sample", "Label")]
+        group.cols <- grep(colnames(curr), pattern = "^Group",value = T)
+        
+        remove.cols <- c("Sample", "Label", group.cols, "Stool_condition")
+        remove.idx <- which(colnames(curr) %in% remove.cols)
+        training <- curr[inTrain,-remove.idx, with=FALSE]
+        testing <- curr[inTest,-remove.idx, with=FALSE]
         
         predIdx <- which(colnames(curr) %in% colnames(config))
         
@@ -2414,12 +2436,15 @@ shinyServer(function(input, output, session) {
         mSet$analSet$ml <<- list(ls=list(), rf=list())
       }
       
-      ml_name <<- input$ml_name
+      #input <- list(ml_attempts = 50, ml_method = "ls", ml_name = "test")
       
       xvals <<- list(type = {unique(lapply(repeats, function(x) x$type))},
                      models = {lapply(repeats, function(x) x$model)},
                      predictions = {lapply(repeats, function(x) x$prediction)},
                      labels = {lapply(repeats, function(x) x$labels)})
+      
+      mSet$analSet$ml[[input$ml_method]][[input$ml_name]] <<- list("roc" = xvals,
+                                                                  "bar" = repeats)
       
       output$ml_roc <- plotly::renderPlotly({plotly::ggplotly(ggPlotROC(xvals, input$ml_attempts, cf))})
       output$ml_bar <- plotly::renderPlotly({plotly::ggplotly(ggPlotBar(repeats, input$ml_attempts, cf, input$ml_top_x))})
@@ -2736,15 +2761,17 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$search_cpd, {
     req(db_search_list)
+    print("Searching...")
     # ----------------
     if(length(db_search_list) > 0){
-      match_table <<- multimatch(curr_cpd, db_search_list, mSet$dataSet$grouping)
-      output$match_tab <-DT::renderDataTable({
+      match_table <<- unique(multimatch(curr_cpd, db_search_list, mSet$dataSet$grouping))
+      output$match_tab <- DT::renderDataTable({
         DT::datatable(match_table[,-c("description","structure", "baseformula")],
                       selection = 'single',
                       autoHideNavigation = T,
                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
       })  
+      match_table
     }
   })
   
@@ -2759,8 +2786,6 @@ shinyServer(function(input, output, session) {
     output$curr_struct <- renderPlot({plot.mol(curr_struct,style = "cow")})
     curr_formula <<- match_table[curr_row,'baseformula'][[1]]
     output$curr_formula <- renderText({curr_formula})
-    
-    
   })
   
   observeEvent(input$browse_db,{

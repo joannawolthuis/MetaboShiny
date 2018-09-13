@@ -337,11 +337,11 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
            # --------------------------------------------------------------------------------------------------------------------------------
            tabPanel("",  icon = icon("bar-chart"), value = "analysis",# multiple options here :-)
                     sidebarLayout(position="right",
-                                  mainPanel = mainPanel(
+                                  mainPanel = mainPanel(width = 8,
                                     uiOutput("analUI")
                                   ),
                                   sidebarPanel = 
-                                    sidebarPanel(align="center",
+                                    sidebarPanel(align="center",width = 4,
                                                  tabsetPanel(id = "search", #type = "pills",
                                                              tabPanel(title=NULL, icon=icon("search"),
                                                                       br(),
@@ -374,7 +374,8 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                              choices=list("M-score"="mscore",
                                                                                                                           "Chi-square"="chisq",
                                                                                                                           "Mean absolute percentage error"="mape",
-                                                                                                                          "SIRIUS"="sirius"))
+                                                                                                                          "SIRIUS"="sirius",
+                                                                                                                          "Network-based"="network"))
                                                                                  )
                                                                       ),
                                                                       hr(),
@@ -388,12 +389,12 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                    ),
                                                                                                    # scoring buttons here..
                                                                                                    fluidRow(
-                                                                                                     actionButton("search_cpd", "", icon=icon("search")),
-                                                                                                     actionButton("score_iso", "", icon=icon("bar-chart")),
-                                                                                                     actionButton("score_net", "", icon=icon("arrows-alt")),
+                                                                                                     actionButton("search_cpd", "S E A R C H", icon=icon("search"),width = "40%"),
+                                                                                                     actionButton("score_iso", "S C O R E", icon=icon("balance-scale"), width="40%"),
+                                                                                                     #,actionButton("score_net", "", icon=icon("arrows-alt")),
                                                                                                      align="center"),
                                                                                                    br(),
-                                                                                                   div(DT::dataTableOutput('match_tab'),style='font-size:80%'),
+                                                                                                   div(DT::dataTableOutput('match_tab', width="100%"),style='font-size:80%'),
                                                                                                    hr(),
                                                                                                    div(textOutput("curr_definition"))
                                                                                           ),
@@ -542,8 +543,8 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
            #actionButton("test", "test"),
            tabPanel(title = "Quit", value="stop", icon = icon("times-circle")),
            div(class="spinnylocation1",
-               div(class="plus", img(class="imagetop", src="unicorn.png", width="120px", height="120px")),
-               div(class="minus", img(class="imagebottom", src="unicorn.png", width="120px", height="120px"))
+               div(class="plus", img(class="imagetop", src="planets.png", width="120px", height="120px")),
+               div(class="minus", img(class="imagebottom", src="planets.png", width="120px", height="120px"))
            ),
            div(class="line")
 )

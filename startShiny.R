@@ -18,7 +18,7 @@ metanr_packages <- function(){
   list_installed <- installed.packages()
   
   new_pkgs <- subset(metr_pkgs, !(metr_pkgs %in% list_installed[, "Package"]))
-  
+  ""
   if(length(new_pkgs) != 0){
     
     source("https://bioconductor.org/biocLite.R")

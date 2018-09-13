@@ -8,10 +8,10 @@ ggplotNormSummary <- function(mSet){
   which_cpds <- sample(colnames(norm_data), sampsize, replace = FALSE, prob = NULL)
   which_samps <- sample(rownames(norm_data), sampsize, replace = FALSE, prob = NULL)
   
-  orig_melt <- reshape2::melt(orig_data[which_samps, which_cpds])
+  orig_melt <- reshape2::melt(cbind(id=which_samps, orig_data[which_samps, which_cpds]))
   orig_melt[is.na(orig_melt)] <- 0
   
-  norm_melt <- reshape2::melt(norm_data[which_samps, which_cpds])
+  norm_melt <- reshape2::melt(cbind(id=which_samps, norm_data[which_samps, which_cpds]))
 
   plot <- ggplot2::ggplot(data=orig_melt) +
     plot.theme(base_size = 15) #+ facet_grid(. ~ variable)
@@ -43,7 +43,7 @@ ggplotSampleNormSummary <- function(mSet){
   
   sampsize = if(nrow(norm_data) > 20) 20 else nrow(norm_data)
   
-  which_samps <- sample(rownames(orig_data), 
+  which_samps <- sample(rownames(norm_data), 
                         sampsize, 
                         replace = FALSE, 
                         prob = NULL)
@@ -147,19 +147,6 @@ ggplotSummary <- function(cpd = curr_cpd, cols=c("black", "pink"), sourceTable =
   }else if(mSet$dataSet$design.type =="time"){ # time trend within phenotype
     cpd = curr_cpd
     profile <- getProfile(cpd, mode="time")
-    # -----------
-    #print(profile)
-    # ggplot
-    # p <- plot_ly(profile, 
-    #              x = ~Time, 
-    #              y = ~Abundance, 
-    #              color = ~Group, 
-    #              type = "box", 
-    #              colors=cols, 
-    #              boxpoints = 'all'
-    #              ) %>%
-    #   layout(boxmode = "group")
-    # p
     plot <- ggplot2::ggplot(data=profile, ggplot2::aes(x=Time, y=Abundance, group=interaction(Time, Group),fill=Group, color=Group)) +
       ggplot2::geom_boxplot(alpha=0.4) +
       ggplot2::geom_point(ggplot2::aes(text=Sample),alpha=0.4, size = 2, shape = 1, position = position_dodge(width=0.1)) +
@@ -412,12 +399,10 @@ ggPlotROC <- function(xvals, attempts = 50, cf = rainbow){
     res
   }))
   
-  print(perf.long)
-  
   cols = cf(attempts)
   
   #nbins <- length(perf.long$TPR)
-  
+
   ggplot(perf.long, aes(FPR,TPR)) +
     #stat_smooth(alpha=.2,color="black") + # fix later, needs to NOT GO ABOVE 1
     stat_summary_bin(aes(FPR, TPR), fun.y=mean, geom="line", colour="black", cex = 2) +
@@ -480,9 +465,7 @@ ggPlotBar <- function(repeats, attempts=50, color.function=rainbow, topn=50){
     lname <- paste0(ml_train_regex,"|", ml_test_regex)
   }
   print(lname)
-  mSet$analSet$ml[[ml_type]][[lname]] <<- data
-  
-  print(mSet$analSet$ml)
+  mSet$analSet$ml[[ml_type]][[lname]][["tophits"]] <<- data
   
   if(ml_type == "ls"){
     p <- ggplot(data[1:topn,], aes(mz,count))
