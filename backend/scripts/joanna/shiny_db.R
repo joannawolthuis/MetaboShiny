@@ -1,5 +1,5 @@
 get_exp_vars <- function(from){
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb) # change this to proper var later
   RSQLite::dbGetQuery(conn, gsubfn::fn$paste("PRAGMA table_info($from)"))$name
 }
 
@@ -24,15 +24,15 @@ browse_db <- function(chosen.db){
 #' @export
 get_matches <- function(cpd = NA, 
                         chosen.db, 
-                        search_formula=F,
-                        searchid)
-{
-  # --- connect to db -=
+                        search_formula = F,
+                        searchid = "mz"){
   
-  req("patdb")
+  # --- connect to db ---
+  
+  req("global$paths$patdb")
   
   # 0. Attach db
-  if(!is.null(searchid) && searchid != "mz"){
+  if(!exists(searchid) && searchid != "mz"){
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), chosen.db)
     cpd <- gsub(cpd, pattern = "http\\/\\/", replacement = "http:\\/\\/")
     query <- if(searchid == "pathway"){
@@ -52,7 +52,7 @@ get_matches <- function(cpd = NA,
     
   }else{
     
-    conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
+    conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb)
     
     cpd = curr_cpd
     
@@ -185,7 +185,7 @@ score.isos <- function(patdb, method="mscore"){
   
   withProgress({
     
-    conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
+    conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb)
     
     setProgress(value = 0.6)
     
@@ -289,7 +289,7 @@ score.isos <- function(patdb, method="mscore"){
 get_mzs <- function(baseformula, charge, chosen.db){
   # --- connect to db ---
   req("patdb")
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb) # change this to proper var later
   query.zero <- gsubfn::fn$paste("ATTACH '$chosen.db' AS db")
   RSQLite::dbExecute(conn, query.zero)
   # search combo of baseformula and charge matching your choice and find all possible mzvals and adducts
@@ -442,11 +442,13 @@ get_all_matches <- function(#exp.condition=NA,
   res
 }
 
-multimatch <- function(cpd, dbs, searchid){
+multimatch <- function(cpd, dbs, searchid="mz"){
   
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb) # change this to proper var later
   DBI::dbExecute(conn, "DROP TABLE IF EXISTS unfiltered")
   DBI::dbExecute(conn, "DROP TABLE IF EXISTS isotopes")
+  DBI::dbExecute(conn, "DROP TABLE IF EXISTS adducts")
+  
   DBI::dbDisconnect(conn)
   
   if(exists("match_table")){

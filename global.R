@@ -3,7 +3,6 @@
 options(stringsAsFactors = FALSE)
 if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
-
 # --- source ---
 
 library(shiny)
@@ -59,33 +58,102 @@ setOption <- function(file.loc, key, value){
   close(opt_conn)
 }
 
-# --- beta stuff ---
-
-mainmode <<- if(exists("dataSet")) dataSet$shinymode else("stat")
-
 # --------------------------
 options <- getOptions(".conf")
+adducts <- fread("backend/umcfiles/adducts/AdductTable1.0.csv", header = T)
+home = normalizePath("~")
 
 sourceDir("backend/scripts/joanna")
-#fwrite(adducts_adj, file = "backend/umcfiles/adducts/AdductTable1.0.csv")
-adducts <<- fread("backend/umcfiles/adducts/AdductTable1.0.csv", header = T)
+
+# === TEST GLOBAL VARIABLE SCOPE ===
+
+global <- list(constants = list(ppm = 2,
+                                nvars = 2,
+                                packages = c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
+                                             "plotly", "parallel", "shinyFiles", "curl", "httr", "pbapply", 
+                                             "sqldf", "plyr", "ChemmineR", "gsubfn", "stringr", "plotly", "heatmaply",
+                                             "reshape2", "XML", "xlsx", "colourpicker", "DT","Rserve", "ellipse", 
+                                             "scatterplot3d","pls", "caret", "lattice", "compiler",
+                                             "Cairo", "randomForest", "e1071","gplots", "som", "xtable",
+                                             "RColorBrewer", "xcms","impute", "pcaMethods","siggenes",
+                                             "globaltest", "GlobalAncova", "Rgraphviz","KEGGgraph",
+                                             "preprocessCore", "genefilter", "pheatmap", "igraph",
+                                             "RJSONIO", "SSPA", "caTools", "ROCR", "pROC", "sva", "rJava",
+                                             "colorRamps", "grDevices", "KEGGREST", "manhattanly", 
+                                             "BatchCorrMetabolomics", "R.utils", "rgl", "glmnet", "caret",
+                                             "RandomForest", "TSPred", "VennDiagram", "rcdk"),
+                                images = list(list(name = 'cute_package', path = 'www/cat.png', dimensions = c(80, 80)),
+                                                list(name = 'umc_logo_int', path = 'www/umcinternal.png', dimensions = c(120, 120)),
+                                                list(name = 'umc_logo_noise', path = 'www/umcnoise.png', dimensions = c(120, 120)),
+                                                list(name = 'hmdb_logo', path = 'www/hmdblogo.png', dimensions = c(150, 100)),
+                                                list(name = 'metacyc_logo', path = 'www/metacyc.png', dimensions = c(300, 80)),
+                                                list(name = 'chebi_logo', path = 'www/chebilogo.png', dimensions = c(140, 140)),
+                                                list(name = 'wikipath_logo', path = 'www/wikipathways.png', dimensions = c(130, 150)),
+                                                list(name = 'kegg_logo', path = 'www/kegglogo.gif', dimensions = c(200, 150)),
+                                                list(name = 'pubchem_logo', path = 'www/pubchemlogo.png', dimensions = c(145, 90)),
+                                                list(name = 'smpdb_logo', path = 'www/smpdb_logo_adj.png', dimensions = c(200, 160)),
+                                                list(name = 'dimedb_logo', path = 'www/dimedb_logo.png', dimensions = c(310, 120)),
+                                                list(name = 'wikidata_logo', path = 'www/wikidata.png', dimensions = c(250, 200)),
+                                                list(name = 'vmh_logo', path = 'www/vmh.png', dimensions = c(250, 200)),
+                                                list(name = 'pos_icon', path = 'www/handpos.png', dimensions = c(120, 120)),
+                                                list(name = 'neg_icon', path = 'www/handneg.png', dimensions = c(120, 120)),
+                                                list(name = 'excel_icon', path = 'www/excel.png', dimensions = c(120, 120)),
+                                                list(name = 'excel_icon_2', path = 'www/excel.png', dimensions = c(120, 120)),
+                                                list(name = 'db_icon', path = 'www/servers.png', dimensions = c(150, 150)),
+                                                list(name = 'csv_icon', path = 'www/office.png', dimensions = c(100, 100)),
+                                                list(name = 'dataset_icon', path = 'www/office.png', dimensions = c(100, 100))
+                                ),
+                                default.text = list(list(name='work_dir',text=options$work_dir),
+                                                    list(name='curr_db_dir',text=options$db_dir),
+                                                    list(name='ppm',text=options$ppm),
+                                                    list(name='analUI',text="Please choose an analysis mode!"),
+                                                    list(name='proj_name',text=options$proj_name),
+                                                    list(name="curr_cpd", text="...")
+                                )
+                           ),
+               functions = list(cf = rainbow,
+                                color.function = rainbow),
+               paths = list(patdb = file.path(options$work_dir, paste0(options$proj_name, ".db")),
+                            csv_loc = file.path(options$work_dir, paste0(options$proj_name, ".csv")),
+                            volumes =  c('R Installation'=R.home(),
+                                         'Home'=home,
+                                         'Downloads'=file.path(home, "Downloads"),
+                                         'Desktop'=file.path(home, "Desktop"))
+               ),
+               tables = list(tbl = NA),
+               vectors = list(db_search_list = c(),
+                              db_list = c("internal", 
+                                          "noise", 
+                                          "hmdb", 
+                                          "chebi", 
+                                          #"pubchem", 
+                                          "kegg",
+                                          "metacyc",
+                                          "wikipathways"
+                                          ,"smpdb",
+                                          "dimedb",
+                                          "wikidata",
+                                          "vmh"
+                              ),
+                              pos_adducts = adducts[Ion_mode == "positive",
+                                                     c("Name")],
+                              neg_adducts = adducts[Ion_mode == "negative",
+                                                    c("Name")]
+                              )
+               )
 
 # === LOAD LIBRARIES ===
 
 data(isotopes, package = "enviPat")
-session_cl <<- parallel::makeCluster(parallel::detectCores())
+session_cl <- parallel::makeCluster(parallel::detectCores()-1)
 
 source("./Rsource/SwitchButton.R")
 
 sardine <- function(content) div(style="display: inline-block;vertical-align:top;", content)
 
-pos_adducts <<- adducts[Ion_mode == "positive",
-                                     c("Name")]
-neg_adducts <<- adducts[Ion_mode == "negative",
-                                     c("Name")]
 # interleave for sorting later ...
-add_idx <- order(c(seq_along(pos_adducts$Name), seq_along(neg_adducts$Name)))
-sort_order <<- unlist(c(pos_adducts$Name,neg_adducts$Name))[add_idx]
+add_idx <- order(c(seq_along(global$vectors$pos_adducts$Name), seq_along(global$vectors$neg_adducts$Name)))
+sort_order <<- unlist(c(global$vectors$pos_adducts$Name, global$vectors$neg_adducts$Name))[add_idx]
 
 bar.css <<- nav.bar.css(options$col1, options$col2, options$col3, options$col4)
 font.css <<- font.css(options$font1, options$font2, options$font3, options$font4)

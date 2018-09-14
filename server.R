@@ -5,33 +5,10 @@ shinyServer(function(input, output, session) {
   # ================================= DEFAULTS ===================================
   
   source('./backend/scripts/joanna/shiny_general.R')
+
+  #theme_update(plot.title = element_text(hjust = 0.5))
   
-  home <- normalizePath("~")
-  volumes <- c('R Installation'=R.home(),
-               'Home'=home,
-               'Downloads'=file.path(home, "Downloads"),
-               'Desktop'=file.path(home, "Desktop")
-               )
-  
-  ifelse(exists("match_table"), remove(match_table), NA)
-  tbl <- NA
-  match_table <- NA
-  tables <- list()
-  db_search_list <- c()
-  theme_update(plot.title = element_text(hjust = 0.5))
-  color.function <- rainbow
-  patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
-  csv_loc <- file.path(options$work_dir, paste0(options$proj_name, ".csv"))
   shinyOptions(progress.style="old")
-  ppm <- 2
-  cf <- rainbow
-  nvars <- 2
-  
-  if(any(!is.na(session_cl))) parallel::stopCluster(session_cl)
-  
-  ncores <- parallel::detectCores() - 1
-  session_cl <- parallel::makeCluster(ncores)
-  metshi <<- list()
   
   parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
     "mape",
@@ -98,74 +75,12 @@ shinyServer(function(input, output, session) {
     )
   })
   
-  packages <<- c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
-                 "plotly", "parallel", "shinyFiles", "curl", "httr", "pbapply", 
-                 "sqldf", "plyr", "ChemmineR", "gsubfn", "stringr", "plotly", "heatmaply",
-                 "reshape2", "XML", "xlsx", "colourpicker", "DT","Rserve", "ellipse", 
-                 "scatterplot3d","pls", "caret", "lattice", "compiler",
-                 "Cairo", "randomForest", "e1071","gplots", "som", "xtable",
-                 "RColorBrewer", "xcms","impute", "pcaMethods","siggenes",
-                 "globaltest", "GlobalAncova", "Rgraphviz","KEGGgraph",
-                 "preprocessCore", "genefilter", "pheatmap", "igraph",
-                 "RJSONIO", "SSPA", "caTools", "ROCR", "pROC", "sva", "rJava",
-                 "colorRamps", "grDevices", "KEGGREST", "manhattanly", 
-                 "BatchCorrMetabolomics", "R.utils", "rgl", "glmnet", "caret",
-                 "RandomForest", "TSPred", "VennDiagram", "rcdk")
-  
-  options <- getOptions(".conf")
-  
-  default.text <- list(list(name='work_dir',text=options$work_dir),
-                       list(name='curr_db_dir',text=options$db_dir),
-                       list(name='ppm',text=options$ppm),
-                       list(name='analUI',text="Please choose an analysis mode!"),
-                       list(name='proj_name',text=options$proj_name),
-                       list(name="curr_cpd", text="...")
-  )
-  
-  db_list <<- c("internal", 
-                "noise", 
-                "hmdb", 
-                "chebi", 
-                #"pubchem", 
-                "kegg",
-                "metacyc",
-                "wikipathways"
-                ,"smpdb",
-                "dimedb",
-                "wikidata",
-                "vmh"
-  )
-  
-  images <<- list(list(name = 'cute_package', path = 'www/cat.png', dimensions = c(80, 80)),
-                  list(name = 'umc_logo_int', path = 'www/umcinternal.png', dimensions = c(120, 120)),
-                  list(name = 'umc_logo_noise', path = 'www/umcnoise.png', dimensions = c(120, 120)),
-                  list(name = 'hmdb_logo', path = 'www/hmdblogo.png', dimensions = c(150, 100)),
-                  list(name = 'metacyc_logo', path = 'www/metacyc.png', dimensions = c(300, 80)),
-                  list(name = 'chebi_logo', path = 'www/chebilogo.png', dimensions = c(140, 140)),
-                  list(name = 'wikipath_logo', path = 'www/wikipathways.png', dimensions = c(130, 150)),
-                  list(name = 'kegg_logo', path = 'www/kegglogo.gif', dimensions = c(200, 150)),
-                  list(name = 'pubchem_logo', path = 'www/pubchemlogo.png', dimensions = c(145, 90)),
-                  list(name = 'smpdb_logo', path = 'www/smpdb_logo_adj.png', dimensions = c(200, 160)),
-                  list(name = 'dimedb_logo', path = 'www/dimedb_logo.png', dimensions = c(310, 120)),
-                  list(name = 'wikidata_logo', path = 'www/wikidata.png', dimensions = c(250, 200)),
-                  list(name = 'vmh_logo', path = 'www/vmh.png', dimensions = c(250, 200)),
-                  list(name = 'pos_icon', path = 'www/handpos.png', dimensions = c(120, 120)),
-                  list(name = 'neg_icon', path = 'www/handneg.png', dimensions = c(120, 120)),
-                  list(name = 'excel_icon', path = 'www/excel.png', dimensions = c(120, 120)),
-                  list(name = 'excel_icon_2', path = 'www/excel.png', dimensions = c(120, 120)),
-                  list(name = 'db_icon', path = 'www/servers.png', dimensions = c(150, 150)),
-                  list(name = 'csv_icon', path = 'www/office.png', dimensions = c(100, 100)),
-                  list(name = 'dataset_icon', path = 'www/office.png', dimensions = c(100, 100))
-  )
-  
-  options$db_dir <<- options$db_dir
   
   # --- render text ---
   
-  lapply(default.text, FUN=function(default){
+  lapply(global$constants$default.text, FUN=function(default){
     output[[default$name]] = renderText(default$text)
   })
-  
   
   stat.ui.bivar <- reactive({
     navbarPage(inverse=F,h2("Standard analysis"), id="tab_stat",
@@ -187,15 +102,19 @@ shinyServer(function(input, output, session) {
                ),
                tabPanel(h3("PLSDA"), value = "plsda",
                         fluidRow(
-                          selectInput("plsda_type", label="PLSDA subtype:", choices=list("Normal"="normal",
-                                                                                         "Orthogonal"="ortho",
-                                                                                         "Sparse"="sparse"), selected=1),
+                          selectInput("plsda_type", 
+                                      label="PLSDA subtype:", 
+                                      choices=list("Normal"="normal",
+                                                   "Orthogonal"="ortho",
+                                                   "Sparse"="sparse"), 
+                                      selected=1),
                           actionButton("do_plsda",label="Go")
                         ),
                         hr(),
                         navbarPage(inverse=F,"",
                                    tabPanel("", icon=icon("globe"),
-                                            plotly::plotlyOutput("plot_plsda_3d", height="800px")
+                                            plotly::plotlyOutput("plot_plsda_3d", 
+                                                                 height="800px")
                                             # ,fluidRow(column(3,
                                             #                 selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:3),selected = "PC1",width="100%"),
                                             #                 selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:3),selected = "PC2",width="100%"),
@@ -240,14 +159,6 @@ shinyServer(function(input, output, session) {
                                              plotly::plotlyOutput('fc_overview_plot',height="300px")
                                    ))
                ),
-               # =================================================================================
-               # tabPanel(h3("RandomForest"), value="rf",
-               #          fluidRow(plotly::plotlyOutput('rf_specific_plot',width="100%")),
-               #          navbarPage(inverse=F,"",
-               #                     tabPanel("", icon=icon("table"),
-               #                              div(DT::dataTableOutput('rf_tab',width="100%"),style='font-size:80%'))
-               #          )
-               # ),
                tabPanel(h3("Heatmap"), value="heatmap_biv",
                         plotly::plotlyOutput("heatmap",width="110%",height="700px"),
                         br(),
@@ -531,7 +442,7 @@ shinyServer(function(input, output, session) {
   }
   
   optUI <- function(){		
-    selectInput('your.time', 'What end time do you want to pick?', choices = get_times(patdb))
+    selectInput('your.time', 'What end time do you want to pick?', choices = get_times(global$paths$patdb))
   }
   
   observeEvent(input$exp_type,{
@@ -544,16 +455,16 @@ shinyServer(function(input, output, session) {
   
   output$pos_add_tab <-DT::renderDataTable({
     # -------------
-    DT::datatable(pos_adducts,
-                  selection = list(mode = 'multiple', selected = c(1:3, nrow(pos_adducts)), target = 'row'),
+    DT::datatable(global$vectors$pos_adducts,
+                  selection = list(mode = 'multiple', selected = c(1:3, nrow(global$vectors$pos_adducts)), target = 'row'),
                   options = list(pageLength = 5, dom = 'tp'), 
                   rownames = F)
   })
   
   output$neg_add_tab <-DT::renderDataTable({
     # -------------
-    DT::datatable(neg_adducts,
-                  selection = list(mode = 'multiple', selected = c(1, 2, 14, 15, nrow(neg_adducts)), target = 'row'),
+    DT::datatable(global$vectors$neg_adducts,
+                  selection = list(mode = 'multiple', selected = c(1, 2, 14, 15, nrow(global$vectors$neg_adducts)), target = 'row'),
                   options = list(pageLength = 5, dom = 'tp'), 
                   rownames = F)
   })
@@ -561,15 +472,15 @@ shinyServer(function(input, output, session) {
   observeEvent(input$sel_all_adducts, {
     output$pos_add_tab <-DT::renderDataTable({
       # -------------
-      DT::datatable(pos_adducts,
-                    selection = list(mode = 'multiple', selected = c(1:nrow(pos_adducts)), target = 'row'),
+      DT::datatable(global$vectors$pos_adducts,
+                    selection = list(mode = 'multiple', selected = c(1:nrow(global$vectors$pos_adducts)), target = 'row'),
                     options = list(pageLength = 5, dom = 'tp'), 
                     rownames = F)
     })
     output$neg_add_tab <-DT::renderDataTable({
       # -------------
-      DT::datatable(neg_adducts,
-                    selection = list(mode = 'multiple', selected = c(1:nrow(neg_adducts)), target = 'row'),
+      DT::datatable(global$vectors$neg_adducts,
+                    selection = list(mode = 'multiple', selected = c(1:nrow(global$vectors$neg_adducts)), target = 'row'),
                     options = list(pageLength = 5, dom = 'tp'), 
                     rownames = F)
     })
@@ -578,14 +489,14 @@ shinyServer(function(input, output, session) {
   observeEvent(input$sel_no_adducts, {
     output$pos_add_tab <-DT::renderDataTable({
       # -------------
-      DT::datatable(pos_adducts,
+      DT::datatable(global$vectors$pos_adducts,
                     selection = list(mode = 'multiple', selected = c(0), target = 'row'),
                     options = list(pageLength = 5, dom = 'tp'), 
                     rownames = F)
     })
     output$neg_add_tab <-DT::renderDataTable({
       # -------------
-      DT::datatable(neg_adducts,
+      DT::datatable(global$vectors$neg_adducts,
                     selection = list(mode = 'multiple', selected = c(0), target = 'row'),
                     options = list(pageLength = 5, dom = 'tp'), 
                     rownames = F)
@@ -596,16 +507,16 @@ shinyServer(function(input, output, session) {
   observeEvent(input$sel_comm_adducts, {
     output$pos_add_tab <-DT::renderDataTable({
       # -------------
-      DT::datatable(pos_adducts,
-                    selection = list(mode = 'multiple', selected = c(1:3, nrow(pos_adducts)), target = 'row'),
+      DT::datatable(global$vectors$pos_adducts,
+                    selection = list(mode = 'multiple', selected = c(1:3, nrow(global$vectors$pos_adducts)), target = 'row'),
                     options = list(pageLength = 5, dom = 'tp'), 
                     rownames = F)
     })
     
     output$neg_add_tab <-DT::renderDataTable({
       # -------------
-      DT::datatable(neg_adducts,
-                    selection = list(mode = 'multiple', selected = c(1, 2, 14:15, nrow(neg_adducts)), target = 'row'),
+      DT::datatable(global$vectors$neg_adducts,
+                    selection = list(mode = 'multiple', selected = c(1, 2, 14:15, nrow(global$vectors$neg_adducts)), target = 'row'),
                     options = list(pageLength = 5, dom = 'tp'), 
                     rownames = F)
     })
@@ -621,7 +532,7 @@ shinyServer(function(input, output, session) {
   
   # =================================================
   
-  lapply(images, FUN=function(image){
+  lapply(global$constants$images, FUN=function(image){
     output[[image$name]] <- renderImage({
       filename <- normalizePath(image$path)
       # Return a list containing the filename and alt text
@@ -646,9 +557,10 @@ shinyServer(function(input, output, session) {
   )
   
   observeEvent(input$update_packages, {
-    req(packages)
+    #req(packages)
     # ----------
-    pacman::p_load(char = packages, update = T, character.only = T)
+    
+    pacman::p_load(char = global$constants$packages, update = T, character.only = T)
     # ---------- 
     firstRun <<- F
     setOption(".conf", "packages_installed", "Y")
@@ -668,19 +580,16 @@ shinyServer(function(input, output, session) {
   if(options$packages_installed == "N") return(NULL) # BREAK!!
   
   observe({
-    shinyFileChoose(input, 'outlist_pos', roots=volumes, filetypes=c('csv'))
-    shinyFileChoose(input, 'outlist_neg', roots=volumes, filetypes=c('csv'))
-    shinyFileChoose(input, 'excel', roots=volumes, filetypes=c('xls', 'xlsm', 'xlsx'))
-    shinyFileChoose(input, 'database', roots=volumes, filetypes=c('sqlite3', 'db', 'sqlite'))
+    shinyFileChoose(input, 'outlist_pos', roots=global$paths$volumes, filetypes=c('csv'))
+    shinyFileChoose(input, 'outlist_neg', roots=global$paths$volumes, filetypes=c('csv'))
+    shinyFileChoose(input, 'excel', roots=global$paths$volumes, filetypes=c('xls', 'xlsm', 'xlsx'))
+    shinyFileChoose(input, 'database', roots=global$paths$volumes, filetypes=c('sqlite3', 'db', 'sqlite'))
   })
   
   observe({  
-    shinyDirChoose(input, "get_db_dir", roots=volumes, session = session)
+    shinyDirChoose(input, "get_db_dir", roots=global$paths$volumes, session = session)
     if(is.null(input$get_db_dir)) return()
-    #dir <- reactive(input$get_db_dir)
-    #home <- normalizePath("~")
-    given_dir <- parseDirPath(volumes, input$get_db_dir)
-    #given_dir <- file.path(home, paste(unlist(dir()$path[-1]), collapse = .Platform$file.sep))
+    given_dir <- parseDirPath(global$paths$volumes, input$get_db_dir)
     if(is.null(given_dir)) return()
     options$db_dir <<- given_dir
     output$curr_db_dir <- renderText(options$db_dir)
@@ -690,16 +599,13 @@ shinyServer(function(input, output, session) {
   })
   
   observe({  
-    shinyDirChoose(input, "get_work_dir", roots =volumes, session = session)
+    shinyDirChoose(input, "get_work_dir", roots =global$paths$volumes, session = session)
     if(is.null(input$get_work_dir)) return()
-    #dir <- reactive(input$get_work_dir)
-    #home <- normalizePath("~")
-    #given_dir <- file.path(home, paste(unlist(dir()$path[-1]), collapse = .Platform$file.sep))
-    given_dir <- parseDirPath(volumes, input$get_db_dir)
+    given_dir <- parseDirPath(global$paths$volumes, input$get_db_dir)
     if(is.null(given_dir)) return()
     options$work_dir <<- given_dir
     output$exp_dir <- renderText(options$work_dir)
-    patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
+    global$paths$patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
     if(!dir.exists(options$work_dir)) dir.create(options$work_dir)
     # --- connect ---
     setOption(".conf", "work_dir", options$work_dir)
@@ -709,7 +615,7 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$set_proj_name, {
     proj_name <<- input$proj_name
-    patdb <<- file.path(options$work_dir, paste0(proj_name,".db", sep=""))
+    global$paths$patdb <<- file.path(options$work_dir, paste0(proj_name,".db", sep=""))
     output$proj_name <<- renderText(proj_name)
     # --- connect ---
     setOption(".conf", "proj_name", proj_name)
@@ -726,7 +632,7 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$color_ramp,{
     output$ramp_plot <- plotly::renderPlotly({
-      color.function <<- switch(input$color_ramp,
+      global$functions$color.function <<- switch(input$color_ramp,
                                 "rb"=rainbow,
                                 "y2b"=ygobb,
                                 "ml1"=matlab.like2,
@@ -752,7 +658,7 @@ shinyServer(function(input, output, session) {
       )
       # --- render ---
       plotly::plot_ly(z = volcano, 
-                      colors = color.function(100), 
+                      colors = global$functions$color.function(100), 
                       type = "heatmap",
                       showscale=FALSE)  %>%
         layout(xaxis = ax, yaxis = ax)
@@ -898,7 +804,7 @@ shinyServer(function(input, output, session) {
   
   # --- check for db files ---
   
-  lapply(db_list, FUN=function(db){
+  lapply(global$vectors$db_list, FUN=function(db){
     observeEvent(input[[paste0("check_", db)]],{
       db_folder_files <- list.files(options$db_dir)
       is.present <- paste0(db, ".full.db") %in% db_folder_files
@@ -915,7 +821,7 @@ shinyServer(function(input, output, session) {
   
   # --- build db ---
   
-  lapply(db_list, FUN=function(db){
+  lapply(global$vectors$db_list, FUN=function(db){
     observeEvent(input[[paste0("build_", db)]], {
       # ---------------------------
       library(RCurl)
@@ -972,22 +878,20 @@ shinyServer(function(input, output, session) {
 
     req(input$iso_score_method)
     
-    if(!data.table::is.data.table(match_table)) return(NULL)
+    if(!data.table::is.data.table(global$tables$last_matches)) return(NULL)
     
-    if("score" %in% colnames(match_table)){
-      match_table <<- match_table[,-"score"]
+    if("score" %in% colnames(global$tables$last_matches)){
+      global$tables$last_matches <<- global$tables$last_matches[,-"score"]
     }
     
     # - - - 
     
+    score_table <- score.isos(global$paths$patdb, method=input$iso_score_method) 
     
-    
-    score_table <- score.isos(patdb, method=input$iso_score_method) 
-    
-    match_table <<- match_table[score_table, on = c("baseformula", "adduct")]
+    global$tables$last_matches <<- global$tables$last_matches[score_table, on = c("baseformula", "adduct")]
     
     output$match_tab <-DT::renderDataTable({
-      DT::datatable(match_table[,-c("description","structure", "baseformula")],
+      DT::datatable(global$tables$last_matches[,-c("description","structure", "baseformula")],
                     selection = 'single',
                     autoHideNavigation = T,
                     options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -1001,7 +905,7 @@ shinyServer(function(input, output, session) {
     
     # --------------------
     
-    patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
+    global$paths$patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
     
     # --------------------
     
@@ -1014,34 +918,34 @@ shinyServer(function(input, output, session) {
                
                req(input$database, input$excel)
                
-               db_path <- parseFilePaths(volumes, input$database)$datapath
+               db_path <- parseFilePaths(global$paths$volumes, input$database)$datapath
                
                #db_path <- "/Users/jwolthuis/Downloads/hpc/farms_pig_2ppm.db"
                
-               file.copy(db_path, patdb, overwrite = T)
+               file.copy(db_path, global$paths$patdb, overwrite = T)
                
                shiny::setProgress(session=session, value= .30)
                
-               exp_vars <- load.excel(parseFilePaths(volumes, input$excel)$datapath, patdb)
+               exp_vars <- load.excel(parseFilePaths(global$paths$volumes, input$excel)$datapath, global$paths$patdb)
                
                shiny::setProgress(session=session, value= .60)
                
-               #reindex.pat.db(patdb)
+               #reindex.pat.db(global$paths$patdb)
                
              },
              `From CSV` = {
                
                req(input$outlist_neg, input$outlist_pos, input$excel)
                
-               build.pat.db(patdb,
+               build.pat.db(global$paths$patdb,
                             ppm = ppm,
-                            pospath = parseFilePaths(volumes, input$outlist_pos)$datapath,
-                            negpath = parseFilePaths(volumes, input$outlist_neg)$datapath,
+                            pospath = parseFilePaths(global$paths$volumes, input$outlist_pos)$datapath,
+                            negpath = parseFilePaths(global$paths$volumes, input$outlist_neg)$datapath,
                             overwrite = T)
                
                shiny::setProgress(session=session, value= .95,message = "Adding excel sheets to database...")
                
-               exp_vars <<- load.excel(parseFilePaths(volumes, input$excel)$datapath, patdb)}
+               exp_vars <<- load.excel(parseFilePaths(global$paths$volumes, input$excel)$datapath, global$paths$patdb)}
              )
              
       })
@@ -1049,7 +953,7 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$import_db, {
     req(input$pat_db)
-    patdb <<- input$pat_db$datapath
+    global$paths$patdb <<- input$pat_db$datapath
     output$db_upload_check <- renderImage({
       # When input$n is 3, filename is ./images/image3.jpeg
       filename <- normalizePath('www/yes.png')
@@ -1061,7 +965,7 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$import_csv, {
     req(input$pat_csv)
-    csv_loc <<- input$pat_csv$datapath
+    global$paths$csv_loc <<- input$pat_csv$datapath
     
     output$csv_upload_check <- renderImage({
       # When input$n is 3, filename is ./images/image3.jpeg
@@ -1075,23 +979,18 @@ shinyServer(function(input, output, session) {
   # ==================== CREATE CSV =======================
   
   observeEvent(input$create_csv, {
+    # ---------
     req(options$proj_name)
     req(options$work_dir)
     # ---------
     withProgress({
       shiny::setProgress(session=session, value= 1/4)
-      # create csv
-      # input = list(group_by = "mz", exp_type = "stat")
-      #
-      tbl <- get.csv(patdb,
+      tbl <- get.csv(global$paths$patdb,
                      time.series = if(input$exp_type == "time_std") T else F,
-                     #exp.condition = input$exp_var,
                      group_adducts = if(length(add_search_list) == 0) F else T,
                      groupfac = input$group_by,
                      which_dbs = add_search_list,
                      which_adducts = selected_adduct_list
-                     #,var_table = if(input$broadvars) "individual_data" else "setup",
-                     #batches = input$batch_var
       )
       
       # --- experimental stuff ---
@@ -1120,8 +1019,8 @@ shinyServer(function(input, output, session) {
       # -------------------------
       # save csv
       shiny::setProgress(session=session, value= 2/4)
-      csv_loc <<- file.path(options$work_dir, paste0(options$proj_name,".csv"))
-      fwrite(tbl.adj, csv_loc, sep="\t")
+      global$paths$csv_loc <<- file.path(options$work_dir, paste0(options$proj_name,".csv"))
+      fwrite(tbl.adj, global$paths$csv_loc, sep="\t")
       # --- overview table ---
       
       as.numi <- as.numeric(colnames(tbl.adj)[1:100])
@@ -1162,8 +1061,8 @@ shinyServer(function(input, output, session) {
     
     
     
-    #csv_loc <- "/Users/jwolthuis/Analysis/SP/CHK_0718.csv"
-    csv <- fread(csv_loc, 
+    #global$paths$csv_loc <- "/Users/jwolthuis/Analysis/SP/CHK_0718.csv"
+    csv <- fread(global$paths$csv_loc, 
                  header = T)
     
     as.numi <- as.numeric(colnames(csv)[1:100])
@@ -1204,7 +1103,7 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$check_csv, {
-    req(csv_loc)
+    req(global$paths$csv_loc)
     switch(input$norm_type,
            ProbNorm=updateSelectInput(session, "ref_var",
                                       choices = get_ref_vars(fac = "Label") # please add options for different times later, not difficult
@@ -1257,11 +1156,11 @@ shinyServer(function(input, output, session) {
       # 
       # ------- load and re-save csv --------
       
-      #f = fread(csv_loc, header = TRUE)
+      #f = fread(global$paths$csv_loc, header = TRUE)
       
-      #csv_loc <- "/Users/jwolthuis/Analysis/SP/CHICKENS.csv" #DEBUG
+      #global$paths$csv_loc <- "/Users/jwolthuis/Analysis/SP/CHICKENS.csv" #DEBUG
       
-      csv_orig <- fread(csv_loc, 
+      csv_orig <- fread(global$paths$csv_loc, 
                         data.table = TRUE,
                         header = T)
       
@@ -1358,7 +1257,7 @@ shinyServer(function(input, output, session) {
         csv_temp_filt <- csv_temp_no_out#[, -"Batch"]
       }
       
-      csv_loc_no_out <- gsub(pattern = "\\.csv", replacement = "_no_out.csv", x = csv_loc)
+      csv_loc_no_out <- gsub(pattern = "\\.csv", replacement = "_no_out.csv", x = global$paths$csv_loc)
       
       # remove all except sample and time in saved csv
       exp_var_names <- colnames(csv_temp_filt)[exp.vars]
@@ -1474,7 +1373,7 @@ shinyServer(function(input, output, session) {
                          mSet$dataSet$norm[match(rownames(mSet$dataSet$norm),
                                                  mSet$dataSet$covars$Sample),])
       
-      csv_loc_filled <- gsub(pattern = "\\.csv", replacement = "_filled.csv", x = csv_loc)
+      csv_loc_filled <- gsub(pattern = "\\.csv", replacement = "_filled.csv", x = global$paths$csv_loc)
       
       fwrite(csv_filled, file = csv_loc_filled)
       
@@ -1761,7 +1660,7 @@ shinyServer(function(input, output, session) {
   # 
   # outliers <- names(which(abs(mSet$analSet$pca$x[,1]) > 50))
   # # remove
-  # csv <- as.data.table(fread(csv_loc))
+  # csv <- as.data.table(fread(global$paths$csv_loc))
   # csv_no_out <- csv[!Sample %in% outliers]
   # fwrite(csv_no_out,file = "ayr_no_outliers.csv")
   
@@ -1923,7 +1822,7 @@ shinyServer(function(input, output, session) {
                                       Colv=F, Rowv=F,
                                       branches_lwd = 0.3,
                                       margins = c(60,0,NA,50),
-                                      colors = color.function(256),
+                                      colors = global$functions$color.function(256),
                                       col_side_colors = function(n){
                                         if(n == length(color.vec())) color.vec() else rainbow(n)
                                         rainbow(n)
@@ -2010,7 +1909,7 @@ shinyServer(function(input, output, session) {
              })
              output$tt_overview_plot <- plotly::renderPlotly({
                # --- ggplot ---
-               ggPlotTT(color.function, 20)
+               ggPlotTT(global$functions$color.function, 20)
              })
            },
            fc = {
@@ -2033,7 +1932,7 @@ shinyServer(function(input, output, session) {
              })
              output$fc_overview_plot <- plotly::renderPlotly({
                # --- ggplot ---
-               ggPlotFC(color.function, 20)
+               ggPlotFC(global$functions$color.function, 20)
              })
            },
            aov = {
@@ -2087,7 +1986,7 @@ shinyServer(function(input, output, session) {
              })
              output$volc_plot <- plotly::renderPlotly({
                # --- ggplot ---
-               ggPlotVolc(color.function, 20)
+               ggPlotVolc(global$functions$color.function, 20)
              })
            }
     )
@@ -2454,7 +2353,7 @@ shinyServer(function(input, output, session) {
   
   observe({
     # ---------------------------------
-    db_search_list <- lapply(db_list, 
+    db_search_list <- lapply(global$vectors$db_list, 
                              FUN = function(db){
                                # -----------------------
                                if(!input[[paste0("search_", db)]]){
@@ -2463,12 +2362,12 @@ shinyServer(function(input, output, session) {
                                else{NA}
                              }
     )
-    db_search_list <<- db_search_list[!is.na(db_search_list)]
+    global$vectors$db_search_list <<- db_search_list[!is.na(db_search_list)]
   })  
   
   observe({
     # ---------------------------------
-    add_search_list <- lapply(db_list, 
+    add_search_list <- lapply(global$vectors$db_list, 
                               FUN = function(db){
                                 if(is.null(input[[paste0("add_", db)]])){
                                   return(NA)
@@ -2481,12 +2380,12 @@ shinyServer(function(input, output, session) {
                                 }
                               }        
     )
-    add_search_list <<- add_search_list[!is.na(add_search_list)]
+    global$vectors$add_search_list <<- add_search_list[!is.na(add_search_list)]
   })  
   
   observe({
     # ---------------------------------
-    enrich_db_list <- lapply(db_list, 
+    enrich_db_list <- lapply(global$vectors$db_list, 
                              FUN = function(db){
                                if(is.null(input[[paste0("enrich_", db)]])){
                                  return(NA)
@@ -2499,13 +2398,13 @@ shinyServer(function(input, output, session) {
                                }
                              }
     )
-    enrich_db_list <<- enrich_db_list[!is.na(enrich_db_list)]
+    global$vectors$enrich_db_list <<- enrich_db_list[!is.na(enrich_db_list)]
   })  
   
   observe({
     # --------------
-    wanted.adducts.pos <- pos_adducts[input$pos_add_tab_rows_selected, "Name"]
-    wanted.adducts.neg <- neg_adducts[input$neg_add_tab_rows_selected, "Name"]
+    wanted.adducts.pos <- global$vectors$pos_adducts[input$pos_add_tab_rows_selected, "Name"]
+    wanted.adducts.neg <- global$vectors$neg_adducts[input$neg_add_tab_rows_selected, "Name"]
     # ---------
     selected_adduct_list <<- rbind(wanted.adducts.neg, 
                                    wanted.adducts.pos)$Name
@@ -2591,9 +2490,9 @@ shinyServer(function(input, output, session) {
       output[[outplot_name]] <- plotly::renderPlotly({
         # --- ggplot ---
         if(table == 'meba'){
-          ggplotMeba(curr_cpd, draw.average = T, cols = color.vec(),cf=color.function)
+          ggplotMeba(curr_cpd, draw.average = T, cols = color.vec(),cf=global$functions$color.function)
         }else{
-          ggplotSummary(curr_cpd, cols = color.vec(), cf=color.function)
+          ggplotSummary(curr_cpd, cols = color.vec(), cf=global$functions$color.function)
         }
       })
     })
@@ -2649,7 +2548,7 @@ shinyServer(function(input, output, session) {
                
                output$ml_specific_plot <- plotly::renderPlotly({
                  # --- ggplot ---
-                 ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
+                 ggplotSummary(curr_cpd, cols = color.vec(),cf=global$functions$color.function)
                })
              })
            },
@@ -2678,7 +2577,7 @@ shinyServer(function(input, output, session) {
              curr_cpd <<- d$key
              output$tt_specific_plot <- plotly::renderPlotly({
                # --- ggplot ---
-               ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
+               ggplotSummary(curr_cpd, cols = color.vec(),cf=global$functions$color.function)
              })
            },
            fc = {
@@ -2687,7 +2586,7 @@ shinyServer(function(input, output, session) {
              curr_cpd <<- d$key
              output$fc_specific_plot <- plotly::renderPlotly({
                # --- ggplot ---
-               ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
+               ggplotSummary(curr_cpd, cols = color.vec(),cf=global$functions$color.function)
              })
            },
            aov = {
@@ -2696,7 +2595,7 @@ shinyServer(function(input, output, session) {
              curr_cpd <<- d$key
              output$aov_specific_plot <- plotly::renderPlotly({
                # --- ggplot ---
-               ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
+               ggplotSummary(curr_cpd, cols = color.vec(),cf=global$functions$color.function)
              })
            },
            rf = {
@@ -2705,7 +2604,7 @@ shinyServer(function(input, output, session) {
              curr_cpd <<- d$key
              output$rf_specific_plot <- plotly::renderPlotly({
                # --- ggplot ---
-               ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
+               ggplotSummary(curr_cpd, cols = color.vec(),cf=global$functions$color.function)
              })
            },
            heatmap_biv = {
@@ -2714,7 +2613,7 @@ shinyServer(function(input, output, session) {
              curr_cpd <<- hm_matrix$matrix$rows[d$y]
              output$heatmap_specific_plot <- plotly::renderPlotly({
                # --- ggplot ---
-               ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
+               ggplotSummary(curr_cpd, cols = color.vec(),cf=global$functions$color.function)
              })
            },
            heatmap_mult = {
@@ -2723,7 +2622,7 @@ shinyServer(function(input, output, session) {
              curr_cpd <<- hm_matrix$matrix$rows[d$y]
              output$heatmap_specific_plot <- plotly::renderPlotly({
                # --- ggplot ---
-               ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
+               ggplotSummary(curr_cpd, cols = color.vec(),cf=global$functions$color.function)
              })
            },
            volc = {
@@ -2732,7 +2631,7 @@ shinyServer(function(input, output, session) {
              curr_cpd <<- d$key
              output$volc_specific_plot <- plotly::renderPlotly({
                # --- ggplot ---
-               ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
+               ggplotSummary(curr_cpd, cols = color.vec(),cf=global$functions$color.function)
              })
            },
            lasnet = {
@@ -2741,7 +2640,7 @@ shinyServer(function(input, output, session) {
              curr_cpd <<- d$key
              output$lasnet_specific_plot <- plotly::renderPlotly({
                # --- ggplot ---
-               ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)
+               ggplotSummary(curr_cpd, cols = color.vec(),cf=global$functions$color.function)
              })
            })
     # ----------------------------
@@ -2760,19 +2659,18 @@ shinyServer(function(input, output, session) {
   }, deleteFile = FALSE)
   
   observeEvent(input$search_cpd, {
-    req(db_search_list)
+    req(global$vectors$db_search_list)
     print("Searching...")
     # ----------------
-    if(length(db_search_list) > 0){
-      match_table <<- unique(multimatch(curr_cpd, db_search_list, mSet$dataSet$grouping))
+    if(length(global$vectors$db_search_list) > 0){
+      global$tables$last_matches <<- unique(multimatch(curr_cpd, global$vectors$db_search_list))
       output$match_tab <- DT::renderDataTable({
-        DT::datatable(match_table[,-c("description","structure", "baseformula")],
+        DT::datatable(global$tables$last_matches[,-c("description","structure", "baseformula")],
                       selection = 'single',
                       autoHideNavigation = T,
                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
       })  
-      match_table
-    }
+      }
   })
   
   observeEvent(input$match_tab_rows_selected,{
@@ -2780,18 +2678,18 @@ shinyServer(function(input, output, session) {
     curr_row <<- input$match_tab_rows_selected
     if (is.null(curr_row)) return()
     # -----------------------------
-    curr_def <<- match_table[curr_row,'description']
+    curr_def <<- global$tables$last_matches[curr_row,'description']
     output$curr_definition <- renderText(curr_def$description)
-    curr_struct <<- match_table[curr_row,'structure'][[1]]
+    curr_struct <<- global$tables$last_matches[curr_row,'structure'][[1]]
     output$curr_struct <- renderPlot({plot.mol(curr_struct,style = "cow")})
-    curr_formula <<- match_table[curr_row,'baseformula'][[1]]
+    curr_formula <<- global$tables$last_matches[curr_row,'baseformula'][[1]]
     output$curr_formula <- renderText({curr_formula})
   })
   
   observeEvent(input$browse_db,{
-    req(db_search_list)
+    #req(db_search_list)
     # -------------------
-    cpd_list <- lapply(db_search_list, FUN=function(match.table){
+    cpd_list <- lapply(global$vectors$db_search_list, FUN=function(match.table){
       browse_db(match.table)
     })
     # ------------------
@@ -2806,12 +2704,12 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$revsearch_cpd, {
-    req(db_search_list)
+    #req(db_search_list)
     req(input$browse_tab_rows_selected)
     # -------------------
     search_cmd <- browse_table[curr_row,c('Formula', 'Charge')]
     # -------------------
-    cpd_list <- lapply(db_search_list, FUN=function(match.table){
+    cpd_list <- lapply(global$vectors$db_search_list, FUN=function(match.table){
       get_mzs(search_cmd$Formula, search_cmd$Charge, match.table)})
     # ------------------
     hits_table <<- unique(as.data.table(rbindlist(cpd_list)))
@@ -2832,12 +2730,12 @@ shinyServer(function(input, output, session) {
     curr_def <<- browse_table[curr_row,'Description']
     output$browse_definition <- renderText(curr_def$Description)
     # --- search ---
-    output$meba_specific_plot <- plotly::renderPlotly({ggplotMeba(curr_cpd, draw.average=T, cols = color.vec(),cf=color.function)})
-    output$asca_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)})
-    output$fc_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)})
-    output$tt_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)})
-    output$aov_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)})
-    output$plsda_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)})
+    output$meba_specific_plot <- plotly::renderPlotly({ggplotMeba(curr_cpd, draw.average=T, cols = color.vec(),cf=global$functions$color.function)})
+    output$asca_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=global$functions$color.function)})
+    output$fc_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=global$functions$color.function)})
+    output$tt_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=global$functions$color.function)})
+    output$aov_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=global$functions$color.function)})
+    output$plsda_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=global$functions$color.function)})
   })
   
   observeEvent(input$hits_tab_rows_selected,{
@@ -2846,12 +2744,12 @@ shinyServer(function(input, output, session) {
     if (is.null(curr_row)) return()
     # -----------------------------
     curr_cpd <<- hits_table[curr_row, mzmed.pgrp]
-    output$meba_specific_plot <- plotly::renderPlotly({ggplotMeba(curr_cpd, draw.average=T, cols = color.vec(),cf=color.function)})
-    output$asca_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)})
-    output$fc_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)})
-    output$tt_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)})
-    output$aov_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)})
-    output$plsda_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=color.function)})
+    output$meba_specific_plot <- plotly::renderPlotly({ggplotMeba(curr_cpd, draw.average=T, cols = color.vec(),cf=global$functions$color.function)})
+    output$asca_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=global$functions$color.function)})
+    output$fc_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=global$functions$color.function)})
+    output$tt_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=global$functions$color.function)})
+    output$aov_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=global$functions$color.function)})
+    output$plsda_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=global$functions$color.function)})
   })
   
   observeEvent(input$go_enrich,{

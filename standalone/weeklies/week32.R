@@ -53,20 +53,22 @@ plot(g,
 
 # - - 
 
+require(data.table)
+
 score.netw.add <- function(cpd, patdb, ppm){
-  #test.mz <- curr_cpd
-  #patdb <- "/Users/jwolthuis/Analysis/SP/CHICKENS_SEPT18.db"
-  
+
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
   
-  results <- unique(DBI::dbGetQuery(conn, "SELECT * FROM adducts;"))
+  results <- unique(DBI::dbGetQuery(conn, "SELECT * FROM adducts"))
   
   keep.cpds <- pbapply::pbsapply(unique(results$fullmz), function(cpd){
     res <- RSQLite::dbGetQuery(conn, gsubfn::fn$paste(strwrap(
       "SELECT DISTINCT count(*)
       FROM mzvals mz
       JOIN mzranges rng ON rng.ID = mz.ID
-      WHERE $cpd BETWEEN rng.mzmin AND rng.mzmax",width=10000, simplify=TRUE)))[,1]  
+      WHERE $cpd BETWEEN rng.mzmin AND rng.mzmax",
+      width=10000, 
+      simplify=TRUE)))[,1]  
     if(res > 0) cpd else NA
   })
   
@@ -79,8 +81,9 @@ score.netw.add <- function(cpd, patdb, ppm){
   
   involved.rows <- which(named.net$node1 == cpd | named.net$node2 == cpd)
   network.of.mz <- as.data.table(named.net[involved.rows,])
+  
   # make all node1 the orig mz
-  need.swap <- which(network.of.mz$node2 == test.mz)
+  need.swap <- which(network.of.mz$node2 == cpd)
   
   for(i in need.swap){
     store.1 = network.of.mz[i, "node1"][[1]]
@@ -94,32 +97,36 @@ score.netw.add <- function(cpd, patdb, ppm){
 
   # - - - - - - - - - 
 
-scores <- pbapply::pblapply(split.by.formula, function(current){
-  current = unique(current[,-9])
-  
-  # == IMPORTANT: FIRST CHECK  WHICH ARE EVEN FOUND AT ALL IN SAMPLES, USE THAT AS 100% THEN DIVIDE BY ONES W/ CONNECTION TO SIGNI MZ ==
-  
-  print(paste("Scoring", unique(current$baseformula)))
-  matches <- pbapply::pblapply(current$fullmz, function(mz){
-    #print(paste("---", mz, "---"))
-    bounds <- c(mz - mz*(ppm*1e-6), mz + mz*(ppm*1e-6))
-    node.matches <- network.of.mz[as.numeric(node2) %between% bounds,]
-    # - - -
-    node.matches
+  scores <- pbapply::pblapply(split.by.formula, function(current){
+    current = unique(current[,-9])
+    print(paste("Scoring", unique(current$baseformula)))
+    matches <- pbapply::pblapply(current$fullmz, function(mz){
+      #print(paste("---", mz, "---"))
+      bounds <- c(mz - mz*(ppm*1e-6), mz + mz*(ppm*1e-6))
+      node.matches <- network.of.mz[as.numeric(node2) %between% bounds,]
+      # - - -
+      node.matches
+    })
+    score = sum(sapply(matches, function(x) if(nrow(x)>0) 1 else 0))
+    print(paste("Total rows:", nrow(current)))
+    print(paste("Rows with match:", score))
+    percscore = round(score/nrow(current)*100.00, digits=2)
+    print(paste("Fractional score (intra-adduct):", percscore,"%"))
+    
+    data.table(baseformula = unique(current$baseformula), score = percscore)
   })
-  score = sum(sapply(matches, function(x) if(nrow(x)>0) 1 else 0))
-  print(paste("Total rows:", nrow(current)))
-  print(paste("Rows with match:", score))
-  # - - - 
-  percscore = round(score/nrow(current)*100.00, digits=2)
-  print(paste("Fractional score (intra-adduct):", percscore,"%"))
-  
-  #  - - - 
-  data.table(baseformula = unique(current$baseformula), score = percscore)
-  })
+  # - - - - - - -
+  rbindlist(scores)
 }
 
-scores.table <- rbindlist(scores)
+cpd <- curr_cpd
+patdb <- global$paths$patdb
+ppm <- global$constants$ppm
+
+score <- score.netw.add(cpd, patdb, ppm)
+
+View(global$tables$last_matches[unique(score), on = c("baseformula")])
+
 g <- igraph::make_graph(edges = as.character(get.nodes(network.of.mz)), directed = FALSE)
 plot(g,edge.arrow.size=.5,vertex.size=5)
 
