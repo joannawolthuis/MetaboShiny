@@ -425,7 +425,7 @@ ggPlotROC <- function(xvals, attempts = 50, cf = rainbow){
     coord_cartesian(xlim = c(.04,.96), ylim = c(.04,.96))
 }
 
-ggPlotBar <- function(repeats, attempts=50, color.function=rainbow, topn=50){
+ggPlotBar <- function(repeats, attempts=50, color.function=rainbow, topn=50, ml_name){
   
   # - - - - - - - - - - - - -
   
@@ -457,7 +457,7 @@ ggPlotBar <- function(repeats, attempts=50, color.function=rainbow, topn=50){
   # data$mz <- round(as.numeric(data$mz), digits = 2)
   data$mz <- factor(data$mz, levels=data$mz)
   
-  ml_bar_tab <<- data
+  global$tables$ml_bar_tab <<- data
   
   if(ml_name != ""){
     lname = ml_name

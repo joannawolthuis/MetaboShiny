@@ -125,11 +125,7 @@ ppm <- global$constants$ppm
 
 score <- score.netw.add(cpd, patdb, ppm)
 
-View(global$tables$last_matches[unique(score), on = c("baseformula")])
-
-g <- igraph::make_graph(edges = as.character(get.nodes(network.of.mz)), directed = FALSE)
-plot(g,edge.arrow.size=.5,vertex.size=5)
-
+scored_table <- global$tables$last_matches[unique(score), on = c("baseformula")]
 
 # === METHOD 2 == CHECK REACTIONS ===
 
@@ -137,10 +133,41 @@ require(enviPat)
 
 # loop through all pairs
 
+involved.rows <- which(named.net$node1 == cpd | named.net$node2 == cpd)
+network.of.mz <- as.data.table(named.net[involved.rows,])
+need.swap <- which(network.of.mz$node2 == cpd)
+
+for(i in need.swap){
+  store.1 = network.of.mz[i, "node1"][[1]]
+  store.2 = network.of.mz[i, "node2"][[1]]
+  # - - - -
+  network.of.mz$node1[i] <- store.2
+  network.of.mz$node2[i] <- store.1
+}
 # molecule modification list
 
 adduct = c()
 deduct = c()
+
+
+curr.row <- get_matches(cpd = cpd, chosen.db = "/Users/jwolthuis/Google Drive/MetaboShiny/backend/db/hmdb.full.db")
+
+scores <- pbapply::pblapply(1:nrow(network.of.mz), function(row){
+  matches <- pbapply::pblapply(c(curr.row$node1, curr.row$node2), function(mz){
+    #print(paste("---", mz, "---"))
+    bounds <- c(mz - mz*(ppm*1e-6), mz + mz*(ppm*1e-6))
+    node.matches <- network.of.mz[as.numeric(node2) %between% bounds,]
+    # - - -
+    node.matches
+  })
+  score = sum(sapply(matches, function(x) if(nrow(x)>0) 1 else 0))
+  print(paste("Total rows:", nrow(current)))
+  print(paste("Rows with match:", score))
+  percscore = round(score/nrow(current)*100.00, digits=2)
+  print(paste("Fractional score (intra-adduct):", percscore,"%"))
+  
+  data.table(baseformula = unique(current$baseformula), score = percscore)
+})
 
 # - - paper files - - 
 

@@ -727,26 +727,30 @@ shinyServer(function(input, output, session) {
   color.vec <- reactive({
     req(mSet$dataSet)
     # ----------
-    switch(input$exp_type,
+    facs <- switch(input$exp_type,
            stat = {
-             facs <- mSet$dataSet$cls
+             mSet$dataSet$cls
            },
            time_std = {
              if("facA" %not in% names(mSet$dataSet) & "facB" %not in% names(mSet$dataSet)) return(c("Blue", "Pink"))
              lbl.fac <- if(mSet$dataSet$facA.lbl == "Time") "facB" else "facA"
-             facs <- mSet$dataSet[[lbl.fac]]
+             mSet$dataSet[[lbl.fac]]
            },
            time_fin = {
-             facs <- mSet$dataSet$cls
+             mSet$dataSet$cls
            },
            time_min = {           
-             facs <- mSet$dataSet$cls
+             mSet$dataSet$cls
            })
     default.colours <- rainbow(length(facs))
     # -------------
-    unlist(lapply(seq_along(facs), function(i) {
+    func <- unlist(lapply(seq_along(facs), function(i) {
       input[[paste("col", i, sep="_")]]
     }))
+    # - - -
+    global$functions$color.vec <<- func
+    # - - - 
+    func
   })
   
   # --- adduct table editing ---
@@ -1682,7 +1686,7 @@ shinyServer(function(input, output, session) {
                  var = mSet$analSet$pca$variance)
                p <- ggplot2::ggplot(data=df[1:20,]) + ggplot2::geom_line(mapping = aes(x=pc, y=var, colour=var), cex=3) + 
                  plot.theme(base_size = 10) +
-                 ggplot2::scale_colour_gradientn(colours = cf(256)) +
+                 ggplot2::scale_colour_gradientn(colours = global$functions$color.function(256)) +
                  theme(axis.text=element_text(size=10),
                        axis.title=element_text(size=19,face="bold"),
                        #legend.title=element_text(size=15),
@@ -1809,7 +1813,7 @@ shinyServer(function(input, output, session) {
                output$heatmap <- plotly::renderPlotly({
                  x <- mSet$dataSet$norm[,names(sourceTable)]
                  final_matrix <- t(x)
-                 translator <- data.table(Sample=rownames(mSet$dataSet$norm),Group=mSet$dataSet$prenorm.cls)
+                 translator <- data.table(Sample=rownames(mSet$dataSet$norm),Group=mSet$dataSet$cls)
                  group_assignments <- translator[,"Group",on=colnames(final_matrix)]$Group
                  hm_matrix <<- heatmaply::heatmapr(final_matrix, 
                                                    Colv=T, 
@@ -1846,8 +1850,8 @@ shinyServer(function(input, output, session) {
                used.analysis <- "fc"
                used.values <- "fc.all"
              }
-             #sourceTable <- mSet$analSet[[used.analysis]]$inx.imp[mSet$analSet[[used.analysis]]$inx.imp == TRUE]
-             sourceTable <- sort(mSet$analSet[[used.analysis]][[used.values]])[1:100]
+             sourceTable <- mSet$analSet[[used.analysis]]$inx.imp[mSet$analSet[[used.analysis]]$inx.imp == TRUE]
+             #sourceTable <- sort(mSet$analSet[[used.analysis]][[used.values]])[1:100]
              # --- render ---
              withProgress({
                output$heatmap <- plotly::renderPlotly({
@@ -1855,32 +1859,25 @@ shinyServer(function(input, output, session) {
                  final_matrix <- t(x)
                  translator <- data.table(Sample=rownames(mSet$dataSet$norm),Group=mSet$dataSet$cls)
                  group_assignments <- translator[,"Group",on=colnames(final_matrix)]$Group
-                 #hm_matrix <- heatmaply::heatmapr(final_matrix, 
-                 #                                 Colv=T, 
-                 #                                 Rowv=T,
-                                                   #col_side_colors = ,
-                 #                                 k_row = NA)
                  
-                 # x <- mtcars
-                 # # different colors
-                 # heatmaply(x, colors = heat.colors(200))
-                 # # using special scale_fill_gradient_fun colors
-                 # heatmaply(x, scale_fill_gradient_fun = scale_color_gradient())
+                 cols_mapped <- unlist(sapply(as.numeric(group_assignments), function(i) cols[i]))
                  
-                 
+                 # TODO
+                 #global$constants$palette_choice <- "PiYG"
+                 #global$constants$palette_reverse <- FALSE
+                 #cols <- rev(colorRampPalette(RColorBrewer::brewer.pal(10, global$constants$palette))(256))
                  
                  heatmaply::heatmaply(final_matrix
                                       ,Colv=T, Rowv=T,
                                       branches_lwd = 0.3,
                                       margins = c(60,0,NA,50),
-                                      #scale_fill_gradient_fun = scale_color_gradient(),
-                                      colors = cf(256),
+                                      colors = global$functions$color.function(256),
                                       col_side_colors = group_assignments,
+                                        #cols_mapped,
                                       subplot_widths = c(.9,.1),
                                       #subplot_heights =  c(.15,.85),
                                       subplot_heights =  c(.1,.05,.85),
-                                      column_text_angle = 90,
-                                      ColSideColors=color.vec()
+                                      column_text_angle = 90
                                       )
                })               
              })
@@ -2009,8 +2006,8 @@ shinyServer(function(input, output, session) {
                mSet <<- PLSDA.CV(mSet,compNum = 5)
                mSet <<- PLSDA.Permut(mSet,num = 300)
                
-               output$plsda_cv_plot <- renderPlot({ggPlotClass(cf = cf)})
-               output$plsda_perm_plot <- renderPlot({ggPlotPerm(cf = cf)})
+               output$plsda_cv_plot <- renderPlot({ggPlotClass(cf = global$functions$color.function)})
+               output$plsda_perm_plot <- renderPlot({ggPlotPerm(cf = global$functions$color.function)})
                
                
                # - - - - - - - - - - - 
@@ -2345,8 +2342,8 @@ shinyServer(function(input, output, session) {
       mSet$analSet$ml[[input$ml_method]][[input$ml_name]] <<- list("roc" = xvals,
                                                                   "bar" = repeats)
       
-      output$ml_roc <- plotly::renderPlotly({plotly::ggplotly(ggPlotROC(xvals, input$ml_attempts, cf))})
-      output$ml_bar <- plotly::renderPlotly({plotly::ggplotly(ggPlotBar(repeats, input$ml_attempts, cf, input$ml_top_x))})
+      output$ml_roc <- plotly::renderPlotly({plotly::ggplotly(ggPlotROC(xvals, input$ml_attempts, global$functions$color.function))})
+      output$ml_bar <- plotly::renderPlotly({plotly::ggplotly(ggPlotBar(repeats, input$ml_attempts, global$functions$color.function, input$ml_top_x, input$ml_name))})
       
     })
   })
@@ -2544,7 +2541,7 @@ shinyServer(function(input, output, session) {
              }, bar = {
                #
                #d = list(x=1)
-               curr_cpd <<- as.character(ml_bar_tab[d$x,"mz"][[1]])
+               curr_cpd <<- as.character(global$tables$ml_bar_tab[d$x,"mz"][[1]])
                
                output$ml_specific_plot <- plotly::renderPlotly({
                  # --- ggplot ---
@@ -2998,7 +2995,7 @@ shinyServer(function(input, output, session) {
       geom_text(mapping = aes(x=x, y=y, label=value), data = headers, fontface="bold", size = 7) +
       theme_void() +
       theme(legend.position="none") + 
-      scale_fill_gradientn(colours = cf(circles)) +
+      scale_fill_gradientn(colours = global$functions$color.function(circles)) +
       coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
     
     
