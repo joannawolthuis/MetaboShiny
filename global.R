@@ -81,7 +81,8 @@ global <- list(constants = list(ppm = 2,
                                              "RJSONIO", "SSPA", "caTools", "ROCR", "pROC", "sva", "rJava",
                                              "colorRamps", "grDevices", "KEGGREST", "manhattanly", 
                                              "BatchCorrMetabolomics", "R.utils", "rgl", "glmnet", "caret",
-                                             "RandomForest", "TSPred", "VennDiagram", "rcdk"),
+                                             "RandomForest", "TSPred", "VennDiagram", "rcdk"
+                                             ),
                                 images = list(list(name = 'cute_package', path = 'www/cat.png', dimensions = c(80, 80)),
                                                 list(name = 'umc_logo_int', path = 'www/umcinternal.png', dimensions = c(120, 120)),
                                                 list(name = 'umc_logo_noise', path = 'www/umcnoise.png', dimensions = c(120, 120)),
@@ -145,7 +146,7 @@ global <- list(constants = list(ppm = 2,
 # === LOAD LIBRARIES ===
 
 data(isotopes, package = "enviPat")
-session_cl <- parallel::makeCluster(parallel::detectCores()-1)
+session_cl <- parallel::makeCluster(max(c(1, parallel::detectCores()-1)))
 
 source("./Rsource/SwitchButton.R")
 

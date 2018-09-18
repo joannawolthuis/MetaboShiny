@@ -2,6 +2,7 @@
 
 shinyServer(function(input, output, session) {
   
+  print("Starting server...")
   # ================================= DEFAULTS ===================================
   
   source('./backend/scripts/joanna/shiny_general.R')
@@ -587,8 +588,11 @@ shinyServer(function(input, output, session) {
   })
   
   observe({  
+    print("!!!")
     shinyDirChoose(input, "get_db_dir", roots=global$paths$volumes, session = session)
+    print(input$get_db_dir)
     if(is.null(input$get_db_dir)) return()
+    if(input$get_db_dir == 0) return()
     given_dir <- parseDirPath(global$paths$volumes, input$get_db_dir)
     if(is.null(given_dir)) return()
     options$db_dir <<- given_dir
@@ -599,8 +603,10 @@ shinyServer(function(input, output, session) {
   })
   
   observe({  
-    shinyDirChoose(input, "get_work_dir", roots =global$paths$volumes, session = session)
+    print("!!")
+    shinyDirChoose(input, "get_work_dir", roots = global$paths$volumes, session = session)
     if(is.null(input$get_work_dir)) return()
+    if(input$get_work_dir == 0) return()
     given_dir <- parseDirPath(global$paths$volumes, input$get_db_dir)
     if(is.null(given_dir)) return()
     options$work_dir <<- given_dir
