@@ -43,7 +43,7 @@ metanr_packages <- function(){
 }
 
 # -- IF YOU HAVE PROBLEMS STARTING UP --
-# requires openssl, libcurl, libxt, libxml2, cairo, java installed
+# requires openssl, libcurl, libxt, libxml2, cairo, java, mesa-common, libgl1, libglu1 installed
 
 base.packs <- c("httr", "curl", "git2r", "devtools", 
                 "pacman", "gsubfn", "shiny", "DT", 
@@ -53,7 +53,7 @@ base.packs <- c("httr", "curl", "git2r", "devtools",
                 "colorRamps", "enviPat", "shinyalert",
                 "shinyWidgets", "colourpicker")
 
-base.packs <- c("xlsx", "rJava", "randomForest", "rgl", "rcdk", "xcms")
+#base.packs <- c("xlsx", "rJava", "randomForest", "rgl", "rcdk", "xcms")
 
 for(package in base.packs){
   install.if.not(package)
