@@ -2943,6 +2943,25 @@ shinyServer(function(input, output, session) {
     
     # - - - - - - --
     
+    # TODO
+    # Hypergeometric testing?
+    # SO : 'Calculate venn diagram hypergeometric p value using R'
+    '''
+    Example:
+    total genes avail. 15220.
+    set A only: 1850
+    set B only: 596
+    overlap : 195
+    
+    require(gmp)
+    enrich_pvalue <- function(N,A,B,k){
+      m = A + k
+      n = B + k
+      i = k:min(m,n)
+      as.numeric(sum(choosez(m,i)*choosez))
+      ...
+    }
+    '''
     venn.plot <- VennDiagram::venn.diagram(x = flattened,
                                            filename = NULL)
     

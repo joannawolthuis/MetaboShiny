@@ -181,10 +181,11 @@ build.base.db <- function(dbname=NA,
                                  print("Downloading XML database...")
                                  file.url <- "http://www.hmdb.ca/system/downloads/current/hmdb_metabolites.zip"
                                  # ----
+                                 #base.loc <- options$db_dir
                                  base.loc <- file.path(options$db_dir, "hmdb_source")
-                                 if(!dir.exists(base.loc)) dir.create(base.loc)
+                                 if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                                  zip.file <- file.path(base.loc, "HMDB.zip")
-                                 utils::download.file(file.url, zip.file)
+                                 utils::download.file(file.url, zip.file,mode = "w")
                                  utils::unzip(zip.file, exdir = base.loc)
                                  # --- go through xml ---
                                  print("Parsing XML...")
@@ -652,15 +653,13 @@ build.base.db <- function(dbname=NA,
                                  require(curl)
                                  
                                  all_ids <- read.table("ftp://ftp.ebi.ac.uk/pub/databases/metabolights/eb-eye/unichem.tsv", sep="\t")
-                                 
+                                 all_ids <- all_ids[1:100,]
                                  colnames(all_ids) <- c("identifier", "inchi", "inchikey")
                                  query <- all_ids$inchi[[1]]
                                  
-                                 
                                  token = "b7e19fad-46bd-48d3-80c1-765140acace1"
                                  
-                                 cl = parallel::makeCluster(3, "FORK")
-                                 w.csid.rows <- pbapply::pblapply(1:nrow(all_ids), cl=0, function(i){
+                                 w.csid.rows <- pbapply::pblapply(1:nrow(all_ids), cl=session_cl, function(i){
                                    row = all_ids[i,]
                                    inchi = row$inchikey
                                    print(i/nrow(all_ids)*100)
@@ -686,14 +685,14 @@ build.base.db <- function(dbname=NA,
                                  # pathways = jsonlite::fromJSON(txt = "http://ftp.ebi.ac.uk/pub/databases/metabolights/compounds/reactome.json", 
                                  #                               simplifyDataFrame = TRUE)
                                  url = "ftp://ftp.ebi.ac.uk/pub/databases/metabolights/eb-eye/eb-eye_metabolights_complete.xml"
-                                 result <- XML::xmlParse()
+                                 result <- XML::xmlParse(url)
                                  tbl <- XML::xmlToList(url)
                                  rootnode <- XML::xmlRoot(result)
                                  
                                  # Find number of nodes in the root.
                                  rootsize <- XML::xmlSize(rootnode)
                                  
-                                 db.rows.from.study <- pbapply::pblapply(tbl$entries, function(study){
+                                 db.rows.from.study <- pbapply::pblapply(tbl$entries, cl=session_cl, function(study){
                                    ids = sapply(study$cross_references, function(x) x[[1]])
                                    ids = ids[grepl(x=ids, pattern = "MTBLC")]
                                    names = sapply(study$additional_fields, function(x){
@@ -735,9 +734,9 @@ build.base.db <- function(dbname=NA,
                                  # met_info <- jsonlite::fromJSON(txt = "https://www.ebi.ac.uk/metabolights/webservice/beta/compound/MTBLC11449", simplifyDataFrame = TRUE)
                                  # - - - - - -
                                  
-                                 cl = parallel::makeCluster(3)
+                                 #cl = parallel::makeCluster(3)
                                  
-                                 info_objs <- pbapply::pblapply(names(metabs), cl = 0, FUN=function(id){
+                                 info_objs <- pbapply::pblapply(names(metabs), cl = session_cl, FUN=function(id){
                                    url <- paste0("https://www.ebi.ac.uk/metabolights/webservice/beta/compound/", id)
                                    tries = 4
                                    met_info <- NULL
@@ -749,7 +748,7 @@ build.base.db <- function(dbname=NA,
                                    met_info
                                  })
                                  
-                                 db_rows <- pbapply::pblapply(info_objs, cl = 0, FUN=function(met_info){
+                                 db_rows <- pbapply::pblapply(info_objs, cl = session_cl, FUN=function(met_info){
                                    formula <- NA
                                    charge <- NA
                                    try({
@@ -805,7 +804,7 @@ build.base.db <- function(dbname=NA,
                                  
                                  names(pathway.tb.list) <- sapply(db.pathway.info, function(x) x$id)
                                  
-                                 with.pw.info <- pbapply::pblapply(1:length(pathway.tb.list), cl=0, function(i){
+                                 with.pw.info <- pbapply::pblapply(1:length(pathway.tb.list), cl=session_cl, function(i){
                                    tb = pathway.tb.list[[i]]
                                    id = names(pathway.tb.list)[i]
                                    namecol = which(colnames(tb) == "name")
