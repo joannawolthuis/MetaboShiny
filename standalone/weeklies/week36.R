@@ -15,7 +15,9 @@ t <- list(
   size = 40,
   color = toRGB("black"))
 
-save(chicken_mset, swine_mset, file="~/data_twopager.RData")
+#save(chicken_mset, swine_mset, file="~/data_twopager.RData")
+
+load("~/data_twopager.RData")
 
 # PLS-DA BICOLOURED PLOT
 mSet <- chicken_mset
@@ -255,6 +257,37 @@ ggplot(df_both,aes(x=acc)) +
                linetype=1)+
   geom_label(aes(x=bw.vec1[1]-0.015,y=.05*nrow(df_both),label = chick_pval), color="black", label.size = 1, size=5) +
   geom_label(aes(x=bw.vec2[1]-0.015,y=.05*nrow(df_both),label = swine_pval), color="black", label.size = 1, size=5)
+
+# ACCURACY CHARTS
+
+require(ggplot2)
+
+res <- chicken_mset$analSet$plsda$fit.info
+colnames(res) <- 1:ncol(res)
+# best.num <- mSet$analSet$plsda$best.num
+# choice <- mSet$analSet$plsda$choice
+df1 <- reshape2::melt(res)
+df1$animal = "chicken"
+
+res <- swine_mset$analSet$plsda$fit.info
+colnames(res) <- 1:ncol(res)
+# best.num <- mSet$analSet$plsda$best.num
+# choice <- mSet$analSet$plsda$choice
+df2 <- reshape2::melt(res)
+df2$animal = "swine"
+
+df <- rbind(df1, df2)
+
+df$Component <- paste0("PC",df$Component)
+colnames(df) <- c("Metric", "Component", "Value", "animal")
+p <- ggplot(df, aes(x=Metric, y=Value, fill=animal)) +
+  geom_bar(stat="identity",position='dodge', colour="black") + 
+  theme_minimal() + 
+  theme_gray() +
+  facet_grid(~Component) +
+  theme(text=element_text(size=15,  family="Trebuchet MS", hjust = 0.5)) +
+  scale_fill_manual(values=c("yellow", "pink"))
+p
 
 # ROC
 xvals <- chicken_mset$analSet$ml$ls$lasso_all$roc

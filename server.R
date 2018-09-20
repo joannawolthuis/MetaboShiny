@@ -85,6 +85,7 @@ shinyServer(function(input, output, session) {
   
   stat.ui.bivar <- reactive({
     navbarPage(inverse=F,h2("Standard analysis"), id="tab_stat",
+               # TODO: T-SNE
                tabPanel(h3("PCA"), value = "pca", #icon=icon("cube"),
                         fluidRow(column(12,align="center",plotly::plotlyOutput("plot_pca",height = "600px", width="600px"))),
                         hr(),
@@ -279,6 +280,7 @@ shinyServer(function(input, output, session) {
                tabPanel("", value = "intro", icon=icon("comment-o"),
                         helpText("Info text here")
                ), # pca_legend
+               # TODO: t-sne
                tabPanel(h3("PCA"), value = "pca", #icon=icon("cube"),
                         fluidRow(column(10, plotly::plotlyOutput("plot_pca",height = "600px")),
                                  column(2, br(),br(), br(),plotly::plotlyOutput("pca_legend",height = "400px"))
@@ -2946,22 +2948,7 @@ shinyServer(function(input, output, session) {
     # TODO
     # Hypergeometric testing?
     # SO : 'Calculate venn diagram hypergeometric p value using R'
-    '''
-    Example:
-    total genes avail. 15220.
-    set A only: 1850
-    set B only: 596
-    overlap : 195
     
-    require(gmp)
-    enrich_pvalue <- function(N,A,B,k){
-      m = A + k
-      n = B + k
-      i = k:min(m,n)
-      as.numeric(sum(choosez(m,i)*choosez))
-      ...
-    }
-    '''
     venn.plot <- VennDiagram::venn.diagram(x = flattened,
                                            filename = NULL)
     

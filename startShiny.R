@@ -52,7 +52,7 @@ base.packs <- c("httr", "curl", "git2r", "devtools",
                 "shinyBS", "rhandsontable", "XML", 
                 "MetaboAnalystR", "BatchCorrMetabolomics", 
                 "colorRamps", "enviPat", "shinyalert",
-                "shinyWidgets", "colourpicker")
+                "shinyWidgets", "colourpicker", "here")
 
 # IF RJAVA DOESN'T WANT TO INSTALL
 # sudo R CMD javareconf # FIXES EVERYTHING!!! JUST NEED TO USE ADMIN MODE...
@@ -63,11 +63,13 @@ for(package in base.packs){
 }
 
 # please put your working dir below AND in the .conf file in the main directory 
-#wdir <<- "/Users/jwolthuis/Google Drive/MetaboShiny"
-wdir <<- "/home/joanna/Code/MetaboShiny"
 
+#wdir <<- here::here()
+wdir <<- dirname(rstudioapi::getSourceEditorContext()$path)
 setwd(wdir)
+
+# TODO: SET DEFAULT DIRECTORIES FOR DATABASES AND OUTPUT FILES
 
 # ---------------------------------
 
-shiny::runApp(".", launch.browser = T)
+shiny::runApp(".")#, launch.browser = T)
