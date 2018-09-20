@@ -65,7 +65,7 @@ for(package in base.packs){
 # please put your working dir below AND in the .conf file in the main directory 
 
 #wdir <<- here::here()
-wdir <<- dirname(rstudioapi::getSourceEditorContext()$path)
+wdir <<- dirname(rstudioapi::getSourceEditorContext()$path) # TODO: make this not break when not running from rstudio
 setwd(wdir)
 
 # TODO: SET DEFAULT DIRECTORIES FOR DATABASES AND OUTPUT FILES
