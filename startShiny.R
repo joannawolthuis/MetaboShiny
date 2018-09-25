@@ -1,7 +1,7 @@
-'''
-This script is currently used to start MetaboShiny.
-It takes care of installing packages necessary for MetaboShiny to even start.
-'''
+# - - helloo - - 
+"This script is currently used to start MetaboShiny.
+It takes care of installing packages necessary for 
+MetaboShiny to even start."
 
 
 # Function to install packages, either through regular method or through downloading from git directly
@@ -25,8 +25,13 @@ install.if.not <- function(package){
 
 metanr_packages <- function(){
   # - - - - - - - - - - - - - -
-  metr_pkgs <- c("Rserve", "BatchCorrMetabolomics", "RColorBrewer", "xtable", "som", "ROCR", "RJSONIO", "gplots", "e1071", "caTools", "igraph", "randomForest", "Cairo", "pls", "pheatmap", "lattice", "rmarkdown", "knitr", "data.table", "pROC", "Rcpp", "caret", "ellipse",
-                 "scatterplot3d", "impute", "rhandsontable", "pcaMethods", "siggenes", "globaltest", "GlobalAncova", "Rgraphviz", "KEGGgraph", "preprocessCore", "genefilter", "SSPA", "sva")
+  metr_pkgs <- c("Rserve", "BatchCorrMetabolomics", "RColorBrewer", 
+                 "xtable", "som", "ROCR", "RJSONIO", "gplots", 
+                 "e1071", "caTools", "igraph", "randomForest", "Cairo", 
+                 "pls", "pheatmap", "lattice", "rmarkdown", "knitr", 
+                 "data.table", "pROC", "Rcpp", "caret", "ellipse",
+                 "scatterplot3d", "impute", "rhandsontable", "pcaMethods", 
+                 "siggenes", "globaltest", "GlobalAncova", "Rgraphviz", "KEGGgraph", "preprocessCore", "genefilter", "SSPA", "sva")
   list_installed <- installed.packages()
   
   new_pkgs <- subset(metr_pkgs, !(metr_pkgs %in% list_installed[, "Package"]))
@@ -63,7 +68,6 @@ for(package in base.packs){
 }
 
 # please put your working dir below AND in the .conf file in the main directory 
-
 #wdir <<- here::here()
 wdir <<- dirname(rstudioapi::getSourceEditorContext()$path) # TODO: make this not break when not running from rstudio
 setwd(wdir)

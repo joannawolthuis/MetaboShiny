@@ -214,20 +214,31 @@ plot_ly(x  = c(-1,1,3,1, 1,1,1,0, 2),
 
 df_both <- rbind(df1, df2)
 
-mSet <- swine_mset
-bw.vec <- mSet$analSet$plsda$permut
-len <- length(bw.vec)
-df <- melt(bw.vec)
-colnames(df) = "acc"
-df$animal = "swine"
 
-#df1 = df
-df2 = df
+df1 = {
+  mSet <- swine_mset
+  bw.vec1 <- mSet$analSet$plsda$permut
+  len <- length(bw.vec)
+  df <- melt(bw.vec)
+  colnames(df) = "acc"
+  df$animal = "swine"
+  df
+}
+df2 = {
+  mSet <- chicken_mset
+  bw.vec2 <- mSet$analSet$plsda$permut
+  len <- length(bw.vec)
+  df <- melt(bw.vec)
+  colnames(df) = "acc"
+  df$animal = "chicken"
+  df
+}
+df_both <- rbind(df1, df2)
 
 chick_pval <- gsub(chicken_mset$analSet$plsda$permut.p, pattern = "0\\.00333333333333333", replacement = "0.003")
 swine_pval <- gsub(swine_mset$analSet$plsda$permut.p, pattern = "0\\.00333333333333333", replacement = "0.003")
 
-my_binwidth = (max(df_both)-min(df_both))/30;
+my_binwidth = (max(df_both$acc)-min(df_both$acc))/30;
 
 ggplot(df_both,aes(x=acc)) + 
   #plot.theme(base_size = 15) +
@@ -360,7 +371,9 @@ ggplot(perf.joined, aes(FPR, TPR, color=animal)) +
 
 # VENN PREP
 
+repeats <- chicken_mset$analSet$ml$ls$lasso_all$bar
 repeats <- swine_mset$analSet$ml$ls$lasso_pig$bar
+
 ml_type = repeats[[1]]$type
 
 print(ml_type)
@@ -391,12 +404,6 @@ data$mz <- factor(data$mz, levels=data$mz)
 
 ml_bar_tab <<- data
 
-if(ml_name != ""){
-  lname = ml_name
-}else{
-  lname <- paste0(ml_train_regex,"|", ml_test_regex)
-}
-print(lname)
 venn2 <- data
 
 p <- ggplot(data[1:topn,], aes(mz,count))
@@ -504,21 +511,45 @@ p <- ggplot(datapoly,
   geom_text(mapping = aes(x=x, y=y, label=value), data = headers, size = 9,family="Trebuchet MS") +
   theme_void() +
   theme(legend.position="none") + 
-  scale_fill_gradientn(colours = cf(circles)) +
+  scale_fill_gradientn(colours = rainbow(circles)) +
   coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
 p 
 
-# hypergeo
+# Hypergeometric testing for venn diagrams?
 
-m <- 286
-n <- 283
-k <- 27
+require(gmp)
 
-x <- 0:(k+1)
+enrich_pvalue <- function(N, A, B, k)
+{
+  m <- A + k
+  n <- B + k
+  i <- k:min(m,n)
+  # - - - 
+  as.numeric( sum(gmp::chooseZ(m,i) * gmp::chooseZ(N-m,n-i)) / gmp::chooseZ(N,n) )
+}
 
-mean(phyper(x, m, n, k, lower.tail = TRUE, log.p = FALSE))
+N = ncol(swine_mset$dataSet$norm) # pool of possible options
+A = 93 # circle A
+B = 6 # circle B
+k = 3# overlap
 
-signif(phyper(x, m, n, k) - cumsum(dhyper(x, m, n, k)), digits = 3)
+{
+  pval <- enrich_pvalue(N, A, B, k)
+  
+  stars <- if(pval < 0.0001){
+   " (****)" 
+  }else if(pval < 0.001){
+    " (***)"
+  }else if(pval < 0.01){
+    " (**)"
+  }else if(pval < 0.05){
+    " (*)"
+  }else{
+    ""
+  }
+  
+  print(paste0(pval, stars))
+}
 
 # COUNT ALL CPDS IN DB
 
@@ -532,4 +563,3 @@ cpd.count <- pbapply::pblapply(db_list, function(db){
 })
 
 sum(unlist(cpd.count))
-# Hypergeometric testing for venn diagrams?

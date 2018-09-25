@@ -93,7 +93,8 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                            helpText("Small molecule pathway database. Compounds overlap with HMDB.")
                     ),column(3,  align="center",
                              h2("MetaCyc"),
-                             helpText("Large pathway database with over 10 000 available compounds. Spans several organisms!")
+                             helpText("Large pathway database with over 10 000 available compounds. Spans several organisms!"),
+                             helpText(a("Download spreadsheet to /backend/db/metacyc_source.", href = 'https://metacyc.org/group?id=biocyc17-31223-3729417004'))
                     )
                     ), br(),
                     fluidRow(column(3, align="center",

@@ -525,14 +525,6 @@ shinyServer(function(input, output, session) {
     })
   })
   
-  
-  
-  # ===== PACKAGE LOADING ====
-  
-  observeEvent(input$nav_general, {
-    #load.necessarities(input$nav_general)
-  })
-  
   # =================================================
   
   lapply(global$constants$images, FUN=function(image){
@@ -898,7 +890,7 @@ shinyServer(function(input, output, session) {
     
     # - - - 
     
-    score_table <- score.isos(global$paths$patdb, method=input$iso_score_method) 
+    score_table <- score.isos(global$paths$patdb, method=input$iso_score_method, inshiny=T) 
     
     global$tables$last_matches <<- global$tables$last_matches[score_table, on = c("baseformula", "adduct")]
     
@@ -2012,7 +2004,8 @@ shinyServer(function(input, output, session) {
                shiny::setProgress(session=session, value= 0.3)
                
                mSet <<- PLSDA.CV(mSet,compNum = 5)
-               mSet <<- PLSDA.Permut(mSet,num = 300)
+               mSet <<- PLSDA.Permut(mSet,num = 300, type = "accu")
+               #swine_mset <<- PLSDA.Permut(swine_mset,num = 300, type = "accu")
                
                output$plsda_cv_plot <- renderPlot({ggPlotClass(cf = global$functions$color.function)})
                output$plsda_perm_plot <- renderPlot({ggPlotPerm(cf = global$functions$color.function)})
@@ -2758,7 +2751,10 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$go_enrich,{
-    enrich_db_list <- paste0("./backend/db/", c("kegg", "wikipathways", "smpdb", "metacyc"), ".full.db")
+    enrich_db_list <- paste0("./backend/db/", c("kegg", 
+                                                "wikipathways", 
+                                                "smpdb",
+                                                "metacyc"), ".full.db")
     withProgress({
       all_pathways <- lapply(enrich_db_list, FUN=function(db){
         conn <- RSQLite::dbConnect(RSQLite::SQLite(), db) # change this to proper var later
@@ -3060,11 +3056,7 @@ shinyServer(function(input, output, session) {
                                stopApp() 
                              }else{
                                NULL
-                             }
-                               }
-                             #,imageHeight = 300, 
-                             #imageWidth = 300
-                             )
+                             }})
     }
   })
 })

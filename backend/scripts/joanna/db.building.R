@@ -402,7 +402,7 @@ build.base.db <- function(dbname=NA,
                                kegg = function(dbname){
                                  # ---------------
                                  batches <- split(0:2000, ceiling(seq_along(0:2000)/100))
-                                 cpds <- pbapply::pblapply(batches, cl=cl, FUN=function(batch){
+                                 cpds <- pbapply::pblapply(batches, cl=session_cl, FUN=function(batch){
                                    names(KEGGREST::keggFind("compound", batch, "mol_weight"))
                                  })
                                  cpd.ids <- Reduce(c, cpds)
@@ -415,9 +415,9 @@ build.base.db <- function(dbname=NA,
                                  # --- GET COMPOUNDS ---
                                  
                                  #cl = parallel::makeCluster(3)
-                                 parallel::clusterExport(cl, c("kegg.charge", "rbindlist"))
+                                 parallel::clusterExport(session_cl, c("kegg.charge", "rbindlist"))
                                  
-                                 kegg.cpd.list <- pbapply::pblapply(id.batches, cl=cl, FUN=function(batch){
+                                 kegg.cpd.list <- pbapply::pblapply(id.batches, cl=session_cl, FUN=function(batch){
                                    rest.result <- KEGGREST::keggGet(batch)
                                    # ---------------------------
                                    base.list <- lapply(rest.result, FUN=function(cpd){
@@ -460,7 +460,7 @@ build.base.db <- function(dbname=NA,
                                  # --- GET PATHWAYS ---
                                  pathways <- unique(db.cpds$pathway)
                                  pw.batches <- split(pathways, ceiling(seq_along(pathways)/10))
-                                 kegg.pw.list <- pbapply::pblapply(pw.batches, cl=cl, FUN=function(batch){
+                                 kegg.pw.list <- pbapply::pblapply(pw.batches, cl=session_cl, FUN=function(batch){
                                    rest.result <- KEGGREST::keggGet(batch)
                                    # ---------------------------
                                    base.list <- lapply(rest.result, FUN=function(pw){
@@ -484,13 +484,15 @@ build.base.db <- function(dbname=NA,
                                metacyc = function(dbname, ...){
                                  # NOTE: Requires downloading this SmartTable as delimited file: https://metacyc.org/group?id=biocyc17-31223-3729417004
                                  # May need to remake smartTable if anything on the website changes unfortunately
+                                 # TODO: download file directly from link, will need a javascript. Maybe Rselenium??
                                  source.file = "./backend/db/metacyc_source/All_compounds_of_MetaCyc.txt"
                                  if(!file.exists(source.file)){
                                    message("Please download SmartTable from 'https://metacyc.org/group?id=biocyc17-31223-3729417004' as .txt and save in the backend/db/metacyc_source folder.")
                                    return(NULL)
                                  }
-                                 metacyc.raw = fread(source.file)
-                                 charges = pbapply::pbsapply(metacyc.raw$SMILES, cl=cl, FUN=function(smile){
+                                 metacyc.raw = read.table(source.file, fill = T, header = T)
+                                 #metacyc.raw = fread(source.file, sep = "\t", quote = '\"', header = T, fill=T)
+                                 charges = pbapply::pbsapply(metacyc.raw$SMILES, cl=session_cl, FUN=function(smile){
                                    m <- rcdk::parse.smiles(smile)
                                    #print(m)
                                    ## perform operations on this molecule
@@ -503,7 +505,7 @@ build.base.db <- function(dbname=NA,
                                  charges[grep("Error", charges)] <- 0
                                  charges = as.numeric(charges)
                                  
-                                 compounds <- pbapply::pbsapply(metacyc.raw$Compound, cl=cl, FUN=function(pw){
+                                 compounds <- pbapply::pbsapply(metacyc.raw$Compound, cl=session_cl, FUN=function(pw){
                                    pw <- pw[pw != " // "]
                                    pw <- gsub(pw, pattern = "&", replacement="")
                                    pw <- gsub(pw, pattern = ";", replacement="")
@@ -511,7 +513,7 @@ build.base.db <- function(dbname=NA,
                                    paste0(res, collapse=" --- ")
                                  })
                                  
-                                 pathways <- pbapply::pbsapply(metacyc.raw$`Pathways of compound`, cl=cl, FUN=function(pw){
+                                 pathways <- pbapply::pbsapply(metacyc.raw$Pathways.of.compound, cl=session_cl, FUN=function(pw){
                                    pw <- unlist(strsplit(pw, split = '\\"'))
                                    pw <- pw[pw != " // "]
                                    pw <- gsub(pw, pattern = "&", replacement="")
@@ -521,14 +523,14 @@ build.base.db <- function(dbname=NA,
                                  })
                                  
                                  # give the pathwys some identifiers
-                                 uniq.pws <- unique(unlist(pbapply::pbsapply(pathways, cl=cl, function(x){unlist(strsplit(x, split = " --- "))})))
+                                 uniq.pws <- unique(unlist(pbapply::pbsapply(pathways, cl=session_cl, function(x){unlist(strsplit(x, split = " --- "))})))
                                  
                                  db.pathways <- data.table::data.table(name = uniq.pws,
                                                                        identifier = paste0("METACYC_PW_", 1:length(uniq.pws)))
                                  
                                  db.formatted <- data.table(compoundname = compounds, 
                                                             description = metacyc.raw$Summary,metacyc.raw,
-                                                            baseformula = metacyc.raw$`Chemical Formula`,
+                                                            baseformula = metacyc.raw$Chemical.Formula,
                                                             identifier = paste0("METACYC_CP_", 1:length(charges)), 
                                                             charge = charges,
                                                             structure = metacyc.raw$SMILES,
@@ -541,11 +543,11 @@ build.base.db <- function(dbname=NA,
                                  keep <- checked[warning == FALSE, which = TRUE]
                                  db.formatted <- db.formatted[keep]
                                  # --- fix the multiple pathway thingy ---
-                                 db.fixed.rows <- pbapply::pblapply(1:nrow(db.formatted), cl=cl, FUN=function(i){
-                                   row <- db.formatted[i,]
-                                   if(length(pathways) == 1) return(row)
+                                 db.fixed.rows <- pbapply::pblapply(1:nrow(db.formatted), cl = session_cl, FUN=function(i, db.cpd = db.cpd, db.pw = db.pw){
+                                   row <- db.cpd[i,]
                                    pathways <- unlist(strsplit(row$pathway, split = " --- "))
-                                   pw.ids <- sapply(pathways, function(pw) db.pathways[name == pw]$identifier)
+                                   if(length(pathways) == 0) pathways <- c(1)
+                                   pw.ids <- sapply(pathways, function(pw) db.pw[name == pw]$identifier)
                                    res <- data.table(compoundname = rep(row$compoundname, length(pathways)),
                                                      description = rep(row$description, length(pathways)),
                                                      baseformula = rep(row$baseformula, length(pathways)),
@@ -553,11 +555,20 @@ build.base.db <- function(dbname=NA,
                                                      charge = rep(row$charge, length(pathways)),
                                                      structure = rep(row$structure, length(pathways)),
                                                      pathway = pw.ids)
+                                   # - - - - - - - - - -
                                    res
-                                 })
+                                 }, db.cpd=db.formatted, db.pw = db.pathways)
+                                 
                                  db.formatted <- rbindlist(db.fixed.rows)
-                                 db.formatted$pathway <- unlist(db.formatted$pathway)
+                                 
+                                 #db <- file.path(outfolder, paste0(dbname, ".base.db"))
+                                 #if(file.exists(db)) file.remove(db)
+                                 #conn <- RSQLite::dbConnect(RSQLite::SQLite(), db)
+                                 #DBI::dbDisconnect(conn)
+                                 db.formatted$pathway <- as.character(db.formatted$pathway)
+                                 
                                  # ---------------------------------------
+                                 
                                  RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
                                  RSQLite::dbWriteTable(conn, "pathways", db.pathways, overwrite=TRUE)
                                },

@@ -25,13 +25,15 @@ browse_db <- function(chosen.db){
 get_matches <- function(cpd = NA, 
                         chosen.db, 
                         search_formula = F,
-                        searchid = "mz"){
+                        searchid = "mz",
+                        inshiny=TRUE){
   
   # --- connect to db ---
   
   req("global$paths$patdb")
   
   # 0. Attach db
+  
   if(!exists(searchid) && searchid != "mz"){
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), chosen.db)
     cpd <- gsub(cpd, pattern = "http\\/\\/", replacement = "http:\\/\\/")
@@ -58,8 +60,7 @@ get_matches <- function(cpd = NA,
     
     RSQLite::dbExecute(conn, gsubfn::fn$paste("ATTACH '$chosen.db' AS db"))
     
-    withProgress({
-      
+    func <- function(){
       if(!DBI::dbExistsTable(conn, "unfiltered"))
       {
         # create
@@ -77,7 +78,6 @@ get_matches <- function(cpd = NA,
           ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
           AND mz.foundinmode = cpd.foundinmode
           WHERE $cpd BETWEEN rng.mzmin AND rng.mzmax",width=10000, simplify=TRUE)))
-        
       } else{
         # append
         RSQLite::dbExecute(conn, gsubfn::fn$paste(strwrap(
@@ -97,7 +97,7 @@ get_matches <- function(cpd = NA,
       }     
       
       # 1. Find matches in range (reasonably fast <3)
-      setProgress(value = 0.4)
+      if(inshiny) shiny::setProgress(value = 0.4)
       
       if(!DBI::dbExistsTable(conn, "isotopes")){
         # create
@@ -136,8 +136,9 @@ get_matches <- function(cpd = NA,
                            JOIN unfiltered u
                            ON u.baseformula = cpd.baseformula")
       }
+    }
     
-      })
+    if(inshiny) withProgress({func()}) else func()
     
     # - - - save adducts too - - - 
     
@@ -177,17 +178,14 @@ get_matches <- function(cpd = NA,
     
     results
     
-      }}
+    }}
 
-score.isos <- function(patdb, method="mscore"){
+score.isos <- function(patdb, method="mscore", inshiny=TRUE){
   
-  #if(!exists("match_table")) return(NULL)
-  
-  withProgress({
-    
+  func <- function(){
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb)
     
-    setProgress(value = 0.6)
+    if(inshiny) shiny::setProgress(value = 0.6)
     
     table <- RSQLite::dbGetQuery(conn,gsubfn::fn$paste(strwrap(
       "SELECT int.mzmed, iso.baseformula, iso.adduct, iso.fullmz, iso.fullformula, iso.isoprevalence, int.filename, int.intensity
@@ -199,18 +197,18 @@ score.isos <- function(patdb, method="mscore"){
       WHERE int.filename NOT LIKE 'QC%'"
       , width=10000, simplify=TRUE)))
     
-    setProgress(value = 0.8)
+    if(inshiny) shiny::setProgress(value = 0.8)
     
     table <- as.data.table(table[complete.cases(table),])
     
     table <- data.table::setDT(table)[, .(mzmed = mean(mzmed), intensity = sum(intensity)),
                                       by=.(baseformula, fullmz, fullformula, adduct, isoprevalence, filename)]
     p.cpd <- split(x = table, 
-                   f = list(table$baseformula, table$adduct))
+                   f = list(table$fullformula))
     
     i <<- 0
     
-    res_rows <- pbapply::pblapply(p.cpd, cl=0, function(cpd_tab){
+    res_rows <- pbapply::pblapply(p.cpd, cl = session_cl, function(cpd_tab, method = method, i = i, inshiny = inshiny){
       
       formula = unique(cpd_tab$baseformula)
       adduct = unique(cpd_tab$adduct)
@@ -224,6 +222,7 @@ score.isos <- function(patdb, method="mscore"){
         sorted <- data.table::as.data.table(unique(cpd_tab[order(cpd_tab$isoprevalence, 
                                                                  decreasing = TRUE),]))
         
+        print(dim(sorted))
         split.by.samp <- split(sorted, 
                                sorted[,"filename"])
         # - - - - - - - - - 
@@ -269,8 +268,9 @@ score.isos <- function(patdb, method="mscore"){
           res
         })
         
-        i <<- i + 1
-        setProgress(value = 0.8 + i * (.2/length(cpd_tab)))
+        #i <<- i + 1
+        
+        #if(inshiny) shiny::setProgress(value = 0.8 + i * (.2/length(cpd_tab)))
         
         mean_error <- round(mean(score, na.rm=TRUE), digits = 1)
         
@@ -280,9 +280,17 @@ score.isos <- function(patdb, method="mscore"){
       }else{
         data.table::data.table()
       } 
-    })
-  })
-  rbindlist(res_rows)
+    }, method = method, i = i, inshiny = inshiny)
+    
+    # - - - - - - - - -
+    
+    rbindlist(res_rows)
+  }
+  
+  func()
+  
+  #if(inshiny) func() else func()
+  
 }
 
 #' @export

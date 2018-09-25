@@ -3,18 +3,9 @@
 paper.files <- "/Users/jwolthuis/Downloads/1-s2.0-S1570023217305688-mmc12/"
 setwd(paper.files)
 
-# need a matrix to begin with
-# use HMDB as source
-# conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
-# chosen.db <- "/Users/jwolthuis/Google Drive/MetaboShiny/backend/db/hmdb.full.db"
-# adducts <- c(pos_adducts$Name, neg_adducts$Name)
-# 
-# res <- get_all_matches(conn, db, adducts)
-# 
-
 # - - ggm finding - - 
 
-source <- mSet$dataSet$norm
+source <- chicken_mset$dataSet$norm
 
 require(GeneNet)
 
@@ -24,7 +15,7 @@ xtest.results[1:20,]
 
 # extract network containing edges with prob > 0.9 (i.e. local fdr < 0.1)
 
-net <- extract.network(xtest.results, cutoff.ggm=0.9)
+net <- extract.network(xtest.results, cutoff.ggm=0.999)
 
 head(net)
 
@@ -37,7 +28,7 @@ named.net$node2 = as.numeric(colnames(source)[match(named.net$node2, orig_order)
 
 # show/plot subset ...
 
-all_edges <- named.net[1:100,]
+all_edges <- named.net
 
 get.nodes <- function(netobj){
   unlist(lapply(1:nrow(netobj), function(j){
@@ -51,6 +42,44 @@ plot(g,
      edge.arrow.size=.5,
      vertex.size=5)
 
+# OPTION 2: DO THIS W/ A NORMAL CORRELATORY NETWORK
+
+mat <- cor(source,
+        method = "spearman",
+        use = "everything")
+
+# the below has p values
+library(Hmisc)
+
+# type can be pearson or spearman
+mat <- rcorr(as.matrix(source), 
+             type="pearson") 
+
+plim = 0.01
+rlim = 0.9
+
+filt = as.matrix(mat$r)
+
+filt_rows <- pbapply::pblapply(1:ncol(filt), function(i){
+  num.r <- mat$r[,i]
+  num.p <- mat$P[,i]
+  # - - - - - - - - - - - - - - - -
+  num.filt <- as.numeric(num.r)           
+  del <- as.data.frame(abs(num.filt)) < rlim & as.data.frame(num.p) > plim
+  num.repl <- num.filt
+  num.repl[del] <- 0
+  # - - - - - - - - - - - - - - - -
+  num.repl
+})
+
+del <- abs(mat$r) < rlim & mat$P > plim
+filt.table <- mat$r
+filt.table[del] <- 0
+
+g = graph_from_adjacency_matrix(as.matrix(filt.table),
+                                weighted=T,
+                                mode="undirected",
+                                diag=F)
 # - - 
 
 require(data.table)
@@ -95,18 +124,36 @@ score.netw.add <- function(cpd, patdb, ppm){
   
   g <- igraph::make_graph(edges = as.character(get.nodes(network.of.mz)), directed = FALSE)
 
-  # - - - - - - - - - 
-
+  V(g)$color <- c("gray")
+  #E(g)$color <- c("gray")
+  
+  V(g)[ name %in% c(match_nodes$node1, match_nodes$node2) ]$color <- c("red")
+  V(g)[ !(name %in% c(match_nodes$node1, match_nodes$node2)) ]$color <- c("gray")
+  
+  E(g)[ as.character(cpd) %--% as.character(match_nodes$node2) ]$color = c("red")
+  
+  V(g)$name <- c("m/z", rep("", times = length(V(g)-1)))
+  
+  plot(g,
+       edge.arrow.size=.5,
+       vertex.size=8)
+  
+  current <- split.by.formula[[5]]
+  #current <- 
   scores <- pbapply::pblapply(split.by.formula, function(current){
-    current = unique(current[,-9])
+    current = unique(current)
     print(paste("Scoring", unique(current$baseformula)))
     matches <- pbapply::pblapply(current$fullmz, function(mz){
-      #print(paste("---", mz, "---"))
+      paste("---", mz, "---")
       bounds <- c(mz - mz*(ppm*1e-6), mz + mz*(ppm*1e-6))
       node.matches <- network.of.mz[as.numeric(node2) %between% bounds,]
       # - - -
       node.matches
     })
+   
+    match_nodes <- rbindlist(matches[sapply(matches, nrow) > 0])[,c(2,3)]
+    
+    match_info <- current[sapply(matches, nrow) > 0,]
     score = sum(sapply(matches, function(x) if(nrow(x)>0) 1 else 0))
     print(paste("Total rows:", nrow(current)))
     print(paste("Rows with match:", score))
@@ -114,12 +161,13 @@ score.netw.add <- function(cpd, patdb, ppm){
     print(paste("Fractional score (intra-adduct):", percscore,"%"))
     
     data.table(baseformula = unique(current$baseformula), score = percscore)
-  })
+  
+    })
   # - - - - - - -
   rbindlist(scores)
 }
 
-cpd <- curr_cpd
+cpd <- 192.074283985401
 patdb <- global$paths$patdb
 ppm <- global$constants$ppm
 
