@@ -552,28 +552,17 @@ shinyServer(function(input, output, session) {
   )
   
   observeEvent(input$update_packages, {
-    #req(packages)
-    # ----------
-    
     pacman::p_load(char = global$constants$packages, update = T, character.only = T)
     # ---------- 
-    firstRun <<- F
-    setOption(".conf", "packages_installed", "Y")
-    output$package_check <- renderImage({
-      # When input$n is 3, filename is ./images/image3.jpeg
-      filename <- normalizePath('www/yes.png')
-      # Return a list containing the filename and alt text
-      list(src = filename, width = 70,
-           height = 70)
-    }, deleteFile = FALSE)
-    # --- restart ---??
-    #stopApp()
-    #runApp(".")
+    # output$package_check <- renderImage({
+    #   # When input$n is 3, filename is ./images/image3.jpeg
+    #   filename <- normalizePath('www/yes.png')
+    #   # Return a list containing the filename and alt text
+    #   list(src = filename, width = 70,
+    #        height = 70)
+    # }, deleteFile = FALSE)
   })
-  
-  
-  if(options$packages_installed == "N") return(NULL) # BREAK!!
-  
+
   observe({
     shinyFileChoose(input, 'outlist_pos', roots=global$paths$volumes, filetypes=c('csv'))
     shinyFileChoose(input, 'outlist_neg', roots=global$paths$volumes, filetypes=c('csv'))
@@ -583,10 +572,12 @@ shinyServer(function(input, output, session) {
   
   observe({  
     print("!!!")
-    shinyDirChoose(input, "get_db_dir", roots=global$paths$volumes, session = session)
+    shinyDirChoose(input, "get_db_dir", 
+                   roots=global$paths$volumes, 
+                   session = session)
     print(input$get_db_dir)
+    temp <<- input$get_db_dir
     if(is.null(input$get_db_dir)) return()
-    if(input$get_db_dir == 0) return()
     given_dir <- parseDirPath(global$paths$volumes, input$get_db_dir)
     if(is.null(given_dir)) return()
     options$db_dir <<- given_dir
@@ -846,14 +837,7 @@ shinyServer(function(input, output, session) {
           "mergeform.joanna",
           "multiform.joanna",
           "check.ded.joanna",
-          #"data.table",
-          #"rbindlist",
-          #"isopattern",
-          #"keggFind",
-          #"keggGet",
           "kegg.charge",
-          #,"regexpr",
-          #"regmatches",
           "xmlParse",
           "getURL",
           "mape",
@@ -867,13 +851,15 @@ shinyServer(function(input, output, session) {
           }
         }, pkgs = pkgs)
         shiny::setProgress(session=session, message = "Working...")
-        build.base.db(db, outfolder=options$db_dir, cl=session_cl)
+        build.base.db(db,
+                      outfolder = options$db_dir, 
+                      cl = session_cl)
         shiny::setProgress(session=session, 0.5)
         build.extended.db(db, 
-                          outfolder=options$db_dir,
+                          outfolder = options$db_dir,
                           adduct.table = adducts, 
-                          cl=session_cl, 
-                          fetch.limit=200)
+                          cl = session_cl, 
+                          fetch.limit = 200)
       })
     })
   })
@@ -923,8 +909,6 @@ shinyServer(function(input, output, session) {
                req(input$database, input$excel)
                
                db_path <- parseFilePaths(global$paths$volumes, input$database)$datapath
-               
-               #db_path <- "/Users/jwolthuis/Downloads/hpc/farms_pig_2ppm.db"
                
                file.copy(db_path, global$paths$patdb, overwrite = T)
                
@@ -1063,9 +1047,6 @@ shinyServer(function(input, output, session) {
   observeEvent(input$check_csv, {
     # ----------------------
     
-    
-    
-    #global$paths$csv_loc <- "/Users/jwolthuis/Analysis/SP/CHK_0718.csv"
     csv <- fread(global$paths$csv_loc, 
                  header = T)
     
@@ -1159,11 +1140,7 @@ shinyServer(function(input, output, session) {
       
       # 
       # ------- load and re-save csv --------
-      
-      #f = fread(global$paths$csv_loc, header = TRUE)
-      
-      #global$paths$csv_loc <- "/Users/jwolthuis/Analysis/SP/CHICKENS.csv" #DEBUG
-      
+
       csv_orig <- fread(global$paths$csv_loc, 
                         data.table = TRUE,
                         header = T)

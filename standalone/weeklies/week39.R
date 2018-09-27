@@ -176,7 +176,7 @@ ggplot(data=isotable, aes(x=`m/z`, y= isotope, color = label, fill=label, width=
         text=element_text(size=16,  family="Trebuchet MS", hjust = 0.5),
         axis.text.x = element_text(angle=90, hjust=1, size=16)) +
   facet_grid(rows = vars(label),scales = "fixed")
-  
+
 
 ## - - - child rows in table - - -
 
@@ -292,7 +292,7 @@ datatable(
   print(mean(strength(subg, mode = "all")))
   print(mean_distance(subg, directed=FALSE))
   print(edge_density(subg))
- }
+}
 
 current <- split.by.formula[[4]]
 
@@ -301,3 +301,33 @@ test <- cluster_walktrap(g)
 # - - netClass package? - - -
 
 # http://pablobarbera.com/big-data-upf/html/02b-networks-descriptive-analysis.html
+
+# - - find internal standards in internal db - -
+assumed_add <- c("M+H", "M-H", "M+Na", "M-Cl")
+
+conn <- RSQLite::dbConnect(RSQLite::SQLite(), "/Users/jwolthuis/Analysis/SP/CHICKENS_SEPT18.db")
+RSQLite::dbExecute(conn, "DETACH db")
+chosen.db <- "/Users/jwolthuis/Google Drive/MetaboShiny/backend/db/internal.full.db"
+RSQLite::dbExecute(conn, gsubfn::fn$paste("ATTACH '$chosen.db' AS db"))
+
+internal.standards <- RSQLite::dbGetQuery(conn,
+                                          "SELECT * FROM db.base base
+                                          JOIN db.extended cpd
+                                          ON base.baseformula = cpd.baseformula
+                                          AND base.charge = cpd.basecharge
+                                          WHERE base.compoundname LIKE '%IS%'")
+RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS unfiltered")
+query <- gsubfn::fn$paste(strwrap(
+  "SELECT DISTINCT cpd.baseformula as baseformula, 
+  cpd.fullformula, 
+  cpd.adduct as adduct, 
+  cpd.isoprevalence as isoprevalence, 
+  cpd.basecharge as charge
+  FROM 
+  JOIN db.base base
+  ON cpd.baseformula = base.baseformula
+  AND cpd.basecharge = base.charge
+  WHERE base.compoundname LIKE '%IS%')",width=10000, simplify=TRUE))
+res <- RSQLite::dbGetQuery(conn, query)
+
+

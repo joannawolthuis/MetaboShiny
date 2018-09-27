@@ -1,6 +1,6 @@
 #' @export
 build.base.db <- function(dbname=NA, 
-                          outfolder="/Users/jwolthuis/Google Drive/MetaboShiny/backend/db", 
+                          outfolder="./backend/db", 
                           cl=FALSE){
   # --- check if user chose something ---
   if(is.na(dbname)) return("~ Please choose one of the following options: HMDB, ChEBI, PubChem, MetaCyc, internal, noise, KEGG! d(>..w.<)b ~")
@@ -595,7 +595,7 @@ build.base.db <- function(dbname=NA,
                                  max_counter = length(file.urls)
                                  # --- start downloady ---
                                  pool <- new_pool()
-                                 pbapply::pbsapply(file.urls, cl=cl, FUN=function(url){
+                                 pbapply::pbsapply(file.urls, cl=session_cl, FUN=function(url){
                                    print(url)
                                    counter <<- counter + 1
                                    print(paste(counter, length(file.urls), sep=" of "))
@@ -611,7 +611,7 @@ build.base.db <- function(dbname=NA,
                                  print("Converting SDF files to tab delimited matrices...")
                                  sdf.files <- list.files(path = sdf.loc, pattern = "\\.sdf\\.gz$")
                                  # -----------------------
-                                 pbapply::pbsapply(cl=cl, sdf.files, FUN=function(sdf.file){
+                                 pbapply::pbsapply(cl=session_cl, sdf.files, FUN=function(sdf.file){
                                    input <- file.path(sdf.loc, sdf.file)
                                    output <- file.path(csv.loc, gsub("\\.sdf.gz$", "\\.csv", sdf.file))
                                    # -------------------------------
@@ -883,28 +883,6 @@ build.base.db <- function(dbname=NA,
                                  
                                  RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
                                }, wikidata = function(dbname, ...){
-                                 # - - wikidata testing - -
-                                 
-                                 # GET ALL PREDICATES
-                                 # - - - - - - - - - - - - -
-                                 # SELECT * WHERE {
-                                 #   ?molecule wdt:P31 wd:Q11369.
-                                 #   ?molecule ?p ?o.
-                                 #   SERVICE wikibase:label { bd:serviceParam wikibase:language "en, de". }
-                                 # }
-                                 # SELECT * WHERE {
-                                 #   ?molecule wdt:P31 wd:Q11369.
-                                 #   ?molecule wdt:P274 ?formula.
-                                 #   SERVICE wikibase:label { bd:serviceParam wikibase:language "en, de". }
-                                 # }
-                                 # - - YAAY THIS WORKS - -
-                                 # SELECT ?chemical_compound ?chemical_compoundLabel ?chemical_formula ?chemical_compoundDescription ?canonical_SMILES ?roleLabel WHERE {
-                                 #   SERVICE wikibase:label { bd:serviceParam wikibase:language "en, de". }
-                                 #   ?chemical_compound wdt:P31 wd:Q11173.
-                                 #   ?chemical_compound wdt:P274 ?chemical_formula.
-                                 #   ?chemical_compound wdt:P233 ?canonical_SMILES.
-                                 #   ?chemical_compound wdt:P2868 ?role. 
-                                 # }
                                  
                                  sparql_query <- 'PREFIX wd: <http://www.wikidata.org/entity/>
                                  PREFIX wds: <http://www.wikidata.org/entity/statement/>
@@ -936,7 +914,7 @@ build.base.db <- function(dbname=NA,
                                  #cl = parallel::makeCluster(3, "FORK")
                                  
                                  charge.rows <- pbapply::pblapply(unique(db.1$canonical_SMILES), 
-                                                                  cl=cl, 
+                                                                  cl=session_cl, 
                                                                   function(smi){
                                                                     row = data.table(canonical_SMILES = smi,
                                                                                      charge = 0)
@@ -1182,7 +1160,7 @@ build.base.db <- function(dbname=NA,
                                  #   paste0("C", str_pad(i, max_digits, pad = "0"))
                                  #   })
                                  # cl = makeCluster(3, "FORK")
-                                 # responses = pbapply::pblapply(ids, cl=cl, function(id){
+                                 # responses = pbapply::pblapply(ids, cl=session_cl, function(id){
                                  #   #print(id)
                                  #   response <- XML::htmlParse(paste0(url,id))
                                  #   # - - - return - - -
@@ -1418,9 +1396,8 @@ build.extended.db <- function(dbname,
       # --- return ---
       meta.table
     }
-    tab.list <- pbapply::pblapply(cl=NULL, 1:nrow(adduct.table), FUN=function(x) do.calc(x))
-    
-    tab.list <- parallel::parLapply(cl=cl, 1:nrow(adduct.table), fun=function(x) do.calc(x))
+    tab.list <- pbapply::pblapply(cl=session_cl, 1:nrow(adduct.table), FUN=function(x) do.calc(x))
+    #tab.list <- parallel::parLapply(cl=session_cl, 1:nrow(adduct.table), fun=function(x) do.calc(x))
     # --- progress bar... ---
     pbapply::setpb(pb, RSQLite::dbGetRowCount(results))
     total.table <- rbindlist(tab.list[!is.na(tab.list)])
@@ -1440,10 +1417,10 @@ build.extended.db <- function(dbname,
   # # ------------------------
   # mzvals <- data.table::data.table(mzmed = total.table$fullmz,
   #                                  foundinmode = total.table$foundinmode)
-  # mzranges <- data.table::data.table(mzmin = pbapply::pbsapply(total.table$fullmz,cl=cl,
+  # mzranges <- data.table::data.table(mzmin = pbapply::pbsapply(total.table$fullmz,cl=session_cl,
   #                                                              FUN=function(mz, ppm){
   #                                                                mz - mz * (ppm / 1E6)}, ppm=ppm),
-  #                                    mzmax = pbapply::pbsapply(total.table$fullmz,cl=cl,
+  #                                    mzmax = pbapply::pbsapply(total.table$fullmz,cl=session_cl,
   #                                                              FUN=function(mz, ppm){
   #                                                                mz + mz * (ppm / 1E6)}, ppm=ppm))
   # sql.make.meta <- strwrap("CREATE TABLE mzvals(
@@ -1695,16 +1672,14 @@ build.pat.db <- function(db.name,
 #' @export
 load.excel <- function(path.to.xlsx, 
                        path.to.patdb = patdb,
-                       tabs.to.read = c(#"General",
+                       tabs.to.read = c(
+                         #"General",
                          "Setup",
                          "Individual Data"
                          #,"Pen Data",
                          #"Admin"
                        )){
   # --- connect to sqlite db ---
-  #path.to.patdb = "/Users/jwolthuis/Analysis/...
-  #path.to.xlsx = "/Users/jwolthuis/Desktop/..."
-  
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), path.to.patdb)
   # -------------------------------
   data.store <- pbapply::pblapply(tabs.to.read, FUN=function(tab.name){
