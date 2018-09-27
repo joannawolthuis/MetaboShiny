@@ -1,9 +1,9 @@
-db_dir = /doesnt/exist
-work_dir = /break/pls
+db_dir = /Users/jwolthuis/Analysis/SP
+work_dir = /Users/jwolthuis/Analysis/SP
 proj_name = CHICKENS_SEPT18
 ppm = 2
 packages_installed = Y
-col1 = #000000
+col1 = #BA0000
 col2 = #DBDBDB
 col3 = #FFFFFF
 col4 = #FFFFFF
@@ -11,3 +11,4 @@ font1 = Codystar
 font2 = Codystar
 font3 = Roboto
 font4 = Roboto
+taskbar_image = electron.png

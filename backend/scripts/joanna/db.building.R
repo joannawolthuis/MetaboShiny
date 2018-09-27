@@ -1,6 +1,6 @@
 #' @export
 build.base.db <- function(dbname=NA, 
-                          outfolder=options$db_dir, 
+                          outfolder=getOptions("user_options.txt")$db_dir, 
                           cl=FALSE){
   # --- check if user chose something ---
   if(is.na(dbname)) return("~ Please choose one of the following options: HMDB, ChEBI, PubChem, MetaCyc, internal, noise, KEGG! d(>..w.<)b ~")
@@ -181,8 +181,8 @@ build.base.db <- function(dbname=NA,
                                  print("Downloading XML database...")
                                  file.url <- "http://www.hmdb.ca/system/downloads/current/hmdb_metabolites.zip"
                                  # ----
-                                 #base.loc <- options$db_dir
-                                 base.loc <- file.path(options$db_dir, "hmdb_source")
+                                 #base.loc <- getOptions("user_options.txt")$db_dir
+                                 base.loc <- file.path(getOptions("user_options.txt")$db_dir, "hmdb_source")
                                  if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                                  zip.file <- file.path(base.loc, "HMDB.zip")
                                  utils::download.file(file.url, zip.file,mode = "w")
@@ -251,7 +251,7 @@ build.base.db <- function(dbname=NA,
                                  RSQLite::dbWriteTable(conn, "base", db.formatted, append=TRUE)
                                }, 
                                wikipathways = function(dbname){
-                                 chebi.loc <- file.path(options$db_dir, "chebi.full.db")
+                                 chebi.loc <- file.path(getOptions("user_options.txt")$db_dir, "chebi.full.db")
                                  # ---------------------------------------------------
                                  chebi <- SPARQL::SPARQL(url="http://sparql.wikipathways.org/",
                                                          query='prefix wp:      <http://vocabularies.wikipathways.org/wp#>
@@ -342,19 +342,23 @@ build.base.db <- function(dbname=NA,
                                  # ---------------
                                  file.url <- "http://smpdb.ca/downloads/smpdb_metabolites.csv.zip"
                                  # ----
-                                 base.loc <- file.path(options$db_dir, "smpdb_source")
+                                 base.loc <- file.path(getOptions("user_options.txt")$db_dir, "smpdb_source")
                                  if(!dir.exists(base.loc)) dir.create(base.loc)
                                  zip.file <- file.path(base.loc, "SMPDB.zip")
                                  utils::download.file(file.url, zip.file)
                                  utils::unzip(zip.file, exdir = base.loc)
                                  # -------------------------------
-                                 smpdb.tab <- fread(file.path(base.loc, "metabolites.csv"))
+                                 
+                                 smpdb.paths <- list.files(path = base.loc, pattern = "\\.csv$", full.names = T)
+                                 smpdb.tabs <- pbapply::pblapply(smpdb.paths, fread)
+                                 smpdb.tab <- unique(rbindlist(smpdb.tabs, fill=TRUE))
+                                 
                                  # --- get charges ---
                                  
-                                 #charges <- c(gsub(str_match(smpdb.tab$`InChI`, pattern = "q[+-](\\d*)")[,1], pattern = "q|\\+", replacement = ""))
+                                 smi_mapper <- unique(smpdb.tab[,c("Metabolite ID", "SMILES")])
                                  
-                                 charges <- pbapply::pbsapply(smpdb.tab$SMILES, cl = cl, function(smi){
-                                   charge = 0
+                                 smi_mapper$charge <- pbapply::pbsapply(smi_mapper$SMILES, cl = 0, function(smi){
+                                   charge = 0 # set default charge to zero
                                    try({
                                      iatom <- rcdk::parse.smiles(smi)[[1]]
                                      charge = rcdk::get.total.charge(iatom)
@@ -363,40 +367,26 @@ build.base.db <- function(dbname=NA,
                                    charge
                                  })
                                  
-                                 charges[is.na(charges)] <- "0" # set all missing to zero
-                                 db.formatted <- data.table::data.table(compoundname = smpdb.tab$`Metabolite Name`,
-                                                                        description = c("See HMDB for more info :-)"),
-                                                                        baseformula = smpdb.tab$Formula,
-                                                                        identifier = smpdb.tab$`Metabolite ID`,
-                                                                        #widentifier = gsub(smpdb.tab$`HMDB ID`, pattern = "(HMDB0*)", replacement = ""),
-                                                                        charge = charges,
-                                                                        structure = smpdb.tab$SMILES,
-                                                                        pathway = smpdb.tab$`SMPDB ID`)
-                                 db.pathways <- data.table::data.table(name = smpdb.tab$`Pathway Name`,
-                                                                       identifier = smpdb.tab$`SMPDB ID`)
+                                 db.formatted <- unique(data.table::data.table(compoundname = smpdb.tab$`Metabolite Name`,
+                                                                               description = c("See HMDB for more info :-)"),
+                                                                               baseformula = smpdb.tab$Formula,
+                                                                               identifier = smpdb.tab$`Metabolite ID`,
+                                                                               structure = smpdb.tab$SMILES))
+                                 db.formatted <- merge(smi_mapper, db.formatted, by.x = "Metabolite ID", by.y = "identifier")
+                                 colnames(db.formatted)[which(colnames(db.formatted) == 'Metabolite ID')] <- "identifier"
+                                 db.mol2pathway <- unique(data.table::data.table(identifier = smpdb.tab$`Metabolite ID`,
+                                                                          pathway = smpdb.tab$`SMPDB ID`))
+                                 db.pathways <- unique(data.table::data.table(name = smpdb.tab$`Pathway Name`,
+                                                                              identifier = smpdb.tab$`SMPDB ID`,
+                                                                              subject = smpdb.tab$`Pathway Subject`))
                                  checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
                                                                                             db.formatted$baseformula))
                                  db.formatted$baseformula <- checked$new_formula
                                  keep <- checked[warning == FALSE, which = TRUE]
                                  db.formatted <- db.formatted[keep]
-                                 # --- get descriptions from hmdb!!! ---
-                                 #hmdb.loc <- file.path(options$db_dir, "hmdb.full.db")
-                                 #conn.hmdb <- RSQLite::dbConnect(RSQLite::SQLite(), hmdb.loc)
-                                 #RSQLite::dbWriteTable(conn.hmdb, "smpdb", db.cpds, overwrite=TRUE)
-                                 # db.formatted <- RSQLite::dbGetQuery(conn.hmdb, "SELECT DISTINCT  
-                                 #                                     s.compoundname,
-                                 #                                     b.description,
-                                 #                                     s.baseformula, 
-                                 #                                     s.charge as charge,
-                                 #                                     s.identifier as identifier, 
-                                 #                                     s.pathway 
-                                 #                                     FROM smpdb s
-                                 #                                     LEFT JOIN base b
-                                 #                                     ON b.identifier = s.widentifier")
-                                 # RSQLite::dbRemoveTable(conn.hmdb, "smpdb")
-                                 #RSQLite::dbDisconnect(conn.hmdb)
                                  # --- create ---
                                  RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
+                                 RSQLite::dbWriteTable(conn, "mol2pathway", db.mol2pathway, overwrite=TRUE)
                                  RSQLite::dbWriteTable(conn, "pathways", db.pathways, overwrite=TRUE)
                                },
                                kegg = function(dbname){
@@ -574,7 +564,7 @@ build.base.db <- function(dbname=NA,
                                },
                                pubchem = function(dbname, ...){
                                  # --- create working space ---
-                                 baseLoc <- file.path(options$db_dir, "pubchem_source")
+                                 baseLoc <- file.path(getOptions("user_options.txt")$db_dir, "pubchem_source")
                                  sdf.loc <- file.path(baseLoc, "sdf")
                                  csv.loc <- file.path(baseLoc, "csv")
                                  # --- check the user's determination ---
@@ -735,7 +725,7 @@ build.base.db <- function(dbname=NA,
                                  
                                  # file.url <- "ftp://ftp.ebi.ac.uk/pub/databases/metabolights/xml_feeds/unichem.tsv"
                                  # # ----
-                                 # base.loc <- file.path(options$db_dir, "metabolights_source")
+                                 # base.loc <- file.path(getOptions("user_options.txt")$db_dir, "metabolights_source")
                                  # if(!dir.exists(base.loc)) dir.create(base.loc)
                                  # csv.file <- file.path(base.loc, basename(file.url))
                                  # utils::download.file(file.url, csv.file)
@@ -848,7 +838,7 @@ build.base.db <- function(dbname=NA,
                                  file.urls <- paste0(file.url, files)
                                  # ----
                                  print("Downloading files...")
-                                 base.loc <- file.path(options$db_dir, "dimedb_source")
+                                 base.loc <- file.path(getOptions("user_options.txt")$db_dir, "dimedb_source")
                                  if(!dir.exists(base.loc)) dir.create(base.loc)
                                  pbapply::pbsapply(file.urls, function(url){
                                    zip.file <- file.path(base.loc, basename(url))
@@ -1047,17 +1037,17 @@ build.base.db <- function(dbname=NA,
                                  
                                  structs <- db.formatted$structure
                                  
-                                charges_formulae <- pbapply::pblapply(structs, function(smi){
-                                     res = list(charge = NA, formula = NA)
-                                     try({
-                                       iatom <- rcdk::parse.smiles(smi)[[1]]
-                                       charge = rcdk::get.total.charge(iatom)
-                                       formula = rcdk::get.mol2formula(iatom)
-                                       res = list(charge = charge[[1]], formula = formula@string)
-                                     })
-                                     # - - return - -
-                                     res
+                                 charges_formulae <- pbapply::pblapply(structs, function(smi){
+                                   res = list(charge = NA, formula = NA)
+                                   try({
+                                     iatom <- rcdk::parse.smiles(smi)[[1]]
+                                     charge = rcdk::get.total.charge(iatom)
+                                     formula = rcdk::get.mol2formula(iatom)
+                                     res = list(charge = charge[[1]], formula = formula@string)
                                    })
+                                   # - - return - -
+                                   res
+                                 })
                                  
                                  formulae <- sapply(charges_formulae, function(x) x$formula)
                                  charges <- sapply(charges_formulae, function(x) x$charge)
@@ -1118,7 +1108,7 @@ build.base.db <- function(dbname=NA,
                                  })
                                  
                                  halogen.compounds <- data.table::rbindlist(halogen.fixed.list[!is.na(halogen.fixed.list)])
-
+                                 
                                  # - - residual compounds - - 
                                  
                                  w.residual <- grep(x=last.wack.compounds$baseformula, "FULL")
@@ -1184,7 +1174,7 @@ build.extended.db <- function(dbname,
   
   # build.base.db("internal")
   # dbname = "noise"
-  # outfolder = options$db_dir
+  # outfolder = getOptions("user_options.txt")$db_dir
   # adduct.table = adducts
   # continue = F
   # cpd.limit = 100
@@ -1360,7 +1350,7 @@ build.extended.db <- function(dbname,
       #   #print(full_mzs[[i]])
       # }
       # print("here???")
-    # -------------------------
+      # -------------------------
       
       isolist <- lapply(isotables, function(isotable){
         #print(isotable)
@@ -1371,11 +1361,11 @@ build.extended.db <- function(dbname,
         # --- return ---
         result
       })
-
+      
       isolist.nonas <- isolist[!is.na(isolist)]
       isotable <- rbindlist(isolist.nonas)
       
-
+      
       keep.isos <- names(isolist.nonas)
       
       # --- remove 'backtrack' rows that couldn't be calculated ---
@@ -1488,7 +1478,7 @@ reindex.pat.db <- function(db.path){
                             , width=10000, simplify=TRUE)
   
   RSQLite::dbExecute(conn, sql.make.rtree)
-                     
+  
   RSQLite::dbWriteTable(conn, "mzranges", mzranges, append=TRUE) # insert into
   
   # - - - - - - - - - -
@@ -1540,7 +1530,7 @@ build.pat.db <- function(db.name,
     colnames(neglist)[qc] <- new.qc.name
     # - - -
     qc.i = qc.i + 1
-    }
+  }
   # - - - - - - - - - -
   setProgress(.20)
   
@@ -1574,21 +1564,21 @@ build.pat.db <- function(db.name,
   }
   
   gc()
-
+  
   setProgress(.30)
   
   poslist <- data.table::melt(poslist,#[,(rmv.cols) := NULL], 
-                            id.vars="mzmed",
-                            variable.name="filename",
-                            value.name="intensity",
-                            variable.factor=TRUE
-                            )
+                              id.vars="mzmed",
+                              variable.name="filename",
+                              value.name="intensity",
+                              variable.factor=TRUE
+  )
   neglist <- data.table::melt(neglist,#[,(rmv.cols) := NULL], 
-                            id.vars="mzmed",
-                            variable.name="filename",
-                            value.name="intensity",
-                            variable.factor=TRUE
-                            )
+                              id.vars="mzmed",
+                              variable.name="filename",
+                              value.name="intensity",
+                              variable.factor=TRUE
+  )
   setProgress(.40)
   
   #poslist$filename <- trimws(poslist$filename)

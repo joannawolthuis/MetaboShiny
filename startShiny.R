@@ -68,8 +68,7 @@ for(package in base.packs){
   install.if.not(package)
 }
 
-# please put your working dir below AND in the .conf file in the main directory 
-#wdir <<- here::here()
+# set working directory to where the rstudio file currently is
 wdir <<- dirname(rstudioapi::getSourceEditorContext()$path) # TODO: make this not break when not running from rstudio
 setwd(wdir)
 

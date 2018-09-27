@@ -460,7 +460,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                        title = "Browse",
                                                        buttonType = "default", class = NULL),
                                         helpText("Your results will be stored here for later access."),
-                                        textOutput("exp_dir")
+                                        textOutput("curr_exp_dir")
                                ),
                                tabPanel("Graphics", icon=icon("paint-brush"),
                                         h2("Plot theme"),
@@ -541,7 +541,13 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                         textInput(inputId="font.4", label="body", value = options$font4),
                                         br(),
                                         h3("Taskbar image"),
-                                        
+                                        imageOutput("taskbar_image",inline = T),
+                                        shinyFilesButton('taskbar_image_path', 
+                                                         'Select image', 
+                                                         'Please select an image file', 
+                                                         FALSE), 
+                                        hr(),
+                                        # - - - -
                                         actionButton("change_css", "Save settings (restart to apply)")
                                )
                     )
@@ -549,8 +555,8 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
            #actionButton("test", "test"),
            tabPanel(title = "Quit", value="stop", icon = icon("times-circle")),
            div(class="spinnylocation1",
-               div(class="plus", img(class="imagetop", src="planets.png", width="120px", height="120px")),
-               div(class="minus", img(class="imagebottom", src="planets.png", width="120px", height="120px"))
+               div(class="plus", img(class="imagetop", src=getOptions("user_options.txt")$taskbar_image, width="120px", height="120px")),
+               div(class="minus", img(class="imagebottom", src=getOptions("user_options.txt")$taskbar_image, width="120px", height="120px"))
            ),
            div(class="line")
 )

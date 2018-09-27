@@ -23,6 +23,12 @@ shinyServer(function(input, output, session) {
   
   output$spinny <- renderText({spinnyimg()})
   
+  output$taskbar_image <- renderImage({
+    list(src = file.path(getwd(), "www", getOptions("user_options.txt")$taskbar_image), 
+         width = 120,
+         height = 120)
+  }, deleteFile = FALSE)
+  
   output$adductSettings <- renderUI({
     tabsetPanel( id = "adductSettings", selected="db",
                  tabPanel(icon("database"), value="db",
@@ -552,14 +558,6 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$update_packages, {
     pacman::p_load(char = global$constants$packages, update = T, character.only = T)
-    # ---------- 
-    # output$package_check <- renderImage({
-    #   # When input$n is 3, filename is ./images/image3.jpeg
-    #   filename <- normalizePath('www/yes.png')
-    #   # Return a list containing the filename and alt text
-    #   list(src = filename, width = 70,
-    #        height = 70)
-    # }, deleteFile = FALSE)
   })
 
   observe({
@@ -567,49 +565,58 @@ shinyServer(function(input, output, session) {
     shinyFileChoose(input, 'outlist_neg', roots=global$paths$volumes, filetypes=c('csv'))
     shinyFileChoose(input, 'excel', roots=global$paths$volumes, filetypes=c('xls', 'xlsm', 'xlsx'))
     shinyFileChoose(input, 'database', roots=global$paths$volumes, filetypes=c('sqlite3', 'db', 'sqlite'))
+    shinyFileChoose(input, 'taskbar_image_path', roots=global$paths$volumes, filetypes=c('png', 'jpg', 'jpeg', 'bmp'))
+  })
+  
+  observe({
+    print(input$taskbar_image_path)
+    if(is.null(input$taskbar_image_path)) return()
+    img_path <- parseFilePaths(global$paths$volumes, input$taskbar_image_path)$datapath
+    new_path <- file.path(getwd(), "www", basename(img_path))
+    if(img_path != new_path) file.copy(img_path, new_path, overwrite = T)
+    # - - -
+    output$taskbar_image <- renderImage({
+      list(src = new_path, 
+           width = 120,
+           height = 120)
+    }, deleteFile = FALSE)
+    print(basename(new_path))
+    # - - -
+    setOption('user_options.txt', 'taskbar_image', basename(new_path))
   })
   
   observe({  
     shinyDirChoose(input, "get_db_dir", 
                    roots=global$paths$volumes, 
                    session = session)
-    if(!exists("input$get_db_dir")) return()
     if(is.null(input$get_db_dir)) return()
     given_dir <- parseDirPath(global$paths$volumes, 
                               input$get_db_dir)
     if(is.null(given_dir)) return()
-    options$db_dir <<- given_dir
-    output$curr_db_dir <- renderText(options$db_dir)
-    # --- connect ---
-    setOption("user_options.txt", "db_dir", options$db_dir)
-    options <<- getOptions("user_options.txt")
+    # - - connect - -
+    setOption("user_options.txt", "db_dir", given_dir)
+    output$curr_db_dir <- renderText({getOptions('user_options.txt')$db_dir})
   })
   
   observe({  
     shinyDirChoose(input, "get_work_dir", 
                    roots = global$paths$volumes, 
                    session = session)
-    if(!exists("input$get_work_dir")) return()
     if(is.null(input$get_work_dir)) return()
     given_dir <- parseDirPath(global$paths$volumes, 
                               input$get_work_dir)
     if(is.null(given_dir)) return()
-    options$work_dir <<- given_dir
-    output$exp_dir <- renderText(options$work_dir)
-    if(!dir.exists(options$work_dir)) dir.create(options$work_dir)
-    # --- connect ---
-    setOption("user_options.txt", "work_dir", options$work_dir)
-    options <<- getOptions("user_options.txt")
+    setOption("user_options.txt", "db_dir", given_dir)
+    output$curr_exp_dir <- renderText({getOptions('user_options.txt')$work_dir})
   })
-  # ----------------------------------
   
   observeEvent(input$set_proj_name, {
     proj_name <<- input$proj_name
-    global$paths$patdb <<- file.path(options$work_dir, paste0(proj_name,".db", sep=""))
-    output$proj_name <<- renderText(proj_name)
+    if(proj_name == "") return(NULL)
+    global$paths$patdb <<- file.path(getOptions("user_options.txt")$work_dir, paste0(proj_name,".db", sep=""))
     # --- connect ---
     setOption("user_options.txt", "proj_name", proj_name)
-    options <<- getOptions("user_options.txt")
+    output$proj_name <<- renderText(proj_name)
   })
   
   observeEvent(input$set_ppm, {
@@ -617,7 +624,6 @@ shinyServer(function(input, output, session) {
     output$ppm <<- renderText(ppm)
     # --- connect ---
     setOption("user_options.txt", "ppm", ppm)
-    options <<- getOptions("user_options.txt")
   })
   
   observeEvent(input$color_ramp,{
@@ -800,7 +806,7 @@ shinyServer(function(input, output, session) {
   
   lapply(global$vectors$db_list, FUN=function(db){
     observeEvent(input[[paste0("check_", db)]],{
-      db_folder_files <- list.files(options$db_dir)
+      db_folder_files <- list.files(getOptions("user_options.txt")$db_dir)
       is.present <- paste0(db, ".full.db") %in% db_folder_files
       check_pic <- if(is.present) "yes.png" else "no.png"
       output[[paste0(db,"_check")]] <- renderImage({
@@ -849,16 +855,15 @@ shinyServer(function(input, output, session) {
             require(req, character.only = TRUE)
           }
         }, pkgs = pkgs)
-        shiny::setProgress(session=session, message = "Working...")
         build.base.db(db,
-                      outfolder = options$db_dir, 
+                      outfolder = getOptions("user_options.txt")$db_dir, 
                       cl = session_cl)
         shiny::setProgress(session=session, 0.5)
         build.extended.db(db, 
-                          outfolder = options$db_dir,
+                          outfolder = getOptions("user_options.txt")$db_dir,
                           adduct.table = adducts, 
                           cl = session_cl, 
-                          fetch.limit = 200)
+                          fetch.limit = 500) #TODO: figure out the optimal fetch limit...
       })
     })
   })
@@ -894,7 +899,7 @@ shinyServer(function(input, output, session) {
     
     # --------------------
     
-    global$paths$patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
+    global$paths$patdb <<- file.path(getOptions("user_options.txt")$work_dir, paste0(getOptions("user_options.txt")$proj_name, ".db"))
     
     # --------------------
     
@@ -967,8 +972,8 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$create_csv, {
     # ---------
-    req(options$proj_name)
-    req(options$work_dir)
+    req(getOptions("user_options.txt")$proj_name)
+    req(getOptions("user_options.txt")$work_dir)
     # ---------
     withProgress({
       shiny::setProgress(session=session, value= 1/4)
@@ -1006,7 +1011,7 @@ shinyServer(function(input, output, session) {
       # -------------------------
       # save csv
       shiny::setProgress(session=session, value= 2/4)
-      global$paths$csv_loc <<- file.path(options$work_dir, paste0(options$proj_name,".csv"))
+      global$paths$csv_loc <<- file.path(getOptions("user_options.txt")$work_dir, paste0(getOptions("user_options.txt")$proj_name,".csv"))
       fwrite(tbl.adj, global$paths$csv_loc, sep="\t")
       # --- overview table ---
       
@@ -1513,7 +1518,7 @@ shinyServer(function(input, output, session) {
              # --------------------
              output$plot_ipca <- plotly::renderPlotly({
                if("ipca" %not in% names(mSet$analSet)){
-                 iPCA.Anal(mSet, file.path(options$work_dir, "ipca_3d_0_.json"))
+                 iPCA.Anal(mSet, file.path(getOptions("user_options.txt")$work_dir, "ipca_3d_0_.json"))
                }
                fac.lvls <- unique(mSet$analSet$ipca$score[[input$ipca_factor]])
                chosen.colors <- if(length(fac.lvls) == length(color.vec())) color.vec() else rainbow(fac.lvls)
@@ -1601,7 +1606,7 @@ shinyServer(function(input, output, session) {
            },
            meba = {
              if("MB" %not in% names(mSet$analSet)){
-               performMB(10, dir=options$work_dir)
+               performMB(10, dir=getOptions("user_options.txt")$work_dir)
              }
              output$meba_tab <-DT::renderDataTable({
                # -------------
@@ -1618,7 +1623,7 @@ shinyServer(function(input, output, session) {
            asca = {
              if("asca" %not in% names(mSet$analSet)){
                Perform.ASCA(1, 1, 2, 2)
-               CalculateImpVarCutoff(0.05, 0.9, dir=options$work_dir)
+               CalculateImpVarCutoff(0.05, 0.9, dir=getOptions("user_options.txt")$work_dir)
              }
              output$asca_tab <-DT::renderDataTable({
                # -------------
@@ -2327,7 +2332,7 @@ shinyServer(function(input, output, session) {
                              FUN = function(db){
                                # -----------------------
                                if(!input[[paste0("search_", db)]]){
-                                 c(file.path(options$db_dir, paste0(db, ".full.db")))
+                                 c(file.path(getOptions("user_options.txt")$db_dir, paste0(db, ".full.db")))
                                }
                                else{NA}
                              }
@@ -2344,7 +2349,7 @@ shinyServer(function(input, output, session) {
                                 }else{
                                   # -----------------------
                                   if(!input[[paste0("add_", db)]]){
-                                    c(file.path(options$db_dir, paste0(db, ".full.db")))
+                                    c(file.path(getOptions("user_options.txt")$db_dir, paste0(db, ".full.db")))
                                   }
                                   else{NA}
                                 }
@@ -2362,7 +2367,7 @@ shinyServer(function(input, output, session) {
                                }else{
                                  # -----------------------
                                  if(!input[[paste0("enrich_", db)]]){
-                                   c(file.path(options$db_dir, paste0(db, ".full.db")))
+                                   c(file.path(getOptions("user_options.txt")$db_dir, paste0(db, ".full.db")))
                                  }
                                  else{NA}
                                }
@@ -2978,10 +2983,13 @@ shinyServer(function(input, output, session) {
       coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
     
     
-    output$venn_plot <- plotly::renderPlotly({ggplotly(p, tooltip = "label")
+    output$venn_plot <- plotly::renderPlotly({
+      
+      ggplotly(p, tooltip = "label")
       #%>% layout(plot_bgcolor='transparent')
       #%>% layout(paper_bgcolor='transparent')
-    })
+    
+      })
     updateSelectizeInput(session, "intersect_venn", choices = names(flattened))
   })
   
@@ -3002,14 +3010,13 @@ shinyServer(function(input, output, session) {
     })
   })
   
-  # - - - - - - - - - - - - - - - - - - - - - - - - - -
-  
   observeEvent(input$venn_tab_rows_selected, {
     curr_cpd <<- venn_overlap[input$venn_tab_rows_selected]
     output$curr_cpd <- renderText(curr_cpd)
   })
   
-  # --- ON CLOSE ---
+  # - - ON CLOSE - -
+  
   observe({
     if (input$nav_general == "stop"){
       shinyalert::shinyalert(title = "Question", 

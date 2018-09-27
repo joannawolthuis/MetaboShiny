@@ -115,10 +115,11 @@ global <- list(constants = list(ppm = 2,
                                 color.function = rainbow),
                paths = list(patdb = file.path(options$work_dir, paste0(options$proj_name, ".db")),
                             csv_loc = file.path(options$work_dir, paste0(options$proj_name, ".csv")),
-                            volumes =  c('R Installation'=R.home(),
+                            volumes =  c('MetaboShiny' = getwd(),
                                          'Home'=home,
                                          '~' = normalizePath("~"),
                                          'Downloads'=file.path(home, "Downloads"),
+                                         'R Installation'=R.home(),
                                          'Desktop'=file.path(home, "Desktop"))
                ),
                tables = list(tbl = NA),
@@ -158,5 +159,6 @@ sort_order <<- unlist(c(global$vectors$pos_adducts$Name, global$vectors$neg_addu
 bar.css <<- nav.bar.css(options$col1, options$col2, options$col3, options$col4)
 font.css <<- font.css(options$font1, options$font2, options$font3, options$font4)
 plot.theme <<- ggplot2::theme_minimal
+taskbar_image <<- options$task_img
 
 print("loaded global settings")
