@@ -581,6 +581,7 @@ shinyServer(function(input, output, session) {
            height = 120,
            style = "background-image:linear-gradient(0deg, transparent 50%, #aaa 50%),linear-gradient(90deg, #aaa 50%, #ccc 50%);background-size:10px 10px,10px 10px;"
     )
+      #
     }, deleteFile = FALSE)
     # - - -
     setOption('user_options.txt', 'taskbar_image', basename(new_path))
