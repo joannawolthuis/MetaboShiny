@@ -541,7 +541,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                         textInput(inputId="font.4", label="body", value = options$font4),
                                         br(),
                                         h3("Taskbar image"),
-                                        imageOutput("taskbar_image",inline = T),
+                                        div(imageOutput("taskbar_image",inline = T)),
                                         shinyFilesButton('taskbar_image_path', 
                                                          'Select image', 
                                                          'Please select an image file', 

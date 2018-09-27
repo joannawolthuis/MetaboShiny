@@ -26,7 +26,8 @@ shinyServer(function(input, output, session) {
   output$taskbar_image <- renderImage({
     list(src = file.path(getwd(), "www", getOptions("user_options.txt")$taskbar_image), 
          width = 120,
-         height = 120)
+         height = 120,
+         style = "background-image:linear-gradient(0deg, transparent 50%, #aaa 50%),linear-gradient(90deg, #aaa 50%, #ccc 50%);background-size:10px 10px,10px 10px;")
   }, deleteFile = FALSE)
   
   output$adductSettings <- renderUI({
@@ -569,7 +570,6 @@ shinyServer(function(input, output, session) {
   })
   
   observe({
-    print(input$taskbar_image_path)
     if(is.null(input$taskbar_image_path)) return()
     img_path <- parseFilePaths(global$paths$volumes, input$taskbar_image_path)$datapath
     new_path <- file.path(getwd(), "www", basename(img_path))
@@ -578,9 +578,10 @@ shinyServer(function(input, output, session) {
     output$taskbar_image <- renderImage({
       list(src = new_path, 
            width = 120,
-           height = 120)
+           height = 120,
+           style = "background-image:linear-gradient(0deg, transparent 50%, #aaa 50%),linear-gradient(90deg, #aaa 50%, #ccc 50%);background-size:10px 10px,10px 10px;"
+    )
     }, deleteFile = FALSE)
-    print(basename(new_path))
     # - - -
     setOption('user_options.txt', 'taskbar_image', basename(new_path))
   })
