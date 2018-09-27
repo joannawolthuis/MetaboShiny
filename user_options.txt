@@ -1,7 +1,7 @@
-db_dir = /Users/jwolthuis/Analysis
-work_dir = /Users/jwolthuis/Analysis/SP
+db_dir = /Users/jwolthuis/Analysis/SP
+work_dir = /Users/jwolthuis/Desktop/MS_res
 proj_name = CHICKENS_SEPT18
-ppm = 1
+ppm = 2
 packages_installed = Y
 col1 = #000000
 col2 = #DBDBDB

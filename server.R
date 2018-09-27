@@ -2,7 +2,6 @@
 
 shinyServer(function(input, output, session) {
   
-  print("Starting server...")
   # ================================= DEFAULTS ===================================
   
   source('./backend/scripts/joanna/shiny_general.R')
@@ -571,36 +570,38 @@ shinyServer(function(input, output, session) {
   })
   
   observe({  
-    print("!!!")
     shinyDirChoose(input, "get_db_dir", 
                    roots=global$paths$volumes, 
                    session = session)
-    print(input$get_db_dir)
-    temp <<- input$get_db_dir
+    temp1 <<- input$get_db_dir
     if(is.null(input$get_db_dir)) return()
-    given_dir <- parseDirPath(global$paths$volumes, input$get_db_dir)
+    given_dir <- parseDirPath(global$paths$volumes, 
+                              input$get_db_dir)
     if(is.null(given_dir)) return()
     options$db_dir <<- given_dir
     output$curr_db_dir <- renderText(options$db_dir)
     # --- connect ---
-    setOption(".conf", "db_dir", options$db_dir)
-    options <<- getOptions(".conf")
+    setOption("user_options.txt", "db_dir", options$db_dir)
+    options <<- getOptions("user_options.txt")
   })
   
   observe({  
-    print("!!")
-    shinyDirChoose(input, "get_work_dir", roots = global$paths$volumes, session = session)
+    shinyDirChoose(input, "get_work_dir", 
+                   roots = global$paths$volumes, 
+                   session = session)
+    temp2 <<- input$get_work_dir
+    
     if(is.null(input$get_work_dir)) return()
-    if(input$get_work_dir == 0) return()
-    given_dir <- parseDirPath(global$paths$volumes, input$get_db_dir)
+    
+    given_dir <- parseDirPath(global$paths$volumes, 
+                              input$get_work_dir)
     if(is.null(given_dir)) return()
     options$work_dir <<- given_dir
     output$exp_dir <- renderText(options$work_dir)
-    global$paths$patdb <<- file.path(options$work_dir, paste0(options$proj_name, ".db"))
     if(!dir.exists(options$work_dir)) dir.create(options$work_dir)
     # --- connect ---
-    setOption(".conf", "work_dir", options$work_dir)
-    options <<- getOptions(".conf")
+    setOption("user_options.txt", "work_dir", options$work_dir)
+    options <<- getOptions("user_options.txt")
   })
   # ----------------------------------
   
@@ -609,16 +610,16 @@ shinyServer(function(input, output, session) {
     global$paths$patdb <<- file.path(options$work_dir, paste0(proj_name,".db", sep=""))
     output$proj_name <<- renderText(proj_name)
     # --- connect ---
-    setOption(".conf", "proj_name", proj_name)
-    options <<- getOptions(".conf")
+    setOption("user_options.txt", "proj_name", proj_name)
+    options <<- getOptions("user_options.txt")
   })
   
   observeEvent(input$set_ppm, {
     ppm <<- input$ppm
     output$ppm <<- renderText(ppm)
     # --- connect ---
-    setOption(".conf", "ppm", ppm)
-    options <<- getOptions(".conf")
+    setOption("user_options.txt", "ppm", ppm)
+    options <<- getOptions("user_options.txt")
   })
   
   observeEvent(input$color_ramp,{
@@ -677,15 +678,15 @@ shinyServer(function(input, output, session) {
     #               font.3 = "Raleway",
     #               font.4 = "Raleway serif")
     # --- connect ---
-    setOption(".conf", "col1", input$bar.col.1)
-    setOption(".conf", "col2", input$bar.col.2)
-    setOption(".conf", "col3", input$bar.col.3)
-    setOption(".conf", "col4", input$bar.col.4)
+    setOption("user_options.txt", "col1", input$bar.col.1)
+    setOption("user_options.txt", "col2", input$bar.col.2)
+    setOption("user_options.txt", "col3", input$bar.col.3)
+    setOption("user_options.txt", "col4", input$bar.col.4)
     
-    setOption(".conf", "font1", input$font.1)
-    setOption(".conf", "font2", input$font.2)
-    setOption(".conf", "font3", input$font.3)
-    setOption(".conf", "font4", input$font.4)
+    setOption("user_options.txt", "font1", input$font.1)
+    setOption("user_options.txt", "font2", input$font.2)
+    setOption("user_options.txt", "font3", input$font.3)
+    setOption("user_options.txt", "font4", input$font.4)
   })
   
   color.pickers <- reactive({
@@ -767,7 +768,7 @@ shinyServer(function(input, output, session) {
   
   adduct_tab_data <- reactive({
     if (!is.null(input$adduct_tab)) {
-      DF = hot_to_r(input$adduct_tab)
+      DF = rhandsontable::hot_to_r(input$adduct_tab)
     } else {
       if (is.null(values[["DF"]]))
         DF = adducts
@@ -1245,9 +1246,6 @@ shinyServer(function(input, output, session) {
       keep_cols <- c("Sample", "Label")# "Group", "Time")
       remove <- which(!(exp_var_names %in% keep_cols))
       
-      print(colnames(csv_temp_filt)[-remove][1:10])
-      print(dim(csv_temp_filt[,-remove, with=FALSE]))
-      
       fwrite(csv_temp_filt[,-remove, with=FALSE], 
              csv_loc_no_out)
       
@@ -1289,15 +1287,14 @@ shinyServer(function(input, output, session) {
           
           w.missing <- mSet$dataSet$preproc#[,1:50]
           w.missing <- apply(w.missing, 2, as.numeric)
+
           library(doParallel)
-          #session_cl <- makeCluster(3)
+
           registerDoParallel(session_cl)
           
           auto.mtry <- floor(sqrt(ncol(mSet$dataSet$preproc)))
           
           mtry <- ifelse(auto.mtry > 100, 100, auto.mtry)
-          
-          print(mtry)
           
           imp <- missForest::missForest(w.missing, 
                                         parallelize = "variables",
@@ -2635,7 +2632,6 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$search_cpd, {
     req(global$vectors$db_search_list)
-    print("Searching...")
     # ----------------
     if(length(global$vectors$db_search_list) > 0){
       global$tables$last_matches <<- unique(multimatch(curr_cpd, global$vectors$db_search_list))

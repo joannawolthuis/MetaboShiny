@@ -1,6 +1,6 @@
 #' @export
 build.base.db <- function(dbname=NA, 
-                          outfolder="./backend/db", 
+                          outfolder=options$db_dir, 
                           cl=FALSE){
   # --- check if user chose something ---
   if(is.na(dbname)) return("~ Please choose one of the following options: HMDB, ChEBI, PubChem, MetaCyc, internal, noise, KEGG! d(>..w.<)b ~")

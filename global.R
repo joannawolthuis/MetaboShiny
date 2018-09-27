@@ -59,7 +59,7 @@ setOption <- function(file.loc, key, value){
 }
 
 # --------------------------
-options <- getOptions(".conf")
+options <- getOptions("user_options.txt")
 adducts <- fread("backend/umcfiles/adducts/AdductTable1.0.csv", header = T)
 home = normalizePath("~")
 
@@ -127,7 +127,6 @@ global <- list(constants = list(ppm = 2,
                                           "noise", 
                                           "hmdb", 
                                           "chebi", 
-                                          #"pubchem", 
                                           "kegg",
                                           "metacyc",
                                           "wikipathways"
