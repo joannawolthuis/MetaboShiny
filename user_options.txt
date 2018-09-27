@@ -1,5 +1,5 @@
-db_dir = /Users/jwolthuis/Analysis/SP
-work_dir = /Users/jwolthuis/Desktop/MS_res
+db_dir = /doesnt/exist
+work_dir = /break/pls
 proj_name = CHICKENS_SEPT18
 ppm = 2
 packages_installed = Y

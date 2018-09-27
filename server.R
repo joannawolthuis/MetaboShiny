@@ -573,7 +573,7 @@ shinyServer(function(input, output, session) {
     shinyDirChoose(input, "get_db_dir", 
                    roots=global$paths$volumes, 
                    session = session)
-    temp1 <<- input$get_db_dir
+    if(!exists("input$get_db_dir")) return()
     if(is.null(input$get_db_dir)) return()
     given_dir <- parseDirPath(global$paths$volumes, 
                               input$get_db_dir)
@@ -589,10 +589,8 @@ shinyServer(function(input, output, session) {
     shinyDirChoose(input, "get_work_dir", 
                    roots = global$paths$volumes, 
                    session = session)
-    temp2 <<- input$get_work_dir
-    
+    if(!exists("input$get_work_dir")) return()
     if(is.null(input$get_work_dir)) return()
-    
     given_dir <- parseDirPath(global$paths$volumes, 
                               input$get_work_dir)
     if(is.null(given_dir)) return()

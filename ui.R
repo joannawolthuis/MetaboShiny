@@ -540,6 +540,8 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                         textInput(inputId="font.3", label="h3", value = options$font3),
                                         textInput(inputId="font.4", label="body", value = options$font4),
                                         br(),
+                                        h3("Taskbar image"),
+                                        
                                         actionButton("change_css", "Save settings (restart to apply)")
                                )
                     )
