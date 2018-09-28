@@ -1,3 +1,5 @@
+#TODO: zoom font size
+
 shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle.js"), 
                                                       tags$style(type="text/css", bar.css)
 ),

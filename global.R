@@ -80,7 +80,8 @@ global <- list(constants = list(ppm = 2,
                                              "igraph", "RJSONIO", "SSPA", "caTools", "ROCR", "pROC", "sva", 
                                              "rJava", "colorRamps", "grDevices", "KEGGREST", "manhattanly", 
                                              "BatchCorrMetabolomics", "R.utils", "rgl", "glmnet", "TSPred", 
-                                             "VennDiagram", "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR"
+                                             "VennDiagram", "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR", 
+                                             "openxlsx")
                                 ),
                                 images = list(list(name = 'cute_package', path = 'www/cat.png', dimensions = c(80, 80)),
                                                 list(name = 'umc_logo_int', path = 'www/umcinternal.png', dimensions = c(120, 120)),

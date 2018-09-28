@@ -1661,7 +1661,7 @@ build.pat.db <- function(db.name,
 
 #' @export
 load.excel <- function(path.to.xlsx, 
-                       path.to.patdb = patdb,
+                       path.to.patdb = global$paths$patdb,
                        tabs.to.read = c(
                          #"General",
                          "Setup",
@@ -1669,11 +1669,13 @@ load.excel <- function(path.to.xlsx,
                          #,"Pen Data",
                          #"Admin"
                        )){
+  
   # --- connect to sqlite db ---
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), path.to.patdb)
   # -------------------------------
   data.store <- pbapply::pblapply(tabs.to.read, FUN=function(tab.name){
-    tab <- data.table::as.data.table(xlsx::read.xlsx(path.to.xlsx, sheetName = tab.name))
+    #tab <- data.table::as.data.table(xlsx::read.xlsx(path.to.xlsx, sheetName = tab.name))
+    tab <- data.table::as.data.table(openxlsx::read.xlsx(path.to.xlsx, sheet = tab.name))
     # --- reformat colnames ---
     colnames(tab) <- tolower(gsub(x=colnames(tab), pattern = "\\.$|\\.\\.$", replacement = ""))
     colnames(tab) <- gsub(x=colnames(tab), pattern = "\\.|\\.\\.", replacement = "_")
@@ -1704,7 +1706,7 @@ load.excel <- function(path.to.xlsx,
   individual.data <- individual.data[rowSums(is.na(individual.data)) != ncol(individual.data),]
   
   # --------------------------
-  individual.data$sampling_date <- as.factor(as.Date(individual.data$sampling_date, 
+  individual.data$sampling_date <- as.factor(as.Date(as.character(individual.data$sampling_date), 
                                                      format = "%d-%m-%y"))
   if(is.na(individual.data$sampling_date[1])) levels(individual.data$sampling_date) <- factor(1) 
   print(head(individual.data))
