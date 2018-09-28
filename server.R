@@ -570,6 +570,7 @@ shinyServer(function(input, output, session) {
   })
   
   observe({
+    # - - - - 
     if(is.null(input$taskbar_image_path)) return()
     img_path <- parseFilePaths(global$paths$volumes, input$taskbar_image_path)$datapath
     new_path <- file.path(getwd(), "www", basename(img_path))
