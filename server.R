@@ -572,6 +572,7 @@ shinyServer(function(input, output, session) {
   observe({
     # - - - - 
     if(is.null(input$taskbar_image_path)) return()
+    if(input$taskbar_image_path == 0) return()
     img_path <- parseFilePaths(global$paths$volumes, input$taskbar_image_path)$datapath
     new_path <- file.path(getwd(), "www", basename(img_path))
     if(img_path != new_path) file.copy(img_path, new_path, overwrite = T)
@@ -580,8 +581,7 @@ shinyServer(function(input, output, session) {
       list(src = new_path, 
            width = 120,
            height = 120,
-           style = "background-image:linear-gradient(0deg, transparent 50%, #aaa 50%),linear-gradient(90deg, #aaa 50%, #ccc 50%);background-size:10px 10px,10px 10px;"
-    )
+           style = "background-image:linear-gradient(0deg, transparent 50%, #aaa 50%),linear-gradient(90deg, #aaa 50%, #ccc 50%);background-size:10px 10px,10px 10px;")
       #
     }, deleteFile = FALSE)
     # - - -
