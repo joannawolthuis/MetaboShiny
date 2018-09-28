@@ -16,9 +16,11 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                     imageOutput("cute_package",inline = T),
                                                     hr(),
                                                     helpText("Installed packages:"),
-                                                    div(DT::dataTableOutput('package_tab', width="100%"),style='font-size:80%'),
+                                                    div(DT::dataTableOutput('package_tab', 
+                                                                            width="100%"),
+                                                        style='font-size:80%'),
                                                     br(),                                  
-                                                    actionButton("update_packages", "Update", icon = icon("star")),
+                                                    actionButton("update_packages", "Install missing packages", icon = icon("heart")),
                                                     br(),br(),
                                                     imageOutput("package_check")
                     ))),
@@ -264,7 +266,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
            tabPanel("",  icon = icon("shower"), value="filter",
                     fluidRow(column(3, aligh="center",
                                     selectInput('exp_var', 'Which variable do you want to look at?', choices = c("Group")),
-                                    selectInput('samp_var', 'Which variable is your sample amount?', choices = c("")),
+                                    selectInput('samp_var', 'Which variable is your sample amount?', choices = c("")), #TODO: only show this when normalize by sample specific factor (specnorm) is selected
                                     selectizeInput('batch_var', 'What are your batch variables?', choices = c("Batch"), multiple=TRUE, options = list(maxItems = 2L)),
                                     actionButton("check_csv", "Get options", icon=icon("refresh")),
                                     hr(),

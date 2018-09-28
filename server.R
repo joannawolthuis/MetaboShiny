@@ -546,13 +546,17 @@ shinyServer(function(input, output, session) {
   # ========================================
   
   observeEvent(input$nav_general, {
-    output$package_tab <-DT::renderDataTable({
-      # -------------
-      DT::datatable(get.package.table(input$nav_general),
+    # - - - - - -
+    pkg_tbl <- get.package.table()
+    #pkg_tbl <- rbind(pkg_tbl, data.table("lalalala", 'No', "1.1.1"))
+    #pkg_tbl <- pkg_tbl[order(pkg_tbl$Installed,decreasing = T),]
+    output$package_tab <- DT::renderDataTable({
+    # - - - - - -
+      DT::datatable(pkg_tbl,
                     selection = 'none',
                     autoHideNavigation = T,
-                    options = list(lengthMenu = c(10, 20, 30), pageLength = 10)
-                    , rownames = F)
+                    options = list(lengthMenu = c(10, 20, 30), pageLength = 10), 
+                    rownames = F)
     })
   }
   )
@@ -1145,7 +1149,6 @@ shinyServer(function(input, output, session) {
                       }
       )
       
-      # 
       # ------- load and re-save csv --------
 
       csv_orig <- fread(global$paths$csv_loc, 
