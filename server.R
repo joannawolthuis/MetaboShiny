@@ -982,9 +982,9 @@ shinyServer(function(input, output, session) {
       shiny::setProgress(session=session, value= 1/4)
       tbl <- get.csv(global$paths$patdb,
                      time.series = if(input$exp_type == "time_std") T else F,
-                     group_adducts = if(length(add_search_list) == 0) F else T,
+                     group_adducts = if(length(global$vectors$add_search_list) == 0) F else T,
                      groupfac = input$group_by,
-                     which_dbs = add_search_list,
+                     which_dbs = global$vectors$add_search_list,
                      which_adducts = selected_adduct_list
       )
       
