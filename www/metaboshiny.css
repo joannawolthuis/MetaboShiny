@@ -190,6 +190,17 @@ body {  font-family: 'Raleway', serif !important;   font-size: 12pt;  }
   font-size: 18px;
 }
 
+/* 2d / 3d */
+.twodthreed .onoffswitch-inner:before {
+  content: "2D";
+  font-size: 20px;
+}
+
+.twodthreed .onoffswitch-inner:after {
+  content: "3D";
+  font-size: 20px;
+}
+
 /* -------------------- EXPERIMENTATION -------------------- */
 
 

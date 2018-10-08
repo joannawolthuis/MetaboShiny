@@ -38,6 +38,10 @@ switchButton <- function(inputId, label, value=FALSE, col = "GB", type="TF") {
   if(type == "TF"){colclass <- paste(colclass,"TrueFalse")}
   if(type == "YN"){colclass <- paste(colclass,"YesNo")}
   if(type == "TTFC"){colclass <- paste(colclass,"TtFc")}
+  if(type == "2d3d"){
+    print("...")
+    colclass <- paste(colclass,"twodthreed")
+    }
   
   # No javascript button - total CSS3
   # As there is no javascript, the "checked" value implies to

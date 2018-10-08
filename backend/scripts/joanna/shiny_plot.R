@@ -370,7 +370,8 @@ plot.many <- function(res.obj = models, which_alpha = 1){
     theme(axis.text=element_text(size=19),
           axis.title=element_text(size=19,face="bold"),
           legend.title=element_text(size=19),
-          legend.text=element_text(size=19))
+          legend.text=element_text(size=19)) +
+    coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
 }
 
 
@@ -493,4 +494,110 @@ ggPlotBar <- function(repeats, attempts=50, color.function=rainbow, topn=50, ml_
             axis.ticks.x=element_blank())+
       labs(x="Top hits",y="Mean Decrease Accuracy")
   }
+}
+
+plotPCA.3d <- function(mSet, chosen.colors, pcx, pcy, pcz){
+  df <- mSet$analSet$pca$x
+  #x =1;y=2;z=3
+  x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
+  y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
+  z.var <- round(mSet$analSet$pca$variance[pcz] * 100.00, digits=1)
+  fac.lvls <- length(levels(mSet$dataSet$cls))
+  
+#  chosen.colors <<- if(fac.lvls == length(color.vec())) color.vec() else rainbow(fac.lvls)
+  # --- add ellipses ---
+  classes <- mSet$dataSet$cls
+  plots <- plotly::plot_ly(showlegend = F)
+  
+  for(class in levels(classes)){
+    row = which(classes == class)
+    # ---------------------
+    xc=mSet$analSet$pca$x[row, pcx]
+    yc=mSet$analSet$pca$x[row, pcy]
+    zc=mSet$analSet$pca$x[row, pcz]
+    # --- plot ellipse ---
+    o <- rgl::ellipse3d(cov(cbind(xc,yc,zc)), 
+                        centre=c(mean(xc), 
+                                 mean(yc), 
+                                 mean(zc)), 
+                        level = 0.95)
+    mesh <- c(list(x = o$vb[1, o$ib]/o$vb[4, o$ib], 
+                   y = o$vb[2, o$ib]/o$vb[4, o$ib], 
+                   z = o$vb[3, o$ib]/o$vb[4, o$ib]))
+    plots = plots %>% add_trace(
+      x=mesh$x, 
+      y=mesh$y, 
+      z=mesh$z, 
+      type='mesh3d',
+      alphahull=0,
+      opacity=0.1,
+      hoverinfo="none"
+    )
+  }
+  adj_plot <<- plotly_build(plots)
+  rgbcols <- toRGB(chosen.colors)
+  c = 1
+  for(i in seq_along(adj_plot$x$data)){
+    item = adj_plot$x$data[[i]]
+    if(item$type == "mesh3d"){
+      adj_plot$x$data[[i]]$color <- rgbcols[c]
+      adj_plot$x$data[[i]]$visible <- TRUE
+      c = c + 1
+    }
+  }
+  # --- return ---
+  pca_plot <<- adj_plot %>% add_trace(
+    hoverinfo = 'text',
+    text = rownames(df),
+    x = mSet$analSet$pca$x[,pcx], 
+    y = mSet$analSet$pca$x[,pcy], 
+    z = mSet$analSet$pca$x[,pcz], 
+    visible = rep(T, times=fac.lvls),
+    type = "scatter3d",
+    opacity=1,
+    color= mSet$dataSet$cls, colors=chosen.colors
+  ) %>%  layout(scene = list(
+    aspectmode="cube",
+    xaxis = list(
+      titlefont = list(size = 20),
+      title = gsubfn::fn$paste("$pcx ($x.var %)")),
+    yaxis = list(
+      titlefont = list(size = 20),
+      title = gsubfn::fn$paste("$pcy ($y.var %)")),
+    zaxis = list(
+      titlefont = list(size = 20),
+      title = gsubfn::fn$paste("$pcz ($z.var %)")))) 
+  # --- return ---
+  pca_plot
+}
+
+plotPCA.2d <- function(mSet, chosen.colors, pcx, pcy){
+  df <- mSet$analSet$pca$x
+  #x =1;y=2;z=3
+  x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
+  y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
+  fac.lvls <- length(levels(mSet$dataSet$cls))
+  
+  xc=mSet$analSet$pca$x[, pcx]
+  yc=mSet$analSet$pca$x[, pcy]
+  
+  dat_long <- data.table(variable = names(xc),
+                        group = mSet$dataSet$cls,
+                        x = xc, 
+                        y = yc)
+  
+  # - - - - - - - - -
+  
+  p <- ggplot(dat_long, aes(x, y, color = group, fill=group)) +
+    geom_point()+
+    scale_fill_manual(values=chosen.colors) +
+    stat_ellipse(geom = "polygon", alpha = 0.3) +
+    plot.theme() +
+    theme(legend.position="none",
+          axis.text=element_text(size=8),
+          axis.title=element_text(size=13,face="bold"))+
+    scale_x_continuous(name=gsubfn::fn$paste("$pcx ($x.var%)")) +
+    scale_y_continuous(name=gsubfn::fn$paste("$pcy ($y.var%)"))
+  
+  ggplotly(p)
 }

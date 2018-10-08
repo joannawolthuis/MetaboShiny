@@ -96,6 +96,7 @@ shinyServer(function(input, output, session) {
                # TODO: T-SNE
                tabPanel(h3("PCA"), value = "pca", #icon=icon("cube"),
                         fluidRow(column(12,align="center",plotly::plotlyOutput("plot_pca",height = "600px", width="600px"))),
+                        fluidRow(column(12,align="center",switchButton("pca_2d3d", label = "", col = "BW", type = "2d3d"))),
                         hr(),
                         fluidRow(column(3,
                                         selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:20),selected = "PC1",width="100%"),
@@ -789,21 +790,16 @@ shinyServer(function(input, output, session) {
   color.vec <- reactive({
     req(mSet$dataSet)
     # ----------
-    facs <- switch(input$exp_type,
-           stat = {
-             mSet$dataSet$cls
-           },
-           time_std = {
-             if("facA" %not in% names(mSet$dataSet) & "facB" %not in% names(mSet$dataSet)) return(c("Blue", "Pink"))
-             lbl.fac <- if(mSet$dataSet$facA.lbl == "Time") "facB" else "facA"
-             mSet$dataSet[[lbl.fac]]
-           },
-           time_fin = {
-             mSet$dataSet$cls
-           },
-           time_min = {           
-             mSet$dataSet$cls
-           })
+    facs <- if(input$exp_type %in% c("stat", "time_fin", "time_min")){
+      mSet$dataSet$cls
+    }else if(input$exp_type == "time_std"){
+      if("facA" %not in% names(mSet$dataSet) & "facB" %not in% names(mSet$dataSet)) return(c("Blue", "Pink"))
+      lbl.fac <- if(mSet$dataSet$facA.lbl == "Time") "facB" else "facA"
+      mSet$dataSet[[lbl.fac]]
+    }else{
+      mSet$dataSet$clss
+    }
+
     default.colours <- rainbow(length(facs))
     # -------------
     func <- unlist(lapply(seq_along(facs), function(i) {
@@ -1692,81 +1688,10 @@ shinyServer(function(input, output, session) {
                #ggplotly(p)
              })
              output$plot_pca <- plotly::renderPlotly({
-               df <- mSet$analSet$pca$x
-               x <- input$pca_x
-               y <- input$pca_y
-               z <- input$pca_z
-               #x =1;y=2;z=3
-               x.var <- round(mSet$analSet$pca$variance[x] * 100.00, digits=1)
-               y.var <- round(mSet$analSet$pca$variance[y] * 100.00, digits=1)
-               z.var <- round(mSet$analSet$pca$variance[z] * 100.00, digits=1)
-               fac.lvls <- length(levels(mSet$dataSet$cls))
-               
-               chosen.colors <<- if(fac.lvls == length(color.vec())) color.vec() else rainbow(fac.lvls)
-               # --- add ellipses ---
-               classes <- mSet$dataSet$cls
-               plots <- plotly::plot_ly(showlegend = F)
-               
-               for(class in levels(classes)){
-                 row = which(classes == class)
-                 # ---------------------
-                 xc=mSet$analSet$pca$x[row, x]
-                 yc=mSet$analSet$pca$x[row, y]
-                 zc=mSet$analSet$pca$x[row, z]
-                 # --- plot ellipse ---
-                 o <- rgl::ellipse3d(cov(cbind(xc,yc,zc)), 
-                                     centre=c(mean(xc), 
-                                              mean(yc), 
-                                              mean(zc)), 
-                                     level = 0.95)
-                 mesh <- c(list(x = o$vb[1, o$ib]/o$vb[4, o$ib], 
-                                y = o$vb[2, o$ib]/o$vb[4, o$ib], 
-                                z = o$vb[3, o$ib]/o$vb[4, o$ib]))
-                 plots = plots %>% add_trace(
-                   x=mesh$x, 
-                   y=mesh$y, 
-                   z=mesh$z, 
-                   type='mesh3d',
-                   alphahull=0,
-                   opacity=0.1,
-                   hoverinfo="none"
-                 )
-               }
-               adj_plot <<- plotly_build(plots)
-               rgbcols <- toRGB(chosen.colors)
-               c = 1
-               for(i in seq_along(adj_plot$x$data)){
-                 item = adj_plot$x$data[[i]]
-                 if(item$type == "mesh3d"){
-                   adj_plot$x$data[[i]]$color <- rgbcols[c]
-                   adj_plot$x$data[[i]]$visible <- TRUE
-                   c = c + 1
-                 }
-               }
-               # --- return ---
-               pca_plot <<- adj_plot %>% add_trace(
-                 hoverinfo = 'text',
-                 text = rownames(df),
-                 x = mSet$analSet$pca$x[,x], 
-                 y = mSet$analSet$pca$x[,y], 
-                 z = mSet$analSet$pca$x[,z], 
-                 visible = rep(T, times=fac.lvls),
-                 type = "scatter3d",
-                 opacity=1,
-                 color= mSet$dataSet$cls, colors=chosen.colors
-               ) %>%  layout(scene = list(
-                 aspectmode="cube",
-                 xaxis = list(
-                   titlefont = list(size = 20),
-                   title = gsubfn::fn$paste("$x ($x.var %)")),
-                 yaxis = list(
-                   titlefont = list(size = 20),
-                   title = gsubfn::fn$paste("$y ($y.var %)")),
-                 zaxis = list(
-                   titlefont = list(size = 20),
-                   title = gsubfn::fn$paste("$z ($z.var %)")))) 
-               # --- return ---
-               pca_plot
+               plotPCA.3d(mSet, color.vec(),
+                          pcx = input$pca_x,
+                          pcy = input$pca_y,
+                          pcz = input$pca_z)
              })
              # === LEGEND ===
              output$pca_legend <- plotly::renderPlotly({
@@ -2177,6 +2102,24 @@ shinyServer(function(input, output, session) {
     })
   })
   
+  observeEvent(input$pca_2d3d,{
+    if(input$pca_2d3d){
+      # 2d
+      output$plot_pca <- plotly::renderPlotly({
+        plotPCA.2d(mSet, color.vec(),
+                   pcx = input$pca_x,
+                   pcy = input$pca_y)
+      })
+    }else{
+      # 3d
+      output$plot_pca <- plotly::renderPlotly({
+        plotPCA.3d(mSet, color.vec(),
+                   pcx = input$pca_x,
+                   pcy = input$pca_y,
+                   pcz = input$pca_z)
+      })
+    }
+  })
   
   observeEvent(input$do_ml, {
     
