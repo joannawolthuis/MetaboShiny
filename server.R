@@ -1181,7 +1181,7 @@ shinyServer(function(input, output, session) {
       #Below is your R command history: 
       mSet <<- switch(input$exp_type,
                       stat = {
-                        #mSet<- #DEBUG
+                      #  mSet<- #DEBUG
                         InitDataObjects("pktable", 
                                         "stat", 
                                         FALSE)
@@ -1249,7 +1249,6 @@ shinyServer(function(input, output, session) {
       
       csv_temp <- cbind(first_part[,!duplicated(names(first_part)),with=FALSE],
                         "Label" = first_part[,..condition][[1]],
-                        #"$" = c(0),
                         csv_orig[,-..exp.vars,with=FALSE])
       
       # --- remove the rest ---
@@ -1285,38 +1284,24 @@ shinyServer(function(input, output, session) {
       batchview = if(condition == "Batch") TRUE else FALSE
       
       if(any(grepl("QC", csv_temp_no_out$Sample))){
-        #covar_table <- csv_temp_no_out[,c("Sample","Batch"),with=FALSE]
         samps <- which(!grepl(csv_temp_no_out$Sample, pattern = "QC"))
         batchnum <- unique(csv_temp_no_out[samps, "Batch"][[1]])
         keep_samps_post_qc <- covar_table[which(covar_table$Batch %in% batchnum),"Sample"][[1]]
         covar_table <- covar_table[which(covar_table$Batch %in% batchnum),]
-        #if("Batch" %in% batches){
-        csv_temp_filt <- csv_temp_no_out[which(csv_temp_no_out$Sample %in% keep_samps_post_qc),]
-        #}else{
-        #  csv_temp_filt <- csv_temp_no_out[which(csv_temp_no_out$Sample %in% keep_samps), -"Batch"]
-        #}
-      }else{ 
-        csv_temp_filt <- csv_temp_no_out#[, -"Batch"]
+        csv_temp_no_out <- csv_temp_no_out[which(csv_temp_no_out$Sample %in% keep_samps_post_qc),-"Batch"]
+        #csv_temp_filt <- csv_temp_no_out#[, -"Batch"]
       }
       
-      csv_loc_no_out <- gsub(pattern = "\\.csv", replacement = "_no_out.csv", x = global$paths$csv_loc)
-      
       # remove all except sample and time in saved csv
-      exp_var_names <- colnames(csv_temp_filt)[exp.vars]
+      exp_var_names <- colnames(csv_temp_no_out)[exp.vars]
       keep_cols <- c("Sample", "Label")# "Group", "Time")
       remove <- which(!(exp_var_names %in% keep_cols))
       
-      fwrite(csv_temp_filt[,-remove, with=FALSE], 
-             csv_loc_no_out)
+      csv_loc_no_out <- gsub(pattern = "\\.csv", replacement = "_no_out.csv", x = global$paths$csv_loc)
       
-      # if(batch_corr){
-      #   #covar_table <- csv_temp_filt[,c("Sample",batches),with=FALSE]
-      #   fwrite(csv_temp_filt[,-batches, with=FALSE], 
-      #          csv_loc_no_out)  
-      # }else{
-      #   #covar_table <- csv_temp_filt[,c("Sample"),with=FALSE]
-      # 
-      # }
+      if(file.exists(csv_loc_no_out)) file.remove(csv_loc_no_out)
+      
+      fwrite(csv_temp_no_out[,-remove,with=F], file = csv_loc_no_out)
       
       rownames(covar_table) <- covar_table$Sample
       
@@ -1325,6 +1310,8 @@ shinyServer(function(input, output, session) {
       mSet <<- Read.TextData(mSet, 
                             filePath = csv_loc_no_out, 
                             "rowu")
+      
+      file.remove(csv_loc_no_out)
       
       mSet$dataSet$covars <<- covar_table
       
@@ -1361,9 +1348,7 @@ shinyServer(function(input, output, session) {
                                         verbose = T,
                                         ntree = 10,
                                         mtry = mtry)
-          #w.missing <- cbind(w.missing, Sample = c(1))
-          #imp <- randomForest::rfImpute(Sample ~ ., data = w.missing)
-          #rownames(imp) <- samples
+          
           mSet$dataSet$procr <<- imp$ximp
           rownames(mSet$dataSet$procr) <<- rownames(mSet$dataSet$preproc)
           # - - - - - - - - - - - - 
@@ -1387,10 +1372,6 @@ shinyServer(function(input, output, session) {
       
       shiny::setProgress(session=session, value= .2)
       
-      #keep <- intersect(csv_temp_no_out$Sample, rownames(mSet$dataSet$preproc))
-      
-      #first_part_no_out <<- first_part[Sample %in% keep]
-      
       if(input$norm_type == "SpecNorm"){
         norm.vec <<- mSet$dataSet$covars[match(mSet$dataSet$covars$Sample,
                                                rownames(mSet$dataSet$preproc)),][[input$samp_var]]
@@ -1406,31 +1387,7 @@ shinyServer(function(input, output, session) {
                              scaleNorm = input$scale_type,
                              ref = input$ref_var)
       
-      # FOR SEPERATE ML PURPOSES
-      csv_filled = cbind(mSet$dataSet$covars, 
-                         mSet$dataSet$norm[match(rownames(mSet$dataSet$norm),
-                                                 mSet$dataSet$covars$Sample),])
-      
-      csv_loc_filled <- gsub(pattern = "\\.csv", replacement = "_filled.csv", x = global$paths$csv_loc)
-      
-      fwrite(csv_filled, file = csv_loc_filled)
-      
-      # mSet <- Normalization(mSet = mSet,
-      #                       rowNorm = "QuantileNorm",
-      #                       transNorm = "LogNorm",
-      #                       scaleNorm = "AutoNorm"
-      #                       # ref = "C15H13N1O2"
-      #                       #ratio=FALSE,
-      #                       #ratioNum=20
-      #                       )
-      
-      # ====
-      
       shiny::setProgress(session=session, value= .4)
-      
-      #mSet <- mSet_beforebatch
-      
-      #devtools::install_git("https://gitlab.com/CarlBrunius/batchCorr.git")
       
       smps <- rownames(mSet$dataSet$norm)
       
@@ -1535,8 +1492,7 @@ shinyServer(function(input, output, session) {
       }
       
       # REORDER COVARS
-      #mSet$dataSet$covars$Sample == rownames(mSet$dataSet$norm)
-      
+
       mSet$dataSet$covars <<- mSet$dataSet$covars[match(rownames(mSet$dataSet$norm), 
                                                         mSet$dataSet$covars$Sample), 
                                                   -"#"]
