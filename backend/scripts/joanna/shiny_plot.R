@@ -596,16 +596,16 @@ plotPCA.2d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, mode="pca",
          })
   # - - - - - - - - -
   
-  p <- ggplot(dat_long, aes(x, y, color = group, fill=group)) +
-    geom_point()+
-    scale_fill_manual(values=cols) +
+  p <- ggplot(dat_long, aes(x, y, color=group, fill=group)) +
+    geom_point(size=5)+
     stat_ellipse(geom = "polygon", alpha = 0.3) +
     plot.theme() +
     theme(legend.position="none",
           axis.text=element_text(size=8),
           axis.title=element_text(size=13,face="bold"))+
     scale_x_continuous(name=gsubfn::fn$paste("$pcx ($x.var%)")) +
-    scale_y_continuous(name=gsubfn::fn$paste("$pcy ($y.var%)"))
+    scale_y_continuous(name=gsubfn::fn$paste("$pcy ($y.var%)")) +
+    scale_fill_manual(values=cols) 
   
   ggplotly(p)
 }

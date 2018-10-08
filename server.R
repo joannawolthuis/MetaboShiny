@@ -107,7 +107,10 @@ shinyServer(function(input, output, session) {
                                                     tabPanel(title="Table", 
                                                              div(DT::dataTableOutput('pca_tab',width="100%"),style='font-size:80%')),
                                                     tabPanel(title="Scree",
-                                                             plotOutput("pca_scree"))
+                                                             plotOutput("pca_scree")
+                                                             ),
+                                                    tabPanel(title="Loadings", 
+                                                             div(DT::dataTableOutput('pca_load',width="100%"),style='font-size:80%'))
                                         ))
                         )
                ),
@@ -1665,7 +1668,19 @@ shinyServer(function(input, output, session) {
                              selection = 'single',
                              autoHideNavigation = T,
                              options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-             })},
+             })
+             
+             output$pca_load <-DT::renderDataTable({
+               pca.loadings <- as.data.table(mSet$analSet$pca$rotation[,c(input$pca_x, 
+                                                                          input$pca_y, 
+                                                                          input$pca_z)], keep.rownames = T)
+               colnames(pca.loadings)[1] <- "m/z"
+               DT::datatable(pca.loadings, 
+                             selection = 'single',
+                             autoHideNavigation = T,
+                             options = list(lengthMenu = c(5, 10, 15), pageLength = 10))
+             })
+             },
            plsdaa = {NULL},
            heatmap_mult = {
              req(input$color_ramp)

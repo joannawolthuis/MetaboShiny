@@ -16,6 +16,6 @@ size2 = 15
 size3 = 10
 size4 = 10
 taskbar_image = cat.png
-gtheme = bw
+gtheme = dark
 gcols = inflammatory activity:#FF00D9FD&remission:#00FF3CFD
 gspec = Blues
