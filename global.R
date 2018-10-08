@@ -157,7 +157,8 @@ add_idx <- order(c(seq_along(global$vectors$pos_adducts$Name), seq_along(global$
 sort_order <<- unlist(c(global$vectors$pos_adducts$Name, global$vectors$neg_adducts$Name))[add_idx]
 
 bar.css <<- nav.bar.css(options$col1, options$col2, options$col3, options$col4)
-font.css <<- font.css(options$font1, options$font2, options$font3, options$font4)
+font.css <<- font.css(options$font1, options$font2, options$font3, options$font4,
+                      options$size1, options$size2, options$size3, options$size4)
 plot.theme <<- ggplot2::theme_minimal
 taskbar_image <<- options$task_img
 

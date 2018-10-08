@@ -568,6 +568,12 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                         textInput(inputId="font.3", label="h3", value = options$font3),
                                         textInput(inputId="font.4", label="body", value = options$font4),
                                         br(), # TODO: font size modifier slider
+                                        h2("Font size"),
+                                        sliderInput("size.1", label="h1", value=as.numeric(options$size1),min = 5, max=50),
+                                        sliderInput("size.2", label="h2", value=as.numeric(options$size2),min = 5, max=50),
+                                        sliderInput("size.3", label="h3", value=as.numeric(options$size3),min = 5, max=50),
+                                        sliderInput("size.4", label="body", value=as.numeric(options$size4),min = 5, max=50),
+                                        br(),
                                         h3("Taskbar image"),
                                         div(imageOutput("taskbar_image",inline = T)),
                                         shinyFilesButton('taskbar_image_path', 

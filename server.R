@@ -752,6 +752,11 @@ shinyServer(function(input, output, session) {
     setOption("user_options.txt", "font2", input$font.2)
     setOption("user_options.txt", "font3", input$font.3)
     setOption("user_options.txt", "font4", input$font.4)
+    
+    setOption("user_options.txt", "size1", input$size.1)
+    setOption("user_options.txt", "size2", input$size.2)
+    setOption("user_options.txt", "size3", input$size.3)
+    setOption("user_options.txt", "size4", input$size.4)
   })
   
   color.pickers <- reactive({

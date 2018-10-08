@@ -20,9 +20,18 @@ nav.bar.css <- function(RGB.bg = "#ffc8c2",
 font.css <- function(font.h1 = "Press Start 2P",
                      font.h2 = "Raleway bold",
                      font.h3 = "Raleway",
-                     font.body = "Raleway serif"){
+                     font.body = "Raleway serif",
+                     size.h1 = 33,
+                     size.h2 = 22, 
+                     size.h3 = 15, 
+                     size.body = 13){
   
-  # font.h1 = "Press Start 2P"
+  size.h1 <- paste0(size.h1, "pt")
+  size.h2 <- paste0(size.h2, "pt")
+  size.h3 <- paste0(size.h3, "pt")
+  size.body <- paste0(size.body, "pt")
+  
+    # font.h1 = "Press Start 2P"
   # font.h2 = "Raleway bold"
   # font.h3 = "Raleway"
   # font.body = "Raleway serif"
@@ -81,7 +90,7 @@ font.css <- function(font.h1 = "Press Start 2P",
   margin: 2px;
   font-family: '$font.h1';
   $font.h1.w
-  font-size: 33pt; 
+  font-size: $size.h1; 
   line-height: 0.5;
   }
   
@@ -89,7 +98,7 @@ font.css <- function(font.h1 = "Press Start 2P",
   margin: 1px;
   font-family: '$font.h2';
   $font.h2.w
-  font-size: 22pt;
+  font-size: $size.h2;
   line-height: 1;
   }
   
@@ -97,14 +106,14 @@ font.css <- function(font.h1 = "Press Start 2P",
   margin: 1px;
   font-family: '$font.h3';
   $font.h3.w
-  font-size: 15pt;
+  font-size: $size.h3;
   line-height: 1;
   }
   
   body {
   font-family: '$font.body'; 
   $font.body.w
-  font-size: 13pt;
+  font-size: $size.body;
   }
 }"
   
