@@ -499,13 +499,33 @@ ggPlotBar <- function(repeats, attempts=50,  cf = global$functions$color.functio
 plotPCA.3d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, pcz, mode="pca"){
   switch(mode, 
          pca = {
+           df <- mSet$analSet$pca$x
+           #x =1;y=2;z=3
+           x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
+           y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
+           z.var <- round(mSet$analSet$pca$variance[pcz] * 100.00, digits=1)
+         }, plsda = {
+           plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar 
+                                              / mSet$analSet$plsr$Xtotvar 
+                                              * 100.0,
+                                              digits = 2),
+                                        keep.rownames = T)
+           colnames(plsda.table) <- c("PC", "var")
+           plsda.table[, "PC"] <- paste0("PC", 1:nrow(plsda.table))
            
+           print(head(plsda.table))
+           
+           x.var <- plsda.table[PC == pcx]$var
+           y.var <- plsda.table[PC == pcy]$var
+           z.var <- plsda.table[PC == pcz]$var
+           
+           print("...")
+           
+           # --- coordinates ---
+           df <- mSet$analSet$plsr$scores
+           colnames(df) <- paste0("PC", 1:ncol(df))
          })
-  df <- mSet$analSet$pca$x
-  #x =1;y=2;z=3
-  x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
-  y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
-  z.var <- round(mSet$analSet$pca$variance[pcz] * 100.00, digits=1)
+
   fac.lvls <- length(levels(mSet$dataSet$cls))
   
 #  chosen.colors <<- if(fac.lvls == length(color.vec())) color.vec() else rainbow(fac.lvls)
@@ -516,9 +536,9 @@ plotPCA.3d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, pcz, mode="
   for(class in levels(classes)){
     row = which(classes == class)
     # ---------------------
-    xc=mSet$analSet$pca$x[row, pcx]
-    yc=mSet$analSet$pca$x[row, pcy]
-    zc=mSet$analSet$pca$x[row, pcz]
+    xc=df[row, pcx]
+    yc=df[row, pcy]
+    zc=df[row, pcz]
     # --- plot ellipse ---
     o <- rgl::ellipse3d(cov(cbind(xc,yc,zc)), 
                         centre=c(mean(xc), 
@@ -553,9 +573,9 @@ plotPCA.3d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, pcz, mode="
   pca_plot <<- adj_plot %>% add_trace(
     hoverinfo = 'text',
     text = rownames(df),
-    x = mSet$analSet$pca$x[,pcx], 
-    y = mSet$analSet$pca$x[,pcy], 
-    z = mSet$analSet$pca$x[,pcz], 
+    x = df[,pcx], 
+    y = df[,pcy], 
+    z = df[,pcz], 
     visible = rep(T, times=fac.lvls),
     type = "scatter3d",
     opacity=1,
@@ -592,7 +612,29 @@ plotPCA.2d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, mode="pca",
                                   x = xc, 
                                   y = yc)
          }, plsda = {
-           ...
+           plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar 
+                                              / mSet$analSet$plsr$Xtotvar 
+                                              * 100.0,
+                                              digits = 2),
+                                        keep.rownames = T)
+           colnames(plsda.table) <- c("PC", "var")
+           plsda.table[, "PC"] <- paste0("PC", 1:nrow(plsda.table))
+           
+           x.var <- plsda.table[PC == pcx]$var
+           y.var <- plsda.table[PC == pcy]$var
+
+           # --- coordinates ---
+           df <- mSet$analSet$plsr$scores
+           colnames(df) <- paste0("PC", 1:ncol(df))
+           rownames(df) <- rownames(mSet$dataSet$norm)
+           
+           xc=df[, pcx]
+           yc=df[, pcy]
+           
+           dat_long <- data.table(variable = names(xc),
+                                  group = mSet$dataSet$cls,
+                                  x = xc, 
+                                  y = yc)
          })
   # - - - - - - - - -
   

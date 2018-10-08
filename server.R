@@ -114,7 +114,7 @@ shinyServer(function(input, output, session) {
                                         ))
                         )
                ),
-               tabPanel(h3("PLSDA"), value = "plsda",
+               tabPanel(h3("PLSDA"), value = "plsda", #icon=icon("cube"),
                         fluidRow(
                           selectInput("plsda_type", 
                                       label="PLSDA subtype:", 
@@ -125,36 +125,22 @@ shinyServer(function(input, output, session) {
                           actionButton("do_plsda",label="Go")
                         ),
                         hr(),
-                        navbarPage(inverse=F,"",
-                                   tabPanel("", icon=icon("globe"),
-                                            plotly::plotlyOutput("plot_plsda_3d", 
-                                                                 height="800px")
-                                            # ,fluidRow(column(3,
-                                            #                 selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:3),selected = "PC1",width="100%"),
-                                            #                 selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:3),selected = "PC2",width="100%"),
-                                            #                 selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:3),selected = "PC3",width="100%")
-                                            # )
-                                            # ,
-                                            # column(9,
-                                            #        div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')
-                                            # ))
-                                   ),
-                                   tabPanel("", icon=icon("area-chart"), 
-                                            plotOutput("plsda_cv_plot"),
-                                            plotOutput("plsda_perm_plot")
-                                            
-                                   ),
-                                   tabPanel("", icon=icon("star-o"), 
-                                            plotly::plotlyOutput("plsda_vip_specific_plot",width="100%"),
-                                            fluidRow(column(3,
-                                                            selectInput("plsda_vip_cmp", label = "Compounds from:", choices = paste0("PC",1:5),selected = "PC1",width="100%")
-                                            ), 
-                                            column(9, 
-                                                   div(DT::dataTableOutput('plsda_vip_tab',width="100%"),style='font-size:80%')
-                                            ))
-                                            
-                                   )
-                        )),
+                        fluidRow(column(12,align="center",plotly::plotlyOutput("plot_plsda",height = "400px", width="400px"))),
+                        fluidRow(column(12,align="center",switchButton("plsda_2d3d", label = "", col = "BW", type = "2d3d"))),
+                        hr(),
+                        fluidRow(column(3,
+                                        selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:8),selected = "PC1",width="100%"),
+                                        selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:8),selected = "PC2",width="100%"),
+                                        selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:8),selected = "PC3",width="100%")),
+                                 column(9,
+                                        tabsetPanel(id="plsda_2", 
+                                                    tabPanel(title="Table", 
+                                                             div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')),
+                                                    tabPanel(title="Loadings", 
+                                                             div(DT::dataTableOutput('plsda_load',width="100%"),style='font-size:80%'))
+                                        ))
+                        )
+               ),
                tabPanel(h3("T-test"), value="tt", 
                         fluidRow(plotly::plotlyOutput('tt_specific_plot',width="100%")),
                         navbarPage(inverse=F,"",
@@ -325,7 +311,7 @@ shinyServer(function(input, output, session) {
                                                             selectInput("plsda_vip_cmp", label = "Compounds from:", choices = paste0("PC",1:5),selected = "PC1",width="100%")
                                             ), 
                                             column(9, 
-                                                   div(DT::dataTableOutput('plsda_vip_tab',width="100%"),style='font-size:80%')
+                                                   div(DT::dataTableOutput('plsda_load',width="100%"),style='font-size:80%')
                                             ))
                                             
                                    )
@@ -1904,7 +1890,6 @@ shinyServer(function(input, output, session) {
                output$plsda_cv_plot <- renderPlot({ggPlotClass(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
                output$plsda_perm_plot <- renderPlot({ggPlotPerm(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
                
-               
                # - - - - - - - - - - - 
                shiny::setProgress(session=session, value= 0.6)
                # - - overview table - -
@@ -1964,85 +1949,14 @@ shinyServer(function(input, output, session) {
     # -----------
     output$plot_plsda_3d <- plotly::renderPlotly({
       
-      x <- "PC1"
-      y <- "PC2"
-      z <- "PC3"
+      # x <- "PC1"
+      # y <- "PC2"
+      # z <- "PC3"
       
-      x.var <- plsda.table[`Principal Component` == x, 
-                           `% variance`]
-      y.var <- plsda.table[`Principal Component` == y, 
-                           `% variance`]
-      z.var <- plsda.table[`Principal Component` == z, 
-                           `% variance`]
-      fac.lvls <- unique(mSet$dataSet$cls)
-      chosen.colors <- if(fac.lvls == length(global$vectors$mycols)) global$vectors$mycols else rainbow(length(fac.lvls))
-      # --- add ellipses ---
-      classes <- mSet$dataSet$cls
-      plots <- plotly::plot_ly(showlegend = F)
+      plotPCA.3d(mSet, cols = global$vectors$mycols, input$plsda_x, input$plsda_y, input$plsda_z, mode = "plsda")
       
-      for(class in levels(classes)){
-        row = which(classes == class)
-        # ---------------------
-        xc=coords[row, x]
-        yc=coords[row, y]
-        zc=coords[row, z]
-        # --- plot ellipse ---
-        o <- rgl::ellipse3d(cov(cbind(xc,yc,zc)), 
-                            centre=c(mean(xc), 
-                                     mean(yc), 
-                                     mean(zc)), 
-                            level = 0.95)
-        mesh <- c(list(x = o$vb[1, o$ib]/o$vb[4, o$ib], 
-                       y = o$vb[2, o$ib]/o$vb[4, o$ib], 
-                       z = o$vb[3, o$ib]/o$vb[4, o$ib]))
-        plots = plots %>% add_trace(
-          x=mesh$x, 
-          y=mesh$y, 
-          z=mesh$z, 
-          type='mesh3d',
-          alphahull=0,
-          opacity=0.1,
-          hoverinfo="none"
-        )
-      }
-      adj_plot <<- plotly_build(plots)
-      rgbcols <- toRGB(chosen.colors)
-      c = 1
-      for(i in seq_along(adj_plot$x$data)){
-        item = adj_plot$x$data[[i]]
-        if(item$type == "mesh3d"){
-          adj_plot$x$data[[i]]$color <- rgbcols[c]
-          adj_plot$x$data[[i]]$visible <- TRUE
-          adj_plot$x$data[[i]]$hoverinfo <- "none"
-          c = c + 1
-        }
-      }
-      # ---------------
-      adj_plot %>%
-        add_trace(
-          x = coords[,x], 
-          y = coords[,y], 
-          z = coords[,z], 
-          type = "scatter3d",
-          color = mSet$dataSet$cls, 
-          colors=chosen.colors,
-          opacity=1,
-          hoverinfo = 'text',
-          text = rownames(mSet$dataSet$norm)
-        ) %>%  layout(scene = list(
-          aspectmode="cube",
-          xaxis = list(
-            titlefont = list(size = 20),
-            title = gsubfn::fn$paste("$x ($x.var %)")),
-          yaxis = list(
-            titlefont = list(size = 20),
-            title = gsubfn::fn$paste("$y ($y.var %)")),
-          zaxis = list(
-            titlefont = list(size = 20),
-            title = gsubfn::fn$paste("$z ($z.var %)")
-          )
-        ))
     })
+    
     output$plsda_tab <- DT::renderDataTable({
       req(plsda.table)
       # -------------
@@ -2051,10 +1965,14 @@ shinyServer(function(input, output, session) {
                     autoHideNavigation = T,
                     options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
     })
+    
     # -------------
-    output$plsda_vip_tab <-DT::renderDataTable({
+    output$plsda_load <-DT::renderDataTable({
+      plsda.loadings <- mSet$analSet$plsda$vip.mat
+      #rownames(plsda.loadings) <- rownames(mSet$dataSet$norm)
+      #colnames(plsda.loadings) <- paste0("PC", c(1:ncol(plsda.loadings))) 
       # -------------
-      DT::datatable(plsda_tab,
+      DT::datatable(plsda.loadings[, c(input$plsda_x, input$plsda_y, input$plsda_z)],
                     selection = 'single',
                     autoHideNavigation = T,
                     options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -2067,7 +1985,7 @@ shinyServer(function(input, output, session) {
       output$plot_pca <- plotly::renderPlotly({
         plotPCA.2d(mSet, global$vectors$mycols,
                    pcx = input$pca_x,
-                   pcy = input$pca_y)
+                   pcy = input$pca_y, mode = "pca")
       })
     }else{
       # 3d
@@ -2075,7 +1993,26 @@ shinyServer(function(input, output, session) {
         plotPCA.3d(mSet, global$vectors$mycols,
                    pcx = input$pca_x,
                    pcy = input$pca_y,
-                   pcz = input$pca_z)
+                   pcz = input$pca_z, mode = "pca")
+      })
+    }
+  })
+  
+  observeEvent(input$plsda_2d3d,{
+    if(input$plsda_2d3d){
+      # 2d
+      output$plot_plsda <- plotly::renderPlotly({
+        plotPCA.2d(mSet, global$vectors$mycols,
+                   pcx = input$plsda_x,
+                   pcy = input$plsda_y, mode = "plsda")
+      })
+    }else{
+      # 3d
+      output$plot_plsda <- plotly::renderPlotly({
+        plotPCA.3d(mSet, global$vectors$mycols,
+                   pcx = input$plsda_x,
+                   pcy = input$plsda_y,
+                   pcz = input$plsda_z, mode = "plsda")
       })
     }
   })
