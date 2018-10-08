@@ -114,7 +114,44 @@ global <- list(constants = list(ppm = 2,
                            ),
                functions = list(cf = rainbow,
                                 color.function = rainbow,
-                                color.vec = rainbow),
+                                color.vec = rainbow,
+                                plot.themes = list(bw=ggplot2::theme_bw,
+                                                   classic=ggplot2::theme_classic,
+                                                   gray=ggplot2::theme_gray,
+                                                   min=ggplot2::theme_minimal,
+                                                   dark=ggplot2::theme_dark,
+                                                   light=ggplot2::theme_light,
+                                                   line=ggplot2::theme_linedraw),
+                                color.functions = {
+                                  brew.cols <- c("Blues", "BuGn", "BuPu", "GnBu", "Greens", "Greys", # - - sequential - -
+                                                 "Oranges", "OrRd", "PuBu", "PuBuGn", "PuRd", "Purples", 
+                                                 "RdPu", "Reds", "YlGn", "YlGnBu", "YlOrBr", "YlOrRd", 
+                                                 "BrBG", "PiYG", "PRGn", "PuOr", "RdBu", "RdGy", "RdYlBu", "RdYlGn", "Spectral", # - - diverging - -
+                                                 "Accent", "Dark2", "Paired", "Pastel1", "Pastel2", "Set1", "Set2", "Set3" # - - qualitative - -
+                                  )
+                                  
+                                  brew.opts <- lapply(brew.cols, function(opt) colorRampPalette(RColorBrewer::brewer.pal(10, opt)))
+                                  names(brew.opts) <- brew.cols
+                                  
+                                  base.opts <- list("rb"=rainbow,
+                                                    "y2b"=ygobb,
+                                                    "ml1"=matlab.like2,
+                                                    "ml2"=matlab.like,
+                                                    "m2g"=magenta2green,
+                                                    "c2y"=cyan2yellow,
+                                                    "b2y"=blue2yellow,
+                                                    "g2r"=green2red,
+                                                    "b2g"=blue2green,
+                                                    "b2r"=blue2red,
+                                                    "b2p"=cm.colors,
+                                                    "bgy"=topo.colors,
+                                                    "gyw"=terrain.colors,
+                                                    "ryw"=heat.colors,
+                                                    "bw"=blackwhite.colors)
+                                  # - - - - - - - - - - - - -
+                                  
+                                  append(base.opts, brew.opts)
+                                }),
                paths = list(patdb = file.path(options$work_dir, paste0(options$proj_name, ".db")),
                             csv_loc = file.path(options$work_dir, paste0(options$proj_name, ".csv")),
                             volumes =  c('MetaboShiny' = getwd(),
@@ -162,5 +199,10 @@ font.css <<- font.css(options$font1, options$font2, options$font3, options$font4
                       options$size1, options$size2, options$size3, options$size4)
 plot.theme <<- ggplot2::theme_minimal
 taskbar_image <<- options$task_img
+
+# parse color options
+
+global$vectors$mycols <- get.col.map("user_options.txt")
+global$constants$spectrum <- options$gspec
 
 print("loaded global settings")

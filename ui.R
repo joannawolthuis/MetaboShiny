@@ -475,7 +475,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                     "Grid, black bg"="dark",
                                                                                                     "Grid, white bg, gray axes"="light",
                                                                                                     "Line drawing"="line"),
-                                                    selected = "Minimal"),
+                                                    selected = getOptions("user_options.txt")$gtheme),
                                         fluidRow(plotOutput("ggplot_theme_example",inline = F, width="40%")),
                                         h2("Continuous data"),
                                         selectInput("color_ramp", label = "Color scheme", choices = list("RAINBOW!"="rb",
@@ -514,8 +514,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                          "BrBG", "PiYG", "PRGn", "PuOr", "RdBu", #TODO: add descriptions (or remove all?)
                                                                                                          "RdGy", "RdYlBu", "RdYlGn", "Spectral", 
                                                                                                          "Accent", "Dark2", "Paired", "Pastel1", 
-                                                                                                         "Pastel2", "Set1", "Set2", "Set3"
-                                        )
+                                                                                                         "Pastel2", "Set1", "Set2", "Set3"),selected = getOptions("user_options.txt")$gspec
                                         ),
                                         fluidRow(plotly::plotlyOutput("ramp_plot",inline = T, width="50%")),
                                         h2("Discrete data"),

@@ -1,5 +1,5 @@
 #' @export
-ggplotNormSummary <- function(mSet){
+ggplotNormSummary <- function(mSet, colmap = global$vectors$mycols, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
   # 4 by 4 plot, based on random 20-30 picked 
   orig_data <- mSet$dataSet$procr
   norm_data <- mSet$dataSet$norm
@@ -14,7 +14,7 @@ ggplotNormSummary <- function(mSet){
   norm_melt <- reshape2::melt(cbind(id=which_samps, norm_data[which_samps, which_cpds]))
 
   plot <- ggplot2::ggplot(data=orig_melt) +
-    plot.theme(base_size = 15) #+ facet_grid(. ~ variable)
+    plot.theme(base_size = 15) #+ facet_grid(. ~ variable) 
   
   RES1 <- plot + ggplot2::geom_density(ggplot2::aes(x=value), colour="blue", fill="blue", alpha=0.4)
 
@@ -36,7 +36,7 @@ ggplotNormSummary <- function(mSet){
   list(tl=RES1, bl=RES2, tr=RES3, br=RES4)
 } 
 
-ggplotSampleNormSummary <- function(mSet){
+ggplotSampleNormSummary <- function(mSet, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
   # 4 by 4 plot, based on random 20-30 picked 
   orig_data <- mSet$dataSet$orig
   norm_data <- mSet$dataSet$norm
@@ -86,7 +86,7 @@ ggplotSampleNormSummary <- function(mSet){
 
 
 #' @export
-ggplotMeba <- function(cpd, draw.average=T, cols=NULL, cf){
+ggplotMeba <- function(cpd, draw.average=T, cols=global$vectors$mycols, cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
   cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
   profile <- getProfile(cpd, mode="time")
   plot <- if(draw.average){
@@ -112,7 +112,7 @@ blackwhite.colors <- function(n){
 }
 
 #' @export
-ggplotSummary <- function(cpd = curr_cpd, cols=c("black", "pink"), sourceTable = mSet$dataSet$norm, cf=rainbow){
+ggplotSummary <- function(cpd = curr_cpd, cols=c("black", "pink"), sourceTable = mSet$dataSet$norm, cf=rainbow, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
   cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
   if(substring(mSet$dataSet$format,4,5)!="ts"){
     # --- ggplot ---
@@ -161,7 +161,7 @@ ggplotSummary <- function(cpd = curr_cpd, cols=c("black", "pink"), sourceTable =
   #
 }
 
-ggPlotTT <- function(cf, n){
+ggPlotTT <- function(cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]], n, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
   profile <- as.data.table(mSet$analSet$tt$p.log[mSet$analSet$tt$inx.imp],keep.rownames = T)
   colnames(profile) <- c("cpd", "p")
   profile$Peak <- c(1:nrow(profile)) 
@@ -175,7 +175,7 @@ ggPlotTT <- function(cf, n){
   plotly::ggplotly(plot, tooltip="cpd")
 }
 
-ggPlotFC <- function(cf, n){
+ggPlotFC <- function(cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]], n, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
   profile <- as.data.table(mSet$analSet$fc$fc.log[mSet$analSet$fc$inx.imp],keep.rownames = T)
   profile
   colnames(profile) <- c("cpd", "log2fc")
@@ -189,7 +189,7 @@ ggPlotFC <- function(cf, n){
   plotly::ggplotly(plot, tooltip="log2fc")
 }
 
-ggPlotVolc <- function(cf=rainbow, n=256){
+ggPlotVolc <- function(cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]], n=256, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
     vcn<-mSet$analSet$volcano;
     dt <- as.data.table(vcn$sig.mat[,c(2,4)],keep.rownames = T)
     colnames(dt) <- c("cpd", "log2FC", "-log10P")
@@ -205,7 +205,7 @@ ggPlotVolc <- function(cf=rainbow, n=256){
     plotly::ggplotly(plot, tooltip="cpd")
 }
 
-ggPlotPCApairs <- function(cols = c("black", "pink"), pc.num, type = "pca", cf = rainbow){
+ggPlotPCApairs <- function(cols = c("black", "pink"), pc.num, type = "pca", cf = rainbow, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
   
   cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
   
@@ -271,7 +271,7 @@ ggPlotPCApairs <- function(cols = c("black", "pink"), pc.num, type = "pca", cf =
   # }
 }
 
-ggPlotClass <- function(pls.type = "plsda", cf = "rainbow", pcs = 3){
+ggPlotClass <- function(pls.type = "plsda", cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], pcs = 3, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
   res <- mSet$analSet$plsda$fit.info
   colnames(res) <- 1:ncol(res)
   # best.num <- mSet$analSet$plsda$best.num
@@ -288,7 +288,7 @@ ggPlotClass <- function(pls.type = "plsda", cf = "rainbow", pcs = 3){
   return(p)
   }
 
-ggPlotPerm<- function(pls.type = "plsda", cf = "rainbow"){
+ggPlotPerm<- function(pls.type = "plsda", cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], pcs = 3, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
   bw.vec <- mSet$analSet$plsda$permut
   len <- length(bw.vec)
   df <- melt(bw.vec)
@@ -312,7 +312,7 @@ ggPlotPerm<- function(pls.type = "plsda", cf = "rainbow"){
  return(p)
 }
 
-plot.many <- function(res.obj = models, which_alpha = 1){
+plot.many <- function(res.obj = models, which_alpha = 1, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
   
   predictions <- if(length(res.obj) > 1) do.call("cbind", lapply(res.obj, function(x) x$prediction)) else data.frame(res.obj[[1]]$prediction)
   
@@ -375,7 +375,7 @@ plot.many <- function(res.obj = models, which_alpha = 1){
 }
 
 
-ggPlotROC <- function(xvals, attempts = 50, cf = rainbow){
+ggPlotROC <- function(xvals, attempts = 50, cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
   
   require(ROCR)
   require(ggplot2)
@@ -426,7 +426,7 @@ ggPlotROC <- function(xvals, attempts = 50, cf = rainbow){
     coord_cartesian(xlim = c(.04,.96), ylim = c(.04,.96))
 }
 
-ggPlotBar <- function(repeats, attempts=50, color.function=rainbow, topn=50, ml_name){
+ggPlotBar <- function(repeats, attempts=50,  cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], topn=50, ml_name, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
   
   # - - - - - - - - - - - - -
   
@@ -472,7 +472,7 @@ ggPlotBar <- function(repeats, attempts=50, color.function=rainbow, topn=50, ml_
     p <- ggplot(data[1:topn,], aes(mz,count))
     p + geom_bar(stat = "identity", aes(fill = count)) +
       geom_hline(aes(yintercept=attempts)) + 
-      scale_fill_gradientn(colors=color.function(20)) +
+      scale_fill_gradientn(colors=cf(20)) +
       theme(legend.position="none",
             axis.text=element_text(size=8),
             axis.title=element_text(size=13,face="bold"),
@@ -485,7 +485,7 @@ ggPlotBar <- function(repeats, attempts=50, color.function=rainbow, topn=50, ml_
     p <- ggplot(data[1:topn,], aes(mz,mda))
     p + geom_bar(stat = "identity", aes(fill = mda)) +
       #geom_hline(aes(yintercept=attempts)) + 
-      scale_fill_gradientn(colors=color.function(20)) +
+      scale_fill_gradientn(colors=cf(20)) +
       theme(legend.position="none",
             axis.text=element_text(size=8),
             axis.title=element_text(size=13,face="bold"),
@@ -496,7 +496,11 @@ ggPlotBar <- function(repeats, attempts=50, color.function=rainbow, topn=50, ml_
   }
 }
 
-plotPCA.3d <- function(mSet, chosen.colors, pcx, pcy, pcz){
+plotPCA.3d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, pcz, mode="pca"){
+  switch(mode, 
+         pca = {
+           
+         })
   df <- mSet$analSet$pca$x
   #x =1;y=2;z=3
   x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
@@ -535,7 +539,7 @@ plotPCA.3d <- function(mSet, chosen.colors, pcx, pcy, pcz){
     )
   }
   adj_plot <<- plotly_build(plots)
-  rgbcols <- toRGB(chosen.colors)
+  rgbcols <- toRGB(cols)
   c = 1
   for(i in seq_along(adj_plot$x$data)){
     item = adj_plot$x$data[[i]]
@@ -555,7 +559,7 @@ plotPCA.3d <- function(mSet, chosen.colors, pcx, pcy, pcz){
     visible = rep(T, times=fac.lvls),
     type = "scatter3d",
     opacity=1,
-    color= mSet$dataSet$cls, colors=chosen.colors
+    color= mSet$dataSet$cls, colors=cols
   ) %>%  layout(scene = list(
     aspectmode="cube",
     xaxis = list(
@@ -571,26 +575,30 @@ plotPCA.3d <- function(mSet, chosen.colors, pcx, pcy, pcz){
   pca_plot
 }
 
-plotPCA.2d <- function(mSet, chosen.colors, pcx, pcy){
-  df <- mSet$analSet$pca$x
-  #x =1;y=2;z=3
-  x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
-  y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
-  fac.lvls <- length(levels(mSet$dataSet$cls))
-  
-  xc=mSet$analSet$pca$x[, pcx]
-  yc=mSet$analSet$pca$x[, pcy]
-  
-  dat_long <- data.table(variable = names(xc),
-                        group = mSet$dataSet$cls,
-                        x = xc, 
-                        y = yc)
-  
+plotPCA.2d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, mode="pca", plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
+  switch(mode,
+         pca={
+           df <- mSet$analSet$pca$x
+           #x =1;y=2;z=3
+           x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
+           y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
+           fac.lvls <- length(levels(mSet$dataSet$cls))
+           
+           xc=mSet$analSet$pca$x[, pcx]
+           yc=mSet$analSet$pca$x[, pcy]
+           
+           dat_long <- data.table(variable = names(xc),
+                                  group = mSet$dataSet$cls,
+                                  x = xc, 
+                                  y = yc)
+         }, plsda = {
+           ...
+         })
   # - - - - - - - - -
   
   p <- ggplot(dat_long, aes(x, y, color = group, fill=group)) +
     geom_point()+
-    scale_fill_manual(values=chosen.colors) +
+    scale_fill_manual(values=cols) +
     stat_ellipse(geom = "polygon", alpha = 0.3) +
     plot.theme() +
     theme(legend.position="none",
