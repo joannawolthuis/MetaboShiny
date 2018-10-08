@@ -734,6 +734,11 @@ shinyServer(function(input, output, session) {
                           dark=ggplot2::theme_dark,
                           light=ggplot2::theme_light,
                           line=ggplot2::theme_linedraw)
+    output$ggplot_theme_example <- renderPlot({
+      p <- ggplot(mtcars) + geom_boxplot(aes(x = wt, y = mpg,
+                                           colour = factor(gear)))
+      p + plot.theme()
+    })
   })
   
   observeEvent(input$change_css, {
@@ -1876,10 +1881,10 @@ shinyServer(function(input, output, session) {
                used.analysis <- "tt"
                used.values <- "p.value"
              }else{
-               print("fc heatmap...")
                used.analysis <- "fc"
                used.values <- "fc.all"
              }
+             
              sourceTable <- mSet$analSet[[used.analysis]]$inx.imp[mSet$analSet[[used.analysis]]$inx.imp == TRUE]
              if(length(sourceTable) == 0){
                ordered <- order(mSet$analSet[[used.analysis]][[used.values]], decreasing = F)

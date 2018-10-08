@@ -476,6 +476,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                     "Grid, white bg, gray axes"="light",
                                                                                                     "Line drawing"="line"),
                                                     selected = "Minimal"),
+                                        fluidRow(plotOutput("ggplot_theme_example",inline = F, width="40%")),
                                         h2("Continuous data"),
                                         selectInput("color_ramp", label = "Color scheme", choices = list("RAINBOW!"="rb",
                                                                                                          "Yellow - blue"="y2b",
@@ -516,7 +517,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                          "Pastel2", "Set1", "Set2", "Set3"
                                         )
                                         ),
-                                        fluidRow(plotly::plotlyOutput("ramp_plot",inline = T, width="100%")),
+                                        fluidRow(plotly::plotlyOutput("ramp_plot",inline = T, width="50%")),
                                         h2("Discrete data"),
                                         uiOutput("colourPickers")
                                ),
