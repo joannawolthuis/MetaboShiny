@@ -26,7 +26,8 @@ get_matches <- function(cpd = NA,
                         chosen.db, 
                         search_formula = F,
                         searchid = "mz",
-                        inshiny=TRUE){
+                        inshiny=TRUE,
+                        append=FALSE){
   
   # --- connect to db ---
   
@@ -56,13 +57,14 @@ get_matches <- function(cpd = NA,
     
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb)
     
-    cpd = curr_cpd
+    #cpd = curr_cpd
     
     RSQLite::dbExecute(conn, gsubfn::fn$paste("ATTACH '$chosen.db' AS db"))
     
     func <- function(){
-      if(!DBI::dbExistsTable(conn, "unfiltered"))
+      if(!DBI::dbExistsTable(conn, "unfiltered") | !append)
       {
+        RSQLite::dbExecute(conn, 'DROP TABLE IF EXISTS unfiltered')
         # create
         RSQLite::dbExecute(conn, gsubfn::fn$paste(strwrap(
           "CREATE TABLE unfiltered AS
@@ -99,7 +101,8 @@ get_matches <- function(cpd = NA,
       # 1. Find matches in range (reasonably fast <3)
       if(inshiny) shiny::setProgress(value = 0.4)
       
-      if(!DBI::dbExistsTable(conn, "isotopes")){
+      if(!DBI::dbExistsTable(conn, "isotopes") | !append){
+        RSQLite::dbExecute(conn, 'DROP TABLE IF EXISTS isotopes')
         # create
         RSQLite::dbExecute(conn,
                            "CREATE TABLE isotopes AS
@@ -119,8 +122,9 @@ get_matches <- function(cpd = NA,
                            AND u.adduct = cpd.adduct")
       }
       
-      if(!DBI::dbExistsTable(conn, "adducts")){
-        # create
+      if(!DBI::dbExistsTable(conn, "adducts") | !append){
+        RSQLite::dbExecute(conn, 'DROP TABLE IF EXISTS adducts')
+        # - - - - - - - - -
         RSQLite::dbExecute(conn,
                            "CREATE TABLE adducts AS
                            SELECT DISTINCT cpd.*
@@ -450,7 +454,7 @@ get_all_matches <- function(#exp.condition=NA,
   res
 }
 
-multimatch <- function(cpd, dbs, searchid="mz"){
+multimatch <- function(cpd, dbs, searchid="mz", inshiny=T){
   
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb) # change this to proper var later
   DBI::dbExecute(conn, "DROP TABLE IF EXISTS unfiltered")
@@ -463,21 +467,36 @@ multimatch <- function(cpd, dbs, searchid="mz"){
     match_table <<- match_table[,-"score"]
   }
   
+  i = 1
+  
   match_list <- lapply(dbs, FUN=function(match.table){
     dbname <- gsub(basename(match.table), pattern = "\\.full\\.db", replacement = "")
     
+    #print(dbname)
+    
     res <- get_matches(cpd, 
                        match.table, 
-                       searchid=searchid)
+                       searchid=searchid,
+                       inshiny=inshiny,
+                       append = if(i == 1) F else T)
+    
+    #print(res)
+    
+    i <<- i + 1
+    
     if(nrow(res) > 0){
       res = cbind(res, source = c(dbname))
+      #res$source = c(dbname)
     }
+    
+    res
   })
   
   if(is.null(unlist(match_list))) return(data.table(name = "None",
-                                                    description = "Unknown compound"))
+                                                    description = "Unknown compound",
+                                                    soucre = "None"))
   
-  match_table <- (as.data.table(rbindlist(match_list))[name != ""])
+  match_table <- (as.data.table(rbindlist(match_list, fill=T))[name != ""])
   # --- sort ---
   match_table <- match_table[order(match(match_table$adduct, sort_order))]
   # --- merge description and identifier ---
@@ -488,5 +507,5 @@ multimatch <- function(cpd, dbs, searchid="mz"){
     match_table$isopercentage <- round(match_table$IsoPerc, digits = 2)
   }
   # --- return ---
-  match_table[,-c("source", "identifier")]
+  match_table[,-c("identifier")]
 }

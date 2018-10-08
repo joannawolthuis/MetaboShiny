@@ -13,6 +13,7 @@ get.csv <- function(patdb,
   
   library(data.table)
   
+  patdb <- "/Users/jwolthuis/Analysis/SP/IBD_TESTRUN.db"
   # - - announce some stuff - -
   
   adducts <- paste(which_adducts, collapse = ", ")
@@ -39,7 +40,6 @@ get.csv <- function(patdb,
                         #,var_table,
                         #batches
                         )
-
   }else{
     query <- strwrap(gsubfn::fn$paste("select distinct d.*, s.*, b.*,
                                       i.mzmed as identifier,

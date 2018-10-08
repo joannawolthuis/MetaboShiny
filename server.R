@@ -24,7 +24,9 @@ shinyServer(function(input, output, session) {
   output$spinny <- renderText({spinnyimg()})
   
   output$taskbar_image <- renderImage({
-    list(src = file.path(getwd(), "www", getOptions("user_options.txt")$taskbar_image), 
+    list(src = file.path(getwd(), 
+                         "www", 
+                         getOptions("user_options.txt")$taskbar_image), 
          width = 120,
          height = 120,
          style = "background-image:linear-gradient(0deg, transparent 50%, #aaa 50%),linear-gradient(90deg, #aaa 50%, #ccc 50%);background-size:10px 10px,10px 10px;")
@@ -168,7 +170,7 @@ shinyServer(function(input, output, session) {
                                    ))
                ),
                tabPanel(h3("Heatmap"), value="heatmap_biv",
-                        plotly::plotlyOutput("heatmap",width="110%",height="700px"),
+                        plotly::plotlyOutput("heatmap",width="100%",height="700px"),
                         br(),
                         fluidRow(column(align="center",
                                         width=12,switchButton(inputId = "heatmode",
@@ -547,7 +549,7 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$nav_general, {
     # - - - - - -
-    pkg_tbl <- get.package.table()
+    pkg_tbl <- get.package.table() #TODO: sort by 'No' first!! (ascending?) - or translate to numeric factor first?
     #pkg_tbl <- rbind(pkg_tbl, data.table("lalalala", 'No', "1.1.1"))
     #pkg_tbl <- pkg_tbl[order(pkg_tbl$Installed,decreasing = T),]
     output$package_tab <- DT::renderDataTable({
@@ -563,6 +565,16 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$update_packages, {
     pacman::p_load(char = global$constants$packages, update = T, character.only = T)
+    # - - refresh package list - - 
+    pkg_tbl <- get.package.table() 
+    output$package_tab <- DT::renderDataTable({
+      # - - - - - - - - - - -
+      DT::datatable(pkg_tbl,
+                    selection = 'none',
+                    autoHideNavigation = T,
+                    options = list(lengthMenu = c(10, 20, 30), pageLength = 10), 
+                    rownames = F)
+    })
   })
 
   observe({
@@ -575,17 +587,21 @@ shinyServer(function(input, output, session) {
   
   observe({
     # - - - - 
-    if(is.null(input$taskbar_image_path)) return()
-    if(input$taskbar_image_path == 0) return()
+    if(!is.list(input$taskbar_image_path)) return()
+    print(input$taskbar_image_path)
     img_path <- parseFilePaths(global$paths$volumes, input$taskbar_image_path)$datapath
     new_path <- file.path(getwd(), "www", basename(img_path))
+    
+    print(img_path)
+    print(new_path)
+    
     if(img_path != new_path) file.copy(img_path, new_path, overwrite = T)
     # - - -
     output$taskbar_image <- renderImage({
       list(src = new_path, 
            width = 120,
            height = 120,
-           style = "background-image:linear-gradient(0deg, transparent 50%, #aaa 50%),linear-gradient(90deg, #aaa 50%, #ccc 50%);background-size:10px 10px,10px 10px;")
+           style = "background-image:linear-gradient(0deg, transparent 50%, #aaa 50%),linear-gradient(90deg, #aaa 50%, #ccc 50%);background-size:10px 10px,10px 10px;") # blocky bg
       #
     }, deleteFile = FALSE)
     # - - -
@@ -596,7 +612,12 @@ shinyServer(function(input, output, session) {
     shinyDirChoose(input, "get_db_dir", 
                    roots=global$paths$volumes, 
                    session = session)
-    if(is.null(input$get_db_dir)) return()
+     
+    test <<- input$get_db_dir
+    
+    if(typeof(input$get_db_dir) != "list") return()
+
+    print(input$get_db_dir)
     given_dir <- parseDirPath(global$paths$volumes, 
                               input$get_db_dir)
     if(is.null(given_dir)) return()
@@ -605,15 +626,18 @@ shinyServer(function(input, output, session) {
     output$curr_db_dir <- renderText({getOptions('user_options.txt')$db_dir})
   })
   
-  observe({  
-    shinyDirChoose(input, "get_work_dir", 
-                   roots = global$paths$volumes, 
+  observe({
+    shinyDirChoose(input, "get_work_dir",
+                   roots = global$paths$volumes,
                    session = session)
-    if(is.null(input$get_work_dir)) return()
-    given_dir <- parseDirPath(global$paths$volumes, 
+
+    if(typeof(input$get_work_dir) != "list") return()
+    
+    print(input$get_work_dir)
+    given_dir <- parseDirPath(global$paths$volumes,
                               input$get_work_dir)
     if(is.null(given_dir)) return()
-    setOption("user_options.txt", "db_dir", given_dir)
+    setOption("user_options.txt", "work_dir", given_dir)
     output$curr_exp_dir <- renderText({getOptions('user_options.txt')$work_dir})
   })
   
@@ -635,22 +659,53 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$color_ramp,{
     output$ramp_plot <- plotly::renderPlotly({
-      global$functions$color.function <<- switch(input$color_ramp,
-                                "rb"=rainbow,
-                                "y2b"=ygobb,
-                                "ml1"=matlab.like2,
-                                "ml2"=matlab.like,
-                                "m2g"=magenta2green,
-                                "c2y"=cyan2yellow,
-                                "b2y"=blue2yellow,
-                                "g2r"=green2red,
-                                "b2g"=blue2green,
-                                "b2r"=blue2red,
-                                "b2p"=cm.colors,
-                                "bgy"=topo.colors,
-                                "gyw"=terrain.colors,
-                                "ryw"=heat.colors,
-                                "bw"=blackwhite.colors)
+      # global$functions$color.function <<- switch(input$color_ramp,
+      #                                            "rb"=rainbow,
+      #                                            "y2b"=ygobb,
+      #                                            "ml1"=matlab.like2,
+      #                                            "ml2"=matlab.like,
+      #                                            "m2g"=magenta2green,
+      #                                            "c2y"=cyan2yellow,
+      #                                            "b2y"=blue2yellow,
+      #                                            "g2r"=green2red,
+      #                                            "b2g"=blue2green,
+      #                                            "b2r"=blue2red,
+      #                                            "b2p"=cm.colors,
+      #                                            "bgy"=topo.colors,
+      #                                            "gyw"=terrain.colors,
+      #                                            "ryw"=heat.colors,
+      #                                            "bw"=blackwhite.colors)
+
+      brew.cols <- c("Blues", "BuGn", "BuPu", "GnBu", "Greens", "Greys", # - - sequential - -
+                   "Oranges", "OrRd", "PuBu", "PuBuGn", "PuRd", "Purples", 
+                   "RdPu", "Reds", "YlGn", "YlGnBu", "YlOrBr", "YlOrRd", 
+                   "BrBG", "PiYG", "PRGn", "PuOr", "RdBu", "RdGy", "RdYlBu", "RdYlGn", "Spectral", # - - diverging - -
+                   "Accent", "Dark2", "Paired", "Pastel1", "Pastel2", "Set1", "Set2", "Set3" # - - qualitative - -
+                   )
+      
+      brew.opts <- lapply(brew.cols, function(opt) colorRampPalette(RColorBrewer::brewer.pal(10, opt)))
+      names(brew.opts) <- brew.cols
+      
+      base.opts <- list("rb"=rainbow,
+                        "y2b"=ygobb,
+                        "ml1"=matlab.like2,
+                        "ml2"=matlab.like,
+                        "m2g"=magenta2green,
+                        "c2y"=cyan2yellow,
+                        "b2y"=blue2yellow,
+                        "g2r"=green2red,
+                        "b2g"=blue2green,
+                        "b2r"=blue2red,
+                        "b2p"=cm.colors,
+                        "bgy"=topo.colors,
+                        "gyw"=terrain.colors,
+                        "ryw"=heat.colors,
+                        "bw"=blackwhite.colors)
+      
+      all.opts <- append(base.opts, brew.opts)
+      
+      global$functions$color.function <<- all.opts[[input$color_ramp]]
+      
       ax <- list(
         title = "",
         zeroline = FALSE,
@@ -659,7 +714,9 @@ shinyServer(function(input, output, session) {
         showgrid = FALSE,
         titlefont = list(size = 20)
       )
-      # --- render ---
+      
+      # --- re-render --- 
+      #TODO: SHOULD BE GENERAL PURPOSE FUNCTION w/ listeners
       plotly::plot_ly(z = volcano, 
                       colors = global$functions$color.function(100), 
                       type = "heatmap",
@@ -680,15 +737,7 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$change_css, {
-    # input <- list(bar.col.1 = "ffc8c2", 
-    #               bar.col.2 = "e1897f", 
-    #               bar.col.3 = "ffffff", 
-    #               bar.col.4 = "ffffff",
-    #               font.1 = "Press Start 2P",
-    #               font.2 = "Raleway bold",
-    #               font.3 = "Raleway",
-    #               font.4 = "Raleway serif")
-    # --- connect ---
+    # - - - - - - - - - - - - - - -
     setOption("user_options.txt", "col1", input$bar.col.1)
     setOption("user_options.txt", "col2", input$bar.col.2)
     setOption("user_options.txt", "col3", input$bar.col.3)
@@ -1170,11 +1219,11 @@ shinyServer(function(input, output, session) {
       # --- batches ---
       
       # input <- list(batch_var = "Batch",
-      #               exp_var = "Stool_condition",
+      #               exp_var = "Group",
       #               perc_limit = .99,
       #               filt_type = "none",
       #               miss_type = "rf",
-      #               norm_type = "QuantileNorm",
+      #               norm_type = "SumNorm",
       #               trans_type = "LogNorm",
       #               scale_type = "AutoNorm",
       #               ref_var = "none",
@@ -1199,9 +1248,6 @@ shinyServer(function(input, output, session) {
                         csv_orig[,-..exp.vars,with=FALSE])
       
       # --- remove the rest ---
-      
-      #remove = setdiff(colnames(csv_temp)[exp.vars], c(batches, "Label","Batch","Sample","Time"))
-      #remain = intersect(colnames(csv_temp)[exp.vars], c(batches, "Label","Batch","Sample","Time"))
       
       csv_subset <- csv_temp
       
@@ -1387,9 +1433,11 @@ shinyServer(function(input, output, session) {
       
       # - - - - - - - - - - - - - - - - - - - - - - -
       
+      has.qc <- length(qc_rows) > 0
+        
       if(batch_corr){
         
-        if("Batch" %in% input$batch_var & length(qc_rows) > 0){
+        if("Batch" %in% input$batch_var & has.qc){
           
           smpnames = smps[qc_rows]
           
@@ -1427,7 +1475,7 @@ shinyServer(function(input, output, session) {
         }
         
         left_batch_vars <- grep(input$batch_var, 
-                                pattern =  "Batch|Injection|Sample",
+                                pattern =  ifelse(has.qc, "Batch|Injection|Sample", "Injection|Sample"),
                                 value = T,
                                 invert = T)
         
@@ -1469,8 +1517,6 @@ shinyServer(function(input, output, session) {
                                                           batch2 = csv_pheno$batch2))
             rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
           }
-          
-          #mod.batch = model.matrix(~ batch1 + batch2 + outcome, data=csv_pheno)
           
           mSet$dataSet$norm <<- as.data.frame(batch_normalized)
         }
@@ -1746,13 +1792,13 @@ shinyServer(function(input, output, session) {
                  aspectmode="cube",
                  xaxis = list(
                    titlefont = list(size = 20),
-                   title = fn$paste("$x ($x.var %)")),
+                   title = gsubfn::fn$paste("$x ($x.var %)")),
                  yaxis = list(
                    titlefont = list(size = 20),
-                   title = fn$paste("$y ($y.var %)")),
+                   title = gsubfn::fn$paste("$y ($y.var %)")),
                  zaxis = list(
                    titlefont = list(size = 20),
-                   title = fn$paste("$z ($z.var %)")))) 
+                   title = gsubfn::fn$paste("$z ($z.var %)")))) 
                # --- return ---
                pca_plot
              })
@@ -1830,10 +1876,17 @@ shinyServer(function(input, output, session) {
                used.analysis <- "tt"
                used.values <- "p.value"
              }else{
+               print("fc heatmap...")
                used.analysis <- "fc"
                used.values <- "fc.all"
              }
              sourceTable <- mSet$analSet[[used.analysis]]$inx.imp[mSet$analSet[[used.analysis]]$inx.imp == TRUE]
+             if(length(sourceTable) == 0){
+               ordered <- order(mSet$analSet[[used.analysis]][[used.values]], decreasing = F)
+               sourceTable <- mSet$analSet[[used.analysis]][[used.values]][ordered][1:100]
+               #sourceTable <- mSet$analSet[[used.analysis]]$inx.imp[mSet$analSet[[used.analysis]]$inx.imp == TRUE]
+             }
+             
              #sourceTable <- sort(mSet$analSet[[used.analysis]][[used.values]])[1:100]
              # --- render ---
              withProgress({
@@ -1843,24 +1896,32 @@ shinyServer(function(input, output, session) {
                  translator <- data.table(Sample=rownames(mSet$dataSet$norm),Group=mSet$dataSet$cls)
                  group_assignments <- translator[,"Group",on=colnames(final_matrix)]$Group
                  
-                 cols_mapped <- unlist(sapply(as.numeric(group_assignments), function(i) cols[i]))
+                 color.mapper <- {
+                  classes <- levels(mSet$dataSet$cls)
+                  cols <- sapply(1:length(classes), function(i) color.vec()[i])
+                  names(cols) <- classes
+                  # - - -
+                  cols
+                 }
                  
-                 # TODO
-                 #global$constants$palette_choice <- "PiYG"
-                 #global$constants$palette_reverse <- FALSE
-                 #cols <- rev(colorRampPalette(RColorBrewer::brewer.pal(10, global$constants$palette))(256))
+                 assignment.df <- as.data.frame(group_assignments)
+                 colnames(assignment.df) <- "Group"
                  
-                 heatmaply::heatmaply(final_matrix
-                                      ,Colv=T, Rowv=T,
+                 heatmaply::heatmaply(final_matrix,
+                                      Colv=T, 
+                                      Rowv=T,
                                       branches_lwd = 0.3,
-                                      margins = c(60,0,NA,50),
+                                      margins = c(60, 0, NA, 50),
                                       colors = global$functions$color.function(256),
-                                      col_side_colors = group_assignments,
-                                        #cols_mapped,
+                                      col_side_colors = assignment.df,
+                                      col_side_palette = color.mapper,
                                       subplot_widths = c(.9,.1),
-                                      #subplot_heights =  c(.15,.85),
                                       subplot_heights =  c(.1,.05,.85),
-                                      column_text_angle = 90
+                                      column_text_angle = 90,
+                                      xlab = "Sample",
+                                      ylab = "m/z",
+                                      showticklabels = c(T,F)
+                                      #label_names = c("m/z", "sample", "intensity") #breaks side colours
                                       )
                })               
              })
@@ -2009,7 +2070,7 @@ shinyServer(function(input, output, session) {
                coords <- mSet$analSet$plsr$scores
                colnames(coords) <- paste0("PC", 1:ncol(coords))
                # --- vip table ---
-               colnames(mSet$analSet$plsda$vip.mat) <- paste0("PC", 1:ncol(mSet$analSet$plsda$vip.mat))
+               colnames(mSet$analSet$plsda$vip.mat) <<- paste0("PC", 1:ncol(mSet$analSet$plsda$vip.mat))
                compounds_pc <- as.data.table(mSet$analSet$plsda$vip.mat,keep.rownames = T)
                ordered_pc <- setorderv(compounds_pc, input$plsda_vip_cmp, -1)
                plsda_tab <<- cbind(ordered_pc[1:50, c("rn")], 
@@ -2122,13 +2183,13 @@ shinyServer(function(input, output, session) {
           aspectmode="cube",
           xaxis = list(
             titlefont = list(size = 20),
-            title = fn$paste("$x ($x.var %)")),
+            title = gsubfn::fn$paste("$x ($x.var %)")),
           yaxis = list(
             titlefont = list(size = 20),
-            title = fn$paste("$y ($y.var %)")),
+            title = gsubfn::fn$paste("$y ($y.var %)")),
           zaxis = list(
             titlefont = list(size = 20),
-            title = fn$paste("$z ($z.var %)")
+            title = gsubfn::fn$paste("$z ($z.var %)")
           )
         ))
     })
@@ -2710,6 +2771,7 @@ shinyServer(function(input, output, session) {
     curr_def <<- browse_table[curr_row,'Description']
     output$browse_definition <- renderText(curr_def$Description)
     # --- search ---
+    #TODO: this should be a function and not re-written
     output$meba_specific_plot <- plotly::renderPlotly({ggplotMeba(curr_cpd, draw.average=T, cols = color.vec(),cf=global$functions$color.function)})
     output$asca_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=global$functions$color.function)})
     output$fc_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = color.vec(),cf=global$functions$color.function)})
@@ -2733,6 +2795,7 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$go_enrich,{
+    #TODO: fix, currently broken (build in m/z > cpd search?)
     enrich_db_list <- paste0("./backend/db/", c("kegg", 
                                                 "wikipathways", 
                                                 "smpdb",
