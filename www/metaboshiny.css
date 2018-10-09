@@ -1,13 +1,3 @@
-/* progress bar */
-/* @import url('https://fonts.googleapis.com/css?family=Press+Start+2P|Raleway:bold|Raleway|Raleway:serif');   
-
-@import url('https://fonts.googleapis.com/css?family=Press+Start+2P|Raleway:bold,serif');
-h1 {  margin: 2px;  font-family: 'Press Start 2P' !important;  font-weight: 15;  line-height: 0.5;  }    
-h2 {  margin: 1px;  font-family: 'Raleway', bold !important;  font-weight: bold;  font-size: 20pt;  line-height: 1;  }    
-h3 {  margin: 1px;  font-family: 'Raleway' !important;  font-weight: bold;  font-size: 15pt;  line-height: 1;  }    
-body {  font-family: 'Raleway', serif !important;   font-size: 12pt;  }  
-*/
-
 .shiny-notification {
             height: 50px;
             width: 100%;
@@ -15,6 +5,7 @@ body {  font-family: 'Raleway', serif !important;   font-size: 12pt;  }
             left: 0%;
             bottom: 0%;
             }
+
 
 .progress-bar {
   height: 5px;
@@ -38,7 +29,7 @@ body {  font-family: 'Raleway', serif !important;   font-size: 12pt;  }
   left: 15px;
   background: linear-gradient(to right, transparent 50%, white 50%), linear-gradient(to right, orange, yellow, green, cyan, blue, violet);
   background-size: 16px 5px, 100% 5px;
-  z-index:99998 !important;
+  /*z-index:99998 !important;*/
 }
 
 /* ON-OFF switch button */
@@ -71,6 +62,7 @@ body {  font-family: 'Raleway', serif !important;   font-size: 12pt;  }
   font-size: 14px; color: white; font-family: Trebuchet, Arial, sans-serif; font-weight: bold;
   box-sizing: border-box;
 }
+
 /* All switch - default div class */
 .onoffswitch-inner:before {
   content: " ";
@@ -100,17 +92,22 @@ body {  font-family: 'Raleway', serif !important;   font-size: 12pt;  }
   margin-left: 0;
 }
 
+
 /* Color change */
 /* RedGreen */
+
 .RedGreen .onoffswitch-inner:before {
   background-color: #008A0C; color: #FFFFFF;
 }
 .RedGreen .onoffswitch-inner:after {
   background-color: #D10000; color: #FFFFFF;
 }
-
 .RedGreen .onoffswitch-switch {
   background: #FFFFFF;
+  border: 2px solid #FFFFFF;
+}
+.RedGreen .onoffswitch-checkbox:checked + .onoffswitch-label .onoffswitch-switch {
+  background-color: #008A0C;
   border: 2px solid #FFFFFF;
 }
 
@@ -133,6 +130,7 @@ body {  font-family: 'Raleway', serif !important;   font-size: 12pt;  }
 }
 
 /* GreyBlue */ 
+
 .GreyBlue .onoffswitch-inner:before {
   background-color: #FFFFFF; color: #428bca;
 }
@@ -149,6 +147,7 @@ body {  font-family: 'Raleway', serif !important;   font-size: 12pt;  }
 
 /* Text change */
 /* On / Off */
+
 .OnOff .onoffswitch-inner:before {
   content: "ON";
   font-size: 15px;
@@ -158,7 +157,9 @@ body {  font-family: 'Raleway', serif !important;   font-size: 12pt;  }
   content: "OFF";
   font-size: 15px;
 }
+
 /* Yes / No */
+
 .YesNo .onoffswitch-inner:before {
   content: "YES";
   font-size: 15px;
@@ -168,7 +169,9 @@ body {  font-family: 'Raleway', serif !important;   font-size: 12pt;  }
   content: "NO";
   font-size: 15px;
 }
+
 /* True / False */
+
 .TrueFalse .onoffswitch-inner:before {
   content: "TRUE";
   font-size: 15px;
@@ -180,6 +183,7 @@ body {  font-family: 'Raleway', serif !important;   font-size: 12pt;  }
 }
 
 /* Tt / Fc */
+
 .TtFc .onoffswitch-inner:before {
   content: "TT";
   font-size: 15px;
@@ -191,6 +195,7 @@ body {  font-family: 'Raleway', serif !important;   font-size: 12pt;  }
 }
 
 /* 2d / 3d */
+
 .twodthreed .onoffswitch-inner:before {
   content: "2D";
   font-size: 20px;

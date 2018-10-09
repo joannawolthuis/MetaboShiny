@@ -1,8 +1,11 @@
 # - - helloo - - 
-"This script is currently used to start MetaboShiny.
+"
+- - -
+This script is currently used to start MetaboShiny.
 It takes care of installing packages necessary for 
-MetaboShiny to even start."
-
+MetaboShiny to even start.
+- - -
+"
 
 # Function to install packages, either through regular method or through downloading from git directly
 install.if.not <- function(package){

@@ -6,8 +6,6 @@ shinyServer(function(input, output, session) {
   
   source('./backend/scripts/joanna/shiny_general.R')
 
-  #theme_update(plot.title = element_text(hjust = 0.5))
-  
   shinyOptions(progress.style="old")
   
   parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
@@ -16,7 +14,7 @@ shinyServer(function(input, output, session) {
   ))
   
   parallel::clusterEvalQ(session_cl, library(data.table))
-  
+
   # - - - - - - - - - - - - -
   
   spinnyimg <- reactiveVal("www/electron.png")
@@ -50,17 +48,13 @@ shinyServer(function(input, output, session) {
                             sardine(fadeImageButton("add_dimedb", img.path = "dimedb.png")),
                             sardine(fadeImageButton("add_wikidata", img.path = "wikidata.png")),
                             sardine(fadeImageButton("add_vmh", img.path = "vmh.png"))
-                            
                           )),
                  tabPanel(icon("id-card-o"), value = "identifier",
                           br(),
                           tags$i("Select identifier"),
                           radioButtons(inputId = "group_by", label = NULL, choices = 
-                                         list(#"Pathway ID" = "pathway",
-                                           #"Database ID" = "identifier", 
-                                           #"Compound name" = "compoundname",
-                                           "Molecular formula" = "baseformula",
-                                           "Mass/charge" = "mz"), 
+                                         list("Molecular formula" = "baseformula",
+                                              "Mass/charge" = "mz"), 
                                        selected = "mz",
                                        width="100%")                             ), 
                  tabPanel(icon("plus-square"), value="adducts",
@@ -96,7 +90,8 @@ shinyServer(function(input, output, session) {
                # TODO: T-SNE
                tabPanel(h3("PCA"), value = "pca", #icon=icon("cube"),
                         fluidRow(column(12,align="center",plotly::plotlyOutput("plot_pca",height = "600px", width="600px"))),
-                        fluidRow(column(12,align="center",switchButton("pca_2d3d", label = "", col = "BW", type = "2d3d"))),
+                        fluidRow(column(12,align="center",
+                                        switchButton("pca_2d3d", label = "", col = "BW", type = "2d3d"))),
                         hr(),
                         fluidRow(column(3,
                                         selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:20),selected = "PC1",width="100%"),
@@ -214,43 +209,50 @@ shinyServer(function(input, output, session) {
                )
                ,tabPanel(h3("ML"), value = "ml",
                          fluidRow(
-                           column(width=4,
+                           column(width=3,align="center",
                                   selectInput("ml_method", 
                                               label = "Type:", 
                                               selected = "rf", 
                                               choices = list("Random Forest" = "rf",
                                                              "Lasso" = "ls",
                                                              "Group lasso" = "gls"),
-                                              multiple = F)
+                                              multiple = F),
+                                  sliderInput("ml_train_perc", 
+                                              label = "Percentage in training", 
+                                              min = 1,
+                                              max = 100,
+                                              step = 1,
+                                              value = 60, 
+                                              post = "%"),
+                                  selectInput("ml_folds", label="Fold CV",choices = c("5", 
+                                                                                      "10", 
+                                                                                      "20", 
+                                                                                      "50", 
+                                                                                      "LOOCV"),
+                                              multiple = F),
+                                  # - - - - - - - - - -
+                                  style="z-index:1002;"
                            ),
-                           column(width=1, br(), tags$a(img(src="help.png"), href="https://regex101.com")),
-                           column(width=2, textInput("ml_train_regex", label = "Regex for train:")),
-                           column(width=2, textInput("ml_test_regex", label = "Regex for test:")),
-                           column(width=2, textInput("ml_name", label="Name:"))
-                         ),
-                         fluidRow(
-                           column(width=5,sliderInput("ml_train_perc", 
-                                                      label = "Percentage in training", 
-                                                      min = 1,
-                                                      max = 100,
-                                                      step = 1,
-                                                      value = 60, 
-                                                      post = "%"),
-                                  selectInput("ml_folds", label="Fold CV",choices = c("5", "10", "20", "50", "LOOCV"),multiple = F)),
-                           column(width=2, 
-                                  #switchButton(inputId = "ml_saturation", label = "SatMode", value = FALSE, col = "BW", type = "OO"),
-                                  actionButton("do_ml",label="Go",width = "50px"),style = "margin-top: 35px;", align="left"),
-                           column(width=5,sliderInput("ml_attempts", 
-                                                      label = "Attempts", 
-                                                      min = 1,
-                                                      max = 100,
-                                                      step = 1,
-                                                      value = 20, 
-                                                      post = "x")
-                           )),
-                         
-                         hr()
-                         ,
+                           column(width=6,align="center",
+                                  sliderInput("ml_attempts", 
+                                              label = "Attempts", 
+                                              min = 1,
+                                              max = 100,
+                                              step = 1,
+                                              value = 20, 
+                                              post = "x"),
+                                  br(),
+                                  br(),
+                                  shinyWidgets::circleButton("do_ml",icon = h2("Go"), status = "default", size = "lg")
+                                  #actionButton("do_ml",label=h2("Go"),width = "150px", height="150px")
+                                  ),
+                           column(width=3,align="center",
+                                  textInput("ml_train_regex", label = "Regex for train:"),
+                                  textInput("ml_test_regex", label = "Regex for test:"),
+                                  tags$a(img(src="help.png"), href="https://regex101.com"),
+                                  textInput("ml_name", label="Name:"))
+                           ),
+                           hr(),
                          navbarPage(title="Results",id="ml_results",inverse=F,
                                     tabPanel(title = "ROC",value = "roc",icon=icon("area-chart"),
                                              plotlyOutput("ml_roc",height = "600px"),
@@ -267,7 +269,6 @@ shinyServer(function(input, output, session) {
                                                column(7, plotlyOutput("ml_specific_plot", 
                                                                       height="300px"))
                                              )
-                                             #,uiOutput("ml_table_ui")
                                     )
                          )
                ))
@@ -859,7 +860,7 @@ shinyServer(function(input, output, session) {
         build.base.db(db,
                       outfolder = getOptions("user_options.txt")$db_dir, 
                       cl = session_cl)
-        shiny::setProgress(session=session, 0.5)
+        shiny::setProgress(session = session, 0.5)
         build.extended.db(db, 
                           outfolder = getOptions("user_options.txt")$db_dir,
                           adduct.table = adducts, 
@@ -983,7 +984,9 @@ shinyServer(function(input, output, session) {
     req(getOptions("user_options.txt")$work_dir)
     # ---------
     withProgress({
-      shiny::setProgress(session=session, value= 1/4)
+      
+      shiny::setProgress(session = session, value= 1/4)
+      
       tbl <- get.csv(global$paths$patdb,
                      time.series = if(input$exp_type == "time_std") T else F,
                      group_adducts = if(length(global$vectors$add_search_list) == 0) F else T,
@@ -1836,6 +1839,7 @@ shinyServer(function(input, output, session) {
   
   observe({ # PCA PLOTS AND TABLES
     
+    if(!exists("mSet")) return()
     if(!("pca" %in% names(mSet$analSet))) return()
     
     # - - - - -
@@ -1902,17 +1906,18 @@ shinyServer(function(input, output, session) {
     })
   })
   
-    
+  observe({
+    if(!exists("mSet")) return()
     output$plsda_cv_plot <- renderPlot({
       if(!("plsda" %in% names(mSet$analSet) | "plsr" %in% names(mSet$analSet))) return()
       
       ggPlotClass(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
-      })
+    })
     output$plsda_perm_plot <- renderPlot({
       if(!("plsda" %in% names(mSet$analSet) | "plsr" %in% names(mSet$analSet))) return()
       
       ggPlotPerm(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
-      })
+    })
     output$plot_plsda_3d <- plotly::renderPlotly({
       if(!("plsda" %in% names(mSet$analSet) | "plsr" %in% names(mSet$analSet))) return()
       
@@ -1945,7 +1950,7 @@ shinyServer(function(input, output, session) {
                     autoHideNavigation = T,
                     options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
     })
-
+  })
   
   observeEvent(input$pca_2d3d,{
     

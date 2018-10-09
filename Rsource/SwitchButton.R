@@ -27,7 +27,7 @@ switchButton <- function(inputId, label, value=FALSE, col = "GB", type="TF") {
     stop("Please choose a color between \"RG\" (Red-Green) 
          and \"GB\" (Grey-Blue) and Black-white(added).")
   }
-  if (!type %in% c("OO", "TF", "YN", "TTFC")){
+  if (!type %in% c("OO", "TF", "YN", "TTFC", "2d3d")){
     warning("No known text type (\"OO\", \"TF\" or \"YN\") have been specified, 
             button will be empty of text") 
   }
@@ -52,7 +52,8 @@ switchButton <- function(inputId, label, value=FALSE, col = "GB", type="TF") {
       tags$div(class = "form-group shiny-input-container",
                tags$div(class = colclass,
                         tags$label(label, class = "control-label"),
-                        tags$div(class = "onoffswitch",
+                        tags$div(
+                          class = "onoffswitch",
                                  tags$input(type = "checkbox", name = "onoffswitch", class = "onoffswitch-checkbox",
                                             id = inputId, checked = ""
                                  ),

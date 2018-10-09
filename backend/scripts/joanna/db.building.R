@@ -1083,7 +1083,7 @@ build.base.db <- function(dbname=NA,
                                  # fix halogens
                                  
                                  halogens <- c("F1"="fluoride", "Cl1"="chloride", "Br1"="bromide", "I1"="iodide", "At1"="astatide")
-                                 w.halogens <- grep(x=last.wack.compounds$baseformula, "X")
+                                 w.halogens <- grep(x=wack.compounds$baseformula, "X")
                                  
                                  halogen.fixed.list <- pbapply::pblapply(w.halogens, function(i){
                                    
