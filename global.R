@@ -204,5 +204,6 @@ taskbar_image <<- options$task_img
 
 global$vectors$mycols <- get.col.map("user_options.txt")
 global$constants$spectrum <- options$gspec
+global$vectors$project_names <- unique(tools::file_path_sans_ext(list.files(options$work_dir)))
 
 print("loaded global settings")

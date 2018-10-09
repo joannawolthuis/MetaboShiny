@@ -13,7 +13,6 @@ get.csv <- function(patdb,
   
   library(data.table)
   
-  patdb <- "/Users/jwolthuis/Analysis/SP/IBD_TESTRUN.db"
   # - - announce some stuff - -
   
   adducts <- paste(which_adducts, collapse = ", ")

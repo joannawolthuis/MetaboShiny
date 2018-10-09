@@ -1661,7 +1661,7 @@ build.pat.db <- function(db.name,
 
 #' @export
 load.excel <- function(path.to.xlsx, 
-                       path.to.patdb = global$paths$patdb,
+                       path.to.patdb,
                        tabs.to.read = c(
                          #"General",
                          "Setup",

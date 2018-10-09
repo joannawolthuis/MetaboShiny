@@ -448,7 +448,12 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
            tabPanel("",  icon = icon("cog"), value="options", 
                     navbarPage(inverse=TRUE,"Settings", id="tab_settings",
                                tabPanel("Project", icon=icon("gift"),
-                                        textInput(inputId="proj_name", label="Project name", value = ''),
+                                        #textInput(inputId="proj_name", label="Project name", value = ''),
+                                        selectizeInput(inputId="proj_name", 
+                                                       label="Project name", 
+                                                       choices=global$vectors$project_names, 
+                                                       selected = getOptions("user_options.txt")$proj_name,
+                                                       options=list(create = TRUE)),
                                         actionButton("set_proj_name", label="Apply"),
                                         helpText("This name will be used in all save files."),
                                         textOutput("proj_name")
