@@ -1447,6 +1447,7 @@ shinyServer(function(input, output, session) {
       
       shiny::setProgress(session=session, value= .6)
       varNormPlots <- ggplotNormSummary(mSet)
+      varNormPlots$bl
       output$var1 <- renderPlot(varNormPlots$tl)
       output$var2 <- renderPlot(varNormPlots$bl)
       output$var3 <- renderPlot(varNormPlots$tr)

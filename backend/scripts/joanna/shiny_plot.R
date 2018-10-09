@@ -1,49 +1,57 @@
 #' @export
 ggplotNormSummary <- function(mSet, colmap = global$vectors$mycols, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
   # 4 by 4 plot, based on random 20-30 picked 
-  orig_data <- mSet$dataSet$procr
-  norm_data <- mSet$dataSet$norm
+  orig_data <- as.data.frame(mSet$dataSet$procr)
+  norm_data <- as.data.frame(mSet$dataSet$norm)
 
-  sampsize = if(nrow(norm_data) > 20) 20 else nrow(norm_data)
-  which_cpds <- sample(colnames(norm_data), sampsize, replace = FALSE, prob = NULL)
-  which_samps <- sample(rownames(norm_data), sampsize, replace = FALSE, prob = NULL)
+  candidate.samps <- intersect(rownames(orig_data), rownames(norm_data))
+  candidate.mzs <- intersect(colnames(orig_data), colnames(norm_data))
   
-  orig_melt <- reshape2::melt(cbind(id=which_samps, orig_data[which_samps, which_cpds]))
+  sampsize = if(nrow(norm_data) > 20) 20 else nrow(norm_data)
+  which_cpds <- sample(candidate.mzs, sampsize, replace = FALSE, prob = NULL)
+  which_samps <- sample(candidate.samps, sampsize, replace = FALSE, prob = NULL)
+  
+  orig_melt <- reshape2::melt(cbind(which_samps, orig_data[which_samps, which_cpds]))
   orig_melt[is.na(orig_melt)] <- 0
   
-  norm_melt <- reshape2::melt(cbind(id=which_samps, norm_data[which_samps, which_cpds]))
+  norm_melt <- reshape2::melt(cbind(which_samps, norm_data[which_samps, which_cpds]))
 
   plot <- ggplot2::ggplot(data=orig_melt) +
     plot.theme(base_size = 15) #+ facet_grid(. ~ variable) 
   
   RES1 <- plot + ggplot2::geom_density(ggplot2::aes(x=value), colour="blue", fill="blue", alpha=0.4)
-
-  RES2 <- plot + ggplot2::geom_boxplot(alpha=0.4,
-                              ggplot2::aes(x=value,y=variable),
-                              color=rainbow(sampsize), 
-                              alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(orig_melt$value)))
+  
+  RES2 <- plot + ggplot2::geom_boxplot(
+    ggplot2::aes(x=value,y=variable),
+    color=rainbow(sampsize), 
+    alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(orig_melt$value)))
   
   plot <- ggplot2::ggplot(data=norm_melt) +
     plot.theme(base_size = 15) #+ facet_grid(. ~ variable)
   
   RES3 <- plot + ggplot2::geom_density(ggplot2::aes(x=value), colour="pink", fill="pink", alpha=0.4)
   
-  RES4 <- plot + ggplot2::geom_boxplot(alpha=0.4,
-                      ggplot2::aes(x=value,y=variable),
-                      color=rainbow(sampsize), 
-                      alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(norm_melt$value)))
+  RES4 <- plot + ggplot2::geom_boxplot(
+    ggplot2::aes(x=value,y=variable),
+    color=rainbow(sampsize), 
+    alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(norm_melt$value)))
+  
+  # - - - - - - - - - - - - - - - - - - -
   
   list(tl=RES1, bl=RES2, tr=RES3, br=RES4)
 } 
 
 ggplotSampleNormSummary <- function(mSet, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
   # 4 by 4 plot, based on random 20-30 picked 
-  orig_data <- mSet$dataSet$orig
-  norm_data <- mSet$dataSet$norm
+  orig_data <- as.data.frame(mSet$dataSet$procr)
+  norm_data <- as.data.frame(mSet$dataSet$norm)
+  
+  candidate.samps <- intersect(rownames(orig_data), rownames(norm_data))
+  candidate.mzs <- intersect(colnames(orig_data), colnames(norm_data))
   
   sampsize = if(nrow(norm_data) > 20) 20 else nrow(norm_data)
   
-  which_samps <- sample(rownames(norm_data), 
+  which_samps <- sample(candidate.samps, 
                         sampsize, 
                         replace = FALSE, 
                         prob = NULL)
@@ -67,7 +75,7 @@ ggplotSampleNormSummary <- function(mSet, plot.theme = global$functions$plot.the
     plot.theme(base_size = 15) + ggplot2::geom_density(ggplot2::aes(x=value), colour="blue", fill="blue", alpha=0.4)
   
   RES2 <- ggplot2::ggplot(data=orig_melt) +
-    plot.theme(base_size = 15) + ggplot2::geom_boxplot(alpha=0.4,
+    plot.theme(base_size = 15) + ggplot2::geom_boxplot(
                       ggplot2::aes(x=value,y=Label),
                       color=rainbow(sampsize), 
                       alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(orig_melt$value),text=Label))
@@ -76,7 +84,7 @@ ggplotSampleNormSummary <- function(mSet, plot.theme = global$functions$plot.the
     plot.theme(base_size = 15) + ggplot2::geom_density(ggplot2::aes(x=value), colour="pink", fill="pink", alpha=0.4)
   
   RES4 <- ggplot2::ggplot(data=norm_melt) +
-    plot.theme(base_size = 15) + ggplot2::geom_boxplot(alpha=0.4,
+    plot.theme(base_size = 15) + ggplot2::geom_boxplot(
                       ggplot2::aes(x=value,y=Label),
                       color=rainbow(sampsize), 
                       alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(norm_melt$value),text=Label))
