@@ -109,26 +109,32 @@ shinyServer(function(input, output, session) {
                                         ))
                         )
                ),
-               tabPanel(h3("PLSDA"), value = "plsda", #icon=icon("cube"),
-                        fluidRow(
-                          selectInput("plsda_type", 
-                                      label="PLSDA subtype:", 
-                                      choices=list("Normal"="normal",
-                                                   "Orthogonal"="ortho",
-                                                   "Sparse"="sparse"), 
-                                      selected=1),
-                          actionButton("do_plsda",label="Go")
-                        ),
-                        hr(),
-                        fluidRow(column(12,align="center",plotly::plotlyOutput("plot_plsda",height = "400px", width="400px"))),
+               tabPanel(h3("PLSDA"), value = "plsda", 
+                        fluidRow(column(12,align="center",plotly::plotlyOutput("plot_plsda",height = "500px", width="500px"))),
                         fluidRow(column(12,align="center",switchButton("plsda_2d3d", label = "", col = "BW", type = "2d3d"))),
                         hr(),
                         fluidRow(column(3,
+                                        div(style="display:inline-block",
+                                            selectInput("plsda_type", 
+                                                        label="Type:", 
+                                                        choices=list("Normal"="normal",
+                                                                     "Orthogonal"="ortho",
+                                                                     "Sparse"="sparse"), 
+                                                        width = '100px',
+                                                        selected=1)),
+                                        div(style="display:inline-block",
+                                            shinyWidgets::circleButton("do_plsda", icon = icon("hand-pointer-o"), size = "sm")
+                                            #actionButton("do_plsda",label="Go",inline=T)
+                                        ),
                                         selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:8),selected = "PC1",width="100%"),
                                         selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:8),selected = "PC2",width="100%"),
                                         selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:8),selected = "PC3",width="100%")),
                                  column(9,
                                         tabsetPanel(id="plsda_2", 
+                                                    tabPanel(title="Cross-validation", 
+                                                             plotOutput("plsda_cv_plot")),
+                                                    tabPanel(title="Permutation", 
+                                                             plotOutput("plsda_perm_plot")),
                                                     tabPanel(title="Table", 
                                                              div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')),
                                                     tabPanel(title="Loadings", 
@@ -243,7 +249,7 @@ shinyServer(function(input, output, session) {
                                               post = "x"),
                                   br(),
                                   br(),
-                                  shinyWidgets::circleButton("do_ml",icon = h2("Go"), status = "default", size = "lg")
+                                  shinyWidgets::circleButton("do_ml",icon = h3(paste("Go"), icon("hand-pointer-o", "fa-lg")), status = "default", size = "lg")
                                   #actionButton("do_ml",label=h2("Go"),width = "150px", height="150px")
                                   ),
                            column(width=3,align="center",
@@ -1619,8 +1625,67 @@ shinyServer(function(input, output, session) {
                  mSet <<- PCA.Anal(mSet)
                })
              }
-             # CAN use sparse PCA? linear combinations of just a few orig dimensions.
+             output$pca_scree <- renderPlot({
+               df <- data.table(
+                 pc = 1:length(names(mSet$analSet$pca$variance)),
+                 var = mSet$analSet$pca$variance)
+               p <- ggplot2::ggplot(data=df[1:20,]) + ggplot2::geom_line(mapping = aes(x=pc, y=var, colour=var), cex=3) + 
+                 global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]](base_size = 10) +
+                 ggplot2::scale_colour_gradientn(colours = global$functions$color.functions[[getOptions("user_options.txt")$gspec]](256)) +
+                 theme(axis.text=element_text(size=10),
+                       axis.title=element_text(size=19,face="bold"),
+                       #legend.title=element_text(size=15),
+                       #legend.text=element_text(size=12),
+                       legend.position="none")
+               # - - - - - 
+               p
+               #ggplotly(p)
+             })
+             output$plot_pca <- plotly::renderPlotly({
+               plotPCA.3d(mSet, global$vectors$mycols,
+                          pcx = input$pca_x,
+                          pcy = input$pca_y,
+                          pcz = input$pca_z)
+             })
+             # === LEGEND ===
+             output$pca_legend <- plotly::renderPlotly({
+               frame <- data.table(x = c(1), 
+                                   y = fac.lvls)
+               p <- ggplot(data=frame,
+                           aes(x, 
+                               y, 
+                               color=factor(y),
+                               fill=factor(y))) + 
+                 geom_point(shape = 21, size = 5, stroke = 5) +
+                 scale_colour_manual(values=chosen.colors) +
+                 theme_void() + 
+                 theme(legend.position="none")
+               # --- return ---
+               ggplotly(p, tooltip = NULL) %>% config(displayModeBar = F)
+             })
+             # ==============
+             output$pca_tab <-DT::renderDataTable({
+               pca.table <- as.data.table(round(mSet$analSet$pca$variance * 100.00,
+                                                digits = 2),
+                                          keep.rownames = T)
+               colnames(pca.table) <- c("Principal Component", "% variance")
+               
+               DT::datatable(pca.table, 
+                             selection = 'single',
+                             autoHideNavigation = T,
+                             options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+             })
              
+             output$pca_load <-DT::renderDataTable({
+               pca.loadings <- mSet$analSet$pca$rotation[,c(input$pca_x,
+                                                            input$pca_y,
+                                                            input$pca_z)]
+               #colnames(pca.loadings)[1] <- "m/z"
+               DT::datatable(pca.loadings, 
+                             selection = 'single',
+                             autoHideNavigation = T,
+                             options = list(lengthMenu = c(5, 10, 15), pageLength = 10))
+             })
              },
            plsdaa = {NULL},
            heatmap_mult = {
@@ -1835,96 +1900,17 @@ shinyServer(function(input, output, session) {
                mSet <<- PLSDA.CV(mSet,compNum = 5)
                mSet <<- PLSDA.Permut(mSet,num = 300, type = "accu")
                })
-  })
-  
-  observe({ # PCA PLOTS AND TABLES
     
-    if(!exists("mSet")) return()
-    if(!("pca" %in% names(mSet$analSet))) return()
-    
-    # - - - - -
-    output$pca_scree <- renderPlot({
-      df <- data.table(
-        pc = 1:length(names(mSet$analSet$pca$variance)),
-        var = mSet$analSet$pca$variance)
-      p <- ggplot2::ggplot(data=df[1:20,]) + ggplot2::geom_line(mapping = aes(x=pc, y=var, colour=var), cex=3) + 
-        global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]](base_size = 10) +
-        ggplot2::scale_colour_gradientn(colours = global$functions$color.functions[[getOptions("user_options.txt")$gspec]](256)) +
-        theme(axis.text=element_text(size=10),
-              axis.title=element_text(size=19,face="bold"),
-              #legend.title=element_text(size=15),
-              #legend.text=element_text(size=12),
-              legend.position="none")
-      # - - - - - 
-      p
-      #ggplotly(p)
-    })
-    output$plot_pca <- plotly::renderPlotly({
-      plotPCA.3d(mSet, global$vectors$mycols,
-                 pcx = input$pca_x,
-                 pcy = input$pca_y,
-                 pcz = input$pca_z)
-    })
-    # === LEGEND ===
-    output$pca_legend <- plotly::renderPlotly({
-      frame <- data.table(x = c(1), 
-                          y = fac.lvls)
-      p <- ggplot(data=frame,
-                  aes(x, 
-                      y, 
-                      color=factor(y),
-                      fill=factor(y))) + 
-        geom_point(shape = 21, size = 5, stroke = 5) +
-        scale_colour_manual(values=chosen.colors) +
-        theme_void() + 
-        theme(legend.position="none")
-      # --- return ---
-      ggplotly(p, tooltip = NULL) %>% config(displayModeBar = F)
-    })
-    # ==============
-   output$pca_tab <-DT::renderDataTable({
-     pca.table <- as.data.table(round(mSet$analSet$pca$variance * 100.00,
-                                      digits = 2),
-                                keep.rownames = T)
-     colnames(pca.table) <- c("Principal Component", "% variance")
-     
-      DT::datatable(pca.table, 
-                    selection = 'single',
-                    autoHideNavigation = T,
-                    options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-    })
-    
-    output$pca_load <-DT::renderDataTable({
-      pca.loadings <- mSet$analSet$pca$rotation[,c(input$pca_x,
-                                                   input$pca_y,
-                                                   input$pca_z)]
-      #colnames(pca.loadings)[1] <- "m/z"
-      DT::datatable(pca.loadings, 
-                    selection = 'single',
-                    autoHideNavigation = T,
-                    options = list(lengthMenu = c(5, 10, 15), pageLength = 10))
-    })
-  })
-  
-  observe({
-    if(!exists("mSet")) return()
     output$plsda_cv_plot <- renderPlot({
-      if(!("plsda" %in% names(mSet$analSet) | "plsr" %in% names(mSet$analSet))) return()
-      
       ggPlotClass(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
     })
     output$plsda_perm_plot <- renderPlot({
-      if(!("plsda" %in% names(mSet$analSet) | "plsr" %in% names(mSet$analSet))) return()
-      
       ggPlotPerm(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
     })
     output$plot_plsda_3d <- plotly::renderPlotly({
-      if(!("plsda" %in% names(mSet$analSet) | "plsr" %in% names(mSet$analSet))) return()
-      
       plotPCA.3d(mSet, cols = global$vectors$mycols, input$plsda_x, input$plsda_y, input$plsda_z, mode = "plsda")
     })
     output$plsda_tab <- DT::renderDataTable({
-      if(!("plsda" %in% names(mSet$analSet) | "plsr" %in% names(mSet$analSet))) return()
       # - - - -
       plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar 
                                          / mSet$analSet$plsr$Xtotvar 
@@ -1940,8 +1926,6 @@ shinyServer(function(input, output, session) {
                     options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
     })
     output$plsda_load <-DT::renderDataTable({
-      if(!("plsda" %in% names(mSet$analSet) | "plsr" %in% names(mSet$analSet))) return()
-      # - - - - 
       plsda.loadings <- mSet$analSet$plsda$vip.mat
       colnames(plsda.loadings) <- paste0("PC", c(1:ncol(plsda.loadings)))
       # -------------

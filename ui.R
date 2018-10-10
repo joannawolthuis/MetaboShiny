@@ -367,15 +367,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                    sardine(fadeImageButton("search_dimedb", img.path = "dimedb.png")),
                                                                                                    sardine(fadeImageButton("search_wikidata", img.path = "wikidata.png")),
                                                                                                    sardine(fadeImageButton("search_vmh", img.path = "vmh.png"))
-                                                                                                   #sardine(fadeImageButton("search_pubchem", img.path = "pubchemlogo.png")),
-                                                                                                   #br(),
-                                                                                                   #sardine(fadeImageButton("select_all_db", img.path = "cart.png"))
-                                                                                                   # sardine(switchButton(inputId = "autosearch",
-                                                                                                   #                      label = "Autosearch", 
-                                                                                                   #                      value = FALSE, col = "BW", type = "OO"))
-                                                                                                 ),
-                                                                                                 h4("Current compound:"),
-                                                                                                 verbatimTextOutput("curr_cpd") 
+                                                                                                 )
                                                                                  ),
                                                                                  bsCollapsePanel(h2("Isotope scoring"), "",#style = "info",
                                                                                                  selectInput("iso_score_method", "Which method used to score compounds of same weight?", selected="mscore", 
@@ -386,6 +378,18 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                                           "Network-based"="network"))
                                                                                  )
                                                                       ),
+                                                                      hr(),
+                                                                      div(h2(textOutput("curr_cpd"),style="padding:10px;"),
+                                                                        style="background-color:white;
+                                                                          height:55px;
+                                                                          width:115%;
+                                                                          position:relative;
+                                                                          right:30px;
+                                                                          border-top: 1px solid #DFDCDC;
+                                                                          border-bottom: 1px solid #DFDCDC;
+                                                                          "),
+                                                                      h4("Current compound:"),
+                                                                      #verbatimTextOutput("curr_cpd"),
                                                                       hr(),
                                                                       fluidRow( # navbarPage(inverse=TRUE,"Search", id="tab_iden",
                                                                                tabsetPanel(id="tab_iden", # type="pills",

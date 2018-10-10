@@ -78,20 +78,6 @@ switchButton <- function(inputId, label, value=FALSE, col = "GB", type="TF") {
   }
 }
 
-# '<input type="checkbox" id="btnControl"/>
-#                                                        <label class="btn" for="btnControl">
-# <img src="http://placekitten.com.s3.amazonaws.com/homepage-samples/200/140.jpg" id="btnLeft"/>
-# </label>'
-# 
-# img = "hereisyourpicture"
-# tags$img(src="...")
-# tagList(
-#   tags$input(type="checkbox", id="btnControl"),
-#   tags$div(class="form-group shiny-input-container",
-#            tags$label(class="btn", "for"="btnControl", tags$img(src="http://placekitten.com.s3.amazonaws.com/homepage-samples/200/140.jpg", id="btnLeft"))
-#   )
-# )
-
 
 fadeImageButton <- function(inputId, img.path=NULL,value=FALSE) {
   # ---------------
