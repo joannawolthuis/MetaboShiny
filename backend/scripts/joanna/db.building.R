@@ -27,8 +27,6 @@ build.base.db <- function(dbname=NA,
                                                                         charge=c(0),
                                                                         structure=c(NA))
                                  
-                                 # db.formatted <- db.formatted[grep(db.formatted$compoundname, pattern="\\(IS\\)"),]
-                                 
                                  db.rows <- pbapply::pblapply(1:nrow(db.formatted), cl = cl, function(i, db.formatted){
                                    try({
                                      row = db.formatted[i,]

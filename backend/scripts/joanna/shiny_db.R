@@ -164,7 +164,7 @@ get_matches <- function(cpd = NA,
     results$perciso <- round(results$perciso, 2)
     results$dppm <- signif(results$dppm, 2)
     
-    colnames(results)[which(colnames(results) == "dppm")] <- "Δppm"
+    #colnames(results)[which(colnames(results) == "dppm")] <- "Δppm"
     colnames(results)[which(colnames(results) == "perciso")] <- "%iso"
     
     round_df <- function(df, digits) {
@@ -226,7 +226,6 @@ score.isos <- function(patdb, method="mscore", inshiny=TRUE){
         sorted <- data.table::as.data.table(unique(cpd_tab[order(cpd_tab$isoprevalence, 
                                                                  decreasing = TRUE),]))
         
-        print(dim(sorted))
         split.by.samp <- split(sorted, 
                                sorted[,"filename"])
         # - - - - - - - - - 
@@ -329,8 +328,8 @@ get_mzs <- function(baseformula, charge, chosen.db){
   query.three <-  strwrap(
     "SELECT DISTINCT iso.mzmed, adduct
     FROM isotopes iso
-    GROUP BY iso.adduct
-    HAVING COUNT(iso.isoprevalence > 99.99999999999) > 0"
+    GROUP BY iso.adduct"
+    #HAVING COUNT(iso.isoprevalence > 99.99999999999) > 0"
     , width=10000, simplify=TRUE)
   results <- RSQLite::dbGetQuery(conn,query.three)
   # --------
@@ -399,8 +398,6 @@ get_all_matches <- function(#exp.condition=NA,
                     )
                     )
   }
-  print(join.query)
-  
   union <- paste(join.query, collapse = " UNION ")
   # ------------
   RSQLite::dbExecute(pat.conn, gsubfn::fn$paste("DROP TABLE IF EXISTS isotopes"))
@@ -413,14 +410,14 @@ get_all_matches <- function(#exp.condition=NA,
   RSQLite::dbExecute(pat.conn, query.one)
   adductfilter <- paste0("WHERE adduct = '", paste(which_adducts, collapse= "' OR adduct = '"), "'")
   idquery <- paste0("iso.", group_by)
-  # adductfilter <- paste0("WHERE adduct NOT REGEXP '[", paste(which_adducts, collapse="|"), "]'")
+  
   query.two <- gsubfn::fn$paste(strwrap(
     "CREATE temp TABLE results AS
     SELECT DISTINCT iso.mz as mz, $idquery as identifier, iso.adduct as adduct
     FROM isotopes iso
     $adductfilter
-    GROUP BY mz
-    HAVING COUNT(iso.isoprevalence > 99.99999999999) > 0"
+    GROUP BY mz"
+    #HAVING COUNT(iso.isoprevalence > 99.99999999999) > 0"
     , width=10000, simplify=TRUE))
   
   RSQLite::dbExecute(pat.conn, query.two)

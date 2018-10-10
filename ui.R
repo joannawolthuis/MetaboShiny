@@ -367,61 +367,61 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                    sardine(fadeImageButton("search_dimedb", img.path = "dimedb.png")),
                                                                                                    sardine(fadeImageButton("search_wikidata", img.path = "wikidata.png")),
                                                                                                    sardine(fadeImageButton("search_vmh", img.path = "vmh.png"))
-                                                                                                 )
+                                                                                                 )),
+                                                                                 bsCollapsePanel(h2("Miniplot"), "",#style = "info",
+                                                                                                 plotly::plotlyOutput("curr_plot", height="300px", width="100%"))
                                                                                  ),
-                                                                                 bsCollapsePanel(h2("Isotope scoring"), "",#style = "info",
-                                                                                                 selectInput("iso_score_method", "Which method used to score compounds of same weight?", selected="mscore", 
-                                                                                                             choices=list("M-score"="mscore",
-                                                                                                                          "Chi-square"="chisq",
-                                                                                                                          "Mean absolute percentage error"="mape",
-                                                                                                                          "SIRIUS"="sirius",
-                                                                                                                          "Network-based"="network"))
-                                                                                 )
-                                                                      ),
-                                                                      hr(),
-                                                                      div(h2(textOutput("curr_cpd"),style="padding:10px;"),
-                                                                        style="background-color:white;
-                                                                          height:55px;
-                                                                          width:115%;
-                                                                          position:relative;
-                                                                          right:30px;
-                                                                          border-top: 1px solid #DFDCDC;
-                                                                          border-bottom: 1px solid #DFDCDC;
-                                                                          "),
-                                                                      h4("Current compound:"),
-                                                                      #verbatimTextOutput("curr_cpd"),
-                                                                      hr(),
-                                                                      fluidRow( # navbarPage(inverse=TRUE,"Search", id="tab_iden",
-                                                                               tabsetPanel(id="tab_iden", # type="pills",
-                                                                                          tabPanel(title=NULL, icon=icon("paw"),
-                                                                                                   hr(),
-                                                                                                   bsCollapsePanel(h2("Structure viewer"),"",
-                                                                                                                   textOutput("curr_formula"),
-                                                                                                                   plotOutput("curr_struct", height="310px")
-                                                                                                   ),
-                                                                                                   # scoring buttons here..
-                                                                                                   fluidRow(
-                                                                                                     actionButton("search_cpd", "S E A R C H", icon=icon("search"),width = "40%"),
-                                                                                                     actionButton("score_iso", "S C O R E", icon=icon("balance-scale"), width="40%"),
-                                                                                                     #,actionButton("score_net", "", icon=icon("arrows-alt")),
-                                                                                                     align="center"),
-                                                                                                   br(),
-                                                                                                   div(DT::dataTableOutput('match_tab', width="100%"),style='font-size:80%'),
-                                                                                                   hr(),
-                                                                                                   div(textOutput("curr_definition"))
-                                                                                          ),
-                                                                                          tabPanel(title=NULL, icon=icon("binoculars"),
-                                                                                                   br(),
-                                                                                                   actionButton("browse_db", "Browse compounds", icon=icon("eye")),
-                                                                                                   hr(),
-                                                                                                   div(DT::dataTableOutput('browse_tab'),style='font-size:80%'),
-                                                                                                   hr(),
-                                                                                                   div(textOutput("browse_definition"),style='font-size:80%'),
-                                                                                                   hr(),
-                                                                                                   actionButton("revsearch_cpd", "Find hits", icon=icon("search")),
-                                                                                                   hr(),
-                                                                                                   div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
-                                                                                          )))
+                                                                      tabsetPanel(id="tab_iden",                                                             
+                                                                                  tabPanel(title="mz > molecule",
+                                                                                           br(),
+                                                                                           bsCollapse(id="isoSelect",
+                                                                                                      bsCollapsePanel(h2("Isotope scoring"), "",#style = "info",
+                                                                                                                      selectInput("iso_score_method", "Which method used to score compounds of same weight?", selected="mscore", 
+                                                                                                                                  choices=list("M-score"="mscore",
+                                                                                                                                               "Chi-square"="chisq",
+                                                                                                                                               "Mean absolute percentage error"="mape",
+                                                                                                                                               "SIRIUS"="sirius",
+                                                                                                                                               "Network-based"="network"))
+                                                                                                      )
+                                                                                           ),
+                                                                                           hr(),
+                                                                                           div(h2(textOutput("curr_cpd"),style="padding:10px;"),
+                                                                                               style="background-color:white;
+                                                                                               height:55px;
+                                                                                               width:115%;
+                                                                                               position:relative;
+                                                                                               right:30px;
+                                                                                               border-top: 1px solid #DFDCDC;
+                                                                                               border-bottom: 1px solid #DFDCDC;
+                                                                                               "),
+                                                                                           fluidRow(
+                                                                                             actionButton("search_cpd", "S E A R C H", icon=icon("search"),width = "40%"),
+                                                                                             actionButton("score_iso", "S C O R E", icon=icon("balance-scale"), width="40%"),
+                                                                                             #,actionButton("score_net", "", icon=icon("arrows-alt")),
+                                                                                             align="center"),br(),
+                                                                                           fluidRow(
+                                                                                             hr(),
+                                                                                             bsCollapsePanel(h2("Structure viewer"),"",
+                                                                                                             textOutput("curr_formula"),
+                                                                                                             plotOutput("curr_struct", height="310px")
+                                                                                             ),
+                                                                                             # scoring buttons here..
+                                                                                             div(DT::dataTableOutput('match_tab', width="100%"),style='font-size:80%'),
+                                                                                             hr(),
+                                                                                             div(textOutput("curr_definition"))
+                                                                                           )),
+                                                                                  tabPanel(title="molecule > mz",
+                                                                                           br(),
+                                                                                           actionButton("browse_db", "Browse compounds", icon=icon("eye")),
+                                                                                           hr(),
+                                                                                           div(DT::dataTableOutput('browse_tab'),style='font-size:80%'),
+                                                                                           hr(),
+                                                                                           div(textOutput("browse_definition"),style='font-size:80%'),
+                                                                                           hr(),
+                                                                                           actionButton("revsearch_cpd", "Find hits", icon=icon("search")),
+                                                                                           hr(),
+                                                                                           div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
+                                                                                  ))
                                                                       ),
                                                              tabPanel(title=NULL, icon=icon("link"),
                                                                       br(),

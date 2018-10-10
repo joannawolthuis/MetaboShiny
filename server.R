@@ -105,7 +105,7 @@ shinyServer(function(input, output, session) {
                                                              plotOutput("pca_scree")
                                                              ),
                                                     tabPanel(title="Loadings", 
-                                                             div(DT::dataTableOutput('pca_load',width="100%"),style='font-size:80%'))
+                                                             div(DT::dataTableOutput('pca_load_tab',width="100%"),style='font-size:80%'))
                                         ))
                         )
                ),
@@ -138,7 +138,7 @@ shinyServer(function(input, output, session) {
                                                     tabPanel(title="Table", 
                                                              div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')),
                                                     tabPanel(title="Loadings", 
-                                                             div(DT::dataTableOutput('plsda_load',width="100%"),style='font-size:80%'))
+                                                             div(DT::dataTableOutput('plsda_load_tab',width="100%"),style='font-size:80%'))
                                         ))
                         )
                ),
@@ -167,11 +167,10 @@ shinyServer(function(input, output, session) {
                                         width=12,switchButton(inputId = "heatmode",
                                                               label = "Use data from:", 
                                                               value = TRUE, col = "BW", type = "TTFC"))
-                        ),fluidRow(plotly::plotlyOutput('heatmap_specific_plot'),height="200px")
+                        )
                ),
                tabPanel(h3("Volcano"), value="volc",
-                        fluidRow(plotly::plotlyOutput('volc_plot',width="100%",height="600px")),
-                        fluidRow(plotly::plotlyOutput('volc_specific_plot'),height="200px")
+                        fluidRow(plotly::plotlyOutput('volc_plot',width="100%",height="600px"))
                ),
                tabPanel(h3("Enrichment"), value="enrich_biv",
                         sidebarLayout(position="left",
@@ -318,7 +317,7 @@ shinyServer(function(input, output, session) {
                                                             selectInput("plsda_vip_cmp", label = "Compounds from:", choices = paste0("PC",1:5),selected = "PC1",width="100%")
                                             ), 
                                             column(9, 
-                                                   div(DT::dataTableOutput('plsda_load',width="100%"),style='font-size:80%')
+                                                   div(DT::dataTableOutput('plsda_load_tab',width="100%"),style='font-size:80%')
                                             ))
                                             
                                    )
@@ -585,12 +584,8 @@ shinyServer(function(input, output, session) {
   observe({
     # - - - - 
     if(!is.list(input$taskbar_image_path)) return()
-    print(input$taskbar_image_path)
     img_path <- parseFilePaths(global$paths$volumes, input$taskbar_image_path)$datapath
     new_path <- file.path(getwd(), "www", basename(img_path))
-    
-    print(img_path)
-    print(new_path)
     
     if(img_path != new_path) file.copy(img_path, new_path, overwrite = T)
     # - - -
@@ -614,7 +609,6 @@ shinyServer(function(input, output, session) {
     
     if(typeof(input$get_db_dir) != "list") return()
 
-    print(input$get_db_dir)
     given_dir <- parseDirPath(global$paths$volumes, 
                               input$get_db_dir)
     if(is.null(given_dir)) return()
@@ -630,7 +624,6 @@ shinyServer(function(input, output, session) {
 
     if(typeof(input$get_work_dir) != "list") return()
     
-    print(input$get_work_dir)
     given_dir <- parseDirPath(global$paths$volumes,
                               input$get_work_dir)
     if(is.null(given_dir)) return()
@@ -642,7 +635,6 @@ shinyServer(function(input, output, session) {
     proj_name <<- input$proj_name
     if(proj_name == "") return(NULL)
     global$paths$patdb <<- file.path(getOptions("user_options.txt")$work_dir, paste0(proj_name,".db", sep=""))
-    print(global$paths$patdb)
     # --- connect ---
     setOption("user_options.txt", "proj_name", proj_name)
     output$proj_name <<- renderText(proj_name)
@@ -893,7 +885,7 @@ shinyServer(function(input, output, session) {
     global$tables$last_matches <<- global$tables$last_matches[score_table, on = c("baseformula", "adduct")]
     
     output$match_tab <-DT::renderDataTable({
-      DT::datatable(global$tables$last_matches[,-c("description","structure", "baseformula")],
+      DT::datatable(global$tables$last_matches[,-c("description","structure", "baseformula", "dppm")],
                     selection = 'single',
                     autoHideNavigation = T,
                     options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -922,11 +914,6 @@ shinyServer(function(input, output, session) {
                
                db_path <- parseFilePaths(global$paths$volumes, input$database)$datapath
                excel_path <- parseFilePaths(global$paths$volumes, input$excel)$datapath
-               
-               
-               print(db_path)
-               print(global$paths$patdb)
-               print(excel_path)
                
                file.copy(db_path, global$paths$patdb, overwrite = T)
                
@@ -1676,7 +1663,7 @@ shinyServer(function(input, output, session) {
                              options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
              })
              
-             output$pca_load <-DT::renderDataTable({
+             output$pca_load_tab <-DT::renderDataTable({
                pca.loadings <- mSet$analSet$pca$rotation[,c(input$pca_x,
                                                             input$pca_y,
                                                             input$pca_z)]
@@ -1746,7 +1733,7 @@ shinyServer(function(input, output, session) {
                  # - - -
                  
                  x <- mSet$dataSet$norm[,names(sourceTable)]
-                 final_matrix <- t(x)
+                 final_matrix <<- t(x)
                  translator <- data.table(Sample=rownames(mSet$dataSet$norm),Group=mSet$dataSet$cls)
                  group_assignments <- translator[,"Group",on=colnames(final_matrix)]$Group
                  
@@ -1760,8 +1747,8 @@ shinyServer(function(input, output, session) {
                  
                  assignment.df <- as.data.frame(group_assignments)
                  colnames(assignment.df) <- "Group"
-                 
-                 heatmaply::heatmaply(final_matrix,
+                
+                 hmap <- heatmaply::heatmaply(final_matrix,
                                       Colv=T, 
                                       Rowv=T,
                                       branches_lwd = 0.3,
@@ -1777,6 +1764,13 @@ shinyServer(function(input, output, session) {
                                       showticklabels = c(T,F)
                                       #label_names = c("m/z", "sample", "intensity") #breaks side colours
                                       )
+                 
+                 hmap_mzs <<- hmap$x$layout$yaxis3$ticktext
+                 
+                 # - - 
+                 
+                 hmap
+                 
                })               
              })
            },
@@ -1900,40 +1894,44 @@ shinyServer(function(input, output, session) {
                mSet <<- PLSDA.CV(mSet,compNum = 5)
                mSet <<- PLSDA.Permut(mSet,num = 300, type = "accu")
                })
-    
-    output$plsda_cv_plot <- renderPlot({
-      ggPlotClass(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
-    })
-    output$plsda_perm_plot <- renderPlot({
-      ggPlotPerm(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
-    })
-    output$plot_plsda_3d <- plotly::renderPlotly({
-      plotPCA.3d(mSet, cols = global$vectors$mycols, input$plsda_x, input$plsda_y, input$plsda_z, mode = "plsda")
-    })
-    output$plsda_tab <- DT::renderDataTable({
-      # - - - -
-      plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar 
-                                         / mSet$analSet$plsr$Xtotvar 
-                                         * 100.0,
-                                         digits = 2),
-                                   keep.rownames = T)
-      colnames(plsda.table) <- c("Principal Component", "% variance")
-      plsda.table[, "Principal Component"] <- paste0("PC", 1:nrow(plsda.table))
-      # -------------
-      DT::datatable(plsda.table, 
-                    selection = 'single',
-                    autoHideNavigation = T,
-                    options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-    })
-    output$plsda_load <-DT::renderDataTable({
-      plsda.loadings <- mSet$analSet$plsda$vip.mat
-      colnames(plsda.loadings) <- paste0("PC", c(1:ncol(plsda.loadings)))
-      # -------------
-      DT::datatable(plsda.loadings[, c(input$plsda_x, input$plsda_y, input$plsda_z)],
-                    selection = 'single',
-                    autoHideNavigation = T,
-                    options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-    })
+  })
+  
+  observe({
+    if("plsda" %in% names(mSet$analSet)){
+      output$plsda_cv_plot <- renderPlot({
+        ggPlotClass(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+      })
+      output$plsda_perm_plot <- renderPlot({
+        ggPlotPerm(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+      })
+      output$plot_plsda_3d <- plotly::renderPlotly({
+        plotPCA.3d(mSet, cols = global$vectors$mycols, input$plsda_x, input$plsda_y, input$plsda_z, mode = "plsda")
+      })
+      output$plsda_tab <- DT::renderDataTable({
+        # - - - -
+        plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar 
+                                           / mSet$analSet$plsr$Xtotvar 
+                                           * 100.0,
+                                           digits = 2),
+                                     keep.rownames = T)
+        colnames(plsda.table) <- c("Principal Component", "% variance")
+        plsda.table[, "Principal Component"] <- paste0("PC", 1:nrow(plsda.table))
+        # -------------
+        DT::datatable(plsda.table, 
+                      selection = 'single',
+                      autoHideNavigation = T,
+                      options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+      })
+      output$plsda_load_tab <-DT::renderDataTable({
+        plsda.loadings <- mSet$analSet$plsda$vip.mat
+        colnames(plsda.loadings) <- paste0("PC", c(1:ncol(plsda.loadings)))
+        # -------------
+        DT::datatable(plsda.loadings[, c(input$plsda_x, input$plsda_y, input$plsda_z)],
+                      selection = 'single',
+                      autoHideNavigation = T,
+                      options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+      })
+    }
   })
   
   observeEvent(input$pca_2d3d,{
@@ -2228,7 +2226,8 @@ shinyServer(function(input, output, session) {
                           "rf",
                           "asca", 
                           "meba",
-                          "plsda_vip",
+                          "pca_load",
+                          "plsda_load",
                           "enrich_pw",
                           "ml",
                           paste0("alpha_", seq(0,1,0.2), "_lasnet"),
@@ -2268,20 +2267,18 @@ shinyServer(function(input, output, session) {
       if (is.null(curr_row)) return()
       
       if(grepl(pattern = "lasnet",x = table)){
-        
         alpha <- gsub("alpha|stab|_|lasnet", "", table)
         if(!grepl(pattern = "stab",x = table)){
           table <- "lasnet_a"
         }else{
           table <- "lasnet_b"
         }
-        # - - -
-        
-        
       }
       curr_cpd <<- data.table::as.data.table(switch(table,
                                                     tt = mSet$analSet$tt$sig.mat,
                                                     fc = mSet$analSet$fc$sig.mat,
+                                                    pca_load = mSet$analSet$pca$rotation,
+                                                    plsda_load = mSet$analSet$plsda$vip.mat,
                                                     ml = ml_tab,
                                                     asca = mSet$analSet$asca$sig.list$Model.ab,
                                                     aov = mSet$analSet$aov$sig.mat,
@@ -2298,6 +2295,11 @@ shinyServer(function(input, output, session) {
       }
       
       output$curr_cpd <- renderText(curr_cpd)
+
+      output$curr_plot <- plotly::renderPlotly({
+        # --- ggplot ---
+        ggplotSummary(curr_cpd, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+      })
       
       output[[outplot_name]] <- plotly::renderPlotly({
         # --- ggplot ---
@@ -2310,6 +2312,7 @@ shinyServer(function(input, output, session) {
     })
   })
   
+
   observeEvent(plotly::event_data("plotly_click"),{ # WHAT HAPPENS ON CLICK
     d <- plotly::event_data("plotly_click")
     req(d)
@@ -2392,15 +2395,16 @@ shinyServer(function(input, output, session) {
               ggplotSummary(curr_cpd, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
             })
           })}else if(grepl(pattern = "heatmap", x = input$tab_stat)){
-            if(!exists("hm_matrix")) return(NULL)
-            if(d$y > length(hm_matrix$matrix$rows)) return(NULL)
-            curr_cpd <<- hm_matrix$matrix$rows[d$y]
-            output$heatmap_specific_plot <- plotly::renderPlotly({
-              # --- ggplot ---
-              ggplotSummary(curr_cpd, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
-            })
+            if(!exists("hmap_mzs")) return(NULL)
+            if(d$y > length(hmap_mzs)) return(NULL)
+            curr_cpd <<- hmap_mzs[d$y]
           }
   
+    output$curr_plot <- plotly::renderPlotly({
+      # --- ggplot ---
+      ggplotSummary(curr_cpd, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+    })
+    
     # ----------------------------
     output$curr_cpd <- renderText(curr_cpd)
   })
@@ -2422,7 +2426,7 @@ shinyServer(function(input, output, session) {
     if(length(global$vectors$db_search_list) > 0){
       global$tables$last_matches <<- unique(multimatch(curr_cpd, global$vectors$db_search_list))
       output$match_tab <- DT::renderDataTable({
-        DT::datatable(global$tables$last_matches[,-c("description","structure", "baseformula")],
+        DT::datatable(global$tables$last_matches[,-c("description","structure", "baseformula", "dppm")],
                       selection = 'single',
                       autoHideNavigation = T,
                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))

@@ -18,4 +18,4 @@ size4 = 12
 taskbar_image = success.png
 gtheme = classic
 gcols = inflammatory activity:#FF0000FD&remission:#57BFFFF9
-gspec = bw
+gspec = RdGy
