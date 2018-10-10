@@ -130,7 +130,7 @@ global <- list(constants = list(ppm = 2,
                                                  "Accent", "Dark2", "Paired", "Pastel1", "Pastel2", "Set1", "Set2", "Set3" # - - qualitative - -
                                   )
                                   
-                                  brew.opts <- lapply(brew.cols, function(opt) colorRampPalette(RColorBrewer::brewer.pal(RColorBrewer::brewer.pal.info[opt,]$maxcolors, opt)))
+                                  brew.opts <- lapply(brew.cols, function(opt) colorRampPalette(rev(RColorBrewer::brewer.pal(RColorBrewer::brewer.pal.info[opt,]$maxcolors, opt))))
                                   names(brew.opts) <- brew.cols
                                   
                                   base.opts <- list("rb"=rainbow,
