@@ -265,9 +265,9 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
            # --------------------------------------------------------------------------------------------------------------------------------
            tabPanel("",  icon = icon("shower"), value="filter",
                     fluidRow(column(3, aligh="center",
-                                    selectInput('exp_var', 'Which variable do you want to look at?', choices = c("Group")),
+                                    selectInput('exp_var', 'Which variable do you want to look at?', choices = c("group")),
                                     selectInput('samp_var', 'Which variable is your sample amount?', choices = c("")), #TODO: only show this when normalize by sample specific factor (specnorm) is selected
-                                    selectizeInput('batch_var', 'What are your batch variables?', choices = c("Batch"), multiple=TRUE, options = list(maxItems = 2L)),
+                                    selectizeInput('batch_var', 'What are your batch variables?', choices = c("batch"), multiple=TRUE, options = list(maxItems = 2L)),
                                     actionButton("check_csv", "Get options", icon=icon("refresh")),
                                     hr(),
                                     #sliderInput("perc_limit", label = "Max. missing feature percent", min = 0, 

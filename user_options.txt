@@ -1,6 +1,6 @@
 db_dir = /Users/jwolthuis/Google Drive/MetaboShiny/backend/db
 work_dir = /Users/jwolthuis/Analysis/SP
-proj_name = SWINE_SEPT18
+proj_name = CATS_OCT18
 ppm = 2
 packages_installed = Y
 font1 = Cute Font
@@ -17,5 +17,5 @@ size3 = 20
 size4 = 16
 taskbar_image = flask (1).png
 gtheme = classic
-gcols = Diarrhoa:#FF0000FD&Normal:#57BFFFF9
+gcols = 1:#FF0000FD&2:#57BFFFF9
 gspec = RdBu

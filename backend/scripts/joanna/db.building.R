@@ -1668,6 +1668,9 @@ load.excel <- function(path.to.xlsx,
                          #"Admin"
                        )){
   
+  #path.to.xlsx <<- path.to.xlsx
+  #path.to.patdb <<- path.to.patdb
+  
   # --- connect to sqlite db ---
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), path.to.patdb)
   # -------------------------------
@@ -1677,10 +1680,12 @@ load.excel <- function(path.to.xlsx,
     # --- reformat colnames ---
     colnames(tab) <- tolower(gsub(x=colnames(tab), pattern = "\\.$|\\.\\.$", replacement = ""))
     colnames(tab) <- gsub(x=colnames(tab), pattern = "\\.|\\.\\.", replacement = "_")
-    colnames(tab) <- gsub(x=colnames(tab), pattern= "sampling_date_dd_mon_yy", "sampling_date")
+    colnames(tab)[grep(x=colnames(tab), pattern= "*date*")] <- "sampling_date"
+    print(colnames(tab))
     # -----------------------------------------------------------------------------------------
     data.table::as.data.table(tab, keep.rownames=F)
   })
+  
   # --- convert to data table --- ## make this nicer loooking in the future
   #general <- data.store[[1]]
   setup <- data.store[[1]]
@@ -1704,15 +1709,21 @@ load.excel <- function(path.to.xlsx,
   individual.data <- individual.data[rowSums(is.na(individual.data)) != ncol(individual.data),]
   
   # --------------------------
-  individual.data$sampling_date <- as.factor(as.Date(as.character(individual.data$sampling_date), 
-                                                     format = "%d-%m-%y"))
+  
+  if(any(is.na(as.numeric(individual.data$sampling_date)))){
+    individual.data$sampling_date <- as.factor(as.Date(as.character(individual.data$sampling_date), 
+                                                       format = "%d-%m-%y"))
+  }else{
+    # origin <- switch(get_os(),
+    #                  "windows" = "1899-12-30",
+    #                  "osx" = "1904-01-01")
+    individual.data$sampling_date <- as.factor(as.Date(as.numeric(individual.data$sampling_date), 
+                                                       origin = "1899-12-30"))
+    
+  }
+
   if(is.na(individual.data$sampling_date[1])) levels(individual.data$sampling_date) <- factor(1) 
   print(head(individual.data))
-  #names(individual.data) <- make.unique(names(individual.data))
-  #individual.data
-  individual.data$sampling_date <- as.numeric(as.factor(as.Date(individual.data$sampling_date, format = "%d-%m-%y")))
-  #pen.data <- data.store[[4]]
-  #admin <- data.store[[5]]
   
   setup <- data.table::as.data.table(apply(setup, MARGIN=2, trimws))
   individual.data <- data.table::as.data.table(apply(individual.data, MARGIN=2, trimws))
