@@ -19,6 +19,10 @@ shinyServer(function(input, output, session) {
   
   spinnyimg <- reactiveVal("www/electron.png")
   
+  lapply(global$constants$default.text, FUN=function(default){
+    output[[default$name]] = renderText(default$text)
+  })
+  
   output$spinny <- renderText({spinnyimg()})
   
   output$taskbar_image <- renderImage({
@@ -80,10 +84,6 @@ shinyServer(function(input, output, session) {
   
   
   # --- render text ---
-  
-  lapply(global$constants$default.text, FUN=function(default){
-    output[[default$name]] = renderText(default$text)
-  })
   
   stat.ui.bivar <- reactive({
     navbarPage(inverse=F,h2("Standard analysis"), id="tab_stat",
@@ -638,6 +638,8 @@ shinyServer(function(input, output, session) {
     # --- connect ---
     setOption("user_options.txt", "proj_name", proj_name)
     output$proj_name <<- renderText(proj_name)
+    global$paths$csv_loc <<- file.path(getOptions("user_options.txt")$work_dir, paste0(getOptions("user_options.txt")$proj_name,".csv"))
+    
   })
   
   observeEvent(input$set_ppm, {
@@ -1897,6 +1899,11 @@ shinyServer(function(input, output, session) {
   })
   
   observe({
+    
+    if(!exists("mSet")) return()
+    
+    # - - - - - - - - - - -
+    
     if("plsda" %in% names(mSet$analSet)){
       output$plsda_cv_plot <- renderPlot({
         ggPlotClass(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
@@ -1935,9 +1942,10 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$pca_2d3d,{
+
+    if(!exists("mSet")) return()
     
     if(!("pca" %in% names(mSet$analSet))) return()
-    
     # - - - - -
     if(input$pca_2d3d){
       # 2d
@@ -2270,7 +2278,7 @@ shinyServer(function(input, output, session) {
         alpha <- gsub("alpha|stab|_|lasnet", "", table)
         if(!grepl(pattern = "stab",x = table)){
           table <- "lasnet_a"
-        }else{
+        }else{ 
           table <- "lasnet_b"
         }
       }
