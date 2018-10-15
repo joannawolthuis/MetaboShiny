@@ -512,6 +512,12 @@ plotPCA.3d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, pcz, mode="
            x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
            y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
            z.var <- round(mSet$analSet$pca$variance[pcz] * 100.00, digits=1)
+         }, ipca = {
+             df <- mSet$analSet$pca$x
+             #x =1;y=2;z=3
+             x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
+             y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
+             z.var <- round(mSet$analSet$pca$variance[pcz] * 100.00, digits=1)
          }, plsda = {
            plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar 
                                               / mSet$analSet$plsr$Xtotvar 
@@ -534,74 +540,93 @@ plotPCA.3d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, pcz, mode="
            colnames(df) <- paste0("PC", 1:ncol(df))
          })
 
-  fac.lvls <- length(levels(mSet$dataSet$cls))
+  if(mode == "ipca"){
+    fac.lvls <- length(levels(mSet$dataSet$facB))
+    classes <- mSet$dataSet$facB
+    df_split_idx <- split(1:nrow(df), f = sapply(strsplit(rownames(df), split = "_T"), function(x) x[[2]]))
+    df_list <- lapply(df_split_idx, function(idx_list) df[idx_list,])
+  }else{
+    fac.lvls <- length(levels(mSet$dataSet$cls))
+    classes <- mSet$dataSet$cls
+    df_list <- df
+  }
   
-#  chosen.colors <<- if(fac.lvls == length(color.vec())) color.vec() else rainbow(fac.lvls)
   # --- add ellipses ---
-  classes <- mSet$dataSet$cls
-  plots <- plotly::plot_ly(showlegend = F)
-  
-  for(class in levels(classes)){
-    row = which(classes == class)
-    # ---------------------
-    xc=df[row, pcx]
-    yc=df[row, pcy]
-    zc=df[row, pcz]
-    # --- plot ellipse ---
-    o <- rgl::ellipse3d(cov(cbind(xc,yc,zc)), 
-                        centre=c(mean(xc), 
-                                 mean(yc), 
-                                 mean(zc)), 
-                        level = 0.95)
-    mesh <- c(list(x = o$vb[1, o$ib]/o$vb[4, o$ib], 
-                   y = o$vb[2, o$ib]/o$vb[4, o$ib], 
-                   z = o$vb[3, o$ib]/o$vb[4, o$ib]))
-    plots = plots %>% add_trace(
-      x=mesh$x, 
-      y=mesh$y, 
-      z=mesh$z, 
-      type='mesh3d',
-      alphahull=0,
-      opacity=0.1,
-      hoverinfo="none"
-    )
-  }
-  adj_plot <<- plotly_build(plots)
-  rgbcols <- toRGB(cols)
-  c = 1
-  for(i in seq_along(adj_plot$x$data)){
-    item = adj_plot$x$data[[i]]
-    if(item$type == "mesh3d"){
-      adj_plot$x$data[[i]]$color <- rgbcols[c]
-      adj_plot$x$data[[i]]$visible <- TRUE
-      c = c + 1
+  plots_facet <- lapply(1:length(df_list), function(i){
+    
+    df = df_list[[i]]
+    print(df)
+    
+    orig_idx = which(rownames(df) %in% rownames(mSet$dataSet$norm))
+    
+    plots <- plotly::plot_ly(showlegend = F)
+    
+    for(class in levels(classes)){
+      
+      samps <- rownames(mSet$dataSet$norm)[which(classes == class)]
+      row = which(rownames(df) %in% samps)
+      # ---------------------
+      xc=df[row, pcx]
+      yc=df[row, pcy]
+      zc=df[row, pcz]
+      
+      # --- plot ellipse ---
+      o <- rgl::ellipse3d(cov(cbind(xc,yc,zc)), 
+                          centre=c(mean(xc), 
+                                   mean(yc), 
+                                   mean(zc)), 
+                          level = 0.95)
+      mesh <- c(list(x = o$vb[1, o$ib]/o$vb[4, o$ib], 
+                     y = o$vb[2, o$ib]/o$vb[4, o$ib], 
+                     z = o$vb[3, o$ib]/o$vb[4, o$ib]))
+      plots = plots %>% add_trace(
+        x=mesh$x, 
+        y=mesh$y, 
+        z=mesh$z, 
+        type='mesh3d',
+        alphahull=0,
+        opacity=0.1,
+        hoverinfo="none"
+      )
     }
+    adj_plot <<- plotly_build(plots)
+    rgbcols <- toRGB(cols)
+    c = 1
+    for(i in seq_along(adj_plot$x$data)){
+      item = adj_plot$x$data[[i]]
+      if(item$type == "mesh3d"){
+        adj_plot$x$data[[i]]$color <- rgbcols[c]
+        adj_plot$x$data[[i]]$visible <- TRUE
+        c = c + 1
+      }
+    }
+    # --- return ---
+    pca_plot <<- adj_plot %>% add_trace(
+      hoverinfo = 'text',
+      text = rownames(df),
+      x = df[,pcx], 
+      y = df[,pcy], 
+      z = df[,pcz], 
+      visible = rep(T, times=fac.lvls),
+      type = "scatter3d",
+      opacity=1,
+      color= classes[orig_idx], colors=cols
+    ) %>%  layout(scene = list(
+      aspectmode="cube",
+      xaxis = list(
+        titlefont = list(size = 20),
+        title = gsubfn::fn$paste("$pcx ($x.var %)")),
+      yaxis = list(
+        titlefont = list(size = 20),
+        title = gsubfn::fn$paste("$pcy ($y.var %)")),
+      zaxis = list(
+        titlefont = list(size = 20),
+        title = gsubfn::fn$paste("$pcz ($z.var %)")))) 
+    # --- return ---
+    pca_plot
+  })
+  subplot(plots_facet,shareX = F, shareY = F)
   }
-  # --- return ---
-  pca_plot <<- adj_plot %>% add_trace(
-    hoverinfo = 'text',
-    text = rownames(df),
-    x = df[,pcx], 
-    y = df[,pcy], 
-    z = df[,pcz], 
-    visible = rep(T, times=fac.lvls),
-    type = "scatter3d",
-    opacity=1,
-    color= mSet$dataSet$cls, colors=cols
-  ) %>%  layout(scene = list(
-    aspectmode="cube",
-    xaxis = list(
-      titlefont = list(size = 20),
-      title = gsubfn::fn$paste("$pcx ($x.var %)")),
-    yaxis = list(
-      titlefont = list(size = 20),
-      title = gsubfn::fn$paste("$pcy ($y.var %)")),
-    zaxis = list(
-      titlefont = list(size = 20),
-      title = gsubfn::fn$paste("$pcz ($z.var %)")))) 
-  # --- return ---
-  pca_plot
-}
 
 plotPCA.2d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, mode="pca", plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
   switch(mode,
@@ -619,7 +644,25 @@ plotPCA.2d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, mode="pca",
                                   group = mSet$dataSet$cls,
                                   x = xc, 
                                   y = yc)
-         }, plsda = {
+         },
+         ipca = {
+             df <- mSet$analSet$pca$x
+             #x =1;y=2;z=3
+             x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
+             y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
+             fac.lvls <- length(levels(mSet$dataSet$facB))
+             
+             xc=mSet$analSet$pca$x[, pcx]
+             yc=mSet$analSet$pca$x[, pcy]
+             
+             dat_long <- data.table(variable = names(xc),
+                                    group = mSet$dataSet$facB,
+                                    time = mSet$dataSet$facA,
+                                    x = xc, 
+                                    y = yc)
+           
+         },
+         plsda = {
            plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar 
                                               / mSet$analSet$plsr$Xtotvar 
                                               * 100.0,
@@ -656,6 +699,8 @@ plotPCA.2d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, mode="pca",
     scale_x_continuous(name=gsubfn::fn$paste("$pcx ($x.var%)")) +
     scale_y_continuous(name=gsubfn::fn$paste("$pcy ($y.var%)")) +
     scale_fill_manual(values=cols) 
+
+  if(mode == "ipca") p <- p + facet_wrap(~time)
   
   ggplotly(p)
 }

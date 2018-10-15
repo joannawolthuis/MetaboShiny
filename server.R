@@ -1513,79 +1513,14 @@ shinyServer(function(input, output, session) {
            ipca = {
              # --------------------
              output$plot_ipca <- plotly::renderPlotly({
-               if("ipca" %not in% names(mSet$analSet)){
+               if("pca" %not in% names(mSet$analSet)){
                  iPCA.Anal(mSetObj = mSet,
                            fileNm = file.path(getOptions("user_options.txt")$work_dir, "ipca_3d_0_.json"))
+                 mSet <<- PCA.Anal(mSet)
                }
-               fac.lvls <- unique(mSet$analSet$ipca$score[[input$ipca_factor]])
-               chosen.colors <- if(length(fac.lvls) == length(global$vectors$mycols)) global$vectors$mycols else rainbow(fac.lvls)
-               # ---------------
-               df <- t(as.data.frame(mSet$analSet$ipca$score$xyz))
-               x <- gsub(input$ipca_x,pattern = "\\(.*$", replacement = "")
-               y <- gsub(input$ipca_y,pattern = "\\(.*$", replacement = "")
-               z <- gsub(input$ipca_z,pattern = "\\(.*$", replacement = "")
-               x.num <- as.numeric(gsub(x, pattern = "PC", replacement = ""))
-               y.num <- as.numeric(gsub(y, pattern = "PC", replacement = ""))
-               z.num <- as.numeric(gsub(z, pattern = "PC", replacement = ""))
-               # ---------------
-               plots <- plotly::plot_ly()
-               for(class in fac.lvls){
-                 row = which(mSet$analSet$ipca$score[[input$ipca_factor]] == class)
-                 # ---------------------
-                 xc=df[row, x.num]
-                 yc=df[row, y.num]
-                 zc=df[row, z.num]
-                 # --- plot ellipse ---
-                 o <- rgl::ellipse3d(cov(cbind(xc,yc,zc)), 
-                                     centre=c(mean(xc), 
-                                              mean(yc), 
-                                              mean(zc)), 
-                                     level = 0.95)
-                 mesh <- c(list(x = o$vb[1, o$ib]/o$vb[4, o$ib], 
-                                y = o$vb[2, o$ib]/o$vb[4, o$ib], 
-                                z = o$vb[3, o$ib]/o$vb[4, o$ib]))
-                 plots <- plots %>% add_trace(
-                   x=mesh$x, 
-                   y=mesh$y, 
-                   z=mesh$z, 
-                   type='mesh3d',
-                   alphahull=0,
-                   opacity=0.1,
-                   hoverinfo="none"
-                 )
-               }
-               adj_plot <<- plotly_build(plots)
-               rgbcols <- toRGB(chosen.colors)
-               c = 1
-               for(i in seq_along(adj_plot$x$data)){
-                 item = adj_plot$x$data[[i]]
-                 if(item$type == "mesh3d"){
-                   adj_plot$x$data[[i]]$color <- rgbcols[c]
-                   c = c + 1
-                 }
-               }
-               # --- render! ---
-               ipca_plot <<- adj_plot %>%
-                 add_trace(
-                   x = df[,x.num], 
-                   y = df[,y.num], 
-                   z = df[,z.num], 
-                   opacity=1,
-                   type = "scatter3d",
-                   color= mSet$analSet$ipca$score[[input$ipca_factor]], colors=chosen.colors
-                 ) %>%  layout(scene = list(
-                   aspectmode="cube",
-                   xaxis = list(
-                     titlefont = list(size = 20),
-                     title = mSet$analSet$ipca$score$axis[x.num]),
-                   yaxis = list(
-                     titlefont = list(size = 20),
-                     title = mSet$analSet$ipca$score$axis[y.num]),
-                   zaxis = list(
-                     titlefont = list(size = 20),
-                     title = mSet$analSet$ipca$score$axis[z.num])))
-               # --- return ---
-               ipca_plot
+               
+               plotPCA.2d(mSet, "PC1", "PC2", cols = global$vectors$mycols, mode = "ipca")
+               
              })
              # ------------------
              ipca.table <- as.data.table(data.table(gsub(mSet$analSet$ipca$score$axis, pattern = "\\(.*$| ", replacement = ""),
