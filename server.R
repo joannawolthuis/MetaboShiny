@@ -1135,18 +1135,18 @@ shinyServer(function(input, output, session) {
       # get curr values from: input$ exp_type, filt_type, norm_type, scale_type, trans_type (later)
       shiny::setProgress(session=session, value= .1)
       
-      input <- list(batch_var = NULL,
-                    exp_var = "group",
-                    exp_type = "time_std",
-                    perc_limit = .99,
-                    filt_type = "none",
-                    miss_type = "rf",
-                    norm_type = "SumNorm",
-                    trans_type = "LogNorm",
-                    scale_type = "AutoNorm",
-                    ref_var = "none",
-                    remove_outliers = FALSE
-      )
+      # input <- list(batch_var = NULL,
+      #               exp_var = "group",
+      #               exp_type = "time_std",
+      #               perc_limit = .99,
+      #               filt_type = "none",
+      #               miss_type = "rf",
+      #               norm_type = "SumNorm",
+      #               trans_type = "LogNorm",
+      #               scale_type = "AutoNorm",
+      #               ref_var = "none",
+      #               remove_outliers = FALSE
+      # )
       
       # - - check if time series!!! - - 
       
@@ -1160,14 +1160,11 @@ shinyServer(function(input, output, session) {
       #Below is your R command history: 
       mSet <- switch(input$exp_type,
                       stat = {
-                      #  mSet<- #DEBUG
                         InitDataObjects("pktable", 
                                         "stat", 
                                         FALSE)
                       },
                       time_std = {
-                        # mSet<- #DEBUG
-                        # - - - - - - - -
                         InitDataObjects("pktable", 
                                         "ts", 
                                         FALSE)},
@@ -1276,7 +1273,7 @@ shinyServer(function(input, output, session) {
       
       fwrite(csv_temp_no_out[,-remove,with=F], file = csv_loc_no_out)
       
-      rownames(covar_table) <- covar_table$sample
+      #rownames(covar_table) <- covar_table$sample
       
       # -------------------------------------
       
