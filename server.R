@@ -711,8 +711,12 @@ shinyServer(function(input, output, session) {
              facs <- levels(mSet$dataSet$cls)
            },
            time_std = {
-             lbl.fac <- if(mSet$dataSet$facA.lbl == "Time") "facB" else "facA"
-             facs <- levels(mSet$dataSet[[lbl.fac]])
+             if("facA.lbl" %in% names(mSet$dataSet)){
+               lbl.fac <- if(mSet$dataSet$facA.lbl == "Time") "facB" else "facA"
+               facs <- levels(mSet$dataSet[[lbl.fac]])  
+             }else{
+               facs <- levels(mSet$dataSet$cls)
+             }
            },
            time_fin = {
              facs <- levels(mSet$dataSet$cls)
@@ -740,8 +744,12 @@ shinyServer(function(input, output, session) {
              facs <- levels(mSet$dataSet$cls)
            },
            time_std = {
-             lbl.fac <- if(mSet$dataSet$facA.lbl == "Time") "facB" else "facA"
-             facs <- levels(mSet$dataSet[[lbl.fac]])
+             if("facA.lbl" %in% names(mSet$dataSet)){
+               lbl.fac <- if(mSet$dataSet$facA.lbl == "Time") "facB" else "facA"
+               facs <- levels(mSet$dataSet[[lbl.fac]])
+             }else{
+               facs <- levels(mSet$dataSet$cls)
+             }
            },
            time_fin = {
              facs <- levels(mSet$dataSet$cls)
@@ -996,13 +1004,15 @@ shinyServer(function(input, output, session) {
       shiny::setProgress(session = session, value= 1/4)
       
       tbl <- get.csv(global$paths$patdb,
-                     time.series = if(input$exp_type == "time_std") T else F,
+                     time.series = grepl("time", input$exp_type),
                      group_adducts = if(length(global$vectors$add_search_list) == 0) F else T,
                      groupfac = input$group_by,
                      which_dbs = global$vectors$add_search_list,
                      which_adducts = selected_adduct_list
       )
       
+      tbl <<- tbl
+      print(tbl[1:10,1:10])
       # --- experimental stuff ---
       switch(input$exp_type,
              stat = {
@@ -1158,7 +1168,7 @@ shinyServer(function(input, output, session) {
   
       # ------------------------------
       #Below is your R command history: 
-      mSet <<- switch(input$exp_type,
+      mSet <- switch(input$exp_type,
                       stat = {
                         InitDataObjects("pktable", 
                                         "stat", 
@@ -1263,6 +1273,8 @@ shinyServer(function(input, output, session) {
       
       keep_cols <- switch(input$exp_type, 
                           stat = c("sample", "label"),
+                          time_fin = c("sample", "label"),
+                          time_min = c("sample", "label"),
                           time_std = c("sample", "label", "Time"))#, "group")#, "Time")
       
       remove <- which(!(exp_var_names %in% keep_cols))
@@ -1282,20 +1294,27 @@ shinyServer(function(input, output, session) {
       
       print(input$exp_type)
       
-      mSet <<- switch(input$exp_type,
+      mSet <- switch(input$exp_type,
                      stat = Read.TextData(mSet, 
                                           filePath = csv_loc_no_out, 
                                           "rowu"), 
+                     time_min = Read.TextData(mSet, 
+                                              filePath = csv_loc_no_out, 
+                                              "rowu"), 
+                     time_fin = Read.TextData(mSet, 
+                                              filePath = csv_loc_no_out, 
+                                              "rowu"), 
                      time_std = Read.TextData(mSet, 
                                               filePath = csv_loc_no_out, 
                                               "rowts"))
-      mSet$dataSet$covars <<- covar_table
+      
+      mSet$dataSet$covars <- covar_table
       
       # - - - sanity check - - -
       
-      mSet <<- SanityCheckData(mSet)
+      mSet <- SanityCheckData(mSet)
       
-      mSet <<- RemoveMissingPercent(mSet, 
+      mSet <- RemoveMissingPercent(mSet, 
                                     percent = input$perc_limit/100)
       
       if(input$miss_type != "none"){
@@ -1470,8 +1489,7 @@ shinyServer(function(input, output, session) {
       # REORDER COVARS
 
       mSet$dataSet$covars <- mSet$dataSet$covars[match(rownames(mSet$dataSet$norm), 
-                                                        mSet$dataSet$covars$sample), 
-                                                  -"#"]
+                                                        mSet$dataSet$covars$sample),]
       
       # - - set2global - - 
       

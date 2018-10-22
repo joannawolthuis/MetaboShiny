@@ -95,13 +95,13 @@ get.csv <-
     
     # - - - fix QCs - - - 
     
-    qc.locs <- which(small.set$sample == "QC")
-    
-    print(qc.locs)
-    
-    small.set$sample[qc.locs] <- paste0("QC", 1:length(qc.locs))
-    
-    print(small.set$sample)
+    # qc.locs <- which(small.set$sample == "QC")
+    # 
+    # print(qc.locs)
+    # 
+    # small.set$sample[qc.locs] <- paste0("QC", 1:length(qc.locs))
+    # 
+    # print(small.set$sample)
     
     # - - make time series if necessary (this factorizes sampling date) - -
     

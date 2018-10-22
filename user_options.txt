@@ -1,6 +1,6 @@
 db_dir = /Users/jwolthuis/Google Drive/MetaboShiny/backend/db
 work_dir = /Users/jwolthuis/Analysis/SP
-proj_name = IBD_TESTRUN
+proj_name = CATS_OCT18
 ppm = 2
 packages_installed = Y
 font1 = Cute Font
@@ -17,5 +17,5 @@ size3 = 20
 size4 = 16
 taskbar_image = flask (1).png
 gtheme = classic
-gcols = inflammatory activity:#FF0000FD&remission:#57BFFFF9
+gcols = control diet:#FF0000FD&glucose diet:#57BFFFF9
 gspec = YlOrRd
