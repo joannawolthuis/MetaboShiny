@@ -508,7 +508,7 @@ plotPCA.3d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, pcz, mode="
   switch(mode, 
          pca = {
            df <- mSet$analSet$pca$x
-           #x =1;y=2;z=3
+           pcx ="PC1";pcy="PC2";pcz="PC3";
            x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
            y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
            z.var <- round(mSet$analSet$pca$variance[pcz] * 100.00, digits=1)
@@ -533,10 +533,9 @@ plotPCA.3d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, pcz, mode="
            y.var <- plsda.table[PC == pcy]$var
            z.var <- plsda.table[PC == pcz]$var
            
-           print("...")
-           
            # --- coordinates ---
            df <- mSet$analSet$plsr$scores
+           class(df) <- "matrix"
            colnames(df) <- paste0("PC", 1:ncol(df))
          })
 
@@ -544,14 +543,17 @@ plotPCA.3d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, pcz, mode="
     fac.lvls <- length(levels(mSet$dataSet$facB))
     classes <- mSet$dataSet$facB
     df_split_idx <- split(1:nrow(df), f = sapply(strsplit(rownames(df), split = "_T"), function(x) x[[2]]))
-    df_list <- lapply(df_split_idx, function(idx_list) df[idx_list,])
+    df_list <- lapply(df_split_idx, function(idx_list) as.data.frame(df[idx_list,]))
   }else{
     fac.lvls <- length(levels(mSet$dataSet$cls))
     classes <- mSet$dataSet$cls
-    df_list <- df
+    df <- as.data.frame(df)
+    rownames(df) <- rownames(mSet$dataSet$norm)
+    df_list <- list(df)
   }
   
   # --- add ellipses ---
+  
   plots_facet <- lapply(1:length(df_list), function(i){
     
     df = df_list[[i]]

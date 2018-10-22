@@ -1135,9 +1135,9 @@ shinyServer(function(input, output, session) {
       # get curr values from: input$ exp_type, filt_type, norm_type, scale_type, trans_type (later)
       shiny::setProgress(session=session, value= .1)
       
-      # input <- list(batch_var = NULL,
-      #               exp_var = "group",
-      #               exp_type = "time_std",
+      # input <- list(batch_var = "batch",
+      #               exp_var = "stool_condition",
+      #               exp_type = "stat",
       #               perc_limit = .99,
       #               filt_type = "none",
       #               miss_type = "rf",
@@ -1158,7 +1158,7 @@ shinyServer(function(input, output, session) {
   
       # ------------------------------
       #Below is your R command history: 
-      mSet <- switch(input$exp_type,
+      mSet <<- switch(input$exp_type,
                       stat = {
                         InitDataObjects("pktable", 
                                         "stat", 
@@ -1223,7 +1223,6 @@ shinyServer(function(input, output, session) {
         sums <- rowSums(csv_subset[,-exp.vars,with=FALSE],na.rm = TRUE)
         names(sums) <- csv_subset$sample
         outliers = c(car::Boxplot(as.data.frame(sums)))
-        
         csv_temp_no_out <- csv_subset[!(sample %in% outliers),]
       } else{
         csv_temp_no_out <- csv_subset
@@ -1255,6 +1254,10 @@ shinyServer(function(input, output, session) {
       
       colnames(csv_temp_no_out)[which( colnames(csv_temp_no_out) == "time")] <- "Time"
       
+      as.numi <- as.numeric(colnames(csv_temp_no_out)[1:100])
+      
+      exp.vars <- which(is.na(as.numi))
+      
       # remove all except sample and time in saved csv
       exp_var_names <- colnames(csv_temp_no_out)[exp.vars]
       
@@ -1273,26 +1276,26 @@ shinyServer(function(input, output, session) {
       
       fwrite(csv_temp_no_out[,-remove,with=F], file = csv_loc_no_out)
       
-      #rownames(covar_table) <- covar_table$sample
+      rownames(covar_table) <- covar_table$sample
       
       # -------------------------------------
       
       print(input$exp_type)
       
-      mSet <- switch(input$exp_type,
+      mSet <<- switch(input$exp_type,
                      stat = Read.TextData(mSet, 
                                           filePath = csv_loc_no_out, 
                                           "rowu"), 
                      time_std = Read.TextData(mSet, 
                                               filePath = csv_loc_no_out, 
                                               "rowts"))
-      mSet$dataSet$covars <- covar_table
+      mSet$dataSet$covars <<- covar_table
       
       # - - - sanity check - - -
       
-      mSet <- SanityCheckData(mSet)
+      mSet <<- SanityCheckData(mSet)
       
-      mSet <- RemoveMissingPercent(mSet, 
+      mSet <<- RemoveMissingPercent(mSet, 
                                     percent = input$perc_limit/100)
       
       if(input$miss_type != "none"){
