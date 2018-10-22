@@ -120,7 +120,7 @@ blackwhite.colors <- function(n){
 }
 
 #' @export
-ggplotSummary <- function(cpd = curr_cpd, cols=c("black", "pink"), sourceTable = mSet$dataSet$norm, cf=rainbow, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
+ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "pink"), sourceTable = mSet$dataSet$norm, cf=rainbow, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
   cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
   if(substring(mSet$dataSet$format,4,5)!="ts"){
     # --- ggplot ---
@@ -140,10 +140,21 @@ ggplotSummary <- function(cpd = curr_cpd, cols=c("black", "pink"), sourceTable =
       } 
     })
     # -----------
+    
+    print(shape.fac)
+    
+    profile$Shape <- if(shape.fac == "label"){
+      c("placeholder")
+    }else{
+      as.factor(mSet$dataSet$covars[,..shape.fac][[1]])
+    }
+    
+    print(head(profile))
+    
     # ggplot
     plot <- ggplot2::ggplot(data=profile, ggplot2::aes(x=Group,y=Abundance, fill=Group, color=Group)) +
       ggplot2::geom_boxplot(alpha=0.4) +
-      ggplot2::geom_point(ggplot2::aes(text=Sample),alpha=0.4, size = 2, shape = 1, position = position_dodge(width=0.1)) +
+      ggplot2::geom_point(ggplot2::aes(text=Sample, shape=Shape),alpha=0.7, size = 2, position = position_dodge(width=0.1)) +
       plot.theme(base_size = 15) +
       ggplot2::scale_fill_manual(values=cols) +
       ggplot2::scale_color_manual(values=cols) +
@@ -155,9 +166,14 @@ ggplotSummary <- function(cpd = curr_cpd, cols=c("black", "pink"), sourceTable =
   }else if(mSet$dataSet$design.type =="time"){ # time trend within phenotype
     cpd = curr_cpd
     profile <- getProfile(cpd, mode="time")
+    profile$Shape <- if(shape.fac == "label"){
+      c("placeholder")
+    }else{
+      mSet$dataSet$covars[,..shape.fac][[1]]
+    }
     plot <- ggplot2::ggplot(data=profile, ggplot2::aes(x=Time, y=Abundance, group=interaction(Time, Group),fill=Group, color=Group)) +
-      ggplot2::geom_boxplot(alpha=0.4) +
-      ggplot2::geom_point(ggplot2::aes(text=Sample),alpha=0.4, size = 2, shape = 1, position = position_dodge(width=0.1)) +
+      ggplot2::geom_boxplot(alpha=0.4, aes(shape=Shape)) +
+      ggplot2::geom_point(ggplot2::aes(text=Sample),alpha=0.4, size = 2, position = position_dodge(width=0.1)) +
       plot.theme(base_size = 15) +
       ggplot2::scale_fill_manual(values=cols) +
       ggplot2::scale_color_manual(values=cols)+
@@ -504,7 +520,7 @@ ggPlotBar <- function(repeats, attempts=50,  cf = global$functions$color.functio
   }
 }
 
-plotPCA.3d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, pcz, mode="pca"){
+plotPCA.3d <- function(mSet, cols = global$vectors$mycols, shape.fac="label", pcx, pcy, pcz, mode="pca"){
   switch(mode, 
          pca = {
            df <- mSet$analSet$pca$x
@@ -538,21 +554,35 @@ plotPCA.3d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, pcz, mode="
            class(df) <- "matrix"
            colnames(df) <- paste0("PC", 1:ncol(df))
          })
-
+  
   if(mode == "ipca"){
     fac.lvls <- length(levels(mSet$dataSet$facB))
-    classes <- mSet$dataSet$facB
+    classes = mSet$dataSet$facB
     df_split_idx <- split(1:nrow(df), f = sapply(strsplit(rownames(df), split = "_T"), function(x) x[[2]]))
     df_list <- lapply(df_split_idx, function(idx_list) as.data.frame(df[idx_list,]))
   }else{
     fac.lvls <- length(levels(mSet$dataSet$cls))
-    classes <- mSet$dataSet$cls
+    classes = mSet$dataSet$cls
     df <- as.data.frame(df)
     rownames(df) <- rownames(mSet$dataSet$norm)
     df_list <- list(df)
   }
   
+  cols <- cols[c(1:length(unique(classes)))]
+  
   # --- add ellipses ---
+  
+  symbols = c('circle',
+              'diamond', 
+              'square', 
+              'x',
+              'o')
+  
+  symbol.vec<-if(shape.fac == "label"){
+   rep('circle', times = length(classes))
+  }else{
+    as.factor(mSet$dataSet$covars[,..shape.fac][[1]])
+  }
   
   plots_facet <- lapply(1:length(df_list), function(i){
     
@@ -602,6 +632,7 @@ plotPCA.3d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, pcz, mode="
         c = c + 1
       }
     }
+    print(symbol.vec)
     # --- return ---
     pca_plot <<- adj_plot %>% add_trace(
       hoverinfo = 'text',
@@ -612,7 +643,14 @@ plotPCA.3d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, pcz, mode="
       visible = rep(T, times=fac.lvls),
       type = "scatter3d",
       opacity=1,
-      color= classes[orig_idx], colors=cols
+      color = classes[orig_idx], 
+      colors=cols,
+      symbol = symbol.vec[orig_idx],
+      symbols = c('circle',
+                  'diamond', 
+                  'square', 
+                  'x',
+                  'o')
     ) %>%  layout(scene = list(
       aspectmode="cube",
       xaxis = list(
@@ -630,7 +668,19 @@ plotPCA.3d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, pcz, mode="
   subplot(plots_facet,shareX = F, shareY = F)
   }
 
-plotPCA.2d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, mode="pca", plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
+plotPCA.2d <- function(mSet, shape.fac = "label", cols = global$vectors$mycols, pcx, pcy, mode="pca", plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
+  
+  classes <- switch(mode, 
+           ipca = mSet$dataSet$facB,
+           pca = mSet$dataSet$cls)
+  
+  symbols = c("16",#'circle',
+              "18",#'diamond', 
+              "15",#'square', 
+              "4",#'x',
+              "1"#'o'
+              )
+  
   switch(mode,
          pca={
            df <- mSet$analSet$pca$x
@@ -643,7 +693,7 @@ plotPCA.2d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, mode="pca",
            yc=mSet$analSet$pca$x[, pcy]
            
            dat_long <- data.table(variable = names(xc),
-                                  group = mSet$dataSet$cls,
+                                  group = classes,
                                   x = xc, 
                                   y = yc)
          },
@@ -658,7 +708,7 @@ plotPCA.2d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, mode="pca",
              yc=mSet$analSet$pca$x[, pcy]
              
              dat_long <- data.table(variable = names(xc),
-                                    group = mSet$dataSet$facB,
+                                    group = classes,
                                     time = mSet$dataSet$facA,
                                     x = xc, 
                                     y = yc)
@@ -685,14 +735,22 @@ plotPCA.2d <- function(mSet, cols = global$vectors$mycols, pcx, pcy, mode="pca",
            yc=df[, pcy]
            
            dat_long <- data.table(variable = names(xc),
-                                  group = mSet$dataSet$cls,
+                                  group = classes,
                                   x = xc, 
                                   y = yc)
          })
   # - - - - - - - - -
   
+  dat_long$shape <- if(shape.fac == "label"){
+    dat_long$group
+  }else{
+    as.factor(mSet$dataSet$covars[,..shape.fac][[1]])
+  }
+  
+  print(head(dat_long))
+  
   p <- ggplot(dat_long, aes(x, y, color=group, fill=group)) +
-    geom_point(size=5)+
+    geom_point(size=5, aes(shape=shape))+
     stat_ellipse(geom = "polygon", alpha = 0.3) +
     plot.theme() +
     theme(legend.position="none",

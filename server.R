@@ -34,6 +34,30 @@ shinyServer(function(input, output, session) {
          style = "background-image:linear-gradient(0deg, transparent 50%, #aaa 50%),linear-gradient(90deg, #aaa 50%, #ccc 50%);background-size:10px 10px,10px 10px;")
   }, deleteFile = FALSE)
   
+  
+  output$colorPickers <- renderUI({
+    max.cols = 5
+    lapply(c(1:max.cols), function(i) {
+      print(i)
+      colourpicker::colourInput(inputId = paste("col", i, sep="_"),
+                                label = paste("Choose colour", i),
+                                value = global$vectors$mycols[i],
+                                allowTransparent = F)
+    })
+  })
+  
+  observe({
+    max.cols = 5
+    values <- unlist(lapply(c(1:max.cols), function(i) {
+      input[[paste("col", i, sep="_")]]
+    }))
+    
+    if(!any(is.null(values))){
+      set.col.map("user_options.txt", values)
+      global$vectors$mycols <<- get.col.map("user_options.txt")
+    }
+  })
+  
   output$adductSettings <- renderUI({
     tabsetPanel( id = "adductSettings", selected="db",
                  tabPanel(icon("database"), value="db",
@@ -89,7 +113,8 @@ shinyServer(function(input, output, session) {
     navbarPage(inverse=F,h2("Standard analysis"), id="tab_stat",
                # TODO: T-SNE
                tabPanel(h3("PCA"), value = "pca", #icon=icon("cube"),
-                        fluidRow(column(12,align="center",plotly::plotlyOutput("plot_pca",height = "600px", width="600px"))),
+                        fluidRow(column(10,align="center",plotly::plotlyOutput("plot_pca",height = "600px", width="600px"))
+                                 ),
                         fluidRow(column(12,align="center",
                                         switchButton("pca_2d3d", label = "", col = "BW", type = "2d3d"))),
                         hr(),
@@ -702,77 +727,7 @@ shinyServer(function(input, output, session) {
     setOption("user_options.txt", "size3", input$size.3)
     setOption("user_options.txt", "size4", input$size.4)
   })
-  
-  color.pickers <- reactive({
-    req(mSet$dataSet)
-    # -------------
-    switch(input$exp_type,
-           stat = {
-             facs <- levels(mSet$dataSet$cls)
-           },
-           time_std = {
-             if("facA.lbl" %in% names(mSet$dataSet)){
-               lbl.fac <- if(mSet$dataSet$facA.lbl == "Time") "facB" else "facA"
-               facs <- levels(mSet$dataSet[[lbl.fac]])  
-             }else{
-               facs <- levels(mSet$dataSet$cls)
-             }
-           },
-           time_fin = {
-             facs <- levels(mSet$dataSet$cls)
-           },
-           time_min = {           
-             facs <- levels(mSet$dataSet$cls)
-           })
-    # -------------
-    lapply(seq_along(facs), function(i) {
-      colourpicker::colourInput(inputId = paste("col", i, sep="_"), 
-                                label = paste("Choose colour for", facs[i]), 
-                                value = global$vectors$mycols[i],
-                                allowTransparent = T) 
-    })
-  })
-  
-  observe({ # color settings
-    
-    if(!exists("mSet")) return()
-    
-    # - - - - -
-    
-    switch(input$exp_type,
-           stat = {
-             facs <- levels(mSet$dataSet$cls)
-           },
-           time_std = {
-             if("facA.lbl" %in% names(mSet$dataSet)){
-               lbl.fac <- if(mSet$dataSet$facA.lbl == "Time") "facB" else "facA"
-               facs <- levels(mSet$dataSet[[lbl.fac]])
-             }else{
-               facs <- levels(mSet$dataSet$cls)
-             }
-           },
-           time_fin = {
-             facs <- levels(mSet$dataSet$cls)
-           },
-           time_min = {           
-             facs <- levels(mSet$dataSet$cls)
-           })
-    
-    values <- unlist(lapply(seq_along(facs), function(i) {
-      input[[paste("col", i, sep="_")]]
-    }))
-    
-    if(typeof(values) == "NULL") return()
-    
-    names(values) <- facs
-    
-    # - - -
-    
-    set.col.map("user_options.txt", values)
-    global$vectors$mycols <<- get.col.map("user_options.txt")
 
-  })
-  
   # --- adduct table editing ---
   
   values = reactiveValues()
@@ -1626,7 +1581,8 @@ shinyServer(function(input, output, session) {
                plotPCA.3d(mSet, global$vectors$mycols,
                           pcx = input$pca_x,
                           pcy = input$pca_y,
-                          pcz = input$pca_z)
+                          pcz = input$pca_z,
+                          shape.fac = input$second.fac)
              })
              # === LEGEND ===
              output$pca_legend <- plotly::renderPlotly({
@@ -1944,7 +1900,8 @@ shinyServer(function(input, output, session) {
       output$plot_pca <- plotly::renderPlotly({
         plotPCA.2d(mSet, global$vectors$mycols,
                    pcx = input$pca_x,
-                   pcy = input$pca_y, mode = "pca")
+                   pcy = input$pca_y, mode = "pca",
+                   shape.fac = input$second.fac)
       })
     }else{
       # 3d
@@ -1952,7 +1909,8 @@ shinyServer(function(input, output, session) {
         plotPCA.3d(mSet, global$vectors$mycols,
                    pcx = input$pca_x,
                    pcy = input$pca_y,
-                   pcz = input$pca_z, mode = "pca")
+                   pcz = input$pca_z, mode = "pca",
+                   shape.fac = input$second.fac)
       })
     }
   })
@@ -1978,8 +1936,6 @@ shinyServer(function(input, output, session) {
       })
     }
   })
-  
-  
   
   observeEvent(input$do_ml, {
     
@@ -2301,7 +2257,7 @@ shinyServer(function(input, output, session) {
 
       output$curr_plot <- plotly::renderPlotly({
         # --- ggplot ---
-        ggplotSummary(curr_cpd, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+        ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
       })
       
       output[[outplot_name]] <- plotly::renderPlotly({
@@ -2309,7 +2265,7 @@ shinyServer(function(input, output, session) {
         if(table == 'meba'){
           ggplotMeba(curr_cpd, draw.average = T, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
         }else{
-          ggplotSummary(curr_cpd, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+          ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
         }
       })
     })
@@ -2332,7 +2288,7 @@ shinyServer(function(input, output, session) {
         # - return -
         output[[paste0(input$tab_stat, "_specific_plot")]] <- plotly::renderPlotly({
           # --- ggplot ---
-          ggplotSummary(curr_cpd, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+          ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
         })
       }else if(input$tab_stat == "pca"){
         if(!"z" %in% names(d)){
@@ -2395,7 +2351,7 @@ shinyServer(function(input, output, session) {
             
             output$ml_specific_plot <- plotly::renderPlotly({
               # --- ggplot ---
-              ggplotSummary(curr_cpd, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+              ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
             })
           })}else if(grepl(pattern = "heatmap", x = input$tab_stat)){
             if(!exists("hmap_mzs")) return(NULL)
@@ -2405,7 +2361,7 @@ shinyServer(function(input, output, session) {
   
     output$curr_plot <- plotly::renderPlotly({
       # --- ggplot ---
-      ggplotSummary(curr_cpd, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+      ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
     })
     
     # ----------------------------
@@ -2496,11 +2452,11 @@ shinyServer(function(input, output, session) {
     # --- search ---
     #TODO: this should be a function and not re-written
     output$meba_specific_plot <- plotly::renderPlotly({ggplotMeba(curr_cpd, draw.average=T, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$asca_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$fc_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$tt_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$aov_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$plsda_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+    output$asca_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+    output$fc_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+    output$tt_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+    output$aov_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+    output$plsda_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
   })
   
   observeEvent(input$hits_tab_rows_selected,{
@@ -2510,11 +2466,11 @@ shinyServer(function(input, output, session) {
     # -----------------------------
     curr_cpd <<- hits_table[curr_row, mzmed.pgrp]
     output$meba_specific_plot <- plotly::renderPlotly({ggplotMeba(curr_cpd, draw.average=T, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$asca_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$fc_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$tt_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$aov_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$plsda_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+    output$asca_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+    output$fc_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+    output$tt_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+    output$aov_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+    output$plsda_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
   })
   
   observeEvent(input$go_enrich,{

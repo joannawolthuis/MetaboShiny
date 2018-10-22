@@ -79,18 +79,22 @@ flattenlist <- function(x){
 get.col.map <- function(optionfile){
   options <- getOptions(optionfile)
   unparsed.cols <- options$gcols
-  col.items <- strsplit(unparsed.cols, split = "&")
-  keys <- gsub(col.items[[1]], pattern = ":.*$", replacement="")
-  items <- gsub(col.items[[1]], pattern = "^.*:", replacement="")
-  names(items) <- keys
+  col.items <- strsplit(unparsed.cols, split = "&")[[1]]
+  #keys <- gsub(col.items[[1]], pattern = ":.*$", replacement="")
+  #items <- gsub(col.items[[1]], pattern = "^.*:", replacement="")
+  #names(items) <- keys
   # - - - -
-  items
+  col.items
 }
 
 set.col.map <- function(optionfile, colmap){
-  joined <- paste0(sapply(names(colmap), function(gr){
-    paste0(gr, ":", colmap[gr])
-  }), collapse="&")
+  # a default
+  # colmap = c("#E4572E", "#17BEBB", "#FFC914", "#2E282A", "#76B041")
+  # joined <- paste0(sapply(names(colmap), function(gr){
+  #   paste0(gr, ":", colmap[gr])
+  # }), collapse="&")
+  joined <- paste0(
+    colmap, collapse="&")
   # - - - -
   setOption(optionfile, "gcols", joined)
 }

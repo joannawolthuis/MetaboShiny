@@ -17,5 +17,5 @@ size3 = 20
 size4 = 16
 taskbar_image = flask (1).png
 gtheme = classic
-gcols = control diet:#FF0000FD&glucose diet:#57BFFFF9
+gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED
 gspec = YlOrRd
