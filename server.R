@@ -1983,11 +1983,12 @@ shinyServer(function(input, output, session) {
       
       config <- mSet$dataSet$covars[match(mSet$dataSet$covars$sample,rownames(mSet$dataSet$preproc)),]
       config <- config[!is.na(config$sample),]
+      config$label <- mSet$dataSet$cls
       config <- cbind(config, label=mSet$dataSet$cls)
       
       # bye bye NAs
       
-      config <- config[,!apply(is.na(config), 2, any), with=FALSE]
+      config <- config[,apply(!is.na(config), 2, any), with=FALSE]
       
       
       # - - - - - -
@@ -1995,9 +1996,10 @@ shinyServer(function(input, output, session) {
       
       curr <- cbind(config, curr[keep_curr])
       
-      curr <- curr[which(!grepl(curr$sample,
-                                pattern = "QC"))]
+      curr <- curr[which(!grepl(config$sample,
+                                  pattern = "QC"))]        
       
+
       # remove cols with all NA
       
       curr <- curr[,colSums(is.na(curr))<nrow(curr),with=FALSE]
@@ -2013,7 +2015,8 @@ shinyServer(function(input, output, session) {
       repeats <- pbapply::pblapply(1:goes, function(i){
         
         # train / test
-        
+        #ml_train_regex=ml_test_regex=""
+        #ml_train_perc=.8
         ml_train_regex <<- input$ml_train_regex
         ml_test_regex <<- input$ml_test_regex
         
