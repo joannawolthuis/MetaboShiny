@@ -1,7 +1,7 @@
 #' @export
 get.csv <- 
   function(patdb, 
-           time.series = F, 
+           #time.series = F, 
            #exp.condition = "diet",
            max.vals = -1,
            group_adducts = T,
@@ -93,23 +93,8 @@ get.csv <-
     
     small.set <- cbind(small.set, cast.dt[,-exp.vars, with=FALSE])
     
-    # - - - fix QCs - - - 
-    
-    # qc.locs <- which(small.set$sample == "QC")
-    # 
-    # print(qc.locs)
-    # 
-    # small.set$sample[qc.locs] <- paste0("QC", 1:length(qc.locs))
-    # 
-    # print(small.set$sample)
-    
-    # - - make time series if necessary (this factorizes sampling date) - -
-    
-    if(time.series){
-      print("time series")
-      small.set$time <- as.numeric(as.factor(as.Date(small.set$time)))
-      small.set$sample <- small.set$animal_internal_id
-    }
+    small.set$time <- as.numeric(as.factor(as.Date(small.set$time)))
+    small.set$sample <- small.set$animal_internal_id
     
     # - - measure file size - -
     
@@ -119,7 +104,7 @@ get.csv <-
     
     cat(paste("Resulting file will be approximately "))
     
-    print(size, units = "MB")
+    print(size, units = "Mb")
     
     # - - - return - - -
     

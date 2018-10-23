@@ -556,17 +556,18 @@ plotPCA.3d <- function(mSet, cols = global$vectors$mycols, shape.fac="label", pc
          })
   
   if(mode == "ipca"){
-    fac.lvls <- length(levels(mSet$dataSet$facB))
-    classes = mSet$dataSet$facB
-    df_split_idx <- split(1:nrow(df), f = sapply(strsplit(rownames(df), split = "_T"), function(x) x[[2]]))
-    df_list <- lapply(df_split_idx, function(idx_list) as.data.frame(df[idx_list,]))
+    fac.lvls <- length(levels(mSet$dataSet$exp.fac))
+    classes = mSet$dataSet$exp.fac
+    #df_split_idx <- split(1:nrow(df), f = sapply(strsplit(rownames(df), split = "_T"), function(x) x[[2]]))
+    #df_list <- lapply(df_split_idx, function(idx_list) as.data.frame(df[idx_list,]))
   }else{
     fac.lvls <- length(levels(mSet$dataSet$cls))
     classes = mSet$dataSet$cls
-    df <- as.data.frame(df)
-    rownames(df) <- rownames(mSet$dataSet$norm)
-    df_list <- list(df)
   }
+  
+  df <- as.data.frame(df)
+  rownames(df) <- rownames(mSet$dataSet$norm)
+  df_list <- list(df)
   
   cols <- cols[c(1:length(unique(classes)))]
   
@@ -583,6 +584,8 @@ plotPCA.3d <- function(mSet, cols = global$vectors$mycols, shape.fac="label", pc
   }else{
     as.factor(mSet$dataSet$covars[,..shape.fac][[1]])
   }
+  
+  print("...")
   
   plots_facet <- lapply(1:length(df_list), function(i){
     
@@ -671,7 +674,7 @@ plotPCA.3d <- function(mSet, cols = global$vectors$mycols, shape.fac="label", pc
 plotPCA.2d <- function(mSet, shape.fac = "label", cols = global$vectors$mycols, pcx, pcy, mode="pca", plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
   
   classes <- switch(mode, 
-           ipca = mSet$dataSet$facB,
+           ipca = mSet$dataSet$exp.fac,
            pca = mSet$dataSet$cls,
            plsda = mSet$dataSet$cls)
   
@@ -703,14 +706,14 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols = global$vectors$mycols, 
              #x =1;y=2;z=3
              x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
              y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
-             fac.lvls <- length(levels(mSet$dataSet$facB))
+             fac.lvls <- length(levels(mSet$dataSet$exp.fac))
              
              xc=mSet$analSet$pca$x[, pcx]
              yc=mSet$analSet$pca$x[, pcy]
              
              dat_long <- data.table(variable = names(xc),
                                     group = classes,
-                                    time = mSet$dataSet$facA,
+                                    time = mSet$dataSet$time.fac,
                                     x = xc, 
                                     y = yc)
            
@@ -749,9 +752,10 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols = global$vectors$mycols, 
   }
   
   print(head(dat_long))
+  print(dat_long)
   
   p <- ggplot(dat_long, aes(x, y, color=group, fill=group)) +
-    geom_point(size=5, aes(shape=shape))+
+    geom_point(size=5, aes(shape=shape,text=variable))+
     stat_ellipse(geom = "polygon", alpha = 0.3) +
     plot.theme() +
     theme(legend.position="none",

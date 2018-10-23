@@ -416,17 +416,27 @@ shinyServer(function(input, output, session) {
   time.ui <- reactive({
     navbarPage(inverse=F,h2("Time Series"), id="tab_time",
                tabPanel(h3("iPCA"), value = "ipca", 
-                        plotly::plotlyOutput("plot_ipca",height="600px"),
-                        selectInput("ipca_factor", label = "Color based on:", choices =list("Time"="facA",
-                                                                                            "Experimental group"="facB"),width="100%"),
+                        fluidRow(column(10,align="center",plotly::plotlyOutput("plot_pca",height = "600px", width="600px"))
+                        ),
+                        fluidRow(column(12,align="center",
+                                        switchButton("pca_2d3d", label = "", col = "BW", type = "2d3d"))),
+                        hr(),
                         fluidRow(column(3,
-                                        selectInput("ipca_x", label = "X axis:", choices = paste0("PC",1:90),selected = "PC1",width="100%"),
-                                        selectInput("ipca_y", label = "Y axis:", choices = paste0("PC",1:90),selected = "PC2",width="100%"),
-                                        selectInput("ipca_z", label = "Z axis:", choices = paste0("PC",1:90),selected = "PC3",width="100%")
-                        ), 
-                        column(9, 
-                               div(DT::dataTableOutput('ipca_tab',width="100%"),style='font-size:80%')
-                        ))
+                                        selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:20),selected = "PC1",width="100%"),
+                                        selectInput("pca_y", label = "Y axis:", choices = paste0("PC",1:20),selected = "PC2",width="100%"),
+                                        selectInput("pca_z", label = "Z axis:", choices = paste0("PC",1:20),selected = "PC3",width="100%")),
+                                 column(9,
+                                        tabsetPanel(id="pca_2", 
+                                                    tabPanel(title="Table", 
+                                                             div(DT::dataTableOutput('pca_tab',width="100%"),style='font-size:80%')),
+                                                    tabPanel(title="Scree",
+                                                             plotOutput("pca_scree")
+                                                    ),
+                                                    tabPanel(title="Loadings", 
+                                                             div(DT::dataTableOutput('pca_load_tab',width="100%"),style='font-size:80%'))
+                                        ))
+                        )
+                        
                ),
                # =================================================================================
                tabPanel(h3("MEBA"), value="meba", 
@@ -930,68 +940,60 @@ shinyServer(function(input, output, session) {
     withProgress({
       
       shiny::setProgress(session = session, value= 1/4)
+
+      # global$paths$patdb = "/Users/jwolthuis/Analysis/SP/CATS_OCT18.db"
+      # tbl <- get.csv(global$paths$patdb,
+      #                #time.series = grepl("time", input$exp_type),
+      #                group_adducts = F ,
+      #                groupfac = "mz",
+      #                which_dbs = c(""),
+      #                which_adducts = c("")
+      # )
       
       tbl <- get.csv(global$paths$patdb,
-                     time.series = grepl("time", input$exp_type),
+                     #time.series = grepl("time", input$exp_type),
                      group_adducts = if(length(global$vectors$add_search_list) == 0) F else T,
                      groupfac = input$group_by,
                      which_dbs = global$vectors$add_search_list,
                      which_adducts = selected_adduct_list
       )
       
-      tbl <<- tbl
-      print(tbl[1:10,1:10])
       # --- experimental stuff ---
-      switch(input$exp_type,
-             stat = {
-               tbl.adj <- tbl[,-"time"]
-             },
-             time_std = {
-               tbl.adj <- tbl
-             },
-             time_fin = {
-               tbl.adj <<- unique(tbl[time == input$your.time, -"time"])
-               mainmode <<- "stat"
-               tbl.adj$sample <- gsub(tbl.adj$sample,pattern = "_T.*", replacement = "")
-             },
-             time_min = {           
-               uniq.samples <- unique(tbl$sample)
-               table.base <- tbl[time == input$your.time,c(1,3)][on=uniq.samples]
-               time.end <- tbl[time == input$your.time,][,4:ncol(tbl),on=uniq.samples]
-               time.begin <- tbl[time == min(as.numeric(tbl$Time)),][,4:ncol(tbl),on=uniq.samples]
-               tbl.adj <<- cbind(table.base, 
-                                 time.end - time.begin) 
-               tbl.adj$sample <- gsub(tbl.adj$sample,pattern = "_T.*", replacement = "")
-             }
-      )
+
+      if(any(duplicated(tbl$sample))){
+        # time series data
+        tbl$sample <- paste0(tbl$sample, "_T", tbl$time)
+        show.times = T
+      }
+      
       # -------------------------
       # save csv
       shiny::setProgress(session=session, value= 2/4)
       global$paths$csv_loc <<- file.path(getOptions("user_options.txt")$work_dir, paste0(getOptions("user_options.txt")$proj_name,".csv"))
-      fwrite(tbl.adj, global$paths$csv_loc, sep="\t")
+      fwrite(tbl, global$paths$csv_loc, sep="\t")
       # --- overview table ---
       
-      as.numi <- as.numeric(colnames(tbl.adj)[1:100])
+      as.numi <- as.numeric(colnames(tbl)[1:100])
       
       exp.vars <- which(is.na(as.numi))
-      
-      #nvars <- length(tbl.adj[,1:(which(colnames(tbl.adj) == "$"))])
       
       shiny::setProgress(session=session, value= 3/4)
       
       output$csv_tab <-DT::renderDataTable({
-        overview_tab <- if(input$exp_type == "time_std"){
-          t(data.table(keep.rownames = F,
-                       Identifiers = ncol(tbl.adj) - length(exp.vars),
-                       Samples = nrow(tbl.adj),
-                       Times = length(unique(tbl.adj$time))
-          ))
-        } else{
-          t(data.table(keep.rownames = F,
-                       Identifiers = ncol(tbl.adj) - length(exp.vars),
-                       Samples = nrow(tbl.adj)
-          )) 
-        }
+        
+      overview_tab <- if(show.times){
+        t(data.table(keep.rownames = F,
+                     Identifiers = ncol(tbl) - length(exp.vars),
+                     Samples = nrow(tbl),
+                     Times = length(unique(tbl$time))
+        )) 
+      }else{
+        t(data.table(keep.rownames = F,
+                     Identifiers = ncol(tbl) - length(exp.vars),
+                     Samples = nrow(tbl)
+        )) 
+      }
+      
         # --- render ---
         DT::datatable(overview_tab, 
                       selection = 'single',
@@ -999,7 +1001,6 @@ shinyServer(function(input, output, session) {
                       options = list(lengthMenu = c(10, 30, 50), pageLength = 30,scrollX=TRUE, scrollY=TRUE))
       })
     })
-    update.UI()
   })
   
   # ===================== METABOSTART ========================
@@ -1021,8 +1022,8 @@ shinyServer(function(input, output, session) {
     numi <<- which(sapply(exp.vars, function(x) is.numeric(csv[,..x][[1]])))
     
     # get excel table stuff.
-    updateSelectInput(session, "exp_var",
-                      choices = opts[batch])
+    # updateSelectInput(session, "exp_var",
+    #                   choices = opts[batch])
     updateSelectInput(session, "samp_var",
                       choices = opts[numi])
     updateSelectizeInput(session, "batch_var",
@@ -1071,8 +1072,9 @@ shinyServer(function(input, output, session) {
     # match
     withProgress({
       # get curr values from: input$ exp_type, filt_type, norm_type, scale_type, trans_type (later)
-      shiny::setProgress(session=session, value= .1)
       
+      shiny::setProgress(session=session, value= .1)
+
       # input <- list(batch_var = "batch",
       #               exp_var = "stool_condition",
       #               exp_type = "stat",
@@ -1092,41 +1094,17 @@ shinyServer(function(input, output, session) {
                         data.table = TRUE,
                         header = T)
       
-      #if(all(grepl(csv_orig$sample, pattern = "_T\\d$"))) updateSelectInput(session, "exp_type", selected="time_std")
-  
-      # ------------------------------
-      #Below is your R command history: 
-      mSet <- switch(input$exp_type,
-                      stat = {
-                        InitDataObjects("pktable", 
-                                        "stat", 
-                                        FALSE)
-                      },
-                      time_std = {
-                        InitDataObjects("pktable", 
-                                        "ts", 
-                                        FALSE)},
-                      time_fin = {
-                        InitDataObjects("pktable", 
-                                        "stat", 
-                                        FALSE)
-                      },
-                      time_min = {   
-                        InitDataObjects("pktable", 
-                                        "stat", 
-                                        FALSE)
-                      }
-      )
+      # Below is your R command history: 
       
-      if(input$exp_type == "time_std") mSet <- SetDesignType(mSet, "time")
+      mSet <- InitDataObjects("pktable",
+                              "stat",
+                              FALSE)
       
-      # ------- load and re-save csv --------
-      
-      # replace all 0's with NA
+      # === Load and re-save CSV ===
       
       csv_orig[,(1:ncol(csv_orig)) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)})]
       
-      # - - -
+      # ============================
       
       csv_orig$sample <- gsub(csv_orig$sample, pattern=" ", replacement="")
       
@@ -1134,16 +1112,31 @@ shinyServer(function(input, output, session) {
       
       exp.vars <- which(is.na(as.numi))
       
-      # --- batches ---
+      # === BATCHES ===
     
       batches <- input$batch_var
-      condition <- input$exp_var
+      
+      # === PICK AN INITIAL CONDITION ===|
+      
+      unique.levels <- apply(csv_orig[,..exp.vars, with=F], MARGIN=2, function(col){
+        lvls <- levels(as.factor(col))
+        # - - - - - -
+        length(lvls)
+      })
+      
+      which.default <- unique.levels[which(unique.levels == min(unique.levels[which(unique.levels> 1)]))][1]
+      
+      condition = names(which.default)
+      
+      # =================================|
       
       if(is.null(batches)) batches <- ""
       
       batch_corr <- if(length(batches) == 1 & batches[1] == "") FALSE else TRUE
       
-      if("batch" %in% batches){ batches = c(batches, "injection") }
+      if("batch" %in% batches){ 
+        batches = c(batches, "injection")
+      }
       
       first_part <- csv_orig[,..exp.vars, with=FALSE]
       first_part[first_part == "" | is.null(first_part)] <- "unknown"
@@ -1152,11 +1145,12 @@ shinyServer(function(input, output, session) {
                         "label" = first_part[,..condition][[1]],
                         csv_orig[,-..exp.vars,with=FALSE])
       
-      # --- remove the rest ---
+      # - - - remove the rest - - -
       
       csv_subset <- csv_temp
       
-      # --- remove outliers? ---
+      # - - - remove outliers? - - -
+      
       if(input$remove_outliers){
         sums <- rowSums(csv_subset[,-exp.vars,with=FALSE],na.rm = TRUE)
         names(sums) <- csv_subset$sample
@@ -1170,7 +1164,7 @@ shinyServer(function(input, output, session) {
       
       csv_temp_no_out <- csv_temp_no_out[,which(unlist(lapply(csv_temp_no_out, function(x)!all(is.na(x))))),with=F]
       
-      # # - - - low signal samples - - -
+      # - - - low signal samples - - -
       
       complete.perc <- rowMeans(!is.na(csv_temp_no_out))
       keep_samps <- csv_temp_no_out$sample[which(complete.perc > .2)]
@@ -1187,7 +1181,6 @@ shinyServer(function(input, output, session) {
         keep_samps_post_qc <- covar_table[which(covar_table$batch %in% batchnum),"sample"][[1]]
         covar_table <- covar_table[which(covar_table$batch %in% batchnum),]
         csv_temp_no_out <- csv_temp_no_out[which(csv_temp_no_out$sample %in% keep_samps_post_qc),-"batch"]
-        #csv_temp_filt <- csv_temp_no_out#[, -"batch"]
       }
       
       colnames(csv_temp_no_out)[which( colnames(csv_temp_no_out) == "time")] <- "Time"
@@ -1199,11 +1192,7 @@ shinyServer(function(input, output, session) {
       # remove all except sample and time in saved csv
       exp_var_names <- colnames(csv_temp_no_out)[exp.vars]
       
-      keep_cols <- switch(input$exp_type, 
-                          stat = c("sample", "label"),
-                          time_fin = c("sample", "label"),
-                          time_min = c("sample", "label"),
-                          time_std = c("sample", "label", "Time"))#, "group")#, "Time")
+      keep_cols <-  c("sample", "label")
       
       remove <- which(!(exp_var_names %in% keep_cols))
       
@@ -1218,23 +1207,14 @@ shinyServer(function(input, output, session) {
       
       rownames(covar_table) <- covar_table$sample
       
-      # -------------------------------------
+      # - - time series - -    
+      # time series stuff needs to be adjusted laterr!!!
+      # if(input$exp_type == "time_std") mSet <- SetDesignType(mSet, "time")
+      # - - - - - - - - - -
       
-      print(input$exp_type)
-      
-      mSet <- switch(input$exp_type,
-                     stat = Read.TextData(mSet, 
-                                          filePath = csv_loc_no_out, 
-                                          "rowu"), 
-                     time_min = Read.TextData(mSet, 
-                                              filePath = csv_loc_no_out, 
-                                              "rowu"), 
-                     time_fin = Read.TextData(mSet, 
-                                              filePath = csv_loc_no_out, 
-                                              "rowu"), 
-                     time_std = Read.TextData(mSet, 
-                                              filePath = csv_loc_no_out, 
-                                              "rowts"))
+      mSet <- Read.TextData(mSet, 
+                            filePath = csv_loc_no_out, 
+                            "rowu")  
       
       mSet$dataSet$covars <- covar_table
       
@@ -1248,10 +1228,8 @@ shinyServer(function(input, output, session) {
       if(input$miss_type != "none"){
         if(input$miss_type == "pmm"){
           require(mice)
-          #base <- mSet$dataSet$orig
           base <- mSet$dataSet$preproc
           imp <- mice::mice(base, printFlag = TRUE)
-          #mSet$dataSet$norm <<- imp
         }else if(input$miss_type == "rf"){
           samples <- rownames(mSet$dataSet$preproc)
           
@@ -1429,7 +1407,6 @@ shinyServer(function(input, output, session) {
       
       shiny::setProgress(session=session, value= .6)
       varNormPlots <- ggplotNormSummary(mSet)
-      varNormPlots$bl
       output$var1 <- renderPlot(varNormPlots$tl)
       output$var2 <- renderPlot(varNormPlots$bl)
       output$var3 <- renderPlot(varNormPlots$tr)
@@ -1444,7 +1421,6 @@ shinyServer(function(input, output, session) {
       shiny::setProgress(session=session, value= .8)
       
       mSet$dataSet$adducts <<- selected_adduct_list
-      update.UI()  
       shiny::setProgress(session=session, value= .9)
       
     })
@@ -1457,31 +1433,75 @@ shinyServer(function(input, output, session) {
     # get excel table stuff.
     switch(input$tab_time,
            ipca = {
-             # --------------------
-             output$plot_ipca <- plotly::renderPlotly({
-               if("pca" %not in% names(mSet$analSet)){
-                 iPCA.Anal(mSetObj = mSet,
-                           fileNm = file.path(getOptions("user_options.txt")$work_dir, "ipca_3d_0_.json"))
-                 mSet <<- PCA.Anal(mSet)
-               }
-               
-               plotPCA.2d(mSet, "PC1", "PC2", cols = global$vectors$mycols, mode = "ipca")
-               
+             if(!"pca" %in% names(mSet$analSet)){
+             withProgress({
+               mSet <<- PCA.Anal(mSet)
              })
-             # ------------------
-             ipca.table <- as.data.table(data.table(gsub(mSet$analSet$ipca$score$axis, pattern = "\\(.*$| ", replacement = ""),
-                                                    gsub(mSet$analSet$ipca$score$axis, pattern = "PC\\d*| |\\(|%\\)", replacement = "")),
-                                         keep.rownames = T)
-             colnames(ipca.table) <- c("Principal Component", "% variance")
-             output$ipca_tab <-DT::renderDataTable({
-               req(ipca.table)
-               # -------------
-               DT::datatable(ipca.table, 
-                             selection = 'single',
-                             autoHideNavigation = T,
-                             options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-             })
-           },
+           }
+           output$pca_scree <- renderPlot({
+             df <- data.table(
+               pc = 1:length(names(mSet$analSet$pca$variance)),
+               var = mSet$analSet$pca$variance)
+             p <- ggplot2::ggplot(data=df[1:20,]) + ggplot2::geom_line(mapping = aes(x=pc, y=var, colour=var), cex=3) + 
+               global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]](base_size = 10) +
+               ggplot2::scale_colour_gradientn(colours = global$functions$color.functions[[getOptions("user_options.txt")$gspec]](256)) +
+               theme(axis.text=element_text(size=10),
+                     axis.title=element_text(size=19,face="bold"),
+                     #legend.title=element_text(size=15),
+                     #legend.text=element_text(size=12),
+                     legend.position="none")
+             # - - - - - 
+             p
+             #ggplotly(p)
+           })
+           output$plot_pca <- plotly::renderPlotly({
+             plotPCA.3d(mSet, global$vectors$mycols,
+                        pcx = input$pca_x,
+                        pcy = input$pca_y,
+                        pcz = input$pca_z,
+                        shape.fac = input$second.fac,
+                        mode = "ipca")
+           })
+           # === LEGEND ===
+           output$pca_legend <- plotly::renderPlotly({
+             frame <- data.table(x = c(1), 
+                                 y = fac.lvls)
+             p <- ggplot(data=frame,
+                         aes(x, 
+                             y, 
+                             color=factor(y),
+                             fill=factor(y))) + 
+               geom_point(shape = 21, size = 5, stroke = 5) +
+               scale_colour_manual(values=chosen.colors) +
+               theme_void() + 
+               theme(legend.position="none")
+             # --- return ---
+             ggplotly(p, tooltip = NULL) %>% config(displayModeBar = F)
+           })
+           # ==============
+           output$pca_tab <-DT::renderDataTable({
+             pca.table <- as.data.table(round(mSet$analSet$pca$variance * 100.00,
+                                              digits = 2),
+                                        keep.rownames = T)
+             colnames(pca.table) <- c("Principal Component", "% variance")
+             
+             DT::datatable(pca.table, 
+                           selection = 'single',
+                           autoHideNavigation = T,
+                           options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+           })
+           
+           output$pca_load_tab <-DT::renderDataTable({
+             pca.loadings <- mSet$analSet$pca$rotation[,c(input$pca_x,
+                                                          input$pca_y,
+                                                          input$pca_z)]
+             #colnames(pca.loadings)[1] <- "m/z"
+             DT::datatable(pca.loadings, 
+                           selection = 'single',
+                           autoHideNavigation = T,
+                           options = list(lengthMenu = c(5, 10, 15), pageLength = 10))
+           })
+  },
            meba = {
              if("MB" %not in% names(mSet$analSet)){
                mSet <<- performMB(mSet, 10)
@@ -1599,7 +1619,8 @@ shinyServer(function(input, output, session) {
              },
            plsdaa = {NULL},
            heatmap_mult = {
-             req(input$color_ramp)
+             req(input
+                 $color_ramp)
              req(mSet$analSet$aov)
              used.analysis <- "aov"
              used.values <- "p.value"
@@ -1866,13 +1887,20 @@ shinyServer(function(input, output, session) {
     if(!exists("mSet")) return()
     
     if(!("pca" %in% names(mSet$analSet))) return()
+    
+    mode = if(input$timecourse_trigger){
+      "ipca"
+    }else{
+      "pca"
+    }
+    
     # - - - - -
     if(input$pca_2d3d){
       # 2d
       output$plot_pca <- plotly::renderPlotly({
         plotPCA.2d(mSet, global$vectors$mycols,
                    pcx = input$pca_x,
-                   pcy = input$pca_y, mode = "pca",
+                   pcy = input$pca_y, mode = mode,
                    shape.fac = input$second.fac)
       })
     }else{
@@ -1881,7 +1909,7 @@ shinyServer(function(input, output, session) {
         plotPCA.3d(mSet, global$vectors$mycols,
                    pcx = input$pca_x,
                    pcy = input$pca_y,
-                   pcz = input$pca_z, mode = "pca",
+                   pcz = input$pca_z, mode = mode,
                    shape.fac = input$second.fac)
       })
     }
@@ -2741,6 +2769,87 @@ shinyServer(function(input, output, session) {
   
   interface <- reactiveValues()
 
+  timebutton <- reactiveValues()
+  
+  observe({
+    print("checking...")
+    if(exists("mSet")){
+      if(all(grepl(pattern = "_T\\d", x = rownames(mSet$dataSet$norm)))){
+        timebutton$status <- "on"
+      }else{
+        timebutton$status <- "off"
+      }
+    }else{timebutton$status <- "off"}
+  })
+  
+  output$timebutton <- renderUI({
+    print(timebutton$status)
+    if (is.null(timebutton$status)) {
+      NULL
+    } else{
+      switch(timebutton$status, 
+             off = NULL,
+             on = switchButton(inputId = "timecourse_trigger",
+                               label = "Toggle time course mode?", 
+                               value = FALSE, col = "BW", type = "YN"))
+    }
+  })
+  
+  observeEvent(input$timecourse_trigger, {
+    print(input$timecourse_trigger)
+    
+    if(!("storage" %in% names(mSet))){
+      mSet$storage <<- list()
+    }
+    
+    if(input$timecourse_trigger){
+      # change to timecourse mode
+      # save previous mset
+      mSet$storage[[paste0("(timecourse)", paste0(as.character(levels(mSet$dataSet$cls)), collapse="-"))]] <<- mSet$dataSet$analSet
+      
+      # adjust mset
+      SetDesignType(mSet, "time")
+      
+      # facs
+      facA <- as.factor(mSet$dataSet$covars[,input$exp_var, with=F][[1]])
+      facB <- mSet$dataSet$covars[,"time"][[1]]
+
+      mSet$dataSet$exp.fac <<- as.factor(facA)
+      mSet$dataSet$time.fac <<- as.factor(facB)
+      
+      # facA.lbl = input$exp_var
+      # facB.lbl = "Time"
+      # mSet$dataSet$facA.type <<- is.numeric(facA)
+      # mSet$dataSet$orig.facA <<- mSet$dataSet$facA <- as.factor(as.character(facA))
+      # mSet$dataSet$facA.lbl <<- facA.lbl
+      # mSet$dataSet$facB.type <<- is.numeric(facB)
+      # mSet$dataSet$orig.facB <<- mSet$dataSet$facB <- as.factor(as.character(facB))
+      # mSet$dataSet$facB.lbl <<- facB.lbl
+      # 
+      # change ui
+      interface$mode <- "time"
+      
+      mSet$analSet <<- NULL
+      
+    }else{
+      # change back to normal mode
+      # save previous analyses (should be usable in venn diagram later)
+      mSet$storage[[paste0(as.character(levels(mSet$dataSet$cls)), collapse="-")]] <<- mSet$dataSet$analSet
+      # - - - - - - - - - - - -
+      mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,input$exp_var, with=F][[1]])
+      mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
+      # remove old analSet
+      mSet$analSet <<- NULL
+      # reset interface
+      if(mSet$dataSet$cls.num <= 1){
+        interface$mode <- NULL } 
+      else if(mSet$dataSet$cls.num == 2){
+        interface$mode <- "bivar"}
+      else{
+        interface$mode <- "multivar"}
+    }
+  })
+  
   observeEvent(input$change_cls, {
     print(input$change_cls)
     print(input$exp_var)
@@ -2781,10 +2890,9 @@ shinyServer(function(input, output, session) {
       stat.ui.multivar()
     } else if(interface$mode == 'bivar'){  
       stat.ui.bivar()
-    } 
-    # else if(interface$mode == 'timecourse'){
-    #   DO THIS LATER
-    # }
+    } else if(interface$mode == 'time'){
+      time.ui()
+    }
     else{
       fluidRow(column(width=12, align="center",
                       br(),br(),br(),

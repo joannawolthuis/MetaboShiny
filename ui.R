@@ -351,10 +351,14 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                     sidebarPanel(align="center",width = 4,
                                                  tabsetPanel(id = "search", #type = "pills",
                                                              tabPanel(NULL, icon=icon("exchange"),
-                                                                      br(),
-                                                                      selectInput("exp_var", label="Do statistics on:", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < 6))]))
+                                                                      br()
+                                                                      ,h2("Change variable of interest")
+                                                                      ,selectInput("exp_var", label="Do statistics on:", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < 6))]))
                                                                       ,shinyWidgets::circleButton("change_cls", icon = icon("hand-pointer-o"), size = "sm")
                                                                       # change experimental group subset
+                                                                      ,fluidRow(column(12, align="center", uiOutput("timebutton")))
+                                                                      ,h2("Shape")
+                                                                      ,selectInput("second.fac", label="Marker shape based on:", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < 6))]))
                                                                       ,hr()
                                                                       ,h2("Change sample subset"),
                                                                       textInput("subset_regex", "Subset data based on regex:", value = "..."),
@@ -458,8 +462,6 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                       div(DT::dataTableOutput('venn_tab'),style='font-size:80%')
                                                                       ),
                                                              tabPanel(NULL, icon=icon("paint-brush"),
-                                                                      h2("Shape"),
-                                                                      selectInput("second.fac", label="Marker shape based on:", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < 6))])),
                                                                       h2("Plot theme"),
                                                                       selectInput("ggplot_theme", label = "Theme", choices = list("Grid, white bg"="bw",
                                                                                                                                   "No grid, white bg"="classic",
