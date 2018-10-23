@@ -672,7 +672,8 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols = global$vectors$mycols, 
   
   classes <- switch(mode, 
            ipca = mSet$dataSet$facB,
-           pca = mSet$dataSet$cls)
+           pca = mSet$dataSet$cls,
+           plsda = mSet$dataSet$cls)
   
   symbols = c("16",#'circle',
               "18",#'diamond', 

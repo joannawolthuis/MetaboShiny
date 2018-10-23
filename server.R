@@ -1839,10 +1839,9 @@ shinyServer(function(input, output, session) {
            normal={
                require(caret)
 
-               mSet <<- PLSR.Anal(mSet,
-                                  TRUE)
-               mSet <<- PLSDA.CV(mSet,compNum = 5)
-               mSet <<- PLSDA.Permut(mSet,num = 300, type = "accu")
+               mSet <<- PLSR.Anal(mSet)
+               mSet <<- PLSDA.CV(mSet, methodName=if(nrow(mSet$dataSet$norm) < 50) "L" else "T",compNum = 5)
+               mSet <<- PLSDA.Permut(mSet,num = 100, type = "accu")
                })
   })
   
@@ -1860,7 +1859,7 @@ shinyServer(function(input, output, session) {
         ggPlotPerm(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
       })
       output$plot_plsda_3d <- plotly::renderPlotly({
-        plotPCA.3d(mSet, cols = global$vectors$mycols, input$plsda_x, input$plsda_y, input$plsda_z, mode = "plsda")
+        plotPCA.3d(mSet, cols = global$vectors$mycols, input$second.fac, input$plsda_x, input$plsda_y, input$plsda_z, mode = "plsda")
       })
       output$plsda_tab <- DT::renderDataTable({
         # - - - -
@@ -1924,7 +1923,8 @@ shinyServer(function(input, output, session) {
       output$plot_plsda <- plotly::renderPlotly({
         plotPCA.2d(mSet, global$vectors$mycols,
                    pcx = input$plsda_x,
-                   pcy = input$plsda_y, mode = "plsda")
+                   pcy = input$plsda_y, mode = "plsda",
+                   shape.fac = input$second.fac)
       })
     }else{
       # 3d
@@ -1932,7 +1932,8 @@ shinyServer(function(input, output, session) {
         plotPCA.3d(mSet, global$vectors$mycols,
                    pcx = input$plsda_x,
                    pcy = input$plsda_y,
-                   pcz = input$plsda_z, mode = "plsda")
+                   pcz = input$plsda_z, mode = "plsda",
+                   shape.fac = input$second.fac)
       })
     }
   })

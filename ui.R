@@ -447,6 +447,9 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                       selectInput("intersect_venn", label = "Show overlap between:", selected = 1,choices = "",multiple = T),
                                                                       div(DT::dataTableOutput('venn_tab'),style='font-size:80%')
                                                                       ),
+                                                             tabPanel(NULL, icon=icon("exchange"),
+                                                                      selectInput("stat.fac", label="Do statistics on:", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < 6))]))
+                                                                      ),
                                                              tabPanel(NULL, icon=icon("paint-brush"),
                                                                       h2("Shape"),
                                                                       selectInput("second.fac", label="Shape by:", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < 6))])),
