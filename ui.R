@@ -238,12 +238,12 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
            tabPanel("", icon=icon("file-text-o"), value="document",
                     sidebarLayout(position="left",
                                   sidebarPanel = sidebarPanel(align="center",
-                                                              selectInput('exp_type', 'What type of analysis do you want to do?', choices = list("Standard" = "stat",
-                                                                                                                                                 "Time series - standard" = "time_std", 
-                                                                                                                                                 "Time series - custom end" = "time_fin",
-                                                                                                                                                 "Time series - subtract" = "time_min"
-                                                              )),
-                                                              uiOutput("exp_opt"),
+                                                              # selectInput('exp_type', 'What type of analysis do you want to do?', choices = list("Standard" = "stat",
+                                                              #                                                                                    "Time series - standard" = "time_std", 
+                                                              #                                                                                    "Time series - custom end" = "time_fin",
+                                                              #                                                                                    "Time series - subtract" = "time_min"
+                                                              # )),
+                                                              # uiOutput("exp_opt"),
                                                               # ------------------
                                                               uiOutput("adductSettings"),
                                                               # ------------------
@@ -265,8 +265,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
            # --------------------------------------------------------------------------------------------------------------------------------
            tabPanel("",  icon = icon("shower"), value="filter",
                     fluidRow(column(3, aligh="center",
-                                    selectInput('exp_var', 'Which variable do you want to look at?', choices = c("group")),
-                                    selectInput('samp_var', 'Which variable is your sample amount?', choices = c("")), #TODO: only show this when normalize by sample specific factor (specnorm) is selected
+                                    selectInput('samp_var', 'Which variable represents sample amount/concentration?', choices = c("")), #TODO: only show this when normalize by sample specific factor (specnorm) is selected
                                     selectizeInput('batch_var', 'What are your batch variables?', choices = c("batch"), multiple=TRUE, options = list(maxItems = 2L)),
                                     actionButton("check_csv", "Get options", icon=icon("refresh")),
                                     hr(),
@@ -351,6 +350,17 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                   sidebarPanel = 
                                     sidebarPanel(align="center",width = 4,
                                                  tabsetPanel(id = "search", #type = "pills",
+                                                             tabPanel(NULL, icon=icon("exchange"),
+                                                                      br(),
+                                                                      selectInput("exp_var", label="Do statistics on:", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < 6))]))
+                                                                      ,shinyWidgets::circleButton("change_cls", icon = icon("hand-pointer-o"), size = "sm")
+                                                                      # change experimental group subset
+                                                                      ,hr()
+                                                                      ,h2("Change sample subset"),
+                                                                      textInput("subset_regex", "Subset data based on regex:", value = "..."),
+                                                                      selectInput("subset_var", label="Subset data based on:", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < 6))]))
+                                                                      
+                                                             ),
                                                              tabPanel(title=NULL, icon=icon("search"),
                                                                       br(),
                                                                       bsCollapse(id = "dbSelect", open = "Settings",
@@ -447,12 +457,9 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                       selectInput("intersect_venn", label = "Show overlap between:", selected = 1,choices = "",multiple = T),
                                                                       div(DT::dataTableOutput('venn_tab'),style='font-size:80%')
                                                                       ),
-                                                             tabPanel(NULL, icon=icon("exchange"),
-                                                                      selectInput("stat.fac", label="Do statistics on:", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < 6))]))
-                                                                      ),
                                                              tabPanel(NULL, icon=icon("paint-brush"),
                                                                       h2("Shape"),
-                                                                      selectInput("second.fac", label="Shape by:", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < 6))])),
+                                                                      selectInput("second.fac", label="Marker shape based on:", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < 6))])),
                                                                       h2("Plot theme"),
                                                                       selectInput("ggplot_theme", label = "Theme", choices = list("Grid, white bg"="bw",
                                                                                                                                   "No grid, white bg"="classic",

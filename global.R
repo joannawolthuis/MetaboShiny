@@ -107,7 +107,6 @@ global <- list(constants = list(ppm = 2,
                                 default.text = list(list(name='curr_exp_dir',text=options$work_dir),
                                                     list(name='curr_db_dir',text=options$db_dir),
                                                     list(name='ppm',text=options$ppm),
-                                                    list(name='analUI',text="Please choose an analysis mode!"),
                                                     list(name='proj_name',text=options$proj_name),
                                                     list(name="curr_cpd", text="...")
                                 )

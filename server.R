@@ -51,12 +51,12 @@ shinyServer(function(input, output, session) {
     values <- unlist(lapply(c(1:max.cols), function(i) {
       input[[paste("col", i, sep="_")]]
     }))
-    
     if(!any(is.null(values))){
       set.col.map("user_options.txt", values)
       global$vectors$mycols <<- get.col.map("user_options.txt")
     }
   })
+
   
   output$adductSettings <- renderUI({
     tabsetPanel( id = "adductSettings", selected="db",
@@ -444,34 +444,7 @@ shinyServer(function(input, output, session) {
   
   # -----------------
   
-  update.UI <- function(){
-    if(!exists("mSet")){
-      return(NULL)
-    }else{
-      nvars <<- length(levels(mSet$dataSet$cls))
-      which.ui <- if(nvars > 2) stat.ui.multivar else stat.ui.bivar
-      # CHANGE UI
-      switch(input$exp_type,
-             stat = {
-               output$analUI <- renderUI({which.ui()})
-               output$exp_opt <- renderUI({})
-             },
-             time_std = {
-               output$analUI <- renderUI({time.ui()})
-               output$exp_opt <- renderUI({})
-             },
-             time_fin = {
-               output$analUI <- renderUI({which.ui()})
-               output$exp_opt <- renderUI({optUI()})
-             },
-             time_min = {
-               output$analUI <- renderUI({which.ui()})
-               output$exp_opt <- renderUI({optUI()})
-             })
-      # set colour pickers (generate)
-      output$colourPickers <- renderUI({color.pickers()})
-    }
-  }
+
   
   optUI <- function(){		
     selectInput('your.time', 'What end time do you want to pick?', choices = get_times(global$paths$patdb))
@@ -2763,6 +2736,80 @@ shinyServer(function(input, output, session) {
     curr_cpd <<- venn_overlap[input$venn_tab_rows_selected]
     output$curr_cpd <- renderText(curr_cpd)
   })
+  
+  # ===== VARIABLE SWITCHER ====
+  
+  observeEvent(input$change_cls, {
+    print(input$change_cls)
+    print(input$exp_var)
+    
+    if(!("prev.exp" %in% names(mSet))){
+      mSet$storage <<- list()
+    }
+    # save previous analyses (should be usable in venn diagram later)
+    mSet$storage[[paste0(as.character(levels(mSet$dataSet$cls)), collapse="-")]] <- mSet$dataSet$analSet
+    # - - - - - - - - - - - -
+    mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,input$exp_var, with=F][[1]])
+    mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
+    print("Set new variable")
+    # remove old analSet
+    mSet$analSet <<- NULL
+  })
+  
+  # ===== UI SWITCHER ====
+  
+  output$analUI <- renderUI({
+    if(!exists("mSet")){
+      fluidRow(column(width=12, align="center",
+                      br(),br(),br(),
+                      icon("arrow-right","fa-lg"), icon("arrow-right","fa-lg"), icon("arrow-right","fa-lg"),
+                      br(),br(),
+                      h2("Please select a variable of interest in the sidebar!"),
+                      br(),br(),
+                      icon("arrow-right","fa-lg"), icon("arrow-right","fa-lg"), icon("arrow-right","fa-lg")
+      ))      
+    }else{
+      # check if time course data
+      if(any(grepl("_T\\d*$", rownames(mSet$dataSet$norm)))){
+        output$analUI <- renderUI({time.ui()})
+        output$exp_opt <- renderUI({optUI()})
+      }else{
+        # check if multivariate
+        nvars <<- length(levels(mSet$dataSet$cls))
+        which.ui <- if(nvars > 2) stat.ui.multivar else stat.ui.bivar
+        output$analUI <- renderUI({which.ui()})
+      }
+    }
+  })
+  # update.UI <- function(){
+  #   if(!exists("mSet")){
+  #     return(NULL)
+  #   }else{
+  #     nvars <<- length(levels(mSet$dataSet$cls))
+  #     which.ui <- if(nvars > 2) stat.ui.multivar else stat.ui.bivar
+  #     # CHANGE UI
+  #     switch(input$exp_type,
+  #            stat = {
+  #              output$analUI <- renderUI({which.ui()})
+  #              output$exp_opt <- renderUI({})
+  #            },
+  #            time_std = {
+  #              output$analUI <- renderUI({time.ui()})
+  #              output$exp_opt <- renderUI({})
+  #            },
+  #            time_fin = {
+  #              output$analUI <- renderUI({which.ui()})
+  #              output$exp_opt <- renderUI({optUI()})
+  #            },
+  #            time_min = {
+  #              output$analUI <- renderUI({which.ui()})
+  #              output$exp_opt <- renderUI({optUI()})
+  #            })
+  #     # set colour pickers (generate)
+  #     output$colourPickers <- renderUI({color.pickers()})
+  #   }
+  # }
+  # ======================
   
   # - - ON CLOSE - -
   
