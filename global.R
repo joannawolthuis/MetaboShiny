@@ -198,7 +198,7 @@ get_os <- function(){
 # === LOAD LIBRARIES ===
 
 data(isotopes, package = "enviPat")
-#session_cl <- parallel::makeCluster(max(c(1, parallel::detectCores()-1)))
+session_cl <- parallel::makeCluster(max(c(1, parallel::detectCores()-1)))
 
 source("./Rsource/SwitchButton.R")
 
