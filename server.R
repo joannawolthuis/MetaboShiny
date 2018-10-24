@@ -23,6 +23,16 @@ shinyServer(function(input, output, session) {
     output[[default$name]] = renderText(default$text)
   })
   
+  lapply(global$constants$images, FUN=function(image){
+    output[[image$name]] <- renderImage({
+      filename <- normalizePath(image$path)
+      # Return a list containing the filename and alt text
+      list(src = filename, 
+           width = image$dimensions[1],
+           height = image$dimensions[2])
+    }, deleteFile = FALSE)
+  })
+  
   output$spinny <- renderText({spinnyimg()})
   
   output$taskbar_image <- renderImage({
@@ -56,415 +66,191 @@ shinyServer(function(input, output, session) {
       global$vectors$mycols <<- get.col.map("user_options.txt")
     }
   })
+  
+  # ===== STARTUP SETTINGS =====
+  
+  datamanager <- reactiveValues()
+  
+  observe({
+    if(exists("mSet")){
+      datamanager$mset_present = TRUE
+      # - - -
+      if(mSet$dataSet$cls.num <= 1){
+        interface$mode <- NULL } 
+      else if(mSet$dataSet$cls.num == 2){
+        interface$mode <- "bivar"}
+      else{
+        interface$mode <- "multivar"}
+    }else{
+      datamanager$mset_present = FALSE
+    }
+  })
+  
+  observe({
+    if(datamanager$mset_present){
+      # update select input bars
+      updateSelectInput(session, "first_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < 6))]))
+      updateSelectInput(session, "second_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < 6))]))
+      updateSelectInput(session, "subset_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < 6))]))
+      # timecourse button
+      if(all(grepl(pattern = "_T\\d", x = rownames(mSet$dataSet$norm)))){
+        timebutton$status <- "on"
+      }else{
+        timebutton$status <- "off"
+      }
+      if(mSet$dataSet$cls.num ==2 ){
+        heatbutton$status <- "on"
+      }else{
+        heatbutton$status <- "off"
+      }
+    }else{
+      timebutton$status <- "off"
+      heatbutton$status <- "off"
+    }
+  })
 
+  # ===== VARIABLE SWITCHER ====
   
-  output$adductSettings <- renderUI({
-    tabsetPanel( id = "adductSettings", selected="db",
-                 tabPanel(icon("database"), value="db",
-                          br(),
-                          tags$i("Select database(s)"),
-                          br(),
-                          fluidRow(
-                            sardine(fadeImageButton("add_internal", img.path = "umcinternal.png")),
-                            sardine(fadeImageButton("add_noise", img.path = "umcnoise.png")),
-                            sardine(fadeImageButton("add_hmdb", img.path = "hmdblogo.png")),
-                            sardine(fadeImageButton("add_chebi", img.path = "chebilogo.png")),
-                            sardine(fadeImageButton("add_smpdb", img.path = "smpdb_logo_adj.png")),
-                            sardine(fadeImageButton("add_metacyc", img.path = "metacyc.png")),
-                            sardine(fadeImageButton("add_wikipathways", img.path = "wikipathways.png")),
-                            sardine(fadeImageButton("add_kegg", img.path = "kegglogo.gif", value = T)),
-                            sardine(fadeImageButton("add_dimedb", img.path = "dimedb.png")),
-                            sardine(fadeImageButton("add_wikidata", img.path = "wikidata.png")),
-                            sardine(fadeImageButton("add_vmh", img.path = "vmh.png"))
-                          )),
-                 tabPanel(icon("id-card-o"), value = "identifier",
-                          br(),
-                          tags$i("Select identifier"),
-                          radioButtons(inputId = "group_by", label = NULL, choices = 
-                                         list("Molecular formula" = "baseformula",
-                                              "Mass/charge" = "mz"), 
-                                       selected = "mz",
-                                       width="100%")                             ), 
-                 tabPanel(icon("plus-square"), value="adducts",
-                          br(),
-                          tags$i("Select adduct(s)"),
-                          fluidRow(column(width=6, div(style="font-size:120%",icon("search-plus"))), 
-                                   column(width=6,div(style="font-size:120%",icon("search-minus")))
-                          ),
-                          fluidRow(column(width=6,div(DT::dataTableOutput('pos_add_tab',width="100%"),style='font-size:70%')),
-                                   column(width=6,div(DT::dataTableOutput('neg_add_tab',width="100%"),style='font-size:70%'))
-                          ),
-                          fluidRow(sardine(div(actionButton(inputId = "sel_all_adducts",
-                                                            label = "", icon=icon("circle")),style='font-size:70%')),
-                                   sardine(div(actionButton(inputId = "sel_comm_adducts",
-                                                            label = "", icon=icon("check-circle-o")),style='font-size:70%')),
-                                   sardine(div(actionButton(inputId = "sel_no_adducts",
-                                                            label = "", icon=icon("circle-o")),style='font-size:70%'))
-                          ),br()
-                          
-                 )
-    )
+  heatbutton <- reactiveValues()
+  
+  timebutton <- reactiveValues()
+  
+  output$heatbutton <- renderUI({
+    if(is.null(heatbutton$status)){
+      NULL
+    }else{
+      switch(heatbutton$status,
+             off = NULL,
+             on = switchButton(inputId = "heatmode",
+                              label = "Use data from:", 
+                              value = TRUE, col = "BW", type = "TTFC")
+             )
+    }
   })
   
-  
-  # --- render text ---
-  
-  stat.ui.bivar <- reactive({
-    navbarPage(inverse=F,h2("Standard analysis"), id="tab_stat",
-               # TODO: T-SNE
-               tabPanel(h3("PCA"), value = "pca", #icon=icon("cube"),
-                        fluidRow(column(10,align="center",plotly::plotlyOutput("plot_pca",height = "600px", width="600px"))
-                                 ),
-                        fluidRow(column(12,align="center",
-                                        switchButton("pca_2d3d", label = "", col = "BW", type = "2d3d"))),
-                        hr(),
-                        fluidRow(column(3,
-                                        selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:20),selected = "PC1",width="100%"),
-                                        selectInput("pca_y", label = "Y axis:", choices = paste0("PC",1:20),selected = "PC2",width="100%"),
-                                        selectInput("pca_z", label = "Z axis:", choices = paste0("PC",1:20),selected = "PC3",width="100%")),
-                                 column(9,
-                                        tabsetPanel(id="pca_2", 
-                                                    tabPanel(title="Table", 
-                                                             div(DT::dataTableOutput('pca_tab',width="100%"),style='font-size:80%')),
-                                                    tabPanel(title="Scree",
-                                                             plotOutput("pca_scree")
-                                                             ),
-                                                    tabPanel(title="Loadings", 
-                                                             div(DT::dataTableOutput('pca_load_tab',width="100%"),style='font-size:80%'))
-                                        ))
-                        )
-               ),
-               tabPanel(h3("PLSDA"), value = "plsda", 
-                        fluidRow(column(12,align="center",plotly::plotlyOutput("plot_plsda",height = "500px", width="500px"))),
-                        fluidRow(column(12,align="center",switchButton("plsda_2d3d", label = "", col = "BW", type = "2d3d"))),
-                        hr(),
-                        fluidRow(column(3,
-                                        div(style="display:inline-block",
-                                            selectInput("plsda_type", 
-                                                        label="Type:", 
-                                                        choices=list("Normal"="normal",
-                                                                     "Orthogonal"="ortho",
-                                                                     "Sparse"="sparse"), 
-                                                        width = '100px',
-                                                        selected=1)),
-                                        div(style="display:inline-block",
-                                            shinyWidgets::circleButton("do_plsda", icon = icon("hand-pointer-o"), size = "sm")
-                                            #actionButton("do_plsda",label="Go",inline=T)
-                                        ),
-                                        selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:8),selected = "PC1",width="100%"),
-                                        selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:8),selected = "PC2",width="100%"),
-                                        selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:8),selected = "PC3",width="100%")),
-                                 column(9,
-                                        tabsetPanel(id="plsda_2", 
-                                                    tabPanel(title="Cross-validation", 
-                                                             plotOutput("plsda_cv_plot")),
-                                                    tabPanel(title="Permutation", 
-                                                             plotOutput("plsda_perm_plot")),
-                                                    tabPanel(title="Table", 
-                                                             div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')),
-                                                    tabPanel(title="Loadings", 
-                                                             div(DT::dataTableOutput('plsda_load_tab',width="100%"),style='font-size:80%'))
-                                        ))
-                        )
-               ),
-               tabPanel(h3("T-test"), value="tt", 
-                        fluidRow(plotly::plotlyOutput('tt_specific_plot',width="100%")),
-                        navbarPage(inverse=F,"",
-                                   tabPanel("", icon=icon("table"),
-                                            div(DT::dataTableOutput('tt_tab',width="100%"),style='font-size:80%'))
-                                   ,tabPanel("", icon=icon("area-chart"),
-                                             plotly::plotlyOutput('tt_overview_plot',height="300px")
-                                   )
-                        )),
-               tabPanel(h3("Fold-change"), value="fc",
-                        fluidRow(plotly::plotlyOutput('fc_specific_plot',width="100%")),
-                        navbarPage(inverse=F,"",
-                                   tabPanel("", icon=icon("table"),
-                                            div(DT::dataTableOutput('fc_tab',width="100%"),style='font-size:80%'))
-                                   ,tabPanel("", icon=icon("area-chart"),
-                                             plotly::plotlyOutput('fc_overview_plot',height="300px")
-                                   ))
-               ),
-               tabPanel(h3("Heatmap"), value="heatmap_biv",
-                        plotly::plotlyOutput("heatmap",width="100%",height="700px"),
-                        br(),
-                        fluidRow(column(align="center",
-                                        width=12,switchButton(inputId = "heatmode",
-                                                              label = "Use data from:", 
-                                                              value = TRUE, col = "BW", type = "TTFC"))
-                        )
-               ),
-               tabPanel(h3("Volcano"), value="volc",
-                        fluidRow(plotly::plotlyOutput('volc_plot',width="100%",height="600px"))
-               ),
-               tabPanel(h3("Enrichment"), value="enrich_biv",
-                        sidebarLayout(position="left",
-                                      sidebarPanel = sidebarPanel(align="center",
-                                                                  fluidRow(
-                                                                    tags$b("Pathway DBs"),br(),
-                                                                    sardine(fadeImageButton("enrich_metacyc", 
-                                                                                            img.path = "metacyc.png", 
-                                                                                            value = T)),
-                                                                    sardine(fadeImageButton("enrich_wikipathways", 
-                                                                                            img.path = "wikipathways.png", 
-                                                                                            value = T)),
-                                                                    sardine(fadeImageButton("enrich_kegg", 
-                                                                                            img.path = "kegglogo.gif", 
-                                                                                            value = T))
-                                                                  ),
-                                                                  selectInput('enrich_stats', 
-                                                                              'Score source',
-                                                                              choices = c("T-test"="tt", 
-                                                                                          "Fold-change"="fc",
-                                                                                          "PLS-DA"="plsda",
-                                                                                          "RandomForest"="rf")
-                                                                  ),
-                                                                  selectInput('enrich_vals', 
-                                                                              'Score threshold',
-                                                                              choices = c("Significant"="sig", 
-                                                                                          "Top 50"="t50", 
-                                                                                          "Top 100"="t100", 
-                                                                                          "Top 200"="t200", 
-                                                                                          "Top 500"="t500")),
-                                                                  hr(),
-                                                                  actionButton("go_enrich", "Analyse", icon=icon("binoculars"))
-                                      ),
-                                      # ------------------
-                                      mainPanel = mainPanel(align="center",
-                                                            fluidRow(div(DT::dataTableOutput('enriched'),style='font-size:80%')),
-                                                            fluidRow(div(DT::dataTableOutput('enrich_pw_tab'),style='font-size:80%')),
-                                                            fluidRow(plotly::plotlyOutput('enrich_pw_specific_plot'),height="200px")
-                                                            
-                                      ))
-               )
-               ,tabPanel(h3("ML"), value = "ml",
-                         fluidRow(
-                           column(width=3,align="center",
-                                  selectInput("ml_method", 
-                                              label = "Type:", 
-                                              selected = "rf", 
-                                              choices = list("Random Forest" = "rf",
-                                                             "Lasso" = "ls",
-                                                             "Group lasso" = "gls"),
-                                              multiple = F),
-                                  sliderInput("ml_train_perc", 
-                                              label = "Percentage in training", 
-                                              min = 1,
-                                              max = 100,
-                                              step = 1,
-                                              value = 60, 
-                                              post = "%"),
-                                  selectInput("ml_folds", label="Fold CV",choices = c("5", 
-                                                                                      "10", 
-                                                                                      "20", 
-                                                                                      "50", 
-                                                                                      "LOOCV"),
-                                              multiple = F),
-                                  # - - - - - - - - - -
-                                  style="z-index:1002;"
-                           ),
-                           column(width=6,align="center",
-                                  sliderInput("ml_attempts", 
-                                              label = "Attempts", 
-                                              min = 1,
-                                              max = 100,
-                                              step = 1,
-                                              value = 20, 
-                                              post = "x"),
-                                  br(),
-                                  br(),
-                                  shinyWidgets::circleButton("do_ml",icon = h3(paste("Go"), icon("hand-pointer-o", "fa-lg")), status = "default", size = "lg")
-                                  #actionButton("do_ml",label=h2("Go"),width = "150px", height="150px")
-                                  ),
-                           column(width=3,align="center",
-                                  textInput("ml_train_regex", label = "Regex for train:"),
-                                  textInput("ml_test_regex", label = "Regex for test:"),
-                                  tags$a(img(src="help.png"), href="https://regex101.com"),
-                                  textInput("ml_name", label="Name:"))
-                           ),
-                           hr(),
-                         navbarPage(title="Results",id="ml_results",inverse=F,
-                                    tabPanel(title = "ROC",value = "roc",icon=icon("area-chart"),
-                                             plotlyOutput("ml_roc",height = "600px"),
-                                             div(DT::dataTableOutput("ml_tab",width="100%"),style='font-size:80%')),
-                                    tabPanel("Model",value= "bar",icon=icon("table"),
-                                             fluidRow(plotlyOutput("ml_bar", width = "100%", height="300px")),
-                                             fluidRow(
-                                               column(5, sliderInput("ml_top_x",
-                                                                     label = "Show top:",
-                                                                     min = 10,
-                                                                     max = 100,
-                                                                     step=10,
-                                                                     value=20)),
-                                               column(7, plotlyOutput("ml_specific_plot", 
-                                                                      height="300px"))
-                                             )
-                                    )
-                         )
-               ))
+  output$timebutton <- renderUI({
+    print(timebutton$status)
+    if (is.null(timebutton$status)) {
+      NULL
+    } else{
+      switch(timebutton$status, 
+             off = NULL,
+             on = switchButton(inputId = "timecourse_trigger",
+                               label = "Toggle time course mode?", 
+                               value = FALSE, col = "BW", type = "YN"))
+    }
   })
   
-  stat.ui.multivar <- reactive({
-    navbarPage(inverse=F,h2("Standard analysis"), id="tab_stat",
-               tabPanel("", value = "intro", icon=icon("comment-o"),
-                        helpText("Info text here")
-               ), # pca_legend
-               # TODO: t-sne
-               tabPanel(h3("PCA"), value = "pca", #icon=icon("cube"),
-                        fluidRow(column(10, plotly::plotlyOutput("plot_pca",height = "600px")),
-                                 column(2, br(),br(), br(),plotly::plotlyOutput("pca_legend",height = "400px"))
-                        ),
-                        fluidRow(column(3,
-                                        selectInput("pca_x", label = "X axis:", choices = paste0("PC", 1:30),selected = "PC1",width="100%"),
-                                        selectInput("pca_y", label = "Y axis:", choices = paste0("PC", 1:30),selected = "PC2",width="100%"),
-                                        selectInput("pca_z", label = "Z axis:", choices = paste0("PC", 1:30),selected = "PC3",width="100%")
-                        ), 
-                        column(9, 
-                               div(DT::dataTableOutput('pca_tab',width="100%"),style='font-size:80%')
-                        )
-                        )
-               ),
-               tabPanel(h3("PLSDA"), value = "plsda",
-                        navbarPage(inverse=F,"",
-                                   tabPanel("", icon=icon("globe"),
-                                            plotly::plotlyOutput("plot_plsda",width="100%"),
-                                            fluidRow(column(3,
-                                                            selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:8),selected = "PC1",width="100%"),
-                                                            selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:8),selected = "PC2",width="100%"),
-                                                            selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:8),selected = "PC3",width="100%")
-                                            ), 
-                                            column(9, 
-                                                   div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')
-                                            ))),
-                                   tabPanel("", icon=icon("star-o"), 
-                                            plotly::plotlyOutput("plsda_vip_specific_plot",width="100%"),
-                                            fluidRow(column(3,
-                                                            selectInput("plsda_vip_cmp", label = "Compounds from:", choices = paste0("PC",1:5),selected = "PC1",width="100%")
-                                            ), 
-                                            column(9, 
-                                                   div(DT::dataTableOutput('plsda_load_tab',width="100%"),style='font-size:80%')
-                                            ))
-                                            
-                                   )
-                        )
-                        
-               ),
-               tabPanel(h3("ANOVA"), value="aov",
-                        fluidRow(plotly::plotlyOutput('aov_specific_plot',width="100%")),
-                        navbarPage(inverse=F,"",
-                                   tabPanel("", icon=icon("table"),
-                                            div(DT::dataTableOutput('aov_tab',width="100%"),style='font-size:80%'))
-                                   ,tabPanel("", icon=icon("area-chart"),
-                                             plotly::plotlyOutput('aov_overview_plot',height="300px")
-                                   )
-                        )),
-               # tabPanel(h3("RandomForest"), value="rf",
-               #          fluidRow(plotly::plotlyOutput('rf_specific_plot',width="100%")),
-               #          navbarPage(inverse=F,"",
-               #                     tabPanel("", icon=icon("table"),
-               #                              div(DT::dataTableOutput('rf_tab',width="100%"),style='font-size:80%'))
-               #          )
-               # ),
-               tabPanel(h3("Heatmap"), value="heatmap_mult",
-                        plotly::plotlyOutput("heatmap",width="110%",height="700px"),
-                        fluidRow(plotly::plotlyOutput('heatmap_specific_plot'),height="200px")
-               ),
-               tabPanel(h3("Enrichment"), value="enrich_multi",
-                        sidebarLayout(position="left",
-                                      sidebarPanel = sidebarPanel(align="center",
-                                                                  fluidRow(
-                                                                    tags$b("Pathway DBs"),br(),
-                                                                    sardine(fadeImageButton("enrich_metacyc", 
-                                                                                            img.path = "metacyc.png", 
-                                                                                            value = T)),
-                                                                    sardine(fadeImageButton("enrich_wikipathways", 
-                                                                                            img.path = "wikipathways.png", 
-                                                                                            value = T)),
-                                                                    sardine(fadeImageButton("enrich_kegg", 
-                                                                                            img.path = "kegglogo.gif", 
-                                                                                            value = T))
-                                                                  ),
-                                                                  selectInput('enrich_stats', 
-                                                                              'Score source',
-                                                                              choices = c("ANOVA"="aov",
-                                                                                          "PLS-DA"="plsda",
-                                                                                          "RandomForest"="rf")
-                                                                  ),
-                                                                  selectInput('enrich_vals', 
-                                                                              'Score threshold',
-                                                                              choices = c("Significant"="sig", 
-                                                                                          "Top 50"="t50", 
-                                                                                          "Top 100"="t100", 
-                                                                                          "Top 200"="t200", 
-                                                                                          "Top 500"="t500")),
-                                                                  hr(),
-                                                                  actionButton("go_enrich", "Analyse", icon=icon("binoculars"))
-                                      ),
-                                      # ------------------
-                                      mainPanel = mainPanel(align="center",
-                                                            fluidRow(div(DT::dataTableOutput('enriched'),style='font-size:80%')),
-                                                            fluidRow(div(DT::dataTableOutput('enrich_pw_tab'),style='font-size:80%')),
-                                                            fluidRow(plotly::plotlyOutput('enrich_specific_plot'),height="200px")
-                                                            
-                                      ))
-               )
-    )
+  observeEvent(input$timecourse_trigger, {
     
+    print(input$timecourse_trigger)
+    
+    if(!("storage" %in% names(mSet))){
+      mSet$storage <<- list()
+    }
+    
+    if(input$timecourse_trigger){
+      # change to timecourse mode
+      # save previous mset
+      mSet$storage[[paste0(as.character(levels(mSet$dataSet$cls)), collapse="-")]] <<- mSet$dataSet$analSet
+      
+      # adjust mset
+      SetDesignType(mSet, "time")
+      
+      # facs
+      facA <- as.factor(mSet$dataSet$covars[,mSet$dataSet$cls.name, with=F][[1]])
+      facB <- mSet$dataSet$covars[,"time"][[1]]
+      
+      mSet$dataSet$exp.fac <<- as.factor(facA)
+      mSet$dataSet$time.fac <<- as.factor(facB)
+      
+      interface$mode <- "time"
+      
+      #mSet$analSet <<- NULL
+      
+    }else{
+      # change back to normal mode
+      # save previous analyses (should be usable in venn diagram later)
+      mSet$storage[[paste0("(timecourse)", paste0(as.character(levels(mSet$dataSet$cls)), collapse="-"))]] <<- mSet$dataSet$analSet
+      # - - - - - - - - - - - -
+      mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,mSet$dataSet$cls.name, with=F][[1]])
+      mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
+      # remove old analSet
+      
+      #mSet$analSet <<- NULL
+      
+      # reset interface
+      if(mSet$dataSet$cls.num <= 1){
+        interface$mode <- NULL } 
+      else if(mSet$dataSet$cls.num == 2){
+        interface$mode <- "bivar"}
+      else{
+        interface$mode <- "multivar"}
+    }
+  }, ignoreInit = TRUE)
+  
+  interface <- reactiveValues()
+  
+  observeEvent(input$change_cls, {
+    print(input$change_cls)
+    print(input$first_var)
+    
+    if(!("storage" %in% names(mSet))){
+      mSet$storage <<- list()
+    }
+    
+    # save previous analyses (should be usable in venn diagram later)
+    mSet$storage[[paste0(as.character(levels(mSet$dataSet$cls)), collapse="-")]] <<- mSet$dataSet$analSet
+    # - - - - - - - - - - - -
+    mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,input$first_var, with=F][[1]])
+    mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
+    # remove old analSet
+    mSet$analSet <<- NULL
+    mSet$dataSet$cls.name <<- input$first_var
+    # reset interface
+    if(mSet$dataSet$cls.num <= 1){
+      interface$mode <- NULL } 
+    else if(mSet$dataSet$cls.num == 2){
+      interface$mode <- "bivar"}
+    else{
+      interface$mode <- "multivar"}
   })
   
+  # ===== UI SWITCHER ====
   
-  time.ui <- reactive({
-    navbarPage(inverse=F,h2("Time Series"), id="tab_time",
-               tabPanel(h3("iPCA"), value = "ipca", 
-                        fluidRow(column(10,align="center",plotly::plotlyOutput("plot_pca",height = "600px", width="600px"))
-                        ),
-                        fluidRow(column(12,align="center",
-                                        switchButton("pca_2d3d", label = "", col = "BW", type = "2d3d"))),
-                        hr(),
-                        fluidRow(column(3,
-                                        selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:20),selected = "PC1",width="100%"),
-                                        selectInput("pca_y", label = "Y axis:", choices = paste0("PC",1:20),selected = "PC2",width="100%"),
-                                        selectInput("pca_z", label = "Z axis:", choices = paste0("PC",1:20),selected = "PC3",width="100%")),
-                                 column(9,
-                                        tabsetPanel(id="pca_2", 
-                                                    tabPanel(title="Table", 
-                                                             div(DT::dataTableOutput('pca_tab',width="100%"),style='font-size:80%')),
-                                                    tabPanel(title="Scree",
-                                                             plotOutput("pca_scree")
-                                                    ),
-                                                    tabPanel(title="Loadings", 
-                                                             div(DT::dataTableOutput('pca_load_tab',width="100%"),style='font-size:80%'))
-                                        ))
-                        )
-                        
-               ),
-               # =================================================================================
-               tabPanel(h3("MEBA"), value="meba", 
-                        fluidRow(plotly::plotlyOutput('meba_specific_plot'),height="600px"),
-                        fluidRow(div(DT::dataTableOutput('meba_tab', width="100%"),style='font-size:80%'))
-               ),
-               # =================================================================================
-               tabPanel(h3("ASCA"), value="asca",
-                        fluidRow(plotly::plotlyOutput('asca_specific_plot', height="600px")),
-                        fluidRow(div(DT::dataTableOutput('asca_tab',width="100%"),style='font-size:80%'))
-               )
-               # =================================================================================
-    )
+  observe({
+    
+    hide.tabs <- c("inf", "pca", "plsda", "tt", "fc", "aov", "meba", "asca", "ml", "volc", "heatmap", "enrich")
+    
+    print(interface$mode)
+    
+    if (is.null(interface$mode)) {
+      show.tabs <- c("inf")
+    } else if(interface$mode == 'multivar'){ 
+      show.tabs <- c("pca", "aov", "heatmap")
+    } else if(interface$mode == 'bivar'){  
+      show.tabs <- c("pca", "plsda", "tt", "fc", "volc", "heatmap", "ml")
+    } else if(interface$mode == 'time'){
+      show.tabs <- c("pca", "asca", "meba", "heatmap")
+    }
+    else{
+      show.tabs <- c("inf")
+    }
+    # - show/hide - 
+    for(tab in hide.tabs){
+      print(tab)
+      hideTab(inputId = "statistics", tab, session = session)
+    }
+    i=1
+    for(tab in show.tabs){
+      print(tab)
+      showTab(inputId = "statistics", tab, select = ifelse(i==1, TRUE, FALSE), session = session)
+      i = i + 1
+    }
   })
   
   # -----------------
   
-  optUI <- function(){		
-    selectInput('your.time', 'What end time do you want to pick?', choices = get_times(global$paths$patdb))
-  }
-  
-  observeEvent(input$exp_type,{
-    req(input$exp_type)
-    # ---------------------
-    update.UI()
-  })
-  
-  # -----------------
   
   output$pos_add_tab <-DT::renderDataTable({
     # -------------
@@ -534,25 +320,9 @@ shinyServer(function(input, output, session) {
     })
   })
   
-  # =================================================
-  
-  lapply(global$constants$images, FUN=function(image){
-    output[[image$name]] <- renderImage({
-      filename <- normalizePath(image$path)
-      # Return a list containing the filename and alt text
-      list(src = filename, 
-           width = image$dimensions[1],
-           height = image$dimensions[2])
-    }, deleteFile = FALSE)
-  })
-  
-  # ========================================
-  
   observeEvent(input$nav_general, {
     # - - - - - -
     pkg_tbl <- get.package.table() #TODO: sort by 'No' first!! (ascending?) - or translate to numeric factor first?
-    #pkg_tbl <- rbind(pkg_tbl, data.table("lalalala", 'No', "1.1.1"))
-    #pkg_tbl <- pkg_tbl[order(pkg_tbl$Installed,decreasing = T),]
     output$package_tab <- DT::renderDataTable({
     # - - - - - -
       DT::datatable(pkg_tbl,
@@ -598,8 +368,7 @@ shinyServer(function(input, output, session) {
       list(src = new_path, 
            width = 120,
            height = 120,
-           style = "background-image:linear-gradient(0deg, transparent 50%, #aaa 50%),linear-gradient(90deg, #aaa 50%, #ccc 50%);background-size:10px 10px,10px 10px;") # blocky bg
-      #
+           style = "background-image:linear-gradient(0deg, transparent 50%, #aaa 50%),linear-gradient(90deg, #aaa 50%, #ccc 50%);background-size:10px 10px,10px 10px;")
     }, deleteFile = FALSE)
     # - - -
     setOption('user_options.txt', 'taskbar_image', basename(new_path))
@@ -855,16 +624,11 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$create_db,{
     
-    
-    # --------------------
-    
     global$paths$patdb <<- file.path(getOptions("user_options.txt")$work_dir, paste0(getOptions("user_options.txt")$proj_name, ".db"))
-    
-    # --------------------
     
     withProgress({
       
-      shiny::setProgress(session=session, value= .1,message = "Loading outlists into memory...")
+      shiny::setProgress(session=session, value= .1)
       
       switch(input$new_proj,
              `From DB` = {
@@ -882,8 +646,6 @@ shinyServer(function(input, output, session) {
                
                shiny::setProgress(session=session, value= .60)
                
-               #reindex.pat.db(global$paths$patdb)
-               
              },
              `From CSV` = {
                
@@ -899,7 +661,6 @@ shinyServer(function(input, output, session) {
                
                exp_vars <<- load.excel(parseFilePaths(global$paths$volumes, input$excel)$datapath, global$paths$patdb)}
              )
-             
       })
   })
   
@@ -932,44 +693,27 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$create_csv, {
 
-    # ---------
-
     withProgress({
       
       shiny::setProgress(session = session, value= 1/4)
 
-      # global$paths$patdb = "/Users/jwolthuis/Analysis/SP/CATS_OCT18.db"
-      # tbl <- get.csv(global$paths$patdb,
-      #                #time.series = grepl("time", input$exp_type),
-      #                group_adducts = F ,
-      #                groupfac = "mz",
-      #                which_dbs = c(""),
-      #                which_adducts = c("")
-      # )
-      
       tbl <- get.csv(global$paths$patdb,
-                     #time.series = grepl("time", input$exp_type),
                      group_adducts = if(length(global$vectors$add_search_list) == 0) F else T,
                      groupfac = input$group_by,
                      which_dbs = global$vectors$add_search_list,
                      which_adducts = selected_adduct_list
       )
       
-      # --- experimental stuff ---
 
       if(any(duplicated(tbl$sample))){
-        # time series data
         tbl$sample <- paste0(tbl$sample, "_T", tbl$time)
         show.times = T
       }
       
-      # -------------------------
-      # save csv
       shiny::setProgress(session=session, value= 2/4)
       global$paths$csv_loc <<- file.path(getOptions("user_options.txt")$work_dir, paste0(getOptions("user_options.txt")$proj_name,".csv"))
       fwrite(tbl, global$paths$csv_loc, sep="\t")
-      # --- overview table ---
-      
+
       as.numi <- as.numeric(colnames(tbl)[1:100])
       
       exp.vars <- which(is.na(as.numi))
@@ -1017,10 +761,7 @@ shinyServer(function(input, output, session) {
     batch <<- which(sapply(exp.vars, function(x) length(unique(csv[,..x][[1]])) < nrow(csv)))
     
     numi <<- which(sapply(exp.vars, function(x) is.numeric(csv[,..x][[1]])))
-    
-    # get excel table stuff.
-    # updateSelectInput(session, "exp_var",
-    #                   choices = opts[batch])
+
     updateSelectInput(session, "samp_var",
                       choices = opts[numi])
     updateSelectizeInput(session, "batch_var",
@@ -1065,11 +806,8 @@ shinyServer(function(input, output, session) {
     req(input$norm_type)
     req(input$trans_type)
     req(input$scale_type)
-    #req(input$batch_corr)
-    # match
     withProgress({
-      # get curr values from: input$ exp_type, filt_type, norm_type, scale_type, trans_type (later)
-      
+
       shiny::setProgress(session=session, value= .1)
 
       # input <- list(batch_var = "batch",
@@ -1115,7 +853,9 @@ shinyServer(function(input, output, session) {
       
       # === PICK AN INITIAL CONDITION ===|
       
-      unique.levels <- apply(csv_orig[,..exp.vars, with=F], MARGIN=2, function(col){
+      qc.rows <- which(grepl("QC", csv_orig$sample))
+      
+      unique.levels <- apply(csv_orig[!qc.rows,..exp.vars, with=F], MARGIN=2, function(col){
         lvls <- levels(as.factor(col))
         # - - - - - -
         length(lvls)
@@ -1394,9 +1134,20 @@ shinyServer(function(input, output, session) {
       mSet$dataSet$covars <- mSet$dataSet$covars[match(rownames(mSet$dataSet$norm), 
                                                         mSet$dataSet$covars$sample),]
       
+      mSet$dataSet$cls.name <- condition
+      
       # - - set2global - - 
       
       mSet <<- mSet
+      
+      datamanager$mset_present = TRUE
+      
+      if(mSet$dataSet$cls.num <= 1){
+        interface$mode <- NULL } 
+      else if(mSet$dataSet$cls.num == 2){
+        interface$mode <- "bivar"}
+      else{
+        interface$mode <- "multivar"}
       
       # - - - - - - - - - -
       
@@ -1456,7 +1207,7 @@ shinyServer(function(input, output, session) {
                         pcx = input$pca_x,
                         pcy = input$pca_y,
                         pcz = input$pca_z,
-                        shape.fac = input$second.fac,
+                        shape.fac = input$second_var,
                         mode = "ipca")
            })
            # === LEGEND ===
@@ -1532,19 +1283,14 @@ shinyServer(function(input, output, session) {
            })
   })
   
-  # outliers
-  # 
-  # outliers <- names(which(abs(mSet$analSet$pca$x[,1]) > 50))
-  # # remove
-  # csv <- as.data.table(fread(global$paths$csv_loc))
-  # csv_no_out <- csv[!sample %in% outliers]
-  # fwrite(csv_no_out,file = "ayr_no_outliers.csv")
-  
-  observeEvent(input$tab_stat, {
+  observeEvent(input$statistics, {
+    
     if(input$nav_general != "analysis") return(NULL)
-    nvars <<- length(levels(mSet$dataSet$cls))
+    
+    if(!exists("mSet")) return(NULL)
+    
     # get excel table stuff.
-    switch(input$tab_stat,
+    switch(input$statistics,
            pca = {
              if(!"pca" %in% names(mSet$analSet)){
                withProgress({
@@ -1572,7 +1318,7 @@ shinyServer(function(input, output, session) {
                           pcx = input$pca_x,
                           pcy = input$pca_y,
                           pcz = input$pca_z,
-                          shape.fac = input$second.fac)
+                          shape.fac = input$second_var)
              })
              # === LEGEND ===
              output$pca_legend <- plotly::renderPlotly({
@@ -1614,97 +1360,100 @@ shinyServer(function(input, output, session) {
                              options = list(lengthMenu = c(5, 10, 15), pageLength = 10))
              })
              },
-           plsdaa = {NULL},
-           heatmap_mult = {
-             req(input
-                 $color_ramp)
-             req(mSet$analSet$aov)
-             used.analysis <- "aov"
-             used.values <- "p.value"
-             sourceTable <- sort(mSet$analSet[[used.analysis]][[used.values]])[1:100]
-             withProgress({
-               output$heatmap <- plotly::renderPlotly({
-                 x <- mSet$dataSet$norm[,names(sourceTable)]
-                 final_matrix <- t(x)
-                 translator <- data.table(Sample=rownames(mSet$dataSet$norm),Group=mSet$dataSet$cls)
-                 group_assignments <- translator[,"Group",on=colnames(final_matrix)]$Group
-                 hm_matrix <<- heatmaply::heatmapr(final_matrix, 
-                                                   Colv=T, 
-                                                   Rowv=T,
-                                                   col_side_colors = group_assignments,
-                                                   #dist_method = ..., # use dbscan?
-                                                   #hclust_method = ..., ???
-                                                   k_row = NA)
-                 heatmaply::heatmaply(hm_matrix,
-                                      Colv=F, Rowv=F,
-                                      branches_lwd = 0.3,
-                                      margins = c(60,0,NA,50),
-                                      colors = global$functions$color.functions[[getOptions("user_options.txt")$gspec]](256),
-                                      col_side_colors = function(n){
-                                        if(n == length(global$vectors$mycols)) global$vectors$mycols else rainbow(n)
-                                        rainbow(n)
-                                      },
-                                      subplot_widths = c(.9,.1),
-                                      subplot_heights =  c(.1,.05,.85),
-                                      column_text_angle = 90)
-               })
-             })
-           },
-           heatmap_biv = {
+           heatmap = {
              
              withProgress({
                
                output$heatmap <- plotly::renderPlotly({
                  
-                 if(input$heatmode){
-                   used.analysis <- "tt"
-                   used.values <- "p.value"
+                 if(interface$mode == "bivar"){
+                   if(input$heatmode){
+                     used.analysis <- "tt"
+                     used.values <- "p.value"
+                   }else{
+                     used.analysis <- "fc"
+                     used.values <- "fc.all"
+                   }
+                 }else if(interface$mode == "multivar"){
+                   used.analysis = "aov"
+                   used.values = "p.value"
                  }else{
-                   used.analysis <- "fc"
-                   used.values <- "fc.all"
-                 }
+                     NULL
+                   }
                  
-                 sourceTable <- mSet$analSet[[used.analysis]]$inx.imp[mSet$analSet[[used.analysis]]$inx.imp == TRUE]
+                 print(used.analysis)
+                 print(used.values)
                  
-                 if(length(sourceTable) == 0){
-                   ordered <- order(mSet$analSet[[used.analysis]][[used.values]], decreasing = F)
-                   sourceTable <- mSet$analSet[[used.analysis]][[used.values]][ordered][1:100]
-                 }
+                 topn = if(length(mSet$analSet[[used.analysis]][[used.values]]) < topn) length(mSet$analSet[[used.analysis]][[used.values]]) else 100
+                 
+                 ordered <- order(mSet$analSet[[used.analysis]][[used.values]], decreasing = F)
+                 sourceTable <- mSet$analSet[[used.analysis]][[used.values]][ordered][1:topn]
                  
                  # - - -
                  
                  x <- mSet$dataSet$norm[,names(sourceTable)]
                  final_matrix <<- t(x)
-                 translator <- data.table(Sample=rownames(mSet$dataSet$norm),Group=mSet$dataSet$cls)
-                 group_assignments <- translator[,"Group",on=colnames(final_matrix)]$Group
                  
+                 sample_order <- match(colnames(final_matrix), rownames(mSet$dataSet$norm))
+                 
+                 if(timebutton$status == "on"){
+                   if(input$timecourse_trigger){
+                     translator <- data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],Group=mSet$dataSet$exp.fac[sample_order], Time=mSet$dataSet$time.fac[sample_order])
+                     hmap.lvls <- c(levels(mSet$dataSet$exp.fac), levels(mSet$dataSet$time.fac))
+                     # reorder columns
+                     unique.names <- unique(gsub(x = translator$Sample, pattern = "_T\\d", ""))
+                     unique.times <- unique(translator$Time)
+                     
+                     new.order <- unlist(pbapply::pblapply(unique.times, function(time){
+                       vec <- sapply(unique.names, function(name){
+                         name = paste0(name, "_T", time) 
+                         i = which(translator$Sample == name)
+                         i
+                       })
+                       print(vec)
+                       vec
+                     }))
+                     
+                     translator <<- translator[new.order,]
+                     final_matrix <<- final_matrix[,match(translator$Sample, colnames(final_matrix))]
+                     
+                     my_order=F
+                     
+                   }else{
+                     translator <- data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],Group=mSet$dataSet$cls[sample_order])
+                     hmap.lvls <- levels(mSet$dataSet$cls)
+                     my_order = T
+                   }
+                 }else{
+                   translator <- data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],Group=mSet$dataSet$cls[sample_order])
+                   hmap.lvls <- levels(mSet$dataSet$cls)
+                   my_order = T
+                 } 
+
                  color.mapper <- {
-                  classes <- levels(mSet$dataSet$cls)
+                  classes <- hmap.lvls
                   cols <- sapply(1:length(classes), function(i) global$vectors$mycols[i])
                   names(cols) <- classes
                   # - - -
                   cols
                  }
-                 
-                 assignment.df <- as.data.frame(group_assignments)
-                 colnames(assignment.df) <- "Group"
                 
                  hmap <- heatmaply::heatmaply(final_matrix,
-                                      Colv=T, 
-                                      Rowv=T,
-                                      branches_lwd = 0.3,
-                                      margins = c(60, 0, NA, 50),
-                                      colors = global$functions$color.functions[[getOptions("user_options.txt")$gspec]](256),
-                                      col_side_colors = assignment.df,
-                                      col_side_palette = color.mapper,
-                                      subplot_widths = c(.9,.1),
-                                      subplot_heights =  c(.1,.05,.85),
-                                      column_text_angle = 90,
-                                      xlab = "Sample",
-                                      ylab = "m/z",
-                                      showticklabels = c(T,F)
-                                      #label_names = c("m/z", "sample", "intensity") #breaks side colours
-                                      )
+                                              Colv=my_order, 
+                                              Rowv=T,
+                                              branches_lwd = 0.3,
+                                              margins = c(60, 0, NA, 50),
+                                              colors = global$functions$color.functions[[getOptions("user_options.txt")$gspec]](256),
+                                              col_side_colors = translator[,!1],
+                                              col_side_palette = color.mapper,
+                                              subplot_widths = c(.9,.1),
+                                              subplot_heights = if(my_order) c(.1, .05, .85) else c(.05,.95),
+                                              column_text_angle = 90,
+                                              xlab = "Sample",
+                                              ylab = "m/z",
+                                              showticklabels = c(T,F)
+                                              #label_names = c("m/z", "sample", "intensity") #breaks side colours
+                 )
                  
                  hmap_mzs <<- hmap$x$layout$yaxis3$ticktext
                  
@@ -1768,38 +1517,29 @@ shinyServer(function(input, output, session) {
            aov = {
              if(!"aov" %in% names(mSet$analSet)){
                withProgress({
-                 mSet <<- ANOVA.Anal(mSet, 
-                                     thresh=0.05,
-                                     nonpar = F)
+                 ANOVA.Anal(mSet, thresh=0.05,nonpar = F)
+               # TODO: Fix ANOVA2
+               # mSet <<- ifelse(timebutton_trigger,
+               #                 {mSet$dataSet$facA <- mSet$dataSet$exp.fac;
+               #                  mSet$dataSet$facB <- mSet$dataSet$time.fac;
+               #                  ANOVA2.Anal(mSet, 0.05, "fdr", "time", 3, 1)
+               #                   },
+               #                 ANOVA.Anal(mSet, thresh=0.05,nonpar = F))
                })
              }
-             res <<- mSet$analSet$aov$sig.mat
-             if(is.null(res)) res <<- data.table("No significant hits found")
+    
              output$aov_tab <-DT::renderDataTable({
+              
+               mSet$analSet$aov$sig.mat
+               
                # -------------
-               DT::datatable(res, 
+               DT::datatable(if(is.null(mSet$analSet$aov$sig.mat)) data.table("No significant hits found") else mSet$analSet$aov$sig.mat, 
                              selection = 'single',
                              autoHideNavigation = T,
                              options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
                
              })
            },
-           # rf={
-           #   if(!"rf" %in% names(mSet$analSet)){
-           #     withProgress({
-           #       mSet <<- RF.Anal(mSet, 500,7,1)
-           #     })
-           #   }
-           #   vip.score <<- as.data.table(mSet$analSet$rf$importance[, "MeanDecreaseAccuracy"],keep.rownames = T)
-           #   colnames(vip.score) <<- c("rn", "accuracyDrop")
-           #   output$rf_tab <-DT::renderDataTable({
-           #     # -------------
-           #     DT::datatable(vip.score, 
-           #                   selection = 'single',
-           #                   autoHideNavigation = T,
-           #                   options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-           #   })
-           # },
            volc = {
              if(!"volc" %in% names(mSet$analSet)){
                withProgress({
@@ -1850,7 +1590,7 @@ shinyServer(function(input, output, session) {
         ggPlotPerm(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
       })
       output$plot_plsda_3d <- plotly::renderPlotly({
-        plotPCA.3d(mSet, cols = global$vectors$mycols, input$second.fac, input$plsda_x, input$plsda_y, input$plsda_z, mode = "plsda")
+        plotPCA.3d(mSet, cols = global$vectors$mycols, input$second_var, input$plsda_x, input$plsda_y, input$plsda_z, mode = "plsda")
       })
       output$plsda_tab <- DT::renderDataTable({
         # - - - -
@@ -1876,6 +1616,63 @@ shinyServer(function(input, output, session) {
                       autoHideNavigation = T,
                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
       })
+      output$plot_plsda <- plotly::renderPlotly({
+        plotPCA.3d(mSet, global$vectors$mycols,
+                   pcx = input$plsda_x,
+                   pcy = input$plsda_y,
+                   pcz = input$plsda_z, mode = "plsda",
+                   shape.fac = input$second_var)
+      })
+    }
+  })
+  
+  observe({
+    
+    if(!exists("mSet")) return()
+    
+    # - - - - - - - - - - -
+    
+    if("plsda" %in% names(mSet$analSet)){
+      output$pla_cv_plot <- renderPlot({
+        ggPlotClass(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+      })
+      output$plsda_perm_plot <- renderPlot({
+        ggPlotPerm(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+      })
+      output$plot_plsda_3d <- plotly::renderPlotly({
+        plotPCA.3d(mSet, cols = global$vectors$mycols, input$second_var, input$plsda_x, input$plsda_y, input$plsda_z, mode = "plsda")
+      })
+      output$plsda_tab <- DT::renderDataTable({
+        # - - - -
+        plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar 
+                                           / mSet$analSet$plsr$Xtotvar 
+                                           * 100.0,
+                                           digits = 2),
+                                     keep.rownames = T)
+        colnames(plsda.table) <- c("Principal Component", "% variance")
+        plsda.table[, "Principal Component"] <- paste0("PC", 1:nrow(plsda.table))
+        # -------------
+        DT::datatable(plsda.table, 
+                      selection = 'single',
+                      autoHideNavigation = T,
+                      options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+      })
+      output$plsda_load_tab <-DT::renderDataTable({
+        plsda.loadings <- mSet$analSet$plsda$vip.mat
+        colnames(plsda.loadings) <- paste0("PC", c(1:ncol(plsda.loadings)))
+        # -------------
+        DT::datatable(plsda.loadings[, c(input$plsda_x, input$plsda_y, input$plsda_z)],
+                      selection = 'single',
+                      autoHideNavigation = T,
+                      options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+      })
+      output$plot_plsda <- plotly::renderPlotly({
+        plotPCA.3d(mSet, global$vectors$mycols,
+                   pcx = input$plsda_x,
+                   pcy = input$plsda_y,
+                   pcz = input$plsda_z, mode = "plsda",
+                   shape.fac = input$second_var)
+      })
     }
   })
   
@@ -1885,11 +1682,15 @@ shinyServer(function(input, output, session) {
     
     if(!("pca" %in% names(mSet$analSet))) return()
     
-    mode = if(input$timecourse_trigger){
-      "ipca"
+    mode <- if("timecourse_trigger" %in% names(input)){
+      if(input$timecourse_trigger){
+        "ipca"
+      }else{
+        "pca"
+      } 
     }else{
       "pca"
-    }
+      }
     
     # - - - - -
     if(input$pca_2d3d){
@@ -1898,7 +1699,7 @@ shinyServer(function(input, output, session) {
         plotPCA.2d(mSet, global$vectors$mycols,
                    pcx = input$pca_x,
                    pcy = input$pca_y, mode = mode,
-                   shape.fac = input$second.fac)
+                   shape.fac = input$second_var)
       })
     }else{
       # 3d
@@ -1907,12 +1708,14 @@ shinyServer(function(input, output, session) {
                    pcx = input$pca_x,
                    pcy = input$pca_y,
                    pcz = input$pca_z, mode = mode,
-                   shape.fac = input$second.fac)
+                   shape.fac = input$second_var)
       })
     }
   })
   
   observeEvent(input$plsda_2d3d,{
+    
+    if(!exists("mSet")) return()
     
     if(!("plsda" %in% names(mSet$analSet) | "plsr" %in% names(mSet$analSet))) return()
     
@@ -1922,7 +1725,7 @@ shinyServer(function(input, output, session) {
         plotPCA.2d(mSet, global$vectors$mycols,
                    pcx = input$plsda_x,
                    pcy = input$plsda_y, mode = "plsda",
-                   shape.fac = input$second.fac)
+                   shape.fac = input$second_var)
       })
     }else{
       # 3d
@@ -1931,7 +1734,7 @@ shinyServer(function(input, output, session) {
                    pcx = input$plsda_x,
                    pcy = input$plsda_y,
                    pcz = input$plsda_z, mode = "plsda",
-                   shape.fac = input$second.fac)
+                   shape.fac = input$second_var)
       })
     }
   })
@@ -2256,7 +2059,7 @@ shinyServer(function(input, output, session) {
 
       output$curr_plot <- plotly::renderPlotly({
         # --- ggplot ---
-        ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+        ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
       })
       
       output[[outplot_name]] <- plotly::renderPlotly({
@@ -2264,7 +2067,7 @@ shinyServer(function(input, output, session) {
         if(table == 'meba'){
           ggplotMeba(curr_cpd, draw.average = T, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
         }else{
-          ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+          ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
         }
       })
     })
@@ -2274,9 +2077,9 @@ shinyServer(function(input, output, session) {
   observeEvent(plotly::event_data("plotly_click"),{ # WHAT HAPPENS ON CLICK
     d <- plotly::event_data("plotly_click")
     req(d)
-    if(input$tab_stat %in% c("tt", "fc", "rf", "aov", "volc", "lasnet")){
+    if(input$statistics %in% c("tt", "fc", "rf", "aov", "volc", "lasnet")){
         if('key' %not in% colnames(d)) return(NULL)
-        mzs <- switch(input$tab_stat, 
+        mzs <- switch(input$statistics, 
                       tt= names(mSet$analSet$tt$p.value),
                       fc = names(mSet$analSet$fc$fc.log),
                       aov = names(mSet$analSet$aov$p.value),
@@ -2285,11 +2088,11 @@ shinyServer(function(input, output, session) {
         if(d$key %not in% mzs) return(NULL)
         curr_cpd <<- d$key
         # - return -
-        output[[paste0(input$tab_stat, "_specific_plot")]] <- plotly::renderPlotly({
+        output[[paste0(input$statistics, "_specific_plot")]] <- plotly::renderPlotly({
           # --- ggplot ---
-          ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+          ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
         })
-      }else if(input$tab_stat == "pca"){
+      }else if(input$statistics == "pca"){
         if(!"z" %in% names(d)){
           which_group = 1
           which_group <- d$curveNumber + 1
@@ -2306,7 +2109,7 @@ shinyServer(function(input, output, session) {
           pca_plot$x$attrs[[traceLoc]] <- scatter
           pca_plot <<- pca_plot
           output$plot_pca <- plotly::renderPlotly({pca_plot})
-        }}else if(input$tab_stat == "ml"){
+        }}else if(input$statistics == "ml"){
           switch(input$ml_results, roc = {
             attempt = d$curveNumber - 1
             if(attempt > 1){
@@ -2350,9 +2153,9 @@ shinyServer(function(input, output, session) {
             
             output$ml_specific_plot <- plotly::renderPlotly({
               # --- ggplot ---
-              ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+              ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
             })
-          })}else if(grepl(pattern = "heatmap", x = input$tab_stat)){
+          })}else if(grepl(pattern = "heatmap", x = input$statistics)){
             if(!exists("hmap_mzs")) return(NULL)
             if(d$y > length(hmap_mzs)) return(NULL)
             curr_cpd <<- hmap_mzs[d$y]
@@ -2360,7 +2163,7 @@ shinyServer(function(input, output, session) {
   
     output$curr_plot <- plotly::renderPlotly({
       # --- ggplot ---
-      ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+      ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
     })
     
     # ----------------------------
@@ -2451,11 +2254,11 @@ shinyServer(function(input, output, session) {
     # --- search ---
     #TODO: this should be a function and not re-written
     output$meba_specific_plot <- plotly::renderPlotly({ggplotMeba(curr_cpd, draw.average=T, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$asca_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$fc_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$tt_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$aov_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$plsda_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+    output$asca_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+    output$fc_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+    output$tt_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+    output$aov_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+    output$plsda_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
   })
   
   observeEvent(input$hits_tab_rows_selected,{
@@ -2465,11 +2268,11 @@ shinyServer(function(input, output, session) {
     # -----------------------------
     curr_cpd <<- hits_table[curr_row, mzmed.pgrp]
     output$meba_specific_plot <- plotly::renderPlotly({ggplotMeba(curr_cpd, draw.average=T, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$asca_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$fc_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$tt_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$aov_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$plsda_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second.fac, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+    output$asca_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+    output$fc_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+    output$tt_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+    output$aov_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+    output$plsda_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
   })
   
   observeEvent(input$go_enrich,{
@@ -2762,145 +2565,7 @@ shinyServer(function(input, output, session) {
     output$curr_cpd <- renderText(curr_cpd)
   })
   
-  # ===== VARIABLE SWITCHER ====
   
-  interface <- reactiveValues()
-
-  timebutton <- reactiveValues()
-  
-  observe({
-    print("checking...")
-    if(exists("mSet")){
-      if(all(grepl(pattern = "_T\\d", x = rownames(mSet$dataSet$norm)))){
-        timebutton$status <- "on"
-      }else{
-        timebutton$status <- "off"
-      }
-    }else{timebutton$status <- "off"}
-  })
-  
-  output$timebutton <- renderUI({
-    print(timebutton$status)
-    if (is.null(timebutton$status)) {
-      NULL
-    } else{
-      switch(timebutton$status, 
-             off = NULL,
-             on = switchButton(inputId = "timecourse_trigger",
-                               label = "Toggle time course mode?", 
-                               value = FALSE, col = "BW", type = "YN"))
-    }
-  })
-  
-  observeEvent(input$timecourse_trigger, {
-    print(input$timecourse_trigger)
-    
-    if(!("storage" %in% names(mSet))){
-      mSet$storage <<- list()
-    }
-    
-    if(input$timecourse_trigger){
-      # change to timecourse mode
-      # save previous mset
-      mSet$storage[[paste0("(timecourse)", paste0(as.character(levels(mSet$dataSet$cls)), collapse="-"))]] <<- mSet$dataSet$analSet
-      
-      # adjust mset
-      SetDesignType(mSet, "time")
-      
-      # facs
-      facA <- as.factor(mSet$dataSet$covars[,input$exp_var, with=F][[1]])
-      facB <- mSet$dataSet$covars[,"time"][[1]]
-
-      mSet$dataSet$exp.fac <<- as.factor(facA)
-      mSet$dataSet$time.fac <<- as.factor(facB)
-      
-      # facA.lbl = input$exp_var
-      # facB.lbl = "Time"
-      # mSet$dataSet$facA.type <<- is.numeric(facA)
-      # mSet$dataSet$orig.facA <<- mSet$dataSet$facA <- as.factor(as.character(facA))
-      # mSet$dataSet$facA.lbl <<- facA.lbl
-      # mSet$dataSet$facB.type <<- is.numeric(facB)
-      # mSet$dataSet$orig.facB <<- mSet$dataSet$facB <- as.factor(as.character(facB))
-      # mSet$dataSet$facB.lbl <<- facB.lbl
-      # 
-      # change ui
-      interface$mode <- "time"
-      
-      mSet$analSet <<- NULL
-      
-    }else{
-      # change back to normal mode
-      # save previous analyses (should be usable in venn diagram later)
-      mSet$storage[[paste0(as.character(levels(mSet$dataSet$cls)), collapse="-")]] <<- mSet$dataSet$analSet
-      # - - - - - - - - - - - -
-      mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,input$exp_var, with=F][[1]])
-      mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
-      # remove old analSet
-      mSet$analSet <<- NULL
-      # reset interface
-      if(mSet$dataSet$cls.num <= 1){
-        interface$mode <- NULL } 
-      else if(mSet$dataSet$cls.num == 2){
-        interface$mode <- "bivar"}
-      else{
-        interface$mode <- "multivar"}
-    }
-  })
-  
-  observeEvent(input$change_cls, {
-    print(input$change_cls)
-    print(input$exp_var)
-    
-    if(!("storage" %in% names(mSet))){
-      mSet$storage <<- list()
-    }
-    
-    # save previous analyses (should be usable in venn diagram later)
-    mSet$storage[[paste0(as.character(levels(mSet$dataSet$cls)), collapse="-")]] <<- mSet$dataSet$analSet
-    # - - - - - - - - - - - -
-    mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,input$exp_var, with=F][[1]])
-    mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
-    # remove old analSet
-    mSet$analSet <<- NULL
-    # reset interface
-    if(mSet$dataSet$cls.num <= 1){
-      interface$mode <- NULL } 
-    else if(mSet$dataSet$cls.num == 2){
-      interface$mode <- "bivar"}
-    else{
-      interface$mode <- "multivar"}
-  })
-  
-  # ===== UI SWITCHER ====
-  
-  output$analUI <- renderUI({
-    if (is.null(interface$mode)) {
-      fluidRow(column(width=12, align="center",
-                      br(),br(),br(),
-                      icon("arrow-right","fa-lg"), icon("arrow-right","fa-lg"), icon("arrow-right","fa-lg"),
-                      br(),br(),
-                      h2("Please select a variable of interest in the sidebar!"),
-                      br(),br(),
-                      icon("arrow-right","fa-lg"), icon("arrow-right","fa-lg"), icon("arrow-right","fa-lg")
-      ))
-    } else if(interface$mode == 'multivar'){ 
-      stat.ui.multivar()
-    } else if(interface$mode == 'bivar'){  
-      stat.ui.bivar()
-    } else if(interface$mode == 'time'){
-      time.ui()
-    }
-    else{
-      fluidRow(column(width=12, align="center",
-                      br(),br(),br(),
-                      icon("arrow-right","fa-lg"), icon("arrow-right","fa-lg"), icon("arrow-right","fa-lg"),
-                      br(),br(),
-                      h2("Please select a variable of interest in the sidebar!"),
-                      br(),br(),
-                      icon("arrow-right","fa-lg"), icon("arrow-right","fa-lg"), icon("arrow-right","fa-lg")
-      ))
-    }
-  })
   
   # - - ON CLOSE - -
   

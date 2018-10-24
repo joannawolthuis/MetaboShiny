@@ -7,6 +7,7 @@ MetaboShiny to even start.
 - - -
 "
 
+
 # Function to install packages, either through regular method or through downloading from git directly
 install.if.not <- function(package){
   if(package %in% rownames(installed.packages())){
@@ -80,3 +81,4 @@ setwd(wdir)
 # ---------------------------------
 
 shiny::runApp(".")#, launch.browser = T)
+

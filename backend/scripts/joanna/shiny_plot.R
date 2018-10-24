@@ -141,15 +141,11 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
     })
     # -----------
     
-    print(shape.fac)
-    
     profile$Shape <- if(shape.fac == "label"){
       c("placeholder")
     }else{
       as.factor(mSet$dataSet$covars[,..shape.fac][[1]])
     }
-    
-    print(head(profile))
     
     # ggplot
     plot <- ggplot2::ggplot(data=profile, ggplot2::aes(x=Group,y=Abundance, fill=Group, color=Group)) +
@@ -379,7 +375,6 @@ plot.many <- function(res.obj = models, which_alpha = 1, plot.theme = global$fun
                               M = data[, 3], 
                               name = rep(names(data)[3], each = nrow(data)), 
                               stringsAsFactors = FALSE)
-      print(head(roc_coord))
     }
   }
   
@@ -456,8 +451,6 @@ ggPlotBar <- function(repeats, attempts=50,  cf = global$functions$color.functio
   
   ml_type = repeats[[1]]$type
   
-  print(ml_type)
-  
   data <- switch(ml_type,
                  rf = {
                    res <- aggregate(. ~ rn, rbindlist(lapply(repeats, function(x) as.data.table(x$feats, keep.rownames=T))), mean)
@@ -489,7 +482,6 @@ ggPlotBar <- function(repeats, attempts=50,  cf = global$functions$color.functio
   }else{
     lname <- paste0(ml_train_regex,"|", ml_test_regex)
   }
-  print(lname)
   mSet$analSet$ml[[ml_type]][[lname]][["tophits"]] <<- data
   
   if(ml_type == "ls"){
@@ -543,8 +535,6 @@ plotPCA.3d <- function(mSet, cols = global$vectors$mycols, shape.fac="label", pc
            colnames(plsda.table) <- c("PC", "var")
            plsda.table[, "PC"] <- paste0("PC", 1:nrow(plsda.table))
            
-           print(head(plsda.table))
-           
            x.var <- plsda.table[PC == pcx]$var
            y.var <- plsda.table[PC == pcy]$var
            z.var <- plsda.table[PC == pcz]$var
@@ -585,13 +575,10 @@ plotPCA.3d <- function(mSet, cols = global$vectors$mycols, shape.fac="label", pc
     as.factor(mSet$dataSet$covars[,..shape.fac][[1]])
   }
   
-  print("...")
-  
   plots_facet <- lapply(1:length(df_list), function(i){
     
     df = df_list[[i]]
-    print(df)
-    
+
     orig_idx = which(rownames(df) %in% rownames(mSet$dataSet$norm))
     
     plots <- plotly::plot_ly(showlegend = F)
@@ -635,7 +622,6 @@ plotPCA.3d <- function(mSet, cols = global$vectors$mycols, shape.fac="label", pc
         c = c + 1
       }
     }
-    print(symbol.vec)
     # --- return ---
     pca_plot <<- adj_plot %>% add_trace(
       hoverinfo = 'text',
@@ -750,9 +736,6 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols = global$vectors$mycols, 
   }else{
     as.factor(mSet$dataSet$covars[,..shape.fac][[1]])
   }
-  
-  print(head(dat_long))
-  print(dat_long)
   
   p <- ggplot(dat_long, aes(x, y, color=group, fill=group)) +
     geom_point(size=5, aes(shape=shape,text=variable))+
