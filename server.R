@@ -454,8 +454,6 @@ shinyServer(function(input, output, session) {
   
   # -----------------
   
-
-  
   optUI <- function(){		
     selectInput('your.time', 'What end time do you want to pick?', choices = get_times(global$paths$patdb))
   }
@@ -517,8 +515,7 @@ shinyServer(function(input, output, session) {
                     rownames = F)
     })
   })
-  
-  
+
   observeEvent(input$sel_comm_adducts, {
     output$pos_add_tab <-DT::renderDataTable({
       # -------------
