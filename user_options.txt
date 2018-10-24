@@ -17,5 +17,5 @@ size3 = 15
 size4 = 11
 taskbar_image = formula.png
 gtheme = classic
-gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED
+gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
 gspec = RdBu

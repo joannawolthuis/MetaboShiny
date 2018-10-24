@@ -475,14 +475,6 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                  plotly::plotlyOutput('fc_overview_plot',height="300px")
                                                                                        ))
                                                                    ),
-                                                                   tabPanel(h3("Heatmap"), value="heatmap",
-                                                                            plotly::plotlyOutput("heatmap",width="100%",height="700px"),
-                                                                            br(),
-                                                                            fluidRow(column(align="center",
-                                                                                            width=12,
-                                                                                            uiOutput("heatbutton"))
-                                                                            )
-                                                                   ),
                                                                    tabPanel(h3("Volcano"), value="volc",
                                                                             fluidRow(plotly::plotlyOutput('volc_plot',width="100%",height="600px"))
                                                                    ),
@@ -494,6 +486,18 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                    tabPanel(h3("ASCA"), value="asca",
                                                                             fluidRow(plotly::plotlyOutput('asca_specific_plot', height="600px")),
                                                                             fluidRow(div(DT::dataTableOutput('asca_tab',width="100%"),style='font-size:80%'))
+                                                                   ),
+                                                                   tabPanel(h3("Heatmap"), value="heatmap",
+                                                                            plotly::plotlyOutput("heatmap",width="100%",height="700px"),
+                                                                            br(),
+                                                                            fluidRow(column(align="center",
+                                                                                            width=12,
+                                                                                            sliderInput("heatmap_topn", "Use top ... from table:", value=100, min = 10, max = 200))
+                                                                            ),
+                                                                            fluidRow(column(align="center",
+                                                                                            width=12,
+                                                                                            uiOutput("heatbutton"))
+                                                                            )
                                                                    )
                                                                    # ,tabPanel(h3("Enrichment"), value="enrich_biv",
                                                                    #          sidebarLayout(position="left",

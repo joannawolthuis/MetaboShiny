@@ -120,65 +120,66 @@ blackwhite.colors <- function(n){
 }
 
 #' @export
-ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "pink"), sourceTable = mSet$dataSet$norm, cf=rainbow, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
+ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "pink"), sourceTable = mSet$dataSet$norm, cf=rainbow, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]], mode = "nm"){
+  
   cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
-  if(substring(mSet$dataSet$format,4,5)!="ts"){
-    # --- ggplot ---
-    profile <- getProfile(cpd, mode="stat", sourceTable = sourceTable)
-    df_line <- data.table(x = c(1,2),
-                          y = rep(min(profile$Abundance - 0.1),2))
-    stars = ""
-    try({
-      pval <- mSet$analSet$tt$sig.mat[which(rownames(mSet$analSet$tt$sig.mat) == curr_cpd), "p.value"]
-      if(length(pval) == 0){
-        stars <- ""
-      }else{
-        if(pval > 0.05) stars <- "n.s."
-        else if(pval < 0.05 & pval > 0.01) stars <- "*"
-        else if(pval < 0.01 & pval > 0.001) stars <- "***"
-        else stars <- "****"
-      } 
-    })
-    # -----------
-    
-    profile$Shape <- if(shape.fac == "label"){
-      c("placeholder")
-    }else{
-      as.factor(mSet$dataSet$covars[,..shape.fac][[1]])
-    }
-    
-    # ggplot
-    plot <- ggplot2::ggplot(data=profile, ggplot2::aes(x=Group,y=Abundance, fill=Group, color=Group)) +
-      ggplot2::geom_boxplot(alpha=0.4) +
-      ggplot2::geom_point(ggplot2::aes(text=Sample, shape=Shape),alpha=0.7, size = 2, position = position_dodge(width=0.1)) +
-      plot.theme(base_size = 15) +
-      ggplot2::scale_fill_manual(values=cols) +
-      ggplot2::scale_color_manual(values=cols) +
-      theme(legend.position="none")
-    plot <- plot + ggplot2::annotate("text", x = 1.5, y = min(profile$Abundance - 0.3), label = stars, size = 8, col = "black")
-    # ---------------
-    plotly::ggplotly(plot, tooltip="Sample")
-    #
-  }else if(mSet$dataSet$design.type =="time"){ # time trend within phenotype
-    cpd = curr_cpd
-    profile <- getProfile(cpd, mode="time")
-    profile$Shape <- if(shape.fac == "label"){
-      c("placeholder")
-    }else{
-      mSet$dataSet$covars[,..shape.fac][[1]]
-    }
-    plot <- ggplot2::ggplot(data=profile, ggplot2::aes(x=Time, y=Abundance, group=interaction(Time, Group),fill=Group, color=Group)) +
-      ggplot2::geom_boxplot(alpha=0.4, aes(shape=Shape)) +
-      ggplot2::geom_point(ggplot2::aes(text=Sample),alpha=0.4, size = 2, position = position_dodge(width=0.1)) +
-      plot.theme(base_size = 15) +
-      ggplot2::scale_fill_manual(values=cols) +
-      ggplot2::scale_color_manual(values=cols)+
-      theme(legend.position="none") +
-      geom_text(x = 1.5, y = 1, label = "***")
-    # ---------------
-    plotly::ggplotly(plot, tooltip="Sample") %>% layout(boxmode = "group")
-  }
-  #
+  
+  switch(mode, 
+         nm = {
+           # --- ggplot ---
+           profile <- getProfile(cpd, mode="stat", sourceTable = sourceTable)
+           df_line <- data.table(x = c(1,2),
+                                 y = rep(min(profile$Abundance - 0.1),2))
+           stars = ""
+           try({
+             pval <- mSet$analSet$tt$sig.mat[which(rownames(mSet$analSet$tt$sig.mat) == curr_cpd), "p.value"]
+             if(length(pval) == 0){
+               stars <- ""
+             }else{
+               if(pval > 0.05) stars <- "n.s."
+               else if(pval < 0.05 & pval > 0.01) stars <- "*"
+               else if(pval < 0.01 & pval > 0.001) stars <- "***"
+               else stars <- "****"
+             } 
+           })
+           # -----------
+           
+           profile$Shape <- if(shape.fac == "label"){
+             c("placeholder")
+           }else{
+             as.factor(mSet$dataSet$covars[,..shape.fac][[1]])
+           }
+           
+           # ggplot
+           plot <- ggplot2::ggplot(data=profile, ggplot2::aes(x=Group,y=Abundance, fill=Group, color=Group)) +
+             ggplot2::geom_boxplot(alpha=0.4) +
+             ggplot2::geom_point(ggplot2::aes(text=Sample, shape=Shape),alpha=0.7, size = 2, position = position_dodge(width=0.1)) +
+             plot.theme(base_size = 15) +
+             ggplot2::scale_fill_manual(values=cols) +
+             ggplot2::scale_color_manual(values=cols) +
+             theme(legend.position="none")
+           plot <- plot + ggplot2::annotate("text", x = 1.5, y = min(profile$Abundance - 0.3), label = stars, size = 8, col = "black")
+           # ---------------
+           plotly::ggplotly(plot, tooltip="Sample")
+         }, 
+         ts = {
+           profile <- getProfile(cpd, mode="time")
+           profile$Shape <- if(shape.fac == "label"){
+             c("placeholder")
+           }else{
+             mSet$dataSet$covars[,..shape.fac][[1]]
+           }
+           plot <- ggplot2::ggplot(data=profile, ggplot2::aes(x=Time, y=Abundance, group=Group, fill=Group, color=Group)) +
+             ggplot2::geom_boxplot(alpha=0.4, aes(shape=Shape)) +
+             ggplot2::geom_point(ggplot2::aes(text=Sample),alpha=0.4, size = 2, position = position_dodge(width=0.1)) +
+             plot.theme(base_size = 15) +
+             ggplot2::scale_fill_manual(values=cols) +
+             ggplot2::scale_color_manual(values=cols)+
+             theme(legend.position="none")+
+             stat_summary(fun.y=median, geom="line", aes(group=paste("median", Group)), linetype="dotted", lwd=1, alpha=0.5)
+           # ---------------
+           plotly::ggplotly(plot, tooltip="Sample", originalData=T) 
+         })
 }
 
 ggPlotTT <- function(cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]], n, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){

@@ -46,8 +46,7 @@ shinyServer(function(input, output, session) {
   
   
   output$colorPickers <- renderUI({
-    max.cols = 5
-    lapply(c(1:max.cols), function(i) {
+    lapply(c(1:global$constants$max.cols), function(i) {
       print(i)
       colourpicker::colourInput(inputId = paste("col", i, sep="_"),
                                 label = paste("Choose colour", i),
@@ -57,8 +56,7 @@ shinyServer(function(input, output, session) {
   })
   
   observe({
-    max.cols = 5
-    values <- unlist(lapply(c(1:max.cols), function(i) {
+    values <- unlist(lapply(c(1:global$constants$max.cols), function(i) {
       input[[paste("col", i, sep="_")]]
     }))
     if(!any(is.null(values))){
@@ -89,16 +87,16 @@ shinyServer(function(input, output, session) {
   observe({
     if(datamanager$mset_present){
       # update select input bars
-      updateSelectInput(session, "first_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < 6))]))
-      updateSelectInput(session, "second_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < 6))]))
-      updateSelectInput(session, "subset_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < 6))]))
+      updateSelectInput(session, "first_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
+      updateSelectInput(session, "second_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
+      updateSelectInput(session, "subset_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
       # timecourse button
       if(all(grepl(pattern = "_T\\d", x = rownames(mSet$dataSet$norm)))){
         timebutton$status <- "on"
       }else{
         timebutton$status <- "off"
       }
-      if(mSet$dataSet$cls.num ==2 ){
+      if(mSet$dataSet$cls.num == 2 ){
         heatbutton$status <- "on"
       }else{
         heatbutton$status <- "off"
@@ -120,8 +118,10 @@ shinyServer(function(input, output, session) {
       NULL
     }else{
       switch(heatbutton$status,
-             off = NULL,
-             on = switchButton(inputId = "heatmode",
+             asmb = switchButton(inputId = "heatmode",
+                                 label = "Use data from:", 
+                                 value = TRUE, col = "BW", type = "ASMB"),
+             ttfc = switchButton(inputId = "heatmode",
                               label = "Use data from:", 
                               value = TRUE, col = "BW", type = "TTFC")
              )
@@ -166,6 +166,7 @@ shinyServer(function(input, output, session) {
       
       interface$mode <- "time"
       
+      heatbutton$status <- "asmb"
       #mSet$analSet <<- NULL
       
     }else{
@@ -177,6 +178,7 @@ shinyServer(function(input, output, session) {
       mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
       # remove old analSet
       
+      heatbutton$status <- "ttfc"
       #mSet$analSet <<- NULL
       
       # reset interface
@@ -1176,113 +1178,6 @@ shinyServer(function(input, output, session) {
   
   # MAIN EXECUTION OF ANALYSES
   
-  observeEvent(input$tab_time, {
-    if(input$nav_general != "analysis") return(NULL)
-    # get excel table stuff.
-    switch(input$tab_time,
-           ipca = {
-             if(!"pca" %in% names(mSet$analSet)){
-             withProgress({
-               mSet <<- PCA.Anal(mSet)
-             })
-           }
-           output$pca_scree <- renderPlot({
-             df <- data.table(
-               pc = 1:length(names(mSet$analSet$pca$variance)),
-               var = mSet$analSet$pca$variance)
-             p <- ggplot2::ggplot(data=df[1:20,]) + ggplot2::geom_line(mapping = aes(x=pc, y=var, colour=var), cex=3) + 
-               global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]](base_size = 10) +
-               ggplot2::scale_colour_gradientn(colours = global$functions$color.functions[[getOptions("user_options.txt")$gspec]](256)) +
-               theme(axis.text=element_text(size=10),
-                     axis.title=element_text(size=19,face="bold"),
-                     #legend.title=element_text(size=15),
-                     #legend.text=element_text(size=12),
-                     legend.position="none")
-             # - - - - - 
-             p
-             #ggplotly(p)
-           })
-           output$plot_pca <- plotly::renderPlotly({
-             plotPCA.3d(mSet, global$vectors$mycols,
-                        pcx = input$pca_x,
-                        pcy = input$pca_y,
-                        pcz = input$pca_z,
-                        shape.fac = input$second_var,
-                        mode = "ipca")
-           })
-           # === LEGEND ===
-           output$pca_legend <- plotly::renderPlotly({
-             frame <- data.table(x = c(1), 
-                                 y = fac.lvls)
-             p <- ggplot(data=frame,
-                         aes(x, 
-                             y, 
-                             color=factor(y),
-                             fill=factor(y))) + 
-               geom_point(shape = 21, size = 5, stroke = 5) +
-               scale_colour_manual(values=chosen.colors) +
-               theme_void() + 
-               theme(legend.position="none")
-             # --- return ---
-             ggplotly(p, tooltip = NULL) %>% config(displayModeBar = F)
-           })
-           # ==============
-           output$pca_tab <-DT::renderDataTable({
-             pca.table <- as.data.table(round(mSet$analSet$pca$variance * 100.00,
-                                              digits = 2),
-                                        keep.rownames = T)
-             colnames(pca.table) <- c("Principal Component", "% variance")
-             
-             DT::datatable(pca.table, 
-                           selection = 'single',
-                           autoHideNavigation = T,
-                           options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-           })
-           
-           output$pca_load_tab <-DT::renderDataTable({
-             pca.loadings <- mSet$analSet$pca$rotation[,c(input$pca_x,
-                                                          input$pca_y,
-                                                          input$pca_z)]
-             #colnames(pca.loadings)[1] <- "m/z"
-             DT::datatable(pca.loadings, 
-                           selection = 'single',
-                           autoHideNavigation = T,
-                           options = list(lengthMenu = c(5, 10, 15), pageLength = 10))
-           })
-  },
-           meba = {
-             if("MB" %not in% names(mSet$analSet)){
-               mSet <<- performMB(mSet, 10)
-             }
-             output$meba_tab <-DT::renderDataTable({
-               # -------------
-               DT::datatable(mSet$analSet$MB$stats, 
-                             selection = 'single',
-                             colnames = c("Compound", "Hotelling/T2 score"),
-                             autoHideNavigation = T,
-                             options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-             })
-           },
-           manova = {
-             NULL
-           },
-           asca = {
-             if("asca" %not in% names(mSet$analSet)){
-               mSet <<- Perform.ASCA(mSet, 1, 1, 2, 2)
-               mSet <<- CalculateImpVarCutoff(mSet, 0.05, 0.9)
-             }
-             output$asca_tab <-DT::renderDataTable({
-               # -------------
-               DT::datatable(mSet$analSet$asca$sig.list$Model.ab, 
-                             selection = 'single',
-                             colnames = c("Compound", "Leverage", "SPE"),
-                             autoHideNavigation = T,
-                             options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-             })
-             
-           })
-  })
-  
   observeEvent(input$statistics, {
     
     if(input$nav_general != "analysis") return(NULL)
@@ -1360,6 +1255,34 @@ shinyServer(function(input, output, session) {
                              options = list(lengthMenu = c(5, 10, 15), pageLength = 10))
              })
              },
+           meba = {
+             if("MB" %not in% names(mSet$analSet)){
+               mSet <<- performMB(mSet, 10)
+             }
+             output$meba_tab <-DT::renderDataTable({
+               # -------------
+               DT::datatable(mSet$analSet$MB$stats, 
+                             selection = 'single',
+                             colnames = c("Compound", "Hotelling/T2 score"),
+                             autoHideNavigation = T,
+                             options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+             })
+           },
+           asca = {
+             if("asca" %not in% names(mSet$analSet)){
+               mSet <<- Perform.ASCA(mSet, 1, 1, 2, 2)
+               mSet <<- CalculateImpVarCutoff(mSet, 0.05, 0.9)
+             }
+             output$asca_tab <-DT::renderDataTable({
+               # -------------
+               DT::datatable(mSet$analSet$asca$sig.list$Model.ab, 
+                             selection = 'single',
+                             colnames = c("Compound", "Leverage", "SPE"),
+                             autoHideNavigation = T,
+                             options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+             })
+             
+           },
            heatmap = {
              
              withProgress({
@@ -1368,30 +1291,43 @@ shinyServer(function(input, output, session) {
                  
                  if(interface$mode == "bivar"){
                    if(input$heatmode){
-                     used.analysis <- "tt"
+                     tbl = as.data.frame(mSet$analSet$tt$sig.mat)
                      used.values <- "p.value"
+                     decreasing = F
                    }else{
-                     used.analysis <- "fc"
-                     used.values <- "fc.all"
+                     tbl = as.data.frame(mSet$analSet$fc$sig.mat)
+                     tbl$abs_log2 <- abs(tbl$`log2(FC)`)
+                     used.values <- "abs_log2"
+                     decreasing = T
                    }
                  }else if(interface$mode == "multivar"){
-                   used.analysis = "aov"
+                   tbl = as.data.frame(mSet$analSet$aov$sig.mat)
                    used.values = "p.value"
-                 }else{
-                     NULL
+                   decreasing = F
+                 }else{#time series, asca/meba...
+                   if(input$heatmode){
+                     # asca
+                     tbl = as.data.frame(mSet$analSet$asca$sig.list$Model.ab)
+                     used.values = "Leverage"
+                   }else{
+                     # meba
+                     tbl = as.data.frame(mSet$analSet$MB$stats)
+                     used.values = "Hotelling-T2"
                    }
+                   decreasing = T
+                 }
                  
                  print(used.analysis)
                  print(used.values)
                  
-                 topn = if(length(mSet$analSet[[used.analysis]][[used.values]]) < topn) length(mSet$analSet[[used.analysis]][[used.values]]) else 100
+                 topn = if(length(tbl[[used.values]]) < input$heatmap_topn) length(tbl[[used.values]]) else input$heatmap_topn
                  
-                 ordered <- order(mSet$analSet[[used.analysis]][[used.values]], decreasing = F)
-                 sourceTable <- mSet$analSet[[used.analysis]][[used.values]][ordered][1:topn]
+                 mzorder <- order(tbl[[used.values]], decreasing = decreasing)
+                 mzsel <- rownames(tbl)[mzorder][1:topn]
                  
                  # - - -
                  
-                 x <- mSet$dataSet$norm[,names(sourceTable)]
+                 x <- mSet$dataSet$norm[,mzsel]
                  final_matrix <<- t(x)
                  
                  sample_order <- match(colnames(final_matrix), rownames(mSet$dataSet$norm))
@@ -1400,21 +1336,11 @@ shinyServer(function(input, output, session) {
                    if(input$timecourse_trigger){
                      translator <- data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],Group=mSet$dataSet$exp.fac[sample_order], Time=mSet$dataSet$time.fac[sample_order])
                      hmap.lvls <- c(levels(mSet$dataSet$exp.fac), levels(mSet$dataSet$time.fac))
-                     # reorder columns
-                     unique.names <- unique(gsub(x = translator$Sample, pattern = "_T\\d", ""))
-                     unique.times <- unique(translator$Time)
+
+                     split.translator <- split(translator, by = c("Time"))
+                     split.translator.ordered <- lapply(split.translator, function(tbl) tbl[order(tbl$Group)])
+                     translator <- rbindlist(split.translator.ordered)
                      
-                     new.order <- unlist(pbapply::pblapply(unique.times, function(time){
-                       vec <- sapply(unique.names, function(name){
-                         name = paste0(name, "_T", time) 
-                         i = which(translator$Sample == name)
-                         i
-                       })
-                       print(vec)
-                       vec
-                     }))
-                     
-                     translator <<- translator[new.order,]
                      final_matrix <<- final_matrix[,match(translator$Sample, colnames(final_matrix))]
                      
                      my_order=F
@@ -2066,6 +1992,8 @@ shinyServer(function(input, output, session) {
         # --- ggplot ---
         if(table == 'meba'){
           ggplotMeba(curr_cpd, draw.average = T, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+        }else if(table == 'asca'){
+          ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]], mode = "ts")
         }else{
           ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
         }

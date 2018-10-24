@@ -38,8 +38,9 @@ switchButton <- function(inputId, label, value=FALSE, col = "GB", type="TF") {
   if(type == "TF"){colclass <- paste(colclass,"TrueFalse")}
   if(type == "YN"){colclass <- paste(colclass,"YesNo")}
   if(type == "TTFC"){colclass <- paste(colclass,"TtFc")}
+  if(type == "ASMB"){colclass <- paste(colclass,"AsMb")}
+  
   if(type == "2d3d"){
-    print("...")
     colclass <- paste(colclass,"twodthreed")
     }
   

@@ -28,7 +28,7 @@ getProfile <- function(varName, title=varName, sourceTable = mSet$dataSet$norm, 
     translator <- data.table(
       index = 1:length(samp.names),
       Sample = gsub(x = samp.names, pattern = "_T\\d$", replacement=""),
-      Group = mSet$dataSet$facB,
+      Group = mSet$dataSet$exp.fac,
       Time = time.fac,
       Abundance = sourceTable[,varInx]
     )

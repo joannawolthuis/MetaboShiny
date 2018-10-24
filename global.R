@@ -69,6 +69,7 @@ sourceDir("backend/scripts/joanna")
 
 global <- list(constants = list(ppm = 2,
                                 nvars = 2,
+                                max.cols = 8,
                                 packages = c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat", 
                                              "plotly", "parallel", "shinyFiles", "curl", "httr", "pbapply", 
                                              "sqldf", "plyr", "ChemmineR", "gsubfn", "stringr", "heatmaply", 

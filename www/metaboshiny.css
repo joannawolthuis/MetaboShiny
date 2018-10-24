@@ -194,6 +194,18 @@
   font-size: 18px;
 }
 
+/* As / Mb */
+
+.AsMb .onoffswitch-inner:before {
+  content: "ASCA";
+  font-size: 10px;
+}
+
+.AsMb .onoffswitch-inner:after {
+  content: "MEBA";
+  font-size: 10px;
+}
+
 /* 2d / 3d */
 
 .twodthreed .onoffswitch-inner:before {
