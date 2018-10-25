@@ -981,9 +981,9 @@ shinyServer(function(input, output, session) {
           w.missing <- mSet$dataSet$preproc#[,1:50]
           w.missing <- apply(w.missing, 2, as.numeric)
 
-          #library(doParallel)
+          library(doParallel)
 
-          #registerDoParallel(session_cl)
+          registerDoParallel(session_cl)
           
           auto.mtry <- floor(sqrt(ncol(mSet$dataSet$preproc)))
           
