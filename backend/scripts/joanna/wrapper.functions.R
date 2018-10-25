@@ -39,7 +39,7 @@ get.csv <-
         #batches
       )
     }else{
-      query <- strwrap(gsubfn::fn$paste("select distinct d.*, s.*, b.*,
+      query <- strwrap(gsubfn::fn$paste("select distinct d.*, s.*, b.batch,
                                         i.mzmed as identifier,
                                         i.intensity
                                         from mzintensities i
@@ -63,6 +63,7 @@ get.csv <-
                                 fun.aggregate = sum, 
                                 value.var = "intensity",verbose = T) # what to do w/ duplicates? 
     
+    cast.dt <<- cast.dt
     # - - - check the first 100 rows for variables - - -
     
     as.numi <- as.numeric(colnames(cast.dt)[1:100])
@@ -70,31 +71,30 @@ get.csv <-
     exp.vars <- which(is.na(as.numi))
     
     # --- cast to right format ---
+    
     small.set <- cast.dt[,..exp.vars,]
-    
-    #small.set.test <<- small.set
-    #small.set <- small.set.test
-    
-    print(colnames(small.set))
     
     # --- name for metaboanalyst ---
     
     colnames(small.set) <- tolower(colnames(small.set))
     
-    print(colnames(small.set))
-    
+
     colnames(small.set)[which(colnames(small.set) == "card_id")] <- "sample"
     colnames(small.set)[grep(x=colnames(small.set), pattern="sampling_date")] <- "time"
     small.set <- small.set[,which(unlist(lapply(small.set, function(x)!all(is.na(x))))),with=F]
 
-    print(colnames(small.set))
-    
     # --- rejoin w/ rest ---
     
     small.set <- cbind(small.set, cast.dt[,-exp.vars, with=FALSE])
-    
     small.set$time <- as.numeric(as.factor(as.Date(small.set$time)))
-    small.set$sample <- small.set$animal_internal_id
+    
+    # check for time series
+    if(any(duplicated(small.set$animal_internal_id))){
+      print("detecting duplicates, assuming time series")
+      small.set$sample <- small.set$animal_internal_id
+    }
+    
+    print(small.set[1:20,1:20])
     
     # - - measure file size - -
     

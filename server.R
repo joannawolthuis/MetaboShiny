@@ -815,18 +815,29 @@ shinyServer(function(input, output, session) {
 
       shiny::setProgress(session=session, value= .1)
 
-      input <- list(batch_var = c("batch", "country"),
-                    exp_var = "stool_condition",
-                    exp_type = "stat",
-                    perc_limit = .99,
-                    filt_type = "none",
-                    miss_type = "rf",
-                    norm_type = "SumNorm",
-                    trans_type = "LogNorm",
-                    scale_type = "AutoNorm",
-                    ref_var = "none",
-                    remove_outliers = FALSE
-      )
+      # input <- list(batch_var = c("batch", "country"),
+      #               exp_type = "stat",
+      #               perc_limit = .99,
+      #               filt_type = "none",
+      #               miss_type = "rf",
+      #               norm_type = "SumNorm",
+      #               trans_type = "LogNorm",
+      #               scale_type = "AutoNorm",
+      #               ref_var = "none",
+      #               remove_outliers = FALSE
+      # )
+      
+      # input <- list(batch_var = "",
+      #               exp_type = "stat",
+      #               perc_limit = .99,
+      #               filt_type = "none",
+      #               miss_type = "rf",
+      #               norm_type = "SumNorm",
+      #               trans_type = "LogNorm",
+      #               scale_type = "AutoNorm",
+      #               ref_var = "none",
+      #               remove_outliers = FALSE
+      # )
       
       # - - check if time series!!! - - 
       
@@ -883,7 +894,7 @@ shinyServer(function(input, output, session) {
       first_part <- csv_orig[,..exp.vars, with=FALSE]
       first_part[first_part == "" | is.null(first_part)] <- "unknown"
       
-      csv <- cbind(first_part[,-"label"],
+      csv <- cbind(first_part[,-c("label")],
                         "label" = first_part[,..condition][[1]],
                         csv_orig[,-..exp.vars,with=FALSE])
       
@@ -943,12 +954,7 @@ shinyServer(function(input, output, session) {
       fwrite(csv[,-remove,with=F], file = csv_loc_final)
       
       rownames(covar_table) <- covar_table$sample
-      
-      # - - time series - -    
-      # time series stuff needs to be adjusted laterr!!!
-      # if(input$exp_type == "time_std") mSet <- SetDesignType(mSet, "time")
-      # - - - - - - - - - -
-      
+
       mSet <- Read.TextData(mSet, 
                             filePath = csv_loc_final, 
                             "rowu")  
@@ -973,9 +979,9 @@ shinyServer(function(input, output, session) {
           w.missing <- mSet$dataSet$preproc#[,1:50]
           w.missing <- apply(w.missing, 2, as.numeric)
 
-          library(doParallel)
+          #library(doParallel)
 
-          registerDoParallel(session_cl)
+          #registerDoParallel(session_cl)
           
           auto.mtry <- floor(sqrt(ncol(mSet$dataSet$preproc)))
           
@@ -1121,7 +1127,7 @@ shinyServer(function(input, output, session) {
           mSet$dataSet$norm <- as.data.frame(batch_normalized)
         }
       } else{
-        if(!batchview){
+        if(!batchview & has.qc){
           mSet$dataSet$norm <- mSet$dataSet$norm[-qc_rows,]
           mSet$dataSet$cls <- mSet$dataSet$cls[-qc_rows, drop = TRUE]
           mSet$dataSet$covars <- mSet$dataSet$covars[-grep("QC", mSet$dataSet$covars$sample),]
