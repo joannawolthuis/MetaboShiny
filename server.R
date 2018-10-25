@@ -164,6 +164,8 @@ shinyServer(function(input, output, session) {
       
       mSet$dataSet$exp.fac <<- as.factor(facA)
       mSet$dataSet$time.fac <<- as.factor(facB)
+      mSet$dataSet$facA <<- mSet$dataSet$exp.fac;
+      mSet$dataSet$facB <<- mSet$dataSet$time.fac;
       
       interface$mode <- "time"
       
