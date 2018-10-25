@@ -517,13 +517,11 @@ plotPCA.3d <- function(mSet, cols = global$vectors$mycols, shape.fac="label", pc
   switch(mode, 
          pca = {
            df <- mSet$analSet$pca$x
-           pcx ="PC1";pcy="PC2";pcz="PC3";
            x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
            y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
            z.var <- round(mSet$analSet$pca$variance[pcz] * 100.00, digits=1)
          }, ipca = {
              df <- mSet$analSet$pca$x
-             #x =1;y=2;z=3
              x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
              y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
              z.var <- round(mSet$analSet$pca$variance[pcz] * 100.00, digits=1)

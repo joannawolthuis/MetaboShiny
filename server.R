@@ -85,6 +85,8 @@ shinyServer(function(input, output, session) {
   
   observe({
     if(datamanager$mset_present){
+      datamanager$reload <- "pca"
+      datamanager$reload <- "plsda"
       # update select input bars
       updateSelectInput(session, "first_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
       updateSelectInput(session, "second_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
@@ -978,7 +980,7 @@ shinyServer(function(input, output, session) {
         }else if(input$miss_type == "rf"){
           samples <- rownames(mSet$dataSet$preproc)
           
-          w.missing <- mSet$dataSet$preproc#[,1:50]
+          w.missing <- mSet$dataSet$preproc
           w.missing <- apply(w.missing, 2, as.numeric)
 
           library(doParallel)
@@ -1075,7 +1077,7 @@ shinyServer(function(input, output, session) {
           
         }
         
-        if(!batchview){
+        if(!batchview & has.qc){
           mSet$dataSet$norm <- mSet$dataSet$norm[-qc_rows,]
           mSet$dataSet$cls <- mSet$dataSet$cls[-qc_rows, drop = TRUE]
           mSet$dataSet$covars <- mSet$dataSet$covars[-grep("QC", mSet$dataSet$covars$sample),]
@@ -1198,68 +1200,7 @@ shinyServer(function(input, output, session) {
                  mSet <<- PCA.Anal(mSet)
                })
              }
-             output$pca_scree <- renderPlot({
-               df <- data.table(
-                 pc = 1:length(names(mSet$analSet$pca$variance)),
-                 var = mSet$analSet$pca$variance)
-               p <- ggplot2::ggplot(data=df[1:20,]) + ggplot2::geom_line(mapping = aes(x=pc, y=var, colour=var), cex=3) + 
-                 global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]](base_size = 10) +
-                 ggplot2::scale_colour_gradientn(colours = global$functions$color.functions[[getOptions("user_options.txt")$gspec]](256)) +
-                 theme(axis.text=element_text(size=10),
-                       axis.title=element_text(size=19,face="bold"),
-                       #legend.title=element_text(size=15),
-                       #legend.text=element_text(size=12),
-                       legend.position="none")
-               # - - - - - 
-               p
-               #ggplotly(p)
-             })
-             output$plot_pca <- plotly::renderPlotly({
-               plotPCA.3d(mSet, global$vectors$mycols,
-                          pcx = input$pca_x,
-                          pcy = input$pca_y,
-                          pcz = input$pca_z,
-                          shape.fac = input$second_var)
-             })
-             # === LEGEND ===
-             output$pca_legend <- plotly::renderPlotly({
-               frame <- data.table(x = c(1), 
-                                   y = fac.lvls)
-               p <- ggplot(data=frame,
-                           aes(x, 
-                               y, 
-                               color=factor(y),
-                               fill=factor(y))) + 
-                 geom_point(shape = 21, size = 5, stroke = 5) +
-                 scale_colour_manual(values=chosen.colors) +
-                 theme_void() + 
-                 theme(legend.position="none")
-               # --- return ---
-               ggplotly(p, tooltip = NULL) %>% config(displayModeBar = F)
-             })
-             # ==============
-             output$pca_tab <-DT::renderDataTable({
-               pca.table <- as.data.table(round(mSet$analSet$pca$variance * 100.00,
-                                                digits = 2),
-                                          keep.rownames = T)
-               colnames(pca.table) <- c("Principal Component", "% variance")
-               
-               DT::datatable(pca.table, 
-                             selection = 'single',
-                             autoHideNavigation = T,
-                             options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-             })
-             
-             output$pca_load_tab <-DT::renderDataTable({
-               pca.loadings <- mSet$analSet$pca$rotation[,c(input$pca_x,
-                                                            input$pca_y,
-                                                            input$pca_z)]
-               #colnames(pca.loadings)[1] <- "m/z"
-               DT::datatable(pca.loadings, 
-                             selection = 'single',
-                             autoHideNavigation = T,
-                             options = list(lengthMenu = c(5, 10, 15), pageLength = 10))
-             })
+             datamanager$reload <- "pca"
              },
            meba = {
              if("MB" %not in% names(mSet$analSet)){
@@ -1494,175 +1435,153 @@ shinyServer(function(input, output, session) {
     switch(input$plsda_type,
            normal={
                require(caret)
-
                mSet <<- PLSR.Anal(mSet)
                mSet <<- PLSDA.CV(mSet, methodName=if(nrow(mSet$dataSet$norm) < 50) "L" else "T",compNum = 5)
                mSet <<- PLSDA.Permut(mSet,num = 100, type = "accu")
                })
+    datamanager$reload <- "plsda"
   })
+  
+  # preload pca/plsda
   
   observe({
     
-    if(!exists("mSet")) return()
-    
-    # - - - - - - - - - - -
-    
-    if("plsda" %in% names(mSet$analSet)){
-      output$plsda_cv_plot <- renderPlot({
-        ggPlotClass(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
-      })
-      output$plsda_perm_plot <- renderPlot({
-        ggPlotPerm(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
-      })
-      output$plot_plsda_3d <- plotly::renderPlotly({
-        plotPCA.3d(mSet, cols = global$vectors$mycols, input$second_var, input$plsda_x, input$plsda_y, input$plsda_z, mode = "plsda")
-      })
-      output$plsda_tab <- DT::renderDataTable({
-        # - - - -
-        plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar 
-                                           / mSet$analSet$plsr$Xtotvar 
-                                           * 100.0,
-                                           digits = 2),
-                                     keep.rownames = T)
-        colnames(plsda.table) <- c("Principal Component", "% variance")
-        plsda.table[, "Principal Component"] <- paste0("PC", 1:nrow(plsda.table))
-        # -------------
-        DT::datatable(plsda.table, 
-                      selection = 'single',
-                      autoHideNavigation = T,
-                      options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-      })
-      output$plsda_load_tab <-DT::renderDataTable({
-        plsda.loadings <- mSet$analSet$plsda$vip.mat
-        colnames(plsda.loadings) <- paste0("PC", c(1:ncol(plsda.loadings)))
-        # -------------
-        DT::datatable(plsda.loadings[, c(input$plsda_x, input$plsda_y, input$plsda_z)],
-                      selection = 'single',
-                      autoHideNavigation = T,
-                      options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-      })
-      output$plot_plsda <- plotly::renderPlotly({
-        plotPCA.3d(mSet, global$vectors$mycols,
-                   pcx = input$plsda_x,
-                   pcy = input$plsda_y,
-                   pcz = input$plsda_z, mode = "plsda",
-                   shape.fac = input$second_var)
-      })
+    if(is.null(datamanager$reload)){
+      NULL
+    }else{
+     switch(datamanager$reload,
+            "pca" = {
+              if("pca" %in% names(mSet$analSet)){
+                
+               output$pca_legend <- plotly::renderPlotly({
+                frame <- data.table(x = c(1), 
+                                    y = fac.lvls)
+                p <- ggplot(data=frame,
+                            aes(x, 
+                                y, 
+                                color=factor(y),
+                                fill=factor(y))) + 
+                  geom_point(shape = 21, size = 5, stroke = 5) +
+                  scale_colour_manual(values=chosen.colors) +
+                  theme_void() + 
+                  theme(legend.position="none")
+                # --- return ---
+                ggplotly(p, tooltip = NULL) %>% config(displayModeBar = F)
+              })
+              # ==============
+              output$pca_tab <-DT::renderDataTable({
+                pca.table <- as.data.table(round(mSet$analSet$pca$variance * 100.00,
+                                                 digits = 2),
+                                           keep.rownames = T)
+                colnames(pca.table) <- c("Principal Component", "% variance")
+                
+                DT::datatable(pca.table, 
+                              selection = 'single',
+                              autoHideNavigation = T,
+                              options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+              })
+              
+              output$pca_load_tab <-DT::renderDataTable({
+                pca.loadings <- mSet$analSet$pca$rotation[,c(input$pca_x,
+                                                             input$pca_y,
+                                                             input$pca_z)]
+                #colnames(pca.loadings)[1] <- "m/z"
+                DT::datatable(pca.loadings, 
+                              selection = 'single',
+                              autoHideNavigation = T,
+                              options = list(lengthMenu = c(5, 10, 15), pageLength = 10))
+              })
+              mode <- if("timecourse_trigger" %in% names(input)){
+                if(input$timecourse_trigger){
+                  "ipca"
+                }else{
+                  "pca"
+                } 
+              }else{
+                "pca"
+              }
+              
+              # - - - - -
+              if(input$pca_2d3d){
+                # 2d
+                output$plot_pca <- plotly::renderPlotly({
+                  plotPCA.2d(mSet, global$vectors$mycols,
+                             pcx = input$pca_x,
+                             pcy = input$pca_y, mode = mode,
+                             shape.fac = input$second_var)
+                })
+              }else{
+                # 3d
+                output$plot_pca <- plotly::renderPlotly({
+                  plotPCA.3d(mSet, global$vectors$mycols,
+                             pcx = input$pca_x,
+                             pcy = input$pca_y,
+                             pcz = input$pca_z, mode = mode,
+                             shape.fac = input$second_var)
+                })
+              }
+              }else{NULL}
+            },
+            "plsda" = {
+              
+              if("pca" %in% names(mSet$analSet)){
+                
+              output$plsda_cv_plot <- renderPlot({
+                ggPlotClass(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+              })
+              output$plsda_perm_plot <- renderPlot({
+                ggPlotPerm(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+              })
+              output$plsda_tab <- DT::renderDataTable({
+                # - - - -
+                plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar 
+                                                   / mSet$analSet$plsr$Xtotvar 
+                                                   * 100.0,
+                                                   digits = 2),
+                                             keep.rownames = T)
+                colnames(plsda.table) <- c("Principal Component", "% variance")
+                plsda.table[, "Principal Component"] <- paste0("PC", 1:nrow(plsda.table))
+                # -------------
+                DT::datatable(plsda.table, 
+                              selection = 'single',
+                              autoHideNavigation = T,
+                              options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+              })
+              output$plsda_load_tab <-DT::renderDataTable({
+                plsda.loadings <- mSet$analSet$plsda$vip.mat
+                colnames(plsda.loadings) <- paste0("PC", c(1:ncol(plsda.loadings)))
+                # -------------
+                DT::datatable(plsda.loadings[, c(input$plsda_x, input$plsda_y, input$plsda_z)],
+                              selection = 'single',
+                              autoHideNavigation = T,
+                              options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+              })
+              if(input$plsda_2d3d){
+                # 2d
+                output$plot_plsda <- plotly::renderPlotly({
+                  plotPCA.2d(mSet, global$vectors$mycols,
+                             pcx = input$plsda_x,
+                             pcy = input$plsda_y, mode = "plsda",
+                             shape.fac = input$second_var)
+                })
+              }else{
+                # 3d
+                output$plot_plsda <- plotly::renderPlotly({
+                  plotPCA.3d(mSet, global$vectors$mycols,
+                             pcx = input$plsda_x,
+                             pcy = input$plsda_y,
+                             pcz = input$plsda_z, mode = "plsda",
+                             shape.fac = input$second_var)
+                })
+              }
+              }else{NULL}
+            })
+      # - - - - 
+      datamanager$reload <- NULL
     }
   })
-  
-  observe({
-    
-    if(!exists("mSet")) return()
-    
-    # - - - - - - - - - - -
-    
-    if("plsda" %in% names(mSet$analSet)){
-      output$pla_cv_plot <- renderPlot({
-        ggPlotClass(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
-      })
-      output$plsda_perm_plot <- renderPlot({
-        ggPlotPerm(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
-      })
-      output$plot_plsda_3d <- plotly::renderPlotly({
-        plotPCA.3d(mSet, cols = global$vectors$mycols, input$second_var, input$plsda_x, input$plsda_y, input$plsda_z, mode = "plsda")
-      })
-      output$plsda_tab <- DT::renderDataTable({
-        # - - - -
-        plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar 
-                                           / mSet$analSet$plsr$Xtotvar 
-                                           * 100.0,
-                                           digits = 2),
-                                     keep.rownames = T)
-        colnames(plsda.table) <- c("Principal Component", "% variance")
-        plsda.table[, "Principal Component"] <- paste0("PC", 1:nrow(plsda.table))
-        # -------------
-        DT::datatable(plsda.table, 
-                      selection = 'single',
-                      autoHideNavigation = T,
-                      options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-      })
-      output$plsda_load_tab <-DT::renderDataTable({
-        plsda.loadings <- mSet$analSet$plsda$vip.mat
-        colnames(plsda.loadings) <- paste0("PC", c(1:ncol(plsda.loadings)))
-        # -------------
-        DT::datatable(plsda.loadings[, c(input$plsda_x, input$plsda_y, input$plsda_z)],
-                      selection = 'single',
-                      autoHideNavigation = T,
-                      options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-      })
-      output$plot_plsda <- plotly::renderPlotly({
-        plotPCA.3d(mSet, global$vectors$mycols,
-                   pcx = input$plsda_x,
-                   pcy = input$plsda_y,
-                   pcz = input$plsda_z, mode = "plsda",
-                   shape.fac = input$second_var)
-      })
-    }
-  })
-  
-  observeEvent(input$pca_2d3d,{
 
-    if(!exists("mSet")) return()
-    
-    if(!("pca" %in% names(mSet$analSet))) return()
-    
-    mode <- if("timecourse_trigger" %in% names(input)){
-      if(input$timecourse_trigger){
-        "ipca"
-      }else{
-        "pca"
-      } 
-    }else{
-      "pca"
-      }
-    
-    # - - - - -
-    if(input$pca_2d3d){
-      # 2d
-      output$plot_pca <- plotly::renderPlotly({
-        plotPCA.2d(mSet, global$vectors$mycols,
-                   pcx = input$pca_x,
-                   pcy = input$pca_y, mode = mode,
-                   shape.fac = input$second_var)
-      })
-    }else{
-      # 3d
-      output$plot_pca <- plotly::renderPlotly({
-        plotPCA.3d(mSet, global$vectors$mycols,
-                   pcx = input$pca_x,
-                   pcy = input$pca_y,
-                   pcz = input$pca_z, mode = mode,
-                   shape.fac = input$second_var)
-      })
-    }
-  })
-  
-  observeEvent(input$plsda_2d3d,{
-    
-    if(!exists("mSet")) return()
-    
-    if(!("plsda" %in% names(mSet$analSet) | "plsr" %in% names(mSet$analSet))) return()
-    
-    if(input$plsda_2d3d){
-      # 2d
-      output$plot_plsda <- plotly::renderPlotly({
-        plotPCA.2d(mSet, global$vectors$mycols,
-                   pcx = input$plsda_x,
-                   pcy = input$plsda_y, mode = "plsda",
-                   shape.fac = input$second_var)
-      })
-    }else{
-      # 3d
-      output$plot_plsda <- plotly::renderPlotly({
-        plotPCA.3d(mSet, global$vectors$mycols,
-                   pcx = input$plsda_x,
-                   pcy = input$plsda_y,
-                   pcz = input$plsda_z, mode = "plsda",
-                   shape.fac = input$second_var)
-      })
-    }
-  })
+
   
   observeEvent(input$do_ml, {
     
@@ -2000,6 +1919,17 @@ shinyServer(function(input, output, session) {
     })
   })
   
+  observe({
+      datamanager$reload <- input$statistics
+  })
+  
+  observeEvent(input$pca_2d3d, {
+    datamanager$reload <- "pca"
+  },ignoreInit = TRUE, ignoreNULL = T)
+  
+  observeEvent(input$plsda_2d3d, {
+    datamanager$reload <- "plsda"
+  },ignoreInit = TRUE, ignoreNULL = T)
 
   observeEvent(plotly::event_data("plotly_click"),{ # WHAT HAPPENS ON CLICK
     d <- plotly::event_data("plotly_click")
