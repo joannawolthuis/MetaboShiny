@@ -4,6 +4,7 @@
 *.Ruserdata
 *.csv
 *.log
+*.pdf
 *.sql
 *.db
 *.xml

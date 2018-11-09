@@ -14,7 +14,6 @@ get.csv <-
     
     library(data.table)
     
-    
     # - - announce some stuff - -
     
     adducts <- paste(which_adducts, collapse = ", ")
@@ -39,7 +38,7 @@ get.csv <-
         #batches
       )
     }else{
-      query <- strwrap(gsubfn::fn$paste("select distinct d.*, s.*, b.batch,
+      query <- strwrap(gsubfn::fn$paste("select distinct d.*, s.*, b.batch, b.injection,
                                         i.mzmed as identifier,
                                         i.intensity
                                         from mzintensities i
@@ -55,6 +54,12 @@ get.csv <-
       print(query)
       z = RSQLite::dbGetQuery(conn, query)
     }
+
+    
+    #a = DBI::dbGetQuery(conn,"select distinct card_id from individual_data d")    
+    #b = DBI::dbGetQuery(conn,"select distinct filename from mzintensities i")
+    #nows.a <- gsub(x=a$card_id, " ", "")
+    #nows.b <- gsub(x=b$filename, " ", "")
     
     RSQLite::dbDisconnect(conn)
     
@@ -64,6 +69,7 @@ get.csv <-
                                 value.var = "intensity",verbose = T) # what to do w/ duplicates? 
     
     cast.dt <<- cast.dt
+    
     # - - - check the first 100 rows for variables - - -
     
     as.numi <- as.numeric(colnames(cast.dt)[1:100])
@@ -78,7 +84,6 @@ get.csv <-
     
     colnames(small.set) <- tolower(colnames(small.set))
     
-
     colnames(small.set)[which(colnames(small.set) == "card_id")] <- "sample"
     colnames(small.set)[grep(x=colnames(small.set), pattern="sampling_date")] <- "time"
     small.set <- small.set[,which(unlist(lapply(small.set, function(x)!all(is.na(x))))),with=F]

@@ -151,8 +151,11 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                     ),column(3, align="center",
                              h2("VMH"),
                              helpText("Virtual Metabolic Human (VMH) hosts ReconMap, an extensive network of human metabolism, and bacterial metabolites.")
+                    ),column(3, align="center",
+                             h2("ReSpect"),
+                             helpText("RIKEN MSn spectral database for phytochemicals (ReSpect) is a collection of literature and in-house MSn spectra data 
+for research on plant metabolomics.")
                     )
-                    
                     ),
                     fluidRow(column(3, align="center",
                                     imageOutput("dimedb_logo",inline = T),
@@ -162,6 +165,9 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                              br(),br()
                     ),column(3, align="center",
                              imageOutput("vmh_logo",inline = T),
+                             br(),br()
+                    ),column(3, align="center",
+                             imageOutput("respect_logo",inline = T),
                              br(),br()
                     )),
                     fluidRow(column(3, align="center",
@@ -180,6 +186,11 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                            actionButton("build_vmh", "Build", icon = icon("wrench")),
                            br(),br(),
                            imageOutput("vmh_check",inline = T)
+                    ),column(3, align="center",
+                             actionButton("check_respect", "Check", icon = icon("check")),
+                             actionButton("build_respect", "Build", icon = icon("wrench")),
+                             br(),br(),
+                             imageOutput("respect_check",inline = T)
                     ))
                     # ----------------------------------------------------
            ),
@@ -255,7 +266,8 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                       sardine(fadeImageButton("add_kegg", img.path = "kegglogo.gif", value = T)),
                                                                                       sardine(fadeImageButton("add_dimedb", img.path = "dimedb.png")),
                                                                                       sardine(fadeImageButton("add_wikidata", img.path = "wikidata.png")),
-                                                                                      sardine(fadeImageButton("add_vmh", img.path = "vmh.png"))
+                                                                                      sardine(fadeImageButton("add_vmh", img.path = "vmh.png")),
+                                                                                      sardine(fadeImageButton("add_respect", img.path = "respect_logo.png"))
                                                                                     )),
                                                                            tabPanel(icon("id-card-o"), value = "identifier",
                                                                                     br(),
@@ -337,7 +349,8 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                               "Pareto Scaling"="ParetoNorm",
                                                                                                               "Range scaling"="RangeNorm",
                                                                                                               "None"="NULL")),
-                                    selectInput('miss_type', 'How to deal with missing values?', choices = list("Feature minimum"="colmin",
+                                    selectInput('miss_type', 'How to deal with missing values?', choices = list("Half feature minimum"="colmin",
+                                                                                                                "Half sample minimum"="rowmin",
                                                                                                                 "Total minimum"="min",
                                                                                                                 "Random forest"="rf",
                                                                                                                 #"Impute w/ regression"="regr",
@@ -637,7 +650,8 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                    sardine(fadeImageButton("search_kegg", img.path = "kegglogo.gif")),
                                                                                                    sardine(fadeImageButton("search_dimedb", img.path = "dimedb.png")),
                                                                                                    sardine(fadeImageButton("search_wikidata", img.path = "wikidata.png")),
-                                                                                                   sardine(fadeImageButton("search_vmh", img.path = "vmh.png"))
+                                                                                                   sardine(fadeImageButton("search_vmh", img.path = "vmh.png")),
+                                                                                                   sardine(fadeImageButton("search_respect", img.path = "respect_logo.png"))
                                                                                                  )),
                                                                                  bsCollapsePanel(h2("Miniplot"), "",#style = "info",
                                                                                                  plotly::plotlyOutput("curr_plot", height="300px", width="100%"))

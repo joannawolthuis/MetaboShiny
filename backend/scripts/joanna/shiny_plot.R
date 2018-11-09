@@ -656,7 +656,7 @@ plotPCA.3d <- function(mSet, cols = global$vectors$mycols, shape.fac="label", pc
   subplot(plots_facet,shareX = F, shareY = F)
   }
 
-plotPCA.2d <- function(mSet, shape.fac = "label", cols = global$vectors$mycols, pcx, pcy, mode="pca", plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
+plotPCA.2d <- function(mSet, shape.fac = "label", cols = global$vectors$mycols, pcx, pcy, mode="pca", plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]], plotlyfy="T"){
   
   classes <- switch(mode, 
            ipca = mSet$dataSet$exp.fac,
@@ -749,5 +749,9 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols = global$vectors$mycols, 
 
   if(mode == "ipca") p <- p + facet_wrap(~time)
   
-  ggplotly(p)
+  if(plotlyfy){
+    ggplotly(p)
+  }else{
+    p
+  }
 }

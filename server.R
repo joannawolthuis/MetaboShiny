@@ -155,7 +155,7 @@ shinyServer(function(input, output, session) {
     if(input$timecourse_trigger){
       # change to timecourse mode
       # save previous mset
-      mSet$storage[[paste0(as.character(levels(mSet$dataSet$cls)), collapse="-")]] <<- mSet$dataSet$analSet
+      mSet$storage[[paste0(as.character(levels(mSet$dataSet$cls)), collapse="-")]] <<- mSet$analSet
       
       # adjust mset
       SetDesignType(mSet, "time")
@@ -177,7 +177,7 @@ shinyServer(function(input, output, session) {
     }else{
       # change back to normal mode
       # save previous analyses (should be usable in venn diagram later)
-      mSet$storage[[paste0("(timecourse)", paste0(as.character(levels(mSet$dataSet$cls)), collapse="-"))]] <<- mSet$dataSet$analSet
+      mSet$storage[[paste0("(timecourse)", paste0(as.character(levels(mSet$dataSet$cls)), collapse="-"))]] <<- mSet$analSet
       # - - - - - - - - - - - -
       mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,mSet$dataSet$cls.name, with=F][[1]])
       mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
@@ -207,13 +207,21 @@ shinyServer(function(input, output, session) {
     }
     
     # save previous analyses (should be usable in venn diagram later)
-    mSet$storage[[paste0(as.character(levels(mSet$dataSet$cls)), collapse="-")]] <<- mSet$dataSet$analSet
+    
+    mSet$storage[[paste0(as.character(levels(mSet$dataSet$cls)), collapse="-")]] <<- mSet$analSet
+    
+    print(names(mSet$storage))
+    
     # - - - - - - - - - - - -
+    
     mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,input$first_var, with=F][[1]])
     mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
+    
     # remove old analSet
-    mSet$analSet <<- NULL
+
+    #mSet$analSet <<- NULL
     mSet$dataSet$cls.name <<- input$first_var
+    
     # reset interface
     if(mSet$dataSet$cls.num <= 1){
       interface$mode <- NULL } 
@@ -590,6 +598,7 @@ shinyServer(function(input, output, session) {
             require(req, character.only = TRUE)
           }
         }, pkgs = pkgs)
+        shiny::setProgress(session = session, 0.1)
         build.base.db(db,
                       outfolder = getOptions("user_options.txt")$db_dir, 
                       cl = session_cl)
@@ -819,30 +828,6 @@ shinyServer(function(input, output, session) {
 
       shiny::setProgress(session=session, value= .1)
 
-      # input <- list(batch_var = c("batch", "country"),
-      #               exp_type = "stat",
-      #               perc_limit = .99,
-      #               filt_type = "none",
-      #               miss_type = "rf",
-      #               norm_type = "SumNorm",
-      #               trans_type = "LogNorm",
-      #               scale_type = "AutoNorm",
-      #               ref_var = "none",
-      #               remove_outliers = FALSE
-      # )
-      
-      # input <- list(batch_var = "",
-      #               exp_type = "stat",
-      #               perc_limit = .99,
-      #               filt_type = "none",
-      #               miss_type = "rf",
-      #               norm_type = "SumNorm",
-      #               trans_type = "LogNorm",
-      #               scale_type = "AutoNorm",
-      #               ref_var = "none",
-      #               remove_outliers = FALSE
-      # )
-      
       # - - check if time series!!! - - 
       
       csv_orig <- fread(global$paths$csv_loc, 
@@ -973,7 +958,16 @@ shinyServer(function(input, output, session) {
                                     percent = input$perc_limit/100)
       
       if(input$miss_type != "none"){
-        if(input$miss_type == "pmm"){
+        if(input$miss_type == "rowmin"){
+          new.mat <- apply(mSet$dataSet$preproc, 1, function(x) {
+            if (sum(is.na(x)) > 0) {
+              x[is.na(x)] <- min(x, na.rm = T)/2
+            }
+            x
+          })
+          mSet$dataSet$procr <- t(new.mat)
+        }
+        else if(input$miss_type == "pmm"){
           require(mice)
           base <- mSet$dataSet$preproc
           imp <- mice::mice(base, printFlag = TRUE)
@@ -993,8 +987,8 @@ shinyServer(function(input, output, session) {
           
           imp <- missForest::missForest(w.missing, 
                                         parallelize = "variables",
-                                        verbose = T,
-                                        ntree = 10,
+                                        #verbose = T,
+                                        #ntree = 10,
                                         mtry = mtry)
           
           mSet$dataSet$procr <- imp$ximp
@@ -1045,11 +1039,16 @@ shinyServer(function(input, output, session) {
       
       has.qc <- length(qc_rows) > 0
         
+      colnames(mSet$dataSet$covars) <- tolower(colnames(mSet$dataSet$covars))
+      
+      # TODO: find a better fix for samples w/ special characters in name...
+      mSet$dataSet$covars$sample <- gsub(mSet$dataSet$covars$sample, pattern = "\\(|\\)", replacement="")
+      
       if(batch_corr){
         
         if("batch" %in% input$batch_var & has.qc){
           
-          smpnames = smps[qc_rows]
+          #smpnames = smps[qc_rows]
           
           batch.idx = as.numeric(as.factor(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"batch"][[1]]))
           seq.idx = as.numeric(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"injection"][[1]])
@@ -1063,7 +1062,9 @@ shinyServer(function(input, output, session) {
             corr_vec = BatchCorrMetabolomics::doBC(Xvec = as.numeric(vec), 
                                                    ref.idx = as.numeric(qc_rows), 
                                                    batch.idx = batch.idx,
-                                                   seq.idx = seq.idx)
+                                                   seq.idx = seq.idx,
+                                                   result = "correctedX",
+                                                   minBsamp = 1)
             # ---------
             corr_vec
           })
@@ -1383,7 +1384,7 @@ shinyServer(function(input, output, session) {
            aov = {
              if(!"aov" %in% names(mSet$analSet)){
                withProgress({
-                 ANOVA.Anal(mSet, thresh=0.05,nonpar = F)
+                 mSet <<- ANOVA.Anal(mSet, thresh=0.05,nonpar = F)
                # TODO: Fix ANOVA2
                # mSet <<- ifelse(timebutton_trigger,
                #                 {mSet$dataSet$facA <- mSet$dataSet$exp.fac;
@@ -1396,7 +1397,7 @@ shinyServer(function(input, output, session) {
     
              output$aov_tab <-DT::renderDataTable({
               
-               mSet$analSet$aov$sig.mat
+               #mSet$analSet$aov$sig.mat
                
                # -------------
                DT::datatable(if(is.null(mSet$analSet$aov$sig.mat)) data.table("No significant hits found") else mSet$analSet$aov$sig.mat, 
@@ -1436,8 +1437,8 @@ shinyServer(function(input, output, session) {
            normal={
                require(caret)
                mSet <<- PLSR.Anal(mSet)
-               mSet <<- PLSDA.CV(mSet, methodName=if(nrow(mSet$dataSet$norm) < 50) "L" else "T",compNum = 5)
-               mSet <<- PLSDA.Permut(mSet,num = 100, type = "accu")
+               mSet <<- PLSDA.CV(mSet, methodName=if(nrow(mSet$dataSet$norm) < 50) "L" else "T",compNum = 3)
+               mSet <<- PLSDA.Permut(mSet,num = 300, type = "accu")
                })
     datamanager$reload <- "plsda"
   })
@@ -1524,7 +1525,7 @@ shinyServer(function(input, output, session) {
             },
             "plsda" = {
               
-              if("pca" %in% names(mSet$analSet)){
+              if("plsda" %in% names(mSet$analSet)){
                 
               output$plsda_cv_plot <- renderPlot({
                 ggPlotClass(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
@@ -1601,28 +1602,68 @@ shinyServer(function(input, output, session) {
       
       curr[,(1:ncol(curr)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
       
-      config <- mSet$dataSet$covars[match(mSet$dataSet$covars$sample,rownames(mSet$dataSet$preproc)),]
-      config <- config[!is.na(config$sample),]
-      config$label <- mSet$dataSet$cls
-      config <- cbind(config, label=mSet$dataSet$cls)
+      curr <- as.data.frame(curr)
+      rownames(curr) <- rownames(mSet$dataSet$preproc)
       
-      # bye bye NAs
+      is.qc <- grepl("QC|qc", rownames(curr))
+      curr <- curr[!is.qc,]
       
+      order <- match(mSet$dataSet$covars$sample,rownames(curr))
+
+      config <- mSet$dataSet$covars[order, -"label"]
+      config <- cbind(config, label=mSet$dataSet$cls[order])
       config <- config[,apply(!is.na(config), 2, any), with=FALSE]
       
+      # - - - filter out some stuff from config - - -
       
-      # - - - - - -
-      keep_curr <- match(mSet$dataSet$covars$sample,rownames(mSet$dataSet$preproc))
+      # remove ones w/ every row being different
       
-      curr <- cbind(config, curr[keep_curr])
+      covariates <- lapply(1:ncol(config), function(i) as.factor(config[,..i][[1]]))
+      names(covariates) <- colnames(config)
       
-      curr <- curr[which(!grepl(config$sample,
-                                  pattern = "QC"))]        
+      has.na <- sapply(covariates, function(x) any(is.na(x)))
+      has.all.unique <- sapply(covariates, function(x) length(unique(x)) == length(x))
       
+      char.lbl <- as.character(covariates$label)
+      uniques <- unique(char.lbl)
+      uniques_new_name <- c(1:length(uniques))
+      names(uniques_new_name) = uniques
+      
+      remapped.lbl <- uniques_new_name[char.lbl]
+      
+      covariant.with.label <- sapply(covariates, function(x){
+        
+        # convert to something common ...
+        
+        char.x <- as.character(x)
+        uniques <- unique(char.x)
+        uniques_new_name <- c(1:length(uniques))
+        names(uniques_new_name) = uniques
+        remapped.x = uniques_new_name[char.x]
+        
+        res = if(length(remapped.x) == length(remapped.lbl)){
+          all(remapped.x == remapped.lbl)
+        }else{ FALSE }
+        
+        res
+        # - - - - - - -
+      })
+      
+      keep_configs <- which(!(names(config) %in% names(config)[unique(c(which(has.na), which(has.all.unique), which(covariant.with.label)))]))
+      keep_configs <- c(keep_configs, which(names(config) == "label"))
+      
+      print("Removing covariates and unique columns. Keeping non-mz variables:")
+      print(names(config)[keep_configs])
+      
+      config <- config[,..keep_configs,with=F]
+      # - - - - - - - - - - - - - - - - - - - - - - -
+      
+      curr <- cbind(config, curr)
+      curr <- as.data.table(curr)
 
       # remove cols with all NA
       
-      curr <- curr[,colSums(is.na(curr))<nrow(curr),with=FALSE]
+      curr <- curr[,colSums(is.na(curr))<nrow(curr), with=FALSE]
       
       configCols <- which(!(colnames(curr) %in% colnames(mSet$dataSet$norm)))
       mzCols <- which(colnames(curr) %in% colnames(mSet$dataSet$norm))
@@ -1660,15 +1701,7 @@ shinyServer(function(input, output, session) {
           inTrain <- train_idx[reTrain$Resample1]
           
           inTest <- test_idx
-          #reTest <- caret::createDataPartition(y = config[test_idx, label], p = ml_train_perc)
-          #inTest <- test_idx[reTest$Resample1]
         }
-        
-        # - - - re-split - - -
-        #reTrain <- caret::createDataPartition(y = config[train_idx, label], p = ml_train_perc)
-        #inTrain <- train_idx[reTrain$Resample1]
-        #reTest <- caret::createDataPartition(y = config[test_idx, label], p = ml_train_perc)
-        #inTest <- test_idx[reTest$Resample1]
         
         # - - divide - -
         
@@ -1679,9 +1712,7 @@ shinyServer(function(input, output, session) {
         testY <- curr[inTest,
                       ..predictor][[1]]
         
-        group.cols <- grep(colnames(curr), pattern = "^group",value = T)
-        
-        remove.cols <- c("sample", "label", group.cols, "Stool_condition") #TODO: make group column removed at start
+        remove.cols <- c("label") #TODO: make group column removed at start
         remove.idx <- which(colnames(curr) %in% remove.cols)
         training <- curr[inTrain,-remove.idx, with=FALSE]
         testing <- curr[inTest,-remove.idx, with=FALSE]
@@ -1750,15 +1781,13 @@ shinyServer(function(input, output, session) {
         mSet$analSet$ml <<- list(ls=list(), rf=list())
       }
       
-      #input <- list(ml_attempts = 50, ml_method = "ls", ml_name = "test")
-      
       xvals <<- list(type = {unique(lapply(repeats, function(x) x$type))},
                      models = {lapply(repeats, function(x) x$model)},
                      predictions = {lapply(repeats, function(x) x$prediction)},
                      labels = {lapply(repeats, function(x) x$labels)})
       
       mSet$analSet$ml[[input$ml_method]][[input$ml_name]] <<- list("roc" = xvals,
-                                                                  "bar" = repeats)
+                                                                   "bar" = repeats)
       
       output$ml_roc <- plotly::renderPlotly({plotly::ggplotly(ggPlotROC(xvals, input$ml_attempts, global$functions$color.functions[[getOptions("user_options.txt")$gspec]]))})
       output$ml_bar <- plotly::renderPlotly({plotly::ggplotly(ggPlotBar(repeats, input$ml_attempts, global$functions$color.functions[[getOptions("user_options.txt")$gspec]], input$ml_top_x, input$ml_name))})
@@ -1847,15 +1876,7 @@ shinyServer(function(input, output, session) {
     rownames(pw_memb_tab) <- pw_memb_here
     pw_memb_tab[,1] <- c("Yes")
     colnames(pw_memb_tab) <- "Present"
-    # get missing members
-    # pw_memb_all <- gset_proc$gsc[[curr_pw$Name]]
-    # pw_memb_all_tab <<- as.data.frame(pw_memb_all)
-    # rownames(pw_memb_all_tab) <- pw_memb_all
-    # pw_memb_all_tab[,1] <- c("No")
-    # colnames(pw_memb_all_tab) <- "Present"
-    # join
-    enrich_overview_tab <<- pw_memb_tab #rbind(pw_members_tab, pw_memb_all_tab)
-    #
+    enrich_overview_tab <<- pw_memb_tab
     output$enrich_pw_tab <-DT::renderDataTable({
       DT::datatable(enrich_overview_tab,
                     selection = 'single',
@@ -2274,14 +2295,14 @@ shinyServer(function(input, output, session) {
                      fc = list(rownames(mSet$analSet$fc$sig.mat[order(abs(mSet$analSet$fc$sig.mat[,2]), decreasing = F),])),
                      ls = {
                        tbls_ls <- lapply(input$ls_choice, function(name){
-                         mSet$analSet$ml$ls[[name]][order(mSet$analSet$ml$ls[[name]]$count, decreasing = T),]$mz})
+                         mSet$analSet$ml$ls[[name]]$tophits[order(mSet$analSet$ml$ls[[name]]$tophits$count, decreasing = T),]$mz})
                        names(tbls_ls) <- input$ls_choice
                        # - - - 
                        tbls_ls
                      },
                      rf = {
                        tbls_rf <- lapply(input$rf_choice, function(name){
-                         mSet$analSet$ml$rf[[name]][order(mSet$analSet$ml$rf[[name]]$mda, decreasing = T),]$mz})
+                         mSet$analSet$ml$rf[[name]]$tophits[order(mSet$analSet$ml$rf[[name]]$tophits$mda, decreasing = T),]$mz})
                        names(tbls_rf) <- input$rf_choice
                        # - - -
                        tbls_rf
@@ -2289,7 +2310,7 @@ shinyServer(function(input, output, session) {
                      plsda = {
                        tbls_plsda <- lapply(input$plsda_choice, function(name){
                          compounds_pc <- as.data.table(mSet$analSet$plsda$vip.mat,keep.rownames = T)
-                         colnames(compounds_pc) <- c("rn", paste0("PC", 1:3))
+                         colnames(compounds_pc) <- c("rn", paste0("PC", 1:(ncol(compounds_pc)-1)))
                          ordered_pc <- setorderv(compounds_pc, name, -1)
                          ordered_pc[, c("rn")][[1]]               
                        })

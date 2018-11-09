@@ -1154,6 +1154,59 @@ build.base.db <- function(dbname=NA,
                                  #   # - - - return - - -
                                  #   response
                                  # })
+                               }, respect = function(dbname, ...){
+                                 # - - download reSpect database, phytochemicals - - 
+                                 
+                                 file.url <- "http://spectra.psc.riken.jp/menta.cgi/static/respect/respect.zip"
+                                 
+                                 # ----
+                                 #base.loc <- getOptions("user_options.txt")$db_dir
+                                 base.loc <- file.path(getOptions("user_options.txt")$db_dir, "respect_source")
+                                 if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
+                                 zip.file <- file.path(base.loc, "respect.zip")
+                                 utils::download.file(file.url, zip.file,mode = "w")
+                                 utils::unzip(zip.file, exdir = base.loc)
+                                 
+                                 
+                                 cpd_files <- list.files(base.loc, 
+                                                         full.names = T)
+                                 
+                                 db_rows <- pbapply::pblapply(cpd_files, function(fn){
+                                   row = NA
+                                   try({
+                                     lines <- readLines(fn,skipNul = T, n = 100)   
+                                     split.lines <- sapply(lines, strsplit, ": ")
+                                     names(split.lines) <- sapply(split.lines, function(x) x[1])
+                                     split.lines <- lapply(split.lines, function(x) x[2:length(x)])
+                                     row <- data.table(
+                                       compoundname = split.lines$`CH$NAME`, 
+                                       description = split.lines$RECORD_TITLE,
+                                       baseformula = split.lines$`CH$FORMULA`,
+                                       identifier = split.lines$ACCESSION, 
+                                       charge = {
+                                         smi = split.lines$`CH$SMILES`
+                                         charge=0
+                                         try({
+                                           iatom <- rcdk::parse.smiles(smi)[[1]]
+                                           charge = rcdk::get.total.charge(iatom)
+                                         })
+                                         charge
+                                       },
+                                       structure = split.lines$`CH$SMILES`
+                                     )
+                                     if(row$structure == "N/A") row$structure <- split.lines$`CH$INCHI`
+                                   })
+                                   row
+                                 })
+                                 
+                                 db.formatted <- rbindlist(db_rows[!is.na(db_rows)])
+                                 db.formatted <- unique(db.formatted[!is.na(baseformula),])
+                                 # --- check formulae ---
+                                 checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
+                                                                                            db.formatted$baseformula))
+                                 db.formatted$baseformula <- checked$new_formula
+                                 
+                                 RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
                                })
   # --- execute ;) ---
   function.of.choice(dbname)
@@ -1668,8 +1721,11 @@ load.excel <- function(path.to.xlsx,
                          #"Admin"
                        )){
   
-  #path.to.xlsx <<- path.to.xlsx
-  #path.to.patdb <<- path.to.patdb
+  #path.to.xlsx <- "~/Desktop/xls/DSM_NL_BR_IT.xlsx"
+  #path.to.patdb <- global$paths$patdb
+  
+  print(path.to.patdb)
+  print(path.to.xlsx)
   
   # --- connect to sqlite db ---
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), path.to.patdb)
@@ -1714,17 +1770,16 @@ load.excel <- function(path.to.xlsx,
     individual.data$sampling_date <- as.factor(as.Date(as.character(individual.data$sampling_date), 
                                                        format = "%d-%m-%y"))
   }else{
-    # origin <- switch(get_os(),
-    #                  "windows" = "1899-12-30",
-    #                  "osx" = "1904-01-01")
     individual.data$sampling_date <- as.factor(as.Date(as.numeric(individual.data$sampling_date), 
                                                        origin = "1899-12-30"))
     
   }
-
-  if(is.na(individual.data$sampling_date[1])) levels(individual.data$sampling_date) <- factor(1) 
-  print(head(individual.data))
   
+  individual.data$card_id <- as.character(individual.data$card_id)
+  individual.data$animal_internal_id <- as.character(individual.data$animal_internal_id)
+  
+  if(is.na(individual.data$sampling_date[1])) levels(individual.data$sampling_date) <- factor(1) 
+
   setup <- data.table::as.data.table(apply(setup, MARGIN=2, trimws))
   individual.data <- data.table::as.data.table(apply(individual.data, MARGIN=2, trimws))
   #general <- data.table::as.data.table(apply(general, MARGIN=2, trimws))
@@ -1733,27 +1788,25 @@ load.excel <- function(path.to.xlsx,
   
   qc_samps = RSQLite::dbGetQuery(conn, "SELECT * FROM batchinfo WHERE sample LIKE '%QC%'")
   
-  qc_setup <- lapply(qc_samps$sample, function(qc) {
-    data.table(group = "qc",
-               stool_condition = "qc")
-  })
-  
+  placeholder_date <- individual.data$sampling_date[[1]]
+    
   qc_ind_data <- lapply(qc_samps$sample, function(qc) {
     data.table(label = c(1),
                card_id = qc,
-               animal_internal_id = NA,
-               sampling_date = NA,
+               animal_internal_id = qc,
+               sampling_date = placeholder_date,
                sex = "qc",
                group = "qc",
-               farm = NA)
+               farm = "QcLand")
   })
   
-  qc_tab_setup = unique(rbindlist(qc_setup))
+  qc_tab_setup = data.table(group = "qc",
+                            stool_condition = "qc")
   qc_tab_ind = unique(rbindlist(qc_ind_data))
   
   # --- join to existing ---
   
-  setup <- rbind(setup, qc_tab_setup)
+  setup <- rbind(setup, qc_tab_setup, fill=TRUE)
   individual.data <- rbindlist(list(individual.data, qc_tab_ind), fill=TRUE)
   individual.data$label <- 1:nrow(individual.data)
   
