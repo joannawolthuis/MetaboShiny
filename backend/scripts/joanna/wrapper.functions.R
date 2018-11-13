@@ -53,7 +53,7 @@ get.csv <-
                        simplify=TRUE)
       print(query)
       z = RSQLite::dbGetQuery(conn, query)
-    }
+    View}
 
     
     #a = DBI::dbGetQuery(conn,"select distinct card_id from individual_data d")    

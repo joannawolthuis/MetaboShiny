@@ -191,6 +191,35 @@ for research on plant metabolomics.")
                              actionButton("build_respect", "Build", icon = icon("wrench")),
                              br(),br(),
                              imageOutput("respect_check",inline = T)
+                    )),
+                    # -- fourth row --
+                    fluidRow(column(3, align="center",
+                                    h2("MassBank"),
+                                    helpText("This site presents the database of comprehensive, high-resolution mass spectra of metabolites. Supported by the JST-BIRD project, it offers various query methods for standard spectra from Keio Univ., RIKEN PSC, and others. 
+  In 2008, MassBank was authorized as the official mass spectral database of The Mass Spectrometry Society of Japan.")
+                    ),
+                    column(3, align="center",
+                           h2("MetaboLights"),
+                           helpText("MetaboLights is a database for Metabolomics experiments and derived information. The database is cross-species, cross-technique and covers metabolite structures and their reference spectra as well as their biological roles, locations and concentrations, and experimental data from metabolic experiments.")
+                           )),
+                    fluidRow(column(3, align="center",
+                                    imageOutput("massbank_logo",inline = T),
+                                    br(),br()
+                    ),column(3, align="center",
+                           imageOutput("metabolights_logo",inline = T),
+                           br(),br()
+                    )),
+                    fluidRow(column(3, align="center",
+                                    actionButton("check_massbank", "Check", icon = icon("check")),
+                                    actionButton("build_massbank", "Build", icon = icon("wrench")),
+                                    br(),br(),
+                                    imageOutput("massbank_check",inline = T)
+                    ),
+                    column(3, align="center",
+                           actionButton("check_metabolights", "Check", icon = icon("check")),
+                           actionButton("build_metabolights", "Build", icon = icon("wrench")),
+                           br(),br(),
+                           imageOutput("metabolights_check",inline = T)
                     ))
                     # ----------------------------------------------------
            ),
@@ -267,7 +296,9 @@ for research on plant metabolomics.")
                                                                                       sardine(fadeImageButton("add_dimedb", img.path = "dimedb.png")),
                                                                                       sardine(fadeImageButton("add_wikidata", img.path = "wikidata.png")),
                                                                                       sardine(fadeImageButton("add_vmh", img.path = "vmh.png")),
-                                                                                      sardine(fadeImageButton("add_respect", img.path = "respect_logo.png"))
+                                                                                      sardine(fadeImageButton("add_respect", img.path = "respect_logo.png")),
+                                                                                      sardine(fadeImageButton("add_massbank", img.path = "massbank_logo.jpg")),
+                                                                                      sardine(fadeImageButton("add_metabolights", img.path = "metabolights_logo.png"))
                                                                                     )),
                                                                            tabPanel(icon("id-card-o"), value = "identifier",
                                                                                     br(),
@@ -651,7 +682,9 @@ for research on plant metabolomics.")
                                                                                                    sardine(fadeImageButton("search_dimedb", img.path = "dimedb.png")),
                                                                                                    sardine(fadeImageButton("search_wikidata", img.path = "wikidata.png")),
                                                                                                    sardine(fadeImageButton("search_vmh", img.path = "vmh.png")),
-                                                                                                   sardine(fadeImageButton("search_respect", img.path = "respect_logo.png"))
+                                                                                                   sardine(fadeImageButton("search_respect", img.path = "respect_logo.png")),
+                                                                                                   sardine(fadeImageButton("search_massbank", img.path = "massbank_logo.jpg")),
+                                                                                                   sardine(fadeImageButton("search_metabolights", img.path = "metabolights_logo.png"))
                                                                                                  )),
                                                                                  bsCollapsePanel(h2("Miniplot"), "",#style = "info",
                                                                                                  plotly::plotlyOutput("curr_plot", height="300px", width="100%"))

@@ -9,10 +9,7 @@
 *.db
 *.xml
 *.zip
-*.png
 *.gz
-*.jpg
-*.jpeg
 .Rproj.user
 /backend/db
 /backend/appdata/*

@@ -172,7 +172,7 @@ shinyServer(function(input, output, session) {
       interface$mode <- "time"
       
       heatbutton$status <- "asmb"
-      #mSet$analSet <<- NULL
+      mSet$analSet <<- NULL
       
     }else{
       # change back to normal mode
@@ -184,7 +184,7 @@ shinyServer(function(input, output, session) {
       # remove old analSet
       
       heatbutton$status <- "ttfc"
-      #mSet$analSet <<- NULL
+      mSet$analSet <<- NULL
       
       # reset interface
       if(mSet$dataSet$cls.num <= 1){
@@ -218,7 +218,8 @@ shinyServer(function(input, output, session) {
     mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
     
     # remove old analSet
-
+    mSet$analSet <<- NULL
+    
     #mSet$analSet <<- NULL
     mSet$dataSet$cls.name <<- input$first_var
     
@@ -922,6 +923,15 @@ shinyServer(function(input, output, session) {
       
       colnames(csv)[which( colnames(csv) == "time")] <- "Time"
       
+      # dedup
+      
+      remove = which( duplicated( t(csv[,..exp.vars] )))
+      colnms <- colnames(csv)[remove]
+      remove.filt <- setdiff(colnms,c("sample","label"))
+      csv <- csv[ , -remove.filt, with = FALSE ]
+
+      # - - -
+      
       as.numi <- as.numeric(colnames(csv)[1:100])
       
       exp.vars <- which(is.na(as.numi))
@@ -939,6 +949,7 @@ shinyServer(function(input, output, session) {
       csv_loc_final <- gsub(pattern = "\\.csv", replacement = "_no_out.csv", x = global$paths$csv_loc)
       
       if(file.exists(csv_loc_final)) file.remove(csv_loc_final)
+      
       
       fwrite(csv[,-remove,with=F], file = csv_loc_final)
       

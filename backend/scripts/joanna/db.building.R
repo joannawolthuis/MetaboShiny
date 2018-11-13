@@ -652,74 +652,74 @@ build.base.db <- function(dbname=NA,
                                  require(curl)
                                  
                                  all_ids <- read.table("ftp://ftp.ebi.ac.uk/pub/databases/metabolights/eb-eye/unichem.tsv", sep="\t")
-                                 all_ids <- all_ids[1:100,]
+                                 #all_ids <- all_ids
                                  colnames(all_ids) <- c("identifier", "inchi", "inchikey")
-                                 query <- all_ids$inchi[[1]]
+                                 #query <- all_ids$inchi[[1]]
                                  
-                                 token = "b7e19fad-46bd-48d3-80c1-765140acace1"
+                                 #token = "b7e19fad-46bd-48d3-80c1-765140acace1"
                                  
-                                 w.csid.rows <- pbapply::pblapply(1:nrow(all_ids), cl=session_cl, function(i){
-                                   row = all_ids[i,]
-                                   inchi = row$inchikey
-                                   print(i/nrow(all_ids)*100)
-                                   try({
-                                     csid = webchem::cs_convert(inchi, from = c("inchikey"),
-                                                                to = c("csid"))[[1]]
-                                     info = webchem::cs_extcompinfo(csid,token=token)
-                                     smi = info$smiles
-                                     iatom <- rcdk::parse.smiles(smi)[[1]]
-                                     charge = rcdk::get.total.charge(iatom)
-                                     formula = rcdk::get.mol2formula(iatom, charge = charge)@string
-                                     # - - - - -
-                                     data.table::data.table(compoundname = info$common_name,
-                                                            baseformula = formula,
-                                                            description = "MetaboLights compound",
-                                                            identifier = row$identifier,
-                                                            structure = info$smiles)
-                                   })
-                                 })
-                                 
-                                 # metabs = jsonlite::fromJSON(txt = "http://ftp.ebi.ac.uk/pub/databases/metabolights/compounds/MetabolitesReport.json",
-                                 #                             simplifyDataFrame = TRUE)
-                                 # pathways = jsonlite::fromJSON(txt = "http://ftp.ebi.ac.uk/pub/databases/metabolights/compounds/reactome.json", 
-                                 #                               simplifyDataFrame = TRUE)
-                                 url = "ftp://ftp.ebi.ac.uk/pub/databases/metabolights/eb-eye/eb-eye_metabolights_complete.xml"
-                                 result <- XML::xmlParse(url)
-                                 tbl <- XML::xmlToList(url)
-                                 rootnode <- XML::xmlRoot(result)
-                                 
-                                 # Find number of nodes in the root.
-                                 rootsize <- XML::xmlSize(rootnode)
-                                 
-                                 db.rows.from.study <- pbapply::pblapply(tbl$entries, cl=session_cl, function(study){
-                                   ids = sapply(study$cross_references, function(x) x[[1]])
-                                   ids = ids[grepl(x=ids, pattern = "MTBLC")]
-                                   names = sapply(study$additional_fields, function(x){
-                                     #print(x)
-                                     try(
-                                       {if(x[[2]] == "metabolite_name") x[[1]]
-                                       })
-                                     names <- unlist(names)
-                                     names <- grep(x = names, pattern = "Error", value = TRUE, invert = TRUE)
-                                   })
-                                   #print(names)
-                                   #print(unique(names)[,1])
-                                   if(length(ids)>0){
-                                     res <- data.table::data.table(identifier = unique(ids),
-                                                                   compoundname = unique(names)[,1])
-                                     print(res)
-                                     res
-                                   }
-                                 })
-                                 
-                                 joined <- data.table::rbindlist(db.rows.from.study)
-                                 
-                                 # Print the result.
-                                 print(rootsize)
-                                 
-                                 rootnode
-                                 compoundnames <- XML::getNodeSet(metabs_all, 
-                                                                  "/cross_references/*")
+                                 # w.csid.rows <- pbapply::pblapply(1:nrow(all_ids), cl=0, function(i, all_ids){
+                                 #   row = all_ids[i,]
+                                 #   inchi = row$inchikey
+                                 #   print(i/nrow(all_ids)*100)
+                                 #   try({
+                                 #     csid = webchem::cs_convert(inchi, from = c("inchikey"),
+                                 #                                to = c("csid"))[[1]]
+                                 #     info = webchem::cs_extcompinfo(csid,token=token)
+                                 #     smi = info$smiles
+                                 #     iatom <- rcdk::parse.smiles(smi)[[1]]
+                                 #     charge = rcdk::get.total.charge(iatom)
+                                 #     formula = rcdk::get.mol2formula(iatom, charge = charge)@string
+                                 #     # - - - - -
+                                 #     data.table::data.table(compoundname = info$common_name,
+                                 #                            baseformula = formula,
+                                 #                            description = "MetaboLights compound",
+                                 #                            identifier = row$identifier,
+                                 #                            structure = info$smiles)
+                                 #   })
+                                 # }, all_ids = all_ids)
+                                 # 
+                                 # # metabs = jsonlite::fromJSON(txt = "http://ftp.ebi.ac.uk/pub/databases/metabolights/compounds/MetabolitesReport.json",
+                                 # #                             simplifyDataFrame = TRUE)
+                                 # # pathways = jsonlite::fromJSON(txt = "http://ftp.ebi.ac.uk/pub/databases/metabolights/compounds/reactome.json", 
+                                 # #                               simplifyDataFrame = TRUE)
+                                 # url = "ftp://ftp.ebi.ac.uk/pub/databases/metabolights/eb-eye/eb-eye_metabolights_complete.xml"
+                                 # result <- XML::xmlParse(url)
+                                 # tbl <- XML::xmlToList(url)
+                                 # rootnode <- XML::xmlRoot(result)
+                                 # 
+                                 # # Find number of nodes in the root.
+                                 # rootsize <- XML::xmlSize(rootnode)
+                                 # 
+                                 # db.rows.from.study <- pbapply::pblapply(tbl$entries, cl=session_cl, function(study){
+                                 #   ids = sapply(study$cross_references, function(x) x[[1]])
+                                 #   ids = ids[grepl(x=ids, pattern = "MTBLC")]
+                                 #   names = sapply(study$additional_fields, function(x){
+                                 #     #print(x)
+                                 #     try(
+                                 #       {if(x[[2]] == "metabolite_name") x[[1]]
+                                 #       })
+                                 #     names <- unlist(names)
+                                 #     names <- grep(x = names, pattern = "Error", value = TRUE, invert = TRUE)
+                                 #   })
+                                 #   #print(names)
+                                 #   #print(unique(names)[,1])
+                                 #   if(length(ids)>0){
+                                 #     res <- data.table::data.table(identifier = unique(ids),
+                                 #                                   compoundname = unique(names)[,1])
+                                 #     print(res)
+                                 #     res
+                                 #   }
+                                 # })
+                                 # 
+                                 # joined <- data.table::rbindlist(db.rows.from.study)
+                                 # 
+                                 # # Print the result.
+                                 # print(rootsize)
+                                 # 
+                                 # rootnode
+                                 # compoundnames <- XML::getNodeSet(metabs_all, 
+                                 #                                  "/cross_references/*")
                                  
                                  # file.url <- "ftp://ftp.ebi.ac.uk/pub/databases/metabolights/xml_feeds/unichem.tsv"
                                  # # ----
@@ -729,29 +729,34 @@ build.base.db <- function(dbname=NA,
                                  # utils::download.file(file.url, csv.file)
                                  # # -------------------------------
                                  # metabol.tab <- fread(csv.file)
-                                 #cpds <- read.table(file =  sep="\t")
+                                 # cpds <- read.table(file =  sep="\t")
                                  # met_info <- jsonlite::fromJSON(txt = "https://www.ebi.ac.uk/metabolights/webservice/beta/compound/MTBLC11449", simplifyDataFrame = TRUE)
                                  # - - - - - -
                                  
+                                 metabs <- all_ids$identifier
                                  #cl = parallel::makeCluster(3)
-                                 
-                                 info_objs <- pbapply::pblapply(names(metabs), cl = session_cl, FUN=function(id){
-                                   url <- paste0("https://www.ebi.ac.uk/metabolights/webservice/beta/compound/", id)
-                                   tries = 4
-                                   met_info <- NULL
-                                   while(is.null(met_info) & tries > 0){
-                                     #if(tries < 4) print(paste0("retrying ",id))
-                                     met_info <- jsonlite::fromJSON(txt = url)
-                                     tries = tries - 1
-                                   }
+  
+                                 metabs <- pbapply::pblapply(metabs, cl = session_cl, FUN=function(id){
+                                   met_info = NA
+                                   try({
+                                     url <- paste0("https://www.ebi.ac.uk/metabolights/webservice/beta/compound/", id)
+                                     tries = 4
+                                     while(is.na(met_info) & tries > 0){
+                                       #if(tries < 4) print(paste0("retrying ",id))
+                                       met_info <- jsonlite::fromJSON(txt = url)
+                                       tries = tries - 1
+                                     }
+                                   })
                                    met_info
                                  })
                                  
-                                 db_rows <- pbapply::pblapply(info_objs, cl = session_cl, FUN=function(met_info){
+                                 print(length(metabs))
+                                 
+                                 db_rows <- pbapply::pblapply(metabs[!is.na(metabs)], cl = 0, FUN=function(met_info){
                                    formula <- NA
                                    charge <- NA
                                    try({
-                                     formula <- str_match(met_info$structure, "^([^\\n]+)\\n")[[2]]
+                                     formula <- met_info$formula
                                      charge = met_info$charge
                                    })
                                    smi <- toupper(gsub(" ", "", met_info$smiles))
@@ -767,6 +772,7 @@ build.base.db <- function(dbname=NA,
                                        worked = TRUE
                                      })
                                      if(!worked){
+                                       print("no smiles..")
                                        smi <- toupper(webchem::cs_inchi_smiles(inchi = met_info$inchi,verbose = TRUE))
                                        iatom <- rcdk::parse.smiles(smi)[[1]]
                                        charge <- rcdk::get.total.charge(iatom)
@@ -782,48 +788,51 @@ build.base.db <- function(dbname=NA,
                                    # -------
                                    list(metabs=met_dt, pathway=met_info$pathways)
                                  })
+                                 
                                  db_rows_a <- lapply(db_rows, function(x) x$metabs)
                                  db.formatted <- rbindlist(db_rows_a[!is.na(db_rows_a)])
-                                 db.formatted$pathway = c(NA)
-                                 has_pathway = sapply(metabs, function(x){ as.logical(x$flags$hasPathways)})
-                                 metab_has_pathway = names(has_pathway[has_pathway])
-                                 db.formatted.has.pw <- db.formatted[identifier %in% metab_has_pathway]
-                                 db.pathway.info <- lapply(db_rows, function(x) if(x$metabs$identifier %in% metab_has_pathway){ list(id = x$metabs$identifier, pw = x$pathway);  })
-                                 db.pathway.info <- Filter(Negate(is.null), db.pathway.info)
                                  
-                                 pathway.tb.list <- pbapply::pblapply(db.pathway.info, cl=0, FUN=function(item){
-                                   rows <- lapply(item$pw, function(group){
-                                     rows <- lapply(group, function(subgroup){
-                                       data.table(subgroup)
-                                     })
-                                     rbindlist(rows)
-                                   })
-                                   rbindlist(rows, fill=TRUE)
-                                 })
+                                 #db.formatted$pathway = c(NA)
+                                 #has_pathway = sapply(metabs, function(x){ as.logical(x$flags$hasPathways)})
+                                 #metab_has_pathway = names(has_pathway[has_pathway])
+                                 #db.formatted.has.pw <- db.formatted[identifier %in% metab_has_pathway]
+                                 #db.pathway.info <- lapply(db_rows, function(x) if(x$metabs$identifier %in% metab_has_pathway){ list(id = x$metabs$identifier, pw = x$pathway);  })
+                                 #db.pathway.info <- Filter(Negate(is.null), db.pathway.info)
                                  
-                                 names(pathway.tb.list) <- sapply(db.pathway.info, function(x) x$id)
+                                 # pathway.tb.list <- pbapply::pblapply(db.pathway.info, cl=0, FUN=function(item){
+                                 #   rows <- lapply(item$pw, function(group){
+                                 #     rows <- lapply(group, function(subgroup){
+                                 #       data.table(subgroup)
+                                 #     })
+                                 #     rbindlist(rows)
+                                 #   })
+                                 #   rbindlist(rows, fill=TRUE)
+                                 # })
                                  
-                                 with.pw.info <- pbapply::pblapply(1:length(pathway.tb.list), cl=session_cl, function(i){
-                                   tb = pathway.tb.list[[i]]
-                                   id = names(pathway.tb.list)[i]
-                                   namecol = which(colnames(tb) == "name")
-                                   reordered <- lapply(grep(colnames(tb),pattern = "id|ID|Id"), function(idcol){
-                                     subsection = data.table::as.data.table(unique(tb[,c(idcol, namecol),with=FALSE]))
-                                     colnames(subsection) <- c("id", "name")
-                                     # - - - - - 
-                                     subsection
-                                   })
-                                   repasted <- data.table::rbindlist(reordered)
-                                   keep <- unique(repasted[complete.cases(repasted),"name"])
-                                   keep$cpdid <- id
-                                   # - - - - -
-                                   keep
-                                 })
+                                 #names(pathway.tb.list) <- sapply(db.pathway.info, function(x) x$id)
                                  
-                                 pathways <- rbindlist(with.pw.info)
-                                 
-                                 cpds.w.pws <- merge(db.formatted, pathways, by.x = "identifier", by.y = "cpdid",all.x = TRUE)
-                                 
+                                 # with.pw.info <- pbapply::pblapply(1:length(pathway.tb.list), cl=session_cl, function(i){
+                                 #   tb = pathway.tb.list[[i]]
+                                 #   id = names(pathway.tb.list)[i]
+                                 #   namecol = which(colnames(tb) == "name")
+                                 #   reordered <- lapply(grep(colnames(tb),pattern = "id|ID|Id"), function(idcol){
+                                 #     subsection = data.table::as.data.table(unique(tb[,c(idcol, namecol),with=FALSE]))
+                                 #     colnames(subsection) <- c("id", "name")
+                                 #     # - - - - - 
+                                 #     subsection
+                                 #   })
+                                 #   repasted <- data.table::rbindlist(reordered)
+                                 #   keep <- unique(repasted[complete.cases(repasted),"name"])
+                                 #   keep$cpdid <- id
+                                 #   # - - - - -
+                                 #   keep
+                                 # })
+                                 # 
+                                 # pathways <- rbindlist(with.pw.info)
+                                 # 
+                                 # cpds.w.pws <- merge(db.formatted, pathways, by.x = "identifier", by.y = "cpdid",all.x = TRUE)
+                                 # 
+                                 BACKUP <<- db.formatted
                                  RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
                                  
                                }, dimedb = function(dbname, ...){
@@ -1201,6 +1210,65 @@ build.base.db <- function(dbname=NA,
                                  
                                  db.formatted <- rbindlist(db_rows[!is.na(db_rows)])
                                  db.formatted <- unique(db.formatted[!is.na(baseformula),])
+                                 # --- check formulae ---
+                                 checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
+                                                                                            db.formatted$baseformula))
+                                 db.formatted$baseformula <- checked$new_formula
+                                 
+                                 RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
+                               }, 
+                               massbank = function(dbname, ...){
+                                 file.url <- "https://github.com/MassBank/MassBank-data/archive/master.zip"
+                                 base.loc <- file.path(getOptions("user_options.txt")$db_dir, "massbank_source")
+                                 if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
+                                 zip.file <- file.path(base.loc, "massbank.zip")
+                                 utils::download.file(file.url, zip.file,mode = "w")
+                                 utils::unzip(zip.file, exdir = base.loc)
+                                 cpd_files <- list.files(base.loc, 
+                                                         pattern = ".txt$",
+                                                         full.names = T,
+                                                         recursive = T)
+                                 
+                                 # - - - - - - - - - - - - - - -
+                                 
+                                 db_rows <- pbapply::pblapply(cpd_files, cl=session_cl, function(fn){
+                                   row = NA
+                                   try({
+                                     lines <- readLines(fn)   
+                                     split.lines <- sapply(lines, strsplit, ": ")
+                                     names(split.lines) <- sapply(split.lines, function(x) x[1])
+                                     split.lines <- lapply(split.lines, function(x) x[2:length(x)])
+                                     row <- data.table(
+                                       compoundname = split.lines$`CH$NAME`,
+                                       description = split.lines$RECORD_TITLE,
+                                       baseformula = split.lines$`CH$FORMULA`,
+                                       identifier = split.lines$ACCESSION,
+                                       charge = {
+                                         smi = split.lines$`CH$SMILES`
+                                         charge=0
+                                         try({
+                                           iatom <- rcdk::parse.smiles(smi)[[1]]
+                                           charge = rcdk::get.total.charge(iatom)
+                                         })
+                                         charge
+                                       },
+                                       structure = {
+                                         struct = "N/A"
+                                         try({
+                                           struct = split.lines$`CH$SMILES`
+                                         })
+                                         struct
+                                       }
+                                     )
+                                     if(row$structure[[1]] == "N/A"){
+                                       row$structure <- split.lines$`CH$INCHI`
+                                       }
+                                   })
+                                   row
+                                 })
+                                 
+                                 db.formatted <- rbindlist(db_rows[!is.na(db_rows)], fill=TRUE)
+                                 db.formatted <- db.formatted[!is.na(baseformula),]
                                  # --- check formulae ---
                                  checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
                                                                                             db.formatted$baseformula))

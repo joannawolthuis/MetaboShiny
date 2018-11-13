@@ -429,7 +429,7 @@ get_all_matches <- function(#exp.condition=NA,
   query.collect <-  strwrap(gsubfn::fn$paste("select distinct i.filename, 
                                              d.*,
                                              s.*,
-                                             b.*,
+                                             b.batch, b.injection,
                                              r.identifier as identifier, 
                                              $summary
                                              from mzintensities i
