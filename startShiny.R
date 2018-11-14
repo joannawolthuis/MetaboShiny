@@ -8,7 +8,8 @@ MetaboShiny to even start.
 "
 
 
-# Function to install packages, either through regular method or through downloading from git directly
+#' Function to install packages, either through regular method or through downloading from git directly
+#' @param package package name to install, either CRAN or bioconductor
 install.if.not <- function(package){
   if(package %in% rownames(installed.packages())){
     print(paste("Already installed base package", package))
@@ -27,6 +28,7 @@ install.if.not <- function(package){
   }
 }
 
+# installs packages that metaboanalyst needs to run
 metanr_packages <- function(){
   # - - - - - - - - - - - - - -
   metr_pkgs <- c("Rserve", "BatchCorrMetabolomics", "RColorBrewer", 
@@ -56,6 +58,7 @@ metanr_packages <- function(){
 # libxml2, libnetcdf, cairo, java, mesa-common, 
 # libgl1, libglu1 installed
 
+# packages needed to start up
 base.packs <- c("httr", "curl", "git2r", "devtools", 
                 "pacman", "gsubfn", "shiny", "DT", 
                 "R.utils", "data.table", "shinyFiles", 
@@ -64,10 +67,7 @@ base.packs <- c("httr", "curl", "git2r", "devtools",
                 "colorRamps", "enviPat", "shinyalert",
                 "shinyWidgets", "colourpicker", "here")
 
-# IF RJAVA DOESN'T WANT TO INSTALL
-# sudo R CMD javareconf # FIXES EVERYTHING!!! JUST NEED TO USE ADMIN MODE...
-# install.packages("rJava", type="source")
-
+# install the base packages needed to start up
 for(package in base.packs){
   install.if.not(package)
 }
@@ -76,9 +76,6 @@ for(package in base.packs){
 wdir <<- dirname(rstudioapi::getSourceEditorContext()$path) # TODO: make this not break when not running from rstudio
 setwd(wdir)
 
-# TODO: SET DEFAULT DIRECTORIES FOR DATABASES AND OUTPUT FILES
-
-# ---------------------------------
-
+# go run it! :-)
 shiny::runApp(".")#, launch.browser = T)
 

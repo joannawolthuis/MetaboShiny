@@ -6,23 +6,22 @@ shinyServer(function(input, output, session) {
   
   source('./backend/scripts/joanna/shiny_general.R')
 
+  # set progress bar style to 'old' (otherwise it's not movable with CSS)
   shinyOptions(progress.style="old")
   
+  # send specific functions/packages to other threads
   parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
     "mape",
     "flattenlist"
   ))
-  
   parallel::clusterEvalQ(session_cl, library(data.table))
 
-  # - - - - - - - - - - - - -
-  
-  spinnyimg <- reactiveVal("www/electron.png")
-  
+  # create default text objects in UI
   lapply(global$constants$default.text, FUN=function(default){
     output[[default$name]] = renderText(default$text)
   })
   
+  # create image objects in UI
   lapply(global$constants$images, FUN=function(image){
     output[[image$name]] <- renderImage({
       filename <- normalizePath(image$path)
@@ -33,17 +32,7 @@ shinyServer(function(input, output, session) {
     }, deleteFile = FALSE)
   })
   
-  output$spinny <- renderText({spinnyimg()})
-  
-  output$taskbar_image <- renderImage({
-    list(src = file.path(getwd(), 
-                         "www", 
-                         getOptions("user_options.txt")$taskbar_image), 
-         width = 120,
-         height = 120,
-         style = "background-image:linear-gradient(0deg, transparent 50%, #aaa 50%),linear-gradient(90deg, #aaa 50%, #ccc 50%);background-size:10px 10px,10px 10px;")
-  }, deleteFile = FALSE)
-  
+  # create color pickers based on amount of colours allowed in global
   output$colorPickers <- renderUI({
     lapply(c(1:global$constants$max.cols), function(i) {
       print(i)
@@ -54,6 +43,8 @@ shinyServer(function(input, output, session) {
     })
   })
   
+  # create color1, color2 etc variables to use in plotting functions 
+  # and update when colours picked change
   observe({
     values <- unlist(lapply(c(1:global$constants$max.cols), function(i) {
       input[[paste("col", i, sep="_")]]
@@ -66,8 +57,12 @@ shinyServer(function(input, output, session) {
   
   # ===== STARTUP SETTINGS =====
   
+  # create listener for what mode we're currently working in (bivariate, multivariate, time series...)
   datamanager <- reactiveValues()
   
+  # check if a dataset is already loaded in
+  # change mode according to how many levels the experimental variable has
+  # change interface based on that
   observe({
     if(exists("mSet")){
       datamanager$mset_present = TRUE
@@ -83,26 +78,33 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  # reload multiple ui interfaces if mset is already present
+  # reload figures for pca/plsda
+  # re-render drop down bars for picking which experimental variable is chosen
   observe({
     if(datamanager$mset_present){
+	  # reload pca, plsda (make datamanager do that)
       datamanager$reload <- "pca"
       datamanager$reload <- "plsda"
-      # update select input bars
+      # update select input bars with current variable and covariables defined in excel
       updateSelectInput(session, "first_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
       updateSelectInput(session, "second_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
       updateSelectInput(session, "subset_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
-      # timecourse button
+      # if _T in sample names, data is time series. This makes the time series swap button visible. 
       if(all(grepl(pattern = "_T\\d", x = rownames(mSet$dataSet$norm)))){
         timebutton$status <- "on"
       }else{
         timebutton$status <- "off"
       }
+	  # show a button with t-test or fold-change analysis if data is bivariate. hide otherwise.
+	  # TODO: add button for anova/other type of sorting...
       if(mSet$dataSet$cls.num == 2 ){
         heatbutton$status <- "ttfc"
       }else{
         heatbutton$status <- NULL
       }
     }else{
+	  # hide time series button
       timebutton$status <- "off"
       heatbutton$status <- "asmb"
     }
@@ -110,10 +112,13 @@ shinyServer(function(input, output, session) {
 
   # ===== VARIABLE SWITCHER ====
   
+  # set default mode for heatmap top hits pick button (tt/fc or asca/meba)
   heatbutton <- reactiveValues(status = "ttfc")
   
+  # set default timemode switcher button mode to hidden
   timebutton <- reactiveValues(status = "off")
   
+  # render heatmap button
   output$heatbutton <- renderUI({
     print(heatbutton$status)
     if(is.null(heatbutton$status)){
@@ -131,18 +136,19 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  # render time series swap button
   output$timebutton <- renderUI({
-    print(timebutton$status)
     if (is.null(timebutton$status)) {
       NULL
     } else{
       switch(timebutton$status, 
              off = NULL,
-             on = switchButton(inputId = "timecourse_trigger",
+             on = switchButton(inputId = "timecourse_trigger", # this is used to trigger time series dataswap
                                label = "Toggle time course mode?", 
                                value = FALSE, col = "BW", type = "YN"))
     }
   })
+  
   
   observeEvent(input$timecourse_trigger, {
     
@@ -154,24 +160,30 @@ shinyServer(function(input, output, session) {
     
     if(input$timecourse_trigger){
       # change to timecourse mode
-      # save previous mset
+      # save previous mset 
+	  # TODO: use this in venn diagram creation
       mSet$storage[[paste0(as.character(levels(mSet$dataSet$cls)), collapse="-")]] <<- mSet$analSet
       
-      # adjust mset
+      # adjust mset design type (necessary for metaboanalystr)
       SetDesignType(mSet, "time")
       
-      # facs
+      # rename some factors of interest (your experimental variable, and 'time') as A and B
       facA <- as.factor(mSet$dataSet$covars[,mSet$dataSet$cls.name, with=F][[1]])
       facB <- mSet$dataSet$covars[,"time"][[1]]
       
+	  # change mSet experimental factors (these are used in ASCA/MEBA etc.)
       mSet$dataSet$exp.fac <<- as.factor(facA)
       mSet$dataSet$time.fac <<- as.factor(facB)
       mSet$dataSet$facA <<- mSet$dataSet$exp.fac;
       mSet$dataSet$facB <<- mSet$dataSet$time.fac;
       
+	  # change interface to timeseries mode (make 'interface' manager do it)
       interface$mode <- "time"
       
+	  # change heatmap chooser to asca/meba because those are timeseries-specific
       heatbutton$status <- "asmb"
+	  
+	  # REMOVE PREVIOUS ANALYSIS TO TRIGGER RELOAD (or the PCA won't reload)
       mSet$analSet <<- NULL
       
     }else{
@@ -179,16 +191,19 @@ shinyServer(function(input, output, session) {
       # save previous analyses (should be usable in venn diagram later)
       mSet$storage[[paste0("(timecourse)", paste0(as.character(levels(mSet$dataSet$cls)), collapse="-"))]] <<- mSet$analSet
       # - - - - - - - - - - - -
+	  # rename experimental factors
       mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,mSet$dataSet$cls.name, with=F][[1]])
       mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
       # remove old analSet
-      
-      heatbutton$status <- "ttfc"
       mSet$analSet <<- NULL
       
+	  # change heatmap button back to t-test/fold-change bivariate mode
+	  heatbutton$status <- "ttfc"
+
       # reset interface
       if(mSet$dataSet$cls.num <= 1){
         interface$mode <- NULL } 
+	# check bivariate/multivariate and change interface back
       else if(mSet$dataSet$cls.num == 2){
         interface$mode <- "bivar"}
       else{
@@ -196,31 +211,30 @@ shinyServer(function(input, output, session) {
     }
   }, ignoreInit = TRUE)
   
+  # create interface mode storage object.
   interface <- reactiveValues()
   
+  # triggers when the 'change variable' dropdown menu is filled and button is clicked
   observeEvent(input$change_cls, {
-    print(input$change_cls)
-    print(input$first_var)
     
+	# check if previous analysis storage already exists, if not, make it
     if(!("storage" %in% names(mSet))){
       mSet$storage <<- list()
     }
     
     # save previous analyses (should be usable in venn diagram later)
-    
     mSet$storage[[paste0(as.character(levels(mSet$dataSet$cls)), collapse="-")]] <<- mSet$analSet
     
-    print(names(mSet$storage))
-    
-    # - - - - - - - - - - - -
-    
+	# change current variable of interest to user pick from covars table
     mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,input$first_var, with=F][[1]])
+	
+	# adjust bivariate/multivariate (2, >2)...
     mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
     
     # remove old analSet
     mSet$analSet <<- NULL
     
-    #mSet$analSet <<- NULL
+	# adjust name of experimental variable
     mSet$dataSet$cls.name <<- input$first_var
     
     # reset interface
@@ -234,12 +248,15 @@ shinyServer(function(input, output, session) {
   
   # ===== UI SWITCHER ====
   
+  # this toggles when 'interface' values change (for example from 'bivar' to 'multivar' etc.)
   observe({
     
+	# hide all tabs by default, easier to hide them and then make visible selectively
     hide.tabs <- c("inf", "pca", "plsda", "tt", "fc", "aov", "meba", "asca", "ml", "volc", "heatmap", "enrich")
-    
-    print(interface$mode)
-    
+  
+    # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
+	# then show the relevent tabs
+	# TODO: enable multivariate time series analysis
     if (is.null(interface$mode)) {
       show.tabs <- c("inf")
     } else if(interface$mode == 'multivar'){ 
@@ -250,14 +267,16 @@ shinyServer(function(input, output, session) {
       show.tabs <- c("pca", "asca", "meba", "heatmap")
     }
     else{
-      show.tabs <- c("inf")
+      show.tabs <- c("inf") # 'info' tab that loads when no data is loaded currently
     }
-    # - show/hide - 
+	
+	# hide all the tabs to begin with
     for(tab in hide.tabs){
       print(tab)
       hideTab(inputId = "statistics", tab, session = session)
     }
     i=1
+	# show the relevant tabs
     for(tab in show.tabs){
       print(tab)
       showTab(inputId = "statistics", tab, select = ifelse(i==1, TRUE, FALSE), session = session)
@@ -267,75 +286,40 @@ shinyServer(function(input, output, session) {
   
   # -----------------
   
-  
-  output$pos_add_tab <-DT::renderDataTable({
-    # -------------
-    DT::datatable(global$vectors$pos_adducts,
-                  selection = list(mode = 'multiple', selected = c(1:3, nrow(global$vectors$pos_adducts)), target = 'row'),
-                  options = list(pageLength = 5, dom = 'tp'), 
-                  rownames = F)
+  # generate positive and negative adduct picker tabs (for csv creation)
+  # defaults are in the huge global object :-)
+  observe({
+    modes = c("pos", "neg")
+	lapply(modes, function(mode){
+		output[[paste0(mode, "add_tab")]] <- DT::renderDataTable({
+			DT::datatable(global$vectors$pos_adducts,
+					selection = list(mode = 'multiple', 
+					selected = global$vectors[[paste0(mode, "selected_adducts")]], target="row"),
+					options = list(pageLength = 5, dom = 'tp'), 
+					rownames = F)
+		})
+	})
   })
   
-  output$neg_add_tab <-DT::renderDataTable({
-    # -------------
-    DT::datatable(global$vectors$neg_adducts,
-                  selection = list(mode = 'multiple', selected = c(1, 2, 14, 15, nrow(global$vectors$neg_adducts)), target = 'row'),
-                  options = list(pageLength = 5, dom = 'tp'), 
-                  rownames = F)
-  })
-  
+  # toggles when 'select all adducts' is pressed (filled circle)
   observeEvent(input$sel_all_adducts, {
-    output$pos_add_tab <-DT::renderDataTable({
-      # -------------
-      DT::datatable(global$vectors$pos_adducts,
-                    selection = list(mode = 'multiple', selected = c(1:nrow(global$vectors$pos_adducts)), target = 'row'),
-                    options = list(pageLength = 5, dom = 'tp'), 
-                    rownames = F)
-    })
-    output$neg_add_tab <-DT::renderDataTable({
-      # -------------
-      DT::datatable(global$vectors$neg_adducts,
-                    selection = list(mode = 'multiple', selected = c(1:nrow(global$vectors$neg_adducts)), target = 'row'),
-                    options = list(pageLength = 5, dom = 'tp'), 
-                    rownames = F)
-    })
+    global$vectors$neg_selected_adducts <<- c(1:nrow(global$vectors$pos_adducts))
+	global$vectors$pos_selected_adducts <<- c(1:nrow(global$vectors$neg_adducts))
   })
   
+  # triggers when 'select no adducts' is selected
   observeEvent(input$sel_no_adducts, {
-    output$pos_add_tab <-DT::renderDataTable({
-      # -------------
-      DT::datatable(global$vectors$pos_adducts,
-                    selection = list(mode = 'multiple', selected = c(0), target = 'row'),
-                    options = list(pageLength = 5, dom = 'tp'), 
-                    rownames = F)
-    })
-    output$neg_add_tab <-DT::renderDataTable({
-      # -------------
-      DT::datatable(global$vectors$neg_adducts,
-                    selection = list(mode = 'multiple', selected = c(0), target = 'row'),
-                    options = list(pageLength = 5, dom = 'tp'), 
-                    rownames = F)
-    })
+    global$vectors$neg_selected_adducts <<- c(0)
+	global$vectors$pos_selected_adducts <<- c(0)
   })
 
+  # triggers when common adducts are to be selected
   observeEvent(input$sel_comm_adducts, {
-    output$pos_add_tab <-DT::renderDataTable({
-      # -------------
-      DT::datatable(global$vectors$pos_adducts,
-                    selection = list(mode = 'multiple', selected = c(1:3, nrow(global$vectors$pos_adducts)), target = 'row'),
-                    options = list(pageLength = 5, dom = 'tp'), 
-                    rownames = F)
-    })
-    
-    output$neg_add_tab <-DT::renderDataTable({
-      # -------------
-      DT::datatable(global$vectors$neg_adducts,
-                    selection = list(mode = 'multiple', selected = c(1, 2, 14:15, nrow(global$vectors$neg_adducts)), target = 'row'),
-                    options = list(pageLength = 5, dom = 'tp'), 
-                    rownames = F)
-    })
+    global$vectors$neg_selected_adducts <<- c(1:3, nrow(global$vectors$pos_adducts))
+	global$vectors$pos_selected_adducts <<- c(1, 2, 14:15, nrow(global$vectors$neg_adducts))
   })
   
+  # if general tab selection changes, load package table
   observeEvent(input$nav_general, {
     # - - - - - -
     pkg_tbl <- get.package.table() #TODO: sort by 'No' first!! (ascending?) - or translate to numeric factor first?
@@ -350,10 +334,13 @@ shinyServer(function(input, output, session) {
   }
   )
   
+  # triggers when 'update' button is pressed on the packages table tab
   observeEvent(input$update_packages, {
+	# use pacman package to update packages (should swap between normal installed and bioconductor)
     pacman::p_load(char = global$constants$packages, update = T, character.only = T)
-    # - - refresh package list - - 
+    # refresh package list 
     pkg_tbl <- get.package.table() 
+	# reload table
     output$package_tab <- DT::renderDataTable({
       # - - - - - - - - - - -
       DT::datatable(pkg_tbl,
@@ -364,6 +351,7 @@ shinyServer(function(input, output, session) {
     })
   })
 
+  # listener for all the file pickers, trigger a window if they are clicked
   observe({
     shinyFileChoose(input, 'outlist_pos', roots=global$paths$volumes, filetypes=c('csv'))
     shinyFileChoose(input, 'outlist_neg', roots=global$paths$volumes, filetypes=c('csv'))
@@ -372,41 +360,49 @@ shinyServer(function(input, output, session) {
     shinyFileChoose(input, 'taskbar_image_path', roots=global$paths$volumes, filetypes=c('png', 'jpg', 'jpeg', 'bmp'))
   })
   
+  # observes if a new taskbar image is chosen by user
   observe({
     # - - - - 
-    if(!is.list(input$taskbar_image_path)) return()
+    if(!is.list(input$taskbar_image_path)) return() # if nothing is chosen, do nothing
     img_path <- parseFilePaths(global$paths$volumes, input$taskbar_image_path)$datapath
-    new_path <- file.path(getwd(), "www", basename(img_path))
+    new_path <- file.path(getwd(), "www", basename(img_path)) # set path to copy to
     
+	# copy image to the www folder
     if(img_path != new_path) file.copy(img_path, new_path, overwrite = T)
     # - - -
+	# render taskbar image preview
     output$taskbar_image <- renderImage({
       list(src = new_path, 
            width = 120,
            height = 120,
            style = "background-image:linear-gradient(0deg, transparent 50%, #aaa 50%),linear-gradient(90deg, #aaa 50%, #ccc 50%);background-size:10px 10px,10px 10px;")
     }, deleteFile = FALSE)
-    # - - -
+    # change chosen taskbar image in user option file
     setOption('user_options.txt', 'taskbar_image', basename(new_path))
   })
   
+  # observes if user is choosing a different database storage folder
   observe({  
+	# trigger window
     shinyDirChoose(input, "get_db_dir", 
                    roots=global$paths$volumes, 
                    session = session)
-     
-    test <<- input$get_db_dir
-    
-    if(typeof(input$get_db_dir) != "list") return()
+         
+    if(typeof(input$get_db_dir) != "list") return() # if nothing selected or done, ignore
 
+	# parse the file path given based on the possible base folders (defined in global)
     given_dir <- parseDirPath(global$paths$volumes, 
                               input$get_db_dir)
+							  
     if(is.null(given_dir)) return()
-    # - - connect - -
+    # change db storage directory in user options file
     setOption("user_options.txt", "db_dir", given_dir)
+	
+	# render current db location in text
     output$curr_db_dir <- renderText({getOptions('user_options.txt')$db_dir})
   })
   
+  # see above, but for working directory. CSV/DB files with user data are stored here.
   observe({
     shinyDirChoose(input, "get_work_dir",
                    roots = global$paths$volumes,
@@ -421,23 +417,31 @@ shinyServer(function(input, output, session) {
     output$curr_exp_dir <- renderText({getOptions('user_options.txt')$work_dir})
   })
   
+  # triggers if user changes their current project name
   observeEvent(input$set_proj_name, {
     proj_name <<- input$proj_name
-    if(proj_name == "") return(NULL)
+    if(proj_name == "") return(NULL) # if empty, ignore
+	# change path of current db in global
     global$paths$patdb <<- file.path(getOptions("user_options.txt")$work_dir, paste0(proj_name,".db", sep=""))
-    # --- connect ---
+    # change project name in user options file
     setOption("user_options.txt", "proj_name", proj_name)
+	# print the changed name in the UI
     output$proj_name <<- renderText(proj_name)
+	# change path CSV should be / is saved to in session
     global$paths$csv_loc <<- file.path(getOptions("user_options.txt")$work_dir, paste0(getOptions("user_options.txt")$proj_name,".csv"))
     
   })
   
+  # change ppm accuracy, ONLY USEFUL if loading in from CSV
+  # TODO: make it possible to change this and re-make user database (mzranges table specifically)
   observeEvent(input$set_ppm, {
     ppm <<- input$ppm
-    output$ppm <<- renderText(ppm)
-    # --- connect ---
+	# show ppm amount in UI
+    output$ppm <- renderText(ppm)
+    # change in options file
     setOption("user_options.txt", "ppm", ppm)
   })
+  
   
   observeEvent(input$color_ramp,{
     output$ramp_plot <- plotly::renderPlotly({

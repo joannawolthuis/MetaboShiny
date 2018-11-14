@@ -3,7 +3,9 @@
 options(stringsAsFactors = FALSE)
 if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
-# --- source ---
+### Anything loaded in this GLOBAL file will be avaliable for metaboShiny in general. ###
+ 
+# --- source neccessary libraries ---
 
 library(shiny)
 library(shinyBS)
@@ -15,18 +17,28 @@ library(plotly)
 library(colorRamps)
 library(enviPat)
 library(stringr)
-library(BatchCorrMetabolomics)
 
-#library(randomForest)
-
+#' Sources all R scripts in a given directory. 
+#' 
+#' \code{sourceDir} searches the given directory for .R files and sources them into the current session.
+#' 
+#' @param path Path to search for scripts in.
 sourceDir <- function(path, trace = TRUE, ...) {
   for (nm in list.files(path, pattern = "\\.[RrSsQq]$")) {
     if(trace) cat(nm,":")           
     source(file.path(path, nm), ...)
     if(trace) cat("\n")
   }
+  
 }
 
+
+#' Load user options saved in file.
+#' 
+#' \code{getOptions} returns all current user options defined in the given options file.
+#' 
+#' @param file.loc Path to user options file to read in.
+#' @return R list with keys as option types and values as option values.
 getOptions <- function(file.loc){
   opt_conn <- file(file.loc)
   # ----------------
@@ -42,6 +54,13 @@ getOptions <- function(file.loc){
   options 
 }
 
+#' Changes an option in the given MetaboShiny user options file. 
+#' 
+#' \code{setOption} changes an option in the options file. Can also be used to add new options to the file.
+#' 
+#' @param file.loc Location of user options file. Usually .txt but any format is fine.
+#' @param key Name of the new option / to change option
+#' @param value Value of the option to change or add
 setOption <- function(file.loc, key, value){
   opt_conn <- file(file.loc)
   # -------------------------
@@ -58,18 +77,23 @@ setOption <- function(file.loc, key, value){
   close(opt_conn)
 }
 
-# --------------------------
+# load in options
 options <- getOptions("user_options.txt")
+
+# load adduct table (if you add/remove any adducts, change them in the below file!)
 adducts <- fread("backend/umcfiles/adducts/AdductTable1.0.csv", header = T)
+
+# set the home path
 home = normalizePath("~")
 
+# source all used functions (see shiny_plot.R, shiny_general.R, shiny_db.R etc.)
 sourceDir("backend/scripts/joanna")
 
-# === TEST GLOBAL VARIABLE SCOPE ===
+# === THE BELOW LIST CONTAINS ALL GLOBAL VARIABLES THAT METABOSHINY CALLS UPON LATER ===
 
-global <- list(constants = list(ppm = 2,
-                                nvars = 2,
-                                max.cols = 8,
+global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people importing their data through csv
+                                nvars = 2, # Default bivariate setting for statistics
+                                max.cols = 8, # Maximum colours available to choose (need to change if anyone does ANOVA with >8 variables)
                                 packages = c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat", 
                                              "plotly", "parallel", "shinyFiles", "curl", "httr", "pbapply", 
                                              "sqldf", "plyr", "ChemmineR", "gsubfn", "stringr", "heatmaply", 
@@ -83,7 +107,7 @@ global <- list(constants = list(ppm = 2,
                                              "BatchCorrMetabolomics", "R.utils", "rgl", "glmnet", "TSPred", 
                                              "VennDiagram", "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR", 
                                              "openxlsx", "doParallel", "missForest", "InterpretMSSpectrum"
-                                             ),
+                                             ), # these packages are listed in the first tab and should include all necessary packages
                                 images = list(list(name = 'cute_package', path = 'www/cat.png', dimensions = c(80, 80)),
                                                 list(name = 'umc_logo_int', path = 'www/umcinternal.png', dimensions = c(120, 120)),
                                                 list(name = 'umc_logo_noise', path = 'www/umcnoise.png', dimensions = c(120, 120)),
@@ -107,17 +131,21 @@ global <- list(constants = list(ppm = 2,
                                                 list(name = 'db_icon', path = 'www/servers.png', dimensions = c(150, 150)),
                                                 list(name = 'csv_icon', path = 'www/office.png', dimensions = c(100, 100)),
                                                 list(name = 'dataset_icon', path = 'www/office.png', dimensions = c(100, 100))
-                                ),
+                                ), # all image paths, if you add an image you can add it here
                                 default.text = list(list(name='curr_exp_dir',text=options$work_dir),
                                                     list(name='curr_db_dir',text=options$db_dir),
                                                     list(name='ppm',text=options$ppm),
                                                     list(name='proj_name',text=options$proj_name),
                                                     list(name="curr_cpd", text="...")
+													# default text options at startup
                                 )
                            ),
-               functions = list(cf = rainbow,
+               functions = list(# default color functions at startup, will be re-loaded from options
+								cf = rainbow,
                                 color.function = rainbow,
                                 color.vec = rainbow,
+								# available plot themes for ggplot. Can add more,also user-defined ones, 
+								# but put them in shiny_general.R first so they are sourced properly.
                                 plot.themes = list(bw=ggplot2::theme_bw,
                                                    classic=ggplot2::theme_classic,
                                                    gray=ggplot2::theme_gray,
@@ -125,7 +153,8 @@ global <- list(constants = list(ppm = 2,
                                                    dark=ggplot2::theme_dark,
                                                    light=ggplot2::theme_light,
                                                    line=ggplot2::theme_linedraw),
-                                color.functions = {
+                                color.functions = { 
+								# available colorbrewer themes to load into ggplot. These are the standard brew names used in their functions color.brewer etc.
                                   brew.cols <- c("Blues", "BuGn", "BuPu", "GnBu", "Greens", "Greys", # - - sequential - -
                                                  "Oranges", "OrRd", "PuBu", "PuBuGn", "PuRd", "Purples", 
                                                  "RdPu", "Reds", "YlGn", "YlGnBu", "YlOrBr", "YlOrRd", 
@@ -133,9 +162,11 @@ global <- list(constants = list(ppm = 2,
                                                  "Accent", "Dark2", "Paired", "Pastel1", "Pastel2", "Set1", "Set2", "Set3" # - - qualitative - -
                                   )
                                   
+								  # generate direct functions from the brewer colours
                                   brew.opts <- lapply(brew.cols, function(opt) colorRampPalette(rev(RColorBrewer::brewer.pal(RColorBrewer::brewer.pal.info[opt,]$maxcolors, opt))))
                                   names(brew.opts) <- brew.cols
                                   
+								  # add the more general color scale functions as options
                                   base.opts <- list("rb"=rainbow,
                                                     "y2b"=ygobb,
                                                     "ml1"=matlab.like2,
@@ -151,12 +182,16 @@ global <- list(constants = list(ppm = 2,
                                                     "gyw"=terrain.colors,
                                                     "ryw"=heat.colors,
                                                     "bw"=blackwhite.colors)
-                                  # - - - - - - - - - - - - -
-                                  
+													
+                                  # add into a single list for use in interface
                                   append(base.opts, brew.opts)
                                 }),
-               paths = list(patdb = file.path(options$work_dir, paste0(options$proj_name, ".db")),
+				# set default paths
+               paths = list(# path to .db file selected as default data source in the csv making pane
+							patdb = file.path(options$work_dir, paste0(options$proj_name, ".db")),
+							# path to .csv file selected as default source in the normalization pane
                             csv_loc = file.path(options$work_dir, paste0(options$proj_name, ".csv")),
+							# available paths when selecting a new file or folder
                             volumes =  c('MetaboShiny' = getwd(),
                                          'Home'=home,
                                          '~' = normalizePath("~"),
@@ -164,8 +199,17 @@ global <- list(constants = list(ppm = 2,
                                          'R Installation'=R.home(),
                                          'Desktop'=file.path(home, "Desktop"))
                ),
+			   # empty list to store result tables in at the statistics pane
                tables = list(tbl = NA),
-               vectors = list(db_list = c("internal", 
+			   # default vectors to go through in metaboshiny
+               vectors = list(
+							# default indices of chosen adducts
+							pos_selected_add = c(1:3, nrow(adducts[Ion_mode == "positive",
+                                                     c("Name")])),
+							neg_selected_add = c(1, 2, 14, 15, nrow(adducts[Ion_mode == "negative",
+                                                     c("Name")])),
+							# list of available databases!!
+							db_list = c("internal", 
                                           "noise", 
                                           "hmdb", 
                                           "chebi", 
@@ -180,13 +224,20 @@ global <- list(constants = list(ppm = 2,
                                           "massbank",
                                           "metabolights"
                               ),
+							  # list of positive adducts
                               pos_adducts = adducts[Ion_mode == "positive",
                                                      c("Name")],
+							  # list of negative adducts
                               neg_adducts = adducts[Ion_mode == "negative",
                                                     c("Name")]
                               )
                )
 
+#' Gets the current used operating system. Important for parallel/multithreaded functions if using makeCluster("FORK")
+#' 
+#' \code{get_os} finds the name of the OS the user is running this function on.
+#' 
+#' @return osx, windows/win or linux
 get_os <- function(){
   sysinf <- Sys.info()
   if (!is.null(sysinf)){
@@ -204,27 +255,41 @@ get_os <- function(){
 }
 # === LOAD LIBRARIES ===
 
+# load isotopes of all atoms, necessary for the build.extended.db function.
 data(isotopes, package = "enviPat")
+
+# create parallel workers, leaving 1 core for general use
+# TODO: make this a user slider
 session_cl <- parallel::makeCluster(max(c(1, parallel::detectCores()-1)))
 
+# source the miniscript for the toggle buttons used in the interface (needs custom CSS)
 source("./Rsource/SwitchButton.R")
 
+#' Squishes HTML elements close together.
+#' 
+#' \code{sardine} used on consequtive html objects will make them sit next to each other neatly.
+#'
+#' @param content TagList or shiny function that generates HTML (such as an image..)
+#' @return 'sardined' content that will sit close to its neighbors.
 sardine <- function(content) div(style="display: inline-block;vertical-align:top;", content)
 
 # interleave for sorting later ...
 add_idx <- order(c(seq_along(global$vectors$pos_adducts$Name), seq_along(global$vectors$neg_adducts$Name)))
 sort_order <<- unlist(c(global$vectors$pos_adducts$Name, global$vectors$neg_adducts$Name))[add_idx]
 
+# generate CSS for the interface based on user settings for colours, fonts etc.
 bar.css <<- nav.bar.css(options$col1, options$col2, options$col3, options$col4)
 font.css <<- font.css(options$font1, options$font2, options$font3, options$font4,
                       options$size1, options$size2, options$size3, options$size4)
+					  
+# set default plot theme to minimal
 plot.theme <<- ggplot2::theme_minimal
+
+# set taskbar image as set in options
 taskbar_image <<- options$task_img
 
 # parse color options
+global$vectors$mycols <- get.col.map("user_options.txt") # colours for discrete sets, like group A vs group B etc.
+global$constants$spectrum <- options$gspec # gradient function for heatmaps, volcano plot etc.
+global$vectors$project_names <- unique(tools::file_path_sans_ext(list.files(options$work_dir, pattern=".csv|.db"))) # the names listed in the 'choose project' tab of options.
 
-global$vectors$mycols <- get.col.map("user_options.txt")
-global$constants$spectrum <- options$gspec
-global$vectors$project_names <- unique(tools::file_path_sans_ext(list.files(options$work_dir)))
-
-print("loaded global settings")
