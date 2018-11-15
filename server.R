@@ -35,7 +35,6 @@ shinyServer(function(input, output, session) {
   # create color pickers based on amount of colours allowed in global
   output$colorPickers <- renderUI({
     lapply(c(1:global$constants$max.cols), function(i) {
-      print(i)
       colourpicker::colourInput(inputId = paste("col", i, sep="_"),
                                 label = paste("Choose colour", i),
                                 value = global$vectors$mycols[i],
@@ -120,11 +119,9 @@ shinyServer(function(input, output, session) {
   
   # render heatmap button
   output$heatbutton <- renderUI({
-    print(heatbutton$status)
     if(is.null(heatbutton$status)){
       NULL
     }else{
-      print(heatbutton$status)
       switch(heatbutton$status,
              asmb = switchButton(inputId = "heatmode",
                                  label = "Use data from:", 
@@ -151,9 +148,7 @@ shinyServer(function(input, output, session) {
   
   
   observeEvent(input$timecourse_trigger, {
-    
-    print(input$timecourse_trigger)
-    
+
     if(!("storage" %in% names(mSet))){
       mSet$storage <<- list()
     }
@@ -271,13 +266,11 @@ shinyServer(function(input, output, session) {
 	
 	# hide all the tabs to begin with
     for(tab in hide.tabs){
-      print(tab)
       hideTab(inputId = "statistics", tab, session = session)
     }
     i=1
 	# show the relevant tabs
     for(tab in show.tabs){
-      print(tab)
       showTab(inputId = "statistics", tab, select = ifelse(i==1, TRUE, FALSE), session = session)
       i = i + 1
     }
@@ -1922,6 +1915,45 @@ shinyServer(function(input, output, session) {
     })
   })
   
+  # render the database download area
+  output$db_build_ui <- renderUI({
+    dbs_per_line = 4 
+    max_col_width = 12
+    rows = ceiling(length(global$vectors$db_list) / dbs_per_line)
+    database_layout = lapply(1:rows, function(i){
+      min_i = 4 * i - 3
+      max_i = 4 * i
+      if(max_i > length(global$vectors$db_list)) max_i <- length(global$vectors$db_list)
+      # create 3 fluidrows followed by a break
+      list(
+        # row 1: name
+        fluidRow(lapply(global$vectors$db_list[min_i:max_i], function(db){
+          column(width=3,align="center", h2(global$constants$db.build.info[[db]]$title))
+        })),
+        # row 2: description
+        fluidRow(lapply(global$vectors$db_list[min_i:max_i], function(db){
+          column(width=3,align="center", helpText(global$constants$db.build.info[[db]]$description))
+        })),
+        # row 3: image
+        fluidRow(lapply(global$vectors$db_list[min_i:max_i], function(db){
+          column(width=3,align="center",imageOutput(global$constants$db.build.info[[db]]$image_id, inline=T))
+        })),
+        # row 4: button
+        fluidRow(lapply(global$vectors$db_list[min_i:max_i], function(db){
+          column(width=3,align="center", list(
+            actionButton(paste0("check_", db), "Check", icon = icon("check")),
+            actionButton(paste0("build_", db), "Build", icon = icon("wrench")), 
+            br(),
+            imageOutput(paste0(db, "_check"),inline = T)
+          ))
+        })),
+        br(),br()
+        )
+    })
+    # return
+    database_layout
+  })
+  
   db_button_prefixes = c("search", "add", "enrich")
   
   # generate all the fadebuttons for the database selection
@@ -1944,7 +1976,6 @@ shinyServer(function(input, output, session) {
                                FUN = function(db){
                                  button_id = input[[paste0(prefix, "_", db)]]
                                  if(is.null(button_id)){
-                                   print("nope")
                                    NA
                                  }else{
                                    if(!button_id){
@@ -2528,8 +2559,6 @@ shinyServer(function(input, output, session) {
     curr_cpd <<- venn_overlap[input$venn_tab_rows_selected] # set current compound to the clicked one
     output$curr_cpd <- renderText(curr_cpd) # render text in sidebar
   })
-  
-  
   
   # this SHOULD trigger on closing the app
   observe({
