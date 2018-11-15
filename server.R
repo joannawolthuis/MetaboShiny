@@ -443,12 +443,17 @@ shinyServer(function(input, output, session) {
   })
   
   
+  # triggers when a new color spectrum is chosen
   observeEvent(input$color_ramp,{
+	# render preview plot
     output$ramp_plot <- plotly::renderPlotly({
 
+	  # change the current spectrum in global
       global$functions$color.functions[[getOptions("user_options.txt")$gspec]] <<- global$functions$color.functions[[input$color_ramp]]
-      setOption("user_options.txt", "gspec", input$color_ramp)
+      # change the current spectrum in user options file
+	  setOption("user_options.txt", "gspec", input$color_ramp)
       
+	  # create plot background (no grid, no lines, just color ;) )
       ax <- list(
         title = "",
         zeroline = FALSE,
@@ -458,8 +463,7 @@ shinyServer(function(input, output, session) {
         titlefont = list(size = 20)
       )
       
-      # --- re-render --- 
-      #TODO: SHOULD BE GENERAL PURPOSE FUNCTION w/ listeners
+      # re-render preview plot with the new options (general heatmap using R standard volcano dataset)
       plotly::plot_ly(z = volcano, 
                       colors = global$functions$color.functions[[getOptions("user_options.txt")$gspec]](100), 
                       type = "heatmap",
@@ -468,10 +472,13 @@ shinyServer(function(input, output, session) {
     })
   })
   
+  # triggers when new plot theme is picked
   observeEvent(input$ggplot_theme,{
     
+	# change default plot theme in user settings
     setOption("user_options.txt", "gtheme", input$ggplot_theme)
     
+	# change preview plot (uses mtcars default R dataset)
     output$ggplot_theme_example <- renderPlot({
       p <- ggplot(mtcars) + geom_boxplot(aes(x = wt, y = mpg,
                                            colour = factor(gear)))
@@ -479,31 +486,35 @@ shinyServer(function(input, output, session) {
     })
   })
   
+  # triggers when changes in interface aesthetics are applied
   observeEvent(input$change_css, {
-    # - - - - - - - - - - - - - - -
+
+	# set default user color options
     setOption("user_options.txt", "col1", input$bar.col.1)
     setOption("user_options.txt", "col2", input$bar.col.2)
     setOption("user_options.txt", "col3", input$bar.col.3)
     setOption("user_options.txt", "col4", input$bar.col.4)
     
+	# set default user font options
     setOption("user_options.txt", "font1", input$font.1)
     setOption("user_options.txt", "font2", input$font.2)
     setOption("user_options.txt", "font3", input$font.3)
     setOption("user_options.txt", "font4", input$font.4)
     
+	# set default user font size options
     setOption("user_options.txt", "size1", input$size.1)
     setOption("user_options.txt", "size2", input$size.2)
     setOption("user_options.txt", "size3", input$size.3)
     setOption("user_options.txt", "size4", input$size.4)
   })
 
-  # --- adduct table editing ---
+  # adduct table editing from settings tab
   
   values = reactiveValues()
   
+  # TODO: fix and re-docment this
   observeEvent(input$import_adducts, {
     req(input$add_tab)
-    # ----------------
     DF = fread(input$add_tab$datapath)
     output$adduct_tab <- rhandsontable::renderRHandsontable({
       if (!is.null(DF))
@@ -518,6 +529,8 @@ shinyServer(function(input, output, session) {
     }, deleteFile = FALSE)
   })
   
+  # uses rhandsontable for live table editing...
+  # TODO: fix
   adduct_tab_data <- reactive({
     if (!is.null(input$adduct_tab)) {
       DF = rhandsontable::hot_to_r(input$adduct_tab)
@@ -548,27 +561,28 @@ shinyServer(function(input, output, session) {
       )}
   })
   
-  # ======================== DB CHECK ============================
+  # everything below uses the dblist defined in global
+  # as well as the logos defined here
+  # if you add a db, both the name and associated logo need to be added
   
-  # --- check for db files ---
-  
+  # create checkcmarks if database is present
   lapply(global$vectors$db_list, FUN=function(db){
+	# creates listener for if the 'check db' button is pressed
     observeEvent(input[[paste0("check_", db)]],{
+	  # see which db files are present in folder
       db_folder_files <- list.files(getOptions("user_options.txt")$db_dir)
       is.present <- paste0(db, ".full.db") %in% db_folder_files
       check_pic <- if(is.present) "yes.png" else "no.png"
+	  # generate checkmark image objects
       output[[paste0(db,"_check")]] <- renderImage({
-        # When input$n is 3, filename is ./images/image3.jpeg
         filename <- normalizePath(file.path('www', check_pic))
-        # Return a list containing the filename and alt text
         list(src = filename, width = 70,
              height = 70)
       }, deleteFile = FALSE)
     })
   })
   
-  # --- build db ---
-  
+  # these listeners trigger when build_'db' is clicked (loops through dblist in global)
   lapply(global$vectors$db_list, FUN=function(db){
     observeEvent(input[[paste0("build_", db)]], {
       # ---------------------------
@@ -578,12 +592,12 @@ shinyServer(function(input, output, session) {
       # ---------------------------
       withProgress({
         
+		# send necessary functions and libraries to parallel threads
         parallel::clusterEvalQ(session_cl, library(enviPat))
         parallel::clusterEvalQ(session_cl, library(KEGGREST))
         parallel::clusterEvalQ(session_cl, library(RCurl))
         parallel::clusterEvalQ(session_cl, library(SPARQL))
         parallel::clusterEvalQ(session_cl, library(XML))
-        
         parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
           "isotopes",
           "subform.joanna", 
@@ -596,7 +610,6 @@ shinyServer(function(input, output, session) {
           "mape",
           "flattenlist"
         ))
-        
         pkgs = c("data.table", "enviPat", "KEGGREST", "XML", "SPARQL", "RCurl")
         parallel::clusterCall(session_cl, function(pkgs) {
           for (req in pkgs) {
@@ -604,10 +617,12 @@ shinyServer(function(input, output, session) {
           }
         }, pkgs = pkgs)
         shiny::setProgress(session = session, 0.1)
+		# build base db (differs per db, parsers for downloaded data)
         build.base.db(db,
                       outfolder = getOptions("user_options.txt")$db_dir, 
                       cl = session_cl)
         shiny::setProgress(session = session, 0.5)
+		# extend base db (identical per db, makes adduct and isotope variants of downloaded compounds)
         build.extended.db(db, 
                           outfolder = getOptions("user_options.txt")$db_dir,
                           adduct.table = adducts, 
@@ -617,23 +632,28 @@ shinyServer(function(input, output, session) {
     })
   })
   
+  # triggers if isotope scoring is clicked after finding db matches
   observeEvent(input$score_iso, {
 
-    req(input$iso_score_method)
-    
+	# check if the matches table even exists
     if(!data.table::is.data.table(global$tables$last_matches)) return(NULL)
     
+	# check if a previous scoring was already done (remove that column if so, new score is generated in a bit)
     if("score" %in% colnames(global$tables$last_matches)){
       global$tables$last_matches <<- global$tables$last_matches[,-"score"]
     }
     
-    # - - - 
-    
+	# get table including isotope scores
+	# as input, takes user method for doing this scoring
     score_table <- score.isos(global$paths$patdb, method=input$iso_score_method, inshiny=T) 
     
+	# update the match table available to the rest of metaboshiny
     global$tables$last_matches <<- global$tables$last_matches[score_table, on = c("baseformula", "adduct")]
     
+	# re-render match table
     output$match_tab <-DT::renderDataTable({
+	  # don't show some columns but keep them in the original table, so they can be used
+	  # for showing molecule descriptions, structure
       DT::datatable(global$tables$last_matches[,-c("description","structure", "baseformula", "dppm")],
                     selection = 'single',
                     autoHideNavigation = T,
@@ -641,10 +661,10 @@ shinyServer(function(input, output, session) {
     })  
   })
   
-  # ================== DATA IMPORT ===========================
-  
+  # triggers when user wants to create database from .db and excel or 2 csv files and excel
   observeEvent(input$create_db,{
     
+	# update the path to patient db
     global$paths$patdb <<- file.path(getOptions("user_options.txt")$work_dir, paste0(getOptions("user_options.txt")$proj_name, ".db"))
     
     withProgress({
@@ -652,26 +672,32 @@ shinyServer(function(input, output, session) {
       shiny::setProgress(session=session, value= .1)
       
       switch(input$new_proj,
+			 # if loading in a .db file... (FAST, MOSTLY FOR ADMINS USING HPC)
              `From DB` = {
                
                req(input$database, input$excel)
                
+			   # get the db and excel path from the UI elemnts
                db_path <- parseFilePaths(global$paths$volumes, input$database)$datapath
                excel_path <- parseFilePaths(global$paths$volumes, input$excel)$datapath
                
+			   # copy the user selected db to the processing folder under proj_name renaming
                file.copy(db_path, global$paths$patdb, overwrite = T)
                
                shiny::setProgress(session=session, value= .30)
                
+			   # add excel file to this database
                exp_vars <- load.excel(excel_path, global$paths$patdb)
                
                shiny::setProgress(session=session, value= .60)
                
              },
+			 # if loading in .csv files...
              `From CSV` = {
                
                req(input$outlist_neg, input$outlist_pos, input$excel)
                
+			   # build patient db from csv files with a given ppm error margin
                build.pat.db(global$paths$patdb,
                             ppm = ppm,
                             pospath = parseFilePaths(global$paths$volumes, input$outlist_pos)$datapath,
@@ -680,11 +706,14 @@ shinyServer(function(input, output, session) {
                
                shiny::setProgress(session=session, value= .95,message = "Adding excel sheets to database...")
                
+			   # add excel file to .db file generated in previous step
                exp_vars <<- load.excel(parseFilePaths(global$paths$volumes, input$excel)$datapath, global$paths$patdb)}
              )
       })
   })
   
+  # imports existing db file
+  # TODO: is deprecated, fix!!
   observeEvent(input$import_db, {
     req(input$pat_db)
     global$paths$patdb <<- input$pat_db$datapath
@@ -697,10 +726,13 @@ shinyServer(function(input, output, session) {
     }, deleteFile = FALSE)
   })
   
+  # imports existing csv file
   observeEvent(input$import_csv, {
     req(input$pat_csv)
+	# change path to current csv file to user given path
     global$paths$csv_loc <<- input$pat_csv$datapath
     
+	# show checkmark underneath select csv button
     output$csv_upload_check <- renderImage({
       # When input$n is 3, filename is ./images/image3.jpeg
       filename <- normalizePath('www/yes.png')
@@ -710,39 +742,46 @@ shinyServer(function(input, output, session) {
     }, deleteFile = FALSE)
   })
   
-  # ==================== CREATE CSV =======================
-  
+
+  # is triggered when the create csv button is clicked
   observeEvent(input$create_csv, {
 
     withProgress({
       
       shiny::setProgress(session = session, value= 1/4)
 
+	  # create csv table from patient database and user chosen settings in that pane
       tbl <- get.csv(global$paths$patdb,
-                     group_adducts = if(length(global$vectors$add_search_list) == 0) F else T,
-                     groupfac = input$group_by,
-                     which_dbs = global$vectors$add_search_list,
-                     which_adducts = selected_adduct_list
+                     group_adducts = if(length(global$vectors$add_search_list) == 0) F else T, # group by addicts?
+                     groupfac = input$group_by, # group by mz or formula
+                     which_dbs = global$vectors$add_search_list, # used databases
+                     which_adducts = selected_adduct_list # used adducts
       )
       
-
+	  # check if any samples are duplicated in the resulting table 
+	  # IF SO: rename to time series data format because that is the only one that should have duplicate sample names
       if(any(duplicated(tbl$sample))){
         tbl$sample <- paste0(tbl$sample, "_T", tbl$time)
-        show.times = T
+        show.times = T # make sure the 'times' column shows in the csv making result table
       }else{
         show.times = F
       }
       
       shiny::setProgress(session=session, value= 2/4)
+	  
+	  # change location of csv in global
       global$paths$csv_loc <<- file.path(getOptions("user_options.txt")$work_dir, paste0(getOptions("user_options.txt")$proj_name,".csv"))
+	  
+	  # write csv file to new location
       fwrite(tbl, global$paths$csv_loc, sep="\t")
 
+	  # find the experimental variables by checking which column names wont convert to numeric
       as.numi <- as.numeric(colnames(tbl)[1:100])
-      
       exp.vars <- which(is.na(as.numi))
       
       shiny::setProgress(session=session, value= 3/4)
       
+	  # render overview table
       output$csv_tab <-DT::renderDataTable({
         
       overview_tab <- if(show.times){
@@ -767,24 +806,29 @@ shinyServer(function(input, output, session) {
     })
   })
   
-  # ===================== METABOSTART ========================
-  
+  # triggers when 'get options' is clicked in the normalization pane
   observeEvent(input$check_csv, {
     # ----------------------
     
+	# read in csv 
+	# TODO: only read in the first x -rows- to save time??
     csv <- fread(global$paths$csv_loc, 
                  header = T)
     
+	# find experimental variables by checking which wont convert to numeric
     as.numi <- as.numeric(colnames(csv)[1:100])
-    
     exp.vars <- which(is.na(as.numi))
     
+	# get the names of those experimental variables
     opts <<- colnames(csv[,..exp.vars])
     
+	# get columns that can be used for batch correction (need to be non-unique)
     batch <<- which(sapply(exp.vars, function(x) length(unique(csv[,..x][[1]])) < nrow(csv)))
     
+	# get sample columns
     numi <<- which(sapply(exp.vars, function(x) is.numeric(csv[,..x][[1]])))
 
+	# update the possible options in the UI
     updateSelectInput(session, "samp_var",
                       choices = opts[numi])
     updateSelectizeInput(session, "batch_var",
@@ -793,6 +837,9 @@ shinyServer(function(input, output, session) {
     )
   })
   
+  
+  # triggers when probnorm or compnorm is selected
+  # let user pick a reference condition
   ref.selector <- reactive({
     # -------------
     if(input$norm_type == "ProbNorm" | input$norm_type == "CompNorm"){
@@ -809,6 +856,7 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  # triggers when check_csv is clicked - get factors usable for normalization
   observeEvent(input$check_csv, {
     req(global$paths$csv_loc)
     switch(input$norm_type,
@@ -818,83 +866,82 @@ shinyServer(function(input, output, session) {
            CompNorm=updateSelectInput(session, "ref_var",
                                       choices = get_ref_cpds() # please add options for different times later, not difficult
            ))
-    # get excel table stuff.
-    
   })
   
+  # render the created UI
   output$ref_select <- renderUI({ref.selector()})
   
+  # this triggers when the user wants to normalize their data to proceed to statistics
   observeEvent(input$initialize,{
-    req(input$filt_type)
-    req(input$norm_type)
-    req(input$trans_type)
-    req(input$scale_type)
+  
     withProgress({
 
       shiny::setProgress(session=session, value= .1)
 
-      # - - check if time series!!! - - 
-      
+      # read in original CSV file
       csv_orig <- fread(global$paths$csv_loc, 
                         data.table = TRUE,
                         header = T)
       
-      # Below is your R command history: 
-      
-      mSet <- InitDataObjects("pktable",
+      # create empty mSet with 'stat' as default mode
+	  mSet <- InitDataObjects("pktable",
                               "stat",
                               FALSE)
       
-      # === Load and re-save CSV ===
+      # convert all 0's to NA so metaboanalystR will recognize them
+	  csv_orig[,(1:ncol(csv_orig)) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)})]
       
-      csv_orig[,(1:ncol(csv_orig)) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)})]
+      # remove whitespace
+	  csv_orig$sample <- gsub(csv_orig$sample, pattern=" ", replacement="")
       
-      # ============================
-      
-      csv_orig$sample <- gsub(csv_orig$sample, pattern=" ", replacement="")
-      
+	  # find experimental variables by converting to numeric
       as.numi <- as.numeric(colnames(csv_orig)[1:100])
-      
       exp.vars <- which(is.na(as.numi))
       
-      # === BATCHES ===
-    
+      # load batch variable chosen by user
       batches <- input$batch_var
       
-      # === PICK AN INITIAL CONDITION ===|
+      # locate qc containing rows in csv
+	  qc.rows <- which(grepl("QC", csv_orig$sample))
       
-      qc.rows <- which(grepl("QC", csv_orig$sample))
-      
+	  # for the non-qc samples, check experimental variables. Which have at least 2 different factors, but as little as possible?
       unique.levels <- apply(csv_orig[!qc.rows,..exp.vars, with=F], MARGIN=2, function(col){
         lvls <- levels(as.factor(col))
         # - - - - - -
         length(lvls)
       })
       
+	  # use this as the default selected experimental variable (user can change later)
       which.default <- unique.levels[which(unique.levels == min(unique.levels[which(unique.levels> 1)]))][1]
-      
       condition = names(which.default)
       
       # =================================|
       
+	  # if nothing is selected for batch, give empty
       if(is.null(batches)) batches <- ""
       
+	  # only turn on batch correction if user says so
       batch_corr <- if(length(batches) == 1 & batches[1] == "") FALSE else TRUE
       
+	  # if 'batch' is selected, 'injection' is often also present
+	  # TODO: i can imagine this doesn't work for all  users, please disable this...
       if("batch" %in% batches){ 
         batches = c(batches, "injection")
       }
       
+	  # get the part of csv with only the experimental variables
       first_part <- csv_orig[,..exp.vars, with=FALSE]
+	  
+	  # set NULL or missing levels to "unknown"
       first_part[first_part == "" | is.null(first_part)] <- "unknown"
       
-      csv <- cbind(first_part[,-c("label")],
-                        "label" = first_part[,..condition][[1]],
+	  # re-make csv with the corrected data
+      csv <- cbind(first_part[,-c("label")], # if 'label' is in excel file remove it, it will clash with the metaboanalystR 'label'
+                        "label" = first_part[,..condition][[1]], # set label as the initial variable of interest
                         csv_orig[,-..exp.vars,with=FALSE])
       
 
-      # - - - remove outliers? - - -
-      
+      # remove outliers by making a boxplot and going from there
       if(input$remove_outliers){
         sums <- rowSums(csv[,-exp.vars,with=FALSE],na.rm = TRUE)
         names(sums) <- csv$sample
@@ -902,21 +949,22 @@ shinyServer(function(input, output, session) {
         csv <- csv[!(sample %in% outliers),]
       } 
       
-      # - - - remove peaks that are missing in all - - -
-      
+      # remove peaks that are missing in all 
       csv <- csv[,which(unlist(lapply(csv, function(x)!all(is.na(x))))),with=F]
       
-      # - - - low signal samples - - -
-      
-      complete.perc <- rowMeans(!is.na(csv))
+      # remove samples with really low numbers of peaks
+	  complete.perc <- rowMeans(!is.na(csv))
       keep_samps <- csv$sample[which(complete.perc > .2)]
-      
       csv <- csv[sample %in% keep_samps,]
       
+	  # also remove them in the table with covariates
       covar_table <- first_part[sample %in% keep_samps,]
       
+	  # if the experimental condition is batch, make sure QC samples are not removed at the end for analysis
+	  # TODO: this is broken with the new system, move this to the variable switching segment of code
       batchview = if(condition == "batch") TRUE else FALSE
       
+	  # if QC present, only keep QCs that share batches with the other samples (may occur when subsetting data/only loading part of the samples)
       if(any(grepl("QC", csv$sample))){
         samps <- which(!grepl(csv$sample, pattern = "QC"))
         batchnum <- unique(csv[samps, "batch"][[1]])
@@ -925,55 +973,55 @@ shinyServer(function(input, output, session) {
         csv <- csv[which(csv$sample %in% keep_samps_post_qc),-"batch"]
       }
       
+	  # rename time column or metaboanalyst won't recognize it
       colnames(csv)[which( colnames(csv) == "time")] <- "Time"
       
-      # dedup
-      
-      remove = which( duplicated( t(csv[,..exp.vars] )))
+      # deduplicate columns
+	  # TODO: remove the source of the duplicated columns ealier, might already be fixed
+	  remove = which( duplicated( t(csv[,..exp.vars] )))
       colnms <- colnames(csv)[remove]
       remove.filt <- setdiff(colnms,c("sample","label"))
       csv <- csv[ , -remove.filt, with = FALSE ]
 
-      # - - -
-      
-      as.numi <- as.numeric(colnames(csv)[1:100])
-      
+      # find experimental variables
+	  as.numi <- as.numeric(colnames(csv)[1:100])
       exp.vars <- which(is.na(as.numi))
       
       # remove all except sample and time in saved csv
       exp_var_names <- colnames(csv)[exp.vars]
-      
       keep_cols <-  c("sample", "label")
-      
       remove <- which(!(exp_var_names %in% keep_cols))
       
-      print("Removing:")
-      print(exp_var_names[remove])
-      
+      # define location to write processed csv to
       csv_loc_final <- gsub(pattern = "\\.csv", replacement = "_no_out.csv", x = global$paths$csv_loc)
       
+	  # remove file if it already exists
       if(file.exists(csv_loc_final)) file.remove(csv_loc_final)
       
-      
+      # write new csv to new location
       fwrite(csv[,-remove,with=F], file = csv_loc_final)
       
+	  # rename row names of covariant table to the sample names
       rownames(covar_table) <- covar_table$sample
 
+	  # load new csv into empty mSet!
       mSet <- Read.TextData(mSet, 
                             filePath = csv_loc_final, 
-                            "rowu")  
+                            "rowu")  # rows contain samples
       
+	  # add covars to the mSet for later switching and machine learning
       mSet$dataSet$covars <- covar_table
       
-      # - - - sanity check - - -
+      # sanity check data 
+	  mSet <- SanityCheckData(mSet)
       
-      mSet <- SanityCheckData(mSet)
-      
+	  # remove metabolites with more than user defined perc missing
       mSet <- RemoveMissingPercent(mSet, 
                                     percent = input$perc_limit/100)
       
+	  # missing value imputation
       if(input$miss_type != "none"){
-        if(input$miss_type == "rowmin"){
+        if(input$miss_type == "rowmin"){ # use sample minimum
           new.mat <- apply(mSet$dataSet$preproc, 1, function(x) {
             if (sum(is.na(x)) > 0) {
               x[is.na(x)] <- min(x, na.rm = T)/2
@@ -982,26 +1030,30 @@ shinyServer(function(input, output, session) {
           })
           mSet$dataSet$procr <- t(new.mat)
         }
-        else if(input$miss_type == "pmm"){
+        else if(input$miss_type == "pmm"){ # use predictive mean matching
+		# TODO: re-enable, it's very slow
           require(mice)
           base <- mSet$dataSet$preproc
           imp <- mice::mice(base, printFlag = TRUE)
-        }else if(input$miss_type == "rf"){
+        }else if(input$miss_type == "rf"){ # random forest
           samples <- rownames(mSet$dataSet$preproc)
           
+		  # convert all to as numeric
+		  # TODO: remove, should be automatic
           w.missing <- mSet$dataSet$preproc
           w.missing <- apply(w.missing, 2, as.numeric)
 
-          library(doParallel)
-
-          registerDoParallel(session_cl)
+		  # register other threads as parallel threads
+          doParallel::registerDoParallel(session_cl)
           
+		  # set amount of tries (defined by missforest package)
           auto.mtry <- floor(sqrt(ncol(mSet$dataSet$preproc)))
           
           mtry <- ifelse(auto.mtry > 100, 100, auto.mtry)
           
+		  # impute missing values with random forest
           imp <- missForest::missForest(w.missing, 
-                                        parallelize = "variables",
+                                        parallelize = "variables", # parallelize over variables, 'forests' is other option
                                         #verbose = T,
                                         #ntree = 10,
                                         mtry = mtry)
@@ -1010,6 +1062,7 @@ shinyServer(function(input, output, session) {
           rownames(mSet$dataSet$procr) <- rownames(mSet$dataSet$preproc)
           # - - - - - - - - - - - - 
         }else{
+		  # use built in imputation methods, knn means etc.
           mSet <- ImputeVar(mSet,
                              method = # "knn"
                               input$miss_type
@@ -1018,8 +1071,10 @@ shinyServer(function(input, output, session) {
       }
       # ------------------------
       
+	  # if user picked a data filter
       if(input$filt_type != "none"){
-        
+        # filter dataset
+		# TODO; add option to only keep columns that are also in QC ('qcfilter'?)
         mSet <- FilterVariable(mSet,
                                 filter = input$filt_type,
                                 qcFilter = "F",
@@ -1029,15 +1084,17 @@ shinyServer(function(input, output, session) {
       
       shiny::setProgress(session=session, value= .2)
       
+	  # if normalizing by a factor, do the below
       if(input$norm_type == "SpecNorm"){
         norm.vec <- mSet$dataSet$covars[match(mSet$dataSet$covars$sample,
                                                rownames(mSet$dataSet$preproc)),][[input$samp_var]]
-        norm.vec <- scale(x = norm.vec, center = 1)
+        norm.vec <- scale(x = norm.vec, center = 1) # normalize scaling factor
         
       }else{
-        norm.vec <- rep(1, length(mSet$dataSet$cls))
+        norm.vec <- rep(1, length(mSet$dataSet$cls)) # empty
       }
       
+	  # normalize dataset with user settings(result: mSet$dataSet$norm)
       mSet <- Normalization(mSet,
                              rowNorm = input$norm_type,
                              transNorm = input$trans_type,
@@ -1046,16 +1103,19 @@ shinyServer(function(input, output, session) {
       
       shiny::setProgress(session=session, value= .4)
       
+	  # get sample names
       smps <- rownames(mSet$dataSet$norm)
       
+	  # get which rows are QC samples
       qc_rows <- which(grepl(pattern = "QC", x = smps))
       
-      # - - - - - - - - - - - - - - - - - - - - - - -
-      
+      # if at least one row has a QC in it, batch correct
       has.qc <- length(qc_rows) > 0
-        
+      
+	  # lowercase all the covars table column names
       colnames(mSet$dataSet$covars) <- tolower(colnames(mSet$dataSet$covars))
       
+	  # remove special characters in sample names 
       # TODO: find a better fix for samples w/ special characters in name...
       mSet$dataSet$covars$sample <- gsub(mSet$dataSet$covars$sample, pattern = "\\(|\\)", replacement="")
       
@@ -1063,36 +1123,37 @@ shinyServer(function(input, output, session) {
         
         if("batch" %in% input$batch_var & has.qc){
           
-          #smpnames = smps[qc_rows]
-          
+		  # get batch for each sample
           batch.idx = as.numeric(as.factor(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"batch"][[1]]))
+		  
+		  # get injection order for samples
           seq.idx = as.numeric(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"injection"][[1]])
           
-          # --- QC CORRECTION ---
-          
+          # go through all the metabolite columns
           corr_cols <- pbapply::pblapply(1:ncol(mSet$dataSet$norm), function(i){
-            #
+            # fetch non-corrected values
             vec = mSet$dataSet$norm[,i]
-            #
+            # correct values using QCs and injectiono rder
             corr_vec = BatchCorrMetabolomics::doBC(Xvec = as.numeric(vec), 
                                                    ref.idx = as.numeric(qc_rows), 
                                                    batch.idx = batch.idx,
                                                    seq.idx = seq.idx,
                                                    result = "correctedX",
-                                                   minBsamp = 1)
-            # ---------
+                                                   minBsamp = 1) # at least one QC necessary
             corr_vec
           })
           
+		  # cbind the corrected columns to re-make table
           qc_corr_matrix <- as.data.frame(do.call(cbind, corr_cols))
-          
+          # fix rownames to old rownames
           colnames(qc_corr_matrix) <- colnames(mSet$dataSet$norm)
           rownames(qc_corr_matrix) <- rownames(mSet$dataSet$norm)
-          
+          # save to mSet
           mSet$dataSet$norm <- as.data.frame(qc_corr_matrix)
           
         }
         
+		# remove QC samples if user doesn't use batch as condition
         if(!batchview & has.qc){
           mSet$dataSet$norm <- mSet$dataSet$norm[-qc_rows,]
           mSet$dataSet$cls <- mSet$dataSet$cls[-qc_rows, drop = TRUE]
@@ -1100,54 +1161,64 @@ shinyServer(function(input, output, session) {
           mSet$dataSet$cls.num <- length(levels(mSet$dataSet$cls))
         }
         
+		# check which batch values are left after initial correction
         left_batch_vars <- grep(input$batch_var, 
                                 pattern =  ifelse(has.qc, "batch|injection|sample", "injection|sample"),
                                 value = T,
                                 invert = T)
         
         if(length(left_batch_vars) > 2){ 
-          NULL
+          NULL  # no option for more than 2 other batch variables yet
         } else if(length(left_batch_vars) == 0){
-          NULL
+          NULL # if none left, continue after this
         } else{
-          
+          # get sample names and classes
           smp <- rownames(mSet$dataSet$norm)
           exp_lbl <- mSet$dataSet$cls
           
+		  # create csv for comBat
           csv <- as.data.table(cbind(sample = smp, 
                                      label = mSet$dataSet$cls,
                                      mSet$dataSet$norm))
           
+		  # transpose for combat
           csv_edata <-t(csv[,!c(1,2)])
           colnames(csv_edata) <- csv$sample
           
           if(length(left_batch_vars) == 1){
+			# create a model table
             csv_pheno <- data.frame(sample = 1:nrow(csv),
                                     batch1 = mSet$dataSet$covars[match(smp, mSet$dataSet$covars$sample),left_batch_vars[1], with=FALSE][[1]],
                                     batch2 = c(0),
-                                    outcome = as.factor(exp_lbl))     
+                                    outcome = as.factor(exp_lbl)) 
+			# batch correct with comBat
             batch_normalized= t(sva::ComBat(dat=csv_edata,
                                             batch=csv_pheno$batch1
                                             #mod=mod.pheno,
                                             #par.prior=TRUE
             ))
+			# fix row names
             rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
           }else{
+			# create a model table
             csv_pheno <- data.frame(sample = 1:nrow(csv),
                                     batch1 = mSet$dataSet$covars[match(smp, mSet$dataSet$covars$sample), left_batch_vars[1], with=FALSE][[1]],
                                     batch2 = mSet$dataSet$covars[match(smp, mSet$dataSet$covars$sample), left_batch_vars[2], with=FALSE][[1]],
                                     outcome = as.factor(exp_lbl))
+			# batch correct with limma and two batches
             batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
                                                           #design = mod.pheno,
                                                           batch = csv_pheno$batch1,
                                                           batch2 = csv_pheno$batch2))
             rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
           }
-          
+          # save normalized table to mSet
           mSet$dataSet$norm <- as.data.frame(batch_normalized)
         }
       } else{
+		# if qcs presnt and user doesn't want to analyse qc samples
         if(!batchview & has.qc){
+		# remove QC rows and associated data from mSet
           mSet$dataSet$norm <- mSet$dataSet$norm[-qc_rows,]
           mSet$dataSet$cls <- mSet$dataSet$cls[-qc_rows, drop = TRUE]
           mSet$dataSet$covars <- mSet$dataSet$covars[-grep("QC", mSet$dataSet$covars$sample),]
@@ -1155,19 +1226,20 @@ shinyServer(function(input, output, session) {
         }
       }
       
-      # REORDER COVARS
-
+      # make sure covars order is consistent with mset$..$norm order
       mSet$dataSet$covars <- mSet$dataSet$covars[match(rownames(mSet$dataSet$norm), 
                                                         mSet$dataSet$covars$sample),]
       
+	  # set name of variable of interest
       mSet$dataSet$cls.name <- condition
       
-      # - - set2global - - 
-      
+      # save mset to global environment
       mSet <<- mSet
       
+	  # tell datamanager that an mset is present 
       datamanager$mset_present = TRUE
       
+	  # change interface mode based on the current condition
       if(mSet$dataSet$cls.num <= 1){
         interface$mode <- NULL } 
       else if(mSet$dataSet$cls.num == 2){
@@ -1180,13 +1252,15 @@ shinyServer(function(input, output, session) {
       shiny::setProgress(session=session, value= .5)
       
       shiny::setProgress(session=session, value= .6)
+	  
+	  # generate summary plots and render them in UI
+	  
       varNormPlots <- ggplotNormSummary(mSet)
       output$var1 <- renderPlot(varNormPlots$tl)
       output$var2 <- renderPlot(varNormPlots$bl)
       output$var3 <- renderPlot(varNormPlots$tr)
       output$var4 <- renderPlot(varNormPlots$br)
       
-      shiny::setProgress(session=session, value= .7)
       sampNormPlots <-  ggplotSampleNormSummary(mSet)
       output$samp1 <- renderPlot(sampNormPlots$tl)
       output$samp2 <- renderPlot(sampNormPlots$bl)
