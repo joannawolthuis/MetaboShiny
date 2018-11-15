@@ -254,10 +254,10 @@ shinyServer(function(input, output, session) {
 	# hide all tabs by default, easier to hide them and then make visible selectively
     hide.tabs <- c("inf", "pca", "plsda", "tt", "fc", "aov", "meba", "asca", "ml", "volc", "heatmap", "enrich")
   
-    # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
+  # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
 	# then show the relevent tabs
 	# TODO: enable multivariate time series analysis
-    if (is.null(interface$mode)) {
+  if (is.null(interface$mode)) {
       show.tabs <- c("inf")
     } else if(interface$mode == 'multivar'){ 
       show.tabs <- c("pca", "aov", "heatmap")
@@ -265,8 +265,7 @@ shinyServer(function(input, output, session) {
       show.tabs <- c("pca", "plsda", "tt", "fc", "volc", "heatmap", "ml")
     } else if(interface$mode == 'time'){
       show.tabs <- c("pca", "asca", "meba", "heatmap")
-    }
-    else{
+    } else{
       show.tabs <- c("inf") # 'info' tab that loads when no data is loaded currently
     }
 	
@@ -297,8 +296,8 @@ shinyServer(function(input, output, session) {
 					selected = global$vectors[[paste0(mode, "selected_adducts")]], target="row"),
 					options = list(pageLength = 5, dom = 'tp'), 
 					rownames = F)
-		})
-	})
+		      })
+	    })
   })
   
   # toggles when 'select all adducts' is pressed (filled circle)
@@ -592,7 +591,7 @@ shinyServer(function(input, output, session) {
       # ---------------------------
       withProgress({
         
-		# send necessary functions and libraries to parallel threads
+		    # send necessary functions and libraries to parallel threads
         parallel::clusterEvalQ(session_cl, library(enviPat))
         parallel::clusterEvalQ(session_cl, library(KEGGREST))
         parallel::clusterEvalQ(session_cl, library(RCurl))
@@ -617,12 +616,14 @@ shinyServer(function(input, output, session) {
           }
         }, pkgs = pkgs)
         shiny::setProgress(session = session, 0.1)
-		# build base db (differs per db, parsers for downloaded data)
+		    
+        # build base db (differs per db, parsers for downloaded data)
         build.base.db(db,
                       outfolder = getOptions("user_options.txt")$db_dir, 
                       cl = session_cl)
         shiny::setProgress(session = session, 0.5)
-		# extend base db (identical per db, makes adduct and isotope variants of downloaded compounds)
+		
+        # extend base db (identical per db, makes adduct and isotope variants of downloaded compounds)
         build.extended.db(db, 
                           outfolder = getOptions("user_options.txt")$db_dir,
                           adduct.table = adducts, 
@@ -635,24 +636,25 @@ shinyServer(function(input, output, session) {
   # triggers if isotope scoring is clicked after finding db matches
   observeEvent(input$score_iso, {
 
-	# check if the matches table even exists
+	  # check if the matches table even exists
     if(!data.table::is.data.table(global$tables$last_matches)) return(NULL)
     
-	# check if a previous scoring was already done (remove that column if so, new score is generated in a bit)
+	  # check if a previous scoring was already done (remove that column if so, new score is generated in a bit)
     if("score" %in% colnames(global$tables$last_matches)){
       global$tables$last_matches <<- global$tables$last_matches[,-"score"]
     }
     
-	# get table including isotope scores
-	# as input, takes user method for doing this scoring
+	  # get table including isotope scores
+	  # as input, takes user method for doing this scoring
     score_table <- score.isos(global$paths$patdb, method=input$iso_score_method, inshiny=T) 
     
-	# update the match table available to the rest of metaboshiny
+	  # update the match table available to the rest of metaboshiny
     global$tables$last_matches <<- global$tables$last_matches[score_table, on = c("baseformula", "adduct")]
     
-	# re-render match table
+	  # re-render match table
     output$match_tab <-DT::renderDataTable({
-	  # don't show some columns but keep them in the original table, so they can be used
+	  
+      # don't show some columns but keep them in the original table, so they can be used
 	  # for showing molecule descriptions, structure
       DT::datatable(global$tables$last_matches[,-c("description","structure", "baseformula", "dppm")],
                     selection = 'single',
@@ -752,9 +754,9 @@ shinyServer(function(input, output, session) {
 
 	  # create csv table from patient database and user chosen settings in that pane
       tbl <- get.csv(global$paths$patdb,
-                     group_adducts = if(length(global$vectors$add_search_list) == 0) F else T, # group by addicts?
+                     group_adducts = if(length(global$vectors$db_add_list) == 0) F else T, # group by addicts?
                      groupfac = input$group_by, # group by mz or formula
-                     which_dbs = global$vectors$add_search_list, # used databases
+                     which_dbs = global$vectors$db_add_list, # used databases
                      which_adducts = selected_adduct_list # used adducts
       )
       
@@ -1867,7 +1869,7 @@ shinyServer(function(input, output, session) {
                       labels = testY)
                }, 
                ls = { # lasso
-				 # user x cross validation input
+				         # user x cross validation input
                  nfold = switch(input$ml_folds, 
                                 "5" = 5,
                                 "10" = 10,
@@ -1877,16 +1879,20 @@ shinyServer(function(input, output, session) {
 								
                  family = "binomial" #TODO: enable multinomial for multivariate data!!
                  
-				 # 
+				         #  make model (a. internal cross validation until optimized)
                  cv1 <- glmnet::cv.glmnet(training, trainY, family = family, type.measure = "auc", alpha = 1, keep = TRUE, nfolds=nfold)
+                 # pick the best model (other options, lambda.1se)
                  cv2 <- data.frame(cvm = cv1$cvm[cv1$lambda == cv1[["lambda.min"]]], lambda = cv1[["lambda.min"]], alpha = 1)
                  
+                 # save final model
                  model <- glmnet::glmnet(as.matrix(training), trainY, family = family, lambda = cv2$lambda, alpha = cv2$alpha)
                  
+                 # test on testing data and save prediction
                  prediction <- stats::predict(model,
                                               type = "response", 
                                               newx = testing, 
                                               s = "lambda.min")#[,2] # add if necessary
+                 # return list with mode, prediction on test data etc.s
                  list(type = "ls",
                       model = model,
                       prediction = prediction, 
@@ -1896,75 +1902,65 @@ shinyServer(function(input, output, session) {
                  NULL
                })
       })
-      
+      # check if a storage list for machine learning results already exists
       if(!"ml" %in% names(mSet$analSet)){
-        mSet$analSet$ml <<- list(ls=list(), rf=list())
+        mSet$analSet$ml <<- list(ls=list(), rf=list()) # otherwise make it
       }
-      
+      # save the summary of all repeats (will be used in plots)
       xvals <<- list(type = {unique(lapply(repeats, function(x) x$type))},
                      models = {lapply(repeats, function(x) x$model)},
                      predictions = {lapply(repeats, function(x) x$prediction)},
                      labels = {lapply(repeats, function(x) x$labels)})
       
+      # save results to mset
       mSet$analSet$ml[[input$ml_method]][[input$ml_name]] <<- list("roc" = xvals,
                                                                    "bar" = repeats)
-      
+      # render plots for UIs
       output$ml_roc <- plotly::renderPlotly({plotly::ggplotly(ggPlotROC(xvals, input$ml_attempts, global$functions$color.functions[[getOptions("user_options.txt")$gspec]]))})
       output$ml_bar <- plotly::renderPlotly({plotly::ggplotly(ggPlotBar(repeats, input$ml_attempts, global$functions$color.functions[[getOptions("user_options.txt")$gspec]], input$ml_top_x, input$ml_name))})
       
     })
   })
   
-  observe({
-    # ---------------------------------
-    db_search_list <- lapply(global$vectors$db_list, 
-                             FUN = function(db){
-                               # -----------------------
-                               if(!input[[paste0("search_", db)]]){
-                                 c(file.path(getOptions("user_options.txt")$db_dir, paste0(db, ".full.db")))
-                               }
-                               else{NA}
-                             }
-    )
-    global$vectors$db_search_list <<- db_search_list[!is.na(db_search_list)]
-  })  
+  db_button_prefixes = c("search", "add", "enrich")
   
-  observe({
-    # ---------------------------------
-    add_search_list <- lapply(global$vectors$db_list, 
-                              FUN = function(db){
-                                if(is.null(input[[paste0("add_", db)]])){
-                                  return(NA)
-                                }else{
-                                  # -----------------------
-                                  if(!input[[paste0("add_", db)]]){
-                                    c(file.path(getOptions("user_options.txt")$db_dir, paste0(db, ".full.db")))
-                                  }
-                                  else{NA}
-                                }
-                              }        
-    )
-    global$vectors$add_search_list <<- add_search_list[!is.na(add_search_list)]
-  })  
+  # generate all the fadebuttons for the database selection
+  lapply(db_button_prefixes, function(prefix){
+    output[[paste0("db_", prefix, "_select")]] <- renderUI({
+      fluidRow(
+        lapply(global$vectors$db_list, function(db){
+          which_idx = grep(sapply(global$constants$images, function(x) x$name), pattern = db) # find the matching image (NAME MUST HAVE DB NAME IN IT COMPLETELY)
+          sardine(fadeImageButton(inputId = paste0(prefix, "_", db), img.path = basename(global$constants$images[[which_idx]]$path))) # generate fitting html
+        })
+      )
+    })
+  })
   
-  observe({
-    # ---------------------------------
-    enrich_db_list <- lapply(global$vectors$db_list, 
-                             FUN = function(db){
-                               if(is.null(input[[paste0("enrich_", db)]])){
-                                 return(NA)
-                               }else{
-                                 # -----------------------
-                                 if(!input[[paste0("enrich_", db)]]){
-                                   c(file.path(getOptions("user_options.txt")$db_dir, paste0(db, ".full.db")))
+  # check if these buttons are selected or not
+  lapply(db_button_prefixes, function(prefix){
+    observe({
+      # ---------------------------------
+      db_path_list <- lapply(global$vectors$db_list, # go through the dbs defined in db_lists
+                               FUN = function(db){
+                                 button_id = input[[paste0(prefix, "_", db)]]
+                                 if(is.null(button_id)){
+                                   print("nope")
+                                   NA
+                                 }else{
+                                   if(!button_id){
+                                     c(file.path(getOptions("user_options.txt")$db_dir, paste0(db, ".full.db"))) # add path to list of dbpaths
+                                   }
+                                   else{NA}
                                  }
-                                 else{NA}
                                }
-                             }
-    )
-    global$vectors$enrich_db_list <<- enrich_db_list[!is.na(enrich_db_list)]
-  })  
-  
+      )
+      # save the selected database paths to global
+      global$vectors[[paste0("db_", prefix, "_list")]] <<- db_path_list[!is.na(db_path_list)]
+    })  
+  })
+
+
+  # check which adducts are currently selected by user
   observe({
     # --------------
     wanted.adducts.pos <- global$vectors$pos_adducts[input$pos_add_tab_rows_selected, "Name"]
@@ -1974,6 +1970,7 @@ shinyServer(function(input, output, session) {
                                    wanted.adducts.pos)$Name
   })
   
+  # which table names to check for user click events
   res.update.tables <<- c("tt", 
                           "fc", 
                           "aov",
@@ -1983,43 +1980,15 @@ shinyServer(function(input, output, session) {
                           "pca_load",
                           "plsda_load",
                           "enrich_pw",
-                          "ml",
-                          paste0("alpha_", seq(0,1,0.2), "_lasnet"),
-                          paste0("alpha_stab_", seq(0,1,0.2), "_lasnet"))
+                          "ml")
   
-  observeEvent(input$enriched_rows_selected, {
-    curr_row = input$enriched_rows_selected
-    # LOAD MEMBERS IN GROUP
-    curr_pw <- enrich_tab[curr_row,]
-    pw_memb_here <- gsaRes$gsc[[curr_pw$Name]]
-    pw_memb_tab <<- as.data.frame(pw_memb_here)
-    rownames(pw_memb_tab) <- pw_memb_here
-    pw_memb_tab[,1] <- c("Yes")
-    colnames(pw_memb_tab) <- "Present"
-    enrich_overview_tab <<- pw_memb_tab
-    output$enrich_pw_tab <-DT::renderDataTable({
-      DT::datatable(enrich_overview_tab,
-                    selection = 'single',
-                    autoHideNavigation = T,
-                    options = list(lengthMenu = c(5, 10, 15), 
-                                   pageLength = 5))
-    })  
-  })
-  
+  # creates observers for click events in the tables defined above
   lapply(unique(res.update.tables), FUN=function(table){
     observeEvent(input[[paste0(table, "_tab_rows_selected")]], {
       curr_row = input[[paste0(table, "_tab_rows_selected")]]
       # do nothing if not clicked yet, or the clicked cell is not in the 1st column
       if (is.null(curr_row)) return()
-      
-      if(grepl(pattern = "lasnet",x = table)){
-        alpha <- gsub("alpha|stab|_|lasnet", "", table)
-        if(!grepl(pattern = "stab",x = table)){
-          table <- "lasnet_a"
-        }else{ 
-          table <- "lasnet_b"
-        }
-      }
+      # get current selected compound from the original table (needs to be available in global env)
       curr_cpd <<- data.table::as.data.table(switch(table,
                                                     tt = mSet$analSet$tt$sig.mat,
                                                     fc = mSet$analSet$fc$sig.mat,
@@ -2033,37 +2002,36 @@ shinyServer(function(input, output, session) {
                                                     meba = mSet$analSet$MB$stats,
                                                     plsda_vip = plsda_tab)
                                              , keep.rownames = T)[curr_row, rn]
-      
-      if(grepl(pattern = "lasnet",x = table)){
-        outplot_name = "lasnet_specific_plot"
-      }else{
-        outplot_name = paste0(table, "_specific_plot")
-      }
-      
+      # print current compound in sidebar
       output$curr_cpd <- renderText(curr_cpd)
 
+      # make miniplot for sidebar with current compound
       output$curr_plot <- plotly::renderPlotly({
         # --- ggplot ---
         ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
       })
       
+      outplot_name <- paste0(table, "_specific_plot")
+      # send plot to relevant spot in UI
       output[[outplot_name]] <- plotly::renderPlotly({
         # --- ggplot ---
-        if(table == 'meba'){
+        if(table == 'meba'){ # meba needs a split by time
           ggplotMeba(curr_cpd, draw.average = T, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
-        }else if(table == 'asca'){
+        }else if(table == 'asca'){ # asca needs a split by time
           ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]], mode = "ts")
-        }else{
+        }else{ # regular boxplot
           ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
         }
       })
     })
   })
   
+  # reload necessary plot on entering the specific tab
   observe({
       datamanager$reload <- input$statistics
   })
   
+  # reload plots (pca/plsda) if the 2d/3d button is triggered
   observeEvent(input$pca_2d3d, {
     datamanager$reload <- "pca"
   },ignoreInit = TRUE, ignoreNULL = T)
@@ -2072,10 +2040,11 @@ shinyServer(function(input, output, session) {
     datamanager$reload <- "plsda"
   },ignoreInit = TRUE, ignoreNULL = T)
 
-  observeEvent(plotly::event_data("plotly_click"),{ # WHAT HAPPENS ON CLICK
-    d <- plotly::event_data("plotly_click")
-    req(d)
-    if(input$statistics %in% c("tt", "fc", "rf", "aov", "volc", "lasnet")){
+  # triggers when a plotly plot is clicked by user
+  observeEvent(plotly::event_data("plotly_click"),{ 
+    d <- plotly::event_data("plotly_click") # get click details (which point, additional included info, etc..)
+    
+    if(input$statistics %in% c("tt", "fc", "rf", "aov", "volc", "lasnet")){ # these cases need the same processing and use similar scoring systems
         if('key' %not in% colnames(d)) return(NULL)
         mzs <- switch(input$statistics, 
                       tt= names(mSet$analSet$tt$p.value),
@@ -2090,7 +2059,7 @@ shinyServer(function(input, output, session) {
           # --- ggplot ---
           ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
         })
-      }else if(input$statistics == "pca"){
+      }else if(input$statistics == "pca"){ # deprecated - used to hide and show certain groups
         if(!"z" %in% names(d)){
           which_group = 1
           which_group <- d$curveNumber + 1
@@ -2107,35 +2076,35 @@ shinyServer(function(input, output, session) {
           pca_plot$x$attrs[[traceLoc]] <- scatter
           pca_plot <<- pca_plot
           output$plot_pca <- plotly::renderPlotly({pca_plot})
-        }}else if(input$statistics == "ml"){
-          switch(input$ml_results, roc = {
+        }}else if(input$statistics == "ml"){ # makes ROC curves and boxplots clickable
+          switch(input$ml_results, roc = { # if roc, check the curve numbers of the roc plot
             attempt = d$curveNumber - 1
             if(attempt > 1){
               ml_type <- xvals$type[[1]]
               model <- xvals$models[[attempt]]
               output$ml_tab <- switch(ml_type,
-                                      rf = {
+                                      rf = { # random forest specific data fetching
                                         importance = as.data.table(model$importance, keep.rownames = T)
                                         rf_tab <- importance[which(MeanDecreaseAccuracy > 0), c("rn", "MeanDecreaseAccuracy")]
-                                        rf_tab <- rf_tab[order(MeanDecreaseAccuracy, decreasing = T)]
+                                        rf_tab <- rf_tab[order(MeanDecreaseAccuracy, decreasing = T)] # order descending
                                         # - - - return - - -
                                         ml_tab <<- data.frame(MDA = rf_tab$MeanDecreaseAccuracy, row.names = rf_tab$rn) 
-                                        DT::renderDataTable({
+                                        DT::renderDataTable({ # render importance table for selected model
                                           DT::datatable(rf_tab,
                                                         selection = 'single',
                                                         autoHideNavigation = T,
                                                         options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
                                         })
-                                      },
-                                      ls = {
+                                      }, 
+                                      ls = { # lasso specific data fetching
                                         tab = model$beta
                                         keep = which(tab[,1] > 0)
                                         tab_new = data.frame("beta" = tab[keep,1],
-                                                             "absbeta" = abs(tab[keep,1]),
+                                                             "absbeta" = abs(tab[keep,1]), # use the absolute beta as additional measure (min or plus importance is similar for statistical validity i think)
                                                              row.names = rownames(tab)[keep])
                                         colnames(tab_new) <- c("beta", "abs_beta")
-                                        ml_tab <<- tab_new[order(tab_new[,1],decreasing = TRUE),]
-                                        DT::renderDataTable({
+                                        ml_tab <<- tab_new[order(tab_new[,1],decreasing = T),] # order descending
+                                        DT::renderDataTable({ #  render importance table for selected model
                                           DT::datatable(ml_tab,
                                                         selection = 'single',
                                                         autoHideNavigation = T,
@@ -2144,32 +2113,31 @@ shinyServer(function(input, output, session) {
                                       })
               
             }
-          }, bar = {
-            #
-            #d = list(x=1)
+          }, bar = { # for bar plot just grab the # bar clicked
             curr_cpd <<- as.character(global$tables$ml_bar_tab[d$x,"mz"][[1]])
             
+            # plot underneath? TODO: remove, should just be in sidebar miniplot
             output$ml_specific_plot <- plotly::renderPlotly({
               # --- ggplot ---
               ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
             })
-          })}else if(grepl(pattern = "heatmap", x = input$statistics)){
+          })}else if(grepl(pattern = "heatmap", x = input$statistics)){ # heatmap requires the table used to make it saved to global (hmap_mzs)
             if(!exists("hmap_mzs")) return(NULL)
             if(d$y > length(hmap_mzs)) return(NULL)
             curr_cpd <<- hmap_mzs[d$y]
           }
   
+    # render curent miniplot based on current compound
     output$curr_plot <- plotly::renderPlotly({
       # --- ggplot ---
       ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
     })
     
-    # ----------------------------
+    # change current compound in text
     output$curr_cpd <- renderText(curr_cpd)
   })
   
-  # --- find matches ---
-  
+  # render icon for search bar
   output$find_mol_icon <- renderImage({
     # When input$n is 3, filename is ./images/image3.jpeg
     filename <- normalizePath(file.path('www/search.png'))
@@ -2179,42 +2147,43 @@ shinyServer(function(input, output, session) {
          height=70)
   }, deleteFile = FALSE)
   
+  # triggers on clicking the 'search' button in sidebar
   observeEvent(input$search_cpd, {
     req(global$vectors$db_search_list)
     # ----------------
-    if(length(global$vectors$db_search_list) > 0){
-      global$tables$last_matches <<- unique(multimatch(curr_cpd, global$vectors$db_search_list))
-      output$match_tab <- DT::renderDataTable({
-        DT::datatable(global$tables$last_matches[,-c("description","structure", "baseformula", "dppm")],
+    if(length(global$vectors$db_search_list) > 0){ # go through selected databases
+      global$tables$last_matches <<- unique(multimatch(curr_cpd, global$vectors$db_search_list)) # match with all
+      output$match_tab <- DT::renderDataTable({ # render table for UI
+        DT::datatable(global$tables$last_matches[,-c("description","structure", "baseformula", "dppm")], # filter table some
                       selection = 'single',
                       autoHideNavigation = T,
                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-      })  
-      }
+        })  
+     }
   })
   
+  # triggers on clicking a row in the match results table
   observeEvent(input$match_tab_rows_selected,{
-    curr_row = input$match_tab_rows_selected
-    curr_row <<- input$match_tab_rows_selected
+    curr_row <<- input$match_tab_rows_selected # get current row
     if (is.null(curr_row)) return()
     # -----------------------------
-    curr_def <<- global$tables$last_matches[curr_row,'description']
-    output$curr_definition <- renderText(curr_def$description)
-    curr_struct <<- global$tables$last_matches[curr_row,'structure'][[1]]
-    output$curr_struct <- renderPlot({plot.mol(curr_struct,style = "cow")})
-    curr_formula <<- global$tables$last_matches[curr_row,'baseformula'][[1]]
-    output$curr_formula <- renderText({curr_formula})
+    curr_def <<- global$tables$last_matches[curr_row,'description'] # get current definition (hidden in table display but not deleted)
+    output$curr_definition <- renderText(curr_def$description) # render definition
+    curr_struct <<- global$tables$last_matches[curr_row,'structure'][[1]] # get current structure
+    output$curr_struct <- renderPlot({plot.mol(curr_struct,style = "cow")}) # plot molecular structure
+    curr_formula <<- global$tables$last_matches[curr_row,'baseformula'][[1]] # get current formula
+    output$curr_formula <- renderText({curr_formula}) # render text of current formula
   })
   
+  # triggers on clicking the 'browse database' function
   observeEvent(input$browse_db,{
-    #req(db_search_list)
-    # -------------------
+    # get all compounds in the selected databases
     cpd_list <- lapply(global$vectors$db_search_list, FUN=function(match.table){
       browse_db(match.table)
     })
-    # ------------------
+    # join the individual result tables together
     browse_table <<- unique(as.data.table(rbindlist(cpd_list)))
-    
+    # render table for UI
     output$browse_tab <-DT::renderDataTable({
       DT::datatable(browse_table[,-c("Description", "Charge")],
                     selection = 'single',
@@ -2223,212 +2192,196 @@ shinyServer(function(input, output, session) {
     })
   })
   
-  observeEvent(input$revsearch_cpd, {
-    #req(db_search_list)
-    req(input$browse_tab_rows_selected)
-    # -------------------
-    search_cmd <- browse_table[curr_row,c('Formula', 'Charge')]
-    # -------------------
-    cpd_list <- lapply(global$vectors$db_search_list, FUN=function(match.table){
-      get_mzs(search_cmd$Formula, search_cmd$Charge, match.table)})
-    # ------------------
-    hits_table <<- unique(as.data.table(rbindlist(cpd_list)))
-    output$hits_tab <-DT::renderDataTable({
-      DT::datatable(hits_table,
-                    selection = 'single',
-                    autoHideNavigation = T,
-                    options = list(lengthMenu = c(5, 10, 20), pageLength = 5))
-    })
-  })
+  # triggers on reverse searching TODO: fix this, it's broken
+  # observeEvent(input$revsearch_cpd, {
+  #   req(input$browse_tab_rows_selected)
+  #   # -------------------
+  #   search_cmd <- browse_table[curr_row,c('Formula', 'Charge')]
+  #   # -------------------
+  #   cpd_list <- lapply(global$vectors$db_search_list, FUN=function(match.table){
+  #     get_mzs(search_cmd$Formula, search_cmd$Charge, match.table)})
+  #   # ------------------
+  #   hits_table <<- unique(as.data.table(rbindlist(cpd_list)))
+  #   output$hits_tab <-DT::renderDataTable({
+  #     DT::datatable(hits_table,
+  #                   selection = 'single',
+  #                   autoHideNavigation = T,
+  #                   options = list(lengthMenu = c(5, 10, 20), pageLength = 5))
+  #   })
+  # })
   
-  observeEvent(input$browse_tab_rows_selected,{
-    curr_row = input$browse_tab_rows_selected
-    curr_cpd = browse_table[curr_row, Formula]
-    curr_row <<- input$browse_tab_rows_selected
-    if (is.null(curr_row)) return()
-    # -----------------------------
-    curr_def <<- browse_table[curr_row,'Description']
-    output$browse_definition <- renderText(curr_def$Description)
-    # --- search ---
-    #TODO: this should be a function and not re-written
-    output$meba_specific_plot <- plotly::renderPlotly({ggplotMeba(curr_cpd, draw.average=T, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$asca_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$fc_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$tt_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$aov_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$plsda_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-  })
-  
-  observeEvent(input$hits_tab_rows_selected,{
-    curr_row = input$hits_tab_rows_selected
-    curr_row <<- input$hits_tab_rows_selected
-    if (is.null(curr_row)) return()
-    # -----------------------------
-    curr_cpd <<- hits_table[curr_row, mzmed.pgrp]
-    output$meba_specific_plot <- plotly::renderPlotly({ggplotMeba(curr_cpd, draw.average=T, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$asca_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$fc_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$tt_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$aov_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-    output$plsda_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
-  })
-  
-  observeEvent(input$go_enrich,{
-    #TODO: fix, currently broken (build in m/z > cpd search?)
-    enrich_db_list <- paste0("./backend/db/", c("kegg", 
-                                                "wikipathways", 
-                                                "smpdb",
-                                                "metacyc"), ".full.db")
-    withProgress({
-      all_pathways <- lapply(enrich_db_list, FUN=function(db){
-        conn <- RSQLite::dbConnect(RSQLite::SQLite(), db) # change this to proper var later
-        dbname <- gsub(basename(db), pattern = "\\.full\\.db", replacement = "")
-        #RSQLite::dbGetQuery(conn, "SELECT distinct * FROM pathways limit 10;")
-        gset <- RSQLite::dbGetQuery(conn,"SELECT DISTINCT c.baseformula AS cpd,
-                                    p.name as name
-                                    FROM pathways p
-                                    JOIN base c
-                                    ON c.pathway = p.identifier 
-                                    ")
-        RSQLite::dbDisconnect(conn)
-        # --- returny ---
-        gset$name <- paste(gset$name, " (", dbname, ")", sep="")
-        gset
-      })
-      shiny::setProgress(session=session, value= 0.33)
-      # --- only anova top 100 for now ---
-      used.analysis <- input$enrich_stats
-      if(used.analysis == "rf"){
-        ranking <- vip.score[accuracyDrop > 0,]
-        ranking <- ranking[order(-accuracyDrop),]
-        vec <- ranking$accuracyDrop
-        names(vec) <- ranking$rn
-        sigvals <- switch(input$enrich_vals,
-                          sig=vec[1:500],
-                          t50=vec[1:50],
-                          t100=vec[1:100],
-                          t200=vec[1:200],
-                          t500=vec[1:500]
-        )
-      }else{
-        stat.tab <- switch(input$enrich_stats,
-                           tt="p.value",
-                           aov="p.value",
-                           fc="fc.all")
-        sigvals <- switch(input$enrich_vals,
-                          sig=mSet$analSet[[used.analysis]][[stat.tab]][mSet$analSet[[used.analysis]]$inx.imp],
-                          t50=sort(mSet$analSet[[used.analysis]][[stat.tab]])[1:50],
-                          t100=sort(mSet$analSet[[used.analysis]][[stat.tab]])[1:100],
-                          t200=sort(mSet$analSet[[used.analysis]][[stat.tab]])[1:200],
-                          t500=sort(mSet$analSet[[used.analysis]][[stat.tab]])[1:500]
-        )        
+  lapply(c("browse", "hits"), function(prefix){
+    observeEvent(input$browse_tab_rows_selected,{
+      curr_row <<- input[[paste0(prefix, "_tab_rows_selected")]]
+      curr_cpd <- browse_table[curr_row, Formula]
+      if (is.null(curr_row)) return()
+      # -----------------------------
+      curr_def <<- browse_table[curr_row, switch(prefix, browse='Description', hits="mzmed.pgrp")]
+      if(prefix == "browse"){
+        output$browse_definition <- renderText(curr_def$Description)
       }
-      
-      # -----------------------
-      gset <- rbindlist(all_pathways)
-      gset_proc <<- piano::loadGSC(gset)
-      shiny::setProgress(session=session, value= 0.66)
-      
-      # - - - - - - 
-      
-      sigvals <- rownames(lasnet_tables[[1]])
-      matches <- rbindlist(lapply(sigvals, function(mz){
-        subtables <- lapply(enrich_db_list, function(db){
-          matches = get_matches(mz, db, F, "mz")
-        }) 
-        tab <- rbindlist(subtables)
-        tab$mz = c(mz)
-        tab
-      }))
-      
-      lasnet_vals <- lasnet_tables[[1]]
-      lasnet_vals$mz <- rownames(lasnet_vals)
-      matches <- merge(matches, lasnet_vals, by = "mz")
-      sigvals <- unique(matches[, c("Baseformula", "beta")])
-      
-      # - - - - - -
-      
-      gsaRes <<- piano::runGSA(sigvals, 
-                               gsc = gset_proc)
-      enrich_tab <<- piano::GSAsummaryTable(gsaRes)[,1:3]
-      # --- render ---
-      output$enriched <- DT::renderDataTable({
-        # -------------
-        DT::datatable(enrich_tab, 
-                      selection = 'single',
-                      autoHideNavigation = T,
-                      options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-        
-      })
-      shiny::setProgress(session=session, value= 1)
+      #TODO: this should be a function and not re-written
+      output$meba_specific_plot <- plotly::renderPlotly({ggplotMeba(curr_cpd, draw.average=T, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+      output$asca_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+      output$fc_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+      output$tt_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+      output$aov_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
+      output$plsda_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
     })
   })
+
+  # triggers on clicking the 'go' button on the enrichment analysis pane
+  # observeEvent(input$go_enrich,{
+  #   #TODO: fix, currently broken (build in m/z > cpd search?)
+  #   enrich_path_list <- paste0("./backend/db/", c("kegg", 
+  #                                               "wikipathways", 
+  #                                               "smpdb",
+  #                                               "metacyc"), ".full.db")
+  #   withProgress({
+  #     all_pathways <- lapply(db_enrich_list, FUN=function(db){
+  #       conn <- RSQLite::dbConnect(RSQLite::SQLite(), db) # change this to proper var later
+  #       dbname <- gsub(basename(db), pattern = "\\.full\\.db", replacement = "")
+  #       #RSQLite::dbGetQuery(conn, "SELECT distinct * FROM pathways limit 10;")
+  #       gset <- RSQLite::dbGetQuery(conn,"SELECT DISTINCT c.baseformula AS cpd,
+  #                                   p.name as name
+  #                                   FROM pathways p
+  #                                   JOIN base c
+  #                                   ON c.pathway = p.identifier 
+  #                                   ")
+  #       RSQLite::dbDisconnect(conn)
+  #       # --- returny ---
+  #       gset$name <- paste(gset$name, " (", dbname, ")", sep="")
+  #       gset
+  #     })
+  #     shiny::setProgress(session=session, value= 0.33)
+  #     # --- only anova top 100 for now ---
+  #     used.analysis <- input$enrich_stats
+  #     if(used.analysis == "rf"){
+  #       ranking <- vip.score[accuracyDrop > 0,]
+  #       ranking <- ranking[order(-accuracyDrop),]
+  #       vec <- ranking$accuracyDrop
+  #       names(vec) <- ranking$rn
+  #       sigvals <- switch(input$enrich_vals,
+  #                         sig=vec[1:500],
+  #                         t50=vec[1:50],
+  #                         t100=vec[1:100],
+  #                         t200=vec[1:200],
+  #                         t500=vec[1:500]
+  #       )
+  #     }else{
+  #       stat.tab <- switch(input$enrich_stats,
+  #                          tt="p.value",
+  #                          aov="p.value",
+  #                          fc="fc.all")
+  #       sigvals <- switch(input$enrich_vals,
+  #                         sig=mSet$analSet[[used.analysis]][[stat.tab]][mSet$analSet[[used.analysis]]$inx.imp],
+  #                         t50=sort(mSet$analSet[[used.analysis]][[stat.tab]])[1:50],
+  #                         t100=sort(mSet$analSet[[used.analysis]][[stat.tab]])[1:100],
+  #                         t200=sort(mSet$analSet[[used.analysis]][[stat.tab]])[1:200],
+  #                         t500=sort(mSet$analSet[[used.analysis]][[stat.tab]])[1:500]
+  #       )        
+  #     }
+  #     
+  #     # -----------------------
+  #     gset <- rbindlist(all_pathways)
+  #     gset_proc <<- piano::loadGSC(gset)
+  #     shiny::setProgress(session=session, value= 0.66)
+  #     
+  #     # - - - - - - 
+  #     
+  #     sigvals <- rownames(lasnet_tables[[1]])
+  #     matches <- rbindlist(lapply(sigvals, function(mz){
+  #       subtables <- lapply(db_enrich_list, function(db){
+  #         matches = get_matches(mz, db, F, "mz")
+  #       }) 
+  #       tab <- rbindlist(subtables)
+  #       tab$mz = c(mz)
+  #       tab
+  #     }))
+  #     
+  #     lasnet_vals <- lasnet_tables[[1]]
+  #     lasnet_vals$mz <- rownames(lasnet_vals)
+  #     matches <- merge(matches, lasnet_vals, by = "mz")
+  #     sigvals <- unique(matches[, c("Baseformula", "beta")])
+  #     
+  #     # - - - - - -
+  #     
+  #     gsaRes <<- piano::runGSA(sigvals, 
+  #                              gsc = gset_proc)
+  #     enrich_tab <<- piano::GSAsummaryTable(gsaRes)[,1:3]
+  #     # --- render ---
+  #     output$enriched <- DT::renderDataTable({
+  #       # -------------
+  #       DT::datatable(enrich_tab, 
+  #                     selection = 'single',
+  #                     autoHideNavigation = T,
+  #                     options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+  #       
+  #     })
+  #     shiny::setProgress(session=session, value= 1)
+  #   })
+  # })
   
-  
-  # === META ANALYSIS ===
-  
-  # --- combine tab ---
-  
+  # triggers on changing the members of the venn diagram analysis selection
   observeEvent(input$venn_members, {
-    
     if("ls" %in% input$venn_members | "rf" %in% input$venn_members | "plsda" %in% input$venn_members){
       uiElements <- lapply(intersect(c("rf", "ls", "plsda"), input$venn_members), function(name){
-        options <- switch(name,
+        options <- switch(name, # get options for subdatasets
                           tt = NULL,
                           fc = NULL,
                           ls = names(mSet$analSet$ml$ls),
                           rf = names(mSet$analSet$ml$rf),
                           volc = NULL,
-                          plsda = c("PC1", "PC2", "PC3"))
-        
+                          plsda = c("PC1", "PC2", "PC3")) 
         shorthand = switch(name,
                            ls = "lasso",
                            rf = "random forest",
                            plsda = "PLSDA")
+        # generate dropdown menu to pick your subdataset of choice
         selectInput(inputId = paste0(name,"_choice"), 
                     label = gsubfn::fn$paste("Which $shorthand group(s):"), 
                     multiple=TRUE,
                     choices = options)
       })
-      
+      # render this dropdown menu in UI
       output$venn_ml_ui <- renderUI({uiElements})
     }else{
+      # otherwise render an empty space (if not using plsda or machine learning)
       output$venn_ml_ui <- renderUI({br()})
     }
   })
   
+  # triggers on clicking the 'go' button on the venn diagram sidebar panel
   observeEvent(input$build_venn, {
     
-    # - - - cats - - -
-    
+    # get user input for how many top values to use for venn
     top = input$venn_tophits
     
+    # pick which analyses are included
     categories <- input$venn_members
     
-    #top = 200
-    #categories = c("tt", "fc")
-    
+    # go through the to include analyses
     tables <- lapply(categories, function(name){
-      
+      # fetch involved mz values 
       tbls <- switch(name,
                      tt = list(rownames(mSet$analSet$tt$sig.mat[order(mSet$analSet$tt$sig.mat[,2], decreasing = F),])),
                      fc = list(rownames(mSet$analSet$fc$sig.mat[order(abs(mSet$analSet$fc$sig.mat[,2]), decreasing = F),])),
                      ls = {
-                       tbls_ls <- lapply(input$ls_choice, function(name){
+                       tbls_ls <- lapply(input$ls_choice, function(name){ # which lasso subset?
                          mSet$analSet$ml$ls[[name]]$tophits[order(mSet$analSet$ml$ls[[name]]$tophits$count, decreasing = T),]$mz})
                        names(tbls_ls) <- input$ls_choice
                        # - - - 
                        tbls_ls
                      },
                      rf = {
-                       tbls_rf <- lapply(input$rf_choice, function(name){
+                       tbls_rf <- lapply(input$rf_choice, function(name){ # which random forest subset?
                          mSet$analSet$ml$rf[[name]]$tophits[order(mSet$analSet$ml$rf[[name]]$tophits$mda, decreasing = T),]$mz})
                        names(tbls_rf) <- input$rf_choice
                        # - - -
                        tbls_rf
                      },
                      plsda = {
-                       tbls_plsda <- lapply(input$plsda_choice, function(name){
+                       tbls_plsda <- lapply(input$plsda_choice, function(name){ # which PC to use? (usually PC1 for PLS-DA)
                          compounds_pc <- as.data.table(mSet$analSet$plsda$vip.mat,keep.rownames = T)
                          colnames(compounds_pc) <- c("rn", paste0("PC", 1:(ncol(compounds_pc)-1)))
                          ordered_pc <- setorderv(compounds_pc, name, -1)
@@ -2439,10 +2392,9 @@ shinyServer(function(input, output, session) {
                        tbls_plsda
                      },
                      volc = list(rownames(mSet$analSet$volcano$sig.mat)))
+      # TODO: include PCA here too?
       
-      # - - - - - - - 
-      # FIX NAMES!!!
-      
+      # user specified top hits only
       tbls_top <- lapply(tbls, function(tbl){
         if(length(tbl) < top){
           tbl
@@ -2450,69 +2402,76 @@ shinyServer(function(input, output, session) {
           tbl[1:top]
         }
       })
-      
-      # - - return - -
       tbls_top
     })
     
+    # rename the list to the used analyses
     names(tables) <- categories
-    # - - unlist - -
     
+    # unnest the nested lists
     flattened <<- flattenlist(tables)
+    
+    #rename and remove regex-y names
     names(flattened) <<- gsub(x = names(flattened), pattern = "(.*\\.)(.*$)", replacement = "\\2")
     
+    # how many circles need to be plotted? (# of included analysis)
     circles = length(flattened)
     
-    # - - - - - - --
     
-    # TODO
-    # Hypergeometric testing?
-    # SO : 'Calculate venn diagram hypergeometric p value using R'
-    
+    # generate the initial plot - the POLYGONS
     venn.plot <- VennDiagram::venn.diagram(x = flattened,
                                            filename = NULL)
     
-    # - - - - - - - - -
-    
+    # split the plots into its individual elements
     items <- strsplit(as.character(venn.plot), split = ",")[[1]]
     
+    # get which are circles
     circ_values <<- data.frame(
       id = 1:length(grep(items, pattern="polygon"))
       #,value = c(3, 3.1, 3.1, 3.2, 3.15, 3.5)
     )
     
+    # get which are text
     txt_values <- data.frame(
       id = grep(items, pattern="text"),
       value = unlist(lapply(grep(items, pattern="text"), function(i) venn.plot[[i]]$label))
     )
     
+    # TODO: figure out what i did here again...
     txt_values$value <- gsub(x = txt_values$value, pattern = "(.*\\.)(.*$)", replacement = "\\2")
     categories <- c(categories, input$rf_choice, input$ls_choice, input$plsda_choice)
     
+    # get x and y values for circles
     x_c = unlist(lapply(grep(items, pattern="polygon"), function(i) venn.plot[[i]]$x))
     y_c = unlist(lapply(grep(items, pattern="polygon"), function(i) venn.plot[[i]]$y))
     
+    # get x and y values for text
     x_t = unlist(lapply(grep(items, pattern="text"), function(i) venn.plot[[i]]$x))
     y_t = unlist(lapply(grep(items, pattern="text"), function(i)venn.plot[[i]]$y))
     
+    # table with positions and ids for circles
     positions_c <- data.frame(
       id = rep(circ_values$id, each = length(x_c)/length(circ_values$id)),
       x = x_c,
       y = y_c
     )
     
+    # table with positions and ids for text
     positions_t <- data.frame(
       id = rep(txt_values$id, each = length(x_t)/length(txt_values$id)),
       x = x_t,
       y = y_t
     )
     
+    # merge them together for use in ggplot
     datapoly <- merge(circ_values, positions_c, by=c("id"))
     datatxt <- merge(txt_values, positions_t, by=c("id"))
     
+    # make sure only the wanted analyses are in there
     numbers <- datatxt[!(datatxt$value %in% names(flattened)),]
     headers <- datatxt[(datatxt$value %in% names(flattened)),]
     
+    # move numbers slightly if there are only 2 circles
     if(circles == 2){
       occur <- table(numbers$y)
       newy <- names(occur[occur == max(occur)])
@@ -2520,6 +2479,7 @@ shinyServer(function(input, output, session) {
       numbers$y <- as.numeric(c(newy))
     }
     
+    # generate plot with ggplot
     p <- ggplot(datapoly, 
                 aes(x = x, 
                     y = y)) + geom_polygon(colour="black", alpha=0.5, aes(fill=id, group=id)) +
@@ -2530,25 +2490,29 @@ shinyServer(function(input, output, session) {
       scale_fill_gradientn(colours = global$functions$color.functions[[getOptions("user_options.txt")$gspec]](circles)) +
       coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
     
-    
+    # render plot in UI
     output$venn_plot <- plotly::renderPlotly({
       
       ggplotly(p, tooltip = "label")
-      #%>% layout(plot_bgcolor='transparent')
-      #%>% layout(paper_bgcolor='transparent')
+      #%>% layout(plot_bgcolor='transparent') # attempts at making background transparant
+      #%>% layout(paper_bgcolor='transparent') # attempts at making background transparant
     
       })
+    # update the selectize input that the user can use to find which hits are intersecting
+    # TODO: ideally, this happens on click but its hard...
     updateSelectizeInput(session, "intersect_venn", choices = names(flattened))
   })
   
+  # triggers when users pick which intersecting hits they want
   observeEvent(input$intersect_venn, {
 
     if(length(input$intersect_venn) > 1){
-      venn_overlap <<- Reduce("intersect", lapply(input$intersect_venn, function(x){
+      venn_overlap <<- Reduce("intersect", lapply(input$intersect_venn, function(x){ # get the intersecting hits for the wanted tables
         flattened[[x]]
       })
       )
     }
+    # render table for UI
     output$venn_tab <- DT::renderDataTable({
       # -------------
       DT::datatable(data.table(mz = venn_overlap), 
@@ -2558,17 +2522,20 @@ shinyServer(function(input, output, session) {
     })
   })
   
+  # toggles when the venn diagram overlap tab is clicked
+  # TODO: move to the main table observer generator waaaaay up
   observeEvent(input$venn_tab_rows_selected, {
-    curr_cpd <<- venn_overlap[input$venn_tab_rows_selected]
-    output$curr_cpd <- renderText(curr_cpd)
+    curr_cpd <<- venn_overlap[input$venn_tab_rows_selected] # set current compound to the clicked one
+    output$curr_cpd <- renderText(curr_cpd) # render text in sidebar
   })
   
   
   
-  # - - ON CLOSE - -
-  
+  # this SHOULD trigger on closing the app
   observe({
-    if (input$nav_general == "stop"){
+    if (input$nav_general == "stop"){ # if on the 'close' tab...
+      # interrupt and ask if you're sure 
+      # TODO: save prompt here too
       shinyalert::shinyalert(title = "Question", 
                              text = "Do you want to close metaboShiny?", 
                              type = "warning",
@@ -2579,11 +2546,11 @@ shinyServer(function(input, output, session) {
                              confirmButtonText = "Yes",
                              callbackR = function(x) {if(x == TRUE){
                                print("closing metaboShiny ~ヾ(＾∇＾)")
-                               if(any(!is.na(session_cl))) parallel::stopCluster(session_cl)
-                               R.utils::gcDLLs() # flush dlls
+                               if(any(!is.na(session_cl))) parallel::stopCluster(session_cl) # close parallel threads
+                               R.utils::gcDLLs() # flush dlls 
                                stopApp() 
                              }else{
-                               NULL
+                               NULL # if not, do nothing
                              }})
     }
   })

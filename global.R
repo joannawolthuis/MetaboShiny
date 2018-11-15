@@ -109,12 +109,12 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                              "openxlsx", "doParallel", "missForest", "InterpretMSSpectrum"
                                              ), # these packages are listed in the first tab and should include all necessary packages
                                 images = list(list(name = 'cute_package', path = 'www/cat.png', dimensions = c(80, 80)),
-                                                list(name = 'umc_logo_int', path = 'www/umcinternal.png', dimensions = c(120, 120)),
-                                                list(name = 'umc_logo_noise', path = 'www/umcnoise.png', dimensions = c(120, 120)),
+                                                list(name = 'internal_logo', path = 'www/umcinternal.png', dimensions = c(120, 120)),
+                                                list(name = 'noise_logo', path = 'www/umcnoise.png', dimensions = c(120, 120)),
                                                 list(name = 'hmdb_logo', path = 'www/hmdblogo.png', dimensions = c(150, 100)),
                                                 list(name = 'metacyc_logo', path = 'www/metacyc.png', dimensions = c(300, 80)),
                                                 list(name = 'chebi_logo', path = 'www/chebilogo.png', dimensions = c(140, 140)),
-                                                list(name = 'wikipath_logo', path = 'www/wikipathways.png', dimensions = c(130, 150)),
+                                                list(name = 'wikipathways_logo', path = 'www/wikipathways.png', dimensions = c(130, 150)),
                                                 list(name = 'kegg_logo', path = 'www/kegglogo.gif', dimensions = c(200, 150)),
                                                 list(name = 'pubchem_logo', path = 'www/pubchemlogo.png', dimensions = c(145, 90)),
                                                 list(name = 'smpdb_logo', path = 'www/smpdb_logo_adj.png', dimensions = c(200, 160)),

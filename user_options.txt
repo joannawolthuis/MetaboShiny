@@ -1,13 +1,13 @@
 db_dir = /Users/jwolthuis/Google Drive/MetaboShiny/backend/db
 work_dir = /Users/jwolthuis/Analysis/SP
-proj_name = URINE_LUNGCANCER
+proj_name = CHICKENS_OCT18
 ppm = 2
 packages_installed = Y
 font1 = Mali
 font2 = Mali
 font3 = Open Sans
 font4 = Open Sans
-col1 = #00F008
+col1 = #00C6F2
 col2 = #DBDBDB
 col3 = #FFFFFF
 col4 = #FFFFFF
