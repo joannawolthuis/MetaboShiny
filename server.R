@@ -1268,35 +1268,38 @@ shinyServer(function(input, output, session) {
       output$samp4 <- renderPlot(sampNormPlots$br)
       shiny::setProgress(session=session, value= .8)
       
+	  # save the used adducts to mSet
       mSet$dataSet$adducts <<- selected_adduct_list
       shiny::setProgress(session=session, value= .9)
       
     })
   })
   
-  # MAIN EXECUTION OF ANALYSES
-  
+  # triggered when user enters the statistics tab
   observeEvent(input$statistics, {
     
+	# check if we're in the right tab, otherwise abort
     if(input$nav_general != "analysis") return(NULL)
     
+	# check if an mset is present, otherwise abort
     if(!exists("mSet")) return(NULL)
     
-    # get excel table stuff.
+    # depending on the present tab, perform analyses accordingly
     switch(input$statistics,
            pca = {
-             if(!"pca" %in% names(mSet$analSet)){
+             if(!"pca" %in% names(mSet$analSet)){ # if PCA already has been done, don't redo it
                withProgress({
-                 mSet <<- PCA.Anal(mSet)
+                 mSet <<- PCA.Anal(mSet) # perform PCA analysis
                })
              }
-             datamanager$reload <- "pca"
+             datamanager$reload <- "pca" # reload pca plots
              },
            meba = {
-             if("MB" %not in% names(mSet$analSet)){
-               mSet <<- performMB(mSet, 10)
+             if("MB" %not in% names(mSet$analSet)){ # if already done, don't redo
+               mSet <<- performMB(mSet, 10) # perform MEBA analysis
              }
-             output$meba_tab <-DT::renderDataTable({
+			 # render results table for UI
+             output$meba_tab <-DT::renderDataTable({ 
                # -------------
                DT::datatable(mSet$analSet$MB$stats, 
                              selection = 'single',
@@ -1306,11 +1309,12 @@ shinyServer(function(input, output, session) {
              })
            },
            asca = {
-             if("asca" %not in% names(mSet$analSet)){
+             if("asca" %not in% names(mSet$analSet)){ # if already done, don't redo
+			   # perform asca analysis
                mSet <<- Perform.ASCA(mSet, 1, 1, 2, 2)
                mSet <<- CalculateImpVarCutoff(mSet, 0.05, 0.9)
              }
-             output$asca_tab <-DT::renderDataTable({
+             output$asca_tab <-DT::renderDataTable({ # render results table for UI
                # -------------
                DT::datatable(mSet$analSet$asca$sig.list$Model.ab, 
                              selection = 'single',
@@ -1324,9 +1328,12 @@ shinyServer(function(input, output, session) {
              
              withProgress({
                
+			   # rendering within output object, so it reloads when changing colours etc.
                output$heatmap <- plotly::renderPlotly({
                  
-                 if(interface$mode == "bivar"){
+				 # change top hits used in heatmap depending on time series / bivariate / multivariate mode
+				 # reordering of hits according to most significant at the top
+                 if(interface$mode == "bivar"){ 
                    if(input$heatmode){
                      tbl = as.data.frame(mSet$analSet$tt$sig.mat)
                      used.values <- "p.value"
@@ -1352,48 +1359,58 @@ shinyServer(function(input, output, session) {
                    decreasing = T
                  }
                  
+				 # check top x used (slider bar in UI), if more than total matches use total matches
                  topn = if(length(tbl[[used.values]]) < input$heatmap_topn) length(tbl[[used.values]]) else input$heatmap_topn
-                 
                  mzorder <- order(tbl[[used.values]], decreasing = decreasing)
                  mzsel <- rownames(tbl)[mzorder][1:topn]
                  
+				 # reorder matrix used
                  x <- mSet$dataSet$norm[,mzsel]
-                 final_matrix <<- t(x)
+                 final_matrix <<- t(x) # transpose so samples are in columns
                  
+				 # check if the sample order is correct - mSet$..$ norm needs to match the matrix
                  sample_order <- match(colnames(final_matrix), rownames(mSet$dataSet$norm))
                  
-                 if(timebutton$status == "on"){
+                 if(timebutton$status == "on"){ # check if time series
                    if(input$timecourse_trigger){
+					 # create convenient table with the ncessary info
                      translator <- data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],Group=mSet$dataSet$exp.fac[sample_order], Time=mSet$dataSet$time.fac[sample_order])
                      hmap.lvls <- c(levels(mSet$dataSet$exp.fac), levels(mSet$dataSet$time.fac))
 
+					 # reorder first by time, then by sample
                      split.translator <- split(translator, by = c("Time"))
                      split.translator.ordered <- lapply(split.translator, function(tbl) tbl[order(tbl$Group)])
                      translator <- rbindlist(split.translator.ordered)
                      
+					 # ensure correct sample order
                      final_matrix <<- final_matrix[,match(translator$Sample, colnames(final_matrix))]
                      
+					 # disable automatic ordering of samples through clustering
                      my_order=F
                      
                    }else{
+					 # no complicated reordering necessary
                      translator <- data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],Group=mSet$dataSet$cls[sample_order])
                      hmap.lvls <- levels(mSet$dataSet$cls)
-                     my_order = T
+                     my_order = T # enable sorting through dendrogram
                    }
                  }else{
+				   # no complicated reordering necessary
                    translator <- data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],Group=mSet$dataSet$cls[sample_order])
                    hmap.lvls <- levels(mSet$dataSet$cls)
-                   my_order = T
+                   my_order = T # enable sorting through dendrogram
                  } 
 
+				 # create name - to - color mapping vector for the plotting functions
                  color.mapper <- {
                   classes <- hmap.lvls
-                  cols <- sapply(1:length(classes), function(i) global$vectors$mycols[i])
+                  cols <- sapply(1:length(classes), function(i) global$vectors$mycols[i]) # use user-defined colours
                   names(cols) <- classes
                   # - - -
                   cols
                  }
                 
+				 # create heatmap object :- )
                  hmap <- heatmaply::heatmaply(final_matrix,
                                               Colv=my_order, 
                                               Rowv=T,
@@ -1411,6 +1428,7 @@ shinyServer(function(input, output, session) {
                                               #label_names = c("m/z", "sample", "intensity") #breaks side colours
                  )
                  
+				 # save the order of mzs for later clicking functionality
                  hmap_mzs <<- hmap$x$layout$yaxis3$ticktext
                  
                  # - - 
@@ -1421,19 +1439,21 @@ shinyServer(function(input, output, session) {
              })
            },
            tt = {
-             if(!"tt" %in% names(mSet$analSet)){
+             if(!"tt" %in% names(mSet$analSet)){ # if already done, don't redo
                withProgress({
                  mSet <<- Ttests.Anal(mSet,
                                       nonpar = FALSE, 
-                                      threshp = 0.05, 
+                                      threshp = 0.05, # TODO: make the threshold user defined...
                                       paired = FALSE,
                                       equal.var = TRUE
                                       #  multicorr = "BH"
                  )
                })
              }
-             res <<- mSet$analSet$tt$sig.mat
+			 # save results to table
+             res <<- mSet$analSet$tt$sig.mat 
              if(is.null(res)) res <<- data.table("No significant hits found")
+			 # render results table for UI
              output$tt_tab <-DT::renderDataTable({
                # -------------
                DT::datatable(res, 
@@ -1442,21 +1462,25 @@ shinyServer(function(input, output, session) {
                              options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
                
              })
+			 # render manhattan-like plot for UI
              output$tt_overview_plot <- plotly::renderPlotly({
                # --- ggplot ---
                ggPlotTT(global$functions$color.functions[[getOptions("user_options.txt")$gspec]], 20)
              })
            },
            fc = {
-             if(!"fc" %in% names(mSet$analSet)){
+             if(!"fc" %in% names(mSet$analSet)){ # if already done, don't redo
                withProgress({
                  mSet <<- FC.Anal.unpaired(mSet,
-                                           2.0, 
+                                           2.0, # TODO: make this threshold user defined
                                            1)                 
                })
              }
-             res <<- mSet$analSet$fc$sig.mat
+			 # save results table
+             res <<- mSet$analSet$fc$sig.mat 
+			 # if none found, give the below table...
              if(is.null(res)) res <<- data.table("No significant hits found")
+			 # render result table for UI
              output$fc_tab <-DT::renderDataTable({
                # -------------
                DT::datatable(res, 
@@ -1465,16 +1489,17 @@ shinyServer(function(input, output, session) {
                              options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
                
              })
+			 # render manhattan-like plot for UI
              output$fc_overview_plot <- plotly::renderPlotly({
                # --- ggplot ---
                ggPlotFC(global$functions$color.functions[[getOptions("user_options.txt")$gspec]], 20)
              })
            },
            aov = {
-             if(!"aov" %in% names(mSet$analSet)){
+             if(!"aov" %in% names(mSet$analSet)){ # if done, don't redo
                withProgress({
-                 mSet <<- ANOVA.Anal(mSet, thresh=0.05,nonpar = F)
-               # TODO: Fix ANOVA2
+                 mSet <<- ANOVA.Anal(mSet, thresh=0.05,nonpar = F) # TODO: make threshold user-defined
+               # TODO: Fix ANOVA2, this works for time series data!! error likely due to something missing in conversion from stat -> time mode
                # mSet <<- ifelse(timebutton_trigger,
                #                 {mSet$dataSet$facA <- mSet$dataSet$exp.fac;
                #                  mSet$dataSet$facB <- mSet$dataSet$time.fac;
@@ -1483,12 +1508,8 @@ shinyServer(function(input, output, session) {
                #                 ANOVA.Anal(mSet, thresh=0.05,nonpar = F))
                })
              }
-    
+			 # render results table for UI
              output$aov_tab <-DT::renderDataTable({
-              
-               #mSet$analSet$aov$sig.mat
-               
-               # -------------
                DT::datatable(if(is.null(mSet$analSet$aov$sig.mat)) data.table("No significant hits found") else mSet$analSet$aov$sig.mat, 
                              selection = 'single',
                              autoHideNavigation = T,
@@ -1497,11 +1518,12 @@ shinyServer(function(input, output, session) {
              })
            },
            volc = {
-             if(!"volc" %in% names(mSet$analSet)){
+             if(!"volc" %in% names(mSet$analSet)){ # if done, don't redo
                withProgress({
-                 mSet <<- Volcano.Anal(mSet,FALSE, 2.0, 0, 0.75,F, 0.1, TRUE, "raw")
+                 mSet <<- Volcano.Anal(mSet,FALSE, 2.0, 0, 0.75,F, 0.1, TRUE, "raw") # TODO: make thresholds user-defined
                })
              }
+			 # render results table (currently not visible...)
              output$volc_tab <-DT::renderDataTable({
                # -------------
                DT::datatable(mSet$analSet$volc$sig.mat, 
@@ -1510,6 +1532,7 @@ shinyServer(function(input, output, session) {
                              options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
                
              })
+			 # render volcano plot with user defined colours
              output$volc_plot <- plotly::renderPlotly({
                # --- ggplot ---
                ggPlotVolc(global$functions$color.functions[[getOptions("user_options.txt")$gspec]], 20)
@@ -1518,31 +1541,34 @@ shinyServer(function(input, output, session) {
     )
   })
   
+  # triggers when the 'go' button is pressed on the PLS-DA tab
   observeEvent(input$do_plsda, {
     
-    library(e1071)
+    require(e1071)
     
+	# depending on type, do something else
+	# TODO: enable sparse and orthogonal PLS-DA
     switch(input$plsda_type,
            normal={
                require(caret)
-               mSet <<- PLSR.Anal(mSet)
-               mSet <<- PLSDA.CV(mSet, methodName=if(nrow(mSet$dataSet$norm) < 50) "L" else "T",compNum = 3)
-               mSet <<- PLSDA.Permut(mSet,num = 300, type = "accu")
+               mSet <<- PLSR.Anal(mSet) # perform pls regression
+               mSet <<- PLSDA.CV(mSet, methodName=if(nrow(mSet$dataSet$norm) < 50) "L" else "T",compNum = 3) # cross validate
+               mSet <<- PLSDA.Permut(mSet,num = 300, type = "accu") # permute
                })
+	# reload pls-da plots
     datamanager$reload <- "plsda"
   })
   
   # preload pca/plsda
-  
   observe({
-    
     if(is.null(datamanager$reload)){
-      NULL
+      NULL # if not reloading anything, nevermind
     }else{
      switch(datamanager$reload,
             "pca" = {
               if("pca" %in% names(mSet$analSet)){
-                
+                # create PCA legend plot
+				# TODO: re-enable this plot, it was clickable so you could filter out certain groups
                output$pca_legend <- plotly::renderPlotly({
                 frame <- data.table(x = c(1), 
                                     y = fac.lvls)
@@ -1558,7 +1584,7 @@ shinyServer(function(input, output, session) {
                 # --- return ---
                 ggplotly(p, tooltip = NULL) %>% config(displayModeBar = F)
               })
-              # ==============
+			  # render PCA variance per PC table for UI
               output$pca_tab <-DT::renderDataTable({
                 pca.table <- as.data.table(round(mSet$analSet$pca$variance * 100.00,
                                                  digits = 2),
@@ -1570,7 +1596,7 @@ shinyServer(function(input, output, session) {
                               autoHideNavigation = T,
                               options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
               })
-              
+              # render PCA loadings tab for UI
               output$pca_load_tab <-DT::renderDataTable({
                 pca.loadings <- mSet$analSet$pca$rotation[,c(input$pca_x,
                                                              input$pca_y,
@@ -1581,19 +1607,20 @@ shinyServer(function(input, output, session) {
                               autoHideNavigation = T,
                               options = list(lengthMenu = c(5, 10, 15), pageLength = 10))
               })
+			  # chekc which mode we're in
               mode <- if("timecourse_trigger" %in% names(input)){
-                if(input$timecourse_trigger){
-                  "ipca"
+                if(input$timecourse_trigger){ # if time series mode
+                  "ipca" # interactive PCA (old name, i like tpca more :P )
                 }else{
-                  "pca"
+                  "pca" # normal pca
                 } 
               }else{
                 "pca"
               }
               
               # - - - - -
-              if(input$pca_2d3d){
-                # 2d
+              if(input$pca_2d3d){ # check if switch button is in 2d or 3d mode
+                # render 2d plot
                 output$plot_pca <- plotly::renderPlotly({
                   plotPCA.2d(mSet, global$vectors$mycols,
                              pcx = input$pca_x,
@@ -1601,7 +1628,7 @@ shinyServer(function(input, output, session) {
                              shape.fac = input$second_var)
                 })
               }else{
-                # 3d
+                # render 3d plot
                 output$plot_pca <- plotly::renderPlotly({
                   plotPCA.3d(mSet, global$vectors$mycols,
                              pcx = input$pca_x,
@@ -1610,18 +1637,21 @@ shinyServer(function(input, output, session) {
                              shape.fac = input$second_var)
                 })
               }
-              }else{NULL}
+              }else{NULL} # do nothing
             },
             "plsda" = {
               
-              if("plsda" %in% names(mSet$analSet)){
+              if("plsda" %in% names(mSet$analSet)){ # if plsda has been performed...
                 
+			  # render cross validation plot
               output$plsda_cv_plot <- renderPlot({
                 ggPlotClass(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
               })
+			  # render permutation plot
               output$plsda_perm_plot <- renderPlot({
                 ggPlotPerm(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
               })
+			  # render table with variance per PC
               output$plsda_tab <- DT::renderDataTable({
                 # - - - -
                 plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar 
@@ -1637,6 +1667,7 @@ shinyServer(function(input, output, session) {
                               autoHideNavigation = T,
                               options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
               })
+			  # render table with PLS-DA loadings
               output$plsda_load_tab <-DT::renderDataTable({
                 plsda.loadings <- mSet$analSet$plsda$vip.mat
                 colnames(plsda.loadings) <- paste0("PC", c(1:ncol(plsda.loadings)))
@@ -1646,6 +1677,7 @@ shinyServer(function(input, output, session) {
                               autoHideNavigation = T,
                               options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
               })
+			  # see PCA - render 2d or 3d plots, just with plsda as mode instead
               if(input$plsda_2d3d){
                 # 2d
                 output$plot_plsda <- plotly::renderPlotly({
@@ -1667,52 +1699,49 @@ shinyServer(function(input, output, session) {
               }else{NULL}
             })
       # - - - - 
-      datamanager$reload <- NULL
+      datamanager$reload <- NULL # set reloading to 'off'
     }
   })
 
 
-  
+  # triggers if 'go' is pressed in the machine learning tab
   observeEvent(input$do_ml, {
-    
-    # do_ml, ml_attempts, ml_train_perc
-    
-    
-    # -- NOTE : CHECK IF AUC INCREASES W/ INCREASING TRAINING SET SIZE --- !!!!!!!!!!!!!!!!
-    # 'saturation point'
-    #switchButton(inputId = "ml_saturation", label = "SatMode", value = FALSE, col = "BW", type = "OO"),
-    
     withProgress({
       
       setProgress(value = 0)
-      # prepare matric
+      # prepare matrix
       
-      curr <- as.data.table(mSet$dataSet$preproc)
+	  # get base table to use for process
+      curr <- as.data.table(mSet$dataSet$preproc) # the filtered BUT NOT IMPUTED table, ML should be able to deal w/ missing values
       
+	  # replace NA's with zero
       curr[,(1:ncol(curr)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
       
+	  # conv to data frame
       curr <- as.data.frame(curr)
       rownames(curr) <- rownames(mSet$dataSet$preproc)
       
+	  # find the qc rows
       is.qc <- grepl("QC|qc", rownames(curr))
       curr <- curr[!is.qc,]
       
+	  # reorder according to covars table (will be used soon)
       order <- match(mSet$dataSet$covars$sample,rownames(curr))
 
-      config <- mSet$dataSet$covars[order, -"label"]
-      config <- cbind(config, label=mSet$dataSet$cls[order])
+	  # get covariates to add to the metabolite table
+      config <- mSet$dataSet$covars[order, -"label"] # reorder so both halves match up later
+      config <- cbind(config, label=mSet$dataSet$cls[order]) # add current experimental condition
       config <- config[,apply(!is.na(config), 2, any), with=FALSE]
       
-      # - - - filter out some stuff from config - - -
-      
-      # remove ones w/ every row being different
-      
+      # remove ones w/ every row being different(may be used to identify...)
       covariates <- lapply(1:ncol(config), function(i) as.factor(config[,..i][[1]]))
       names(covariates) <- colnames(config)
       
+	  # remove ones with na present
       has.na <- sapply(covariates, function(x) any(is.na(x)))
       has.all.unique <- sapply(covariates, function(x) length(unique(x)) == length(x))
       
+	  # rename the variable of interest to 0-1-2 etc.
       char.lbl <- as.character(covariates$label)
       uniques <- unique(char.lbl)
       uniques_new_name <- c(1:length(uniques))
@@ -1720,133 +1749,135 @@ shinyServer(function(input, output, session) {
       
       remapped.lbl <- uniques_new_name[char.lbl]
       
+	  # find which variables are covariant with label, they will be removed
       covariant.with.label <- sapply(covariates, function(x){
-        
-        # convert to something common ...
-        
         char.x <- as.character(x)
         uniques <- unique(char.x)
         uniques_new_name <- c(1:length(uniques))
         names(uniques_new_name) = uniques
         remapped.x = uniques_new_name[char.x]
-        
         res = if(length(remapped.x) == length(remapped.lbl)){
           all(remapped.x == remapped.lbl)
         }else{ FALSE }
-        
         res
-        # - - - - - - -
       })
       
+	  # now filter out unique, covariate and with missing columns from $covars
       keep_configs <- which(!(names(config) %in% names(config)[unique(c(which(has.na), which(has.all.unique), which(covariant.with.label)))]))
       keep_configs <- c(keep_configs, which(names(config) == "label"))
       
-      print("Removing covariates and unique columns. Keeping non-mz variables:")
-      print(names(config)[keep_configs])
+      #print("Removing covariates and unique columns. Keeping non-mz variables:")
+      #print(names(config)[keep_configs])
       
       config <- config[,..keep_configs,with=F]
       # - - - - - - - - - - - - - - - - - - - - - - -
       
+	  # join halves together, user variables and metabolite data
       curr <- cbind(config, curr)
       curr <- as.data.table(curr)
 
       # remove cols with all NA
-      
       curr <- curr[,colSums(is.na(curr))<nrow(curr), with=FALSE]
       
+	  # identify which columns are metabolites and which are config/covars
       configCols <- which(!(colnames(curr) %in% colnames(mSet$dataSet$norm)))
       mzCols <- which(colnames(curr) %in% colnames(mSet$dataSet$norm))
       
+	  # make the covars factors and the metabolites numeric.
       curr[,(configCols):= lapply(.SD, function(x) as.factor(x)), .SDcols = configCols]
       curr[,(mzCols):= lapply(.SD, function(x) as.numeric(x)), .SDcols = mzCols]
       
+	  # how many models will be built? user input
       goes = as.numeric(input$ml_attempts)
       
+	  # get results for the amount of attempts chosen
       repeats <- pbapply::pblapply(1:goes, function(i){
         
-        # train / test
-        #ml_train_regex=ml_test_regex=""
-        #ml_train_perc=.8
+        # get regex user input for filtering testing and training set
         ml_train_regex <<- input$ml_train_regex
         ml_test_regex <<- input$ml_test_regex
         
+		# get user training percentage
         ml_train_perc <- input$ml_train_perc/100
         
         if(ml_train_regex == "" & ml_test_regex == ""){ # BOTH ARE NOT DEFINED
-          test_idx = caret::createDataPartition(y = curr$label, p = ml_train_perc, list = FALSE)
-          train_idx = setdiff(1:nrow(curr), test_idx)
+          test_idx = caret::createDataPartition(y = curr$label, p = ml_train_perc, list = FALSE) # partition data in a balanced way (uses labels)
+          train_idx = setdiff(1:nrow(curr), test_idx) #use the other rows for testing
           inTrain = train_idx
           inTest = test_idx
         }else if(ml_train_regex != ""){ #ONLY TRAIN IS DEFINED
-          train_idx = grep(config$sample, pattern = ml_train_regex)
-          test_idx = setdiff(1:nrow(curr), train_idx)
-          reTrain <- caret::createDataPartition(y = config[train_idx, label], p = ml_train_perc)
+          train_idx = grep(config$sample, pattern = ml_train_regex) # get training sample ids with regex
+          test_idx = setdiff(1:nrow(curr), train_idx) # use the other rows for testing
+          reTrain <- caret::createDataPartition(y = config[train_idx, label], p = ml_train_perc) # take a user-defined percentage of the regexed training set
           inTrain <- train_idx[reTrain$Resample1]
           inTest = test_idx
         }else{ # ONLY TEST IS DEFINED
-          test_idx = grep(config$sample, pattern = ml_test_regex)
-          train_idx = setdiff(1:nrow(curr), test_idx)
-          reTrain <- caret::createDataPartition(y = config[train_idx, label], p = ml_train_perc)
-          inTrain <- train_idx[reTrain$Resample1]
-          
+          test_idx = grep(config$sample, pattern = ml_test_regex) # get training sample ids with regex
+          train_idx = setdiff(1:nrow(curr), test_idx) # use the other rows for testing
+          reTrain <- caret::createDataPartition(y = config[train_idx, label], p = ml_train_perc) # take a user-defined percentage of the regexed training set
+          inTrain <- train_idx[reTrain$Resample1] 
           inTest <- test_idx
         }
         
-        # - - divide - -
-        
+		# choose predictor "label" (some others are also included but cross validation will be done on this)
         predictor = "label"
         
+		# split training and testing data
         trainY <- curr[inTrain, 
                        ..predictor][[1]]
         testY <- curr[inTest,
                       ..predictor][[1]]
         
+		# remove predictive column from training set 
         remove.cols <- c("label") #TODO: make group column removed at start
         remove.idx <- which(colnames(curr) %in% remove.cols)
         training <- curr[inTrain,-remove.idx, with=FALSE]
         testing <- curr[inTest,-remove.idx, with=FALSE]
         
+		# get covar indices
         predIdx <- which(colnames(curr) %in% colnames(config))
-        
-        #trainX <- apply(training, 2, as.numeric)
-        #testX <- apply(testing, 2, as.numeric)
-        
+       
+        # remove unused levels in the factor part of the table after filtering
         training <- data.matrix(gdata::drop.levels(training))
         testing <- data.matrix(gdata::drop.levels(testing))
         
         setProgress(value = i/goes)
         
+		# train and cross validate model
         switch(input$ml_method,
-               rf = {
+               rf = { # random forest
                  model = randomForest::randomForest(x = training, 
                                                     y = trainY, 
-                                                    ntree = 500,
-                                                    importance=TRUE)
+                                                    ntree = 500, # amount of trees made TODO: make user choice
+                                                    importance=TRUE) # include variable importance in model
                  
                  prediction <- stats::predict(model, 
                                               testing, 
                                               "prob")[,2]
-                 
+                 # get importance table
                  importance = as.data.table(model$importance, keep.rownames = T)
                  rf_tab <- importance[which(MeanDecreaseAccuracy > 0), c("rn", "MeanDecreaseAccuracy")]
-                 rf_tab <- rf_tab[order(MeanDecreaseAccuracy, decreasing = T)]
+                 rf_tab <- rf_tab[order(MeanDecreaseAccuracy, decreasing = T)] # reorder for convenience
                  rf_tab <- data.frame(MDA = rf_tab$MeanDecreaseAccuracy, row.names = rf_tab$rn) 
+				 # return list with model, prediction on test data etc.
                  list(type="rf",
                       feats = as.data.table(rf_tab, keep.rownames = T), 
                       model = model,
                       prediction = prediction,
                       labels = testY)
                }, 
-               ls = {
-
+               ls = { # lasso
+				 # user x cross validation input
                  nfold = switch(input$ml_folds, 
                                 "5" = 5,
                                 "10" = 10,
                                 "20" = 20,
                                 "50" = 50,
-                                "LOOCV" = length(trainY))
-                 family = "binomial"
+                                "LOOCV" = length(trainY)) # leave one out CV
+								
+                 family = "binomial" #TODO: enable multinomial for multivariate data!!
                  
+				 # 
                  cv1 <- glmnet::cv.glmnet(training, trainY, family = family, type.measure = "auc", alpha = 1, keep = TRUE, nfolds=nfold)
                  cv2 <- data.frame(cvm = cv1$cvm[cv1$lambda == cv1[["lambda.min"]]], lambda = cv1[["lambda.min"]], alpha = 1)
                  
