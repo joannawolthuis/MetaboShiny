@@ -429,3 +429,52 @@ plot.mol = function(smi,
   # Return a list
   list(src = a)
 }
+
+# @export
+find.formulas <- function(mzvals, cl=FALSE, ppm=3, charge=1, element.counts = list(c("C",0,50),c("H",0,50),
+                                                                                   c("N",0,50),c("O",0,50),
+                                                                                   c("S",0,50),c("Na", 0, 5),
+                                                                                   c("Cl", 0, 5), c("P", 0,5))){
+  require(rcdk)
+  require(pbapply)
+  require(data.table)
+  # ------------------------------------------
+  found.rows <- pblapply(mzvals,cl=cl, function(mz){
+    window = mz * (ppm / 1e6)
+    # --- generate molecular formulae ---
+    found.mfs <- generate.formula(mz, window=0.3, element.counts, validation=TRUE, charge=charge)
+    rows <- if(length(found.mfs) == 0) NA else(
+      rows <- lapply(found.mfs, function(formula){
+        # --- check for ppm range ---
+        mz.found <- formula@mass
+        within.ppm <- abs(mz - mz.found) < window
+        if(within.ppm){
+          data.table(origMZ = mz,
+                     genMZ = mz.found,
+                     BaseFormula = formula@string)
+        } else(data.table(origMZ=mz, 
+                          genMZ=NA, 
+                          BaseFormula=NA))
+      })
+    )
+    # --- return ---
+    unique(rbindlist(rows[!is.na(rows)]))
+  })
+  rbindlist(found.rows[!is.na(found.rows)])
+}
+
+get.package.table <- function(){
+  status <- sapply(global$constants$packages, FUN=function(package){
+    if(package %in% rownames(installed.packages())) "Yes" else "No"
+  })
+  version <- sapply(global$constants$packages, FUN=function(package){
+    if(package %in% rownames(installed.packages())){packageDescription(package)$Version} else ""
+  })
+  result <-data.table(
+    Package = global$constants$packages,
+    Installed = status,
+    Version = version
+  )
+  # --- return ---
+  result
+}
