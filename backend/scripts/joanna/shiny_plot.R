@@ -1,36 +1,52 @@
 #' @export
+#' Plot a summary of metaboanalystR normalization results. Takes the total of 20 m/z values and 20 samples before and after normalization and plots that distribution.
+#' @param mSet input user mSet
+#' @param colmap character vector of colours used in plotting
+#' @param plot.theme function for ggplot theme used.
+#' @return list of four plots that fit in a 2x2 raster used in MetaboShiny.
 ggplotNormSummary <- function(mSet, colmap = global$vectors$mycols, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
-  # 4 by 4 plot, based on random 20-30 picked 
+  # load in original data (pre-normalization, post-filter)
   orig_data <- as.data.frame(mSet$dataSet$procr)
+  # load in normalized data
   norm_data <- as.data.frame(mSet$dataSet$norm)
 
+  # isolate which samples and mz values are available in both tables
   candidate.samps <- intersect(rownames(orig_data), rownames(norm_data))
   candidate.mzs <- intersect(colnames(orig_data), colnames(norm_data))
   
+  # at random, pick 20 compounds and 20 samples to plot data from
   sampsize = if(nrow(norm_data) > 20) 20 else nrow(norm_data)
   which_cpds <- sample(candidate.mzs, sampsize, replace = FALSE, prob = NULL)
   which_samps <- sample(candidate.samps, sampsize, replace = FALSE, prob = NULL)
   
+  # isolate these samples from original table and melt into long format (ggplot needs it!)
   orig_melt <- reshape2::melt(cbind(which_samps, orig_data[which_samps, which_cpds]))
-  orig_melt[is.na(orig_melt)] <- 0
+  orig_melt[is.na(orig_melt)] <- 0 # replace NA values with 0
   
+  # isolate these samples from normalized table and melt into long format
   norm_melt <- reshape2::melt(cbind(which_samps, norm_data[which_samps, which_cpds]))
 
+  # create base plot with base theme and font size for original data
   plot <- ggplot2::ggplot(data=orig_melt) +
     plot.theme(base_size = 15) #+ facet_grid(. ~ variable) 
   
+  # first result plot: is a density plot of chosen 20 mz values with 20 samples
   RES1 <- plot + ggplot2::geom_density(ggplot2::aes(x=value), colour="blue", fill="blue", alpha=0.4)
   
+  # second result plot: shows the spread of the intensities before normalization
   RES2 <- plot + ggplot2::geom_boxplot(
     ggplot2::aes(x=value,y=variable),
     color=rainbow(sampsize), 
     alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(orig_melt$value)))
   
+  # create base plot with base theme and font size for normalized data
   plot <- ggplot2::ggplot(data=norm_melt) +
     plot.theme(base_size = 15) #+ facet_grid(. ~ variable)
   
+  # third result plot: a density plot of chosen 20 mz values post normalization
   RES3 <- plot + ggplot2::geom_density(ggplot2::aes(x=value), colour="pink", fill="pink", alpha=0.4)
   
+  # fourth result plot: spread of intensities after normalization
   RES4 <- plot + ggplot2::geom_boxplot(
     ggplot2::aes(x=value,y=variable),
     color=rainbow(sampsize), 
@@ -41,6 +57,11 @@ ggplotNormSummary <- function(mSet, colmap = global$vectors$mycols, plot.theme =
   list(tl=RES1, bl=RES2, tr=RES3, br=RES4)
 } 
 
+#' @export
+#' Plot a summary of metaboanalystR normalization results. Takes the total of 20 samples before and after normalization and plots that distribution.
+#' @param mSet input user mSet
+#' @param plot.theme function for ggplot theme used.
+#' @return list of four plots that fit in a 2x2 raster used in MetaboShiny.
 ggplotSampleNormSummary <- function(mSet, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
   # 4 by 4 plot, based on random 20-30 picked 
   orig_data <- as.data.frame(mSet$dataSet$procr)
