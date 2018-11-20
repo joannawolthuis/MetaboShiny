@@ -4,7 +4,7 @@ options(stringsAsFactors = FALSE)
 if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
 ### Anything loaded in this GLOBAL file will be avaliable for metaboShiny in general. ###
- 
+
 # --- source neccessary libraries ---
 
 library(shiny)
@@ -107,30 +107,30 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                              "BatchCorrMetabolomics", "R.utils", "rgl", "glmnet", "TSPred", 
                                              "VennDiagram", "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR", 
                                              "openxlsx", "doParallel", "missForest", "InterpretMSSpectrum"
-                                             ), # these packages are listed in the first tab and should include all necessary packages
+                                ), # these packages are listed in the first tab and should include all necessary packages
                                 images = list(list(name = 'cute_package', path = 'www/cat.png', dimensions = c(80, 80)),
-                                                list(name = 'internal_logo', path = 'www/umcinternal.png', dimensions = c(120, 120)),
-                                                list(name = 'noise_logo', path = 'www/umcnoise.png', dimensions = c(120, 120)),
-                                                list(name = 'hmdb_logo', path = 'www/hmdblogo.png', dimensions = c(150, 100)),
-                                                list(name = 'metacyc_logo', path = 'www/metacyc.png', dimensions = c(300, 80)),
-                                                list(name = 'chebi_logo', path = 'www/chebilogo.png', dimensions = c(140, 140)),
-                                                list(name = 'wikipathways_logo', path = 'www/wikipathways.png', dimensions = c(130, 150)),
-                                                list(name = 'kegg_logo', path = 'www/kegglogo.gif', dimensions = c(200, 150)),
-                                                list(name = 'pubchem_logo', path = 'www/pubchemlogo.png', dimensions = c(145, 90)),
-                                                list(name = 'smpdb_logo', path = 'www/smpdb_logo_adj.png', dimensions = c(200, 160)),
-                                                list(name = 'dimedb_logo', path = 'www/dimedb_logo.png', dimensions = c(310, 120)),
-                                                list(name = 'wikidata_logo', path = 'www/wikidata.png', dimensions = c(250, 200)),
-                                                list(name = 'respect_logo', path = 'www/respect_logo.png', dimensions = c(250, 100)),
-                                                list(name = 'massbank_logo', path = 'www/massbank_logo.jpg', dimensions = c(250, 100)),
-                                                list(name = 'metabolights_logo', path = 'www/metabolights_logo.png', dimensions = c(200, 200)),
-                                                list(name = 'vmh_logo', path = 'www/vmh.png', dimensions = c(250, 200)),
-                                                list(name = 'pos_icon', path = 'www/handpos.png', dimensions = c(120, 120)),
-                                                list(name = 'neg_icon', path = 'www/handneg.png', dimensions = c(120, 120)),
-                                                list(name = 'excel_icon', path = 'www/excel.png', dimensions = c(120, 120)),
-                                                list(name = 'excel_icon_2', path = 'www/excel.png', dimensions = c(120, 120)),
-                                                list(name = 'db_icon', path = 'www/servers.png', dimensions = c(150, 150)),
-                                                list(name = 'csv_icon', path = 'www/office.png', dimensions = c(100, 100)),
-                                                list(name = 'dataset_icon', path = 'www/office.png', dimensions = c(100, 100))
+                                              list(name = 'internal_logo', path = 'www/umcinternal.png', dimensions = c(120, 120)),
+                                              list(name = 'noise_logo', path = 'www/umcnoise.png', dimensions = c(120, 120)),
+                                              list(name = 'hmdb_logo', path = 'www/hmdblogo.png', dimensions = c(150, 100)),
+                                              list(name = 'metacyc_logo', path = 'www/metacyc.png', dimensions = c(300, 80)),
+                                              list(name = 'chebi_logo', path = 'www/chebilogo.png', dimensions = c(140, 140)),
+                                              list(name = 'wikipathways_logo', path = 'www/wikipathways.png', dimensions = c(130, 150)),
+                                              list(name = 'kegg_logo', path = 'www/kegglogo.gif', dimensions = c(200, 150)),
+                                              list(name = 'pubchem_logo', path = 'www/pubchemlogo.png', dimensions = c(145, 90)),
+                                              list(name = 'smpdb_logo', path = 'www/smpdb_logo_adj.png', dimensions = c(200, 160)),
+                                              list(name = 'dimedb_logo', path = 'www/dimedb_logo.png', dimensions = c(310, 120)),
+                                              list(name = 'wikidata_logo', path = 'www/wikidata.png', dimensions = c(250, 200)),
+                                              list(name = 'respect_logo', path = 'www/respect_logo.png', dimensions = c(250, 100)),
+                                              list(name = 'massbank_logo', path = 'www/massbank_logo.jpg', dimensions = c(250, 100)),
+                                              list(name = 'metabolights_logo', path = 'www/metabolights_logo.png', dimensions = c(200, 200)),
+                                              list(name = 'vmh_logo', path = 'www/vmh.png', dimensions = c(250, 200)),
+                                              list(name = 'pos_icon', path = 'www/handpos.png', dimensions = c(120, 120)),
+                                              list(name = 'neg_icon', path = 'www/handneg.png', dimensions = c(120, 120)),
+                                              list(name = 'excel_icon', path = 'www/excel.png', dimensions = c(120, 120)),
+                                              list(name = 'excel_icon_2', path = 'www/excel.png', dimensions = c(120, 120)),
+                                              list(name = 'db_icon', path = 'www/servers.png', dimensions = c(150, 150)),
+                                              list(name = 'csv_icon', path = 'www/office.png', dimensions = c(100, 100)),
+                                              list(name = 'dataset_icon', path = 'www/office.png', dimensions = c(100, 100))
                                 ), # all image paths, if you add an image you can add it here
                                 default.text = list(list(name='curr_exp_dir',text=options$work_dir),
                                                     list(name='curr_db_dir',text=options$db_dir),
@@ -139,8 +139,8 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                                     list(name="curr_cpd", text="...")# default text options at startup
                                 ),
                                 db.build.info = list(internal = list(title = "UMC Internal", 
-                                                                 description = "Internal commonly known metabolites",
-                                                                 image_id = "internal_logo"),
+                                                                     description = "Internal commonly known metabolites",
+                                                                     image_id = "internal_logo"),
                                                      noise = list(title = "UMC Noise", 
                                                                   description = "Internal common pollutants found in DIMS using local method.",
                                                                   image_id = "noise_logo"),
@@ -165,7 +165,7 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                                      smpdb = list(title = "SMPDB", 
                                                                   description = "Small molecule pathway database. Compounds overlap with HMDB.",
                                                                   image_id = "smpdb_logo"),
-                                                     dimedb = list(title = "dimeDB", 
+                                                     dimedb = list(title = "DimeDB", 
                                                                    description = "A direct infusion database of biologically relevant metabolite structures and annotations.",
                                                                    image_id = "dimedb_logo"),
                                                      wikidata = list(title = "Wikidata", 
@@ -176,107 +176,108 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                                                     image_id = "respect_logo"),
                                                      massbank = list(title = "MassBank", 
                                                                      description = "This site presents the database of comprehensive, high-resolution mass spectra of metabolites. Supported by the JST-BIRD project, it offers various query methods for standard spectra from Keio Univ., RIKEN PSC, and others. 
-  In 2008, MassBank was authorized as the official mass spectral database of The Mass Spectrometry Society of Japan.",
+                                                                     In 2008, MassBank was authorized as the official mass spectral database of The Mass Spectrometry Society of Japan.",
                                                                      image_id = "massbank_logo"),
                                                      metabolights = list(title = "MetaboLights", 
                                                                          description = "MetaboLights is a database for Metabolomics experiments and derived information. The database is cross-species, cross-technique and covers metabolite structures and their reference spectra as well as their biological roles, locations and concentrations, and experimental data from metabolic experiments.",
                                                                          image_id = "metabolights_logo"),
                                                      vmh = list(title = "VMH",
                                                                 description = "Virtual Metabolic Human (VMH) hosts ReconMap, an extensive network of human metabolism, and bacterial metabolites.",
-                                                                image_id = "vmh_logo"))
-                           ),
-               functions = list(# default color functions at startup, will be re-loaded from options
-								cf = rainbow,
-                                color.function = rainbow,
-                                color.vec = rainbow,
-								# available plot themes for ggplot. Can add more,also user-defined ones, 
-								# but put them in shiny_general.R first so they are sourced properly.
-                                plot.themes = list(bw=ggplot2::theme_bw,
-                                                   classic=ggplot2::theme_classic,
-                                                   gray=ggplot2::theme_gray,
-                                                   min=ggplot2::theme_minimal,
-                                                   dark=ggplot2::theme_dark,
-                                                   light=ggplot2::theme_light,
-                                                   line=ggplot2::theme_linedraw),
-                                color.functions = { 
-								# available colorbrewer themes to load into ggplot. These are the standard brew names used in their functions color.brewer etc.
-                                  brew.cols <- c("Blues", "BuGn", "BuPu", "GnBu", "Greens", "Greys", # - - sequential - -
-                                                 "Oranges", "OrRd", "PuBu", "PuBuGn", "PuRd", "Purples", 
-                                                 "RdPu", "Reds", "YlGn", "YlGnBu", "YlOrBr", "YlOrRd", 
-                                                 "BrBG", "PiYG", "PRGn", "PuOr", "RdBu", "RdGy", "RdYlBu", "RdYlGn", "Spectral", # - - diverging - -
-                                                 "Accent", "Dark2", "Paired", "Pastel1", "Pastel2", "Set1", "Set2", "Set3" # - - qualitative - -
-                                  )
-                                  
-								  # generate direct functions from the brewer colours
-                                  brew.opts <- lapply(brew.cols, function(opt) colorRampPalette(rev(RColorBrewer::brewer.pal(RColorBrewer::brewer.pal.info[opt,]$maxcolors, opt))))
-                                  names(brew.opts) <- brew.cols
-                                  
-								  # add the more general color scale functions as options
-                                  base.opts <- list("rb"=rainbow,
-                                                    "y2b"=ygobb,
-                                                    "ml1"=matlab.like2,
-                                                    "ml2"=matlab.like,
-                                                    "m2g"=magenta2green,
-                                                    "c2y"=cyan2yellow,
-                                                    "b2y"=blue2yellow,
-                                                    "g2r"=green2red,
-                                                    "b2g"=blue2green,
-                                                    "b2r"=blue2red,
-                                                    "b2p"=cm.colors,
-                                                    "bgy"=topo.colors,
-                                                    "gyw"=terrain.colors,
-                                                    "ryw"=heat.colors,
-                                                    "bw"=blackwhite.colors)
-													
-                                  # add into a single list for use in interface
-                                  append(base.opts, brew.opts)
-                                }),
-				# set default paths
-               paths = list(# path to .db file selected as default data source in the csv making pane
-							patdb = file.path(options$work_dir, paste0(options$proj_name, ".db")),
-							# path to .csv file selected as default source in the normalization pane
-                            csv_loc = file.path(options$work_dir, paste0(options$proj_name, ".csv")),
-							# available paths when selecting a new file or folder
-                            volumes =  c('MetaboShiny' = getwd(),
-                                         'Home'=home,
-                                         '~' = normalizePath("~"),
-                                         'Downloads'=file.path(home, "Downloads"),
-                                         'R Installation'=R.home(),
-                                         'Desktop'=file.path(home, "Desktop"))
-               ),
-			   # empty list to store result tables in at the statistics pane
-               tables = list(tbl = NA),
-			   # default vectors to go through in metaboshiny
-               vectors = list(
-							# default indices of chosen adducts
-							pos_selected_add = c(1:3, nrow(adducts[Ion_mode == "positive",
-                                                     c("Name")])),
-							neg_selected_add = c(1, 2, 14, 15, nrow(adducts[Ion_mode == "negative",
-                                                     c("Name")])),
-							# list of available databases!!
-							db_list = c("internal", 
-                                          "noise", 
-                                          "hmdb", 
-                                          "chebi", 
-                                          "kegg",
-                                          "metacyc",
-                                          "wikipathways"
-                                          ,"smpdb",
-                                          "dimedb",
-                                          "wikidata",
-                                          "vmh",
-                                          "respect",
-                                          "massbank",
-                                          "metabolights"
-                              ),
-							  # list of positive adducts
-                              pos_adducts = adducts[Ion_mode == "positive",
-                                                     c("Name")],
-							  # list of negative adducts
-                              neg_adducts = adducts[Ion_mode == "negative",
-                                                    c("Name")]
-                              )
-               )
+                                                                image_id = "vmh_logo")
+                                                     )
+),
+functions = list(# default color functions at startup, will be re-loaded from options
+  cf = rainbow,
+  color.function = rainbow,
+  color.vec = rainbow,
+  # available plot themes for ggplot. Can add more,also user-defined ones, 
+  # but put them in shiny_general.R first so they are sourced properly.
+  plot.themes = list(bw=ggplot2::theme_bw,
+                     classic=ggplot2::theme_classic,
+                     gray=ggplot2::theme_gray,
+                     min=ggplot2::theme_minimal,
+                     dark=ggplot2::theme_dark,
+                     light=ggplot2::theme_light,
+                     line=ggplot2::theme_linedraw),
+  color.functions = { 
+    # available colorbrewer themes to load into ggplot. These are the standard brew names used in their functions color.brewer etc.
+    brew.cols <- c("Blues", "BuGn", "BuPu", "GnBu", "Greens", "Greys", # - - sequential - -
+                   "Oranges", "OrRd", "PuBu", "PuBuGn", "PuRd", "Purples", 
+                   "RdPu", "Reds", "YlGn", "YlGnBu", "YlOrBr", "YlOrRd", 
+                   "BrBG", "PiYG", "PRGn", "PuOr", "RdBu", "RdGy", "RdYlBu", "RdYlGn", "Spectral", # - - diverging - -
+                   "Accent", "Dark2", "Paired", "Pastel1", "Pastel2", "Set1", "Set2", "Set3" # - - qualitative - -
+    )
+    
+    # generate direct functions from the brewer colours
+    brew.opts <- lapply(brew.cols, function(opt) colorRampPalette(rev(RColorBrewer::brewer.pal(RColorBrewer::brewer.pal.info[opt,]$maxcolors, opt))))
+    names(brew.opts) <- brew.cols
+    
+    # add the more general color scale functions as options
+    base.opts <- list("rb"=rainbow,
+                      "y2b"=ygobb,
+                      "ml1"=matlab.like2,
+                      "ml2"=matlab.like,
+                      "m2g"=magenta2green,
+                      "c2y"=cyan2yellow,
+                      "b2y"=blue2yellow,
+                      "g2r"=green2red,
+                      "b2g"=blue2green,
+                      "b2r"=blue2red,
+                      "b2p"=cm.colors,
+                      "bgy"=topo.colors,
+                      "gyw"=terrain.colors,
+                      "ryw"=heat.colors,
+                      "bw"=blackwhite.colors)
+    
+    # add into a single list for use in interface
+    append(base.opts, brew.opts)
+  }),
+# set default paths
+paths = list(# path to .db file selected as default data source in the csv making pane
+  patdb = file.path(options$work_dir, paste0(options$proj_name, ".db")),
+  # path to .csv file selected as default source in the normalization pane
+  csv_loc = file.path(options$work_dir, paste0(options$proj_name, ".csv")),
+  # available paths when selecting a new file or folder
+  volumes =  c('MetaboShiny' = getwd(),
+               'Home'=home,
+               '~' = normalizePath("~"),
+               'Downloads'=file.path(home, "Downloads"),
+               'R Installation'=R.home(),
+               'Desktop'=file.path(home, "Desktop"))
+),
+# empty list to store result tables in at the statistics pane
+tables = list(tbl = NA),
+# default vectors to go through in metaboshiny
+vectors = list(
+  # default indices of chosen adducts
+  pos_selected_add = c(1:3, nrow(adducts[Ion_mode == "positive",
+                                         c("Name")])),
+  neg_selected_add = c(1, 2, 14, 15, nrow(adducts[Ion_mode == "negative",
+                                                  c("Name")])),
+  # list of available databases!!
+  db_list = c("internal",
+              "noise", 
+              "hmdb", 
+              "chebi", 
+              "kegg",
+              "metacyc",
+              "wikipathways"
+              ,"smpdb",
+              "dimedb",
+              "wikidata",
+              "vmh",
+              "respect",
+              "massbank",
+              "metabolights"
+  ),
+  # list of positive adducts
+  pos_adducts = adducts[Ion_mode == "positive",
+                        c("Name")],
+  # list of negative adducts
+  neg_adducts = adducts[Ion_mode == "negative",
+                        c("Name")]
+)
+)
 
 #' Gets the current used operating system. Important for parallel/multithreaded functions if using makeCluster("FORK")
 #' 
@@ -326,7 +327,7 @@ sort_order <<- unlist(c(global$vectors$pos_adducts$Name, global$vectors$neg_addu
 bar.css <<- nav.bar.css(options$col1, options$col2, options$col3, options$col4)
 font.css <<- font.css(options$font1, options$font2, options$font3, options$font4,
                       options$size1, options$size2, options$size3, options$size4)
-					  
+
 # set default plot theme to minimal
 plot.theme <<- ggplot2::theme_minimal
 

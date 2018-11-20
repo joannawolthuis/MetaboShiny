@@ -1921,8 +1921,8 @@ shinyServer(function(input, output, session) {
     max_col_width = 12
     rows = ceiling(length(global$vectors$db_list) / dbs_per_line)
     database_layout = lapply(1:rows, function(i){
-      min_i = 4 * i - 3
-      max_i = 4 * i
+      min_i = (dbs_per_line * i) - (dbs_per_line - 1)
+      max_i = (dbs_per_line * i)
       if(max_i > length(global$vectors$db_list)) max_i <- length(global$vectors$db_list)
       # create 3 fluidrows followed by a break
       list(
@@ -2183,7 +2183,17 @@ shinyServer(function(input, output, session) {
     req(global$vectors$db_search_list)
     # ----------------
     if(length(global$vectors$db_search_list) > 0){ # go through selected databases
-      global$tables$last_matches <<- unique(multimatch(curr_cpd, global$vectors$db_search_list)) # match with all
+      global$tables$last_matches <- unique(multimatch(curr_cpd, global$vectors$db_search_list,inshiny = F)) # match with all
+      output$summary_tab <- plotly::renderPlotly({
+        data = global$tables$last_matches
+        data <- within(data, adduct <- factor(adduct, levels = names(sort(table(adduct), decreasing=T))))
+        p <- ggplot(data = data) + 
+          geom_histogram(aes(x=adduct, fill=adduct), stat="count") + 
+          global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]() +
+          guides(fill=FALSE)
+        # - - - 
+        p
+      })
       output$match_tab <- DT::renderDataTable({ # render table for UI
         DT::datatable(global$tables$last_matches[,-c("description","structure", "baseformula", "dppm")], # filter table some
                       selection = 'single',
