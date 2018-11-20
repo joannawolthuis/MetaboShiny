@@ -405,16 +405,14 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                  plotlyOutput("ml_roc",height = "600px"),
                                                                                                  div(DT::dataTableOutput("ml_tab",width="100%"),style='font-size:80%')),
                                                                                         tabPanel("Model",value= "bar",icon=icon("table"),
-                                                                                                 fluidRow(plotlyOutput("ml_bar", width = "100%", height="300px")),
+                                                                                                 fluidRow(plotlyOutput("ml_bar", width = "100%", height="600px")),
                                                                                                  fluidRow(
-                                                                                                   column(5, sliderInput("ml_top_x",
+                                                                                                   column(12, sliderInput("ml_top_x",
                                                                                                                          label = "Show top:",
                                                                                                                          min = 10,
-                                                                                                                         max = 100,
+                                                                                                                         max = 200,
                                                                                                                          step=10,
-                                                                                                                         value=20)),
-                                                                                                   column(7, plotlyOutput("ml_specific_plot", 
-                                                                                                                          height="300px"))
+                                                                                                                         value=20), align="center")
                                                                                                  )
                                                                                         )
                                                                              )

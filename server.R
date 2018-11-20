@@ -2414,7 +2414,7 @@ shinyServer(function(input, output, session) {
                      },
                      rf = {
                        tbls_rf <- lapply(input$rf_choice, function(name){ # which random forest subset?
-                         mSet$analSet$ml$rf[[name]]$tophits[order(mSet$analSet$ml$rf[[name]]$tophits$mda, decreasing = T),]$mz})
+                         mSet$analSet$ml$rf[[name]]$bar[order(mSet$analSet$ml$rf[[name]]$bar$mda, decreasing = T),]$mz})
                        names(tbls_rf) <- input$rf_choice
                        # - - -
                        tbls_rf
@@ -2448,10 +2448,10 @@ shinyServer(function(input, output, session) {
     names(tables) <- categories
     
     # unnest the nested lists
-    flattened <<- flattenlist(tables)
+    flattened <- flattenlist(tables)
     
     #rename and remove regex-y names
-    names(flattened) <<- gsub(x = names(flattened), pattern = "(.*\\.)(.*$)", replacement = "\\2")
+    names(flattened) <- gsub(x = names(flattened), pattern = "(.*\\.)(.*$)", replacement = "\\2")
     
     # how many circles need to be plotted? (# of included analysis)
     circles = length(flattened)
@@ -2525,7 +2525,8 @@ shinyServer(function(input, output, session) {
       geom_text(mapping = aes(x=x, y=y, label=value), data = numbers, size = 5) +
       geom_text(mapping = aes(x=x, y=y, label=value), data = headers, fontface="bold", size = 7) +
       theme_void() +
-      theme(legend.position="none") + 
+      theme(legend.position="none",
+            panel.grid = element_blank()) + 
       scale_fill_gradientn(colours = global$functions$color.functions[[getOptions("user_options.txt")$gspec]](circles)) +
       coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
     
@@ -2533,8 +2534,6 @@ shinyServer(function(input, output, session) {
     output$venn_plot <- plotly::renderPlotly({
       
       ggplotly(p, tooltip = "label")
-      #%>% layout(plot_bgcolor='transparent') # attempts at making background transparant
-      #%>% layout(paper_bgcolor='transparent') # attempts at making background transparant
     
       })
     # update the selectize input that the user can use to find which hits are intersecting

@@ -69,6 +69,10 @@ input <- list(batch_var = c(""),
               ml_folds=5,
               ml_train_perc = 60,
               ml_method = "rf",
-              ml_top_x = 50
+              ml_top_x = 50,
+              venn_tophits = 50,
+              venn_members = c("tt", "fc", "plsda", "rf"),
+              rf_choice = "all",
+              plsda_choice = "PC1"
 )
 }
