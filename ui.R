@@ -386,14 +386,18 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                   post = "x"),
                                                                                       br(),
                                                                                       br(),
-                                                                                      shinyWidgets::circleButton("do_ml",icon = h3(paste("Go"), icon("hand-pointer-o", "fa-lg")), status = "default", size = "lg")
+                                                                                      shinyWidgets::circleButton("do_ml",
+                                                                                                                 icon = h3(paste("Go"), 
+                                                                                                                           icon("hand-pointer-o", "fa-lg")), 
+                                                                                                                 status = "default", 
+                                                                                                                 size = "lg")
                                                                                       #actionButton("do_ml",label=h2("Go"),width = "150px", height="150px")
                                                                                ),
                                                                                column(width=3,align="center",
                                                                                       textInput("ml_train_regex", label = "Regex for train:"),
                                                                                       textInput("ml_test_regex", label = "Regex for test:"),
                                                                                       tags$a(img(src="help.png"), href="https://regex101.com"),
-                                                                                      textInput("ml_name", label="Name:"))
+                                                                                      textInput("ml_name", label="Name:", value = "all"))
                                                                              ),
                                                                              hr(),
                                                                              navbarPage(title="Results",id="ml_results",inverse=F,
@@ -448,7 +452,9 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                            br(),
                                                                                            bsCollapse(id="isoSelect",
                                                                                                       bsCollapsePanel(h2("Isotope scoring"), "",#style = "info",
-                                                                                                                      selectInput("iso_score_method", "Which method used to score compounds of same weight?", selected="mscore", 
+                                                                                                                      selectInput("iso_score_method", 
+                                                                                                                                  "Which method used to score compounds of same weight?", 
+                                                                                                                                  selected="mscore", 
                                                                                                                                   choices=list("M-score"="mscore",
                                                                                                                                                "Chi-square"="chisq",
                                                                                                                                                "Mean absolute percentage error"="mape",
@@ -473,6 +479,14 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                              align="center"),br(),
                                                                                            fluidRow(
                                                                                              hr(),
+                                                                                             bsCollapsePanel(h2("Summary"),"",
+                                                                                                             tabsetPanel(id = "...",
+                                                                                                                         tabPanel(title=icon("database"),
+                                                                                                                                  plotly::plotlyOutput("match_pie_db")),
+                                                                                                                         tabPanel(title=icon("plus"),
+                                                                                                                                  plotly::plotlyOutput("match_pie_add"))
+                                                                                                                         )
+                                                                                             ),
                                                                                              bsCollapsePanel(h2("Structure viewer"),"",
                                                                                                              textOutput("curr_formula"),
                                                                                                              plotOutput("curr_struct", height="310px")

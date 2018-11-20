@@ -306,7 +306,7 @@ data(isotopes, package = "enviPat")
 
 # create parallel workers, leaving 1 core for general use
 # TODO: make this a user slider
-session_cl <- parallel::makeCluster(max(c(1, parallel::detectCores()-1)))
+session_cl <- parallel::makeCluster(max(c(1, parallel::detectCores()-2))) # leave 1 core for general use and 1 core for shiny session
 
 # source the miniscript for the toggle buttons used in the interface (needs custom CSS)
 source("./Rsource/SwitchButton.R")

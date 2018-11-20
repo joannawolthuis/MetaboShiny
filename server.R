@@ -82,9 +82,10 @@ shinyServer(function(input, output, session) {
   # re-render drop down bars for picking which experimental variable is chosen
   observe({
     if(datamanager$mset_present){
-	  # reload pca, plsda (make datamanager do that)
+	  # reload pca, plsda, ml(make datamanager do that)
       datamanager$reload <- "pca"
       datamanager$reload <- "plsda"
+      datamanager$reload <- "ml"
       # update select input bars with current variable and covariables defined in excel
       updateSelectInput(session, "first_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
       updateSelectInput(session, "second_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
@@ -1532,6 +1533,8 @@ shinyServer(function(input, output, session) {
                # --- ggplot ---
                ggPlotVolc(global$functions$color.functions[[getOptions("user_options.txt")$gspec]], 20)
              })
+           }, ml = {
+               datamanager$reload <- "ml" # reload 
            }
     )
   })
@@ -1566,14 +1569,14 @@ shinyServer(function(input, output, session) {
 				# TODO: re-enable this plot, it was clickable so you could filter out certain groups
                output$pca_legend <- plotly::renderPlotly({
                 frame <- data.table(x = c(1), 
-                                    y = fac.lvls)
+                                    y = mSet$dataSet$cls.num)
                 p <- ggplot(data=frame,
                             aes(x, 
                                 y, 
                                 color=factor(y),
                                 fill=factor(y))) + 
                   geom_point(shape = 21, size = 5, stroke = 5) +
-                  scale_colour_manual(values=chosen.colors) +
+                  scale_colour_manual(values=global$vectors$mycols) +
                   theme_void() + 
                   theme(legend.position="none")
                 # --- return ---
@@ -1692,7 +1695,33 @@ shinyServer(function(input, output, session) {
                 })
               }
               }else{NULL}
-            })
+            },
+				"ml" = {
+				  
+				  print("reloading machine learning results")
+				  
+				  if("ml" %in% names(mSet$analSet)){
+				    roc_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
+				    
+				    output$ml_roc <- plotly::renderPlotly({
+				      plotly::ggplotly(ggPlotROC(roc_data, 
+				                                 input$ml_attempts, 
+				                                 global$functions$color.functions[[getOptions("user_options.txt")$gspec]]))
+				    })
+				    
+				    bar_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar
+				    
+				    output$ml_bar <- plotly::renderPlotly({
+				      
+				      plotly::ggplotly(ggPlotBar(bar_data, 
+				                                 input$ml_attempts, 
+				                                 global$functions$color.functions[[getOptions("user_options.txt")$gspec]], 
+				                                 input$ml_top_x, 
+				                                 ml_name = mSet$analSet$ml$last$name,
+				                                 ml_type = mSet$analSet$ml$last$method))
+				    })
+				  }else{NULL}
+				  })
       # - - - - 
       datamanager$reload <- NULL # set reloading to 'off'
     }
@@ -1785,12 +1814,17 @@ shinyServer(function(input, output, session) {
 	  # how many models will be built? user input
       goes = as.numeric(input$ml_attempts)
       
+      # ============ LOOP HERE ============
+      
 	  # get results for the amount of attempts chosen
-      repeats <- pbapply::pblapply(1:goes, function(i){
+      repeats <- pbapply::pblapply(1:goes, cl=0, function(i, ...){
         
+        shiny::isolate({
+          
+       
         # get regex user input for filtering testing and training set
-        ml_train_regex <<- input$ml_train_regex
-        ml_test_regex <<- input$ml_test_regex
+        ml_train_regex <- input$ml_train_regex
+        ml_test_regex <- input$ml_test_regex
         
 		# get user training percentage
         ml_train_perc <- input$ml_train_perc/100
@@ -1836,7 +1870,7 @@ shinyServer(function(input, output, session) {
         training <- data.matrix(gdata::drop.levels(training))
         testing <- data.matrix(gdata::drop.levels(testing))
         
-        setProgress(value = i/goes)
+        #shiny::setProgress(value = i/goes)
         
 		# train and cross validate model
         switch(input$ml_method,
@@ -1894,26 +1928,56 @@ shinyServer(function(input, output, session) {
                gls = {
                  NULL
                })
-      })
+        })
+      })#, input, config, curr) # for session_cl
       # check if a storage list for machine learning results already exists
       if(!"ml" %in% names(mSet$analSet)){
-        mSet$analSet$ml <<- list(ls=list(), rf=list()) # otherwise make it
-      }
+        
+        mSet$analSet$ml <<- list(ls=list(), 
+                                 rf=list()) # otherwise make it
+      
+      
+        }
       # save the summary of all repeats (will be used in plots)
-      xvals <<- list(type = {unique(lapply(repeats, function(x) x$type))},
-                     models = {lapply(repeats, function(x) x$model)},
-                     predictions = {lapply(repeats, function(x) x$prediction)},
-                     labels = {lapply(repeats, function(x) x$labels)})
+      roc_data <- list(type = {unique(lapply(repeats, function(x) x$type))},
+                   models = {lapply(repeats, function(x) x$model)},
+                   predictions = {lapply(repeats, function(x) x$prediction)},
+                   labels = {lapply(repeats, function(x) x$labels)})
+      
+      bar_data <- switch(input$ml_method,
+                     rf = {
+                       res <- aggregate(. ~ rn, rbindlist(lapply(repeats, function(x) as.data.table(x$feats, keep.rownames=T))), mean)
+                       data <- res[order(res$MDA, decreasing = TRUE),]
+                       colnames(data) <- c("mz", "mda")
+                       # - - -
+                       data
+                     },
+                     ls = {
+                       feat_count <- lapply(repeats, function(x){
+                         beta <- x$model$beta
+                         feats <- which(beta[,1] > 0)
+                         names(feats)
+                       })
+                       feat_count_tab <- table(unlist(feat_count))
+                       feat_count_dt <- data.table::data.table(feat_count_tab)
+                       colnames(feat_count_dt) <- c("mz", "count")
+                       data <- feat_count_dt[order(feat_count_dt$count, decreasing = T)]
+                       # - - -
+                       data
+                     })
+      bar_data$mz <- factor(bar_data$mz, levels=bar_data$mz)
       
       # save results to mset
-      mSet$analSet$ml[[input$ml_method]][[input$ml_name]] <<- list("roc" = xvals,
-                                                                   "bar" = repeats)
-      # render plots for UIs
-      output$ml_roc <- plotly::renderPlotly({plotly::ggplotly(ggPlotROC(xvals, input$ml_attempts, global$functions$color.functions[[getOptions("user_options.txt")$gspec]]))})
-      output$ml_bar <- plotly::renderPlotly({plotly::ggplotly(ggPlotBar(repeats, input$ml_attempts, global$functions$color.functions[[getOptions("user_options.txt")$gspec]], input$ml_top_x, input$ml_name))})
+      mSet$analSet$ml[[input$ml_method]][[input$ml_name]] <<- list("roc" = roc_data,
+                                                                   "bar" = bar_data)
+      mSet$analSet$ml$last <<- list(name = input$ml_name,
+                                    method = input$ml_method)
       
+      # render plots for UIs
+      datamanager$reload <- "ml"
     })
   })
+
   
   # render the database download area
   output$db_build_ui <- renderUI({
@@ -2073,7 +2137,10 @@ shinyServer(function(input, output, session) {
 
   # triggers when a plotly plot is clicked by user
   observeEvent(plotly::event_data("plotly_click"),{ 
+    
     d <- plotly::event_data("plotly_click") # get click details (which point, additional included info, etc..)
+    
+    print(d)
     
     if(input$statistics %in% c("tt", "fc", "rf", "aov", "volc", "lasnet")){ # these cases need the same processing and use similar scoring systems
         if('key' %not in% colnames(d)) return(NULL)
@@ -2145,8 +2212,7 @@ shinyServer(function(input, output, session) {
               
             }
           }, bar = { # for bar plot just grab the # bar clicked
-            curr_cpd <<- as.character(global$tables$ml_bar_tab[d$x,"mz"][[1]])
-            
+            curr_cpd <<- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar[d$x,"mz"][[1]]
             # plot underneath? TODO: remove, should just be in sidebar miniplot
             output$ml_specific_plot <- plotly::renderPlotly({
               # --- ggplot ---
@@ -2183,17 +2249,41 @@ shinyServer(function(input, output, session) {
     req(global$vectors$db_search_list)
     # ----------------
     if(length(global$vectors$db_search_list) > 0){ # go through selected databases
-      global$tables$last_matches <- unique(multimatch(curr_cpd, global$vectors$db_search_list,inshiny = F)) # match with all
-      output$summary_tab <- plotly::renderPlotly({
-        data = global$tables$last_matches
-        data <- within(data, adduct <- factor(adduct, levels = names(sort(table(adduct), decreasing=T))))
-        p <- ggplot(data = data) + 
-          geom_histogram(aes(x=adduct, fill=adduct), stat="count") + 
-          global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]() +
-          guides(fill=FALSE)
-        # - - - 
-        p
+      global$tables$last_matches <<- unique(multimatch(curr_cpd, global$vectors$db_search_list,inshiny = F)) # match with all
+      # - - -
+      adduct_dist <- melt(table(global$tables$last_matches$adduct))
+      db_dist <- melt(table(global$tables$last_matches$source))
+      
+      output$match_pie_add <- plotly::renderPlotly({
+        plot_ly(adduct_dist, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
+                textposition = 'inside',
+                textinfo = 'label+percent',
+                insidetextfont = list(color = '#FFFFFF'),
+                hoverinfo = 'text',
+                text = ~paste0(Var1, ": ", value, ' matches'),
+                marker = list(colors = colors,
+                              line = list(color = '#FFFFFF', width = 1)),
+                #The 'pull' attribute can also be used to create space between the sectors
+                showlegend = FALSE) %>%
+          layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                 yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
       })
+      
+      output$match_pie_db <- plotly::renderPlotly({
+        plot_ly(db_dist, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
+                textposition = 'inside',
+                textinfo = 'label+percent',
+                insidetextfont = list(color = '#FFFFFF'),
+                hoverinfo = 'text',
+                text = ~paste0(Var1, ": ", value, ' matches'),
+                marker = list(colors = colors,
+                              line = list(color = '#FFFFFF', width = 1)),
+                #The 'pull' attribute can also be used to create space between the sectors
+                showlegend = FALSE) %>%
+          layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                 yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+      })
+     
       output$match_tab <- DT::renderDataTable({ # render table for UI
         DT::datatable(global$tables$last_matches[,-c("description","structure", "baseformula", "dppm")], # filter table some
                       selection = 'single',
@@ -2270,98 +2360,6 @@ shinyServer(function(input, output, session) {
       output$plsda_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
     })
   })
-
-  # triggers on clicking the 'go' button on the enrichment analysis pane
-  # observeEvent(input$go_enrich,{
-  #   #TODO: fix, currently broken (build in m/z > cpd search?)
-  #   enrich_path_list <- paste0("./backend/db/", c("kegg", 
-  #                                               "wikipathways", 
-  #                                               "smpdb",
-  #                                               "metacyc"), ".full.db")
-  #   withProgress({
-  #     all_pathways <- lapply(db_enrich_list, FUN=function(db){
-  #       conn <- RSQLite::dbConnect(RSQLite::SQLite(), db) # change this to proper var later
-  #       dbname <- gsub(basename(db), pattern = "\\.full\\.db", replacement = "")
-  #       #RSQLite::dbGetQuery(conn, "SELECT distinct * FROM pathways limit 10;")
-  #       gset <- RSQLite::dbGetQuery(conn,"SELECT DISTINCT c.baseformula AS cpd,
-  #                                   p.name as name
-  #                                   FROM pathways p
-  #                                   JOIN base c
-  #                                   ON c.pathway = p.identifier 
-  #                                   ")
-  #       RSQLite::dbDisconnect(conn)
-  #       # --- returny ---
-  #       gset$name <- paste(gset$name, " (", dbname, ")", sep="")
-  #       gset
-  #     })
-  #     shiny::setProgress(session=session, value= 0.33)
-  #     # --- only anova top 100 for now ---
-  #     used.analysis <- input$enrich_stats
-  #     if(used.analysis == "rf"){
-  #       ranking <- vip.score[accuracyDrop > 0,]
-  #       ranking <- ranking[order(-accuracyDrop),]
-  #       vec <- ranking$accuracyDrop
-  #       names(vec) <- ranking$rn
-  #       sigvals <- switch(input$enrich_vals,
-  #                         sig=vec[1:500],
-  #                         t50=vec[1:50],
-  #                         t100=vec[1:100],
-  #                         t200=vec[1:200],
-  #                         t500=vec[1:500]
-  #       )
-  #     }else{
-  #       stat.tab <- switch(input$enrich_stats,
-  #                          tt="p.value",
-  #                          aov="p.value",
-  #                          fc="fc.all")
-  #       sigvals <- switch(input$enrich_vals,
-  #                         sig=mSet$analSet[[used.analysis]][[stat.tab]][mSet$analSet[[used.analysis]]$inx.imp],
-  #                         t50=sort(mSet$analSet[[used.analysis]][[stat.tab]])[1:50],
-  #                         t100=sort(mSet$analSet[[used.analysis]][[stat.tab]])[1:100],
-  #                         t200=sort(mSet$analSet[[used.analysis]][[stat.tab]])[1:200],
-  #                         t500=sort(mSet$analSet[[used.analysis]][[stat.tab]])[1:500]
-  #       )        
-  #     }
-  #     
-  #     # -----------------------
-  #     gset <- rbindlist(all_pathways)
-  #     gset_proc <<- piano::loadGSC(gset)
-  #     shiny::setProgress(session=session, value= 0.66)
-  #     
-  #     # - - - - - - 
-  #     
-  #     sigvals <- rownames(lasnet_tables[[1]])
-  #     matches <- rbindlist(lapply(sigvals, function(mz){
-  #       subtables <- lapply(db_enrich_list, function(db){
-  #         matches = get_matches(mz, db, F, "mz")
-  #       }) 
-  #       tab <- rbindlist(subtables)
-  #       tab$mz = c(mz)
-  #       tab
-  #     }))
-  #     
-  #     lasnet_vals <- lasnet_tables[[1]]
-  #     lasnet_vals$mz <- rownames(lasnet_vals)
-  #     matches <- merge(matches, lasnet_vals, by = "mz")
-  #     sigvals <- unique(matches[, c("Baseformula", "beta")])
-  #     
-  #     # - - - - - -
-  #     
-  #     gsaRes <<- piano::runGSA(sigvals, 
-  #                              gsc = gset_proc)
-  #     enrich_tab <<- piano::GSAsummaryTable(gsaRes)[,1:3]
-  #     # --- render ---
-  #     output$enriched <- DT::renderDataTable({
-  #       # -------------
-  #       DT::datatable(enrich_tab, 
-  #                     selection = 'single',
-  #                     autoHideNavigation = T,
-  #                     options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-  #       
-  #     })
-  #     shiny::setProgress(session=session, value= 1)
-  #   })
-  # })
   
   # triggers on changing the members of the venn diagram analysis selection
   observeEvent(input$venn_members, {

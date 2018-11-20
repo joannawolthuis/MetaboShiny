@@ -335,6 +335,11 @@ ggPlotPerm<- function(pls.type = "plsda", cf = global$functions$color.functions[
   len <- length(bw.vec)
   df <- melt(bw.vec)
   colnames(df) = "acc"
+  # round p value
+  pval <- mSet$analSet$plsda$permut.p
+  rounded <- round(as.numeric(str_match(pval, "0\\.\\d*")), digits = 3)
+  pval <- gsub(pval, pattern = "(0\\.\\d*)", replacement=rounded)
+  # - - -
   p <- ggplot(df) +
     geom_histogram(mapping=aes(x=acc, y=..count.., fill=factor(..count..)),
                    binwidth=0.01) +
@@ -350,7 +355,7 @@ ggPlotPerm<- function(pls.type = "plsda", cf = global$functions$color.functions[
                  y=0,aes(yend=.1*nrow(df)),
                  size=1.5,
                  linetype=8)+
-    annotate("text",x=bw.vec[1],y=.11*nrow(df),label = mSet$analSet$plsda$permut.p, color="black",size=4)
+    annotate("text",x=bw.vec[1],y=.11*nrow(df),label = pval, color="black",size=4)
  return(p)
 }
 
@@ -416,13 +421,15 @@ plot.many <- function(res.obj = models, which_alpha = 1, plot.theme = global$fun
 }
 
 
-ggPlotROC <- function(xvals, attempts = 50, cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
+ggPlotROC <- function(data, attempts = 50, cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
   
   require(ROCR)
   require(ggplot2)
   require(data.table)
   
-  pred <- ROCR::prediction(xvals$predictions, xvals$labels)
+  print(data$predictions)
+  
+  pred <- ROCR::prediction(data$predictions, data$labels)
   perf <- ROCR::performance(pred, "tpr", "fpr")
   
   # - - - old method - - -
@@ -467,45 +474,20 @@ ggPlotROC <- function(xvals, attempts = 50, cf = global$functions$color.function
     coord_cartesian(xlim = c(.04,.96), ylim = c(.04,.96))
 }
 
-ggPlotBar <- function(repeats, attempts=50,  cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], topn=50, ml_name, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
-  
-  # - - - - - - - - - - - - -
-  
-  ml_type = repeats[[1]]$type
-  
-  data <- switch(ml_type,
-                 rf = {
-                   res <- aggregate(. ~ rn, rbindlist(lapply(repeats, function(x) as.data.table(x$feats, keep.rownames=T))), mean)
-                   data <- res[order(res$MDA, decreasing = TRUE),]
-                   colnames(data) <- c("mz", "mda")
-                   # - - -
-                   data
-                 },
-                 ls = {
-                   feat_count <- lapply(repeats, function(x){
-                     beta <- x$model$beta
-                     feats <- which(beta[,1] > 0)
-                     names(feats)
-                   })
-                   feat_count_tab <- table(unlist(feat_count))
-                   feat_count_dt <- data.table::data.table(feat_count_tab)
-                   colnames(feat_count_dt) <- c("mz", "count")
-                   data <- feat_count_dt[order(feat_count_dt$count, decreasing = T)]
-                   # - - -
-                   data
-                 })
-  # data$mz <- round(as.numeric(data$mz), digits = 2)
-  data$mz <- factor(data$mz, levels=data$mz)
-  
-  global$tables$ml_bar_tab <<- data
+ggPlotBar <- function(data, 
+                      attempts=50, 
+                      cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], 
+                      topn=50, 
+                      plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]],
+                      ml_name, 
+                      ml_type){
   
   if(ml_name != ""){
     lname = ml_name
   }else{
-    lname <- paste0(ml_train_regex,"|", ml_test_regex)
+    lname <- paste0(input$ml_train_regex,"|", input$ml_test_regex)
   }
-  mSet$analSet$ml[[ml_type]][[lname]][["tophits"]] <<- data
-  
+
   if(ml_type == "ls"){
     p <- ggplot(data[1:topn,], aes(mz,count))
     p + geom_bar(stat = "identity", aes(fill = count)) +
@@ -751,22 +733,28 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols = global$vectors$mycols, 
          })
   # - - - - - - - - -
   
-  dat_long$shape <- if(shape.fac == "label"){
+  dat_long$shape <- if(is.null(shape.fac)){
+    factor(1) # all same shape...
+  } else if(shape.fac == "label"){
     dat_long$group
   }else{
     as.factor(mSet$dataSet$covars[,..shape.fac][[1]])
   }
   
-  p <- ggplot(dat_long, aes(x, y, color=group, fill=group)) +
-    geom_point(size=5, aes(shape=shape,text=variable))+
-    stat_ellipse(geom = "polygon", alpha = 0.3) +
+  p <- ggplot(dat_long, aes(x, y,group=group)) +
+    geom_point(size=5, aes(shape=shape,
+                           text=variable,
+                           fill=group, 
+                           color=group), alpha=0.7)+
+    stat_ellipse(geom = "polygon", aes(fill=group), alpha = 0.3) +
     plot.theme() +
     theme(legend.position="none",
           axis.text=element_text(size=8),
-          axis.title=element_text(size=13,face="bold"))+
+          axis.title=element_text(size=18,face="bold"))+
     scale_x_continuous(name=gsubfn::fn$paste("$pcx ($x.var%)")) +
     scale_y_continuous(name=gsubfn::fn$paste("$pcy ($y.var%)")) +
-    scale_fill_manual(values=cols) 
+    scale_fill_manual(values=cols) +
+    scale_color_manual(values = cols)
 
   if(mode == "ipca") p <- p + facet_wrap(~time)
   
