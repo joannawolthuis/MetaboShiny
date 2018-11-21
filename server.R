@@ -2403,18 +2403,22 @@ shinyServer(function(input, output, session) {
     tables <- lapply(categories, function(name){
       # fetch involved mz values 
       tbls <- switch(name,
-                     tt = list(rownames(mSet$analSet$tt$sig.mat[order(mSet$analSet$tt$sig.mat[,2], decreasing = F),])),
-                     fc = list(rownames(mSet$analSet$fc$sig.mat[order(abs(mSet$analSet$fc$sig.mat[,2]), decreasing = F),])),
+                     tt = list(rownames(mSet$analSet$tt$sig.mat[order(mSet$analSet$tt$sig.mat[,2], 
+                                                                      decreasing = F),])),
+                     fc = list(rownames(mSet$analSet$fc$sig.mat[order(abs(mSet$analSet$fc$sig.mat[,2]), 
+                                                                      decreasing = F),])),
                      ls = {
                        tbls_ls <- lapply(input$ls_choice, function(name){ # which lasso subset?
-                         mSet$analSet$ml$ls[[name]]$tophits[order(mSet$analSet$ml$ls[[name]]$tophits$count, decreasing = T),]$mz})
+                         mSet$analSet$ml$ls[[name]]$tophits[order(mSet$analSet$ml$ls[[name]]$tophits$count, 
+                                                                  decreasing = T),]$mz})
                        names(tbls_ls) <- input$ls_choice
                        # - - - 
                        tbls_ls
                      },
                      rf = {
                        tbls_rf <- lapply(input$rf_choice, function(name){ # which random forest subset?
-                         mSet$analSet$ml$rf[[name]]$bar[order(mSet$analSet$ml$rf[[name]]$bar$mda, decreasing = T),]$mz})
+                         mSet$analSet$ml$rf[[name]]$bar[order(mSet$analSet$ml$rf[[name]]$bar$mda, 
+                                                              decreasing = T),]$mz})
                        names(tbls_rf) <- input$rf_choice
                        # - - -
                        tbls_rf

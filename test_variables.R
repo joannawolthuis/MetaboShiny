@@ -76,3 +76,17 @@ input <- list(batch_var = c(""),
               plsda_choice = "PC1"
 )
 }
+
+# plotting
+plotPCA.2d(mSet, global$vectors$mycols,
+           pcx = input$pca_x,
+           pcy = input$pca_y, mode = mode,
+           shape.fac = input$second_var)
+
+ggPlotPerm(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+
+plotPCA.3d(mSet, global$vectors$mycols,
+           pcx = input$pca_x,
+           pcy = input$pca_y,
+           pcz = input$pca_z, mode = mode,
+           shape.fac = input$second_var)

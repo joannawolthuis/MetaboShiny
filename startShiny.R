@@ -14,13 +14,14 @@ install.if.not <- function(package){
   if(package %in% rownames(installed.packages())){
     print(paste("Already installed base package", package))
   }else{
-    if(package %in% c("MetaboAnalystR", "BatchCorrMetabolomics")){
+    if(package %in% c("MetaboAnalystR", "BatchCorrMetabolomics", "showtext")){
       metanr_packages() # Installs MetaboAnalyst-specific packages
       # Step 1: Install devtools
       install.if.not("devtools")
       # Step 2: Install MetaboAnalystR with documentation
       gitfolder <- switch(package, MetaboAnalystR = "xia-lab/MetaboAnalystR",
-                          BatchCorrMetabolomics = "rwehrens/BatchCorrMetabolomics")
+                          BatchCorrMetabolomics = "rwehrens/BatchCorrMetabolomics",
+                          showtext = "yixuan/showtext")
       devtools::install_github(gitfolder)#, build_vignettes=TRUE)
     }else{
       install.packages(package)
@@ -38,7 +39,7 @@ metanr_packages <- function(){
                  "data.table", "pROC", "Rcpp", "caret", "ellipse",
                  "scatterplot3d", "impute", "rhandsontable", "pcaMethods", 
                  "siggenes", "globaltest", "GlobalAncova", "Rgraphviz", "KEGGgraph", 
-                 "preprocessCore", "genefilter", "SSPA", "sva")
+                 "preprocessCore", "genefilter", "SSPA", "sva"))#, "showtext")
   list_installed <- installed.packages()
   
   new_pkgs <- subset(metr_pkgs, !(metr_pkgs %in% list_installed[, "Package"]))
@@ -56,7 +57,7 @@ metanr_packages <- function(){
 # -- IF YOU HAVE PROBLEMS STARTING UP --
 # requires openssl, libcurl, libxt, 
 # libxml2, libnetcdf, cairo, java, mesa-common, 
-# libgl1, libglu1 installed
+# libgl1, libglu1, libpng installed
 
 # packages needed to start up
 base.packs <- c("httr", "curl", "git2r", "devtools", 

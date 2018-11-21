@@ -32,7 +32,6 @@ sourceDir <- function(path, trace = TRUE, ...) {
   
 }
 
-
 #' Load user options saved in file.
 #' 
 #' \code{getOptions} returns all current user options defined in the given options file.
@@ -138,6 +137,11 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                                     list(name='proj_name',text=options$proj_name),
                                                     list(name="curr_cpd", text="...")# default text options at startup
                                 ),
+                                font.aes = list(font = options$font4,
+                                                ax.num.size = 9,
+                                                ax.txt.size = 15,
+                                                ann.size = 20,
+                                                title.size = 25),
                                 db.build.info = list(internal = list(title = "UMC Internal", 
                                                                      description = "Internal commonly known metabolites",
                                                                      image_id = "internal_logo"),
@@ -327,6 +331,25 @@ sort_order <<- unlist(c(global$vectors$pos_adducts$Name, global$vectors$neg_addu
 bar.css <<- nav.bar.css(options$col1, options$col2, options$col3, options$col4)
 font.css <<- font.css(options$font1, options$font2, options$font3, options$font4,
                       options$size1, options$size2, options$size3, options$size4)
+
+# google fonts
+
+# name = the name of the font in Google's Library (https://fonts.google.com)
+# family = how you want to refer to the font inside R
+# regular.wt = the weight of font used in axis, labels etc.
+# bolt.wt = the weight of font used in the title
+
+# # === GOOGLE FONT SUPPORT FOR GGPLOT2 ===
+# 
+# # Download a webfont
+# lapply(options[grepl(pattern = "font", names(options))], function(font){
+#   showtext::font.add.google(name = font, family = font, regular.wt = 400, bold.wt = 700)
+# })
+# 
+# # Perhaps the only tricky bit is remembering to run the following function to enable webfonts
+# showtext::showtext.auto()
+
+# ======================================
 
 # set default plot theme to minimal
 plot.theme <<- ggplot2::theme_minimal

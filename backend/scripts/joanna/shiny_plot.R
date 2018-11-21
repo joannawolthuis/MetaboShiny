@@ -31,26 +31,46 @@ ggplotNormSummary <- function(mSet, colmap = global$vectors$mycols, plot.theme =
     plot.theme(base_size = 15) #+ facet_grid(. ~ variable) 
   
   # first result plot: is a density plot of chosen 20 mz values with 20 samples
-  RES1 <- plot + ggplot2::geom_density(ggplot2::aes(x=value), colour="blue", fill="blue", alpha=0.4)
+  RES1 <- plot + ggplot2::geom_density(ggplot2::aes(x=value), colour="blue", fill="blue", alpha=0.4)+
+    theme(legend.position="none",
+          axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+          axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+          legend.title.align = 0.5,
+          axis.line = element_line(colour = 'black', size = .5))
   
   # second result plot: shows the spread of the intensities before normalization
   RES2 <- plot + ggplot2::geom_boxplot(
     ggplot2::aes(x=value,y=variable),
     color=rainbow(sampsize), 
-    alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(orig_melt$value)))
+    alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(orig_melt$value)))+
+    theme(legend.position="none",
+          axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+          axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+          legend.title.align = 0.5,
+          axis.line = element_line(colour = 'black', size = .5))
   
   # create base plot with base theme and font size for normalized data
   plot <- ggplot2::ggplot(data=norm_melt) +
     plot.theme(base_size = 15) #+ facet_grid(. ~ variable)
   
   # third result plot: a density plot of chosen 20 mz values post normalization
-  RES3 <- plot + ggplot2::geom_density(ggplot2::aes(x=value), colour="pink", fill="pink", alpha=0.4)
+  RES3 <- plot + ggplot2::geom_density(ggplot2::aes(x=value), colour="pink", fill="pink", alpha=0.4)+
+    theme(legend.position="none",
+          axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+          axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+          legend.title.align = 0.5,
+          axis.line = element_line(colour = 'black', size = .5))
   
   # fourth result plot: spread of intensities after normalization
   RES4 <- plot + ggplot2::geom_boxplot(
     ggplot2::aes(x=value,y=variable),
     color=rainbow(sampsize), 
-    alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(norm_melt$value)))
+    alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(norm_melt$value))) +
+    theme(legend.position="none",
+          axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+          axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+          legend.title.align = 0.5,
+          axis.line = element_line(colour = 'black', size = .5))
   
   # - - - - - - - - - - - - - - - - - - -
   
@@ -93,22 +113,42 @@ ggplotSampleNormSummary <- function(mSet, plot.theme = global$functions$plot.the
   norm_melt_sums$variable <- rownames(norm_melt_sums)
   
   RES1 <- ggplot2::ggplot(data=orig_melt_sums) +
-    plot.theme(base_size = 15) + ggplot2::geom_density(ggplot2::aes(x=value), colour="blue", fill="blue", alpha=0.4)
+    plot.theme(base_size = 15) + ggplot2::geom_density(ggplot2::aes(x=value), colour="blue", fill="blue", alpha=0.4)+
+    theme(legend.position="none",
+          axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+          axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+          legend.title.align = 0.5,
+          axis.line = element_line(colour = 'black', size = .5))
   
   RES2 <- ggplot2::ggplot(data=orig_melt) +
     plot.theme(base_size = 15) + ggplot2::geom_boxplot(
                       ggplot2::aes(x=value,y=Label),
                       color=rainbow(sampsize), 
-                      alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(orig_melt$value),text=Label))
+                      alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(orig_melt$value),text=Label))+
+    theme(legend.position="none",
+          axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+          axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+          legend.title.align = 0.5,
+          axis.line = element_line(colour = 'black', size = .5))
 
   RES3 <- ggplot2::ggplot(data=norm_melt_sums) +
-    plot.theme(base_size = 15) + ggplot2::geom_density(ggplot2::aes(x=value), colour="pink", fill="pink", alpha=0.4)
+    plot.theme(base_size = 15) + ggplot2::geom_density(ggplot2::aes(x=value), colour="pink", fill="pink", alpha=0.4)+
+    theme(legend.position="none",
+          axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+          axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+          legend.title.align = 0.5,
+          axis.line = element_line(colour = 'black', size = .5))
   
   RES4 <- ggplot2::ggplot(data=norm_melt) +
     plot.theme(base_size = 15) + ggplot2::geom_boxplot(
                       ggplot2::aes(x=value,y=Label),
                       color=rainbow(sampsize), 
-                      alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(norm_melt$value),text=Label))
+                      alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(norm_melt$value),text=Label))+
+    theme(legend.position="none",
+          axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+          axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+          legend.title.align = 0.5,
+          axis.line = element_line(colour = 'black', size = .5))
    
   list(tl=RES1, bl=RES2, tr=RES3, br=RES4)
 } 
@@ -124,13 +164,23 @@ ggplotMeba <- function(cpd, draw.average=T, cols=global$vectors$mycols, cf = glo
       stat_summary(fun.y="mean", size=1.5, geom="line", ggplot2::aes(x=Time, y=Abundance, color=Group, group=Group)) +
       ggplot2::scale_x_discrete(expand = c(0, 0)) +
       plot.theme(base_size = 15) +
-      ggplot2::scale_color_manual(values=cols)
+      ggplot2::scale_color_manual(values=cols) +
+      theme(legend.position="none",
+            axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+            axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+            legend.title.align = 0.5,
+            axis.line = element_line(colour = 'black', size = .5))
   } else{
     ggplot2::ggplot(data=profile) +
       ggplot2::geom_line(size=0.7, ggplot2::aes(x=Time, y=Abundance, group=Sample, color=Group, text=Sample)) +
       ggplot2::scale_x_discrete(expand = c(0, 0)) +
       plot.theme(base_size = 15) +
-      ggplot2::scale_color_manual(values=cols)
+      ggplot2::scale_color_manual(values=cols) +
+      theme(legend.position="none",
+            axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+            axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+            legend.title.align = 0.5,
+            axis.line = element_line(colour = 'black', size = .5))
   }
   # ---------------
   plotly::ggplotly(plot, tooltip="Sample")
@@ -178,7 +228,11 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
              plot.theme(base_size = 15) +
              ggplot2::scale_fill_manual(values=cols) +
              ggplot2::scale_color_manual(values=cols) +
-             theme(legend.position="none")
+             theme(legend.position="none",
+                   axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+                   axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+                   legend.title.align = 0.5,
+                   axis.line = element_line(colour = 'black', size = .5))
            plot <- plot + ggplot2::annotate("text", x = 1.5, y = min(profile$Abundance - 0.3), label = stars, size = 8, col = "black")
            # ---------------
            plotly::ggplotly(plot, tooltip="Sample")
@@ -196,7 +250,11 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
              plot.theme(base_size = 15) +
              ggplot2::scale_fill_manual(values=cols) +
              ggplot2::scale_color_manual(values=cols)+
-             theme(legend.position="none")+
+             theme(legend.position="none",
+                   axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+                   axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+                   legend.title.align = 0.5,
+                   axis.line = element_line(colour = 'black', size = .5))+
              stat_summary(fun.y=median, geom="line", aes(group=paste("median", Group)), linetype="dotted", lwd=1, alpha=0.5)
            # ---------------
            plotly::ggplotly(plot, tooltip="Sample", originalData=T) 
@@ -211,7 +269,11 @@ ggPlotTT <- function(cf=global$functions$color.functions[[getOptions("user_optio
   plot <- ggplot2::ggplot(data=profile) +
     ggplot2::geom_point(ggplot2::aes(x=Peak, y=p,text=cpd, color=p, key=cpd)) +
     plot.theme(base_size = 15) +
-    theme(axis.text=element_text(size=12)) +
+    theme(legend.position="none",
+          axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+          axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+          legend.title.align = 0.5,
+          axis.line = element_line(colour = 'black', size = .5))+
     ggplot2::scale_colour_gradientn(colours = cf(n)) +
     ggplot2::scale_y_log10()
   plotly::ggplotly(plot, tooltip="cpd")
@@ -227,6 +289,11 @@ ggPlotFC <- function(cf=global$functions$color.functions[[getOptions("user_optio
     ggplot2::geom_point(ggplot2::aes(x=Peak, y=log2fc, text=log2fc, color=log2fc, key=cpd)) +
     ggplot2::geom_abline(ggplot2::aes(intercept = 0, slope = 0)) +
     plot.theme(base_size = 15) +
+    theme(legend.position="none",
+          axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+          axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+          legend.title.align = 0.5,
+          axis.line = element_line(colour = 'black', size = .5))+
     ggplot2::scale_colour_gradientn(colours = cf(n))
   plotly::ggplotly(plot, tooltip="log2fc")
 }
@@ -243,6 +310,11 @@ ggPlotVolc <- function(cf=global$functions$color.functions[[getOptions("user_opt
                                        color=abs(log2FC*`-log10P`), 
                                        key=cpd)) +
       plot.theme(base_size = 15) +
+      theme(legend.position="none",
+            axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+            axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+            legend.title.align = 0.5,
+            axis.line = element_line(colour = 'black', size = .5))+
       ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE)
     plotly::ggplotly(plot, tooltip="cpd")
 }
@@ -325,6 +397,11 @@ ggPlotClass <- function(pls.type = "plsda", cf = global$functions$color.function
     geom_bar(stat="identity") + 
     theme_minimal() + 
     plot.theme(base_size = 15) +
+    theme(legend.position="none",
+          axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+          axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+          legend.title.align = 0.5,
+          axis.line = element_line(colour = 'black', size = .5))+
     facet_grid(~Component) + 
     scale_fill_manual(values=cf(pcs))
   return(p)
@@ -344,10 +421,13 @@ ggPlotPerm<- function(pls.type = "plsda", cf = global$functions$color.functions[
     geom_histogram(mapping=aes(x=acc, y=..count.., fill=factor(..count..)),
                    binwidth=0.01) +
     scale_fill_manual(values=cf(20)) +
-    theme_minimal() + 
     plot.theme(base_size = 15) + 
-    theme(legend.position="none",legend.title.align = 0.5)+
-    labs(title="PLSDA predictive value",x="Accuracy", y = "Permutations") +
+    theme(legend.position="none",
+          axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+          axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+          legend.title.align = 0.5,
+          axis.line = element_line(colour = 'black', size = .5))+
+    labs(x="Accuracy", y = "Permutations") +
     geom_segment(data=df,
                  color="black",
                  x=bw.vec[1],
@@ -464,11 +544,11 @@ ggPlotROC <- function(data, attempts = 50, cf = global$functions$color.functions
     #             alpha = 0.5) +
     plot.theme(base_size = 10) +
     ggplot2::scale_color_gradientn(colors = cols) +
-    theme(axis.text=element_text(size=10),
-          axis.title=element_text(size=19,face="bold"),
-          #legend.title=element_text(size=15),
-          #legend.text=element_text(size=12),
-          legend.position="none") +
+    theme(legend.position="none",
+          axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+          axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+          legend.title.align = 0.5,
+          axis.line = element_line(colour = 'black', size = .5))+
     #scale_y_continuous(limits=c(0,1)) +
     coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE) + 
     coord_cartesian(xlim = c(.04,.96), ylim = c(.04,.96))
@@ -493,12 +573,14 @@ ggPlotBar <- function(data,
     p + geom_bar(stat = "identity", aes(fill = count)) +
       geom_hline(aes(yintercept=attempts)) + 
       scale_fill_gradientn(colors=cf(20)) +
+      plot.theme() + 
       theme(legend.position="none",
-            axis.text=element_text(size=8),
-            axis.title=element_text(size=13,face="bold"),
-            #axis.title.x=element_blank(),
+            axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+            axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+            legend.title.align = 0.5,
+            axis.line = element_line(colour = 'black', size = .5),
             axis.text.x=element_blank(),
-            axis.ticks.x=element_blank()) +
+            axis.ticks.x=element_blank())
       labs(x="Top hits",y="Times chosen")
     
   }else{
@@ -506,10 +588,12 @@ ggPlotBar <- function(data,
     p + geom_bar(stat = "identity", aes(fill = mda)) +
       #geom_hline(aes(yintercept=attempts)) + 
       scale_fill_gradientn(colors=cf(20)) +
+      plot.theme() + 
       theme(legend.position="none",
-            axis.text=element_text(size=8),
-            axis.title=element_text(size=13,face="bold"),
-            #axis.title.x=element_blank(),
+            axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+            axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+            legend.title.align = 0.5,
+            axis.line = element_line(colour = 'black', size = .5),
             axis.text.x=element_blank(),
             axis.ticks.x=element_blank())+
       labs(x="Top hits",y="Mean Decrease Accuracy")
@@ -571,7 +655,10 @@ plotPCA.3d <- function(mSet, cols = global$vectors$mycols, shape.fac="label", pc
               'x',
               'o')
   
-  symbol.vec<-if(shape.fac == "label"){
+  symbol.vec<-if(is.null(shape.fac)){
+    rep('circle', times = length(classes))
+  }
+  else if(shape.fac == "label"){
    rep('circle', times = length(classes))
   }else{
     as.factor(mSet$dataSet$covars[,..shape.fac][[1]])
@@ -645,13 +732,13 @@ plotPCA.3d <- function(mSet, cols = global$vectors$mycols, shape.fac="label", pc
     ) %>%  layout(scene = list(
       aspectmode="cube",
       xaxis = list(
-        titlefont = list(size = 20),
+        titlefont = list(size = global$constants$font.aes$ax.txt.size),
         title = gsubfn::fn$paste("$pcx ($x.var %)")),
       yaxis = list(
-        titlefont = list(size = 20),
+        titlefont = list(size = global$constants$font.aes$ax.txt.size),
         title = gsubfn::fn$paste("$pcy ($y.var %)")),
       zaxis = list(
-        titlefont = list(size = 20),
+        titlefont = list(size = global$constants$font.aes$ax.txt.size),
         title = gsubfn::fn$paste("$pcz ($z.var %)")))) 
     # --- return ---
     pca_plot
@@ -749,8 +836,10 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols = global$vectors$mycols, 
     stat_ellipse(geom = "polygon", aes(fill=group), alpha = 0.3) +
     plot.theme() +
     theme(legend.position="none",
-          axis.text=element_text(size=8),
-          axis.title=element_text(size=18,face="bold"))+
+          axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+          axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+          legend.title.align = 0.5,
+          axis.line = element_line(colour = 'black', size = .5))+
     scale_x_continuous(name=gsubfn::fn$paste("$pcx ($x.var%)")) +
     scale_y_continuous(name=gsubfn::fn$paste("$pcy ($y.var%)")) +
     scale_fill_manual(values=cols) +
