@@ -513,20 +513,22 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                              tabPanel(title=NULL, icon=icon("link"),
                                                                       br(),
                                                                       helpText("You can use this tab to find overlapping hits between analyses."),
-                                                                      # select groups to compare to each other
-                                                                      checkboxGroupInput("venn_members", label = "Please choose which to combine", choices = list(
-                                                                        "T-test" = "tt",
-                                                                        "Fold-change" = "fc",
-                                                                        "Lasso" = "ls",
-                                                                        "Random Forest" = "rf",
-                                                                        "Volcano" = "volc",
-                                                                        "PLS-DA" = "plsda"
-                                                                      ), selected = c("tt", "fc"), inline = T),
-                                                                      # generate selection menus based on which chosen (ML and PLS-DA etc have multiple options)
-                                                                      uiOutput("venn_ml_ui"),
+                                                                      fluidRow(
+                                                                        column(5, 
+                                                                               div(DT::dataTableOutput('venn_unselected'),style='font-size:80%')),
+                                                                        column(2,align="center",
+                                                                               br(),br(),br(),br(),br(),br(),br(),br(),
+                                                                               shinyWidgets::circleButton("venn_add", icon=icon("arrow-right"), size="sm"),
+                                                                               shinyWidgets::circleButton("venn_remove", icon=icon("arrow-left"), size="sm"),
+                                                                               shinyWidgets::circleButton("venn_build", icon=icon("hand-pointer-o"),size="sm")
+                                                                               ),
+                                                                        column(5, 
+                                                                               div(DT::dataTableOutput('venn_selected'),style='font-size:80%'))
+                                                                      ),
+                                                                      br(),
                                                                       # choose how many top hits are picked
-                                                                      sliderInput("venn_tophits", label = "Only include top", min = 1, max = 1000, post = " hits", value=20),
-                                                                      actionButton("build_venn", label = "Find overlap"),
+                                                                      sliderInput("venn_tophits", label = "Only include top:", min = 1, max = 200, post = " hits", value=20),
+                                                                      hr(),
                                                                       plotly::plotlyOutput("venn_plot",inline = F),
 																	  # find the overlapping compounds between the groups you want to compare (user select)
 																	  # TODO: enable this with clicking the numbers/areas

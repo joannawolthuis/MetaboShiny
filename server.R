@@ -157,8 +157,10 @@ shinyServer(function(input, output, session) {
     if(input$timecourse_trigger){
       # change to timecourse mode
       # save previous mset 
+      
+      mset_name = paste0(as.character(levels(mSet$dataSet$cls)), collapse="-")
 	  # TODO: use this in venn diagram creation
-      mSet$storage[[paste0(as.character(levels(mSet$dataSet$cls)), collapse="-")]] <<- mSet$analSet
+      mSet$storage[[mset_name]] <<- mSet$analSet
       
       # adjust mset design type (necessary for metaboanalystr)
       SetDesignType(mSet, "time")
@@ -185,7 +187,9 @@ shinyServer(function(input, output, session) {
     }else{
       # change back to normal mode
       # save previous analyses (should be usable in venn diagram later)
-      mSet$storage[[paste0("(timecourse)", paste0(as.character(levels(mSet$dataSet$cls)), collapse="-"))]] <<- mSet$analSet
+      mset_name = paste0("(timecourse)", paste0(as.character(levels(mSet$dataSet$cls)), collapse="-"))
+      
+      mSet$storage[[mset_name]] <<- mSet$analSet
       # - - - - - - - - - - - -
 	  # rename experimental factors
       mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,mSet$dataSet$cls.name, with=F][[1]])
@@ -205,6 +209,9 @@ shinyServer(function(input, output, session) {
       else{
         interface$mode <- "multivar"}
     }
+    
+    global$constants$last_mset <<- mset_name
+    
   }, ignoreInit = TRUE)
   
   # create interface mode storage object.
@@ -218,8 +225,12 @@ shinyServer(function(input, output, session) {
       mSet$storage <<- list()
     }
     
+    mset_name = paste0(as.character(levels(mSet$dataSet$cls)), collapse="-")
+    
     # save previous analyses (should be usable in venn diagram later)
-    mSet$storage[[paste0(as.character(levels(mSet$dataSet$cls)), collapse="-")]] <<- mSet$analSet
+    mSet$storage[[mset_name]] <<- mSet$analSet
+    
+    global$constants$last_mset <<- mset_name
     
 	# change current variable of interest to user pick from covars table
     mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,input$first_var, with=F][[1]])
@@ -2360,34 +2371,108 @@ shinyServer(function(input, output, session) {
       output$plsda_specific_plot <- plotly::renderPlotly({ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])})
     })
   })
+
+
+  # nonselected
   
-  # triggers on changing the members of the venn diagram analysis selection
-  observeEvent(input$venn_members, {
-    if("ls" %in% input$venn_members | "rf" %in% input$venn_members | "plsda" %in% input$venn_members){
-      uiElements <- lapply(intersect(c("rf", "ls", "plsda"), input$venn_members), function(name){
-        options <- switch(name, # get options for subdatasets
+  
+  venn_yes = reactiveValues(start = data.frame(),
+                            now = data.frame())
+  
+  venn_no = reactiveValues(start = data.frame(c("a", "b", "c")), 
+                           now = data.frame(c("a", "b", "c")))
+  
+  observe({
+    if("storage" %in% names(mSet)){
+      analyses = names(mSet$storage)
+      venn_no$start <- rbindlist(lapply(analyses, function(name){
+        analysis = mSet$storage[[name]]
+        analysis_names = names(anal)
+        first_letters = unlist(stringr::str_match_all(string = name, pattern = "(^\\w)|-(\\w)"))
+        first_letters = first_letters[!is.na(first_letters)]
+        first_letters = unique(grep(first_letters, pattern = "-", 
+                                         invert =T, 
+                                         value = T))
+        shorthand = paste0(first_letters, collapse="|") 
+        data.frame(
+            paste0(analysis_names, " (", shorthand, ")")
+          )
+      }))
+      venn_no$now <- venn_no$start
+    }else{
+      venn_no$start <- data.frame(names(mSet$analSet))
+      venn_no$now <- venn_no$start
+    }
+  })
+  
+  venn_members <- reactiveValues(mzvals = list())
+  
+  observeEvent(input$venn_add, {
+    # add to the 'selected' table
+    rows <- input$venn_unselected_rows_selected
+    print(rows)
+    # get members and send to members list
+    added = venn_no$now[rows,]
+    venn_yes$now <- data.frame(c(unlist(venn_yes$now), added))
+    venn_no$now <- venn_no$now[-rows,]
+  })
+  
+  observeEvent(input$venn_remove, {
+    # add to the 'selected' table
+    rows <- input$venn_selected_rows_selected
+    print(rows)
+    # get members and send to non members list
+    removed = venn_yes$now[rows,]
+    venn_no$now <- data.frame(c(unlist(venn_no$now), removed))
+    venn_yes$now <- venn_yes$now[-rows,]
+  })
+  
+  
+  # the 'non-selected' table
+  output$venn_unselected <- DT::renderDataTable({
+    res = DT::datatable(data.table(), rownames=FALSE, colnames="excluded", options = list(dom = 't'))
+    try({
+      res = DT::datatable(venn_no$now,rownames = FALSE, colnames="excluded", selection = "multiple", options = list(dom = 't')) 
+    })
+    res
+  })
+  
+  # the 'selected' table
+  output$venn_selected <- DT::renderDataTable({
+    res = DT::datatable(data.table(), rownames=FALSE, colnames="included", options = list(dom = 't'))
+    try({
+      res = DT::datatable(venn_yes$now,rownames = FALSE, colnames="included", selection = "multiple", options = list(dom = 't')) 
+    })
+    res
+  })
+  
+  observeEvent(input$venn_curr_anal, {
+    options <- switch(input$venn_curr_anal, # get options for subdatasets
                           tt = NULL,
                           fc = NULL,
                           ls = names(mSet$analSet$ml$ls),
                           rf = names(mSet$analSet$ml$rf),
                           volc = NULL,
-                          plsda = c("PC1", "PC2", "PC3")) 
-        shorthand = switch(name,
-                           ls = "lasso",
-                           rf = "random forest",
-                           plsda = "PLSDA")
-        # generate dropdown menu to pick your subdataset of choice
+                          plsda = c("PC1", "PC2", "PC3"))
+    
+    if(length(options) > 0){
+      shorthand = switch(input$venn_curr_anal,
+                         ls = "lasso",
+                         rf = "random forest",
+                         plsda = "PLSDA")
+      output$venn_ml_ui <- renderUI({
         selectInput(inputId = paste0(name,"_choice"), 
                     label = gsubfn::fn$paste("Which $shorthand group(s):"), 
                     multiple=TRUE,
                     choices = options)
       })
-      # render this dropdown menu in UI
-      output$venn_ml_ui <- renderUI({uiElements})
     }else{
-      # otherwise render an empty space (if not using plsda or machine learning)
       output$venn_ml_ui <- renderUI({br()})
     }
+  })
+  
+  observeEvent(input$add_venn, {
+    print("adding...")
   })
   
   # triggers on clicking the 'go' button on the venn diagram sidebar panel
