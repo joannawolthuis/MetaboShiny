@@ -71,7 +71,7 @@ input <- list(batch_var = c(""),
               ml_method = "rf",
               ml_top_x = 50,
               venn_tophits = 50,
-              venn_members = c("tt", "fc", "plsda", "rf"),
+              venn_members = c("tt", "plsda", "rf"),
               rf_choice = "all",
               plsda_choice = "PC1"
 )

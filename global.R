@@ -138,7 +138,7 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                                     list(name="curr_cpd", text="...")# default text options at startup
                                 ),
                                 font.aes = list(font = options$font4,
-                                                ax.num.size = 9,
+                                                ax.num.size = 11,
                                                 ax.txt.size = 15,
                                                 ann.size = 20,
                                                 title.size = 25),
@@ -339,15 +339,15 @@ font.css <<- font.css(options$font1, options$font2, options$font3, options$font4
 # regular.wt = the weight of font used in axis, labels etc.
 # bolt.wt = the weight of font used in the title
 
-# # === GOOGLE FONT SUPPORT FOR GGPLOT2 ===
-# 
-# # Download a webfont
-# lapply(options[grepl(pattern = "font", names(options))], function(font){
-#   showtext::font.add.google(name = font, family = font, regular.wt = 400, bold.wt = 700)
-# })
-# 
-# # Perhaps the only tricky bit is remembering to run the following function to enable webfonts
-# showtext::showtext.auto()
+# === GOOGLE FONT SUPPORT FOR GGPLOT2 ===
+
+# Download a webfont
+lapply(c(options[grepl(pattern = "font", names(options))]), function(font){
+  sysfonts::font_add_google(name = font, family = font, regular.wt = 400, bold.wt = 700)
+})
+
+# Perhaps the only tricky bit is remembering to run the following function to enable webfonts
+showtext::showtext_auto(enable = T)
 
 # ======================================
 

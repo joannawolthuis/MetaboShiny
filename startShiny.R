@@ -39,7 +39,7 @@ metanr_packages <- function(){
                  "data.table", "pROC", "Rcpp", "caret", "ellipse",
                  "scatterplot3d", "impute", "rhandsontable", "pcaMethods", 
                  "siggenes", "globaltest", "GlobalAncova", "Rgraphviz", "KEGGgraph", 
-                 "preprocessCore", "genefilter", "SSPA", "sva"))#, "showtext")
+                 "preprocessCore", "genefilter", "SSPA", "sva", "showtext")
   list_installed <- installed.packages()
   
   new_pkgs <- subset(metr_pkgs, !(metr_pkgs %in% list_installed[, "Package"]))
@@ -47,7 +47,7 @@ metanr_packages <- function(){
   if(length(new_pkgs) != 0){
     source("https://bioconductor.org/biocLite.R")
     BiocInstaller::biocLite(new_pkgs, dependencies = TRUE, ask = FALSE)
-    print(c(new_pkgs, " packages added..."))
+    print(paste0(new_pkgs, " added..."))
   }
   if((length(new_pkgs) < 1)){
     print("No new packages added...")

@@ -2403,34 +2403,34 @@ shinyServer(function(input, output, session) {
     tables <- lapply(categories, function(name){
       # fetch involved mz values 
       tbls <- switch(name,
-                     tt = list(rownames(mSet$analSet$tt$sig.mat[order(mSet$analSet$tt$sig.mat[,2], 
-                                                                      decreasing = F),])),
-                     fc = list(rownames(mSet$analSet$fc$sig.mat[order(abs(mSet$analSet$fc$sig.mat[,2]), 
-                                                                      decreasing = F),])),
+                     tt = list(as.numeric(rownames(mSet$analSet$tt$sig.mat[order(mSet$analSet$tt$sig.mat[,2], 
+                                                                      decreasing = F),]))),
+                     fc = list(as.numeric(rownames(mSet$analSet$fc$sig.mat[order(abs(mSet$analSet$fc$sig.mat[,2]), 
+                                                                      decreasing = F),]))),
                      ls = {
                        tbls_ls <- lapply(input$ls_choice, function(name){ # which lasso subset?
-                         mSet$analSet$ml$ls[[name]]$tophits[order(mSet$analSet$ml$ls[[name]]$tophits$count, 
-                                                                  decreasing = T),]$mz})
+                         as.numeric(mSet$analSet$ml$ls[[name]]$tophits[order(mSet$analSet$ml$ls[[name]]$tophits$count, 
+                                                                  decreasing = T),]$mz)})
                        names(tbls_ls) <- input$ls_choice
                        # - - - 
-                       tbls_ls
+                       as.numeric(tbls_ls, na.rm=T)
                      },
                      rf = {
                        tbls_rf <- lapply(input$rf_choice, function(name){ # which random forest subset?
                          mSet$analSet$ml$rf[[name]]$bar[order(mSet$analSet$ml$rf[[name]]$bar$mda, 
                                                               decreasing = T),]$mz})
-                       names(tbls_rf) <- input$rf_choice
+                       names(tbls_rf) <- paste0(input$rf_choice, " (RF)")
                        # - - -
-                       tbls_rf
+                       lapply(tbls_rf, function(x){as.numeric(as.character(x))})
                      },
                      plsda = {
                        tbls_plsda <- lapply(input$plsda_choice, function(name){ # which PC to use? (usually PC1 for PLS-DA)
                          compounds_pc <- as.data.table(mSet$analSet$plsda$vip.mat,keep.rownames = T)
                          colnames(compounds_pc) <- c("rn", paste0("PC", 1:(ncol(compounds_pc)-1)))
                          ordered_pc <- setorderv(compounds_pc, name, -1)
-                         ordered_pc[, c("rn")][[1]]               
+                         as.numeric(ordered_pc[, c("rn")][[1]])        
                        })
-                       names(tbls_plsda) <- paste0("pls_", input$plsda_choice)
+                       names(tbls_plsda) <- paste0(input$plsda_choice, " (PLS-DA)")
                        # - - -
                        tbls_plsda
                      },
@@ -2454,12 +2454,14 @@ shinyServer(function(input, output, session) {
     # unnest the nested lists
     flattened <- flattenlist(tables)
     
+    # remove NAs
+    flattened <- lapply(flattened, function(x) x[!is.na(x)])
+    
     #rename and remove regex-y names
     names(flattened) <- gsub(x = names(flattened), pattern = "(.*\\.)(.*$)", replacement = "\\2")
     
     # how many circles need to be plotted? (# of included analysis)
     circles = length(flattened)
-    
     
     # generate the initial plot - the POLYGONS
     venn.plot <- VennDiagram::venn.diagram(x = flattened,
@@ -2526,11 +2528,13 @@ shinyServer(function(input, output, session) {
     p <- ggplot(datapoly, 
                 aes(x = x, 
                     y = y)) + geom_polygon(colour="black", alpha=0.5, aes(fill=id, group=id)) +
+      geom_text(mapping = aes(x=x, y=y, label=value), data = headers, size = 5) +
       geom_text(mapping = aes(x=x, y=y, label=value), data = numbers, size = 5) +
-      geom_text(mapping = aes(x=x, y=y, label=value), data = headers, fontface="bold", size = 7) +
       theme_void() +
       theme(legend.position="none",
-            panel.grid = element_blank()) + 
+            text=element_text(size=),
+            panel.grid = element_blank()) +
+      #scale_fill_gradientn(colors = rainbow(circles)) + 
       scale_fill_gradientn(colours = global$functions$color.functions[[getOptions("user_options.txt")$gspec]](circles)) +
       coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
     
