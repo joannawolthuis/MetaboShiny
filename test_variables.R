@@ -77,6 +77,20 @@ input <- list(batch_var = c(""),
 )
 }
 
+venn_yes <- list(now = data.frame(included = c(
+  "tt (disease)",
+  "plsda - PC1 (disease)",
+  "rf - all (disease)",
+  "tt (race)",
+  "plsda - PC1 (race)",
+  "rf - all (race)"
+)))
+
+venn_yes$now <- data.frame(a=c("tt (race)"
+                               ,"tt (disease)"
+                               ,"plsda - PC1 (disease)"
+                               ,"rf - all (disease)"))
+
 # plotting
 plotPCA.2d(mSet, global$vectors$mycols,
            pcx = input$pca_x,

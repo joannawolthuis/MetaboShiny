@@ -157,8 +157,8 @@ shinyServer(function(input, output, session) {
     if(input$timecourse_trigger){
       # change to timecourse mode
       # save previous mset 
+      mset_name = mSet$dataSet$cls.name
       
-      mset_name = paste0(as.character(levels(mSet$dataSet$cls)), collapse="-")
 	  # TODO: use this in venn diagram creation
       mSet$storage[[mset_name]] <<- mSet$analSet
       
@@ -187,7 +187,7 @@ shinyServer(function(input, output, session) {
     }else{
       # change back to normal mode
       # save previous analyses (should be usable in venn diagram later)
-      mset_name = paste0("(timecourse)", paste0(as.character(levels(mSet$dataSet$cls)), collapse="-"))
+      mset_name = paste0("(timecourse)", mSet$dataSet$cls.name, collapse="-")
       
       mSet$storage[[mset_name]] <<- mSet$analSet
       # - - - - - - - - - - - -
@@ -225,7 +225,7 @@ shinyServer(function(input, output, session) {
       mSet$storage <<- list()
     }
     
-    mset_name = paste0(as.character(levels(mSet$dataSet$cls)), collapse="-")
+    mset_name = mSet$dataSet$cls.name
     
     # save previous analyses (should be usable in venn diagram later)
     mSet$storage[[mset_name]] <<- mSet$analSet
@@ -2383,25 +2383,42 @@ shinyServer(function(input, output, session) {
                            now = data.frame(c("a", "b", "c")))
   
   observe({
-    if("storage" %in% names(mSet)){
-      analyses = names(mSet$storage)
-      venn_no$start <- rbindlist(lapply(analyses, function(name){
-        analysis = mSet$storage[[name]]
-        analysis_names = names(anal)
-        first_letters = unlist(stringr::str_match_all(string = name, pattern = "(^\\w)|-(\\w)"))
-        first_letters = first_letters[!is.na(first_letters)]
-        first_letters = unique(grep(first_letters, pattern = "-", 
-                                         invert =T, 
-                                         value = T))
-        shorthand = paste0(first_letters, collapse="|") 
-        data.frame(
-            paste0(analysis_names, " (", shorthand, ")")
+    if(exists("mSet")){
+      if("storage" %in% names(mSet)){
+        analyses = names(mSet$storage)
+        venn_no$start <- rbindlist(lapply(analyses, function(name){
+          analysis = mSet$storage[[name]]
+          analysis_names = names(analysis)
+          # - - -
+          with.subgroups <- intersect(analysis_names, c("ml", "plsr"))
+          if(length(with.subgroups) > 0){
+            extra_names <- lapply(with.subgroups, function(anal){
+              switch(anal,
+                     ml = {
+                       which.mls <- intersect(c("rf", "ls"), names(analysis$ml))
+                       ml.names = sapply(which.mls, function(meth){
+                         if(length(analysis$ml[[meth]]) > 0){
+                           paste0(meth, " - ", names(analysis$ml[[meth]]))
+                         }
+                       })
+                       unlist(ml.names)
+                     },
+                     plsr = {
+                       c ("plsda - PC1", "plsda - PC2", "plsda - PC3")
+                     })
+            })
+            analysis_names <- c(setdiff(analysis_names, c("ml", "plsr", "plsda")), unlist(extra_names))
+          }
+          # - - -
+          data.frame(
+            paste0(analysis_names, " (", name, ")")
           )
-      }))
-      venn_no$now <- venn_no$start
-    }else{
-      venn_no$start <- data.frame(names(mSet$analSet))
-      venn_no$now <- venn_no$start
+        }))
+        venn_no$now <- venn_no$start
+      }else{
+        venn_no$start <- data.frame(names(mSet$analSet))
+        venn_no$now <- venn_no$start
+      }
     }
   })
   
@@ -2410,228 +2427,232 @@ shinyServer(function(input, output, session) {
   observeEvent(input$venn_add, {
     # add to the 'selected' table
     rows <- input$venn_unselected_rows_selected
-    print(rows)
     # get members and send to members list
     added = venn_no$now[rows,]
     venn_yes$now <- data.frame(c(unlist(venn_yes$now), added))
-    venn_no$now <- venn_no$now[-rows,]
+    venn_no$now <- data.frame(venn_no$now[-rows,])
   })
   
   observeEvent(input$venn_remove, {
     # add to the 'selected' table
     rows <- input$venn_selected_rows_selected
-    print(rows)
     # get members and send to non members list
     removed = venn_yes$now[rows,]
     venn_no$now <- data.frame(c(unlist(venn_no$now), removed))
-    venn_yes$now <- venn_yes$now[-rows,]
+    venn_yes$now <- data.frame(venn_yes$now[-rows,])
   })
   
   
   # the 'non-selected' table
   output$venn_unselected <- DT::renderDataTable({
-    res = DT::datatable(data.table(), rownames=FALSE, colnames="excluded", options = list(dom = 't'))
+    res = DT::datatable(data.table(), rownames=FALSE, colnames="excluded", options = list(dom = 'tp'))
     try({
-      res = DT::datatable(venn_no$now,rownames = FALSE, colnames="excluded", selection = "multiple", options = list(dom = 't')) 
+      res = DT::datatable(venn_no$now,rownames = FALSE, colnames="excluded", selection = "multiple", options = list(dom = 'tp')) 
     })
     res
   })
   
   # the 'selected' table
   output$venn_selected <- DT::renderDataTable({
-    res = DT::datatable(data.table(), rownames=FALSE, colnames="included", options = list(dom = 't'))
+    res = DT::datatable(data.table(), rownames=FALSE, colnames="included", options = list(dom = 'tp'))
     try({
-      res = DT::datatable(venn_yes$now,rownames = FALSE, colnames="included", selection = "multiple", options = list(dom = 't')) 
+      res = DT::datatable(venn_yes$now,rownames = FALSE, colnames="included", selection = "multiple", options = list(dom = 'tp')) 
     })
     res
   })
   
-  observeEvent(input$venn_curr_anal, {
-    options <- switch(input$venn_curr_anal, # get options for subdatasets
-                          tt = NULL,
-                          fc = NULL,
-                          ls = names(mSet$analSet$ml$ls),
-                          rf = names(mSet$analSet$ml$rf),
-                          volc = NULL,
-                          plsda = c("PC1", "PC2", "PC3"))
-    
-    if(length(options) > 0){
-      shorthand = switch(input$venn_curr_anal,
-                         ls = "lasso",
-                         rf = "random forest",
-                         plsda = "PLSDA")
-      output$venn_ml_ui <- renderUI({
-        selectInput(inputId = paste0(name,"_choice"), 
-                    label = gsubfn::fn$paste("Which $shorthand group(s):"), 
-                    multiple=TRUE,
-                    choices = options)
-      })
-    }else{
-      output$venn_ml_ui <- renderUI({br()})
-    }
-  })
-  
-  observeEvent(input$add_venn, {
-    print("adding...")
-  })
-  
   # triggers on clicking the 'go' button on the venn diagram sidebar panel
-  observeEvent(input$build_venn, {
+  observeEvent(input$venn_build, {
     
     # get user input for how many top values to use for venn
     top = input$venn_tophits
+
+    print(venn_yes$now)
     
-    # pick which analyses are included
-    categories <- input$venn_members
-    
-    # go through the to include analyses
-    tables <- lapply(categories, function(name){
-      # fetch involved mz values 
-      tbls <- switch(name,
-                     tt = list(as.numeric(rownames(mSet$analSet$tt$sig.mat[order(mSet$analSet$tt$sig.mat[,2], 
-                                                                      decreasing = F),]))),
-                     fc = list(as.numeric(rownames(mSet$analSet$fc$sig.mat[order(abs(mSet$analSet$fc$sig.mat[,2]), 
-                                                                      decreasing = F),]))),
-                     ls = {
-                       tbls_ls <- lapply(input$ls_choice, function(name){ # which lasso subset?
-                         as.numeric(mSet$analSet$ml$ls[[name]]$tophits[order(mSet$analSet$ml$ls[[name]]$tophits$count, 
-                                                                  decreasing = T),]$mz)})
-                       names(tbls_ls) <- input$ls_choice
-                       # - - - 
-                       as.numeric(tbls_ls, na.rm=T)
-                     },
-                     rf = {
-                       tbls_rf <- lapply(input$rf_choice, function(name){ # which random forest subset?
-                         mSet$analSet$ml$rf[[name]]$bar[order(mSet$analSet$ml$rf[[name]]$bar$mda, 
-                                                              decreasing = T),]$mz})
-                       names(tbls_rf) <- paste0(input$rf_choice, " (RF)")
-                       # - - -
-                       lapply(tbls_rf, function(x){as.numeric(as.character(x))})
-                     },
-                     plsda = {
-                       tbls_plsda <- lapply(input$plsda_choice, function(name){ # which PC to use? (usually PC1 for PLS-DA)
-                         compounds_pc <- as.data.table(mSet$analSet$plsda$vip.mat,keep.rownames = T)
-                         colnames(compounds_pc) <- c("rn", paste0("PC", 1:(ncol(compounds_pc)-1)))
-                         ordered_pc <- setorderv(compounds_pc, name, -1)
-                         as.numeric(ordered_pc[, c("rn")][[1]])        
-                       })
-                       names(tbls_plsda) <- paste0(input$plsda_choice, " (PLS-DA)")
-                       # - - -
-                       tbls_plsda
-                     },
-                     volc = list(rownames(mSet$analSet$volcano$sig.mat)))
-      # TODO: include PCA here too?
+    if(length(venn_yes$now) > 5 | length(venn_yes) == 0){
+      print("can only take more than zero and less than five")
+      NULL 
+    }else{
+      # pick which analyses are included
+      experiments <- str_match(unlist(venn_yes$now), pattern = "\\(.*\\)")[,1]
+      experiments <- unique(gsub(experiments, pattern = "\\(|\\)", replacement=""))
       
-      # user specified top hits only
-      tbls_top <- lapply(tbls, function(tbl){
-        if(length(tbl) < top){
-          tbl
-        }else{
-          tbl[1:top]
-        }
+      table_list <- lapply(experiments, function(experiment){
+        print(experiment)
+        analysis = mSet$storage[[experiment]]
+        categories = grep(unlist(venn_yes$now), pattern = experiment, value = T)
+        categories = gsub(categories, pattern = " \\(.*\\)", replacement = "")
+        # go through the to include analyses
+        tables <- lapply(categories, function(name){
+          
+          base_name <- gsub(name, pattern = " -.*$", replacement="")
+                    # fetch involved mz values 
+          tbls <- switch(base_name,
+                         tt = {
+                           res = list(as.numeric(rownames(analysis$tt$sig.mat[order(analysis$tt$sig.mat[,2],
+                                                                                    decreasing = F),])))
+                           names(res) = base_name
+                           res
+                           },
+                         fc ={
+                           res = list(as.numeric(rownames(analysis$fc$sig.mat[order(abs(analysis$fc$sig.mat[,2]), 
+                                                                                     decreasing = F),])))
+                           names(res) = base_name
+                           res
+                           },
+                         ls = {
+                           which.ls <- gsub(name, pattern = "^.*- ", replacement="")
+                           tbls_ls <- lapply(which.ls, function(name){ # which lasso subset?
+                             as.numeric(analysis$ml$ls[[name]]$tophits[order(analysis$ml$ls[[name]]$tophits$count, 
+                                                                                 decreasing = T),]$mz)})
+                           names(tbls_ls) <- which.ls
+                           # - - - 
+                           as.numeric(tbls_ls, na.rm=T)
+                         },
+                         rf = {
+                           which.rf <- gsub(name, pattern = "^.*- ", replacement="")
+                           tbls_rf <- lapply(which.rf, function(name){ # which random forest subset?
+                             analysis$ml$rf[[name]]$bar[order(analysis$ml$rf[[name]]$bar$mda, 
+                                                                  decreasing = T),]$mz})
+                           names(tbls_rf) <- paste0(which.rf, " (RF)")
+                           # - - -
+                           lapply(tbls_rf, function(x){as.numeric(as.character(x))})
+                         },
+                         plsda = {
+                           which.plsda <- gsub(name, pattern = "^.*- ", replacement="")
+                           tbls_plsda <- lapply(which.plsda, function(name){ # which PC to use? (usually PC1 for PLS-DA)
+                             compounds_pc <- as.data.table(analysis$plsda$vip.mat,keep.rownames = T)
+                             colnames(compounds_pc) <- c("rn", paste0("PC", 1:(ncol(compounds_pc)-1)))
+                             ordered_pc <- setorderv(compounds_pc, name, -1)
+                             as.numeric(ordered_pc[, c("rn")][[1]])        
+                           })
+                           names(tbls_plsda) <- paste0(which.plsda, " (PLS-DA)")
+                           # - - -
+                           tbls_plsda
+                         },
+                         volc = {
+                           res <- list(rownames(analysis$volcano$sig.mat))
+                           names(res) = base_name
+                           res
+                           })
+          # TODO: include PCA here too?
+          
+          # user specified top hits only
+          tbls_top <- lapply(tbls, function(tbl){
+            if(length(tbl) < top){
+              tbl
+            }else{
+              tbl[1:top]
+            }
+          })
+          names(tbls_top) <- paste0(experiment, ": ", names(tbls_top))
+          tbls_top
+        })
+        # unnest the nested lists
+        flattened <- flattenlist(tables)
+        
+        # remove NAs
+        flattened <- lapply(flattened, function(x) x[!is.na(x)])
+        
+        #rename and remove regex-y names
+        names(flattened) <- gsub(x = names(flattened), pattern = "(.*\\.)(.*$)", replacement = "\\2")
+      
+        # return
+        flattened
+        })
+      
+      flattened <- flattenlist(table_list)
+      names(flattened) <- gsub(x = names(flattened), pattern = "(.*\\.)(.*$)", replacement = "\\2")
+      flattened <- lapply(flattened, function(x) x[!is.na(x)])
+      
+      # how many circles need to be plotted? (# of included analysis)
+      circles = length(flattened)
+      
+      # generate the initial plot - the POLYGONS
+      venn.plot <- VennDiagram::venn.diagram(x = flattened,
+                                             filename = NULL)
+      
+      # split the plots into its individual elements
+      items <- strsplit(as.character(venn.plot), split = ",")[[1]]
+      
+      # get which are circles
+      circ_values <<- data.frame(
+        id = 1:length(grep(items, pattern="polygon"))
+        #,value = c(3, 3.1, 3.1, 3.2, 3.15, 3.5)
+      )
+      
+      # get which are text
+      txt_values <- data.frame(
+        id = grep(items, pattern="text"),
+        value = unlist(lapply(grep(items, pattern="text"), function(i) venn.plot[[i]]$label))
+      )
+      
+      # TODO: figure out what i did here again...
+      txt_values$value <- gsub(x = txt_values$value, pattern = "(.*\\.)(.*$)", replacement = "\\2")
+      categories <- c(categories, input$rf_choice, input$ls_choice, input$plsda_choice)
+      
+      # get x and y values for circles
+      x_c = unlist(lapply(grep(items, pattern="polygon"), function(i) venn.plot[[i]]$x))
+      y_c = unlist(lapply(grep(items, pattern="polygon"), function(i) venn.plot[[i]]$y))
+      
+      # get x and y values for text
+      x_t = unlist(lapply(grep(items, pattern="text"), function(i) venn.plot[[i]]$x))
+      y_t = unlist(lapply(grep(items, pattern="text"), function(i)venn.plot[[i]]$y))
+      
+      # table with positions and ids for circles
+      positions_c <- data.frame(
+        id = rep(circ_values$id, each = length(x_c)/length(circ_values$id)),
+        x = x_c,
+        y = y_c
+      )
+      
+      # table with positions and ids for text
+      positions_t <- data.frame(
+        id = rep(txt_values$id, each = length(x_t)/length(txt_values$id)),
+        x = x_t,
+        y = y_t
+      )
+      
+      # merge them together for use in ggplot
+      datapoly <- merge(circ_values, positions_c, by=c("id"))
+      datatxt <- merge(txt_values, positions_t, by=c("id"))
+      
+      # make sure only the wanted analyses are in there
+      numbers <- datatxt[!(datatxt$value %in% names(flattened)),]
+      headers <- datatxt[(datatxt$value %in% names(flattened)),]
+      
+      # move numbers slightly if there are only 2 circles
+      if(circles == 2){
+        occur <- table(numbers$y)
+        newy <- names(occur[occur == max(occur)])
+        # - - -
+        numbers$y <- as.numeric(c(newy))
+      }
+      
+      # generate plot with ggplot
+      p <- ggplot(datapoly, 
+                  aes(x = x, 
+                      y = y)) + geom_polygon(colour="black", alpha=0.5, aes(fill=id, group=id)) +
+        geom_text(mapping = aes(x=x, y=y, label=value), data = headers, size = 5) +
+        geom_text(mapping = aes(x=x, y=y, label=value), data = numbers, size = 5) +
+        theme_void() +
+        theme(legend.position="none",
+              text=element_text(size=),
+              panel.grid = element_blank()) +
+        #scale_fill_gradientn(colors = rainbow(circles)) + 
+        scale_fill_gradientn(colours = global$functions$color.functions[[getOptions("user_options.txt")$gspec]](circles)) +
+        coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
+      
+      # render plot in UI
+      output$venn_plot <- plotly::renderPlotly({
+        
+        ggplotly(p, tooltip = "label")
+        
       })
-      tbls_top
-    })
-    
-    # rename the list to the used analyses
-    names(tables) <- categories
-    
-    # unnest the nested lists
-    flattened <- flattenlist(tables)
-    
-    # remove NAs
-    flattened <- lapply(flattened, function(x) x[!is.na(x)])
-    
-    #rename and remove regex-y names
-    names(flattened) <- gsub(x = names(flattened), pattern = "(.*\\.)(.*$)", replacement = "\\2")
-    
-    # how many circles need to be plotted? (# of included analysis)
-    circles = length(flattened)
-    
-    # generate the initial plot - the POLYGONS
-    venn.plot <- VennDiagram::venn.diagram(x = flattened,
-                                           filename = NULL)
-    
-    # split the plots into its individual elements
-    items <- strsplit(as.character(venn.plot), split = ",")[[1]]
-    
-    # get which are circles
-    circ_values <<- data.frame(
-      id = 1:length(grep(items, pattern="polygon"))
-      #,value = c(3, 3.1, 3.1, 3.2, 3.15, 3.5)
-    )
-    
-    # get which are text
-    txt_values <- data.frame(
-      id = grep(items, pattern="text"),
-      value = unlist(lapply(grep(items, pattern="text"), function(i) venn.plot[[i]]$label))
-    )
-    
-    # TODO: figure out what i did here again...
-    txt_values$value <- gsub(x = txt_values$value, pattern = "(.*\\.)(.*$)", replacement = "\\2")
-    categories <- c(categories, input$rf_choice, input$ls_choice, input$plsda_choice)
-    
-    # get x and y values for circles
-    x_c = unlist(lapply(grep(items, pattern="polygon"), function(i) venn.plot[[i]]$x))
-    y_c = unlist(lapply(grep(items, pattern="polygon"), function(i) venn.plot[[i]]$y))
-    
-    # get x and y values for text
-    x_t = unlist(lapply(grep(items, pattern="text"), function(i) venn.plot[[i]]$x))
-    y_t = unlist(lapply(grep(items, pattern="text"), function(i)venn.plot[[i]]$y))
-    
-    # table with positions and ids for circles
-    positions_c <- data.frame(
-      id = rep(circ_values$id, each = length(x_c)/length(circ_values$id)),
-      x = x_c,
-      y = y_c
-    )
-    
-    # table with positions and ids for text
-    positions_t <- data.frame(
-      id = rep(txt_values$id, each = length(x_t)/length(txt_values$id)),
-      x = x_t,
-      y = y_t
-    )
-    
-    # merge them together for use in ggplot
-    datapoly <- merge(circ_values, positions_c, by=c("id"))
-    datatxt <- merge(txt_values, positions_t, by=c("id"))
-    
-    # make sure only the wanted analyses are in there
-    numbers <- datatxt[!(datatxt$value %in% names(flattened)),]
-    headers <- datatxt[(datatxt$value %in% names(flattened)),]
-    
-    # move numbers slightly if there are only 2 circles
-    if(circles == 2){
-      occur <- table(numbers$y)
-      newy <- names(occur[occur == max(occur)])
-      # - - -
-      numbers$y <- as.numeric(c(newy))
+      # update the selectize input that the user can use to find which hits are intersecting
+      # TODO: ideally, this happens on click but its hard...
+      updateSelectizeInput(session, "intersect_venn", choices = names(flattened))
     }
-    
-    # generate plot with ggplot
-    p <- ggplot(datapoly, 
-                aes(x = x, 
-                    y = y)) + geom_polygon(colour="black", alpha=0.5, aes(fill=id, group=id)) +
-      geom_text(mapping = aes(x=x, y=y, label=value), data = headers, size = 5) +
-      geom_text(mapping = aes(x=x, y=y, label=value), data = numbers, size = 5) +
-      theme_void() +
-      theme(legend.position="none",
-            text=element_text(size=),
-            panel.grid = element_blank()) +
-      #scale_fill_gradientn(colors = rainbow(circles)) + 
-      scale_fill_gradientn(colours = global$functions$color.functions[[getOptions("user_options.txt")$gspec]](circles)) +
-      coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
-    
-    # render plot in UI
-    output$venn_plot <- plotly::renderPlotly({
-      
-      ggplotly(p, tooltip = "label")
-    
-      })
-    # update the selectize input that the user can use to find which hits are intersecting
-    # TODO: ideally, this happens on click but its hard...
-    updateSelectizeInput(session, "intersect_venn", choices = names(flattened))
   })
   
   # triggers when users pick which intersecting hits they want

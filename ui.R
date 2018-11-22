@@ -519,8 +519,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                         column(2,align="center",
                                                                                br(),br(),br(),br(),br(),br(),br(),br(),
                                                                                shinyWidgets::circleButton("venn_add", icon=icon("arrow-right"), size="sm"),
-                                                                               shinyWidgets::circleButton("venn_remove", icon=icon("arrow-left"), size="sm"),
-                                                                               shinyWidgets::circleButton("venn_build", icon=icon("hand-pointer-o"),size="sm")
+                                                                               shinyWidgets::circleButton("venn_remove", icon=icon("arrow-left"), size="sm")
                                                                                ),
                                                                         column(5, 
                                                                                div(DT::dataTableOutput('venn_selected'),style='font-size:80%'))
@@ -528,6 +527,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                       br(),
                                                                       # choose how many top hits are picked
                                                                       sliderInput("venn_tophits", label = "Only include top:", min = 1, max = 200, post = " hits", value=20),
+                                                                      shinyWidgets::circleButton("venn_build", icon=icon("hand-pointer-o"),size="default"),
                                                                       hr(),
                                                                       plotly::plotlyOutput("venn_plot",inline = F),
 																	  # find the overlapping compounds between the groups you want to compare (user select)
