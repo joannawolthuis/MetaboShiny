@@ -2565,6 +2565,8 @@ shinyServer(function(input, output, session) {
       names(flattened) <- gsub(x = names(flattened), pattern = "(.*\\.)(.*$)", replacement = "\\2")
       flattened <- lapply(flattened, function(x) x[!is.na(x)])
       
+      global$vectors$venn_lists <<- flattened
+      
       # how many circles need to be plotted? (# of included analysis)
       circles = length(flattened)
       
@@ -2633,8 +2635,8 @@ shinyServer(function(input, output, session) {
       p <- ggplot(datapoly, 
                   aes(x = x, 
                       y = y)) + geom_polygon(colour="black", alpha=0.5, aes(fill=id, group=id)) +
-        geom_text(mapping = aes(x=x, y=y, label=value), data = headers, size = 5) +
-        geom_text(mapping = aes(x=x, y=y, label=value), data = numbers, size = 5) +
+        geom_text(mapping = aes(x=x, y=y, label=value), data = headers, size = 3) +
+        geom_text(mapping = aes(x=x, y=y, label=value), data = numbers, size = 4) +
         theme_void() +
         theme(legend.position="none",
               text=element_text(size=),
@@ -2660,18 +2662,31 @@ shinyServer(function(input, output, session) {
 
     if(length(input$intersect_venn) > 1){
       venn_overlap <<- Reduce("intersect", lapply(input$intersect_venn, function(x){ # get the intersecting hits for the wanted tables
-        flattened[[x]]
+        global$vectors$venn_lists[[x]]
       })
       )
     }
+    if(length(venn_overlap) > 0){
+      output$venn_tab <- DT::renderDataTable({
+        # -------------
+        DT::datatable(data.table(mz = venn_overlap), 
+                      selection = 'single',
+                      rownames = F,
+                      autoHideNavigation = T,
+                      options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+      }) 
+    }else{
+      output$venn_tab <- DT::renderDataTable({
+        # -------------
+        DT::datatable(data.table(), 
+                      selection = 'single',
+                      rownames = F,
+                      autoHideNavigation = T,
+                      options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+      })
+    }
     # render table for UI
-    output$venn_tab <- DT::renderDataTable({
-      # -------------
-      DT::datatable(data.table(mz = venn_overlap), 
-                    selection = 'single',
-                    autoHideNavigation = T,
-                    options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-    })
+   
   })
   
   # toggles when the venn diagram overlap tab is clicked
