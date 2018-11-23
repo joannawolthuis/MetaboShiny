@@ -163,10 +163,10 @@ ggplotSampleNormSummary <- function(mSet, plot.theme = global$functions$plot.the
 
 
 #' @export
-ggplotMeba <- function(cpd, draw.average=T, cols=global$vectors$mycols, cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
+ggplotMeba <- function(cpd, draw.average=T, cols=global$vectors$mycols, cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]], plotlyfy=TRUE){
   cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
   profile <- getProfile(cpd, mode="time")
-  plot <- if(draw.average){
+  p <- if(draw.average){
     ggplot2::ggplot(data=profile) +
       ggplot2::geom_line(size=0.3, ggplot2::aes(x=Time, y=Abundance, group=Sample, color=Group, text=Sample), alpha=0.4) +
       stat_summary(fun.y="mean", size=1.5, geom="line", ggplot2::aes(x=Time, y=Abundance, color=Group, group=Group)) +
@@ -180,7 +180,7 @@ ggplotMeba <- function(cpd, draw.average=T, cols=global$vectors$mycols, cf = glo
             axis.line = element_line(colour = 'black', size = .5),
             text = element_text(family = global$constants$font.aes$font))
   } else{
-    ggplot2::ggplot(data=profile) +
+  ggplot2::ggplot(data=profile) +
       ggplot2::geom_line(size=0.7, ggplot2::aes(x=Time, y=Abundance, group=Sample, color=Group, text=Sample)) +
       ggplot2::scale_x_discrete(expand = c(0, 0)) +
       plot.theme(base_size = 15) +
@@ -192,8 +192,11 @@ ggplotMeba <- function(cpd, draw.average=T, cols=global$vectors$mycols, cf = glo
             axis.line = element_line(colour = 'black', size = .5),
             text = element_text(family = global$constants$font.aes$font))
   }
-  # ---------------
-  plotly::ggplotly(plot, tooltip="Sample")
+  if(plotlyfy){
+    ggplotly(p, tooltip="Sample", originalData=T)
+  }else{
+    p
+  }
 }
 
 blackwhite.colors <- function(n){
@@ -201,7 +204,7 @@ blackwhite.colors <- function(n){
 }
 
 #' @export
-ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "pink"), sourceTable = mSet$dataSet$norm, cf=rainbow, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]], mode = "nm"){
+ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "pink"), sourceTable = mSet$dataSet$norm, cf=rainbow, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]], mode = "nm", plotlyfy=TRUE){
   
   cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
   
@@ -232,7 +235,7 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
            }
            
            # ggplot
-           plot <- ggplot2::ggplot(data=profile, ggplot2::aes(x=Group,y=Abundance, fill=Group, color=Group)) +
+           p <- ggplot2::ggplot(data=profile, ggplot2::aes(x=Group,y=Abundance, fill=Group, color=Group)) +
              ggplot2::geom_boxplot(alpha=0.4) +
              ggplot2::geom_point(ggplot2::aes(text=Sample, shape=Shape),alpha=0.7, size = 2, position = position_dodge(width=0.1)) +
              plot.theme(base_size = 15) +
@@ -244,9 +247,13 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
                    legend.title.align = 0.5,
                    axis.line = element_line(colour = 'black', size = .5),
                    text = element_text(family = global$constants$font.aes$font))
-           plot <- plot + ggplot2::annotate("text", x = 1.5, y = min(profile$Abundance - 0.3), label = stars, size = 8, col = "black")
+           p <- p + ggplot2::annotate("text", x = 1.5, y = min(profile$Abundance - 0.3), label = stars, size = 8, col = "black")
            # ---------------
-           plotly::ggplotly(plot, tooltip="Sample")
+           if(plotlyfy){
+             ggplotly(p, tooltip="Sample", originalData=T)
+           }else{
+             p
+           }
          }, 
          ts = {
            profile <- getProfile(cpd, mode="time")
@@ -255,7 +262,7 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
            }else{
              mSet$dataSet$covars[,..shape.fac][[1]]
            }
-           plot <- ggplot2::ggplot(data=profile, ggplot2::aes(x=Time, y=Abundance, group=Group, fill=Group, color=Group)) +
+           p <- ggplot2::ggplot(data=profile, ggplot2::aes(x=Time, y=Abundance, group=Group, fill=Group, color=Group)) +
              ggplot2::geom_boxplot(alpha=0.4, aes(shape=Shape)) +
              ggplot2::geom_point(ggplot2::aes(text=Sample),alpha=0.4, size = 2, position = position_dodge(width=0.1)) +
              plot.theme(base_size = 15) +
@@ -269,16 +276,20 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
                    text = element_text(family = global$constants$font.aes$font))+
              stat_summary(fun.y=median, geom="line", aes(group=paste("median", Group)), linetype="dotted", lwd=1, alpha=0.5)
            # ---------------
-           plotly::ggplotly(plot, tooltip="Sample", originalData=T) 
+           if(plotlyfy){
+             ggplotly(p, tooltip="Sample", originalData=T)
+           }else{
+             p
+           }
          })
 }
 
-ggPlotTT <- function(cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]], n, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
+ggPlotTT <- function(cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]], n, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]], plotlyfy=TRUE){
   profile <- as.data.table(mSet$analSet$tt$p.log[mSet$analSet$tt$inx.imp],keep.rownames = T)
   colnames(profile) <- c("cpd", "p")
   profile$Peak <- c(1:nrow(profile)) 
   # ---------------------------
-  plot <- ggplot2::ggplot(data=profile) +
+  p <- ggplot2::ggplot(data=profile) +
     ggplot2::geom_point(ggplot2::aes(x=Peak, y=p,text=cpd, color=p, key=cpd)) +
     plot.theme(base_size = 15) +
     theme(legend.position="none",
@@ -289,16 +300,20 @@ ggPlotTT <- function(cf=global$functions$color.functions[[getOptions("user_optio
           text = element_text(family = global$constants$font.aes$font))+
     ggplot2::scale_colour_gradientn(colours = cf(n)) +
     ggplot2::scale_y_log10()
-  plotly::ggplotly(plot, tooltip="cpd")
+  if(plotlyfy){
+    ggplotly(p, tooltip="cpd")
+  }else{
+    p
+  }
 }
 
-ggPlotFC <- function(cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]], n, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
+ggPlotFC <- function(cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]], n, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]], plotlyfy=TRUE){
   profile <- as.data.table(mSet$analSet$fc$fc.log[mSet$analSet$fc$inx.imp],keep.rownames = T)
   profile
   colnames(profile) <- c("cpd", "log2fc")
   profile$Peak <- c(1:nrow(profile)) 
   # ---------------------------
-  plot <- ggplot2::ggplot(data=profile) +
+  p <- ggplot2::ggplot(data=profile) +
     ggplot2::geom_point(ggplot2::aes(x=Peak, y=log2fc, text=log2fc, color=log2fc, key=cpd)) +
     ggplot2::geom_abline(ggplot2::aes(intercept = 0, slope = 0)) +
     plot.theme(base_size = 15) +
@@ -309,14 +324,19 @@ ggPlotFC <- function(cf=global$functions$color.functions[[getOptions("user_optio
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = global$constants$font.aes$font))+
     ggplot2::scale_colour_gradientn(colours = cf(n))
-  plotly::ggplotly(plot, tooltip="log2fc")
+
+  if(plotlyfy){
+    ggplotly(p, tooltip="log2fc")
+  }else{
+    p
+  }
 }
 
-ggPlotVolc <- function(cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]], n=256, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
+ggPlotVolc <- function(cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]], n=256, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]], plotlyfy=TRUE){
     vcn<-mSet$analSet$volcano;
     dt <- as.data.table(vcn$sig.mat[,c(2,4)],keep.rownames = T)
     colnames(dt) <- c("cpd", "log2FC", "-log10P")
-    plot <- ggplot2::ggplot() +
+    p <- ggplot2::ggplot() +
       #ggplot2::geom_point(data=dt[!imp.inx], ggplot2::aes(x=log2FC, y=minlog10P)) +
       ggplot2::geom_point(data=dt, ggplot2::aes(x=log2FC, 
                                        y=`-log10P`,
@@ -331,10 +351,20 @@ ggPlotVolc <- function(cf=global$functions$color.functions[[getOptions("user_opt
             axis.line = element_line(colour = 'black', size = .5),
             text = element_text(family = global$constants$font.aes$font))+
       ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE)
-    plotly::ggplotly(plot, tooltip="cpd")
+
+    if(plotlyfy){
+      ggplotly(p, tooltop="cpd")
+    }else{
+      p
+    }
 }
 
-ggPlotPCApairs <- function(cols = c("black", "pink"), pc.num, type = "pca", cf = rainbow, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
+ggPlotPCApairs <- function(cols = c("black", "pink"), 
+                           pc.num, 
+                           type = "pca", 
+                           cf = rainbow, 
+                           plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]],
+                           plotlyfy=TRUE){
   
   cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
   
@@ -391,16 +421,23 @@ ggPlotPCApairs <- function(cols = c("black", "pink"), pc.num, type = "pca", cf =
     }
   }
   
+  if(plotlyfy){
+    ggplotly(p)
+  }else{
     p
-    
-    plotly::ggplotly(p)
+  }
+  
   # }
   # else {
   #   pairs(mSet$analSet$pca$x[, 2:pc.num], labels = pclabels)
   # }
 }
 
-ggPlotClass <- function(pls.type = "plsda", cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], pcs = 3, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
+ggPlotClass <- function(pls.type = "plsda", 
+                        cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], 
+                        pcs = 3, 
+                        plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]],
+                        plotlyfy=TRUE){
   res <- mSet$analSet$plsda$fit.info
   colnames(res) <- 1:ncol(res)
   # best.num <- mSet$analSet$plsda$best.num
@@ -420,10 +457,18 @@ ggPlotClass <- function(pls.type = "plsda", cf = global$functions$color.function
           text = element_text(family = global$constants$font.aes$font))+
     facet_grid(~Component) + 
     scale_fill_manual(values=cf(pcs))
-  return(p)
+  if(plotlyfy){
+    ggplotly(p)
+  }else{
+    p
   }
+}
 
-ggPlotPerm<- function(pls.type = "plsda", cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], pcs = 3, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
+ggPlotPerm<- function(pls.type = "plsda", 
+                      cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], 
+                      pcs = 3, 
+                      plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]],
+                      plotlyfy=TRUE){
   bw.vec <- mSet$analSet$plsda$permut
   len <- length(bw.vec)
   df <- melt(bw.vec)
@@ -453,10 +498,18 @@ ggPlotPerm<- function(pls.type = "plsda", cf = global$functions$color.functions[
                  size=1.5,
                  linetype=8)+
     annotate("text",x=bw.vec[1],y=.11*nrow(df),label = pval, color="black",size=4)
- return(p)
+  
+  if(plotlyfy){
+    ggplotly(p)
+  }else{
+    p
+  }
 }
 
-plot.many <- function(res.obj = models, which_alpha = 1, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
+plot.many <- function(res.obj = models, 
+                      which_alpha = 1, 
+                      plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]],
+                      plotlyfy=TRUE){
   
   predictions <- if(length(res.obj) > 1) do.call("cbind", lapply(res.obj, function(x) x$prediction)) else data.frame(res.obj[[1]]$prediction)
   
@@ -506,7 +559,7 @@ plot.many <- function(res.obj = models, which_alpha = 1, plot.theme = global$fun
   
   roc_coord <- roc_coord[roc_coord$alpha %in% which_alpha,]
   # plot
-  ggplot2::ggplot(roc_coord, 
+  p <- ggplot2::ggplot(roc_coord, 
                   ggplot2::aes(d = D, m = M, color = alpha)) + 
     plotROC::geom_roc(labelsize=0,show.legend = TRUE) + 
     plotROC::style_roc() + 
@@ -515,10 +568,20 @@ plot.many <- function(res.obj = models, which_alpha = 1, plot.theme = global$fun
           legend.title=element_text(size=19),
           legend.text=element_text(size=19)) +
     coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
+  
+  if(plotlyfy){
+    ggplotly(p)
+  }else{
+    p
+  }
 }
 
 
-ggPlotROC <- function(data, attempts = 50, cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]){
+ggPlotROC <- function(data, 
+                      attempts = 50, 
+                      cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], 
+                      plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]],
+                      plotlyfy=TRUE){
   
   require(ROCR)
   require(ggplot2)
@@ -549,7 +612,7 @@ ggPlotROC <- function(data, attempts = 50, cf = global$functions$color.functions
   
   #nbins <- length(perf.long$TPR)
 
-  ggplot(perf.long, aes(FPR,TPR)) +
+  p <- ggplot(perf.long, aes(FPR,TPR)) +
     #stat_smooth(alpha=.2,color="black") + # fix later, needs to NOT GO ABOVE 1
     stat_summary_bin(aes(FPR, TPR), fun.y=mean, geom="line", colour="black", cex = 2) +
     geom_path(alpha=.5,
@@ -570,6 +633,12 @@ ggPlotROC <- function(data, attempts = 50, cf = global$functions$color.functions
     #scale_y_continuous(limits=c(0,1)) +
     coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE) + 
     coord_cartesian(xlim = c(.04,.96), ylim = c(.04,.96))
+  
+  if(plotlyfy){
+    ggplotly(p)
+  }else{
+    p
+  }
 }
 
 ggPlotBar <- function(data, 
@@ -578,7 +647,8 @@ ggPlotBar <- function(data,
                       topn=50, 
                       plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]],
                       ml_name, 
-                      ml_type){
+                      ml_type,
+                      plotlyfy=TRUE){
   
   if(ml_name != ""){
     lname = ml_name
@@ -603,8 +673,7 @@ ggPlotBar <- function(data,
       labs(x="Top hits",y="Times chosen")
     
   }else{
-    p <- ggplot(data[1:topn,], aes(mz,mda))
-    p + geom_bar(stat = "identity", aes(fill = mda)) +
+    p <- ggplot(data[1:topn,], aes(mz,mda)) + geom_bar(stat = "identity", aes(fill = mda)) +
       #geom_hline(aes(yintercept=attempts)) + 
       scale_fill_gradientn(colors=cf(20)) +
       plot.theme() + 
@@ -617,6 +686,11 @@ ggPlotBar <- function(data,
             axis.ticks.x=element_blank(),
             text = element_text(family = global$constants$font.aes$font))+
       labs(x="Top hits",y="Mean Decrease Accuracy")
+  }
+  if(plotlyfy){
+    ggplotly(p)
+  }else{
+    p
   }
 }
 
@@ -877,4 +951,5 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols = global$vectors$mycols, 
   }else{
     p
   }
+  
 }

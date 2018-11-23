@@ -2548,6 +2548,7 @@ shinyServer(function(input, output, session) {
           names(tbls_top) <- paste0(experiment, ": ", names(tbls_top))
           tbls_top
         })
+        
         # unnest the nested lists
         flattened <- flattenlist(tables)
         
@@ -2591,7 +2592,7 @@ shinyServer(function(input, output, session) {
       
       # TODO: figure out what i did here again...
       txt_values$value <- gsub(x = txt_values$value, pattern = "(.*\\.)(.*$)", replacement = "\\2")
-      categories <- c(categories, input$rf_choice, input$ls_choice, input$plsda_choice)
+      #categories <- c(categories, input$rf_choice, input$ls_choice, input$plsda_choice)
       
       # get x and y values for circles
       x_c = unlist(lapply(grep(items, pattern="polygon"), function(i) venn.plot[[i]]$x))
