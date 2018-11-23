@@ -1654,11 +1654,11 @@ shinyServer(function(input, output, session) {
                 
 			  # render cross validation plot
               output$plsda_cv_plot <- renderPlot({
-                ggPlotClass(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+                ggPlotClass(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], plotlyfy = F)
               })
 			  # render permutation plot
               output$plsda_perm_plot <- renderPlot({
-                ggPlotPerm(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+                ggPlotPerm(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], plotlyfy = F)
               })
 			  # render table with variance per PC
               output$plsda_tab <- DT::renderDataTable({
@@ -2473,179 +2473,11 @@ shinyServer(function(input, output, session) {
       print("can only take more than zero and less than five")
       NULL 
     }else{
-      # pick which analyses are included
-      experiments <- str_match(unlist(venn_yes$now), pattern = "\\(.*\\)")[,1]
-      experiments <- unique(gsub(experiments, pattern = "\\(|\\)", replacement=""))
-      
-      table_list <- lapply(experiments, function(experiment){
-        print(experiment)
-        analysis = mSet$storage[[experiment]]
-        categories = grep(unlist(venn_yes$now), pattern = experiment, value = T)
-        categories = gsub(categories, pattern = " \\(.*\\)", replacement = "")
-        # go through the to include analyses
-        tables <- lapply(categories, function(name){
-          
-          base_name <- gsub(name, pattern = " -.*$", replacement="")
-                    # fetch involved mz values 
-          tbls <- switch(base_name,
-                         tt = {
-                           res = list(as.numeric(rownames(analysis$tt$sig.mat[order(analysis$tt$sig.mat[,2],
-                                                                                    decreasing = F),])))
-                           names(res) = base_name
-                           res
-                           },
-                         fc ={
-                           res = list(as.numeric(rownames(analysis$fc$sig.mat[order(abs(analysis$fc$sig.mat[,2]), 
-                                                                                     decreasing = F),])))
-                           names(res) = base_name
-                           res
-                           },
-                         ls = {
-                           which.ls <- gsub(name, pattern = "^.*- ", replacement="")
-                           tbls_ls <- lapply(which.ls, function(name){ # which lasso subset?
-                             as.numeric(analysis$ml$ls[[name]]$tophits[order(analysis$ml$ls[[name]]$tophits$count, 
-                                                                                 decreasing = T),]$mz)})
-                           names(tbls_ls) <- which.ls
-                           # - - - 
-                           as.numeric(tbls_ls, na.rm=T)
-                         },
-                         rf = {
-                           which.rf <- gsub(name, pattern = "^.*- ", replacement="")
-                           tbls_rf <- lapply(which.rf, function(name){ # which random forest subset?
-                             analysis$ml$rf[[name]]$bar[order(analysis$ml$rf[[name]]$bar$mda, 
-                                                                  decreasing = T),]$mz})
-                           names(tbls_rf) <- paste0(which.rf, " (RF)")
-                           # - - -
-                           lapply(tbls_rf, function(x){as.numeric(as.character(x))})
-                         },
-                         plsda = {
-                           which.plsda <- gsub(name, pattern = "^.*- ", replacement="")
-                           tbls_plsda <- lapply(which.plsda, function(name){ # which PC to use? (usually PC1 for PLS-DA)
-                             compounds_pc <- as.data.table(analysis$plsda$vip.mat,keep.rownames = T)
-                             colnames(compounds_pc) <- c("rn", paste0("PC", 1:(ncol(compounds_pc)-1)))
-                             ordered_pc <- setorderv(compounds_pc, name, -1)
-                             as.numeric(ordered_pc[, c("rn")][[1]])        
-                           })
-                           names(tbls_plsda) <- paste0(which.plsda, " (PLS-DA)")
-                           # - - -
-                           tbls_plsda
-                         },
-                         volc = {
-                           res <- list(rownames(analysis$volcano$sig.mat))
-                           names(res) = base_name
-                           res
-                           })
-          # TODO: include PCA here too?
-          
-          # user specified top hits only
-          tbls_top <- lapply(tbls, function(tbl){
-            if(length(tbl) < top){
-              tbl
-            }else{
-              tbl[1:top]
-            }
-          })
-          names(tbls_top) <- paste0(experiment, ": ", names(tbls_top))
-          tbls_top
-        })
-        
-        # unnest the nested lists
-        flattened <- flattenlist(tables)
-        
-        # remove NAs
-        flattened <- lapply(flattened, function(x) x[!is.na(x)])
-        
-        #rename and remove regex-y names
-        names(flattened) <- gsub(x = names(flattened), pattern = "(.*\\.)(.*$)", replacement = "\\2")
-      
-        # return
-        flattened
-        })
-      
-      flattened <- flattenlist(table_list)
-      names(flattened) <- gsub(x = names(flattened), pattern = "(.*\\.)(.*$)", replacement = "\\2")
-      flattened <- lapply(flattened, function(x) x[!is.na(x)])
-      
-      global$vectors$venn_lists <<- flattened
-      
-      # how many circles need to be plotted? (# of included analysis)
-      circles = length(flattened)
-      
-      # generate the initial plot - the POLYGONS
-      venn.plot <- VennDiagram::venn.diagram(x = flattened,
-                                             filename = NULL)
-      
-      # split the plots into its individual elements
-      items <- strsplit(as.character(venn.plot), split = ",")[[1]]
-      
-      # get which are circles
-      circ_values <<- data.frame(
-        id = 1:length(grep(items, pattern="polygon"))
-        #,value = c(3, 3.1, 3.1, 3.2, 3.15, 3.5)
-      )
-      
-      # get which are text
-      txt_values <- data.frame(
-        id = grep(items, pattern="text"),
-        value = unlist(lapply(grep(items, pattern="text"), function(i) venn.plot[[i]]$label))
-      )
-      
-      # TODO: figure out what i did here again...
-      txt_values$value <- gsub(x = txt_values$value, pattern = "(.*\\.)(.*$)", replacement = "\\2")
-      #categories <- c(categories, input$rf_choice, input$ls_choice, input$plsda_choice)
-      
-      # get x and y values for circles
-      x_c = unlist(lapply(grep(items, pattern="polygon"), function(i) venn.plot[[i]]$x))
-      y_c = unlist(lapply(grep(items, pattern="polygon"), function(i) venn.plot[[i]]$y))
-      
-      # get x and y values for text
-      x_t = unlist(lapply(grep(items, pattern="text"), function(i) venn.plot[[i]]$x))
-      y_t = unlist(lapply(grep(items, pattern="text"), function(i)venn.plot[[i]]$y))
-      
-      # table with positions and ids for circles
-      positions_c <- data.frame(
-        id = rep(circ_values$id, each = length(x_c)/length(circ_values$id)),
-        x = x_c,
-        y = y_c
-      )
-      
-      # table with positions and ids for text
-      positions_t <- data.frame(
-        id = rep(txt_values$id, each = length(x_t)/length(txt_values$id)),
-        x = x_t,
-        y = y_t
-      )
-      
-      # merge them together for use in ggplot
-      datapoly <- merge(circ_values, positions_c, by=c("id"))
-      datatxt <- merge(txt_values, positions_t, by=c("id"))
-      
-      # make sure only the wanted analyses are in there
-      numbers <- datatxt[!(datatxt$value %in% names(flattened)),]
-      headers <- datatxt[(datatxt$value %in% names(flattened)),]
-      
-      # move numbers slightly if there are only 2 circles
-      if(circles == 2){
-        occur <- table(numbers$y)
-        newy <- names(occur[occur == max(occur)])
-        # - - -
-        numbers$y <- as.numeric(c(newy))
-      }
-      
-      # generate plot with ggplot
-      p <- ggplot(datapoly, 
-                  aes(x = x, 
-                      y = y)) + geom_polygon(colour="black", alpha=0.5, aes(fill=id, group=id)) +
-        geom_text(mapping = aes(x=x, y=y, label=value), data = headers, size = 3) +
-        geom_text(mapping = aes(x=x, y=y, label=value), data = numbers, size = 4) +
-        theme_void() +
-        theme(legend.position="none",
-              text=element_text(size=),
-              panel.grid = element_blank()) +
-        #scale_fill_gradientn(colors = rainbow(circles)) + 
-        scale_fill_gradientn(colours = global$functions$color.functions[[getOptions("user_options.txt")$gspec]](circles)) +
-        coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
-      
+      p <- ggPlotVenn(mSet, 
+                      venn_yes, 
+                      top = input$venn_tophits, 
+                      cols = global$vectors$mycols,
+                      cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
       # render plot in UI
       output$venn_plot <- plotly::renderPlotly({
         
@@ -2654,7 +2486,7 @@ shinyServer(function(input, output, session) {
       })
       # update the selectize input that the user can use to find which hits are intersecting
       # TODO: ideally, this happens on click but its hard...
-      updateSelectizeInput(session, "intersect_venn", choices = names(flattened))
+      updateSelectizeInput(session, "intersect_venn", choices = names(global$vectors$venn_lists))
     }
   })
   
