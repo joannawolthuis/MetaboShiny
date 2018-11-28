@@ -64,6 +64,7 @@ shinyServer(function(input, output, session) {
   # change interface based on that
   observe({
     if(exists("mSet")){
+      if(is.null(mSet$timeseries)) mSet$timeseries <<- FALSE
       datamanager$mset_present = TRUE
       # - - -
       if(mSet$dataSet$cls.num <= 1){
@@ -143,7 +144,9 @@ shinyServer(function(input, output, session) {
              off = NULL,
              on = switchButton(inputId = "timecourse_trigger", # this is used to trigger time series dataswap
                                label = "Toggle time course mode?", 
-                               value = FALSE, col = "BW", type = "YN"))
+                               value = mSet$timeseries, 
+                               col = "BW", 
+                               type = "YN"))
     }
   })
   
@@ -156,6 +159,9 @@ shinyServer(function(input, output, session) {
     
     if(input$timecourse_trigger){
       # change to timecourse mode
+      
+      mSet$timeseries <<- TRUE
+      
       # save previous mset 
       mset_name = mSet$dataSet$cls.name
       
@@ -182,9 +188,12 @@ shinyServer(function(input, output, session) {
       heatbutton$status <- "asmb"
 	  
 	  # REMOVE PREVIOUS ANALYSIS TO TRIGGER RELOAD (or the PCA won't reload)
-      mSet$analSet <<- NULL
+      mSet$analSet$pca <<- NULL
       
     }else{
+      
+      mSet$timeseries <<- FALSE
+      
       # change back to normal mode
       # save previous analyses (should be usable in venn diagram later)
       mset_name = paste0("(timecourse)", mSet$dataSet$cls.name, collapse="-")
@@ -195,7 +204,7 @@ shinyServer(function(input, output, session) {
       mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,mSet$dataSet$cls.name, with=F][[1]])
       mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
       # remove old analSet
-      mSet$analSet <<- NULL
+      mSet$analSet$pca <<- NULL
       
 	  # change heatmap button back to t-test/fold-change bivariate mode
 	  heatbutton$status <- "ttfc"
@@ -894,7 +903,9 @@ shinyServer(function(input, output, session) {
 	  mSet <- InitDataObjects("pktable",
                               "stat",
                               FALSE)
-      
+    # set default time series mode'
+	  mSet$timeseries <- FALSE
+	  
       # convert all 0's to NA so metaboanalystR will recognize them
 	  csv_orig[,(1:ncol(csv_orig)) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)})]
       
@@ -1306,14 +1317,7 @@ shinyServer(function(input, output, session) {
                mSet <<- performMB(mSet, 10) # perform MEBA analysis
              }
 			 # render results table for UI
-             output$meba_tab <-DT::renderDataTable({ 
-               # -------------
-               DT::datatable(mSet$analSet$MB$stats, 
-                             selection = 'single',
-                             colnames = c("Compound", "Hotelling/T2 score"),
-                             autoHideNavigation = T,
-                             options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-             })
+             datamanager$reload <- "meba"
            },
            asca = {
              if("asca" %not in% names(mSet$analSet)){ # if already done, don't redo
@@ -1321,129 +1325,11 @@ shinyServer(function(input, output, session) {
                mSet <<- Perform.ASCA(mSet, 1, 1, 2, 2)
                mSet <<- CalculateImpVarCutoff(mSet, 0.05, 0.9)
              }
-             output$asca_tab <-DT::renderDataTable({ # render results table for UI
-               # -------------
-               DT::datatable(mSet$analSet$asca$sig.list$Model.ab, 
-                             selection = 'single',
-                             colnames = c("Compound", "Leverage", "SPE"),
-                             autoHideNavigation = T,
-                             options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-             })
+             datamanager$reload <- "asca"
              
            },
            heatmap = {
-             
-             withProgress({
-               
-			   # rendering within output object, so it reloads when changing colours etc.
-               output$heatmap <- plotly::renderPlotly({
-                 
-				 # change top hits used in heatmap depending on time series / bivariate / multivariate mode
-				 # reordering of hits according to most significant at the top
-                 if(interface$mode == "bivar"){ 
-                   if(input$heatmode){
-                     tbl = as.data.frame(mSet$analSet$tt$sig.mat)
-                     used.values <- "p.value"
-                     decreasing = F
-                   }else{
-                     tbl = as.data.frame(mSet$analSet$fc$sig.mat)
-                     tbl$abs_log2 <- abs(tbl$`log2(FC)`)
-                     used.values <- "abs_log2"
-                     decreasing = T
-                   }
-                 }else if(interface$mode == "multivar"){
-                   tbl = as.data.frame(mSet$analSet$aov$sig.mat)
-                   used.values = "p.value"
-                   decreasing = F
-                 }else{
-                   if(input$heatmode){
-                     tbl = as.data.frame(mSet$analSet$asca$sig.list$Model.ab)
-                     used.values = "Leverage"
-                   }else{
-                     tbl = as.data.frame(mSet$analSet$MB$stats)
-                     used.values = "Hotelling-T2"
-                   }
-                   decreasing = T
-                 }
-                 
-				 # check top x used (slider bar in UI), if more than total matches use total matches
-                 topn = if(length(tbl[[used.values]]) < input$heatmap_topn) length(tbl[[used.values]]) else input$heatmap_topn
-                 mzorder <- order(tbl[[used.values]], decreasing = decreasing)
-                 mzsel <- rownames(tbl)[mzorder][1:topn]
-                 
-				 # reorder matrix used
-                 x <- mSet$dataSet$norm[,mzsel]
-                 final_matrix <<- t(x) # transpose so samples are in columns
-                 
-				 # check if the sample order is correct - mSet$..$ norm needs to match the matrix
-                 sample_order <- match(colnames(final_matrix), rownames(mSet$dataSet$norm))
-                 
-                 if(timebutton$status == "on"){ # check if time series
-                   if(input$timecourse_trigger){
-					 # create convenient table with the ncessary info
-                     translator <- data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],Group=mSet$dataSet$exp.fac[sample_order], Time=mSet$dataSet$time.fac[sample_order])
-                     hmap.lvls <- c(levels(mSet$dataSet$exp.fac), levels(mSet$dataSet$time.fac))
-
-					 # reorder first by time, then by sample
-                     split.translator <- split(translator, by = c("Time"))
-                     split.translator.ordered <- lapply(split.translator, function(tbl) tbl[order(tbl$Group)])
-                     translator <- rbindlist(split.translator.ordered)
-                     
-					 # ensure correct sample order
-                     final_matrix <<- final_matrix[,match(translator$Sample, colnames(final_matrix))]
-                     
-					 # disable automatic ordering of samples through clustering
-                     my_order=F
-                     
-                   }else{
-					 # no complicated reordering necessary
-                     translator <- data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],Group=mSet$dataSet$cls[sample_order])
-                     hmap.lvls <- levels(mSet$dataSet$cls)
-                     my_order = T # enable sorting through dendrogram
-                   }
-                 }else{
-				   # no complicated reordering necessary
-                   translator <- data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],Group=mSet$dataSet$cls[sample_order])
-                   hmap.lvls <- levels(mSet$dataSet$cls)
-                   my_order = T # enable sorting through dendrogram
-                 } 
-
-				 # create name - to - color mapping vector for the plotting functions
-                 color.mapper <- {
-                  classes <- hmap.lvls
-                  cols <- sapply(1:length(classes), function(i) global$vectors$mycols[i]) # use user-defined colours
-                  names(cols) <- classes
-                  # - - -
-                  cols
-                 }
-                
-				 # create heatmap object :- )
-                 hmap <- heatmaply::heatmaply(final_matrix,
-                                              Colv=my_order, 
-                                              Rowv=T,
-                                              branches_lwd = 0.3,
-                                              margins = c(60, 0, NA, 50),
-                                              colors = global$functions$color.functions[[getOptions("user_options.txt")$gspec]](256),
-                                              col_side_colors = translator[,!1],
-                                              col_side_palette = color.mapper,
-                                              subplot_widths = c(.9,.1),
-                                              subplot_heights = if(my_order) c(.1, .05, .85) else c(.05,.95),
-                                              column_text_angle = 90,
-                                              xlab = "Sample",
-                                              ylab = "m/z",
-                                              showticklabels = c(T,F)
-                                              #label_names = c("m/z", "sample", "intensity") #breaks side colours
-                 )
-                 
-				 # save the order of mzs for later clicking functionality
-                 hmap_mzs <<- hmap$x$layout$yaxis3$ticktext
-                 
-                 # - - 
-                 
-                 hmap
-                 
-               })               
-             })
+             datamanager$reload <- "heatmap"
            },
            tt = {
              if(!"tt" %in% names(mSet$analSet)){ # if already done, don't redo
@@ -1574,7 +1460,7 @@ shinyServer(function(input, output, session) {
       NULL # if not reloading anything, nevermind
     }else{
      switch(datamanager$reload,
-            "pca" = {
+            pca = {
               if("pca" %in% names(mSet$analSet)){
                 # create PCA legend plot
 				# TODO: re-enable this plot, it was clickable so you could filter out certain groups
@@ -1648,7 +1534,7 @@ shinyServer(function(input, output, session) {
               }
               }else{NULL} # do nothing
             },
-            "plsda" = {
+            plsda = {
               
               if("plsda" %in% names(mSet$analSet)){ # if plsda has been performed...
                 
@@ -1707,10 +1593,7 @@ shinyServer(function(input, output, session) {
               }
               }else{NULL}
             },
-				"ml" = {
-				  
-				  print("reloading machine learning results")
-				  
+				ml = {
 				  if("ml" %in% names(mSet$analSet)){
 				    roc_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
 				    
@@ -1732,7 +1615,144 @@ shinyServer(function(input, output, session) {
 				                                 ml_type = mSet$analSet$ml$last$method))
 				    })
 				  }else{NULL}
-				  })
+				  },
+				asca = {
+				  if("asca" %in% names(mSet$analSet)){
+				    output$asca_tab <-DT::renderDataTable({ # render results table for UI
+				      # -------------
+				      DT::datatable(mSet$analSet$asca$sig.list$Model.ab, 
+				                    selection = 'single',
+				                    colnames = c("Compound", "Leverage", "SPE"),
+				                    autoHideNavigation = T,
+				                    options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+				    })
+				    }
+				  },
+				meba = {
+				  if("MB" %in% names(mSet$analSet)){
+				    output$meba_tab <-DT::renderDataTable({ 
+				      # -------------
+				      DT::datatable(mSet$analSet$MB$stats, 
+				                    selection = 'single',
+				                    colnames = c("Compound", "Hotelling/T2 score"),
+				                    autoHideNavigation = T,
+				                    options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+				    })
+				  }
+				},
+				heatmap = {
+				  if(!is.null(input$heatmode)){
+				    output$heatmap <- plotly::renderPlotly({
+				      
+				      # change top hits used in heatmap depending on time series / bivariate / multivariate mode
+				      # reordering of hits according to most significant at the top
+				      if(interface$mode == "bivar"){ 
+				        if(input$heatmode){
+				          tbl <- as.data.frame(mSet$analSet$tt$sig.mat)
+				          used.values <- "p.value"
+				          decreasing <- F
+				        }else{
+				          tbl <- as.data.frame(mSet$analSet$fc$sig.mat)
+				          tbl$abs_log2 <- abs(tbl$`log2(FC)`)
+				          used.values <- "abs_log2"
+				          decreasing <- T
+				        }
+				      }else if(interface$mode == "multivar"){
+				        tbl <- as.data.frame(mSet$analSet$aov$sig.mat)
+				        used.values <- "p.value"
+				        decreasing <- F
+				      }else{
+				        if(input$heatmode){
+				          tbl <- as.data.frame(mSet$analSet$asca$sig.list$Model.ab)
+				          used.values <- "Leverage"
+				        }else{
+				          tbl <- as.data.frame(mSet$analSet$MB$stats)
+				          used.values <- "Hotelling-T2"
+				        }
+				        decreasing = T
+				      }
+				      
+				      # check top x used (slider bar in UI), if more than total matches use total matches
+				      topn = if(length(tbl[[used.values]]) < input$heatmap_topn) length(tbl[[used.values]]) else input$heatmap_topn
+				      mzorder <- order(tbl[[used.values]], decreasing = decreasing)
+				      mzsel <- rownames(tbl)[mzorder][1:topn]
+				      
+				      # reorder matrix used
+				      x <- mSet$dataSet$norm[,mzsel]
+				      final_matrix <<- t(x) # transpose so samples are in columns
+				      
+				      # check if the sample order is correct - mSet$..$ norm needs to match the matrix
+				      sample_order <- match(colnames(final_matrix), rownames(mSet$dataSet$norm))
+				      
+				      if(timebutton$status == "on"){ # check if time series
+				        if(input$timecourse_trigger){
+				          # create convenient table with the ncessary info
+				          translator <- data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],Group=mSet$dataSet$exp.fac[sample_order], Time=mSet$dataSet$time.fac[sample_order])
+				          hmap.lvls <- c(levels(mSet$dataSet$exp.fac), levels(mSet$dataSet$time.fac))
+				          
+				          # reorder first by time, then by sample
+				          split.translator <- split(translator, by = c("Time"))
+				          split.translator.ordered <- lapply(split.translator, function(tbl) tbl[order(tbl$Group)])
+				          translator <- rbindlist(split.translator.ordered)
+				          
+				          # ensure correct sample order
+				          final_matrix <<- final_matrix[,match(translator$Sample, colnames(final_matrix))]
+				          
+				          # disable automatic ordering of samples through clustering
+				          my_order=F
+				          
+				        }else{
+				          # no complicated reordering necessary
+				          translator <- data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],Group=mSet$dataSet$cls[sample_order])
+				          hmap.lvls <- levels(mSet$dataSet$cls)
+				          my_order = T # enable sorting through dendrogram
+				        }
+				      }else{
+				        # no complicated reordering necessary
+				        translator <- data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],Group=mSet$dataSet$cls[sample_order])
+				        hmap.lvls <- levels(mSet$dataSet$cls)
+				        my_order = T # enable sorting through dendrogram
+				      } 
+				      
+				      # create name - to - color mapping vector for the plotting functions
+				      color.mapper <- {
+				        classes <- hmap.lvls
+				        cols <- sapply(1:length(classes), function(i) global$vectors$mycols[i]) # use user-defined colours
+				        names(cols) <- classes
+				        # - - -
+				        cols
+				      }
+				      
+				      # create heatmap object :- )
+				      
+				      hmap <- suppressWarnings({
+				        heatmaply::heatmaply(final_matrix,
+				                             Colv = my_order, 
+				                             Rowv = T,
+				                             branches_lwd = 0.3,
+				                             margins = c(60, 0, NA, 50),
+				                             colors = global$functions$color.functions[[getOptions("user_options.txt")$gspec]](256),
+				                             col_side_colors = translator[,!1],
+				                             col_side_palette = color.mapper,
+				                             subplot_widths = c(.9,.1),
+				                             subplot_heights = if(my_order) c(.1, .05, .85) else c(.05,.95),
+				                             column_text_angle = 90,
+				                             xlab = "Sample",
+				                             ylab = "m/z",
+				                             showticklabels = c(T,F)
+				                             #label_names = c("m/z", "sample", "intensity") #breaks side colours
+				        )
+				      })
+				      # save the order of mzs for later clicking functionality
+				      hmap_mzs <<- hmap$x$layout$yaxis3$ticktext
+				      
+				      # - - 
+				      
+				      hmap
+				      
+				    })
+				  }
+			})
       # - - - - 
       datamanager$reload <- NULL # set reloading to 'off'
     }
@@ -2188,6 +2208,7 @@ shinyServer(function(input, output, session) {
         }}else if(input$statistics == "ml"){ # makes ROC curves and boxplots clickable
           switch(input$ml_results, roc = { # if roc, check the curve numbers of the roc plot
             attempt = d$curveNumber - 1
+            xvals <- 
             if(attempt > 1){
               ml_type <- xvals$type[[1]]
               model <- xvals$models[[attempt]]
@@ -2499,6 +2520,7 @@ shinyServer(function(input, output, session) {
       })
       )
     }
+    
     if(length(venn_overlap) > 0){
       output$venn_tab <- DT::renderDataTable({
         # -------------

@@ -25,9 +25,9 @@ library(stringr)
 #' @param path Path to search for scripts in.
 sourceDir <- function(path, trace = TRUE, ...) {
   for (nm in list.files(path, pattern = "\\.[RrSsQq]$")) {
-    if(trace) cat(nm,":")           
+    #if(trace) cat(nm,":")           
     source(file.path(path, nm), ...)
-    if(trace) cat("\n")
+    #if(trace) cat("\n")
   }
   
 }
@@ -91,6 +91,7 @@ sourceDir("backend/scripts/joanna")
 # === THE BELOW LIST CONTAINS ALL GLOBAL VARIABLES THAT METABOSHINY CALLS UPON LATER ===
 
 global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people importing their data through csv
+                                timeseries = FALSE,
                                 nvars = 2, # Default bivariate setting for statistics
                                 max.cols = 8, # Maximum colours available to choose (need to change if anyone does ANOVA with >8 variables)
                                 packages = c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat", 

@@ -250,9 +250,13 @@
   -webkit-animation:spin 30s linear infinite;
   -moz-animation:spin 30s linear infinite;
   animation:spin 30s linear infinite;
-  filter: invert(100%);
+  /*filter: invert(100%);*/
   margin-top: 20px;
   margin-left: 15px;
+    -webkit-filter: drop-shadow(2px 1px 0 black)
+                  drop-shadow(-1px -1px 0 black);
+  filter: drop-shadow(2px 1px 0 black) 
+          drop-shadow(-1px -1px 0 black);
 }
 
 .imagebottom
@@ -262,6 +266,10 @@
   animation:spin 30s linear infinite;
   margin-top: -60px;
   margin-left: 15px;
+    -webkit-filter: drop-shadow(2px 1px 0 black)
+                  drop-shadow(-1px -1px 0 black);
+  filter: drop-shadow(2px 1px 0 black) 
+          drop-shadow(-1px -1px 0 black);
 }
 
 .plus
@@ -311,6 +319,7 @@ $buttonColor: rgba(255,255,255,1);
 }
 
 .rightAlign{float:right;}
+
 
 
 

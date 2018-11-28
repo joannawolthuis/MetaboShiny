@@ -22,15 +22,15 @@
 
 switchButton <- function(inputId, label, value=FALSE, col = "GB", type="TF") {
   
-  # color class
-  if (col != "RG" & col != "GB" & col != "BW") {
-    stop("Please choose a color between \"RG\" (Red-Green) 
-         and \"GB\" (Grey-Blue) and Black-white(added).")
-  }
-  if (!type %in% c("OO", "TF", "YN", "TTFC", "2d3d")){
-    warning("No known text type (\"OO\", \"TF\" or \"YN\") have been specified, 
-            button will be empty of text") 
-  }
+  # # color class
+  # if (col != "RG" & col != "GB" & col != "BW") {
+  #   stop("Please choose a color between \"RG\" (Red-Green) 
+  #        and \"GB\" (Grey-Blue) and Black-white(added).")
+  # }
+  # if (!type %in% c("OO", "TF", "YN", "TTFC", "2d3d")){
+  #   warning("No known text type (\"OO\", \"TF\" or \"YN\") have been specified, 
+  #           button will be empty of text") 
+  # }
   if(col == "RG"){colclass <- "RedGreen"}
   if(col == "GB"){colclass <- "GreyBlue"}
   if(col == "BW"){colclass <- "BlackWhite"}
