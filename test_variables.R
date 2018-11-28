@@ -104,3 +104,26 @@ plotPCA.3d(mSet, global$vectors$mycols,
            pcy = input$pca_y,
            pcz = input$pca_z, mode = mode,
            shape.fac = input$second_var)
+
+object = t(mSetObj$dataSet$norm)
+k = time.len
+mn = size
+c.grp = exp.grp
+mn.grp = rep.grp
+
+k.grp = NULL
+r = FALSE
+vec = FALSE
+d = NULL
+nu = NULL
+Lambda = NULL
+prop = 0.02
+T2.only = TRUE
+mn.grp = NULL
+r = FALSE
+vec = FALSE
+
+function (object, k, mn, c.grp, nu = NULL, Lambda = NULL, eta = NULL, 
+          k.grp = NULL, mn.grp = NULL, r = FALSE, vec = FALSE, d = NULL, 
+          prop = 0.02, T2.only = TRUE) {...}
+  

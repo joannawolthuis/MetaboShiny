@@ -170,7 +170,7 @@ shinyServer(function(input, output, session) {
       
       # adjust mset design type (necessary for metaboanalystr)
       SetDesignType(mSet, "time")
-      
+      mSet$analSet$type <<- "time"
       # rename some factors of interest (your experimental variable, and 'time') as A and B
       facA <- as.factor(mSet$dataSet$covars[,mSet$dataSet$cls.name, with=F][[1]])
       facB <- mSet$dataSet$covars[,"time"][[1]]
@@ -199,6 +199,8 @@ shinyServer(function(input, output, session) {
       mset_name = paste0("(timecourse)", mSet$dataSet$cls.name, collapse="-")
       
       mSet$storage[[mset_name]] <<- mSet$analSet
+      mSet$analSet$type <<- "stat"
+      
       # - - - - - - - - - - - -
 	  # rename experimental factors
       mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,mSet$dataSet$cls.name, with=F][[1]])
@@ -959,8 +961,13 @@ shinyServer(function(input, output, session) {
                         csv_orig[,-..exp.vars,with=FALSE])
       
 
+      if(all(grepl(pattern = "_T\\d", x = first_part$sample))){
+        keep.all.samples <- TRUE
+        print("Potential for time series - disallowing outlier removal")
+      }
+      
       # remove outliers by making a boxplot and going from there
-      if(input$remove_outliers){
+      if(input$remove_outliers & !keep.all.samples){
         sums <- rowSums(csv[,-exp.vars,with=FALSE],na.rm = TRUE)
         names(sums) <- csv$sample
         outliers = c(car::Boxplot(as.data.frame(sums)))
@@ -1391,14 +1398,11 @@ shinyServer(function(input, output, session) {
            aov = {
              if(!"aov" %in% names(mSet$analSet)){ # if done, don't redo
                withProgress({
-                 mSet <<- ANOVA.Anal(mSet, thresh=0.05,nonpar = F) # TODO: make threshold user-defined
-               # TODO: Fix ANOVA2, this works for time series data!! error likely due to something missing in conversion from stat -> time mode
-               # mSet <<- ifelse(timebutton_trigger,
-               #                 {mSet$dataSet$facA <- mSet$dataSet$exp.fac;
-               #                  mSet$dataSet$facB <- mSet$dataSet$time.fac;
-               #                  ANOVA2.Anal(mSet, 0.05, "fdr", "time", 3, 1)
-               #                   },
-               #                 ANOVA.Anal(mSet, thresh=0.05,nonpar = F))
+                 #mSet <<- ANOVA.Anal(mSet, thresh=0.05,nonpar = F) # TODO: make threshold user-defined
+                 # TODO: Fix ANOVA2, this works for time series data!! error likely due to something missing in conversion from stat -> time mode
+                 mSet <- ifelse(timebutton_trigger,
+                                 ANOVA2.Anal(mSet, 0.05, "fdr", "time", 3, 1),
+                                 ANOVA.Anal(mSet, thresh=0.05,nonpar = F))
                })
              }
 			 # render results table for UI
@@ -1456,6 +1460,7 @@ shinyServer(function(input, output, session) {
   
   # preload pca/plsda
   observe({
+    if(exists("mSet")){
     if(is.null(datamanager$reload)){
       NULL # if not reloading anything, nevermind
     }else{
@@ -1471,7 +1476,9 @@ shinyServer(function(input, output, session) {
                             aes(x, 
                                 y, 
                                 color=factor(y),
-                                fill=factor(y))) + 
+                                fill=factor(y)
+                                )
+                            ) + 
                   geom_point(shape = 21, size = 5, stroke = 5) +
                   scale_colour_manual(values=global$vectors$mycols) +
                   theme_void() + 
@@ -1755,6 +1762,7 @@ shinyServer(function(input, output, session) {
 			})
       # - - - - 
       datamanager$reload <- NULL # set reloading to 'off'
+    }
     }
   })
 
