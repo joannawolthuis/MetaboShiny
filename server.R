@@ -281,7 +281,7 @@ shinyServer(function(input, output, session) {
     }else if(interface$mode == 'bivar'){  
       show.tabs <- c("pca", "plsda", "tt", "fc", "volc", "heatmap", "ml")
     }else if(interface$mode == 'time'){
-      show.tabs <- c("pca", "aov", "asca", "meba", "heatmap")
+      show.tabs <- c("pca", "aov", "asca", "meba", "heatmap", "ml")
     }else{
       show.tabs <- c("inf") # 'info' tab that loads when no data is loaded currently
     }
@@ -1803,17 +1803,36 @@ shinyServer(function(input, output, session) {
       curr <- as.data.frame(curr)
       rownames(curr) <- rownames(mSet$dataSet$preproc)
       
+      if(input$timecourse_trigger){
+        melted_curr <- melt(as.data.table(curr, keep.rownames = TRUE),id.vars = "rn")
+        split_rn = strsplit(melted_curr$rn, split = "_T")
+        melted_curr$time <- as.numeric(sapply(split_rn, function(x) x[[2]]))
+        melted_curr$rn <- sapply(split_rn, function(x) x[[1]])
+        melted_curr$variable <- paste0(melted_curr$variable, "_T", melted_curr$time)
+        curr <- reshape::cast(melted_curr[,-"time"])
+        curr <- as.data.frame(curr)
+        rownames(curr) <- curr$rn
+        curr <- curr[,-1]
+      }
+      
       # find the qc rows
       is.qc <- grepl("QC|qc", rownames(curr))
       curr <- curr[!is.qc,]
       
       # reorder according to covars table (will be used soon)
-      order <- match(mSet$dataSet$covars$sample,rownames(curr))
-      
-      # get covariates to add to the metabolite table
-      config <- mSet$dataSet$covars[order, -"label"] # reorder so both halves match up later
-      config <- cbind(config, label=mSet$dataSet$cls[order]) # add current experimental condition
-      config <- config[,apply(!is.na(config), 2, any), with=FALSE]
+      if(input$timecourse_trigger){
+        config <- unique(mSet$dataSet$covars[, c("sample", "sex")]) # reorder so both halves match up later
+        config$sample <- gsub(x = config$sample, pattern = "_T\\d", replacement = "")
+        config <- unique(config)
+        order <- match(config$sample,rownames(curr))
+        config <- cbind(config[order,], label=mSet$dataSet$cls[order]) # add current experimental condition
+        config <- config[,apply(!is.na(config), 2, any), with=FALSE]
+        }else{
+        order <- match(mSet$dataSet$covars$sample,rownames(curr))
+        config <- mSet$dataSet$covars[order, -"label"] # reorder so both halves match up later
+        config <- cbind(config, label=mSet$dataSet$cls[order]) # add current experimental condition
+        config <- config[,apply(!is.na(config), 2, any), with=FALSE]
+      }
       
       # remove ones w/ every row being different(may be used to identify...)
       covariates <- lapply(1:ncol(config), function(i) as.factor(config[,..i][[1]]))
@@ -1860,10 +1879,11 @@ shinyServer(function(input, output, session) {
       
       # remove cols with all NA
       curr <- curr[,colSums(is.na(curr))<nrow(curr), with=FALSE]
-      
+      # remove rows with all NA
+      curr <- curr[complete.cases(curr),]
       # identify which columns are metabolites and which are config/covars
-      configCols <- which(!(colnames(curr) %in% colnames(mSet$dataSet$norm)))
-      mzCols <- which(colnames(curr) %in% colnames(mSet$dataSet$norm))
+      configCols <- which(!(gsub(x = colnames(curr), pattern = "_T\\d", replacement="") %in% colnames(mSet$dataSet$norm)))
+      mzCols <- which(gsub(x = colnames(curr), pattern = "_T\\d", replacement="") %in% colnames(mSet$dataSet$norm))
       
       # make the covars factors and the metabolites numeric.
       curr[,(configCols):= lapply(.SD, function(x) as.factor(x)), .SDcols = configCols]
@@ -1878,7 +1898,6 @@ shinyServer(function(input, output, session) {
       repeats <- pbapply::pblapply(1:goes, cl=0, function(i, ...){
         
         shiny::isolate({
-          
           
           # get regex user input for filtering testing and training set
           ml_train_regex <- input$ml_train_regex
@@ -2243,7 +2262,7 @@ shinyServer(function(input, output, session) {
       }}else if(input$statistics == "ml"){ # makes ROC curves and boxplots clickable
         switch(input$ml_results, roc = { # if roc, check the curve numbers of the roc plot
           attempt = d$curveNumber - 1
-          xvals <- 
+          xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
             if(attempt > 1){
               ml_type <- xvals$type[[1]]
               model <- xvals$models[[attempt]]
