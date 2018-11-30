@@ -273,7 +273,12 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
 																   # this tab is used to perform pls-da. it triggers on 'go' button as it is a time costly analysis.
                                                                    tabPanel(h3("PLSDA"), value = "plsda", 
                                                                             fluidRow(column(12,align="center",plotly::plotlyOutput("plot_plsda",height = "500px", width="500px"))),
-                                                                            fluidRow(column(12,align="center",switchButton("plsda_2d3d", label = "", col = "BW", type = "2d3d"))),
+                                                                            fluidRow(column(6,align="center",switchButton("plsda_2d3d", label = "", col = "BW", type = "2d3d")),
+                                                                                     column(6, align= "center", 
+                                                                                            br(),
+                                                                                            textInput("report_plsda_plot_title", "Title", value = "PLSDA"),
+                                                                                            textAreaInput("report_plsda_plot_notes", "Notes", value = "", height = "100px"),
+                                                                                            actionButton("report_plsda_plot", "Add plot to report"))),
                                                                             hr(),
                                                                             fluidRow(column(3,
                                                                                             div(style="display:inline-block",
