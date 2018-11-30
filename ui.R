@@ -357,7 +357,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                             br(),
                                                                                             textInput("report_volc_plot_title", "Title", value = "Volcano"),
                                                                                             textAreaInput("report_volc_plot_notes", "Notes", value = "", height = "100px"),
-                                                                                            actionButton("report_volc_plot", "Add plot to report"))),
+                                                                                            actionButton("report_volc_plot", "Add plot to report")))
                                                                    ),
                                                                    tabPanel(h3("MEBA"), value="meba", 
                                                                             fluidRow(plotly::plotlyOutput('meba_specific_plot'),height="600px"),
