@@ -311,6 +311,11 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                    ),
                                                                    tabPanel(h3("T-test"), value="tt", 
                                                                             fluidRow(plotly::plotlyOutput('tt_specific_plot',width="100%")),
+                                                                            fluidRow(column(12, align = "center",
+                                                                            br(),
+                                                                            textInput("report_tt_plot_title", "Title", value = "T-test"),
+                                                                            textAreaInput("report_tt_plot_notes", "Notes", value = "", height = "100px"),
+                                                                            actionButton("report_tt_plot", "Add plot to report"))),
                                                                             navbarPage(inverse=F,"",
                                                                                        tabPanel("", icon=icon("table"),
                                                                                                 div(DT::dataTableOutput('tt_tab',width="100%"),style='font-size:80%'))
@@ -320,6 +325,11 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                             )),
                                                                    tabPanel(h3("ANOVA"), value="aov",
                                                                             fluidRow(plotly::plotlyOutput('aov_specific_plot',width="100%")),
+                                                                            fluidRow(column(12, align = "center",
+                                                                                            br(),
+                                                                                            textInput("report_anova_plot_title", "Title", value = "ANOVA"),
+                                                                                            textAreaInput("report_anova_plot_notes", "Notes", value = "", height = "100px"),
+                                                                                            actionButton("report_anova_plot", "Add plot to report"))),
                                                                             navbarPage(inverse=F,"",
                                                                                        tabPanel("", icon=icon("table"),
                                                                                                 div(DT::dataTableOutput('aov_tab',width="100%"),style='font-size:80%'))
@@ -329,6 +339,11 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                             )),
                                                                    tabPanel(h3("Fold-change"), value="fc",
                                                                             fluidRow(plotly::plotlyOutput('fc_specific_plot',width="100%")),
+                                                                            fluidRow(column(12, align = "center",
+                                                                                            br(),
+                                                                                            textInput("report_fc_plot_title", "Title", value = "Fold-change"),
+                                                                                            textInput("report_fc_plot_notes", "Notes", value = "", height = "100px"),
+                                                                                            actionButton("report_fc_plot", "Add plot to report"))),
                                                                             navbarPage(inverse=F,"",
                                                                                        tabPanel("", icon=icon("table"),
                                                                                                 div(DT::dataTableOutput('fc_tab',width="100%"),style='font-size:80%'))
@@ -337,14 +352,29 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                        ))
                                                                    ),
                                                                    tabPanel(h3("Volcano"), value="volc",
-                                                                            fluidRow(plotly::plotlyOutput('volc_plot',width="100%",height="600px"))
+                                                                            fluidRow(plotly::plotlyOutput('volc_plot',width="100%",height="600px")),
+                                                                            fluidRow(column(12, align = "center",
+                                                                                            br(),
+                                                                                            textInput("report_volc_plot_title", "Title", value = "Volcano"),
+                                                                                            textInput("report_volc_plot_notes", "Notes", value = "", height = "100px"),
+                                                                                            actionButton("report_volc_plot", "Add plot to report"))),
                                                                    ),
                                                                    tabPanel(h3("MEBA"), value="meba", 
                                                                             fluidRow(plotly::plotlyOutput('meba_specific_plot'),height="600px"),
+                                                                            fluidRow(column(12, align = "center",
+                                                                                            br(),
+                                                                                            textInput("report_meba_plot_title", "Title", value = "MEBA"),
+                                                                                            textInput("report_meba_plot_notes", "Notes", value = "", height = "100px"),
+                                                                                            actionButton("report_meba_plot", "Add plot to report"))),
                                                                             fluidRow(div(DT::dataTableOutput('meba_tab', width="100%"),style='font-size:80%'))
                                                                    ),
                                                                    tabPanel(h3("ASCA"), value="asca",
                                                                             fluidRow(plotly::plotlyOutput('asca_specific_plot', height="600px")),
+                                                                            fluidRow(column(12, align = "center",
+                                                                                            br(),
+                                                                                            textInput("report_asca_plot_title", "Title", value = "ASCA"),
+                                                                                            textInput("report_asca_plot_notes", "Notes", value = "", height = "100px"),
+                                                                                            actionButton("report_asca_plot", "Add plot to report"))),
                                                                             fluidRow(div(DT::dataTableOutput('asca_tab',width="100%"),style='font-size:80%'))
                                                                    ),
                                                                    tabPanel(h3("Heatmap"), value="heatmap",
@@ -604,6 +634,19 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                              ))
                                     )
                     )),
+					
+					# report tab
+					tabPanel("reportRab", icon = NULL, value="reportTab",
+					         fluidRow(
+					           column(width=12, align="center",
+					                  h2("Report"),
+					                  br(),
+					                  helpText("Report contents:"),
+					                  div(DT::dataTableOutput('report_unselected',  width="100%"))
+					           )#close column
+					         )#close fluidrow
+					),#close tabpanel
+					
 		   # this tab is used to change general settings.
            tabPanel("",  icon = icon("cog"), value="options", 
                     navbarPage(inverse=TRUE,"Settings", id="tab_settings",
