@@ -698,7 +698,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                div(class="minus", img(class="imagebottom", src=getOptions("user_options.txt")$taskbar_image, width="120px", height="120px"))
            ),
            div(class="line")
-,footer=fluidRow(actionButton("show_window", label = "Testy boi"),
-                 actionButton("save_mset", label = "save")))
+,footer=fluidRow(actionButton("show_window", label="", icon = icon("map-marked")),
+                 actionButton("save_mset", label="", icon = icon("save"))))
 )
 )

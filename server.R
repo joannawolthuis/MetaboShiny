@@ -2704,6 +2704,12 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  observeEvent(input$save_mset, {
+    # save mset
+    fn <- paste0(tools::file_path_sans_ext(global$paths$patdb), ".metshi")
+    save(mSet, file = fn)
+  })
+  
   # this SHOULD trigger on closing the app
   observe({
     if (input$nav_general == "stop"){ # if on the 'close' tab...
