@@ -280,9 +280,32 @@ vectors = list(
                         c("Name")],
   # list of negative adducts
   neg_adducts = adducts[Ion_mode == "negative",
-                        c("Name")]
+                        c("Name")],
+  wordcloud = list(top = 20)
 )
 )
+
+global$vectors$wordcloud$skip <- c("on", "in", "and", "at", 
+                                   "an", "by", "is", "it", "that", 
+                                   "as", "be", "like", "can", "a", "of",
+                                   "to", "but", "not", "mainly", "the",
+                                   "a", "", "which", "b", "c", "d", "from",
+                                   "found", "its", "two", "one", "if", "no",
+                                   "yes", "any", "were", "observed", "also",
+                                   "why", "other", "only", "known", "so", "do",
+                                   "with", "resulting", "reaction", "via", "e",
+                                   "f", "g", "h", "mtblc", "group", "groups",
+                                   "metabolism", "mh", "ms", "position", "positions",
+                                   "produced", "this", "v", "ce", "mtblc",
+                                   "has", "p", "ko", "predicted", "are", "been", "isolated",
+                                   "occurs", "form", "generated", "obtained", "et", "insource",
+                                   "or", "nu", "substituted", "exhibits", "for", "ev",
+                                   "attached", "constituent", "negative", "r", "ph", "pmid",
+                                   "compound", "residue", "unknown", "residues", "through",
+                                   "lcesiitft", "lcesitof","lcesiqtof","have", "derived",
+                                   "compounds", "having", "lcesiqq", "different", "s", "more",
+                                   "ec", "activity", "metabolite", "biotransformer","biotransformer¹",
+                                   global$vectors$db_list)
 
 #' Gets the current used operating system. Important for parallel/multithreaded functions if using makeCluster("FORK")
 #' 

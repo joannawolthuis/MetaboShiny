@@ -1,40 +1,46 @@
-Name,Ion_mode,Charge,Multi,Formula_add,Formula_ded,Source,Note
-M,positive,0,1,FALSE,FALSE,naturally charged,helps detect molecules that are naturally charged
-M,negative,0,1,FALSE,FALSE,naturally charged,helps detect molecules that are naturally charged
-M+H,positive,1,1,H1,FALSE,wkz,base ion
-M+Na,positive,1,1,Na1,FALSE,wkz,
-M+K,positive,1,1,K1,FALSE,wkz,
-M+2Na-H,positive,1,1,Na2,H1,wkz,
-M+CH3OH+H,positive,1,1,C1H5O1,FALSE,wkz,
-M+NaCl+H,positive,1,1,Na1Cl1H1,FALSE,wkz,noise
-M+(NaCl)2+H,positive,1,1,Na2Cl2H1,FALSE,wkz,noise
-M+(NaCl)4+H,positive,1,1,Na4Cl4H1,FALSE,wkz,noise
-M+(NaCl)5+H,positive,1,1,Na5Cl5H1,FALSE,wkz,noise
-M+3Na-2H,positive,1,1,Na3,H2,wkz,
-M+KCl+H,positive,1,1,K1Cl1H1,FALSE,wkz,
-M+(CH3OH)2+H,positive,1,1,C2H9O2,FALSE,wkz,
-M+NaK-H,positive,1,1,Na1K1,H1,wkz,
-M+NH4,positive,1,1,N1H4,FALSE,wkz,
-M+3H,positive,3,1,H3,FALSE,wkz,
-M+3Na,positive,3,1,Na3,FALSE,wkz,
-M+Na+2H,positive,3,1,Na2H1,FALSE,wkz,
-M-H,negative,-1,1,FALSE,H1,wkz,base ion
-M+Cl,negative,-1,1,Cl1,FALSE,wkz,
-M+NaCl-H,negative,-1,1,Na1Cl1,H1,wkz,noise
-M+(NaCl)2-H,negative,-1,1,Na2Cl2,H1,wkz,noise
-M+(NaCl)3-H,negative,-1,1,Na3Cl3,H1,wkz,noise
-M+(NaCl)4-H,negative,-1,1,Na4Cl4,H1,wkz,noise
-M+(NaCl)5-H,negative,-1,1,Na5Cl5,H1,wkz,noise
-M+KCl-H,negative,-1,1,K1Cl1,H1,wkz,noise
-M+H2PO4,negative,-1,1,H2P1O4,FALSE,wkz,
-M+HPO4,negative,-2,1,H1P1O4,FALSE,wkz,
-M+HSO4,negative,-1,1,H1S1O4,FALSE,wkz,
-M+Na-2H,negative,-1,1,Na1,H2,wkz,
-M+K-2H,negative,-1,1,K1,H2,wkz,
-M-H2O-H,negative,-1,1,FALSE,H3O1,wkz,
-M-2H,negative,-2,1,FALSE,H2,wkz,
-M-3H,negative,-3,1,FALSE,H3,wkz,
-M+HCOOH-H,negative,-1,1,C1O2H2,H1,wkz,
-M+CH3COOH-H,negative,-1,1,C2H4O2,H1,wkz,formiate
-M+C3H6O3-H,negative,-1,1,C3H6O3,H1,wkz,acetate
-M+I,negative,-1,1,I1,FALSE,wkz,
+Name;Ion_mode;Charge;Multi;Formula_add;Formula_ded;Source;Note
+M-;positive;0;1;FALSE;FALSE;naturally charged;helps detect molecules that are naturally charged
+M+;negative;0;1;FALSE;FALSE;naturally charged;helps detect molecules that are naturally charged
+M+H;positive;1;1;H1;FALSE;wkz;base ion
+M+Na;positive;1;1;Na1;FALSE;wkz;sodium
+M+K;positive;1;1;K1;FALSE;wkz;potassium
+M+2Na-H;positive;1;1;Na2;H1;wkz;
+M+CH3OH+H;positive;1;1;C1H5O1;FALSE;wkz;methanol
+M+NaCl+H;positive;1;1;Na1Cl1H1;FALSE;wkz;noise
+M+(NaCl)2+H;positive;1;1;Na2Cl2H1;FALSE;wkz;noise
+M+(NaCl)4+H;positive;1;1;Na4Cl4H1;FALSE;wkz;noise
+M+(NaCl)5+H;positive;1;1;Na5Cl5H1;FALSE;wkz;noise
+M+3Na-2H;positive;1;1;Na3;H2;wkz;
+M+KCl+H;positive;1;1;K1Cl1H1;FALSE;wkz;
+M+(CH3OH)2+H;positive;1;1;C2H9O2;FALSE;wkz;
+M+NaK-H;positive;1;1;Na1K1;H1;wkz;
+M+NH4;positive;1;1;N1H4;FALSE;wkz;
+M+3H;positive;3;1;H3;FALSE;wkz;
+M+3Na;positive;3;1;Na3;FALSE;wkz;
+M+Na+2H;positive;3;1;Na2H1;FALSE;wkz;
+M-H;negative;-1;1;FALSE;H1;wkz;base ion
+M+Cl;negative;-1;1;Cl1;FALSE;wkz;
+M+NaCl-H;negative;-1;1;Na1Cl1;H1;wkz;noise
+M+(NaCl)2-H;negative;-1;1;Na2Cl2;H1;wkz;noise
+M+(NaCl)3-H;negative;-1;1;Na3Cl3;H1;wkz;noise
+M+(NaCl)4-H;negative;-1;1;Na4Cl4;H1;wkz;noise
+M+(NaCl)5-H;negative;-1;1;Na5Cl5;H1;wkz;noise
+M+KCl-H;negative;-1;1;K1Cl1;H1;wkz;noise
+M+H2PO4;negative;-1;1;H2P1O4;FALSE;wkz;
+M+HPO4;negative;-2;1;H1P1O4;FALSE;wkz;
+M+HSO4;negative;-1;1;H1S1O4;FALSE;wkz;
+M+Na-2H;negative;-1;1;Na1;H2;wkz;
+M+K-2H;negative;-1;1;K1;H2;wkz;
+M-H2O-H;negative;-1;1;FALSE;H3O1;wkz;
+M-2H;negative;-2;1;FALSE;H2;wkz;
+M-3H;negative;-3;1;FALSE;H3;wkz;
+M+HCOOH-H;negative;-1;1;C1O2H2;H1;wkz;
+M+CH3COOH-H;negative;-1;1;C2H4O2;H1;wkz;formiate
+M+C3H6O3-H;negative;-1;1;C3H6O3;H1;wkz;acetate
+M+I;negative;-1;1;I1;FALSE;wkz;
+M+Li;positive;1;1;Li1;FALSE;rci;lithium salt lcms (http://www.rci.rutgers.edu/~layla/AnalMedChem511/LCMS_files/Adducts%20and%20Clusters_LCMS.pdf)
+M+CH3CN+H;positive;1;1;C2H4N1;FALSE;rci;acetonitrile
+M+H2O+H;positive;1;1;H3O1;FALSE;rci;water
+M+CF3CO2H-H;negative;-1;1;C2F3O2H1;H1;rci;TFA
+M+CH3CN-H;negative;-1;1;C2H3N1;H1;rci;acetonitrile
+M+CH3OH-H;negative;-1;1;C1H4O1;H1;rci;methanol

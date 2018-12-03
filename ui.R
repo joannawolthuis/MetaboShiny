@@ -3,6 +3,8 @@
 shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle.js"),  # load in javascript and CSS for page in general
                                                       tags$style(type="text/css", bar.css) # load in the user customized css (generated in 'global')
 ),
+shinyjqui::includeJqueryUI(),
+ECharts2Shiny::loadEChartsLibrary(),
 shinyalert::useShinyalert(), # enable shinyalert (necessary for on close message)
 navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="text/css", font.css)), # load in user customized css (generated in 'global')
                                   class="sparkley"), # make it use the sparkle.js for unnecessary sparkle effects ;)
@@ -351,7 +353,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                    ),
 																   # this tab enables machine learning
 																   tabPanel(h3("ML"), value = "ml",
-                                                                             fluidRow(
+																            fluidRow(
                                                                                column(width=3,align="center",
                                                                                       selectInput("ml_method", 
                                                                                                   label = "Type:", 
@@ -416,7 +418,35 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                  )
                                                                                         )
                                                                              )
-                                                                   ))
+                                                                   ),
+																   # this tab is used to find overlapping features of interest between analyses
+																   # TODO: enable this with multiple saved mSets in mSet$storage
+																   tabPanel(title="Venn", value="venn", icon=icon("link"),
+																            br(),
+																            helpText("You can use this tab to find overlapping hits between analyses."),
+																            fluidRow(
+																              column(5, 
+																                     div(DT::dataTableOutput('venn_unselected'),style='font-size:80%')),
+																              column(2,align="center",
+																                     br(),br(),br(),br(),br(),br(),br(),br(),
+																                     shinyWidgets::circleButton("venn_add", icon=icon("arrow-right"), size="sm"),
+																                     shinyWidgets::circleButton("venn_remove", icon=icon("arrow-left"), size="sm")
+																              ),
+																              column(5, 
+																                     div(DT::dataTableOutput('venn_selected'),style='font-size:80%'))
+																            ),
+																            br(),
+																            # choose how many top hits are picked
+																            sliderInput("venn_tophits", label = "Only include top:", min = 1, max = 200, post = " hits", value=20),
+																            shinyWidgets::circleButton("venn_build", icon=icon("hand-pointer-o"),size="default"),
+																            hr(),
+																            plotly::plotlyOutput("venn_plot",inline = F),
+																            # find the overlapping compounds between the groups you want to compare (user select)
+																            # TODO: enable this with clicking the numbers/areas
+																            selectInput("intersect_venn", label = "Show overlap between:", selected = 1,choices = "",multiple = T),
+																            div(DT::dataTableOutput('venn_tab'),style='font-size:80%')
+																   )
+																   )
                                   ),
 								  # this is the sidebar that shows in the analysis tab. contains a lot of settings on the current variable of interest, plot themes and colours, and venn diagrams.
                                   sidebarPanel = 
@@ -477,15 +507,18 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                              align="center"),br(),
                                                                                            fluidRow(
                                                                                              hr(),
-                                                                                             bsCollapsePanel(h2("Summary"),"",
+                                                                                             bsCollapsePanel(icon("chart-pie"),"",
                                                                                                              tabsetPanel(id = "...",
                                                                                                                          tabPanel(title=icon("database"),
                                                                                                                                   plotly::plotlyOutput("match_pie_db")),
                                                                                                                          tabPanel(title=icon("plus"),
-                                                                                                                                  plotly::plotlyOutput("match_pie_add"))
+                                                                                                                                  plotly::plotlyOutput("match_pie_add")),
+                                                                                                                         tabPanel(title=icon("cloud"),
+                                                                                                                                  tags$div(id="match_wordcloud", style="width:100%;height:400px;"),
+                                                                                                                                  deliverChart(div_id = "match_wordcloud"))
                                                                                                                          )
                                                                                              ),
-                                                                                             bsCollapsePanel(h2("Structure viewer"),"",
+                                                                                             bsCollapsePanel(icon("atom"),"",
                                                                                                              textOutput("curr_formula"),
                                                                                                              plotOutput("curr_struct", height="310px")
                                                                                              ),
@@ -507,33 +540,6 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                            hr(),
                                                                                            div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
                                                                                   ))
-                                                                      ),
-															 # this tab is used to find overlapping features of interest between analyses
-															 # TODO: enable this with multiple saved mSets in mSet$storage
-                                                             tabPanel(title=NULL, icon=icon("link"),
-                                                                      br(),
-                                                                      helpText("You can use this tab to find overlapping hits between analyses."),
-                                                                      fluidRow(
-                                                                        column(5, 
-                                                                               div(DT::dataTableOutput('venn_unselected'),style='font-size:80%')),
-                                                                        column(2,align="center",
-                                                                               br(),br(),br(),br(),br(),br(),br(),br(),
-                                                                               shinyWidgets::circleButton("venn_add", icon=icon("arrow-right"), size="sm"),
-                                                                               shinyWidgets::circleButton("venn_remove", icon=icon("arrow-left"), size="sm")
-                                                                               ),
-                                                                        column(5, 
-                                                                               div(DT::dataTableOutput('venn_selected'),style='font-size:80%'))
-                                                                      ),
-                                                                      br(),
-                                                                      # choose how many top hits are picked
-                                                                      sliderInput("venn_tophits", label = "Only include top:", min = 1, max = 200, post = " hits", value=20),
-                                                                      shinyWidgets::circleButton("venn_build", icon=icon("hand-pointer-o"),size="default"),
-                                                                      hr(),
-                                                                      plotly::plotlyOutput("venn_plot",inline = F),
-																	  # find the overlapping compounds between the groups you want to compare (user select)
-																	  # TODO: enable this with clicking the numbers/areas
-                                                                      selectInput("intersect_venn", label = "Show overlap between:", selected = 1,choices = "",multiple = T),
-                                                                      div(DT::dataTableOutput('venn_tab'),style='font-size:80%')
                                                                       ),
 															 # this tab is used to select user plot theme and user colours (discrete and continuous)
                                                              tabPanel(NULL, icon=icon("paint-brush"),
@@ -692,6 +698,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                div(class="minus", img(class="imagebottom", src=getOptions("user_options.txt")$taskbar_image, width="120px", height="120px"))
            ),
            div(class="line")
-)
+,footer=fluidRow(actionButton("show_window", label = "Testy boi"),
+                 actionButton("save_mset", label = "save")))
 )
 )
