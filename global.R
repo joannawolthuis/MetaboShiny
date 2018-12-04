@@ -134,6 +134,7 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                 ), # all image paths, if you add an image you can add it here
                                 default.text = list(list(name='curr_exp_dir',text=options$work_dir),
                                                     list(name='curr_db_dir',text=options$db_dir),
+                                                    list(name='curr_definition', text="No m/z selected"),
                                                     list(name='ppm',text=options$ppm),
                                                     list(name='proj_name',text=options$proj_name),
                                                     list(name="curr_cpd", text="...")# default text options at startup
@@ -289,21 +290,21 @@ global$vectors$wordcloud$skip <- c("on", "in", "and", "at",
                                    "an", "by", "is", "it", "that", 
                                    "as", "be", "like", "can", "a", "of",
                                    "to", "but", "not", "mainly", "the",
-                                   "a", "", "which", "b", "c", "d", "from",
+                                   "", "which", "from",
                                    "found", "its", "two", "one", "if", "no",
                                    "yes", "any", "were", "observed", "also",
                                    "why", "other", "only", "known", "so", "do",
-                                   "with", "resulting", "reaction", "via", "e",
-                                   "f", "g", "h", "mtblc", "group", "groups",
+                                   "with", "resulting", "reaction", "via",
+                                  "mtblc", "group", "groups",
                                    "metabolism", "mh", "ms", "position", "positions",
-                                   "produced", "this", "v", "ce", "mtblc",
-                                   "has", "p", "ko", "predicted", "are", "been", "isolated",
+                                   "produced", "this", "ce", "mtblc",
+                                   "has", "ko", "predicted", "are", "been", "isolated",
                                    "occurs", "form", "generated", "obtained", "et", "insource",
                                    "or", "nu", "substituted", "exhibits", "for", "ev",
-                                   "attached", "constituent", "negative", "r", "ph", "pmid",
+                                   "attached", "constituent", "negative", "ph", "pmid",
                                    "compound", "residue", "unknown", "residues", "through",
                                    "lcesiitft", "lcesitof","lcesiqtof","have", "derived",
-                                   "compounds", "having", "lcesiqq", "different", "s", "more",
+                                   "compounds", "having", "lcesiqq", "different", "more",
                                    "ec", "activity", "metabolite", "biotransformer","biotransformer¹",
                                    global$vectors$db_list)
 
@@ -334,7 +335,7 @@ data(isotopes, package = "enviPat")
 
 # create parallel workers, leaving 1 core for general use
 # TODO: make this a user slider
-session_cl <- parallel::makeCluster(max(c(1, parallel::detectCores()-2))) # leave 1 core for general use and 1 core for shiny session
+session_cl <- parallel::makeCluster(max(c(1, parallel::detectCores()-1))) # leave 1 core for general use and 1 core for shiny session
 
 # source the miniscript for the toggle buttons used in the interface (needs custom CSS)
 source("./Rsource/SwitchButton.R")
@@ -388,7 +389,9 @@ global$vectors$project_names <- unique(tools::file_path_sans_ext(list.files(opti
 
 # load existing file
 fn <- paste0(tools::file_path_sans_ext(global$paths$patdb), ".metshi")
-if(file.exists(fn)){
-  print("loading existing mset")
+
+if(file.exists(fn) & !exists("mSet")){
+  print("loading existing mset ..")
   load(fn)
+  print(".. done!")
 }

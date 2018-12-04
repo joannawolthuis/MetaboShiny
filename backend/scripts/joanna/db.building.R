@@ -1013,9 +1013,9 @@ build.base.db <- function(dbname=NA,
                                  missing.desc <- which(db.formatted$description == "<NA>" | db.formatted$description == "" | is.na(db.formatted$description))
                                  db.formatted$description[missing.desc] <- c("Unknown")
                                  
-                                 descriptions <- sapply(1:nrow(table_main), function(i){
+                                 descriptions <- sapply(1:nrow(db.formatted), function(i){
                                    
-                                   row = table_main[i,]
+                                   row = db.formatted[i,]
                                    
                                    if(row$isHuman & row$isMicrobe){
                                      suffix = "Found in humans and microbes."
@@ -1083,57 +1083,58 @@ build.base.db <- function(dbname=NA,
                                  checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
                                                                                             db.formatted$baseformula))
                                  db.formatted$baseformula <- checked$new_formula
-                                 wrong <- checked[warning == TRUE, which = TRUE]
-                                 fine.compounds <- db.formatted[-wrong,]
-                                 wack.compounds <- db.formatted[wrong,]
                                  
-                                 # fix halogens
-                                 
-                                 halogens <- c("F1"="fluoride", "Cl1"="chloride", "Br1"="bromide", "I1"="iodide", "At1"="astatide")
-                                 w.halogens <- grep(x=wack.compounds$baseformula, "X")
-                                 
-                                 halogen.fixed.list <- pbapply::pblapply(w.halogens, function(i){
-                                   
-                                   row <- last.wack.compounds[i,]
-                                   
-                                   if(row$baseformula == "X"){
-                                     print("yeah skip this one")
-                                     return(NA)
-                                   }else{
-                                     rows <- lapply(names(halogens), function(X){
-                                       new.row <- row
-                                       new.row$baseformula = gsub(x = new.row$baseformula, pattern="X", replacement=X)
-                                       new.row$compoundname = paste0(new.row$compoundname, " + ", halogens[[X]])
-                                       new.row$structure = NA
-                                       # - - return - - 
-                                       new.row
-                                     })
-                                     # - - -
-                                     rows
-                                   }
-                                   data.table::rbindlist(rows)
-                                 })
-                                 
-                                 halogen.compounds <- data.table::rbindlist(halogen.fixed.list[!is.na(halogen.fixed.list)])
-                                 
-                                 # - - residual compounds - - 
-                                 
-                                 w.residual <- grep(x=last.wack.compounds$baseformula, "FULL")
-                                 
-                                 residuals <- last.wack.compounds[w.residual,]
-                                 
-                                 # how to fix these?? they're always attached to something... skip for now
-                                 
-                                 # - - totals - - 
-                                 
-                                 subtables <- list(
-                                   fine.compounds,
-                                   fixed.compounds,
-                                   halogen.compounds
-                                 )
-                                 
-                                 db.formatted <- unique(rbindlist(subtables))
-                                 
+                                 # wrong <- checked[warning == TRUE, which = TRUE]
+                                 # fine.compounds <- db.formatted[-wrong,]
+                                 # wack.compounds <- db.formatted[wrong,]
+                                 # 
+                                 # # fix halogens
+                                 # 
+                                 # halogens <- c("F1"="fluoride", "Cl1"="chloride", "Br1"="bromide", "I1"="iodide", "At1"="astatide")
+                                 # w.halogens <- grep(x=wack.compounds$baseformula, "X")
+                                 # 
+                                 # halogen.fixed.list <- pbapply::pblapply(w.halogens, function(i){
+                                 #   
+                                 #   row <- last.wack.compounds[i,]
+                                 #   
+                                 #   if(row$baseformula == "X"){
+                                 #     print("yeah skip this one")
+                                 #     return(NA)
+                                 #   }else{
+                                 #     rows <- lapply(names(halogens), function(X){
+                                 #       new.row <- row
+                                 #       new.row$baseformula = gsub(x = new.row$baseformula, pattern="X", replacement=X)
+                                 #       new.row$compoundname = paste0(new.row$compoundname, " + ", halogens[[X]])
+                                 #       new.row$structure = NA
+                                 #       # - - return - - 
+                                 #       new.row
+                                 #     })
+                                 #     # - - -
+                                 #     rows
+                                 #   }
+                                 #   data.table::rbindlist(rows)
+                                 # })
+                                 # 
+                                 # halogen.compounds <- data.table::rbindlist(halogen.fixed.list[!is.na(halogen.fixed.list)])
+                                 # 
+                                 # # - - residual compounds - - 
+                                 # 
+                                 # w.residual <- grep(x=last.wack.compounds$baseformula, "FULL")
+                                 # 
+                                 # residuals <- last.wack.compounds[w.residual,]
+                                 # 
+                                 # # how to fix these?? they're always attached to something... skip for now
+                                 # 
+                                 # # - - totals - - 
+                                 # 
+                                 # subtables <- list(
+                                 #   fine.compounds,
+                                 #   fixed.compounds,
+                                 #   halogen.compounds
+                                 # )
+                                 # 
+                                 # db.formatted <- unique(rbindlist(subtables))
+                                 # 
                                  # - - write - - 
                                  
                                  RSQLite::dbWriteTable(conn, "base", db.formatted[, lapply(.SD, as.character),], overwrite=TRUE)

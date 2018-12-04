@@ -21,6 +21,15 @@ shinyServer(function(input, output, session) {
     output[[default$name]] = renderText(default$text)
   })
   
+  # default match table fill
+  output$match_tab <-DT::renderDataTable({
+    DT::datatable(data.table("no m/z chosen"="Please choose m/z value from results ٩(｡•́‿•̀｡)۶	"),
+                  selection = 'single',
+                  autoHideNavigation = T,
+                  options = list(lengthMenu = c(5, 10, 15), 
+                                 pageLength = 5))
+  })  
+  
   # create image objects in UI
   lapply(global$constants$images, FUN=function(image){
     output[[image$name]] <- renderImage({
@@ -2418,7 +2427,8 @@ shinyServer(function(input, output, session) {
                           # get description
                           desc <- global$tables$last_matches$description[[i]]
                           desc_lower <- tolower(desc) # make lowercase
-                          desc_strip <- gsub(x = desc_lower, pattern = "[[:punct:]]|\\d", replacement = "") # remove punctuation and single numbers
+                          # (^| ).( |$)
+                          desc_strip <- gsub(x = desc_lower, pattern = "([[:punct:]])|(\\d)|(^| ).( |$)", replacement = "") # remove punctuation and single numbers
                           desc_split <- strsplit(desc_strip, split = " ")[[1]] # split by spaces
                           desc_keep <- unique(setdiff(desc_split, global$vectors$wordcloud$skip)) # get the wanted unique words for this description
                           # - - - - -
@@ -2430,7 +2440,12 @@ shinyServer(function(input, output, session) {
                         rankings <- table(sample_data_for_wordcloud)
                         counts = unique(rankings) # get the unique counts
                         # get the global defined top ranking words
-                        minval = min(counts[order(counts, decreasing = T)[1:global$vectors$wordcloud$top]])
+                        tophits <- if(length(counts) < global$vectors$wordcloud$top){
+                          length(counts)
+                        }else{
+                          global$vectors$wordcloud$top
+                        }
+                        minval = min(counts[order(counts, decreasing = T)[1:tophits]])
                         # filter
                         keep <- rankings[rankings > minval]
                         sample_data_for_wordcloud <- sample_data_for_wordcloud[sample_data_for_wordcloud %in% names(keep)]
@@ -2491,6 +2506,12 @@ shinyServer(function(input, output, session) {
   observeEvent(input$match_tab_rows_selected,{
     curr_row <<- input$match_tab_rows_selected # get current row
     if (is.null(curr_row)) return()
+    # write to clipboard
+    if(input$auto_copy){
+      curr_name <<- global$tables$last_matches[curr_row,'name'][[1]]
+      clipr::write_clip(curr_name)
+      print('copied to clipboard ( ˘ ³˘)♥')
+    }
     # -----------------------------
     curr_def <<- global$tables$last_matches[curr_row,'description'] # get current definition (hidden in table display but not deleted)
     output$curr_definition <- renderText(curr_def$description) # render definition
@@ -2706,8 +2727,10 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$save_mset, {
     # save mset
-    fn <- paste0(tools::file_path_sans_ext(global$paths$patdb), ".metshi")
-    save(mSet, file = fn)
+    withProgress({
+      fn <- paste0(tools::file_path_sans_ext(global$paths$patdb), ".metshi")
+      save(mSet, file = fn)
+    })
   })
   
   # this SHOULD trigger on closing the app
