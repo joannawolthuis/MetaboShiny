@@ -510,38 +510,59 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                              ),
                                                              tabPanel(title=NULL, icon=icon("search"),
                                                                       br(),
-                                                                      tabsetPanel(id="tab_iden_1", selected = "start",
-                                                                                  # forward searching
-                                                                                  tabPanel(title=icon("eye-slash")),
-                                                                                  tabPanel(title=icon("database"),value="start",
-                                                                                           uiOutput("db_search_select")), # clicky buttons for database selection; this is generated in 'server'
-                                                                                  tabPanel(title=icon("chart-bar"),
-                                                                                           plotly::plotlyOutput("curr_plot", height="300px", width="100%")
-                                                                                           ),
-                                                                                  tabPanel(title=icon("star-half-alt"),
-                                                                                           selectInput("iso_score_method", 
-                                                                                                       "Which method used to score compounds of same weight?", 
-                                                                                                       selected="mscore", 
-                                                                                                       choices=list("M-score"="mscore",
-                                                                                                                    "Chi-square"="chisq",
-                                                                                                                    "Mean absolute percentage error"="mape",
-                                                                                                                    "SIRIUS"="sirius",
-                                                                                                                    "Network-based"="network"))
-                                                                                           )
-                                                                                 ),
+                                                                      bsCollapse(bsCollapsePanel(title=h2("Settings"), style="info",
+                                                                                                 tabsetPanel(id="tab_iden_1", selected = "start",
+                                                                                                             # forward searching
+                                                                                                             tabPanel(title=icon("database"),value="start",
+                                                                                                                      uiOutput("db_search_select")), # clicky buttons for database selection; this is generated in 'server'
+                                                                                                             tabPanel(title=icon("chart-bar"),
+                                                                                                                      plotly::plotlyOutput("curr_plot", height="300px", width="100%")
+                                                                                                             ),
+                                                                                                             tabPanel(title=icon("star-half-alt"),
+                                                                                                                      selectInput("iso_score_method", 
+                                                                                                                                  "Which method used to score compounds of same weight?", 
+                                                                                                                                  selected="mscore", 
+                                                                                                                                  choices=list("M-score"="mscore",
+                                                                                                                                               "Chi-square"="chisq",
+                                                                                                                                               "Mean absolute percentage error"="mape",
+                                                                                                                                               "SIRIUS"="sirius",
+                                                                                                                                               "Network-based"="network"))
+                                                                                                             )
+                                                                                                 ))),
                                                                       tabsetPanel(id="tab_iden_2",  
 																				                                          # forward searching
                                                                                   tabPanel(title="mz > molecule",
                                                                                            hr(),
-                                                                                           div(h2(textOutput("curr_cpd"),style="padding:10px;"),
-                                                                                               style="background-color:white;
-                                                                                               height:55px;
-                                                                                               width:115%;
-                                                                                               position:relative;
-                                                                                               right:30px;
-                                                                                               border-top: 1px solid #DFDCDC;
-                                                                                               border-bottom: 1px solid #DFDCDC;
-                                                                                               "),
+                                                                                           fluidRow(
+                                                                                             imageOutput("sidebar_icon",inline = T),
+                                                                                             div(
+                                                                                               sardine(div(icon("paw","fa-xs fa-rotate-90"), 
+                                                                                                           style="position:relative;
+                                                                                                                  top:10px;")),
+                                                                                               sardine(div(icon("paw","fa-xs fa-rotate-90"), 
+                                                                                                           style="position:relative;
+                                                                                                                  top:25px;")),
+                                                                                               sardine(div(icon("paw","fa-xs fa-rotate-90"), 
+                                                                                                           style="position:relative;
+                                                                                                                  top:10px;")),
+                                                                                               sardine(h2(textOutput("curr_cpd"),style="padding:10px;")),
+                                                                                               sardine(div(icon("paw","fa-xs fa-rotate-90"), 
+                                                                                                           style="position:relative;
+                                                                                                                  top:10px;")),
+                                                                                               sardine(div(icon("paw","fa-xs fa-rotate-90"), 
+                                                                                                           style="position:relative;
+                                                                                                                  top:25px;")),
+                                                                                               sardine(div(icon("paw","fa-xs fa-rotate-90"), 
+                                                                                                           style="position:relative;
+                                                                                                                  top:10px;")),
+                                                                                                        style="background-color:white;
+                                                                                                               height:55px;
+                                                                                                               width:115%;
+                                                                                                               position:relative;
+                                                                                                               right:30px;
+                                                                                                               border-top: 1px solid #DFDCDC;
+                                                                                                               border-bottom: 1px solid #DFDCDC;")
+                                                                                             ),
                                                                                            fluidRow(
                                                                                              shinyWidgets::circleButton("search_cpd", icon = icon("search"), size = "default"),
                                                                                              #shinyWidgets::circleButton("score_iso", icon = icon("balance-scale"), size = "default"),
@@ -550,41 +571,39 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                              #,actionButton("score_net", "", icon=icon("arrows-alt")),
                                                                                              align="center"),
                                                                                            hr(),
-                                                                                           fluidRow(h2("Compound info"), align="center"),
-                                                                                             tabsetPanel(id="tab_iden_2", 
-                                                                                                         tabPanel(title=icon("atlas"),
-                                                                                                                  div(textOutput("curr_definition"))
-                                                                                                                  ),
-                                                                                                         tabPanel(title=icon("atom"),
-                                                                                                                  textOutput("curr_formula"),
-                                                                                                                  plotOutput("curr_struct", height="150px")
-                                                                                                                  )
-                                                                                                         ),
-                                                                                           hr(),
-                                                                                           fluidRow(h2("Search results"), align="center"),
-                                                                                             tabsetPanel(id="tab_iden_1",selected = "start",
-                                                                                                         # forward searching
-                                                                                                         tabPanel(title=icon("eye-slash")),
-                                                                                                         tabPanel(title=icon("table"), value="start",
-                                                                                                                  div(DT::dataTableOutput('match_tab', width="100%"),style='font-size:80%')
-                                                                                                                  ),
-                                                                                                         tabPanel(title=icon("database"), 
-                                                                                                                  plotly::plotlyOutput("match_pie_db")
-                                                                                                                  ),
-                                                                                                         tabPanel(title=icon("plus"), 
-                                                                                                                  plotly::plotlyOutput("match_pie_add")
-                                                                                                                  ),
-                                                                                                         tabPanel(title=icon("cloud"), 
-                                                                                                                  tags$div(id="match_wordcloud", style="width:100%;height:400px;"),
-                                                                                                                  deliverChart(div_id = "match_wordcloud")
-                                                                                                                  )
-                                                                                                         ),
-                                                                                           hr(),
-                                                                                           fluidRow(
-                                                                                             switchButton(inputId = "auto_copy",
-                                                                                                        label = "Auto-copy name to clipboard??", 
-                                                                                                        value = TRUE, col = "GB", type = "YN"), 
-                                                                                                    align="center")
+                                                                                           bsCollapse(bsCollapsePanel(title=h2("Compound info"), style="warning",
+                                                                                                                      tabsetPanel(id="tab_iden_2", 
+                                                                                                                                  tabPanel(title=icon("atlas"),
+                                                                                                                                           div(textOutput("curr_definition"))
+                                                                                                                                  ),
+                                                                                                                                  tabPanel(title=icon("atom"),
+                                                                                                                                           textOutput("curr_formula"),
+                                                                                                                                           plotOutput("curr_struct", height="150px")
+                                                                                                                                  )
+                                                                                                                      ))),
+                                                                                           bsCollapse(bsCollapsePanel(title=h2("Search results"), style="error",
+                                                                                                                      tabsetPanel(id="tab_iden_1",selected = "start",
+                                                                                                                                  # forward searching
+                                                                                                                                  tabPanel(title=icon("table"), value="start",
+                                                                                                                                           fluidRow(
+                                                                                                                                             switchButton(inputId = "auto_copy",
+                                                                                                                                                          label = "Auto-copy name to clipboard??", 
+                                                                                                                                                          value = TRUE, col = "GB", type = "YN"), 
+                                                                                                                                             align="center"),
+                                                                                                                                           div(DT::dataTableOutput('match_tab', width="100%"),style='font-size:80%')
+                                                                                                                                  ),
+                                                                                                                                  tabPanel(title=icon("database"), 
+                                                                                                                                           plotly::plotlyOutput("match_pie_db")
+                                                                                                                                  ),
+                                                                                                                                  tabPanel(title=icon("plus"), 
+                                                                                                                                           plotly::plotlyOutput("match_pie_add")
+                                                                                                                                  ),
+                                                                                                                                  tabPanel(title=icon("cloud"), 
+                                                                                                                                           tags$div(id="match_wordcloud", style="width:100%;height:400px;"),
+                                                                                                                                           deliverChart(div_id = "match_wordcloud")
+                                                                                                                                  )
+                                                                                                                      )))
+                                                                                           
                                                                                            ),
 																				  # reverse searching
                                                                                   tabPanel(title="molecule > mz",

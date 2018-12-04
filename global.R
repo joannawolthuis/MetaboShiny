@@ -130,7 +130,9 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                               list(name = 'excel_icon_2', path = 'www/excel.png', dimensions = c(120, 120)),
                                               list(name = 'db_icon', path = 'www/servers.png', dimensions = c(150, 150)),
                                               list(name = 'csv_icon', path = 'www/office.png', dimensions = c(100, 100)),
-                                              list(name = 'dataset_icon', path = 'www/office.png', dimensions = c(100, 100))
+                                              list(name = 'dataset_icon', path = 'www/office.png', dimensions = c(100, 100)),
+                                              list(name = 'sidebar_icon', path = 'www/detective.png', dimensions = c(60, 60))
+                                              
                                 ), # all image paths, if you add an image you can add it here
                                 default.text = list(list(name='curr_exp_dir',text=options$work_dir),
                                                     list(name='curr_db_dir',text=options$db_dir),
