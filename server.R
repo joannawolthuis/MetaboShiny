@@ -21,6 +21,15 @@ shinyServer(function(input, output, session) {
     output[[default$name]] = renderText(default$text)
   })
   
+  # default match table fill
+  output$match_tab <-DT::renderDataTable({
+    DT::datatable(data.table("no m/z chosen"="Please choose m/z value from results ٩(｡•́‿•̀｡)۶	"),
+                  selection = 'single',
+                  autoHideNavigation = T,
+                  options = list(lengthMenu = c(5, 10, 15), 
+                                 pageLength = 5))
+  })  
+  
   # create image objects in UI
   lapply(global$constants$images, FUN=function(image){
     output[[image$name]] <- renderImage({
@@ -135,7 +144,7 @@ shinyServer(function(input, output, session) {
   # render time series swap button
   output$timebutton <- renderUI({
     if (is.null(timebutton$status)) {
-      NULL
+      input$timecourse_trigger <- FALSE
     } else{
       switch(timebutton$status, 
              off = NULL,
@@ -247,13 +256,17 @@ shinyServer(function(input, output, session) {
     
     # adjust bivariate/multivariate (2, >2)...
     mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
-    
-    # remove old analSet
-    mSet$analSet <<- NULL
+        
     
     # adjust name of experimental variable
     mSet$dataSet$cls.name <<- input$first_var
     
+    if(input$first_var %in% names(mSet$storage)){
+      mSet$analSet <<- mSet$storage[[input$first_var]]
+    }else{
+      # remove old analSet
+      mSet$analSet <<- NULL
+    }  
     # reset interface
     if(mSet$dataSet$cls.num <= 1){
       interface$mode <- NULL } 
@@ -636,7 +649,7 @@ shinyServer(function(input, output, session) {
         
         # build base db (differs per db, parsers for downloaded data)
         build.base.db(db,
-                      outfolder = getOptions("user_options.txt")$db_dir, 
+                      outfolder = getOptions("user_options.txt")$db_dir,
                       cl = session_cl)
         shiny::setProgress(session = session, 0.5)
         
@@ -671,12 +684,16 @@ shinyServer(function(input, output, session) {
     # re-render match table
     output$match_tab <-DT::renderDataTable({
       
+      remove_cols = c("description","structure", "baseformula", "dppm")
+      remove_idx <- which(colnames(global$tables$last_matches) %in% remove_cols)
       # don't show some columns but keep them in the original table, so they can be used
       # for showing molecule descriptions, structure
-      DT::datatable(global$tables$last_matches[,-c("description","structure", "baseformula", "dppm")],
+      DT::datatable(global$tables$last_matches,
                     selection = 'single',
                     autoHideNavigation = T,
-                    options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+                    options = list(lengthMenu = c(5, 10, 15), 
+                                   pageLength = 5,
+                                   columnDefs = list(list(visible=FALSE, targets=remove_idx))))
     })  
   })
   
@@ -965,6 +982,8 @@ shinyServer(function(input, output, session) {
       if(all(grepl(pattern = "_T\\d", x = first_part$sample))){
         keep.all.samples <- TRUE
         print("Potential for time series - disallowing outlier removal")
+      }else{
+        keep.all.samples <- FALSE
       }
       
       # remove outliers by making a boxplot and going from there
@@ -1312,6 +1331,14 @@ shinyServer(function(input, output, session) {
     
     # depending on the present tab, perform analyses accordingly
     switch(input$statistics,
+           venn = {
+             # save previous mset 
+             mset_name = mSet$dataSet$cls.name
+             # TODO: use this in venn diagram creation
+             mSet$storage[[mset_name]] <<- mSet$analSet
+             # reload
+             datamanager$reload <- "venn"
+           },
            pca = {
              if(!"pca" %in% names(mSet$analSet)){ # if PCA already has been done, don't redo it
                withProgress({
@@ -1460,6 +1487,43 @@ shinyServer(function(input, output, session) {
       }else{
         print("datamanager active...")
         switch(datamanager$reload,
+               venn = {
+                 if("storage" %in% names(mSet)){
+                   analyses = names(mSet$storage)
+                   venn_no$start <- rbindlist(lapply(analyses, function(name){
+                     analysis = mSet$storage[[name]]
+                     analysis_names = names(analysis)
+                     # - - -
+                     with.subgroups <- intersect(analysis_names, c("ml", "plsr"))
+                     if(length(with.subgroups) > 0){
+                       extra_names <- lapply(with.subgroups, function(anal){
+                         switch(anal,
+                                ml = {
+                                  which.mls <- intersect(c("rf", "ls"), names(analysis$ml))
+                                  ml.names = sapply(which.mls, function(meth){
+                                    if(length(analysis$ml[[meth]]) > 0){
+                                      paste0(meth, " - ", names(analysis$ml[[meth]]))
+                                    }
+                                  })
+                                  unlist(ml.names)
+                                },
+                                plsr = {
+                                  c ("plsda - PC1", "plsda - PC2", "plsda - PC3")
+                                })
+                       })
+                       analysis_names <- c(setdiff(analysis_names, c("ml", "plsr", "plsda")), unlist(extra_names))
+                     }
+                     # - - -
+                     data.frame(
+                       paste0(analysis_names, " (", name, ")")
+                     )
+                   }))
+                   venn_no$now <- venn_no$start
+                 }else{
+                   venn_no$start <- data.frame(names(mSet$analSet))
+                   venn_no$now <- venn_no$start
+                 }
+               },
                aov = {
                  present = switch(input$timecourse_trigger,
                                   {"aov2" %in% names(mSet$analSet)},
@@ -1803,16 +1867,18 @@ shinyServer(function(input, output, session) {
       curr <- as.data.frame(curr)
       rownames(curr) <- rownames(mSet$dataSet$preproc)
       
-      if(input$timecourse_trigger){
-        melted_curr <- melt(as.data.table(curr, keep.rownames = TRUE),id.vars = "rn")
-        split_rn = strsplit(melted_curr$rn, split = "_T")
-        melted_curr$time <- as.numeric(sapply(split_rn, function(x) x[[2]]))
-        melted_curr$rn <- sapply(split_rn, function(x) x[[1]])
-        melted_curr$variable <- paste0(melted_curr$variable, "_T", melted_curr$time)
-        curr <- reshape::cast(melted_curr[,-"time"])
-        curr <- as.data.frame(curr)
-        rownames(curr) <- curr$rn
-        curr <- curr[,-1]
+      if(!is.null(input$timecourse_trigger)){
+        if(input$timecourse_trigger){
+          melted_curr <- melt(as.data.table(curr, keep.rownames = TRUE),id.vars = "rn")
+          split_rn = strsplit(melted_curr$rn, split = "_T")
+          melted_curr$time <- as.numeric(sapply(split_rn, function(x) x[[2]]))
+          melted_curr$rn <- sapply(split_rn, function(x) x[[1]])
+          melted_curr$variable <- paste0(melted_curr$variable, "_T", melted_curr$time)
+          curr <- reshape::cast(melted_curr[,-"time"])
+          curr <- as.data.frame(curr)
+          rownames(curr) <- curr$rn
+          curr <- curr[,-1]
+        }
       }
       
       # find the qc rows
@@ -1820,14 +1886,21 @@ shinyServer(function(input, output, session) {
       curr <- curr[!is.qc,]
       
       # reorder according to covars table (will be used soon)
-      if(input$timecourse_trigger){
-        config <- unique(mSet$dataSet$covars[, c("sample", "sex")]) # reorder so both halves match up later
-        config$sample <- gsub(x = config$sample, pattern = "_T\\d", replacement = "")
-        config <- unique(config)
-        order <- match(config$sample,rownames(curr))
-        config <- cbind(config[order,], label=mSet$dataSet$cls[order]) # add current experimental condition
-        config <- config[,apply(!is.na(config), 2, any), with=FALSE]
+      if(!is.null(input$timecourse_trigger)){
+        if(input$timecourse_trigger){
+          config <- unique(mSet$dataSet$covars[, c("sample", "sex")]) # reorder so both halves match up later
+          config$sample <- gsub(x = config$sample, pattern = "_T\\d", replacement = "")
+          config <- unique(config)
+          order <- match(config$sample,rownames(curr))
+          config <- cbind(config[order,], label=mSet$dataSet$cls[order]) # add current experimental condition
+          config <- config[,apply(!is.na(config), 2, any), with=FALSE]
         }else{
+          order <- match(mSet$dataSet$covars$sample,rownames(curr))
+          config <- mSet$dataSet$covars[order, -"label"] # reorder so both halves match up later
+          config <- cbind(config, label=mSet$dataSet$cls[order]) # add current experimental condition
+          config <- config[,apply(!is.na(config), 2, any), with=FALSE]
+        }
+      }else{
         order <- match(mSet$dataSet$covars$sample,rownames(curr))
         config <- mSet$dataSet$covars[order, -"label"] # reorder so both halves match up later
         config <- cbind(config, label=mSet$dataSet$cls[order]) # add current experimental condition
@@ -2194,11 +2267,16 @@ shinyServer(function(input, output, session) {
         }else if(table == 'asca'){ # asca needs a split by time
           ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]], mode = "ts")
         }else{ # regular boxplot
-          if(input$timecourse_trigger){
-            ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]], mode = "ts")
+          if(!is.null(input$timecourse_trigger)){
+            if(input$timecourse_trigger){
+              ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]], mode = "ts")
+            }else{
+              ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+            }
           }else{
             ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
           }
+          
         }
       })
     })
@@ -2340,6 +2418,44 @@ shinyServer(function(input, output, session) {
       adduct_dist <- melt(table(global$tables$last_matches$adduct))
       db_dist <- melt(table(global$tables$last_matches$source))
       
+      # render word cloud
+      renderWordcloud("match_wordcloud", 
+                      data = {
+                        # remove unwanted words (defined in global) from description
+                        filtered_descriptions <- sapply(1:length(global$tables$last_matches$description), 
+                                                        function(i){
+                          # get description
+                          desc <- global$tables$last_matches$description[[i]]
+                          desc_lower <- tolower(desc) # make lowercase
+                          # (^| ).( |$)
+                          desc_strip <- gsub(x = desc_lower, pattern = "([[:punct:]])|(\\d)|(^| ).( |$)", replacement = "") # remove punctuation and single numbers
+                          desc_split <- strsplit(desc_strip, split = " ")[[1]] # split by spaces
+                          desc_keep <- unique(setdiff(desc_split, global$vectors$wordcloud$skip)) # get the wanted unique words for this description
+                          # - - - - -
+                          desc_keep
+                        })
+                        # put in right format
+                        sample_data_for_wordcloud <- unlist(filtered_descriptions)
+                        # how many times is each word present?
+                        rankings <- table(sample_data_for_wordcloud)
+                        counts = unique(rankings) # get the unique counts
+                        # get the global defined top ranking words
+                        tophits <- if(length(counts) < global$vectors$wordcloud$top){
+                          length(counts)
+                        }else{
+                          global$vectors$wordcloud$top
+                        }
+                        minval = min(counts[order(counts, decreasing = T)[1:tophits]])
+                        # filter
+                        keep <- rankings[rankings > minval]
+                        sample_data_for_wordcloud <- sample_data_for_wordcloud[sample_data_for_wordcloud %in% names(keep)]
+                        # - - - - - - - - - -
+                        sample_data_for_wordcloud
+                      },
+                      shape = "circle",
+                      sizeRange = c(10,80)
+                      )
+      
       output$match_pie_add <- plotly::renderPlotly({
         plot_ly(adduct_dist, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
                 textposition = 'inside',
@@ -2370,12 +2486,19 @@ shinyServer(function(input, output, session) {
                  yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
       })
       
-      output$match_tab <- DT::renderDataTable({ # render table for UI
-        DT::datatable(global$tables$last_matches[,-c("description","structure", "baseformula", "dppm")], # filter table some
+      output$match_tab <-DT::renderDataTable({
+        
+        remove_cols = c("description","structure", "baseformula", "dppm")
+        remove_idx <- which(colnames(global$tables$last_matches) %in% remove_cols)
+        # don't show some columns but keep them in the original table, so they can be used
+        # for showing molecule descriptions, structure
+        DT::datatable(global$tables$last_matches,
                       selection = 'single',
                       autoHideNavigation = T,
-                      options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-      })  
+                      options = list(lengthMenu = c(5, 10, 15), 
+                                     pageLength = 5,
+                                     columnDefs = list(list(visible=FALSE, targets=remove_idx))))
+      })
     }
   })
   
@@ -2383,6 +2506,12 @@ shinyServer(function(input, output, session) {
   observeEvent(input$match_tab_rows_selected,{
     curr_row <<- input$match_tab_rows_selected # get current row
     if (is.null(curr_row)) return()
+    # write to clipboard
+    if(input$auto_copy){
+      curr_name <<- global$tables$last_matches[curr_row,'name'][[1]]
+      clipr::write_clip(curr_name)
+      print('copied to clipboard ( ˘ ³˘)♥')
+    }
     # -----------------------------
     curr_def <<- global$tables$last_matches[curr_row,'description'] # get current definition (hidden in table display but not deleted)
     output$curr_definition <- renderText(curr_def$description) # render definition
@@ -2457,46 +2586,6 @@ shinyServer(function(input, output, session) {
   venn_no = reactiveValues(start = data.frame(c("a", "b", "c")), 
                            now = data.frame(c("a", "b", "c")))
   
-  observe({
-    if(exists("mSet")){
-      if("storage" %in% names(mSet)){
-        analyses = names(mSet$storage)
-        venn_no$start <- rbindlist(lapply(analyses, function(name){
-          analysis = mSet$storage[[name]]
-          analysis_names = names(analysis)
-          # - - -
-          with.subgroups <- intersect(analysis_names, c("ml", "plsr"))
-          if(length(with.subgroups) > 0){
-            extra_names <- lapply(with.subgroups, function(anal){
-              switch(anal,
-                     ml = {
-                       which.mls <- intersect(c("rf", "ls"), names(analysis$ml))
-                       ml.names = sapply(which.mls, function(meth){
-                         if(length(analysis$ml[[meth]]) > 0){
-                           paste0(meth, " - ", names(analysis$ml[[meth]]))
-                         }
-                       })
-                       unlist(ml.names)
-                     },
-                     plsr = {
-                       c ("plsda - PC1", "plsda - PC2", "plsda - PC3")
-                     })
-            })
-            analysis_names <- c(setdiff(analysis_names, c("ml", "plsr", "plsda")), unlist(extra_names))
-          }
-          # - - -
-          data.frame(
-            paste0(analysis_names, " (", name, ")")
-          )
-        }))
-        venn_no$now <- venn_no$start
-      }else{
-        venn_no$start <- data.frame(names(mSet$analSet))
-        venn_no$now <- venn_no$start
-      }
-    }
-  })
-  
   venn_members <- reactiveValues(mzvals = list())
   
   observeEvent(input$venn_add, {
@@ -2567,42 +2656,81 @@ shinyServer(function(input, output, session) {
   
   # triggers when users pick which intersecting hits they want
   observeEvent(input$intersect_venn, {
-    
+
     if(length(input$intersect_venn) > 1){
-      venn_overlap <<- Reduce("intersect", lapply(input$intersect_venn, function(x){ # get the intersecting hits for the wanted tables
+      global$tables$venn_overlap <<- Reduce("intersect", lapply(input$intersect_venn, function(x){ # get the intersecting hits for the wanted tables
         global$vectors$venn_lists[[x]]
       })
       )
+  
+      if(length(global$tables$venn_overlap) > 0){
+        output$venn_tab <- DT::renderDataTable({
+          # -------------
+          DT::datatable(data.table(mz = global$tables$venn_overlap), 
+                        selection = 'single',
+                        rownames = F,
+                        autoHideNavigation = T,
+                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+        }) 
+      }else{
+        output$venn_tab <- DT::renderDataTable({
+          # -------------
+          DT::datatable(data.table(), 
+                        selection = 'single',
+                        rownames = F,
+                        autoHideNavigation = T,
+                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+        })
+      }
     }
-    
-    if(length(venn_overlap) > 0){
-      output$venn_tab <- DT::renderDataTable({
-        # -------------
-        DT::datatable(data.table(mz = venn_overlap), 
-                      selection = 'single',
-                      rownames = F,
-                      autoHideNavigation = T,
-                      options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-      }) 
-    }else{
-      output$venn_tab <- DT::renderDataTable({
-        # -------------
-        DT::datatable(data.table(), 
-                      selection = 'single',
-                      rownames = F,
-                      autoHideNavigation = T,
-                      options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-      })
-    }
-    # render table for UI
-    
   })
   
   # toggles when the venn diagram overlap tab is clicked
   # TODO: move to the main table observer generator waaaaay up
   observeEvent(input$venn_tab_rows_selected, {
-    curr_cpd <<- venn_overlap[input$venn_tab_rows_selected] # set current compound to the clicked one
+    curr_cpd <<- global$tables$venn_overlap[input$venn_tab_rows_selected] # set current compound to the clicked one
     output$curr_cpd <- renderText(curr_cpd) # render text in sidebar
+  })
+
+
+  dataModal <- function(failed = FALSE) {
+    modalDialog(
+      textInput("dataset", "Choose data set",
+                placeholder = 'Try "mtcars" or "abc"'
+      ),
+      span('(Try the name of a valid data object like "mtcars", ',
+           'then a name of a non-existent object like "abc")'),
+      if (failed)
+        div(tags$b("Invalid name of data object", style = "color: red;")),
+      
+      footer = tagList(
+        modalButton("Cancel"),
+        actionButton("ok", "OK")
+      ))
+  }
+  
+  observeEvent(input$show_window, {
+    showModal(dataModal())
+    shinyjqui::jqui_draggable(selector = '.modal-content')
+  })
+  
+  observeEvent(input$ok, {
+    # Check that data object exists and is data frame.
+    if (!is.null(input$dataset) && nzchar(input$dataset) &&
+        exists(input$dataset) && is.data.frame(get(input$dataset))) {
+      vals$data <- get(input$dataset)
+      removeModal()
+    } else {
+      showModal(dataModal(failed = TRUE))
+    }
+  })
+  
+  observeEvent(input$save_mset, {
+    # save mset
+    withProgress({
+      fn <- paste0(tools::file_path_sans_ext(global$paths$patdb), ".metshi")
+      save(mSet, file = fn)
+    })
   })
   
   # Report buttons

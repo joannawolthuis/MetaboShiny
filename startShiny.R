@@ -66,7 +66,8 @@ base.packs <- c("httr", "curl", "git2r", "devtools",
                 "shinyBS", "rhandsontable", "XML", 
                 "MetaboAnalystR", "BatchCorrMetabolomics", 
                 "colorRamps", "enviPat", "shinyalert",
-                "shinyWidgets", "colourpicker", "here")
+                "shinyWidgets", "colourpicker", "here",
+                "ECharts2Shiny", "shinyjqui")
 
 # install the base packages needed to start up
 for(package in base.packs){

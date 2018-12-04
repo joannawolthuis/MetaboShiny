@@ -1,6 +1,6 @@
 db_dir = /Users/jwolthuis/Google Drive/MetaboShiny/backend/db
 work_dir = /Users/jwolthuis/Analysis/SP
-proj_name = CATS_OCT18
+proj_name = URINE_LUNGCANCER
 ppm = 2
 packages_installed = Y
 font1 = VT323
@@ -18,4 +18,4 @@ size4 = 11
 taskbar_image = gemmy_edit.png
 gtheme = classic
 gcols = #000000&#FFA1C3&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
-gspec = ml1
+gspec = RdGy

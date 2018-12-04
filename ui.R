@@ -3,6 +3,7 @@
 shinyUI(fluidPage(theme = "metaboshiny.css",tags$head(tags$script(src = "sparkle.js"),  # load in javascript and CSS for page in general
                                                       tags$style(type="text/css", bar.css) # load in the user customized css (generated in 'global')
 ),
+ECharts2Shiny::loadEChartsLibrary(),
 shinyalert::useShinyalert(), # enable shinyalert (necessary for on close message)
 navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="text/css", font.css)), # load in user customized css (generated in 'global')
                                   class="sparkley"), # make it use the sparkle.js for unnecessary sparkle effects ;)
@@ -353,6 +354,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                    ),
                                                                    tabPanel(h3("Volcano"), value="volc",
                                                                             fluidRow(plotly::plotlyOutput('volc_plot',width="100%",height="600px")),
+                                                                            fluidRow(div(DT::dataTableOutput('volc_tab',width="100%"),style='font-size:80%')),
                                                                             fluidRow(column(12, align = "center",
                                                                                             br(),
                                                                                             textInput("report_volc_plot_title", "Title", value = "Volcano"),
@@ -391,7 +393,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                    ),
 																   # this tab enables machine learning
 																   tabPanel(h3("ML"), value = "ml",
-                                                                             fluidRow(
+																            fluidRow(
                                                                                column(width=3,align="center",
                                                                                       selectInput("ml_method", 
                                                                                                   label = "Type:", 
@@ -456,7 +458,37 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                  )
                                                                                         )
                                                                              )
-                                                                   ))
+                                                                   ),
+																   # this tab is used to find overlapping features of interest between analyses
+																   # TODO: enable this with multiple saved mSets in mSet$storage
+																   tabPanel(title=h3("Venn"), value="venn",
+																            sidebarLayout(position = "left",
+																                          sidebarPanel = sidebarPanel(
+																                            fluidRow(div(DT::dataTableOutput('venn_unselected'),style='font-size:80%'), align="center"),
+																                            fluidRow(shinyWidgets::circleButton("venn_add", icon=icon("arrow-down"), size="sm"),
+																                                     shinyWidgets::circleButton("venn_remove", icon=icon("arrow-up"), size="sm"),
+																                                     align="center"),
+																                            fluidRow(div(DT::dataTableOutput('venn_selected'),style='font-size:80%'),align="center"),
+																                            hr(),
+																                            fluidRow(
+																                              sliderInput("venn_tophits", label = "Only include top:", min = 1, max = 200, post = " hits", value=20)
+																                              ,align="center"),
+																                            fluidRow(
+																                              shinyWidgets::circleButton("venn_build", icon=icon("hand-pointer-o"),size="default")
+																                            ,align="center")
+																                          ),
+																                          mainPanel = mainPanel(
+																                            hr(),
+																                            plotly::plotlyOutput("venn_plot",inline = F),
+																                            # find the overlapping compounds between the groups you want to compare (user select)
+																                            # TODO: enable this with clicking the numbers/areas
+																                            fluidRow(selectInput("intersect_venn", label = "Show overlap between:", selected = 1,choices = "",multiple = T),
+																                                     align="center"),
+																                            fluidRow(div(DT::dataTableOutput('venn_tab'),style='font-size:80%'), 
+																                                     align="center")
+																                          ))   
+																   )
+																   )
                                   ),
 								  # this is the sidebar that shows in the analysis tab. contains a lot of settings on the current variable of interest, plot themes and colours, and venn diagrams.
                                   sidebarPanel = 
@@ -478,28 +510,28 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                              ),
                                                              tabPanel(title=NULL, icon=icon("search"),
                                                                       br(),
-                                                                      bsCollapse(id = "dbSelect", open = "Settings",
-                                                                                 bsCollapsePanel(h2("Databases"), "",#style = "info",
-                                                                                                 uiOutput("db_search_select")), # clicky buttons for database selection; this is generated in 'server'
-                                                                                 bsCollapsePanel(h2("Miniplot"), "",#style = "info",
-                                                                                                 plotly::plotlyOutput("curr_plot", height="300px", width="100%"))
-                                                                                 ),
-                                                                      tabsetPanel(id="tab_iden",  
-																				  # forward searching
-                                                                                  tabPanel(title="mz > molecule",
-                                                                                           br(),
-                                                                                           bsCollapse(id="isoSelect",
-                                                                                                      bsCollapsePanel(h2("Isotope scoring"), "",#style = "info",
-                                                                                                                      selectInput("iso_score_method", 
-                                                                                                                                  "Which method used to score compounds of same weight?", 
-                                                                                                                                  selected="mscore", 
-                                                                                                                                  choices=list("M-score"="mscore",
-                                                                                                                                               "Chi-square"="chisq",
-                                                                                                                                               "Mean absolute percentage error"="mape",
-                                                                                                                                               "SIRIUS"="sirius",
-                                                                                                                                               "Network-based"="network"))
-                                                                                                      )
+                                                                      tabsetPanel(id="tab_iden_1", selected = "start",
+                                                                                  # forward searching
+                                                                                  tabPanel(title=icon("eye-slash")),
+                                                                                  tabPanel(title=icon("database"),value="start",
+                                                                                           uiOutput("db_search_select")), # clicky buttons for database selection; this is generated in 'server'
+                                                                                  tabPanel(title=icon("chart-bar"),
+                                                                                           plotly::plotlyOutput("curr_plot", height="300px", width="100%")
                                                                                            ),
+                                                                                  tabPanel(title=icon("star-half-alt"),
+                                                                                           selectInput("iso_score_method", 
+                                                                                                       "Which method used to score compounds of same weight?", 
+                                                                                                       selected="mscore", 
+                                                                                                       choices=list("M-score"="mscore",
+                                                                                                                    "Chi-square"="chisq",
+                                                                                                                    "Mean absolute percentage error"="mape",
+                                                                                                                    "SIRIUS"="sirius",
+                                                                                                                    "Network-based"="network"))
+                                                                                           )
+                                                                                 ),
+                                                                      tabsetPanel(id="tab_iden_2",  
+																				                                          # forward searching
+                                                                                  tabPanel(title="mz > molecule",
                                                                                            hr(),
                                                                                            div(h2(textOutput("curr_cpd"),style="padding:10px;"),
                                                                                                style="background-color:white;
@@ -511,29 +543,49 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                border-bottom: 1px solid #DFDCDC;
                                                                                                "),
                                                                                            fluidRow(
-                                                                                             actionButton("search_cpd", "S E A R C H", icon=icon("search"),width = "40%"),
-                                                                                             actionButton("score_iso", "S C O R E", icon=icon("balance-scale"), width="40%"),
+                                                                                             shinyWidgets::circleButton("search_cpd", icon = icon("search"), size = "default"),
+                                                                                             #shinyWidgets::circleButton("score_iso", icon = icon("balance-scale"), size = "default"),
+                                                                                             # actionButton("search_cpd", "S E A R C H", icon=icon("search"),width = "40%"),
+                                                                                             # actionButton("score_iso", "S C O R E", icon=icon("balance-scale"), width="40%"),
                                                                                              #,actionButton("score_net", "", icon=icon("arrows-alt")),
-                                                                                             align="center"),br(),
+                                                                                             align="center"),
+                                                                                           hr(),
+                                                                                           fluidRow(h2("Compound info"), align="center"),
+                                                                                             tabsetPanel(id="tab_iden_2", 
+                                                                                                         tabPanel(title=icon("atlas"),
+                                                                                                                  div(textOutput("curr_definition"))
+                                                                                                                  ),
+                                                                                                         tabPanel(title=icon("atom"),
+                                                                                                                  textOutput("curr_formula"),
+                                                                                                                  plotOutput("curr_struct", height="150px")
+                                                                                                                  )
+                                                                                                         ),
+                                                                                           hr(),
+                                                                                           fluidRow(h2("Search results"), align="center"),
+                                                                                             tabsetPanel(id="tab_iden_1",selected = "start",
+                                                                                                         # forward searching
+                                                                                                         tabPanel(title=icon("eye-slash")),
+                                                                                                         tabPanel(title=icon("table"), value="start",
+                                                                                                                  div(DT::dataTableOutput('match_tab', width="100%"),style='font-size:80%')
+                                                                                                                  ),
+                                                                                                         tabPanel(title=icon("database"), 
+                                                                                                                  plotly::plotlyOutput("match_pie_db")
+                                                                                                                  ),
+                                                                                                         tabPanel(title=icon("plus"), 
+                                                                                                                  plotly::plotlyOutput("match_pie_add")
+                                                                                                                  ),
+                                                                                                         tabPanel(title=icon("cloud"), 
+                                                                                                                  tags$div(id="match_wordcloud", style="width:100%;height:400px;"),
+                                                                                                                  deliverChart(div_id = "match_wordcloud")
+                                                                                                                  )
+                                                                                                         ),
+                                                                                           hr(),
                                                                                            fluidRow(
-                                                                                             hr(),
-                                                                                             bsCollapsePanel(h2("Summary"),"",
-                                                                                                             tabsetPanel(id = "...",
-                                                                                                                         tabPanel(title=icon("database"),
-                                                                                                                                  plotly::plotlyOutput("match_pie_db")),
-                                                                                                                         tabPanel(title=icon("plus"),
-                                                                                                                                  plotly::plotlyOutput("match_pie_add"))
-                                                                                                                         )
-                                                                                             ),
-                                                                                             bsCollapsePanel(h2("Structure viewer"),"",
-                                                                                                             textOutput("curr_formula"),
-                                                                                                             plotOutput("curr_struct", height="310px")
-                                                                                             ),
-                                                                                             # scoring buttons here..
-                                                                                             div(DT::dataTableOutput('match_tab', width="100%"),style='font-size:80%'),
-                                                                                             hr(),
-                                                                                             div(textOutput("curr_definition"))
-                                                                                           )),
+                                                                                             switchButton(inputId = "auto_copy",
+                                                                                                        label = "Auto-copy name to clipboard??", 
+                                                                                                        value = TRUE, col = "GB", type = "YN"), 
+                                                                                                    align="center")
+                                                                                           ),
 																				  # reverse searching
                                                                                   tabPanel(title="molecule > mz",
                                                                                            br(),
@@ -547,33 +599,6 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                            hr(),
                                                                                            div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
                                                                                   ))
-                                                                      ),
-															 # this tab is used to find overlapping features of interest between analyses
-															 # TODO: enable this with multiple saved mSets in mSet$storage
-                                                             tabPanel(title=NULL, icon=icon("link"),
-                                                                      br(),
-                                                                      helpText("You can use this tab to find overlapping hits between analyses."),
-                                                                      fluidRow(
-                                                                        column(5, 
-                                                                               div(DT::dataTableOutput('venn_unselected'),style='font-size:80%')),
-                                                                        column(2,align="center",
-                                                                               br(),br(),br(),br(),br(),br(),br(),br(),
-                                                                               shinyWidgets::circleButton("venn_add", icon=icon("arrow-right"), size="sm"),
-                                                                               shinyWidgets::circleButton("venn_remove", icon=icon("arrow-left"), size="sm")
-                                                                               ),
-                                                                        column(5, 
-                                                                               div(DT::dataTableOutput('venn_selected'),style='font-size:80%'))
-                                                                      ),
-                                                                      br(),
-                                                                      # choose how many top hits are picked
-                                                                      sliderInput("venn_tophits", label = "Only include top:", min = 1, max = 200, post = " hits", value=20),
-                                                                      shinyWidgets::circleButton("venn_build", icon=icon("hand-pointer-o"),size="default"),
-                                                                      hr(),
-                                                                      plotly::plotlyOutput("venn_plot",inline = F),
-																	  # find the overlapping compounds between the groups you want to compare (user select)
-																	  # TODO: enable this with clicking the numbers/areas
-                                                                      selectInput("intersect_venn", label = "Show overlap between:", selected = 1,choices = "",multiple = T),
-                                                                      div(DT::dataTableOutput('venn_tab'),style='font-size:80%')
                                                                       ),
 															 # this tab is used to select user plot theme and user colours (discrete and continuous)
                                                              tabPanel(NULL, icon=icon("paint-brush"),
@@ -745,6 +770,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                div(class="minus", img(class="imagebottom", src=getOptions("user_options.txt")$taskbar_image, width="120px", height="120px"))
            ),
            div(class="line")
-)
+,footer=fluidRow(actionButton("show_window", label="", icon = icon("map-marked")),
+                 actionButton("save_mset", label="", icon = icon("save"))))
 )
 )
