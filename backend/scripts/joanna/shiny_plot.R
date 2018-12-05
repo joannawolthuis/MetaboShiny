@@ -178,7 +178,8 @@ ggplotMeba <- function(cpd, draw.average=T, cols=global$vectors$mycols, cf = glo
             axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
             legend.title.align = 0.5,
             axis.line = element_line(colour = 'black', size = .5),
-            text = element_text(family = global$constants$font.aes$font))
+            text = element_text(family = global$constants$font.aes$font)) +
+      ggtitle(cpd)
   } else{
   ggplot2::ggplot(data=profile) +
       ggplot2::geom_line(size=0.7, ggplot2::aes(x=Time, y=Abundance, group=Sample, color=Group, text=Sample)) +
@@ -190,7 +191,8 @@ ggplotMeba <- function(cpd, draw.average=T, cols=global$vectors$mycols, cf = glo
             axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
             legend.title.align = 0.5,
             axis.line = element_line(colour = 'black', size = .5),
-            text = element_text(family = global$constants$font.aes$font))
+            text = element_text(family = global$constants$font.aes$font)) + 
+      ggtitle(cpd)
   }
   if(plotlyfy){
     ggplotly(p, tooltip="Sample", originalData=T)
@@ -247,7 +249,7 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
                    legend.title.align = 0.5,
                    axis.line = element_line(colour = 'black', size = .5),
                    text = element_text(family = global$constants$font.aes$font))
-           p <- p + ggplot2::annotate("text", x = 1.5, y = min(profile$Abundance - 0.3), label = stars, size = 8, col = "black")
+           p <- p + ggplot2::annotate("text", x = 1.5, y = min(profile$Abundance - 0.3), label = stars, size = 8, col = "black") + ggtitle(cpd)
            # ---------------
            if(plotlyfy){
              ggplotly(p, tooltip="Sample", originalData=T)
@@ -274,7 +276,7 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
                    legend.title.align = 0.5,
                    axis.line = element_line(colour = 'black', size = .5),
                    text = element_text(family = global$constants$font.aes$font))+
-             stat_summary(fun.y=median, geom="line", aes(group=paste("median", Group)), linetype="dotted", lwd=1, alpha=0.5)
+             stat_summary(fun.y=median, geom="line", aes(group=paste("median", Group)), linetype="dotted", lwd=1, alpha=0.5) + ggtitle(cpd)
            # ---------------
            if(plotlyfy){
              ggplotly(p, tooltip="Sample", originalData=T)
@@ -464,11 +466,11 @@ ggPlotClass <- function(pls.type = "plsda",
   }
 }
 
-ggPlotPerm<- function(pls.type = "plsda", 
-                      cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], 
-                      pcs = 3, 
-                      plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]],
-                      plotlyfy=TRUE){
+ggPlotPerm <- function(pls.type = "plsda", 
+                       cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], 
+                       pcs = 3, 
+                       plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]],
+                       plotlyfy=TRUE){
   bw.vec <- mSet$analSet$plsda$permut
   len <- length(bw.vec)
   df <- melt(bw.vec)
@@ -694,7 +696,11 @@ ggPlotBar <- function(data,
   }
 }
 
-plotPCA.3d <- function(mSet, cols = global$vectors$mycols, shape.fac="label", pcx, pcy, pcz, mode="pca"){
+plotPCA.3d <- function(mSet, 
+                       cols = global$vectors$mycols, 
+                       shape.fac="label", 
+                       pcx, pcy, pcz, 
+                       mode="pca"){
   switch(mode, 
          pca = {
            df <- mSet$analSet$pca$x

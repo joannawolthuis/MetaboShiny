@@ -1,3 +1,8 @@
+.modal { 
+  show: true; 
+  backdrop: false;
+  }
+
 .shiny-notification {
             height: 50px;
             width: 100%;

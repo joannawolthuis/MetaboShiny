@@ -23,7 +23,7 @@ shinyServer(function(input, output, session) {
   
   # default match table fill
   output$match_tab <-DT::renderDataTable({
-    DT::datatable(data.table("no m/z chosen"="Please choose m/z value from results ٩(｡•́‿•̀｡)۶	"),
+    DT::datatable(data.table("no m/z chosen" = "Please choose m/z value from results ٩(｡•́‿•̀｡)۶	"),
                   selection = 'single',
                   autoHideNavigation = T,
                   options = list(lengthMenu = c(5, 10, 15), 
@@ -2421,6 +2421,12 @@ shinyServer(function(input, output, session) {
       # render word cloud
       renderWordcloud("match_wordcloud", 
                       data = {
+                        # this should go to global etc 
+                        Needed <- c("tm", "SnowballCC", "RColorBrewer", "ggplot2", "wordcloud", "biclust", 
+                                    "cluster", "igraph", "fpc")
+                        install.packages(Needed, dependencies = TRUE)
+                        
+                        install.packages("Rcampdf", repos = "http://datacube.wu.ac.at/", type = "source")
                         # remove unwanted words (defined in global) from description
                         filtered_descriptions <- sapply(1:length(global$tables$last_matches$description), 
                                                         function(i){
@@ -2428,7 +2434,7 @@ shinyServer(function(input, output, session) {
                           desc <- global$tables$last_matches$description[[i]]
                           desc_lower <- tolower(desc) # make lowercase
                           # (^| ).( |$)
-                          desc_strip <- gsub(x = desc_lower, pattern = "([[:punct:]])|(\\d)|(^| ).( |$)", replacement = "") # remove punctuation and single numbers
+                          desc_strip <- gsub(x = desc_lower, pattern = "([[:punct:]])|(\\d)", replacement = "") # remove punctuation and single numbers
                           desc_split <- strsplit(desc_strip, split = " ")[[1]] # split by spaces
                           desc_keep <- unique(setdiff(desc_split, global$vectors$wordcloud$skip)) # get the wanted unique words for this description
                           # - - - - -
@@ -2695,34 +2701,32 @@ shinyServer(function(input, output, session) {
 
   dataModal <- function(failed = FALSE) {
     modalDialog(
-      textInput("dataset", "Choose data set",
-                placeholder = 'Try "mtcars" or "abc"'
-      ),
-      span('(Try the name of a valid data object like "mtcars", ',
-           'then a name of a non-existent object like "abc")'),
-      if (failed)
-        div(tags$b("Invalid name of data object", style = "color: red;")),
-      
+      fluidRow(align="center",
+               textInput("report_plot_title", "Title", value = switch(input$statistics,
+                                                                      tt = "T-test",
+                                                                      fc = "Fold-change",
+                                                                      anova = "ANOVA",
+                                                                      pca = "PCA",
+                                                                      plsda = "PLS-DA",
+                                                                      volc = "Volcano",
+                                                                      meba = "MEBA",
+                                                                      asca = "ASCA",
+                                                                      ml = "Machine learning")),
+               textAreaInput("report_plot_notes", "Notes", value = "", height = "100px")
+               ),
       footer = tagList(
-        modalButton("Cancel"),
-        actionButton("ok", "OK")
-      ))
+        fluidRow(align="center",
+                 modalButton("Cancel"),
+                 actionButton("report_plot", "Add plot to report")
+                 )
+        
+      )
+    )
   }
   
   observeEvent(input$show_window, {
     showModal(dataModal())
-    shinyjqui::jqui_draggable(selector = '.modal-content')
-  })
-  
-  observeEvent(input$ok, {
-    # Check that data object exists and is data frame.
-    if (!is.null(input$dataset) && nzchar(input$dataset) &&
-        exists(input$dataset) && is.data.frame(get(input$dataset))) {
-      vals$data <- get(input$dataset)
-      removeModal()
-    } else {
-      showModal(dataModal(failed = TRUE))
-    }
+    shinyjqui::jqui_draggable(selector = '.modal-content') # make draggable
   })
   
   observeEvent(input$save_mset, {
@@ -2737,7 +2741,8 @@ shinyServer(function(input, output, session) {
   reportAppend = function(reportPlot, plotTitle, plotNotes){
     # if no report folder, create
     dir.create(file.path(options$work_dir, "report"))
-    dir.create(file.path(options$work_dir, "report", "figures"))
+    dir.create(file.path(options$work_dir, "report", 
+                         "figures"))
     
     # Report file name (Rmd)
     reportName <- file.path(options$work_dir, "report", paste("Report_", gsub("[^[:alnum:]]", "_", options$proj_name), ".Rmd", sep = ""))
@@ -2797,31 +2802,11 @@ shinyServer(function(input, output, session) {
     updateTextAreaInput(session, "plotNotes", label = "Notes", value = "")
   }
   # observe report button presses, need one for each button*
-  observeEvent(input$report_pca_plot, {
-    reportAppend(global$last_plot, input$report_pca_plot_title, input$report_pca_plot_notes)
-  })
-  observeEvent(input$report_plsda_plot, {
-    reportAppend(global$last_plot, input$report_plsda_plot_title, input$report_plsda_plot_notes)
-  })
-  observeEvent(input$report_tt_plot, {
-    reportAppend(global$last_plot, input$report_tt_plot_title, input$report_tt_plot_notes)
-  })
-  observeEvent(input$report_fc_plot, {
-    reportAppend(global$last_plot, input$report_fc_plot_title, input$report_fc_plot_notes)
-  })
-  observeEvent(input$report_volc_plot, {
-    reportAppend(global$last_plot, input$report_volc_plot_title, input$report_volc_plot_notes)
-  })
-  observeEvent(input$report_anova_plot, {
-    reportAppend(global$last_plot, input$report_pca_anova_title, input$report_anova_plot_notes)
-  })
-  observeEvent(input$report_meba_plot, {
-    reportAppend(global$last_plot, input$report_meba_plot_title, input$report_meba_plot_notes)
-  })
-  observeEvent(input$report_asca_plot, {
-    reportAppend(global$last_plot, input$report_asca_plot_title, input$report_asca_plot_notes)
-  })
   
+  observeEvent(input$report_plot, {
+    reportAppend(global$last_plot, input$report_plot_title, input$report_plot_notes)
+  })
+
   # For report tab where user can choose plots to appear in report
   # nonselected
   
