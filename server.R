@@ -256,7 +256,7 @@ shinyServer(function(input, output, session) {
     
     # adjust bivariate/multivariate (2, >2)...
     mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
-        
+    
     
     # adjust name of experimental variable
     mSet$dataSet$cls.name <<- input$first_var
@@ -349,14 +349,24 @@ shinyServer(function(input, output, session) {
   # if general tab selection changes, load package table
   observeEvent(input$nav_general, {
     # - - - - - -
-    pkg_tbl <- get.package.table() #TODO: sort by 'No' first!! (ascending?) - or translate to numeric factor first?
+    pkg_tbl <- get.package.table() 
+    
+    # Sort by 'No' first!
+    is.no <- which(pkg_tbl$Installed == "No")
+    if(length(is.no) > 0){
+      pkg_tbl <- rbind(pkg_tbl[is.no,],
+                       pkg_tbl[-is.no,])
+    }
     output$package_tab <- DT::renderDataTable({
       # - - - - - -
       DT::datatable(pkg_tbl,
                     selection = 'none',
                     autoHideNavigation = T,
                     options = list(lengthMenu = c(10, 20, 30), pageLength = 10), 
-                    rownames = F)
+                    rownames = F) %>% DT::formatStyle( # make yes green and no red for warning user
+                      'Installed',
+                      backgroundColor = DT::styleEqual(c("Yes", "No"), c('skyblue', 'pink'))
+                    )
     })
   }
   )
@@ -2341,40 +2351,40 @@ shinyServer(function(input, output, session) {
         switch(input$ml_results, roc = { # if roc, check the curve numbers of the roc plot
           attempt = d$curveNumber - 1
           xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
-            if(attempt > 1){
-              ml_type <- xvals$type[[1]]
-              model <- xvals$models[[attempt]]
-              output$ml_tab <- switch(ml_type,
-                                      rf = { # random forest specific data fetching
-                                        importance = as.data.table(model$importance, keep.rownames = T)
-                                        rf_tab <- importance[which(MeanDecreaseAccuracy > 0), c("rn", "MeanDecreaseAccuracy")]
-                                        rf_tab <- rf_tab[order(MeanDecreaseAccuracy, decreasing = T)] # order descending
-                                        # - - - return - - -
-                                        ml_tab <<- data.frame(MDA = rf_tab$MeanDecreaseAccuracy, row.names = rf_tab$rn) 
-                                        DT::renderDataTable({ # render importance table for selected model
-                                          DT::datatable(rf_tab,
-                                                        selection = 'single',
-                                                        autoHideNavigation = T,
-                                                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-                                        })
-                                      }, 
-                                      ls = { # lasso specific data fetching
-                                        tab = model$beta
-                                        keep = which(tab[,1] > 0)
-                                        tab_new = data.frame("beta" = tab[keep,1],
-                                                             "absbeta" = abs(tab[keep,1]), # use the absolute beta as additional measure (min or plus importance is similar for statistical validity i think)
-                                                             row.names = rownames(tab)[keep])
-                                        colnames(tab_new) <- c("beta", "abs_beta")
-                                        ml_tab <<- tab_new[order(tab_new[,1],decreasing = T),] # order descending
-                                        DT::renderDataTable({ #  render importance table for selected model
-                                          DT::datatable(ml_tab,
-                                                        selection = 'single',
-                                                        autoHideNavigation = T,
-                                                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-                                        })
+          if(attempt > 1){
+            ml_type <- xvals$type[[1]]
+            model <- xvals$models[[attempt]]
+            output$ml_tab <- switch(ml_type,
+                                    rf = { # random forest specific data fetching
+                                      importance = as.data.table(model$importance, keep.rownames = T)
+                                      rf_tab <- importance[which(MeanDecreaseAccuracy > 0), c("rn", "MeanDecreaseAccuracy")]
+                                      rf_tab <- rf_tab[order(MeanDecreaseAccuracy, decreasing = T)] # order descending
+                                      # - - - return - - -
+                                      ml_tab <<- data.frame(MDA = rf_tab$MeanDecreaseAccuracy, row.names = rf_tab$rn) 
+                                      DT::renderDataTable({ # render importance table for selected model
+                                        DT::datatable(rf_tab,
+                                                      selection = 'single',
+                                                      autoHideNavigation = T,
+                                                      options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
                                       })
-              
-            }
+                                    }, 
+                                    ls = { # lasso specific data fetching
+                                      tab = model$beta
+                                      keep = which(tab[,1] > 0)
+                                      tab_new = data.frame("beta" = tab[keep,1],
+                                                           "absbeta" = abs(tab[keep,1]), # use the absolute beta as additional measure (min or plus importance is similar for statistical validity i think)
+                                                           row.names = rownames(tab)[keep])
+                                      colnames(tab_new) <- c("beta", "abs_beta")
+                                      ml_tab <<- tab_new[order(tab_new[,1],decreasing = T),] # order descending
+                                      DT::renderDataTable({ #  render importance table for selected model
+                                        DT::datatable(ml_tab,
+                                                      selection = 'single',
+                                                      autoHideNavigation = T,
+                                                      options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+                                      })
+                                    })
+            
+          }
         }, bar = { # for bar plot just grab the # bar clicked
           curr_cpd <<- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar[d$x,"mz"][[1]]
           # plot underneath? TODO: remove, should just be in sidebar miniplot
@@ -2421,66 +2431,66 @@ shinyServer(function(input, output, session) {
       # render word cloud
       ECharts2Shiny::renderWordcloud("match_wordcloud",
                                      data = {
-                        # remove unwanted words (defined in global) from description
-                        filtered_descriptions <- sapply(1:length(global$tables$last_matches$description), 
-                                                        function(i){
-                          # get description
-                          desc <- global$tables$last_matches$description[[i]]
-                          
-                          # return
-                          desc
-                        })
-                        
-                        require(tm)
-                        
-                        docs <- VCorpus(tm::VectorSource(filtered_descriptions))
-                        
-                        # Convert all text to lower case
-                        docs <- tm_map(docs, content_transformer(tolower))
-                        
-                        # Remove punctuations
-                        docs <- tm_map(docs, removePunctuation)
-                        
-                        # Remove numbers
-                        docs <- tm_map(docs, removeNumbers)
-                        
-                        # Remove english common stopwords
-                        docs <- tm_map(docs, removeWords, stopwords("english"))
-                        # Remove your own stop word
-                        # ADD stopwords as a character vector
-                        docs <- tm_map(docs, removeWords, c(unlist(global$vectors$db_list),
-                                                            "found","via","used","occured",
-                                                            "biotransformer¹", "occurs",
-                                                            "generated", "predicted", "effects",
-                                                            "reaction", "known", "constituent", 
-                                                            "product", "metabolite", "pathways", 
-                                                            "specific", "although", "following", 
-                                                            "classified", "composed", "simply",
-                                                            "way", "produced", "physiological",
-                                                            "expected", "identified", "yet")) 
-                        
-                        # Remove whitespace
-                        docs <- tm_map(docs, stripWhitespace)
-                        
-                        # # Text stemming
-                        # docs <- tm_map(docs, stemDocument)
-                        
-                        doc_mat <- TermDocumentMatrix(docs)
-                        
-                        m <- as.matrix(doc_mat)
-                        
-                        v <- sort(rowSums(m), decreasing = TRUE)
-                        
-                        d_Rcran <- data.frame(name = names(v), value = v)
-                        
-                        # - - return - - 
-                        
-                        head(d_Rcran, 25)
-                        
-                      },
-                      shape = "circle",
-                      sizeRange = c(10,80)
-                      )
+                                       # remove unwanted words (defined in global) from description
+                                       filtered_descriptions <- sapply(1:length(global$tables$last_matches$description), 
+                                                                       function(i){
+                                                                         # get description
+                                                                         desc <- global$tables$last_matches$description[[i]]
+                                                                         
+                                                                         # return
+                                                                         desc
+                                                                       })
+                                       
+                                       require(tm)
+                                       
+                                       docs <- VCorpus(tm::VectorSource(filtered_descriptions))
+                                       
+                                       # Convert all text to lower case
+                                       docs <- tm_map(docs, content_transformer(tolower))
+                                       
+                                       # Remove punctuations
+                                       docs <- tm_map(docs, removePunctuation)
+                                       
+                                       # Remove numbers
+                                       docs <- tm_map(docs, removeNumbers)
+                                       
+                                       # Remove english common stopwords
+                                       docs <- tm_map(docs, removeWords, stopwords("english"))
+                                       # Remove your own stop word
+                                       # ADD stopwords as a character vector
+                                       docs <- tm_map(docs, removeWords, c(unlist(global$vectors$db_list),
+                                                                           "found","via","used","occured",
+                                                                           "biotransformer¹", "occurs",
+                                                                           "generated", "predicted", "effects",
+                                                                           "reaction", "known", "constituent", 
+                                                                           "product", "metabolite", "pathways", 
+                                                                           "specific", "although", "following", 
+                                                                           "classified", "composed", "simply",
+                                                                           "way", "produced", "physiological",
+                                                                           "expected", "identified", "yet")) 
+                                       
+                                       # Remove whitespace
+                                       docs <- tm_map(docs, stripWhitespace)
+                                       
+                                       # # Text stemming
+                                       # docs <- tm_map(docs, stemDocument)
+                                       
+                                       doc_mat <- TermDocumentMatrix(docs)
+                                       
+                                       m <- as.matrix(doc_mat)
+                                       
+                                       v <- sort(rowSums(m), decreasing = TRUE)
+                                       
+                                       d_Rcran <- data.frame(name = names(v), value = v)
+                                       
+                                       # - - return - - 
+                                       
+                                       head(d_Rcran, 25)
+                                       
+                                     },
+                                     shape = "circle",
+                                     sizeRange = c(10,80)
+      )
       
       output$match_pie_add <- plotly::renderPlotly({
         plot_ly(adduct_dist, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
@@ -2682,13 +2692,13 @@ shinyServer(function(input, output, session) {
   
   # triggers when users pick which intersecting hits they want
   observeEvent(input$intersect_venn, {
-
+    
     if(length(input$intersect_venn) > 1){
       global$tables$venn_overlap <<- Reduce("intersect", lapply(input$intersect_venn, function(x){ # get the intersecting hits for the wanted tables
         global$vectors$venn_lists[[x]]
       })
       )
-  
+      
       if(length(global$tables$venn_overlap) > 0){
         output$venn_tab <- DT::renderDataTable({
           # -------------
@@ -2717,8 +2727,8 @@ shinyServer(function(input, output, session) {
     curr_cpd <<- global$tables$venn_overlap[input$venn_tab_rows_selected] # set current compound to the clicked one
     output$curr_cpd <- renderText(curr_cpd) # render text in sidebar
   })
-
-
+  
+  
   dataModal <- function(failed = FALSE) {
     modalDialog(
       fluidRow(align="center",
@@ -2733,12 +2743,12 @@ shinyServer(function(input, output, session) {
                                                                       asca = paste0("ASCA",  " - ", curr_cpd, " m/z"),
                                                                       ml = "Machine learning")),
                textAreaInput("report_plot_notes", "Notes", value = "", height = "100px")
-               ),
+      ),
       footer = tagList(
         fluidRow(align="center",
                  modalButton("Cancel"),
                  actionButton("report_plot", "Add plot to report")
-                 )
+        )
         
       )
     )
@@ -2826,7 +2836,7 @@ shinyServer(function(input, output, session) {
   observeEvent(input$report_plot, {
     reportAppend(global$last_plot, input$report_plot_title, input$report_plot_notes)
   })
-
+  
   # For report tab where user can choose plots to appear in report
   # nonselected
   
