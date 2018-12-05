@@ -18,4 +18,4 @@ size4 = 11
 taskbar_image = gemmy_edit.png
 gtheme = classic
 gcols = #000000&#FFA1C3&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
-gspec = RdGy
+gspec = Set1

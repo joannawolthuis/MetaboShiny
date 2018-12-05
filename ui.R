@@ -245,9 +245,8 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                             ))),
 																   # loading this tab performs PCA. summary and loading tables, alongside a 2d/3d PCA plot, are available here.
                                                                    tabPanel(h3("PCA"), value = "pca", #icon=icon("cube"),
-                                                                            fluidRow(column(10,align="center",plotly::plotlyOutput("plot_pca",height = "600px", width="600px"))
-                                                                            ),
-                                                                            fluidRow(column(6,align="center",
+                                                                            fluidRow(align="center",column(12,plotly::plotlyOutput("plot_pca",height = "600px", width="600px"))),
+                                                                            fluidRow(align="center",column(12,
                                                                                             switchButton("pca_2d3d", label = "", col = "BW", type = "2d3d"))),
                                                                             hr(),
                                                                             fluidRow(column(3,
@@ -269,7 +268,9 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
 																   # TODO: enable the sparse and orthogonal PLS-DA options in metaboanalystR
 																   # this tab is used to perform pls-da. it triggers on 'go' button as it is a time costly analysis.
                                                                    tabPanel(h3("PLSDA"), value = "plsda", 
-                                                                            fluidRow(column(12,align="center",plotly::plotlyOutput("plot_plsda",height = "500px", width="500px"))),
+                                                                            fluidRow(align="center",column(12,plotly::plotlyOutput("plot_plsda",height = "500px", width="500px"))),
+                                                                            fluidRow(align="center",column(12,
+                                                                                            switchButton("plsda_2d3d", label = "", col = "BW", type = "2d3d"))),
                                                                             hr(),
                                                                             fluidRow(column(3,
                                                                                             div(style="display:inline-block",

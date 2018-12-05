@@ -2419,44 +2419,64 @@ shinyServer(function(input, output, session) {
       db_dist <- melt(table(global$tables$last_matches$source))
       
       # render word cloud
-      renderWordcloud("match_wordcloud", 
-                      data = {
-                        # this should go to global etc 
-                        Needed <- c("tm", "SnowballCC", "RColorBrewer", "ggplot2", "wordcloud", "biclust", 
-                                    "cluster", "igraph", "fpc")
-                        install.packages(Needed, dependencies = TRUE)
-                        
-                        install.packages("Rcampdf", repos = "http://datacube.wu.ac.at/", type = "source")
+      ECharts2Shiny::renderWordcloud("match_wordcloud",
+                                     data = {
                         # remove unwanted words (defined in global) from description
                         filtered_descriptions <- sapply(1:length(global$tables$last_matches$description), 
                                                         function(i){
                           # get description
                           desc <- global$tables$last_matches$description[[i]]
-                          desc_lower <- tolower(desc) # make lowercase
-                          # (^| ).( |$)
-                          desc_strip <- gsub(x = desc_lower, pattern = "([[:punct:]])|(\\d)", replacement = "") # remove punctuation and single numbers
-                          desc_split <- strsplit(desc_strip, split = " ")[[1]] # split by spaces
-                          desc_keep <- unique(setdiff(desc_split, global$vectors$wordcloud$skip)) # get the wanted unique words for this description
-                          # - - - - -
-                          desc_keep
+                          
+                          # return
+                          desc
                         })
-                        # put in right format
-                        sample_data_for_wordcloud <- unlist(filtered_descriptions)
-                        # how many times is each word present?
-                        rankings <- table(sample_data_for_wordcloud)
-                        counts = unique(rankings) # get the unique counts
-                        # get the global defined top ranking words
-                        tophits <- if(length(counts) < global$vectors$wordcloud$top){
-                          length(counts)
-                        }else{
-                          global$vectors$wordcloud$top
-                        }
-                        minval = min(counts[order(counts, decreasing = T)[1:tophits]])
-                        # filter
-                        keep <- rankings[rankings > minval]
-                        sample_data_for_wordcloud <- sample_data_for_wordcloud[sample_data_for_wordcloud %in% names(keep)]
-                        # - - - - - - - - - -
-                        sample_data_for_wordcloud
+                        
+                        require(tm)
+                        
+                        docs <- VCorpus(tm::VectorSource(filtered_descriptions))
+                        
+                        # Convert all text to lower case
+                        docs <- tm_map(docs, content_transformer(tolower))
+                        
+                        # Remove punctuations
+                        docs <- tm_map(docs, removePunctuation)
+                        
+                        # Remove numbers
+                        docs <- tm_map(docs, removeNumbers)
+                        
+                        # Remove english common stopwords
+                        docs <- tm_map(docs, removeWords, stopwords("english"))
+                        # Remove your own stop word
+                        # ADD stopwords as a character vector
+                        docs <- tm_map(docs, removeWords, c(unlist(global$vectors$db_list),
+                                                            "found","via","used","occured",
+                                                            "biotransformer¹", "occurs",
+                                                            "generated", "predicted", "effects",
+                                                            "reaction", "known", "constituent", 
+                                                            "product", "metabolite", "pathways", 
+                                                            "specific", "although", "following", 
+                                                            "classified", "composed", "simply",
+                                                            "way", "produced", "physiological",
+                                                            "expected", "identified", "yet")) 
+                        
+                        # Remove whitespace
+                        docs <- tm_map(docs, stripWhitespace)
+                        
+                        # # Text stemming
+                        # docs <- tm_map(docs, stemDocument)
+                        
+                        doc_mat <- TermDocumentMatrix(docs)
+                        
+                        m <- as.matrix(doc_mat)
+                        
+                        v <- sort(rowSums(m), decreasing = TRUE)
+                        
+                        d_Rcran <- data.frame(name = names(v), value = v)
+                        
+                        # - - return - - 
+                        
+                        head(d_Rcran, 25)
+                        
                       },
                       shape = "circle",
                       sizeRange = c(10,80)
