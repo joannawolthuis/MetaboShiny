@@ -126,4 +126,11 @@ vec = FALSE
 function (object, k, mn, c.grp, nu = NULL, Lambda = NULL, eta = NULL, 
           k.grp = NULL, mn.grp = NULL, r = FALSE, vec = FALSE, d = NULL, 
           prop = 0.02, T2.only = TRUE) {...}
+
+input <- list(
+  mummi_ppm = 2,
+  mummi_sigmin = 0.01,
+  mummi_org = "hsa_kegg"
+)
+output <- list()
   

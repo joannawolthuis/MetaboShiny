@@ -1,5 +1,7 @@
 .Rproj.user
 .Rhistory
+*.json
+*.rds
 *.RData
 *.Ruserdata
 *.csv

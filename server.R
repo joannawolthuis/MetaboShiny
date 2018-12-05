@@ -290,9 +290,9 @@ shinyServer(function(input, output, session) {
     if(is.null(interface$mode)) {
       show.tabs <- c("inf")
     }else if(interface$mode == 'multivar'){ 
-      show.tabs <- c("pca", "aov", "heatmap")
+      show.tabs <- c("pca", "aov", "heatmap", "enrich")
     }else if(interface$mode == 'bivar'){  
-      show.tabs <- c("pca", "plsda", "tt", "fc", "volc", "heatmap", "ml")
+      show.tabs <- c("pca", "plsda", "tt", "fc", "volc", "heatmap", "ml", "enrich")
     }else if(interface$mode == 'time'){
       show.tabs <- c("pca", "aov", "asca", "meba", "heatmap", "ml")
     }else{
@@ -1484,10 +1484,14 @@ shinyServer(function(input, output, session) {
              mSet <<- PLSR.Anal(mSet) # perform pls regression
              mSet <<- PLSDA.CV(mSet, methodName=if(nrow(mSet$dataSet$norm) < 50) "L" else "T",compNum = 3) # cross validate
              mSet <<- PLSDA.Permut(mSet,num = 300, type = "accu") # permute
+           },
+           sparse ={
+             mSet <<- SPLSR.Anal(mSet, comp.num = )
            })
     # reload pls-da plots
     datamanager$reload <- "plsda"
   })
+  
   
   # preload pca/plsda
   observe({
@@ -2235,7 +2239,8 @@ shinyServer(function(input, output, session) {
                           "pca_load",
                           "plsda_load",
                           "enrich_pw",
-                          "ml")
+                          "ml",
+                          "mummi_detail")
   
   # creates observers for click events in the tables defined above
   lapply(unique(res.update.tables), FUN=function(table){
@@ -2249,7 +2254,7 @@ shinyServer(function(input, output, session) {
                                                     fc = mSet$analSet$fc$sig.mat,
                                                     pca_load = mSet$analSet$pca$rotation,
                                                     plsda_load = mSet$analSet$plsda$vip.mat,
-                                                    ml = ml_tab,
+                                                    ml = ml_tab, #TODO: fix this, now in global
                                                     asca = mSet$analSet$asca$sig.list$Model.ab,
                                                     aov = switch(input$timecourse_trigger,
                                                                  mSet$analSet$aov2$sig.mat, 
@@ -2257,7 +2262,9 @@ shinyServer(function(input, output, session) {
                                                     rf = vip.score,
                                                     enrich_pw = enrich_overview_tab,
                                                     meba = mSet$analSet$MB$stats,
-                                                    plsda_vip = plsda_tab)
+                                                    plsda_vip = plsda_tab,
+                                                    mummi_detail = global$tables$mummi_detail
+                                                    )
                                              , keep.rownames = T)[curr_row, rn]
       # print current compound in sidebar
       output$curr_cpd <- renderText(curr_cpd)
@@ -2538,6 +2545,32 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  lapply(c("pos", "neg"), function(mode){
+    observeEvent(input[[paste0("mummi_", mode, "_tab_rows_selected")]],{
+      curr_row <- input[[paste0("mummi_", mode, "_tab_rows_selected")]] # get current row
+      if (is.null(curr_row)) return()
+      curr_pw <- rownames(global$vectors[[paste0("mummi_", mode)]]$sig)[curr_row]
+      cpds <- global$vectors[[paste0("mummi_", mode)]]$pw2cpd[[curr_pw]]
+      mzs <- global$vectors[[paste0("mummi_", mode)]]$cpd2mz[cpds]
+      keep <- sapply(mzs, function(x) !is.null(x))
+      mzs <- mzs[keep]
+      mzs <- unique(unlist(mzs))
+      # - - - - - - - - 
+      tbl = data.frame("p-value" = if(mSet$dataSet$cls.num == 2){
+        mSet$analSet$tt$sig.mat[match(mzs, rownames(mSet$analSet$tt$sig.mat)),"p.value"]
+      }else{
+        mSet$analSet$aov$sig.mat[match(mzs, rownames(mSet$analSet$tt$sig.mat)),"p.value"]
+      })
+      rownames(tbl) <- mzs
+      # - - - - - - - - 
+      global$tables$mummi_detail <<- tbl
+      # - - - - - - - -
+      output$mummi_detail_tab <- DT::renderDataTable({
+        DT::datatable(tbl, selection = 'single')
+      })
+    })
+  })
+    
   # triggers on clicking a row in the match results table
   observeEvent(input$match_tab_rows_selected,{
     curr_row <<- input$match_tab_rows_selected # get current row
@@ -2924,6 +2957,97 @@ shinyServer(function(input, output, session) {
       res = DT::datatable(report_yes$now,rownames = FALSE, colnames="included", selection = "multiple", options = list(dom = 'tp'))
     })
     res
+  })
+  
+  # mummichog
+  
+  observeEvent(input$do_mummi, {
+
+    
+    peak_tbl <- if(mSet$dataSet$cls.num == 2){
+      if("tt" %in% names(mSet$analSet)){
+        continue = T
+        data.table(
+          `p.value` = mSet$analSet$tt$sig.mat[,"p.value"],
+          `m.z` = rownames(mSet$analSet$tt$sig.mat),
+          `t.score` = mSet$analSet$tt$sig.mat[,"t.stat"]
+        )
+      }else{continue=F;
+            NULL}
+    }else{
+      if("aov" %in% names(mSet$analSet)){
+        continue = T
+        data.table(
+          `p.value` = mSet$analSet$aov$sig.mat[,"p.value"],
+          `m.z` = rownames(mSet$analSet$aov$sig.mat),
+          `t.score` = mSet$analSet$aov$sig.mat[,"F.stat"]
+        )
+      }else{continue=F;
+            NULL}
+    }
+    
+    if(!continue) NULL
+    
+    # seperate in pos and neg peaks..
+    conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb)
+    pospeaks <- DBI::dbGetQuery(conn, "SELECT DISTINCT mzmed FROM mzvals WHERE foundinmode = 'positive'")
+    negpeaks <- DBI::dbGetQuery(conn, "SELECT DISTINCT mzmed FROM mzvals WHERE foundinmode = 'negative'")
+    peak_tbl_pos <- peak_tbl[`m.z` %in% unlist(pospeaks)]
+    peak_tbl_neg <- peak_tbl[`m.z` %in% unlist(negpeaks)]
+    DBI::dbDisconnect(conn)
+    
+    for(mode in c("positive", "negative")){
+      path <- tempfile()
+      fwrite(x = peak_tbl, file = path, sep = "\t")
+      mummi<-InitDataObjects("mass_all", "mummichog", FALSE)
+      mummi<-Read.PeakListData(mSetObj = mummi, filename = path);
+      mummi<-UpdateMummichogParameters(mummi, as.character(input$mummi_ppm), mode, input$mummi_sigmin);
+      mummi<-SanityCheckMummichogData(mummi)
+      mummi<-PerformMummichog(mummi, input$mummi_org, "fisher", "gamma")
+      
+      global$vectors[[paste0("mummi_", substr(mode, 1, 3))]] <<- list(sig = mummi$mummi.resmat,
+                                                                      pw2cpd = {
+                                                                        lst = mummi$pathways$cpds
+                                                                        names(lst) <- mummi$pathways$name
+                                                                        # - - -
+                                                                        lst
+                                                                      },
+                                                                      cpd2mz = mummi$cpd2mz_dict)
+      global$tables <<- mummi$mummi.resmat
+      output[[paste0("mummi_", substr(mode, 1, 3), "_tab")]] <- DT::renderDataTable({
+        DT::datatable(mummi$mummi.resmat,selection = "single")
+        })
+      # output[[paste0("mummi_", substr(mode, 1, 3), "_plot")]] <- renderPlotly({
+      #   p <- ggplot(data = {
+      #     tbl <- mummi$mummi.resmat
+      #     tbl <- as.data.table(tbl, keep.rownames = T)
+      #     colnames(tbl)[1] <- "Pathway"
+      #     ## set the levels in order we want
+      #     tbl <- within(tbl,
+      #                   Pathway <- factor(Pathway,
+      #                                     levels=names(sort(Gamma,
+      #                                                       decreasing=FALSE))))
+      #     # - - - - -
+      #     tbl
+      #     }) + geom_bar(mapping = aes(x = Pathway, y = Gamma, fill = Gamma), stat = "identity") +
+      #     geom_hline(aes(yintercept=0.05)) + 
+      #     scale_fill_gradientn(colors=global$functions$cf(20)) +
+      #     global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]() + 
+      #     theme(legend.position="none",
+      #           axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+      #           axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+      #           legend.title.align = 0.5,
+      #           axis.line = element_line(colour = 'black', size = .5),
+      #           axis.text.x=element_blank(),
+      #           axis.ticks.x=element_blank(),
+      #           text = element_text(family = global$constants$font.aes$font))+
+      #           labs(x="gamma",y="p-value")
+      #   ggplotly(p)
+      #  })
+    }
+    output[[paste0("mummi_detail_tab")]] <- DT::renderDataTable({
+      DT::datatable(data.table("no pathway selected"="Please select a pathway!")) 
+    })
   })
   
   # this SHOULD trigger on closing the app

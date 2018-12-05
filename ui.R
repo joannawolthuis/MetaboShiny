@@ -352,6 +352,70 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                             uiOutput("heatbutton"))
                                                                             )
                                                                    ),
+																   # this tab enables mummichog pathway analysis (using their own databases...)
+																   tabPanel(h3("Enrichment"), value = "enrich",
+																            sidebarLayout(position = "left",
+																                          sidebarPanel = sidebarPanel(
+																                            fluidRow(align="center", selectInput("mummi_org",label = "Organism DB:",choices = list(
+																                              "Homo sapiens (human) [MFN]" = "hsa_mfn",
+																                              "Homo sapiens (human) [BioCyc]" = "hsa_biocyc",
+																                              "Homo sapiens (human) [KEGG]" = "hsa_kegg",
+																                              "Mus musculus (mouse) [BioCyc]" = "mmu_biocyc",
+																                              "Mus musculus (mouse) [KEGG]" = "mmu_kegg",
+																                              "Rattus norvegicus (rat) [KEGG]" = "rno_kegg",
+																                              "Bos taurus (cow) [KEGG]" = "bta_kegg",
+																                              "Gallus gallus (chicken) [KEGG]" = "gga_kegg",
+																                              "Danio rerio (zebrafish) [KEGG]" = "dre_kegg",
+																                              "Danio rerio (zebrafish) [MTF]" = "dre_mtf",
+																                              "Drosophila melanogaster (fruit fly) [KEGG]" = "dme_kegg",
+																                              "Drosophila melanogaster (fruit fly) [BioCyc]" = "dme_biocyc",
+																                              "Caenorhabditis elegans (nematode) [KEGG]" = "cel_kegg",
+																                              "Saccharomyces cerevisiae (yeast) [KEGG]" = "sce_kegg",
+																                              "Saccharomyces cerevisiae (yeast) [BioCyc]" = "sce_biocyc",
+																                              "Oryza sativa japonica (Japanese rice) [KEGG]" = "osa_kegg",
+																                              "Arabidopsis thaliana (thale cress) [KEGG]" = "ath_kegg",
+																                              "Schistosoma mansoni [KEGG]" = "smm_kegg",
+																                              "Plasmodium falciparum 3D7 (Malaria) [KEGG]" = "pfa_kegg",
+																                              "Trypanosoma brucei [KEGG]" = "tbr_kegg",
+																                              "Escherichia coli K-12 MG1655 [KEGG]" = "eco_kegg",
+																                              "Bacillus subtilis [KEGG]" = "bsu_kegg",
+																                              "Pseudomonas putida KT2440 [KEGG]" = "ppu_kegg",
+																                              "Staphylococcus aureus N315 (MRSA/VSSA) [KEGG]" = "sau_kegg",
+																                              "Thermotoga maritima [KEGG]" = "tma_kegg",
+																                              "Synechococcus elongatus PCC7942 [KEGG]" = "syf_kegg",
+																                              "Mesorhizobium loti [KEGG]" = "mlo_kegg"
+																                            ), selected = "hsa_kegg")),
+																                            hr(),
+																                            fluidRow(align="center",shinyWidgets::sliderTextInput("mummi_sigmin","Min p value:",
+																                                                          choices=c(0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.05, 0.1),
+																                                                          selected=0.05, grid = T)),
+																                            hr(),
+																                            fluidRow(align="center",sliderInput("mummi_ppm", 
+																                                        "ppm accuracy",
+																                                        min = 0.1, 
+																                                        max = 40,
+																                                        value = 2)),
+																                            fluidRow(align="center",
+																                                     shinyWidgets::circleButton("do_mummi",
+																                                                                icon = h3(paste("Go"), 
+																                                                                          icon("hand-pointer-o", "fa-lg")), 
+																                                                                status = "default", 
+																                                                                size = "lg")
+																                                     )),
+																                          mainPanel = mainPanel(
+																                            tabsetPanel(
+																                              tabPanel(title = "", icon = icon("plus"),
+																                                       #plotlyOutput("mummi_pos_plot", height = "300px"),
+																                                       div(DT::dataTableOutput("mummi_pos_tab"),style='font-size:60%')
+																                                       ),
+																                              tabPanel(title = "", icon = icon("minus"),
+																                                       #plotlyOutput("mummi_neg_plot", height = "300px"),
+																                                       div(DT::dataTableOutput("mummi_neg_tab"),style='font-size:60%')
+																                              )
+																                            ),
+																                            div(DT::dataTableOutput("mummi_detail_tab"),style='font-size:60%')
+																                          ))
+																            ),
 																   # this tab enables machine learning
 																   tabPanel(h3("ML"), value = "ml",
 																            fluidRow(

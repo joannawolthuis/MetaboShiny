@@ -671,12 +671,12 @@ ggPlotBar <- function(data,
             axis.line = element_line(colour = 'black', size = .5),
             axis.text.x=element_blank(),
             axis.ticks.x=element_blank(),
-            text = element_text(family = global$constants$font.aes$font))
+            text = element_text(family = global$constants$font.aes$font))+
       labs(x="Top hits",y="Times chosen")
     
   }else{
     p <- ggplot(data[1:topn,], aes(mz,mda)) + geom_bar(stat = "identity", aes(fill = mda)) +
-      #geom_hline(aes(yintercept=attempts)) + 
+      geom_hline(aes(yintercept=attempts)) + 
       scale_fill_gradientn(colors=cf(20)) +
       plot.theme() + 
       theme(legend.position="none",
