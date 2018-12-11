@@ -98,3 +98,36 @@ set.col.map <- function(optionfile, colmap){
   # - - - -
   setOption(optionfile, "gcols", joined)
 }
+
+# - - - mset actions - - - 
+
+# function to generate names for msets
+get_mset_name <- function(mainvar, subsetvar, subsetgroups, timeseries=FALSE){
+  if(timeseries){
+    mset_name = paste0(mainvar, "(timeseries)" ,if(!is.null(subsetgroups)) ":" else "", tolower(paste0(subsetgroups, collapse="+")))
+  }else{
+    mset_name = paste0(mainvar,if(!is.null(subsetgroups)) ":" else "",tolower(paste0(subsetgroups, collapse="+")))
+  }
+  mset_name
+}
+
+
+subset.mSet <- function(mSetObj, used.variable, keep.groups){
+  mSetObj$dataSet$cls.name <- mSetObj_name
+  keep.samples <- mSetObj$dataSet$covars$sample[which(mSetObj$dataSet$covars[[used.variable]] %in% keep.groups)]
+  mSetObj$dataSet$covars <- mSetObj$dataSet$covars[sample %in% keep.samples]
+  keep.log.procr <- rownames(mSetObj$dataSet$procr) %in% keep.samples
+  mSetObj$dataSet$procr <- mSetObj$dataSet$procr[keep.log.procr,]
+  keep.log.norm <- rownames(mSetObj$dataSet$norm) %in% keep.samples
+  mSetObj$dataSet$norm <- mSetObj$dataSet$norm[keep.log.norm,]
+  mSetObj$dataSet$cls <- mSetObj$dataSet$cls[keep.log.norm]
+  if("facA" %in% names(mSetObj$dataSet)){
+    mSetObj$dataSet$facA <<- mSetObj$dataSet$facA[keep.log.norm]
+    mSetObj$dataSet$facB <<- mSetObj$dataSet$facB[keep.log.norm]
+    mSetObj$dataSet$time.fac <<- mSetObj$dataSet$time.fac[keep.log.norm]
+    mSetObj$dataSet$exp.fac <<- mSetObj$dataSet$exp.fac[keep.log.norm]
+  } 
+  print(paste0("Samples left: ", length(keep.samples))) 
+  # - - - -
+  mSetObj
+}

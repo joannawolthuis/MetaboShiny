@@ -289,7 +289,8 @@ vectors = list(
 )
 )
 
-global$vectors$wordcloud$skip <- c("on", "in", "and", "at", 
+global$vectors$wordcloud$skip <- unique(c( # manual curation(
+                                  "on", "in", "and", "at", 
                                    "an", "by", "is", "it", "that", 
                                    "as", "be", "like", "can", "a", "of",
                                    "to", "but", "not", "mainly", "the",
@@ -309,10 +310,32 @@ global$vectors$wordcloud$skip <- c("on", "in", "and", "at",
                                    "lcesiitft", "lcesitof","lcesiqtof","have", "derived",
                                    "compounds", "having", "lcesiqq", "different", "more",
                                    "ec", "activity", "metabolite", "biotransformer","biotransformer¹",
-                                   global$vectors$db_list)
+                                  # pubmed words https://www.ncbi.nlm.nih.gov/books/NBK3827/table/pubmedhelp.T.stopwords/
+                                  c("a", "about", "again", "all", "almost", "also", "although", 
+                                    "always", "among", "an", "and", "another", "any", "are", "as", 
+                                    "at", "be", "because", "been", "before", "being", "between", 
+                                    "both", "but", "by", "can", "could", "did", "do", "does", "done", 
+                                    "due", "during", "each", "either", "enough", "especially", "etc", 
+                                    "for", "found", "from", "further", "had", "has", "have", "having", 
+                                    "here", "how", "however", "i", "if", "in", "into", "is", "it", 
+                                    "its", "itself", "just", "kg", "km", "made", "mainly", "make", 
+                                    "may", "mg", "might", "ml", "mm", "most", "mostly", "must", "nearly", 
+                                    "neither", "no", "nor", "obtained", "of", "often", "on", "our", 
+                                    "overall", "perhaps", "pmid", "quite", "rather", "really", "regarding", 
+                                    "seem", "seen", "several", "should", "show", "showed", "shown", 
+                                    "shows", "significantly", "since", "so", "some", "such", "than", 
+                                    "that", "the", "their", "theirs", "them", "then", "there", "therefore", 
+                                    "these", "they", "this", "those", "through", "thus", "to", "upon", 
+                                    "use", "used", "using", "various", "very", "was", "we", "were", 
+                                    "what", "when", "which", "while", "with", "within", "without", 
+                                    "would"),
+                                  qdapDictionaries::Top200Words,
+                                   global$vectors$db_list))
 
+# split <- strsplit(str, split = ",")[[1]]
+# split_words <- gsub(x = split, pattern = " ", replacement = "")
 #' Gets the current used operating system. Important for parallel/multithreaded functions if using makeCluster("FORK")
-#' 
+ 
 #' \code{get_os} finds the name of the OS the user is running this function on.
 #' 
 #' @return osx, windows/win or linux
@@ -392,9 +415,9 @@ global$vectors$project_names <- unique(tools::file_path_sans_ext(list.files(opti
 
 # load existing file
 fn <- paste0(tools::file_path_sans_ext(global$paths$patdb), ".metshi")
-
-if(file.exists(fn) & !exists("mSet")){
-  print("loading existing mset ..")
-  load(fn)
-  print(".. done!")
-}
+# 
+# if(file.exists(fn) & !exists("mSet")){
+#   print("loading existing mset ..")
+#   load(fn)
+#   print(".. done!")
+# }

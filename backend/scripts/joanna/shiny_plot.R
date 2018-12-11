@@ -972,7 +972,7 @@ ggPlotVenn <- function(mSet,
   
   table_list <- lapply(experiments, function(experiment){
 
-    analysis = mSet$storage[[experiment]]
+    analysis = mSet$storage[[experiment]]$analysis
     categories = grep(unlist(venn_yes$now), pattern = experiment, value = T)
     categories = gsub(categories, pattern = " \\(.*\\)", replacement = "")
     

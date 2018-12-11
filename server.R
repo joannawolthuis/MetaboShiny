@@ -41,6 +41,7 @@ shinyServer(function(input, output, session) {
     }, deleteFile = FALSE)
   })
   
+  
   # create color pickers based on amount of colours allowed in global
   output$colorPickers <- renderUI({
     lapply(c(1:global$constants$max.cols), function(i) {
@@ -92,24 +93,7 @@ shinyServer(function(input, output, session) {
   # re-render drop down bars for picking which experimental variable is chosen
   observe({
     if(datamanager$mset_present){
-      # reload pca, plsda, ml(make datamanager do that)
-      # update select input bars with current variable and covariables defined in excel
-      updateSelectInput(session, "first_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
-      updateSelectInput(session, "second_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
-      updateSelectInput(session, "subset_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
-      # if _T in sample names, data is time series. This makes the time series swap button visible. 
-      if(all(grepl(pattern = "_T\\d", x = rownames(mSet$dataSet$norm)))){
-        timebutton$status <- "on"
-      }else{
-        timebutton$status <- "off"
-      }
-      # show a button with t-test or fold-change analysis if data is bivariate. hide otherwise.
-      # TODO: add button for anova/other type of sorting...
-      if(mSet$dataSet$cls.num == 2 ){
-        heatbutton$status <- "ttfc"
-      }else{
-        heatbutton$status <- NULL
-      }
+      datamanager$reload <- "general"
     }else{
       # hide time series button
       timebutton$status <- "off"
@@ -117,6 +101,133 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  observeEvent(input$subset_var, {
+    lvls = levels(as.factor(mSet$dataSet$covars[[input$subset_var]]))
+    updateSelectizeInput(session, "subset_group", choices = lvls)
+  },ignoreInit = T)
+  
+  # function to generate names for msets
+  get_mset_name <- function(mainvar, subsetvar, subsetgroups, timeseries=FALSE){
+    if(timeseries){
+      mset_name = paste0(mainvar, "(timeseries)" ,if(!is.null(subsetgroups)) ":" else "", tolower(paste0(subsetgroups, collapse="+")))
+    }else{
+      mset_name = paste0(mainvar,if(!is.null(subsetgroups)) ":" else "",tolower(paste0(subsetgroups, collapse="+")))
+    }
+    mset_name
+  }
+  
+  observeEvent(input$change_subset, {
+    print("WIP")
+    print(input$subset_var)
+    print(input$subset_group)
+    
+    # save previous
+    mset_name <- get_mset_name(mainvar = mSet$dataSet$cls.name,
+                               subsetvar = NULL,
+                               subsetgroups = NULL)
+    mSet$storage[[mset_name]] <<- list(data = mSet$dataSet,
+                                       analysis = mSet$analSet)
+
+    # make new subset    
+    mset_name <- get_mset_name(mainvar = gsub(mSet$dataSet$cls.name, pattern = ":.*", replacement = ""),
+                               subsetvar = input$subset_var,
+                               subsetgroups = input$subset_group)
+    
+    print(mset_name)
+    
+    if(mset_name %in% names(mSet$storage)){
+      mSet$dataSet <<- mSet$storage[[mset_name]]$data
+      mSet$analSet <<- mSet$storage[[mset_name]]$analysis
+    }else{
+      mSet$dataSet$cls.name <<- mset_name
+      keep.samples <<- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]
+      mSet$dataSet$covars <<- mSet$dataSet$covars[sample %in% keep.samples]
+      keep.log.procr <<- rownames(mSet$dataSet$procr) %in% keep.samples
+      mSet$dataSet$procr <<- mSet$dataSet$procr[keep.log.procr,]
+      keep.log.norm <<- rownames(mSet$dataSet$norm) %in% keep.samples
+      mSet$dataSet$norm <<- mSet$dataSet$norm[keep.log.norm,]
+      mSet$dataSet$cls <<- mSet$dataSet$cls[keep.log.norm]
+      if("facA" %in% names(mSet$dataSet)){
+        mSet$dataSet$facA <<- mSet$dataSet$facA[keep.log.norm]
+        mSet$dataSet$facB <<- mSet$dataSet$facB[keep.log.norm]
+        mSet$dataSet$time.fac <<- mSet$dataSet$time.fac[keep.log.norm]
+        mSet$dataSet$exp.fac <<- mSet$dataSet$exp.fac[keep.log.norm]
+      } 
+      print(paste0("Samples left: ", length(keep.samples)))
+    }
+    global$constants$last_mset <<- mset_name
+    mSet$analSet <<- NULL
+    
+    covars <- colnames(mSet$dataSet$covars)
+    subsettable.covars <- covars[which(sapply(covars, function(x){
+      lvls <- unlist(mSet$dataSet$covars[,..x])
+      level.count <- length(levels(as.factor(lvls)))
+      keep <- level.count > 1 & level.count < length(lvls) 
+      # - - 
+      keep
+    }))]
+    updateSelectInput(session, "subset_var", choices = subsettable.covars)
+    output$curr_name <- renderText({mSet$dataSet$cls.name}) 
+    if(mSet$dataSet$cls.num <= 1){
+      interface$mode <- NULL } 
+    else if(mSet$dataSet$cls.num == 2){
+      interface$mode <- "bivar"}
+    else{
+      interface$mode <- "multivar"}
+  })
+  
+  observeEvent(input$reset_subset, {
+    
+    print("WIP")
+    
+    # save previous
+    mSet$storage[[mSet$dataSet$cls.name]] <<- list(data = mSet$dataSet,
+                                                   analysis = mSet$analSet)
+    
+    # load previous
+    mset_name <- get_mset_name(mainvar = gsub(mSet$dataSet$cls.name, pattern = ":.*", replacement = ""),
+                               subsetvar = NULL,
+                               subsetgroups = NULL)
+    
+    if(mset_name %in% names(mSet$storage)){
+      mSet$dataSet <<- mSet$storage[[mset_name]]$data
+      mSet$analSet <<- mSet$storage[[mset_name]]$analysis
+    }else{
+      main.var <- gsub(mSet$dataSet$cls.name, pattern = ":.*", replacement = "")
+      
+      # get any non subsetted mset
+      full.msets <- grep(names(mSet$storage), pattern = ":", invert = T)
+      keep <- which(sapply(full.msets, function(mset){
+        "data" %in% names(mSet$storage[[mset]])
+      }))[[1]]
+      mSet$dataSet <<- mSet$storage[[keep]]$data
+      mSet$analSet <<- mSet$storage[[keep]]$analysis
+      # change current variable of interest to user pick from covars table
+      mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,main.var, with=F][[1]])
+      # adjust bivariate/multivariate (2, >2)...
+      mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
+      mSet$dataSet$cls.name <<- mset_name
+      mSet$analSet <- NULL
+    }
+    global$constants$last_mset <<- mset_name
+
+    covars <- colnames(mSet$dataSet$covars)
+    subsettable.covars <- covars[which(sapply(covars, function(x){
+      lvls <- unlist(mSet$dataSet$covars[,..x])
+      level.count <- length(levels(as.factor(lvls)))
+      keep <- level.count > 1 & level.count < length(lvls) 
+      # - - 
+      keep
+    }))]
+    updateSelectInput(session, "subset_var", choices = subsettable.covars)
+    output$curr_name <- renderText({mSet$dataSet$cls.name}) 
+    if(mSet$dataSet$cls.num <= 1){
+      interface$mode <- NULL } 
+    else if(mSet$dataSet$cls.num == 2){
+      interface$mode <- "bivar"}
+    else{
+      interface$mode <- "multivar"}
+  })
   # ===== VARIABLE SWITCHER ====
   
   # set default mode for heatmap top hits pick button (tt/fc or asca/meba)
@@ -172,7 +283,7 @@ shinyServer(function(input, output, session) {
       mset_name = mSet$dataSet$cls.name
       
       # TODO: use this in venn diagram creation
-      mSet$storage[[mset_name]] <<- mSet$analSet
+      mSet$storage[[mset_name]] <<- list(analysis = mSet$analSet)
       
       # adjust mset design type (necessary for metaboanalystr)
       SetDesignType(mSet, "time")
@@ -181,6 +292,18 @@ shinyServer(function(input, output, session) {
       facA <- as.factor(mSet$dataSet$covars[,mSet$dataSet$cls.name, with=F][[1]])
       facB <- mSet$dataSet$covars[,"time"][[1]]
       
+      subset <- if(grepl(mSet$dataSet$cls.name, pattern = ":")){
+        strsplit(x = gsub(mSet$dataSet$cls.name, pattern = ".*:", replacement = ""), split = "\\+")[[1]]
+      }else{
+        c()
+      }
+      
+      # save previous analyses (should be usable in venn diagram later)
+      mset_name = get_mset_name(mainvar = gsub(mSet$dataSet$cls.name, pattern = ":.*", replacement = ""),
+                                subsetvar = NULL,
+                                subsetgroups = subset,
+                                timeseries = T)
+      
       # change mSet experimental factors (these are used in ASCA/MEBA etc.)
       mSet$dataSet$exp.fac <<- as.factor(facA)
       mSet$dataSet$time.fac <<- as.factor(facB)
@@ -188,6 +311,7 @@ shinyServer(function(input, output, session) {
       mSet$dataSet$facB <<- mSet$dataSet$time.fac;
       mSet$dataSet$facA.lbl <<- mSet$dataSet$cls.name
       mSet$dataSet$facB.lbl <<- "time"
+      mSet$dataSet$cls.name <<- mset_name
       
       # change interface to timeseries mode (make 'interface' manager do it)
       interface$mode <- "time"
@@ -197,20 +321,31 @@ shinyServer(function(input, output, session) {
       
       # REMOVE PREVIOUS ANALYSIS TO TRIGGER RELOAD (or the PCA won't reload)
       mSet$analSet$pca <<- NULL
+      output$curr_name <- renderText({mSet$dataSet$cls.name}) 
       
     }else{
       
       mSet$timeseries <<- FALSE
       
       # change back to normal mode
-      # save previous analyses (should be usable in venn diagram later)
-      mset_name = paste0("(timecourse)", mSet$dataSet$cls.name, collapse="-")
+      subset <- if(grepl(mSet$dataSet$cls.name, pattern = ":")){
+        strsplit(x = gsub(mSet$dataSet$cls.name, pattern = ".*:", replacement = ""), split = "\\+")[[1]]
+      }else{
+        c()
+      }
       
-      mSet$storage[[mset_name]] <<- mSet$analSet
+      # save previous analyses (should be usable in venn diagram later)
+      mset_name = get_mset_name(mainvar = gsub(mSet$dataSet$cls.name, pattern = ":.*|\\(.*", replacement = ""),
+                                subsetvar = NULL,
+                                subsetgroups = subset,
+                                timeseries = F)
+      
+      mSet$storage[[mset_name]] <<- list(analysis = mSet$analSet)
       mSet$analSet$type <<- "stat"
       
       # - - - - - - - - - - - -
       # rename experimental factors
+      mSet$dataSet$cls.name <<- mset_name
       mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,mSet$dataSet$cls.name, with=F][[1]])
       mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
       # remove old analSet
@@ -227,8 +362,10 @@ shinyServer(function(input, output, session) {
         interface$mode <- "bivar"}
       else{
         interface$mode <- "multivar"}
+      
+      output$curr_name <- renderText({mSet$dataSet$cls.name}) 
+      
     }
-    
     global$constants$last_mset <<- mset_name
     
   }, ignoreInit = TRUE)
@@ -247,7 +384,7 @@ shinyServer(function(input, output, session) {
     mset_name = mSet$dataSet$cls.name
     
     # save previous analyses (should be usable in venn diagram later)
-    mSet$storage[[mset_name]] <<- mSet$analSet
+    mSet$storage[[mset_name]] <<- list(analysis = mSet$analSet)
     
     global$constants$last_mset <<- mset_name
     
@@ -257,23 +394,24 @@ shinyServer(function(input, output, session) {
     # adjust bivariate/multivariate (2, >2)...
     mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
     
-    
     # adjust name of experimental variable
-    mSet$dataSet$cls.name <<- input$first_var
+    if(grepl(mSet$dataSet$cls.name, pattern = ":")){
+      subset_name <- paste0(":", gsub(mSet$dataSet$cls.name, pattern = ".*:", replacement = ""))
+    }else{
+      subset_name <- ""
+    }
     
-    if(input$first_var %in% names(mSet$storage)){
-      mSet$analSet <<- mSet$storage[[input$first_var]]
+    new_name <- paste0(input$first_var, subset_name)
+    mSet$dataSet$cls.name <<- new_name
+    
+    if(new_name %in% names(mSet$storage)){
+      mSet$analSet <<- mSet$storage[[input$first_var]]$analysis
     }else{
       # remove old analSet
       mSet$analSet <<- NULL
     }  
-    # reset interface
-    if(mSet$dataSet$cls.num <= 1){
-      interface$mode <- NULL } 
-    else if(mSet$dataSet$cls.num == 2){
-      interface$mode <- "bivar"}
-    else{
-      interface$mode <- "multivar"}
+    datamanager$reload <- "general"    
+
   })
   
   # ===== UI SWITCHER ====
@@ -365,7 +503,7 @@ shinyServer(function(input, output, session) {
                     options = list(lengthMenu = c(10, 20, 30), pageLength = 10), 
                     rownames = F) %>% DT::formatStyle( # make yes green and no red for warning user
                       'Installed',
-                      backgroundColor = DT::styleEqual(c("Yes", "No"), c('skyblue', 'pink'))
+                      backgroundColor = DT::styleEqual(c("No"), c('pink'))
                     )
     })
   }
@@ -1293,14 +1431,7 @@ shinyServer(function(input, output, session) {
       
       # tell datamanager that an mset is present 
       datamanager$mset_present = TRUE
-      
-      # change interface mode based on the current condition
-      if(mSet$dataSet$cls.num <= 1){
-        interface$mode <- NULL } 
-      else if(mSet$dataSet$cls.num == 2){
-        interface$mode <- "bivar"}
-      else{
-        interface$mode <- "multivar"}
+      datamanager$reload <- "general"    
       
       # - - - - - - - - - -
       
@@ -1345,7 +1476,7 @@ shinyServer(function(input, output, session) {
              # save previous mset 
              mset_name = mSet$dataSet$cls.name
              # TODO: use this in venn diagram creation
-             mSet$storage[[mset_name]] <<- mSet$analSet
+             mSet$storage[[mset_name]] <<- list(analysis = mSet$analSet)
              # reload
              datamanager$reload <- "venn"
            },
@@ -1359,7 +1490,9 @@ shinyServer(function(input, output, session) {
            },
            meba = {
              if("MB" %not in% names(mSet$analSet)){ # if already done, don't redo
-               mSet <<- performMB(mSet, 10) # perform MEBA analysis
+               withProgress({
+                mSet <<- performMB(mSet, 10) # perform MEBA analysis
+               })
              }
              # render results table for UI
              datamanager$reload <- "meba"
@@ -1367,8 +1500,10 @@ shinyServer(function(input, output, session) {
            asca = {
              if("asca" %not in% names(mSet$analSet)){ # if already done, don't redo
                # perform asca analysis
-               mSet <<- Perform.ASCA(mSet, 1, 1, 2, 2)
-               mSet <<- CalculateImpVarCutoff(mSet, 0.05, 0.9)
+               withProgress({
+                   mSet <<- Perform.ASCA(mSet, 1, 1, 2, 2)
+                   mSet <<- CalculateImpVarCutoff(mSet, 0.05, 0.9)
+               })
              }
              datamanager$reload <- "asca"
              
@@ -1390,7 +1525,10 @@ shinyServer(function(input, output, session) {
              }
              # save results to table
              res <<- mSet$analSet$tt$sig.mat 
-             if(is.null(res)) res <<- data.table("No significant hits found")
+             if(is.null(res)){
+               res <<- data.table("No significant hits found")
+               mSet$analSet$tt <<- NULL
+             }
              # render results table for UI
              output$tt_tab <-DT::renderDataTable({
                # -------------
@@ -1481,12 +1619,16 @@ shinyServer(function(input, output, session) {
     switch(input$plsda_type,
            normal={
              require(caret)
-             mSet <<- PLSR.Anal(mSet) # perform pls regression
-             mSet <<- PLSDA.CV(mSet, methodName=if(nrow(mSet$dataSet$norm) < 50) "L" else "T",compNum = 3) # cross validate
-             mSet <<- PLSDA.Permut(mSet,num = 300, type = "accu") # permute
-           },
+             withProgress({
+              mSet <<- PLSR.Anal(mSet) # perform pls regression
+              setProgress(0.3)
+              mSet <<- PLSDA.CV(mSet, methodName=if(nrow(mSet$dataSet$norm) < 50) "L" else "T",compNum = 3) # cross validate
+              setProgress(0.6)
+              mSet <<- PLSDA.Permut(mSet,num = 300, type = "accu") # permute
+             })
+             },
            sparse ={
-             mSet <<- SPLSR.Anal(mSet, comp.num = )
+             mSet <<- SPLSR.Anal(mSet, comp.num = 3)
            })
     # reload pls-da plots
     datamanager$reload <- "plsda"
@@ -1501,11 +1643,44 @@ shinyServer(function(input, output, session) {
       }else{
         print("datamanager active...")
         switch(datamanager$reload,
+               general = {
+                 # change interface
+                 if(mSet$dataSet$cls.num <= 1){
+                   interface$mode <- NULL } 
+                 else if(mSet$dataSet$cls.num == 2){
+                   interface$mode <- "bivar"}
+                 else{
+                   interface$mode <- "multivar"}
+                 # reload sidebar
+                 output$curr_name <- renderText({mSet$dataSet$cls.name}) 
+                 # reload pca, plsda, ml(make datamanager do that)
+                 # update select input bars with current variable and covariables defined in excel
+                 updateSelectInput(session, "first_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
+                 updateSelectInput(session, "second_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
+                 updateSelectInput(session, "subset_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
+                 output$curr_name <- renderText({mSet$dataSet$cls.name}) 
+                 # if _T in sample names, data is time series. This makes the time series swap button visible. 
+                 if(all(grepl(pattern = "_T\\d", x = rownames(mSet$dataSet$norm)))){
+                   timebutton$status <- "on"
+                 }else{
+                   timebutton$status <- "off"
+                 }
+                 
+                 # show a button with t-test or fold-change analysis if data is bivariate. hide otherwise.
+                 # TODO: add button for anova/other type of sorting...
+                 if(mSet$dataSet$cls.num == 2 ){
+                   heatbutton$status <- "ttfc"
+                 }else{
+                   heatbutton$status <- NULL
+                 }
+                 
+                 
+               },
                venn = {
                  if("storage" %in% names(mSet)){
                    analyses = names(mSet$storage)
                    venn_no$start <- rbindlist(lapply(analyses, function(name){
-                     analysis = mSet$storage[[name]]
+                     analysis = mSet$storage[[name]]$analysis
                      analysis_names = names(analysis)
                      # - - -
                      with.subgroups <- intersect(analysis_names, c("ml", "plsr"))
@@ -1539,6 +1714,9 @@ shinyServer(function(input, output, session) {
                  }
                },
                aov = {
+                 
+                 if(is.null(input$timecourse_trigger)) input$timecourse_trigger <- FALSE
+                 
                  present = switch(input$timecourse_trigger,
                                   {"aov2" %in% names(mSet$analSet)},
                                   {"aov" %in% names(mSet$analSet)})
@@ -1636,7 +1814,9 @@ shinyServer(function(input, output, session) {
                                   shape.fac = input$second_var)
                      })
                    }
-                 }else{NULL} # do nothing
+                 }else{
+                   print("nope")
+                 } # do nothing
                },
                plsda = {
                  
@@ -2228,6 +2408,7 @@ shinyServer(function(input, output, session) {
     selected_adduct_list <<- rbind(wanted.adducts.neg, 
                                    wanted.adducts.pos)$Name
   })
+
   
   # which table names to check for user click events
   res.update.tables <<- c("tt", 
@@ -2240,7 +2421,8 @@ shinyServer(function(input, output, session) {
                           "plsda_load",
                           "enrich_pw",
                           "ml",
-                          "mummi_detail")
+                          "mummi_detail",
+                          "venn")
   
   # creates observers for click events in the tables defined above
   lapply(unique(res.update.tables), FUN=function(table){
@@ -2263,7 +2445,8 @@ shinyServer(function(input, output, session) {
                                                     enrich_pw = enrich_overview_tab,
                                                     meba = mSet$analSet$MB$stats,
                                                     plsda_vip = plsda_tab,
-                                                    mummi_detail = global$tables$mummi_detail
+                                                    mummi_detail = global$tables$mummi_detail,
+                                                    venn = global$tables$venn_overlap
                                                     )
                                              , keep.rownames = T)[curr_row, rn]
       # print current compound in sidebar
@@ -2435,99 +2618,101 @@ shinyServer(function(input, output, session) {
       adduct_dist <- melt(table(global$tables$last_matches$adduct))
       db_dist <- melt(table(global$tables$last_matches$source))
       
-      # render word cloud
-      ECharts2Shiny::renderWordcloud("match_wordcloud",
-                                     data = {
-                                       # remove unwanted words (defined in global) from description
-                                       filtered_descriptions <- sapply(1:length(global$tables$last_matches$description), 
-                                                                       function(i){
-                                                                         # get description
-                                                                         desc <- global$tables$last_matches$description[[i]]
-                                                                         
-                                                                         # return
-                                                                         desc
-                                                                       })
-                                       
-                                       require(tm)
-                                       
-                                       docs <- VCorpus(tm::VectorSource(filtered_descriptions))
-                                       
-                                       # Convert all text to lower case
-                                       docs <- tm_map(docs, content_transformer(tolower))
-                                       
-                                       # Remove punctuations
-                                       docs <- tm_map(docs, removePunctuation)
-                                       
-                                       # Remove numbers
-                                       docs <- tm_map(docs, removeNumbers)
-                                       
-                                       # Remove english common stopwords
-                                       docs <- tm_map(docs, removeWords, stopwords("english"))
-                                       # Remove your own stop word
-                                       # ADD stopwords as a character vector
-                                       docs <- tm_map(docs, removeWords, c(unlist(global$vectors$db_list),
-                                                                           "found","via","used","occured",
-                                                                           "biotransformer¹", "occurs",
-                                                                           "generated", "predicted", "effects",
-                                                                           "reaction", "known", "constituent", 
-                                                                           "product", "metabolite", "pathways", 
-                                                                           "specific", "although", "following", 
-                                                                           "classified", "composed", "simply",
-                                                                           "way", "produced", "physiological",
-                                                                           "expected", "identified", "yet")) 
-                                       
-                                       # Remove whitespace
-                                       docs <- tm_map(docs, stripWhitespace)
-                                       
-                                       # # Text stemming
-                                       # docs <- tm_map(docs, stemDocument)
-                                       
-                                       doc_mat <- TermDocumentMatrix(docs)
-                                       
-                                       m <- as.matrix(doc_mat)
-                                       
-                                       v <- sort(rowSums(m), decreasing = TRUE)
-                                       
-                                       d_Rcran <- data.frame(name = names(v), value = v)
-                                       
-                                       # - - return - - 
-                                       
-                                       head(d_Rcran, 25)
-                                       
-                                     },
-                                     shape = "circle",
-                                     sizeRange = c(10,80)
-      )
-      
-      output$match_pie_add <- plotly::renderPlotly({
-        plot_ly(adduct_dist, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
-                textposition = 'inside',
-                textinfo = 'label+percent',
-                insidetextfont = list(color = '#FFFFFF'),
-                hoverinfo = 'text',
-                text = ~paste0(Var1, ": ", value, ' matches'),
-                marker = list(colors = colors,
-                              line = list(color = '#FFFFFF', width = 1)),
-                #The 'pull' attribute can also be used to create space between the sectors
-                showlegend = FALSE) %>%
-          layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-                 yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
-      })
-      
-      output$match_pie_db <- plotly::renderPlotly({
-        plot_ly(db_dist, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
-                textposition = 'inside',
-                textinfo = 'label+percent',
-                insidetextfont = list(color = '#FFFFFF'),
-                hoverinfo = 'text',
-                text = ~paste0(Var1, ": ", value, ' matches'),
-                marker = list(colors = colors,
-                              line = list(color = '#FFFFFF', width = 1)),
-                #The 'pull' attribute can also be used to create space between the sectors
-                showlegend = FALSE) %>%
-          layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-                 yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
-      })
+      if(nrow(global$tables$last_matches)>0){
+        # render word cloud
+        ECharts2Shiny::renderWordcloud("match_wordcloud",
+                                       data = {
+                                         # remove unwanted words (defined in global) from description
+                                         filtered_descriptions <- sapply(1:length(global$tables$last_matches$description), 
+                                                                         function(i){
+                                                                           # get description
+                                                                           desc <- global$tables$last_matches$description[[i]]
+                                                                           
+                                                                           # return
+                                                                           desc
+                                                                         })
+                                         
+                                         require(tm)
+                                         
+                                         docs <- VCorpus(tm::VectorSource(filtered_descriptions))
+                                         
+                                         # Convert all text to lower case
+                                         docs <- tm_map(docs, content_transformer(tolower))
+                                         
+                                         # Remove punctuations
+                                         docs <- tm_map(docs, removePunctuation)
+                                         
+                                         # Remove numbers
+                                         docs <- tm_map(docs, removeNumbers)
+                                         
+                                         # Remove english common stopwords
+                                         docs <- tm_map(docs, removeWords, stopwords("english"))
+                                         # Remove your own stop word
+                                         # ADD stopwords as a character vector
+                                         docs <- tm_map(docs, removeWords, c(unlist(global$vectors$db_list),
+                                                                             "found","via","used","occured",
+                                                                             "biotransformer¹", "occurs",
+                                                                             "generated", "predicted", "effects",
+                                                                             "reaction", "known", "constituent", 
+                                                                             "product", "metabolite", "pathways", 
+                                                                             "specific", "although", "following", 
+                                                                             "classified", "composed", "simply",
+                                                                             "way", "produced", "physiological",
+                                                                             "expected", "identified", "yet")) 
+                                         
+                                         # Remove whitespace
+                                         docs <- tm_map(docs, stripWhitespace)
+                                         
+                                         # # Text stemming
+                                         # docs <- tm_map(docs, stemDocument)
+                                         
+                                         doc_mat <- TermDocumentMatrix(docs)
+                                         
+                                         m <- as.matrix(doc_mat)
+                                         
+                                         v <- sort(rowSums(m), decreasing = TRUE)
+                                         
+                                         d_Rcran <- data.frame(name = names(v), value = v)
+                                         
+                                         # - - return - - 
+                                         
+                                         head(d_Rcran, 25)
+                                         
+                                       },
+                                       shape = "circle",
+                                       sizeRange = c(10,80)
+        )
+        
+        output$match_pie_add <- plotly::renderPlotly({
+          plot_ly(adduct_dist, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
+                  textposition = 'inside',
+                  textinfo = 'label+percent',
+                  insidetextfont = list(color = '#FFFFFF'),
+                  hoverinfo = 'text',
+                  text = ~paste0(Var1, ": ", value, ' matches'),
+                  marker = list(colors = colors,
+                                line = list(color = '#FFFFFF', width = 1)),
+                  #The 'pull' attribute can also be used to create space between the sectors
+                  showlegend = FALSE) %>%
+            layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                   yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+        })
+        
+        output$match_pie_db <- plotly::renderPlotly({
+          plot_ly(db_dist, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
+                  textposition = 'inside',
+                  textinfo = 'label+percent',
+                  insidetextfont = list(color = '#FFFFFF'),
+                  hoverinfo = 'text',
+                  text = ~paste0(Var1, ": ", value, ' matches'),
+                  marker = list(colors = colors,
+                                line = list(color = '#FFFFFF', width = 1)),
+                  #The 'pull' attribute can also be used to create space between the sectors
+                  showlegend = FALSE) %>%
+            layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                   yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+        })
+      }
       
       output$match_tab <-DT::renderDataTable({
         
@@ -2535,7 +2720,11 @@ shinyServer(function(input, output, session) {
         remove_idx <- which(colnames(global$tables$last_matches) %in% remove_cols)
         # don't show some columns but keep them in the original table, so they can be used
         # for showing molecule descriptions, structure
-        DT::datatable(global$tables$last_matches,
+        DT::datatable(if(nrow(global$tables$last_matches)>0){
+          global$tables$last_matches 
+        }else{
+          data.table()
+        },
                       selection = 'single',
                       autoHideNavigation = T,
                       options = list(lengthMenu = c(5, 10, 15), 
@@ -2660,6 +2849,7 @@ shinyServer(function(input, output, session) {
   observeEvent(input$venn_add, {
     # add to the 'selected' table
     rows <- input$venn_unselected_rows_selected
+    print(rows)
     # get members and send to members list
     added = venn_no$now[rows,]
     venn_yes$now <- data.frame(c(unlist(venn_yes$now), added))
@@ -2669,6 +2859,7 @@ shinyServer(function(input, output, session) {
   observeEvent(input$venn_remove, {
     # add to the 'selected' table
     rows <- input$venn_selected_rows_selected
+    print(rows)
     # get members and send to non members list
     removed = venn_yes$now[rows,]
     venn_no$now <- data.frame(c(unlist(venn_no$now), removed))
@@ -2732,10 +2923,15 @@ shinyServer(function(input, output, session) {
       })
       )
       
+      tbl <- data.frame(mz = global$tables$venn_overlap)
+      rownames(tbl) <- global$tables$venn_overlap
+      
+      global$tables$venn_overlap <<- tbl
+      
       if(length(global$tables$venn_overlap) > 0){
         output$venn_tab <- DT::renderDataTable({
           # -------------
-          DT::datatable(data.table(mz = global$tables$venn_overlap), 
+          DT::datatable(tbl, 
                         selection = 'single',
                         rownames = F,
                         autoHideNavigation = T,
@@ -2753,14 +2949,6 @@ shinyServer(function(input, output, session) {
       }
     }
   })
-  
-  # toggles when the venn diagram overlap tab is clicked
-  # TODO: move to the main table observer generator waaaaay up
-  observeEvent(input$venn_tab_rows_selected, {
-    curr_cpd <<- global$tables$venn_overlap[input$venn_tab_rows_selected] # set current compound to the clicked one
-    output$curr_cpd <- renderText(curr_cpd) # render text in sidebar
-  })
-  
   
   dataModal <- function(failed = FALSE) {
     modalDialog(
@@ -2885,7 +3073,7 @@ shinyServer(function(input, output, session) {
       if("storage" %in% names(mSet)){
         analyses = names(mSet$storage)
         report_no$start <- rbindlist(lapply(analyses, function(name){
-          analysis = mSet$storage[[name]]
+          analysis = mSet$storage[[name]]$analysis
           analysis_names = names(analysis)
           # - - -
           with.subgroups <- intersect(analysis_names, c("ml", "plsr"))

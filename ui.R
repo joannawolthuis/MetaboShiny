@@ -103,7 +103,9 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
 																		   tabPanel(icon("id-card-o"), value = "identifier",
                                                                                     br(),
                                                                                     tags$i("Select identifier"),
-                                                                                    radioButtons(inputId = "group_by", label = NULL, choices = 
+                                                                                    radioButtons(inputId = "group_by", 
+                                                                                                 label = NULL, 
+                                                                                                 choices = 
                                                                                                    list("Molecular formula" = "baseformula",
                                                                                                         "Mass/charge" = "mz"), 
                                                                                                  selected = "mz",
@@ -157,7 +159,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                     hr(),
                                     shinyWidgets::sliderTextInput("perc_limit","Max. missing feature percent:",
                                                                   choices=c(0, 0.0001, 0.001, 0.01, 0.1, seq(1, 100, 1)),
-                                                                  selected=0, grid = T),
+                                                                  selected=1, grid = T),
                                     selectInput('filt_type', 'How will you filter your m/z values?', choices = list("Interquantile range"="iqr",
                                                                                                                     "Relative stdev"="rsd",
                                                                                                                     "Non-parametric relative stdev"="nrsd",
@@ -199,7 +201,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                 selected = "knn"),
                                     switchButton(inputId = "remove_outliers",
                                                                           label = "Exclude outliers?", 
-                                                                          value = TRUE, col = "BW", type = "YN"),
+                                                                          value = FALSE, col = "BW", type = "YN"),
                                     actionButton("initialize", "Go", icon=icon("hand-o-right")),
                                     hr(),
                                     imageOutput("dataset_icon",inline = T),
@@ -355,7 +357,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
 																   # this tab enables mummichog pathway analysis (using their own databases...)
 																   tabPanel(h3("Enrichment"), value = "enrich",
 																            sidebarLayout(position = "left",
-																                          sidebarPanel = sidebarPanel(
+																                          sidebarPanel = sidebarPanel(width=3,
 																                            fluidRow(align="center", selectInput("mummi_org",label = "Organism DB:",choices = list(
 																                              "Homo sapiens (human) [MFN]" = "hsa_mfn",
 																                              "Homo sapiens (human) [BioCyc]" = "hsa_biocyc",
@@ -406,14 +408,14 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
 																                            tabsetPanel(
 																                              tabPanel(title = "", icon = icon("plus"),
 																                                       #plotlyOutput("mummi_pos_plot", height = "300px"),
-																                                       div(DT::dataTableOutput("mummi_pos_tab"),style='font-size:60%')
+																                                       div(DT::dataTableOutput("mummi_pos_tab"),style='font-size:80%')
 																                                       ),
 																                              tabPanel(title = "", icon = icon("minus"),
 																                                       #plotlyOutput("mummi_neg_plot", height = "300px"),
-																                                       div(DT::dataTableOutput("mummi_neg_tab"),style='font-size:60%')
+																                                       div(DT::dataTableOutput("mummi_neg_tab"))#,style='font-size:80%')
 																                              )
 																                            ),
-																                            div(DT::dataTableOutput("mummi_detail_tab"),style='font-size:60%')
+																                            div(DT::dataTableOutput("mummi_detail_tab"),style='font-size:80%')
 																                          ))
 																            ),
 																   # this tab enables machine learning
@@ -519,8 +521,18 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                   sidebarPanel = 
                                     sidebarPanel(align="center",width = 4,
                                                  tabsetPanel(id = "search", #type = "pills",
-                                                             tabPanel(NULL, icon=icon("exchange"),
-                                                                      br()
+                                                             tabPanel(NULL, icon=icon("exchange")
+                                                                      ,h2("Current experiment:")
+                                                                      ,div(
+                                                                        sardine(h2(textOutput("curr_name"),style="padding:10px;")),
+                                                                        style="background-color:white;
+                                                                                                               height:55px;
+                                                                                                               width:115%;
+                                                                                                               position:relative;
+                                                                                                               right:30px;
+                                                                                                               border-top: 1px solid #DFDCDC;
+                                                                                                               border-bottom: 1px solid #DFDCDC;")
+                                                                      ,hr()
                                                                       ,h2("Change variable of interest")
                                                                       ,selectInput("first_var", label="Do statistics on:", choices = c("label"))
                                                                       ,shinyWidgets::circleButton("change_cls", icon = icon("hand-pointer-o"), size = "sm")
@@ -528,9 +540,13 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                       ,h2("Shape")
                                                                       ,selectInput("second_var", label="Marker shape based on:", choices = c("label"))
                                                                       ,hr()
-                                                                      ,h2("Change sample subset"),
-                                                                      textInput("subset_regex", "Subset data based on regex:", value = "...")
+                                                                      ,h2("Subset data")
                                                                       ,selectInput("subset_var", label="Subset data based on:", choices = c("label"))
+                                                                      ,selectizeInput("subset_group", label="Group(s) in subset:", choices = c(), multiple=TRUE)
+                                                                      ,shinyWidgets::circleButton("change_subset", icon = icon("hand-pointer-o"), size = "sm")
+                                                                      ,shinyWidgets::circleButton("reset_subset", icon = icon("undo"), size = "sm")
+                                                                      
+                                                                      
                                                                       
                                                              ),
                                                              tabPanel(title=NULL, icon=icon("search"),
@@ -626,6 +642,9 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                                                   tabPanel(title=icon("cloud"), 
                                                                                                                                            tags$div(id="match_wordcloud", style="width:100%;height:400px;"),
                                                                                                                                            ECharts2Shiny::deliverChart(div_id = "match_wordcloud")
+                                                                                                                                  ),
+                                                                                                                                  tabPanel(title=icon("searchengin"), 
+                                                                                                                                           helpText("tba")
                                                                                                                                   )
                                                                                                                       )))
                                                                                            
