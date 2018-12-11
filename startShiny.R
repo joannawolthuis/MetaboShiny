@@ -39,7 +39,7 @@ metanr_packages <- function(){
                  "data.table", "pROC", "Rcpp", "caret", "ellipse",
                  "scatterplot3d", "impute", "rhandsontable", "pcaMethods", 
                  "siggenes", "globaltest", "GlobalAncova", "Rgraphviz", "KEGGgraph", 
-                 "preprocessCore", "genefilter", "SSPA", "sva", "showtext")
+                 "preprocessCore", "genefilter", "SSPA", "sva", "showtext", "wordcloud2")
   list_installed <- installed.packages()
   
   new_pkgs <- subset(metr_pkgs, !(metr_pkgs %in% list_installed[, "Package"]))

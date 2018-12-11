@@ -575,7 +575,12 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                   tabPanel(title="mz > molecule",
                                                                                            hr(),
                                                                                            fluidRow(
-                                                                                             imageOutput("sidebar_icon",inline = T),
+                                                                                             tags$button(
+                                                                                               id = "search_cpd",
+                                                                                               class = "btn btn-default action-button",
+                                                                                               img(src = "detective.png",
+                                                                                                   height = "50px")
+                                                                                             ),
                                                                                              div(
                                                                                                sardine(div(icon("paw","fa-xs fa-rotate-90"), 
                                                                                                            style="position:relative;
@@ -604,14 +609,6 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                                border-top: 1px solid #DFDCDC;
                                                                                                                border-bottom: 1px solid #DFDCDC;")
                                                                                              ),
-                                                                                           fluidRow(
-                                                                                             shinyWidgets::circleButton("search_cpd", icon = icon("search"), size = "default"),
-                                                                                             #shinyWidgets::circleButton("score_iso", icon = icon("balance-scale"), size = "default"),
-                                                                                             # actionButton("search_cpd", "S E A R C H", icon=icon("search"),width = "40%"),
-                                                                                             # actionButton("score_iso", "S C O R E", icon=icon("balance-scale"), width="40%"),
-                                                                                             #,actionButton("score_net", "", icon=icon("arrows-alt")),
-                                                                                             align="center"),
-                                                                                           hr(),
                                                                                            bsCollapse(bsCollapsePanel(title=h2("Compound info"), style="warning",
                                                                                                                       tabsetPanel(id="tab_iden_2", 
                                                                                                                                   tabPanel(title=icon("atlas"),
@@ -619,7 +616,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                                                   ),
                                                                                                                                   tabPanel(title=icon("atom"),
                                                                                                                                            textOutput("curr_formula"),
-                                                                                                                                           plotOutput("curr_struct", height="150px")
+                                                                                                                                           plotOutput("curr_struct", height="300px")
                                                                                                                                   )
                                                                                                                       ))),
                                                                                            bsCollapse(bsCollapsePanel(title=h2("Search results"), style="error",
@@ -639,12 +636,43 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                                                   tabPanel(title=icon("plus"), 
                                                                                                                                            plotly::plotlyOutput("match_pie_add")
                                                                                                                                   ),
-                                                                                                                                  tabPanel(title=icon("cloud"), 
-                                                                                                                                           tags$div(id="match_wordcloud", style="width:100%;height:400px;"),
-                                                                                                                                           ECharts2Shiny::deliverChart(div_id = "match_wordcloud")
+                                                                                                                                  tabPanel(title=icon("cloud"),
+                                                                                                                                           wordcloud2::wordcloud2Output("wordcloud_desc"),
+                                                                                                                                           tags$script(HTML(
+                                                                                                                                             "$(document).on('click', '#canvas', function() {",
+                                                                                                                                             'word = document.getElementById("wcSpan").innerHTML;',
+                                                                                                                                             "Shiny.onInputChange('selected_word_desc', word);",
+                                                                                                                                             "});"
+                                                                                                                                           ))
                                                                                                                                   ),
                                                                                                                                   tabPanel(title=icon("searchengin"), 
-                                                                                                                                           helpText("tba")
+                                                                                                                                           textInput('pm_query', "Search for:"),
+                                                                                                                                           sliderInput('pm_year', "Paper publication range:",
+                                                                                                                                                       min = 1900, max = as.numeric(format(Sys.Date(), '%Y')),
+                                                                                                                                                       value = c(2000,as.numeric(format(Sys.Date(), '%Y'))),
+                                                                                                                                                       step = 1,sep = ""
+                                                                                                                                                       ),
+                                                                                                                                           sliderInput("pm_max", 
+                                                                                                                                                       "Stop after ... papers:",
+                                                                                                                                                       min = 1, 
+                                                                                                                                                       max = 1000, 
+                                                                                                                                                       value = 500),
+                                                                                                                                           shinyWidgets::circleButton("search_pubmed", icon = icon("search"), size = "sm"),
+                                                                                                                                           tabsetPanel(selected = 1, 
+                                                                                                                                                       tabPanel(title = icon("cloud"),
+                                                                                                                                                                wordcloud2::wordcloud2Output("wordcloud_pubmed"),
+                                                                                                                                                                tags$script(HTML(
+                                                                                                                                                                  "$(document).on('click', '#canvas', function() {",
+                                                                                                                                                                  'word = document.getElementById("wcSpan").innerHTML;',
+                                                                                                                                                                  "Shiny.onInputChange('selected_word_pubmed', word);",
+                                                                                                                                                                  "});"
+                                                                                                                                                                ))
+                                                                                                                                                                ),
+                                                                                                                                                       tabPanel(title = icon("table"),
+                                                                                                                                                                div(DT::dataTableOutput('pm_tab', width="100%"),style='font-size:80%')
+                                                                                                                                                                )
+                                                                                                                                                       )
+                                                                                                                                           
                                                                                                                                   )
                                                                                                                       )))
                                                                                            

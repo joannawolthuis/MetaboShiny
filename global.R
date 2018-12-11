@@ -107,7 +107,7 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                              "BatchCorrMetabolomics", "R.utils", "rgl", "glmnet", "TSPred", 
                                              "VennDiagram", "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR", 
                                              "openxlsx", "doParallel", "missForest", "InterpretMSSpectrum",
-                                             "tm"
+                                             "tm", "RISmed", "qdap", "extrafont", "sysfonts"
                                 ), # these packages are listed in the first tab and should include all necessary packages
                                 images = list(list(name = 'cute_package', path = 'www/cat.png', dimensions = c(80, 80)),
                                               list(name = 'internal_logo', path = 'www/umcinternal.png', dimensions = c(120, 120)),
@@ -258,6 +258,7 @@ paths = list(# path to .db file selected as default data source in the csv makin
 tables = list(tbl = NA),
 # default vectors to go through in metaboshiny
 vectors = list(
+  remove_match_cols = c("description","structure", "baseformula", "dppm", "source"),
   # default indices of chosen adducts
   pos_selected_add = c(1:3, nrow(adducts[Ion_mode == "positive",
                                          c("Name")])),
@@ -328,7 +329,7 @@ global$vectors$wordcloud$skip <- unique(c( # manual curation(
                                     "these", "they", "this", "those", "through", "thus", "to", "upon", 
                                     "use", "used", "using", "various", "very", "was", "we", "were", 
                                     "what", "when", "which", "while", "with", "within", "without", 
-                                    "would"),
+                                    "would", "p"),
                                   qdapDictionaries::Top200Words,
                                    global$vectors$db_list))
 

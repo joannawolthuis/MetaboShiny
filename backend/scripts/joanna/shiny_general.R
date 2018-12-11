@@ -112,22 +112,36 @@ get_mset_name <- function(mainvar, subsetvar, subsetgroups, timeseries=FALSE){
 }
 
 
-subset.mSet <- function(mSetObj, used.variable, keep.groups){
-  mSetObj$dataSet$cls.name <- mSetObj_name
-  keep.samples <- mSetObj$dataSet$covars$sample[which(mSetObj$dataSet$covars[[used.variable]] %in% keep.groups)]
-  mSetObj$dataSet$covars <- mSetObj$dataSet$covars[sample %in% keep.samples]
-  keep.log.procr <- rownames(mSetObj$dataSet$procr) %in% keep.samples
-  mSetObj$dataSet$procr <- mSetObj$dataSet$procr[keep.log.procr,]
-  keep.log.norm <- rownames(mSetObj$dataSet$norm) %in% keep.samples
-  mSetObj$dataSet$norm <- mSetObj$dataSet$norm[keep.log.norm,]
-  mSetObj$dataSet$cls <- mSetObj$dataSet$cls[keep.log.norm]
-  if("facA" %in% names(mSetObj$dataSet)){
-    mSetObj$dataSet$facA <<- mSetObj$dataSet$facA[keep.log.norm]
-    mSetObj$dataSet$facB <<- mSetObj$dataSet$facB[keep.log.norm]
-    mSetObj$dataSet$time.fac <<- mSetObj$dataSet$time.fac[keep.log.norm]
-    mSetObj$dataSet$exp.fac <<- mSetObj$dataSet$exp.fac[keep.log.norm]
-  } 
-  print(paste0("Samples left: ", length(keep.samples))) 
+subset.mSet <- function(mSetObj, used.variable, keep.groups, new.name){
+  mSetObj$dataSet$cls.name <- new.name
+  if(!is.null(used.variable)){
+    keep.samples <- mSetObj$dataSet$covars$sample[which(mSetObj$dataSet$covars[[used.variable]] %in% keep.groups)]
+    mSetObj$dataSet$covars <- mSetObj$dataSet$covars[sample %in% keep.samples]
+    keep.log.procr <- rownames(mSetObj$dataSet$procr) %in% keep.samples
+    mSetObj$dataSet$procr <- mSetObj$dataSet$procr[keep.log.procr,]
+    keep.log.norm <- rownames(mSetObj$dataSet$norm) %in% keep.samples
+    mSetObj$dataSet$norm <- mSetObj$dataSet$norm[keep.log.norm,]
+    mSetObj$dataSet$cls <- mSetObj$dataSet$cls[keep.log.norm]
+    if("facA" %in% names(mSetObj$dataSet)){
+      mSetObj$dataSet$facA <<- mSetObj$dataSet$facA[keep.log.norm]
+      mSetObj$dataSet$facB <<- mSetObj$dataSet$facB[keep.log.norm]
+      mSetObj$dataSet$time.fac <<- mSetObj$dataSet$time.fac[keep.log.norm]
+      mSetObj$dataSet$exp.fac <<- mSetObj$dataSet$exp.fac[keep.log.norm]
+    } 
+    print(paste0("Samples left: ", length(keep.samples))) 
+  }
   # - - - -
   mSetObj
+}
+
+abstracts2wordcloud <-function(abstracts, top=20){
+  abstracts1<-data.frame('Abstract'=RISmed::AbstractText(abstracts))#, 'Year'=YearPubmed(fetch))
+  abstractsOnly<-as.character(abstracts1$Abstract)
+  abstractsOnly<-paste(abstractsOnly, sep="", collapse="")
+  abstractsOnly<-as.vector(abstractsOnly)
+  abstractsOnly<-qdap::strip(abstractsOnly)
+  stsp<-qdap::rm_stopwords(abstractsOnly, stopwords = global$vectors$wordcloud$skip)
+  ord<-as.data.frame(table(stsp))
+  ord<-ord[order(ord$Freq, decreasing=TRUE),]
+  head(ord, top)
 }

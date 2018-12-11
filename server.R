@@ -21,6 +21,19 @@ shinyServer(function(input, output, session) {
     output[[default$name]] = renderText(default$text)
   })
   
+  library(showtext)
+  
+  # import google fonts
+  for(font in unlist(options[grep(names(options), pattern = "font")])){
+    if(font %in% sysfonts::font.families()){
+      NULL
+    }else{
+      sysfonts::font_add_google(font,db_cache = T)  
+    }
+  }
+  
+  showtext::showtext_auto() ## Automatically use showtext to render text for future devices
+  
   # default match table fill
   output$match_tab <-DT::renderDataTable({
     DT::datatable(data.table("no m/z chosen" = "Please choose m/z value from results ٩(｡•́‿•̀｡)۶	"),
@@ -127,7 +140,7 @@ shinyServer(function(input, output, session) {
                                subsetgroups = NULL)
     mSet$storage[[mset_name]] <<- list(data = mSet$dataSet,
                                        analysis = mSet$analSet)
-
+    
     # make new subset    
     mset_name <- get_mset_name(mainvar = gsub(mSet$dataSet$cls.name, pattern = ":.*", replacement = ""),
                                subsetvar = input$subset_var,
@@ -210,7 +223,7 @@ shinyServer(function(input, output, session) {
       mSet$analSet <- NULL
     }
     global$constants$last_mset <<- mset_name
-
+    
     covars <- colnames(mSet$dataSet$covars)
     subsettable.covars <- covars[which(sapply(covars, function(x){
       lvls <- unlist(mSet$dataSet$covars[,..x])
@@ -411,7 +424,7 @@ shinyServer(function(input, output, session) {
       mSet$analSet <<- NULL
     }  
     datamanager$reload <- "general"    
-
+    
   })
   
   # ===== UI SWITCHER ====
@@ -832,7 +845,7 @@ shinyServer(function(input, output, session) {
     # re-render match table
     output$match_tab <-DT::renderDataTable({
       
-      remove_cols = c("description","structure", "baseformula", "dppm")
+      remove_cols = global$vectors$remove_match_cols
       remove_idx <- which(colnames(global$tables$last_matches) %in% remove_cols)
       # don't show some columns but keep them in the original table, so they can be used
       # for showing molecule descriptions, structure
@@ -1491,7 +1504,7 @@ shinyServer(function(input, output, session) {
            meba = {
              if("MB" %not in% names(mSet$analSet)){ # if already done, don't redo
                withProgress({
-                mSet <<- performMB(mSet, 10) # perform MEBA analysis
+                 mSet <<- performMB(mSet, 10) # perform MEBA analysis
                })
              }
              # render results table for UI
@@ -1501,8 +1514,8 @@ shinyServer(function(input, output, session) {
              if("asca" %not in% names(mSet$analSet)){ # if already done, don't redo
                # perform asca analysis
                withProgress({
-                   mSet <<- Perform.ASCA(mSet, 1, 1, 2, 2)
-                   mSet <<- CalculateImpVarCutoff(mSet, 0.05, 0.9)
+                 mSet <<- Perform.ASCA(mSet, 1, 1, 2, 2)
+                 mSet <<- CalculateImpVarCutoff(mSet, 0.05, 0.9)
                })
              }
              datamanager$reload <- "asca"
@@ -1620,13 +1633,13 @@ shinyServer(function(input, output, session) {
            normal={
              require(caret)
              withProgress({
-              mSet <<- PLSR.Anal(mSet) # perform pls regression
-              setProgress(0.3)
-              mSet <<- PLSDA.CV(mSet, methodName=if(nrow(mSet$dataSet$norm) < 50) "L" else "T",compNum = 3) # cross validate
-              setProgress(0.6)
-              mSet <<- PLSDA.Permut(mSet,num = 300, type = "accu") # permute
+               mSet <<- PLSR.Anal(mSet) # perform pls regression
+               setProgress(0.3)
+               mSet <<- PLSDA.CV(mSet, methodName=if(nrow(mSet$dataSet$norm) < 50) "L" else "T",compNum = 3) # cross validate
+               setProgress(0.6)
+               mSet <<- PLSDA.Permut(mSet,num = 300, type = "accu") # permute
              })
-             },
+           },
            sparse ={
              mSet <<- SPLSR.Anal(mSet, comp.num = 3)
            })
@@ -1642,6 +1655,7 @@ shinyServer(function(input, output, session) {
         NULL # if not reloading anything, nevermind
       }else{
         print("datamanager active...")
+        print(datamanager$reload)
         switch(datamanager$reload,
                general = {
                  # change interface
@@ -1673,8 +1687,6 @@ shinyServer(function(input, output, session) {
                  }else{
                    heatbutton$status <- NULL
                  }
-                 
-                 
                },
                venn = {
                  if("storage" %in% names(mSet)){
@@ -1715,7 +1727,7 @@ shinyServer(function(input, output, session) {
                },
                aov = {
                  
-                 if(is.null(input$timecourse_trigger)) input$timecourse_trigger <- FALSE
+                 #if(is.null(input$timecourse_trigger)) input$timecourse_trigger <- FALSE
                  
                  present = switch(input$timecourse_trigger,
                                   {"aov2" %in% names(mSet$analSet)},
@@ -2408,7 +2420,7 @@ shinyServer(function(input, output, session) {
     selected_adduct_list <<- rbind(wanted.adducts.neg, 
                                    wanted.adducts.pos)$Name
   })
-
+  
   
   # which table names to check for user click events
   res.update.tables <<- c("tt", 
@@ -2447,8 +2459,8 @@ shinyServer(function(input, output, session) {
                                                     plsda_vip = plsda_tab,
                                                     mummi_detail = global$tables$mummi_detail,
                                                     venn = global$tables$venn_overlap
-                                                    )
-                                             , keep.rownames = T)[curr_row, rn]
+      )
+      , keep.rownames = T)[curr_row, rn]
       # print current compound in sidebar
       output$curr_cpd <- renderText(curr_cpd)
       
@@ -2620,68 +2632,66 @@ shinyServer(function(input, output, session) {
       
       if(nrow(global$tables$last_matches)>0){
         # render word cloud
-        ECharts2Shiny::renderWordcloud("match_wordcloud",
-                                       data = {
-                                         # remove unwanted words (defined in global) from description
-                                         filtered_descriptions <- sapply(1:length(global$tables$last_matches$description), 
-                                                                         function(i){
-                                                                           # get description
-                                                                           desc <- global$tables$last_matches$description[[i]]
-                                                                           
-                                                                           # return
-                                                                           desc
-                                                                         })
-                                         
-                                         require(tm)
-                                         
-                                         docs <- VCorpus(tm::VectorSource(filtered_descriptions))
-                                         
-                                         # Convert all text to lower case
-                                         docs <- tm_map(docs, content_transformer(tolower))
-                                         
-                                         # Remove punctuations
-                                         docs <- tm_map(docs, removePunctuation)
-                                         
-                                         # Remove numbers
-                                         docs <- tm_map(docs, removeNumbers)
-                                         
-                                         # Remove english common stopwords
-                                         docs <- tm_map(docs, removeWords, stopwords("english"))
-                                         # Remove your own stop word
-                                         # ADD stopwords as a character vector
-                                         docs <- tm_map(docs, removeWords, c(unlist(global$vectors$db_list),
-                                                                             "found","via","used","occured",
-                                                                             "biotransformer¹", "occurs",
-                                                                             "generated", "predicted", "effects",
-                                                                             "reaction", "known", "constituent", 
-                                                                             "product", "metabolite", "pathways", 
-                                                                             "specific", "although", "following", 
-                                                                             "classified", "composed", "simply",
-                                                                             "way", "produced", "physiological",
-                                                                             "expected", "identified", "yet")) 
-                                         
-                                         # Remove whitespace
-                                         docs <- tm_map(docs, stripWhitespace)
-                                         
-                                         # # Text stemming
-                                         # docs <- tm_map(docs, stemDocument)
-                                         
-                                         doc_mat <- TermDocumentMatrix(docs)
-                                         
-                                         m <- as.matrix(doc_mat)
-                                         
-                                         v <- sort(rowSums(m), decreasing = TRUE)
-                                         
-                                         d_Rcran <- data.frame(name = names(v), value = v)
-                                         
-                                         # - - return - - 
-                                         
-                                         head(d_Rcran, 25)
-                                         
-                                       },
-                                       shape = "circle",
-                                       sizeRange = c(10,80)
-        )
+        
+        res = {
+          # remove unwanted words (defined in global) from description
+          filtered_descriptions <- sapply(1:length(global$tables$last_matches$description), 
+                                          function(i){
+                                            # get description
+                                            desc <- global$tables$last_matches$description[[i]]
+                                            
+                                            # return
+                                            desc
+                                          })
+          
+          require(tm)
+          
+          docs <- tm::VCorpus(tm::VectorSource(filtered_descriptions))
+          
+          # Convert all text to lower case
+          docs <- tm::tm_map(docs, tm::content_transformer(tolower))
+          
+          # Remove punctuations
+          docs <- tm::tm_map(docs, tm::removePunctuation)
+          
+          # Remove numbers
+          docs <- tm::tm_map(docs, tm::removeNumbers)
+          
+          # Remove english common stopwords
+          docs <- tm::tm_map(docs, tm::removeWords, tm::stopwords("english"))
+          # Remove your own stop word
+          # ADD stopwords as a character vector
+          docs <- tm::tm_map(docs, tm::removeWords, global$vectors$wordcloud$skip) 
+          
+          # Remove whitespace
+          docs <- tm::tm_map(docs, tm::stripWhitespace)
+          
+          # # Text stemming
+          # docs <- tm_map(docs, stemDocument)
+          
+          doc_mat <- tm::TermDocumentMatrix(docs)
+          
+          m <- as.matrix(doc_mat)
+          
+          v <- sort(rowSums(m), decreasing = TRUE)
+          
+          word_freq <- data.frame(name = names(v), value = v)
+          
+          # - - return - - 
+          
+          head(word_freq, 30)
+        }
+        
+        wordcloud_plot <- wordcloud2::wordcloud2(data = data.frame(word = res$name,
+                                                                   freq = res$value), 
+                                                 size = 0.7, 
+                                                 shuffle = FALSE,
+                                                 fontFamily = options$font4,
+                                                 ellipticity = 1, 
+                                                 minRotation = -pi/8, 
+                                                 maxRotation = pi/8,
+                                                 shape = 'heart')
+        output$wordcloud_desc  <- wordcloud2::renderWordcloud2(wordcloud_plot)
         
         output$match_pie_add <- plotly::renderPlotly({
           plot_ly(adduct_dist, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
@@ -2716,7 +2726,7 @@ shinyServer(function(input, output, session) {
       
       output$match_tab <-DT::renderDataTable({
         
-        remove_cols = c("description","structure", "baseformula", "dppm")
+        remove_cols = global$vectors$remove_match_cols
         remove_idx <- which(colnames(global$tables$last_matches) %in% remove_cols)
         # don't show some columns but keep them in the original table, so they can be used
         # for showing molecule descriptions, structure
@@ -2725,11 +2735,11 @@ shinyServer(function(input, output, session) {
         }else{
           data.table()
         },
-                      selection = 'single',
-                      autoHideNavigation = T,
-                      options = list(lengthMenu = c(5, 10, 15), 
-                                     pageLength = 5,
-                                     columnDefs = list(list(visible=FALSE, targets=remove_idx))))
+        selection = 'single',
+        autoHideNavigation = T,
+        options = list(lengthMenu = c(5, 10, 15), 
+                       pageLength = 5,
+                       columnDefs = list(list(visible=FALSE, targets=remove_idx))))
       })
     }
   })
@@ -2759,14 +2769,15 @@ shinyServer(function(input, output, session) {
       })
     })
   })
-    
+  
   # triggers on clicking a row in the match results table
   observeEvent(input$match_tab_rows_selected,{
     curr_row <<- input$match_tab_rows_selected # get current row
     if (is.null(curr_row)) return()
+    curr_name <<- global$tables$last_matches[curr_row,'name'][[1]]
+    updateTextInput(session, "pm_query", value = curr_name)
     # write to clipboard
     if(input$auto_copy){
-      curr_name <<- global$tables$last_matches[curr_row,'name'][[1]]
       clipr::write_clip(curr_name)
       print('copied to clipboard ( ˘ ³˘)♥')
     }
@@ -3150,7 +3161,7 @@ shinyServer(function(input, output, session) {
   # mummichog
   
   observeEvent(input$do_mummi, {
-
+    
     
     peak_tbl <- if(mSet$dataSet$cls.num == 2){
       if("tt" %in% names(mSet$analSet)){
@@ -3161,7 +3172,7 @@ shinyServer(function(input, output, session) {
           `t.score` = mSet$analSet$tt$sig.mat[,"t.stat"]
         )
       }else{continue=F;
-            NULL}
+      NULL}
     }else{
       if("aov" %in% names(mSet$analSet)){
         continue = T
@@ -3171,7 +3182,7 @@ shinyServer(function(input, output, session) {
           `t.score` = mSet$analSet$aov$sig.mat[,"F.stat"]
         )
       }else{continue=F;
-            NULL}
+      NULL}
     }
     
     if(!continue) NULL
@@ -3204,7 +3215,7 @@ shinyServer(function(input, output, session) {
       global$tables <<- mummi$mummi.resmat
       output[[paste0("mummi_", substr(mode, 1, 3), "_tab")]] <- DT::renderDataTable({
         DT::datatable(mummi$mummi.resmat,selection = "single")
-        })
+      })
       # output[[paste0("mummi_", substr(mode, 1, 3), "_plot")]] <- renderPlotly({
       #   p <- ggplot(data = {
       #     tbl <- mummi$mummi.resmat
@@ -3236,6 +3247,62 @@ shinyServer(function(input, output, session) {
     output[[paste0("mummi_detail_tab")]] <- DT::renderDataTable({
       DT::datatable(data.table("no pathway selected"="Please select a pathway!")) 
     })
+  })
+  
+  observeEvent(input$search_pubmed, {
+    
+    withProgress({
+      
+      abstr <- RISmed::EUtilsSummary(
+        as.character(input$pm_query), 
+        type="esearch", 
+        db="pubmed", 
+        datetype='pdat', 
+        mindate=input$pm_year[1], 
+        maxdate=input$pm_year[2], 
+        retmax=as.numeric(input$pm_max))
+      
+      setProgress(0.2)
+      
+      fetch <- RISmed::EUtilsGet(abstr)
+      
+      if(length(fetch@PMID) > 0){
+        res <- abstracts2wordcloud(abstracts = fetch, 
+                                   top = 30)
+        
+        setProgress(0.4)
+        
+        tbl <- data.frame(
+          pmids = RISmed::PMID(fetch),
+          titles = RISmed::ArticleTitle(fetch)
+          #abstracts = RISmed::AbstractText(fetch)
+        )
+        
+        setProgress(0.6)
+        
+        wordcloud_plot <- wordcloud2::wordcloud2(data = data.frame(word = res$stsp,
+                                                                   freq = res$Freq), 
+                                                 size = 0.7, 
+                                                 shuffle = FALSE, 
+                                                 ellipticity = 1,
+                                                 fontFamily = options$font4,
+                                                 minRotation = -pi/8, 
+                                                 maxRotation = pi/8,
+                                                 shape = 'heart')
+        
+        setProgress(0.8)
+        
+        output$wordcloud_pubmed  <- wordcloud2::renderWordcloud2(wordcloud_plot)
+      }else{
+        tbl <- data.table("no papers found" = "Please try another term!	(｡•́︿•̀｡)")	
+      }
+
+      output$pm_tab <- DT::renderDataTable({
+        DT::datatable(tbl,
+                      selection = "single")
+      })
+    })
+    
   })
   
   # this SHOULD trigger on closing the app
