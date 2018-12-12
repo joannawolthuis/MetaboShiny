@@ -676,7 +676,7 @@ ggPlotBar <- function(data,
     
   }else{
     p <- ggplot(data[1:topn,], aes(mz,mda)) + geom_bar(stat = "identity", aes(fill = mda)) +
-      geom_hline(aes(yintercept=attempts)) + 
+      #geom_hline(aes(yintercept=attempts)) + 
       scale_fill_gradientn(colors=cf(20)) +
       plot.theme() + 
       theme(legend.position="none",

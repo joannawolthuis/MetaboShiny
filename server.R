@@ -89,13 +89,6 @@ shinyServer(function(input, output, session) {
     if(exists("mSet")){
       if(is.null(mSet$timeseries)) mSet$timeseries <<- FALSE
       datamanager$mset_present = TRUE
-      # - - -
-      if(mSet$dataSet$cls.num <= 1){
-        interface$mode <- NULL } 
-      else if(mSet$dataSet$cls.num == 2){
-        interface$mode <- "bivar"}
-      else{
-        interface$mode <- "multivar"}
     }else{
       datamanager$mset_present = FALSE
     }
@@ -130,7 +123,6 @@ shinyServer(function(input, output, session) {
   }
   
   observeEvent(input$change_subset, {
-    print("WIP")
     print(input$subset_var)
     print(input$subset_group)
     
@@ -190,9 +182,7 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$reset_subset, {
-    
-    print("WIP")
-    
+
     # save previous
     mSet$storage[[mSet$dataSet$cls.name]] <<- list(data = mSet$dataSet,
                                                    analysis = mSet$analSet)
@@ -1443,8 +1433,15 @@ shinyServer(function(input, output, session) {
       mSet <<- mSet
       
       # tell datamanager that an mset is present 
-      datamanager$mset_present = TRUE
-      datamanager$reload <- "general"    
+      #datamanager$mset_present <- TRUE
+      #datamanager$reload <- "general"    
+      
+      if(mSet$dataSet$cls.num <= 1){
+        interface$mode <- NULL } 
+      else if(mSet$dataSet$cls.num == 2){
+        interface$mode <- "bivar"}
+      else{
+        interface$mode <- "multivar"}
       
       # - - - - - - - - - -
       
@@ -1679,7 +1676,6 @@ shinyServer(function(input, output, session) {
                  }else{
                    timebutton$status <- "off"
                  }
-                 
                  # show a button with t-test or fold-change analysis if data is bivariate. hide otherwise.
                  # TODO: add button for anova/other type of sorting...
                  if(mSet$dataSet$cls.num == 2 ){
@@ -1687,6 +1683,13 @@ shinyServer(function(input, output, session) {
                  }else{
                    heatbutton$status <- NULL
                  }
+                 # tab loading
+                 if(mSet$dataSet$cls.num <= 1){
+                   interface$mode <- NULL } 
+                 else if(mSet$dataSet$cls.num == 2){
+                   interface$mode <- "bivar"}
+                 else{
+                   interface$mode <- "multivar"}
                },
                venn = {
                  if("storage" %in% names(mSet)){
@@ -2515,7 +2518,7 @@ shinyServer(function(input, output, session) {
     
     print(d)
     
-    if(input$statistics %in% c("tt", "fc", "rf", "aov", "volc", "lasnet")){ # these cases need the same processing and use similar scoring systems
+    if(input$statistics %in% c("tt", "fc", "rf", "aov", "volc")){ # these cases need the same processing and use similar scoring systems
       if('key' %not in% colnames(d)) return(NULL)
       mzs <- switch(input$statistics, 
                     tt = names(mSet$analSet$tt$p.value),
@@ -2588,12 +2591,7 @@ shinyServer(function(input, output, session) {
             
           }
         }, bar = { # for bar plot just grab the # bar clicked
-          curr_cpd <<- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar[d$x,"mz"][[1]]
-          # plot underneath? TODO: remove, should just be in sidebar miniplot
-          output$ml_specific_plot <- plotly::renderPlotly({
-            # --- ggplot ---
-            ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
-          })
+          curr_cpd <<- as.character(mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar[d$x,"mz"])
         })}else if(grepl(pattern = "heatmap", x = input$statistics)){ # heatmap requires the table used to make it saved to global (hmap_mzs)
           if(!exists("hmap_mzs")) return(NULL)
           if(d$y > length(hmap_mzs)) return(NULL)
