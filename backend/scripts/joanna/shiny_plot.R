@@ -981,20 +981,12 @@ ggPlotVenn <- function(mSet,
     categories = grep(unlist(venn_yes$now), 
                       pattern = rgx_exp, value = T)
     
-    print(categories)
-    
     categories = gsub(categories, pattern = "\\(\\s*(.+)\\s*\\)", replacement = "")
-    
-    print(experiment)
     
     # go through the to include analyses
     tables <- lapply(categories, function(name){
       
-      print(name)
-      
       base_name <- gsub(name, pattern = " -.*$| ", replacement="")
-      
-      print(base_name)
       
       # fetch involved mz values 
       tbls <- switch(base_name,
@@ -1164,20 +1156,40 @@ ggPlotVenn <- function(mSet,
   }
   
   # generate plot with ggplot
-  p <- ggplot(datapoly, 
-              aes(x = x, 
+  p <- ggplot(datapoly,   
+              aes(x = x,
                   y = y)) + geom_polygon(colour="black", alpha=0.5, aes(fill=id, group=id)) +
-    geom_text(mapping = aes(x=x, y=y, label=value), data = headers, size = 3) +
-    geom_text(mapping = aes(x=x, y=y, label=value), data = numbers, size = 4) +
-    theme_void() +
-    theme(legend.position="none",
-          text=element_text(size=),
-          panel.grid = element_blank()) +
-    #scale_fill_gradientn(colors = rainbow(circles)) + 
-    scale_fill_gradientn(colours = 
+  geom_text(mapping = aes(x=x, y=y, label=value), data = numbers, size = 6, hjust = 0) +
+  theme_void() +
+  theme(legend.position="none",
+        text=element_text(size=),
+        panel.grid = element_blank()) +
+  #scale_fill_gradientn(colors = rainbow(circles)) + 
+  scale_fill_gradientn(colours = 
                            cf(circles)) +
-    coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
-  
+  coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
+
+  # - - white outline - - 
+  theta <- seq(pi/8, 2*pi, length.out=16)
+  xo <- diff(range(headers$x))/200
+  yo <- diff(range(headers$y))/200
+  for(i in theta) {
+    p <- p + geom_text(data = headers,
+                       mapping = aes_q(x = bquote(x+.(cos(i)*xo)),
+                                       y = bquote(y+.(sin(i)*yo)),
+                                       label = quote(gsub(value, 
+                                                    pattern = ":", 
+                                                    replacement = "\n"))),
+                       size=4, colour='white')
+  }
+  p <- p + geom_text(mapping = aes(x=x, y=y, label=gsub(value, 
+                                                        pattern = ":", 
+                                                        replacement = "\n")), 
+                     data = headers, 
+                     size = 4, hjust = 0, 
+                     fontface = 2) +
+    scale_x_continuous(expand = c(.1, .1)) + 
+    scale_y_continuous(expand = c(.1, .1))
   if(plotlyfy){
     ggplotly(p)
   }else{

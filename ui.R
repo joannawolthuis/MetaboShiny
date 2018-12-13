@@ -509,7 +509,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
 																                            plotly::plotlyOutput("venn_plot",inline = F),
 																                            # find the overlapping compounds between the groups you want to compare (user select)
 																                            # TODO: enable this with clicking the numbers/areas
-																                            fluidRow(selectInput("intersect_venn", label = "Show overlap between:", selected = 1,choices = "",multiple = T),
+																                            fluidRow(selectInput("intersect_venn", label = "Show hits from (only):", selected = 1,choices = "",multiple = T),
 																                                     align="center"),
 																                            fluidRow(div(DT::dataTableOutput('venn_tab'),style='font-size:80%'), 
 																                                     align="center")
@@ -612,7 +612,8 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                            bsCollapse(bsCollapsePanel(title=h2("Compound info"), style="warning",
                                                                                                                       tabsetPanel(id="tab_iden_2", 
                                                                                                                                   tabPanel(title=icon("atlas"),
-                                                                                                                                           div(textOutput("curr_definition"))
+                                                                                                                                           wellPanel(id = "def",style = "overflow-y:scroll; max-height: 200px",
+                                                                                                                                                     textOutput("curr_definition"))
                                                                                                                                   ),
                                                                                                                                   tabPanel(title=icon("atom"),
                                                                                                                                            textOutput("curr_formula"),

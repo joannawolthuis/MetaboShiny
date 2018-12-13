@@ -9,11 +9,13 @@ shinyServer(function(input, output, session) {
   # set progress bar style to 'old' (otherwise it's not movable with CSS)
   shinyOptions(progress.style="old")
   
+  options(digits=22)
+  
   # send specific functions/packages to other threads
   parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
     "mape",
-    "flattenlist"
-  ))
+    "flattenlist"))
+  
   parallel::clusterEvalQ(session_cl, library(data.table))
   
   # create default text objects in UI
@@ -123,9 +125,7 @@ shinyServer(function(input, output, session) {
   }
   
   observeEvent(input$change_subset, {
-    print(input$subset_var)
-    print(input$subset_group)
-    
+
     # save previous
     mset_name <- get_mset_name(mainvar = mSet$dataSet$cls.name,
                                subsetvar = NULL,
@@ -137,8 +137,6 @@ shinyServer(function(input, output, session) {
     mset_name <- get_mset_name(mainvar = gsub(mSet$dataSet$cls.name, pattern = ":.*", replacement = ""),
                                subsetvar = input$subset_var,
                                subsetgroups = input$subset_group)
-    
-    print(mset_name)
     
     if(mset_name %in% names(mSet$storage)){
       mSet$dataSet <<- mSet$storage[[mset_name]]$data
@@ -158,7 +156,6 @@ shinyServer(function(input, output, session) {
         mSet$dataSet$time.fac <<- mSet$dataSet$time.fac[keep.log.norm]
         mSet$dataSet$exp.fac <<- mSet$dataSet$exp.fac[keep.log.norm]
       } 
-      print(paste0("Samples left: ", length(keep.samples)))
     }
     global$constants$last_mset <<- mset_name
     mSet$analSet <<- NULL
@@ -182,7 +179,7 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$reset_subset, {
-
+    
     # save previous
     mSet$storage[[mSet$dataSet$cls.name]] <<- list(data = mSet$dataSet,
                                                    analysis = mSet$analSet)
@@ -306,7 +303,7 @@ shinyServer(function(input, output, session) {
       facA <- as.factor(mSet$dataSet$covars[,gsub(mSet$dataSet$cls.name, pattern = ":.*|\\(.*", replacement = ""), with=F][[1]])
       facB <- mSet$dataSet$covars[,"time"][[1]]
       
-
+      
       # change mSet experimental factors (these are used in ASCA/MEBA etc.)
       mSet$dataSet$exp.fac <<- as.factor(facA)
       mSet$dataSet$time.fac <<- as.factor(facB)
@@ -1581,13 +1578,27 @@ shinyServer(function(input, output, session) {
              })
            },
            aov = {
-             redo = switch(input$timecourse_trigger,
-                           {!"aov2" %in% names(mSet$analSet)},
-                           {!"aov" %in% names(mSet$analSet)})
+             if(!is.null(input$timecourse_trigger)){
+               redo = switch(input$timecourse_trigger,
+                             {!"aov2" %in% names(mSet$analSet)},
+                             {!"aov" %in% names(mSet$analSet)})
+             }else{
+               redo = !"aov" %in% names(mSet$analSet)
+             }
+             
              if(redo){ # if done, don't redo
                withProgress({
                  #mSet <<- ANOVA.Anal(mSet, thresh=0.05,nonpar = F) # TODO: make threshold user-defined
-                 mSet <<- if(input$timecourse_trigger) ANOVA2.Anal(mSet, 0.05, "fdr", "time", 3, 1) else ANOVA.Anal(mSet, thresh=0.05,nonpar = F)
+                 if(!is.null(input$timecourse_trigger)){
+                   mSet <<- if(input$timecourse_trigger){
+                     ANOVA2.Anal(mSet, 0.05, "fdr", "time", 3, 1)
+                   }else{
+                     ANOVA.Anal(mSet, thresh=0.05,nonpar = F)
+                   }
+                 }else{
+                   mSet <<- ANOVA.Anal(mSet, thresh=0.05,nonpar = F)
+                 }
+                 
                })
              }
              datamanager$reload <- "aov"
@@ -1650,8 +1661,6 @@ shinyServer(function(input, output, session) {
       if(is.null(datamanager$reload)){
         NULL # if not reloading anything, nevermind
       }else{
-        print("datamanager active...")
-        print(datamanager$reload)
         switch(datamanager$reload,
                general = {
                  # change interface
@@ -1729,24 +1738,34 @@ shinyServer(function(input, output, session) {
                },
                aov = {
                  
-                 #if(is.null(input$timecourse_trigger)) input$timecourse_trigger <- FALSE
-                 
-                 present = switch(input$timecourse_trigger,
-                                  {"aov2" %in% names(mSet$analSet)},
-                                  {"aov" %in% names(mSet$analSet)})
-                 
-                 if(present){
-                   if(input$timecourse_trigger){ # send time series anova to normal anova storage
-                     which.anova <- "aov2"
-                     keep <- grepl("adj\\.p", colnames(mSet$analSet$aov2$sig.mat))
-                   }else{
-                     which.anova = "aov"
-                     keep <- grepl("adj\\.p", colnames(mSet$analSet$aov$sig.mat))
+                 if(!is.null(input$timecourse_trigger)){
+                   present = switch(input$timecourse_trigger,
+                                    {"aov2" %in% names(mSet$analSet)},
+                                    {"aov" %in% names(mSet$analSet)})
+                   if(present){
+                     if(input$timecourse_trigger){ # send time series anova to normal anova storage
+                       which.anova <- "aov2"
+                       keep <- grepl("adj\\.p", colnames(mSet$analSet$aov2$sig.mat))
+                     }else{
+                       which.anova = "aov"
+                       keep <- c("p.value", "FDR", "Fisher's LSD")
+                     }
                    }
-                   
+                 }else{
+                   present = "aov" %in% names(mSet$analSet)
+                   if(present){
+                     which.anova = "aov"
+                     keep <- c("p.value", "FDR", "Fisher's LSD")
+                   }
+                 }
+
+                 if(present){
                    # render results table for UI
                    output$aov_tab <- DT::renderDataTable({
-                     DT::datatable(if(is.null(mSet$analSet[[which.anova]]$sig.mat[,keep])) data.table("No significant hits found") else mSet$analSet[[which.anova]]$sig.mat[,keep], 
+                     DT::datatable(if(is.null(mSet$analSet[[which.anova]]$sig.mat)){
+                       data.table("No significant hits found")
+                       }else{mSet$analSet[[which.anova]]$sig.mat[,keep]
+                         }, 
                                    selection = 'single',
                                    autoHideNavigation = T,
                                    options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -2096,7 +2115,8 @@ shinyServer(function(input, output, session) {
       # reorder according to covars table (will be used soon)
       if(!is.null(input$timecourse_trigger)){
         if(input$timecourse_trigger){
-          config <- unique(mSet$dataSet$covars[, c("sample", "sex")]) # reorder so both halves match up later
+          config <- unique(mSet$dataSet$covars[, c("sample", 
+                                                   "sex")]) # reorder so both halves match up later
           config$sample <- gsub(x = config$sample, pattern = "_T\\d", replacement = "")
           config <- unique(config)
           order <- match(config$sample,rownames(curr))
@@ -2452,9 +2472,15 @@ shinyServer(function(input, output, session) {
                                                     plsda_load = mSet$analSet$plsda$vip.mat,
                                                     ml = ml_tab, #TODO: fix this, now in global
                                                     asca = mSet$analSet$asca$sig.list$Model.ab,
-                                                    aov = switch(input$timecourse_trigger,
-                                                                 mSet$analSet$aov2$sig.mat, 
-                                                                 mSet$analSet$aov$sig.mat),
+                                                    aov = {
+                                                      if(!is.null(input$timecourse_trigger)){
+                                                        switch(input$timecourse_trigger,
+                                                               mSet$analSet$aov2$sig.mat, 
+                                                               mSet$analSet$aov$sig.mat)  
+                                                      }else{
+                                                        mSet$analSet$aov$sig.mat
+                                                      }
+                                                    },
                                                     rf = vip.score,
                                                     enrich_pw = enrich_overview_tab,
                                                     meba = mSet$analSet$MB$stats,
@@ -2514,8 +2540,6 @@ shinyServer(function(input, output, session) {
   observeEvent(plotly::event_data("plotly_click"),{ 
     
     d <- plotly::event_data("plotly_click") # get click details (which point, additional included info, etc..)
-    
-    print(d)
     
     if(input$statistics %in% c("tt", "fc", "rf", "aov", "volc")){ # these cases need the same processing and use similar scoring systems
       if('key' %not in% colnames(d)) return(NULL)
@@ -2857,7 +2881,6 @@ shinyServer(function(input, output, session) {
   observeEvent(input$venn_add, {
     # add to the 'selected' table
     rows <- input$venn_unselected_rows_selected
-    print(rows)
     # get members and send to members list
     added = venn_no$now[rows,]
     venn_yes$now <- data.frame(c(unlist(venn_yes$now), added))
@@ -2867,7 +2890,6 @@ shinyServer(function(input, output, session) {
   observeEvent(input$venn_remove, {
     # add to the 'selected' table
     rows <- input$venn_selected_rows_selected
-    print(rows)
     # get members and send to non members list
     removed = venn_yes$now[rows,]
     venn_no$now <- data.frame(c(unlist(venn_no$now), removed))
@@ -2899,8 +2921,6 @@ shinyServer(function(input, output, session) {
     # get user input for how many top values to use for venn
     top = input$venn_tophits
     
-    print(venn_yes$now)
-    
     if(length(venn_yes$now) > 5 | length(venn_yes) == 0){
       print("can only take more than zero and less than five")
       NULL 
@@ -2913,7 +2933,7 @@ shinyServer(function(input, output, session) {
       # render plot in UI
       output$venn_plot <- plotly::renderPlotly({
         
-        ggplotly(p, tooltip = "label")
+        ggplotly(p, tooltip = "label", height = "600px")
         
       })
       # update the selectize input that the user can use to find which hits are intersecting
@@ -2924,38 +2944,45 @@ shinyServer(function(input, output, session) {
   
   # triggers when users pick which intersecting hits they want
   observeEvent(input$intersect_venn, {
+
+    print(input$intersect_venn)
     
-    if(length(input$intersect_venn) > 1){
+    if(length(input$intersect_venn) == 0){
+      global$tables$venn_overlap <<- data.frame()
+    }else if(length(input$intersect_venn) == 1){
+      
+      l = global$vectors$venn_lists
+      # Get the combinations of names of list elements
+      nms <- combn( names(l) , 2 , FUN = paste0 , collapse = "  ~ " , simplify = FALSE )
+      
+      # Make the combinations of list elements
+      ll <- combn( l , 2 , simplify = FALSE )
+      
+      # Intersect the list elements
+      out <- lapply( ll , function(x) ( intersect( x[[1]] , x[[2]] ) ) )
+      
+      # Output with names
+      intersecties <- unique(unlist(out))
+      
+      uniqies = global$vectors$venn_lists[[input$intersect_venn]]
+      global$tables$venn_overlap <<- setdiff(uniqies,intersecties)
+    }else{
       global$tables$venn_overlap <<- Reduce("intersect", lapply(input$intersect_venn, function(x){ # get the intersecting hits for the wanted tables
         global$vectors$venn_lists[[x]]
-      })
-      )
-      
-      tbl <- data.frame(mz = global$tables$venn_overlap)
-      rownames(tbl) <- global$tables$venn_overlap
-      
-      global$tables$venn_overlap <<- tbl
-      
-      if(length(global$tables$venn_overlap) > 0){
-        output$venn_tab <- DT::renderDataTable({
-          # -------------
-          DT::datatable(tbl, 
-                        selection = 'single',
-                        rownames = F,
-                        autoHideNavigation = T,
-                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-        }) 
-      }else{
-        output$venn_tab <- DT::renderDataTable({
-          # -------------
-          DT::datatable(data.table(), 
-                        selection = 'single',
-                        rownames = F,
-                        autoHideNavigation = T,
-                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-        })
-      }
+      }))
     }
+    
+    global$tables$venn_overlap <<- data.frame(mz = global$tables$venn_overlap)
+    rownames(global$tables$venn_overlap) <<- global$tables$venn_overlap$mz
+    
+    output$venn_tab <- DT::renderDataTable({
+        # -------------
+        DT::datatable(global$tables$venn_overlap, 
+                      selection = 'single',
+                      rownames = F,
+                      autoHideNavigation = T,
+                      options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+      }) 
   })
   
   dataModal <- function(failed = FALSE) {
@@ -3159,7 +3186,6 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$do_mummi, {
     
-    
     peak_tbl <- if(mSet$dataSet$cls.num == 2){
       if("tt" %in% names(mSet$analSet)){
         continue = T
@@ -3193,6 +3219,7 @@ shinyServer(function(input, output, session) {
     DBI::dbDisconnect(conn)
     
     for(mode in c("positive", "negative")){
+      
       path <- tempfile()
       fwrite(x = peak_tbl, file = path, sep = "\t")
       mummi<-InitDataObjects("mass_all", "mummichog", FALSE)
@@ -3213,33 +3240,6 @@ shinyServer(function(input, output, session) {
       output[[paste0("mummi_", substr(mode, 1, 3), "_tab")]] <- DT::renderDataTable({
         DT::datatable(mummi$mummi.resmat,selection = "single")
       })
-      # output[[paste0("mummi_", substr(mode, 1, 3), "_plot")]] <- renderPlotly({
-      #   p <- ggplot(data = {
-      #     tbl <- mummi$mummi.resmat
-      #     tbl <- as.data.table(tbl, keep.rownames = T)
-      #     colnames(tbl)[1] <- "Pathway"
-      #     ## set the levels in order we want
-      #     tbl <- within(tbl,
-      #                   Pathway <- factor(Pathway,
-      #                                     levels=names(sort(Gamma,
-      #                                                       decreasing=FALSE))))
-      #     # - - - - -
-      #     tbl
-      #     }) + geom_bar(mapping = aes(x = Pathway, y = Gamma, fill = Gamma), stat = "identity") +
-      #     geom_hline(aes(yintercept=0.05)) + 
-      #     scale_fill_gradientn(colors=global$functions$cf(20)) +
-      #     global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]]() + 
-      #     theme(legend.position="none",
-      #           axis.text=element_text(size=global$constants$font.aes$ax.num.size),
-      #           axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
-      #           legend.title.align = 0.5,
-      #           axis.line = element_line(colour = 'black', size = .5),
-      #           axis.text.x=element_blank(),
-      #           axis.ticks.x=element_blank(),
-      #           text = element_text(family = global$constants$font.aes$font))+
-      #           labs(x="gamma",y="p-value")
-      #   ggplotly(p)
-      #  })
     }
     output[[paste0("mummi_detail_tab")]] <- DT::renderDataTable({
       DT::datatable(data.table("no pathway selected"="Please select a pathway!")) 
@@ -3293,12 +3293,16 @@ shinyServer(function(input, output, session) {
       }else{
         tbl <- data.table("no papers found" = "Please try another term!	(｡•́︿•̀｡)")	
       }
-
+      
       output$pm_tab <- DT::renderDataTable({
         DT::datatable(tbl,
-                      selection = "single")
+                      selection = "single",
+                      options = list(lengthMenu = c(5, 10, 15), 
+                                     pageLength = 5)
+                      )
       })
-    })
+    
+      })
     
   })
   
