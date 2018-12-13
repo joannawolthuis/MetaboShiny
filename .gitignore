@@ -1,4 +1,4 @@
-user_options.txt
+*.txt
 .Rproj.user
 .Rhistory
 *.json

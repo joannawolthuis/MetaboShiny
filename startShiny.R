@@ -58,6 +58,7 @@ metanr_packages <- function(){
 # -- IF YOU HAVE PROBLEMS STARTING UP --
 # requires openssl, libcurl, libxt, 
 # libxml2, libnetcdf, cairo, java, mesa-common, 
+# libgit2, 
 # libgl1, libglu1, libpng installed
 
 # packages needed to start up

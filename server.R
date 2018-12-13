@@ -282,19 +282,7 @@ shinyServer(function(input, output, session) {
       
       mSet$timeseries <<- TRUE
       
-      # save previous mset 
-      mset_name = mSet$dataSet$cls.name
-      
-      # TODO: use this in venn diagram creation
-      mSet$storage[[mset_name]] <<- list(analysis = mSet$analSet)
-      
-      # adjust mset design type (necessary for metaboanalystr)
-      SetDesignType(mSet, "time")
-      mSet$analSet$type <<- "time"
-      # rename some factors of interest (your experimental variable, and 'time') as A and B
-      facA <- as.factor(mSet$dataSet$covars[,mSet$dataSet$cls.name, with=F][[1]])
-      facB <- mSet$dataSet$covars[,"time"][[1]]
-      
+      # subset
       subset <- if(grepl(mSet$dataSet$cls.name, pattern = ":")){
         strsplit(x = gsub(mSet$dataSet$cls.name, pattern = ".*:", replacement = ""), split = "\\+")[[1]]
       }else{
@@ -302,11 +290,23 @@ shinyServer(function(input, output, session) {
       }
       
       # save previous analyses (should be usable in venn diagram later)
-      mset_name = get_mset_name(mainvar = gsub(mSet$dataSet$cls.name, pattern = ":.*", replacement = ""),
+      mset_name = get_mset_name(mainvar = gsub(mSet$dataSet$cls.name, pattern = ":.*|\\(.*", replacement = ""),
                                 subsetvar = NULL,
                                 subsetgroups = subset,
                                 timeseries = T)
       
+      # TODO: use this in venn diagram creation
+      mSet$storage[[mset_name]] <<- list(analysis = mSet$analSet)
+      mSet$dataSet$cls.name <<- mset_name
+      
+      # adjust mset design type (necessary for metaboanalystr)
+      SetDesignType(mSet, "time")
+      mSet$analSet$type <<- "time"
+      # rename some factors of interest (your experimental variable, and 'time') as A and B
+      facA <- as.factor(mSet$dataSet$covars[,gsub(mSet$dataSet$cls.name, pattern = ":.*|\\(.*", replacement = ""), with=F][[1]])
+      facB <- mSet$dataSet$covars[,"time"][[1]]
+      
+
       # change mSet experimental factors (these are used in ASCA/MEBA etc.)
       mSet$dataSet$exp.fac <<- as.factor(facA)
       mSet$dataSet$time.fac <<- as.factor(facB)
@@ -314,7 +314,6 @@ shinyServer(function(input, output, session) {
       mSet$dataSet$facB <<- mSet$dataSet$time.fac;
       mSet$dataSet$facA.lbl <<- mSet$dataSet$cls.name
       mSet$dataSet$facB.lbl <<- "time"
-      mSet$dataSet$cls.name <<- mset_name
       
       # change interface to timeseries mode (make 'interface' manager do it)
       interface$mode <- "time"
