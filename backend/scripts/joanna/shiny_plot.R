@@ -219,14 +219,7 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
            stars = ""
            try({
              pval <- mSet$analSet$tt$sig.mat[which(rownames(mSet$analSet$tt$sig.mat) == curr_cpd), "p.value"]
-             if(length(pval) == 0){
-               stars <- ""
-             }else{
-               if(pval > 0.05) stars <- "n.s."
-               else if(pval < 0.05 & pval > 0.01) stars <- "*"
-               else if(pval < 0.01 & pval > 0.001) stars <- "***"
-               else stars <- "****"
-             } 
+             stars <- p2stars(pval)
            })
            # -----------
            
@@ -974,7 +967,8 @@ ggPlotVenn <- function(mSet,
   table_list <- lapply(experiments, function(experiment){
 
     analysis = mSet$storage[[experiment]]$analysis
-
+    data = mSet$storage[[experiment]]$data
+    
     rgx_exp <- gsub(experiment, pattern = "\\(", replacement = "\\\\(")
     rgx_exp <- gsub(rgx_exp, pattern = "\\)", replacement = "\\\\)")
     
@@ -1024,35 +1018,33 @@ ggPlotVenn <- function(mSet,
                        res
                      },
                      ls = {
-                       which.ls <- gsub(name, pattern = "^.*- ", replacement="")
-                       tbls_ls <- lapply(which.ls, function(name){ # which lasso subset?
-                         as.numeric(analysis$ml$ls[[name]]$tophits[order(analysis$ml$ls[[name]]$bar$count, 
-                                                                         decreasing = T),]$mz)})
+                       which.ls <- gsub(base.name, pattern = "^.*- ", replacement="")
+                       res <- as.numeric(as.character(analysis$ml$ls[[which.ls]]$tophits[order(analysis$ml$ls[[base.name]]$bar$count, 
+                                                                         decreasing = T),]$mz))
                        names(tbls_ls) <- paste0(which.ls, " (LS)")
                        # - - - 
-                       lapply(tbls_rf, function(x){as.numeric(as.character(x))})
-                       
+                       res
+
                      },
                      rf = {
-                       which.rf <- gsub(name, pattern = "^.*- ", replacement="")
-                       tbls_rf <- lapply(which.rf, function(name){ # which random forest subset?
-                         analysis$ml$rf[[name]]$bar[order(analysis$ml$rf[[name]]$bar$mda, 
-                                                          decreasing = T),]$mz})
-                       names(tbls_rf) <- paste0(which.rf, " (RF)")
+                       which.rf <- gsub(base.name, pattern = "^.*- ", replacement="")
+                       res <- as.numeric(as.character(analysis$ml$rf[[which.rf]]$bar[order(analysis$ml$rf[[which.rf]]$bar$mda, 
+                                                                  decreasing = T),]$mz))
+                       names(res) <- paste0(which.rf, " (RF)")
                        # - - -
-                       lapply(tbls_rf, function(x){as.numeric(as.character(x))})
+                       res
                      },
                      plsda = {
-                       which.plsda <- gsub(name, pattern = "^.*- ", replacement="")
-                       tbls_plsda <- lapply(which.plsda, function(name){ # which PC to use? (usually PC1 for PLS-DA)
-                         compounds_pc <- as.data.table(analysis$plsda$vip.mat,keep.rownames = T)
-                         colnames(compounds_pc) <- c("rn", paste0("PC", 1:(ncol(compounds_pc)-1)))
-                         ordered_pc <- setorderv(compounds_pc, name, -1)
-                         as.numeric(ordered_pc[, c("rn")][[1]])        
-                       })
-                       names(tbls_plsda) <- paste0(which.plsda, " (PLS-DA)")
+                       which.plsda <- gsub(base.name, pattern = "^.*- ", replacement="")
+                       
+                       compounds_pc <- as.data.table(analysis$plsda$vip.mat,keep.rownames = T)
+                       colnames(compounds_pc) <- c("rn", paste0("PC", 1:(ncol(compounds_pc)-1)))
+                       ordered_pc <- setorderv(compounds_pc, which.plsda, -1)
+                       as.numeric(ordered_pc[, c("rn")][[1]])  
+                       
+                       names(res) <- paste0(which.plsda, " (PLS-DA)")
                        # - - -
-                       tbls_plsda
+                       res
                      },
                      volc = {
                        res <- list(rownames(analysis$volcano$sig.mat))
@@ -1089,6 +1081,7 @@ ggPlotVenn <- function(mSet,
   names(flattened) <- gsub(x = names(flattened), pattern = "(.*\\.)(.*$)", replacement = "\\2")
   flattened <- lapply(flattened, function(x) x[!is.na(x)])
   
+  # TODO: this is sloppy... IDK
   global$vectors$venn_lists <<- flattened
   
   # how many circles need to be plotted? (# of included analysis)

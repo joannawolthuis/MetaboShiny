@@ -2975,6 +2975,24 @@ shinyServer(function(input, output, session) {
     global$tables$venn_overlap <<- data.frame(mz = global$tables$venn_overlap)
     rownames(global$tables$venn_overlap) <<- global$tables$venn_overlap$mz
     
+    # hypergeometric testing...
+    if(length(input$intersect_venn) == 2 & nrow(global$tables$venn_overlap) > 0){
+      
+      pval = 1 - phyper(nrow(global$tables$venn_overlap),
+                        length(global$vectors$venn_lists[[input$intersect_venn[1]]]),
+                        ncol(mSet$dataSet$norm) - length(global$vectors$venn_lists[[1]]),
+                        length(global$vectors$venn_lists[[input$intersect_venn[2]]]))
+      stars = p2stars(pval)
+      boxcolor = if(stars == "") "blue" else if(stars == "*") "green" else if(stars == "**") "yellow" else if(stars == "***") "orange" else if (stars == "****") "red"
+      output$venn_pval <- renderUI({
+        div(renderText({
+          paste0("significance: ", stars, " (p = ", pval, ")" )   
+        }), style=paste0("background:", boxcolor))
+      })
+    }else{
+      pval = NULL
+      output$venn_pval <- NULL
+    }
     output$venn_tab <- DT::renderDataTable({
         # -------------
         DT::datatable(global$tables$venn_overlap, 

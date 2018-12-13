@@ -511,6 +511,8 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
 																                            # TODO: enable this with clicking the numbers/areas
 																                            fluidRow(selectInput("intersect_venn", label = "Show hits from (only):", selected = 1,choices = "",multiple = T),
 																                                     align="center"),
+																                            fluidRow(uiOutput("venn_pval"), align="center"),
+																                            br(),
 																                            fluidRow(div(DT::dataTableOutput('venn_tab'),style='font-size:80%'), 
 																                                     align="center")
 																                          ))   

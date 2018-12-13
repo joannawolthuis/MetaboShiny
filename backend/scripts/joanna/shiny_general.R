@@ -145,3 +145,14 @@ abstracts2wordcloud <-function(abstracts, top=20){
   ord<-ord[order(ord$Freq, decreasing=TRUE),]
   head(ord, top)
 }
+
+p2stars = function(pval){
+  if(length(pval) == 0){
+    stars <- ""
+  }else{
+    if(pval > 0.05) stars <- "n.s."
+    else if(pval < 0.05 & pval > 0.01) stars <- "*"
+    else if(pval < 0.01 & pval > 0.001) stars <- "***"
+    else stars <- "****"
+  } 
+}

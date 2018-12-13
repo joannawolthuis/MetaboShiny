@@ -107,7 +107,7 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                              "BatchCorrMetabolomics", "R.utils", "rgl", "glmnet", "TSPred", 
                                              "VennDiagram", "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR", 
                                              "openxlsx", "doParallel", "missForest", "InterpretMSSpectrum",
-                                             "tm", "RISmed", "qdap", "extrafont", "sysfonts"
+                                             "tm", "RISmed", "qdap", "extrafont", "sysfonts", "gmp"
                                 ), # these packages are listed in the first tab and should include all necessary packages
                                 images = list(list(name = 'cute_package', path = 'www/cat.png', dimensions = c(80, 80)),
                                               list(name = 'internal_logo', path = 'www/umcinternal.png', dimensions = c(120, 120)),
