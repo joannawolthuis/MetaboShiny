@@ -966,30 +966,66 @@ ggPlotVenn <- function(mSet,
                        cols=global$vectors$mycols, 
                        cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], 
                        plotlyfy=TRUE){
-  
+
   experiments <- str_match(unlist(venn_yes$now), pattern = "\\(.*\\)")[,1]
-  experiments <- unique(gsub(experiments, pattern = "\\(|\\)", replacement=""))
+
+  experiments <- unique(gsub(experiments, pattern = "\\(\\s*(.+)\\s*\\)", replacement="\\1"))
   
   table_list <- lapply(experiments, function(experiment){
 
     analysis = mSet$storage[[experiment]]$analysis
-    categories = grep(unlist(venn_yes$now), pattern = experiment, value = T)
-    categories = gsub(categories, pattern = " \\(.*\\)", replacement = "")
+
+    rgx_exp <- gsub(experiment, pattern = "\\(", replacement = "\\\\(")
+    rgx_exp <- gsub(rgx_exp, pattern = "\\)", replacement = "\\\\)")
+    
+    categories = grep(unlist(venn_yes$now), 
+                      pattern = rgx_exp, value = T)
+    
+    print(categories)
+    
+    categories = gsub(categories, pattern = "\\(\\s*(.+)\\s*\\)", replacement = "")
+    
+    print(experiment)
     
     # go through the to include analyses
     tables <- lapply(categories, function(name){
       
-      base_name <- gsub(name, pattern = " -.*$", replacement="")
+      print(name)
+      
+      base_name <- gsub(name, pattern = " -.*$| ", replacement="")
+      
+      print(base_name)
       
       # fetch involved mz values 
       tbls <- switch(base_name,
+                     aov = {
+                       NULL
+                     },
+                     aov2 = {
+                       res = list(as.numeric(rownames(analysis$aov2$sig.mat[order(analysis$aov2$sig.mat[,"Interaction(adj.p)"],
+                                                                                  decreasing = F),])))
+                       names(res) = base_name
+                       res
+                     },
+                     asca = {
+                       res = list(as.numeric(rownames(analysis$asca$sig.list$Model.ab[order(analysis$asca$sig.list$Model.ab[,1],
+                                                                                            decreasing = T),])))
+                       names(res) = base_name
+                       res
+                     },
+                     MB = {
+                       res = list(as.numeric(rownames(analysis$MB$stats))[order(analysis$MB$stats[,1],
+                                                                              decreasing = T)])
+                       names(res) = base_name
+                       res
+                     },
                      tt = {
                        res = list(as.numeric(rownames(analysis$tt$sig.mat[order(analysis$tt$sig.mat[,2],
                                                                                 decreasing = F),])))
                        names(res) = base_name
                        res
                      },
-                     fc ={
+                     fc = {
                        res = list(as.numeric(rownames(analysis$fc$sig.mat[order(abs(analysis$fc$sig.mat[,2]), 
                                                                                 decreasing = F),])))
                        names(res) = base_name
@@ -998,11 +1034,12 @@ ggPlotVenn <- function(mSet,
                      ls = {
                        which.ls <- gsub(name, pattern = "^.*- ", replacement="")
                        tbls_ls <- lapply(which.ls, function(name){ # which lasso subset?
-                         as.numeric(analysis$ml$ls[[name]]$tophits[order(analysis$ml$ls[[name]]$tophits$count, 
+                         as.numeric(analysis$ml$ls[[name]]$tophits[order(analysis$ml$ls[[name]]$bar$count, 
                                                                          decreasing = T),]$mz)})
-                       names(tbls_ls) <- which.ls
+                       names(tbls_ls) <- paste0(which.ls, " (LS)")
                        # - - - 
-                       as.numeric(tbls_ls, na.rm=T)
+                       lapply(tbls_rf, function(x){as.numeric(as.character(x))})
+                       
                      },
                      rf = {
                        which.rf <- gsub(name, pattern = "^.*- ", replacement="")

@@ -58,7 +58,7 @@ metanr_packages <- function(){
 # -- IF YOU HAVE PROBLEMS STARTING UP --
 # requires openssl, libcurl, libxt, 
 # libxml2, libnetcdf, cairo, java, mesa-common, 
-# libgit2, 
+# libgit2, (LIKELY -devel versions)
 # libgl1, libglu1, libpng installed
 
 # packages needed to start up
@@ -69,7 +69,7 @@ base.packs <- c("httr", "curl", "git2r", "devtools",
                 "MetaboAnalystR", "BatchCorrMetabolomics", 
                 "colorRamps", "enviPat", "shinyalert",
                 "shinyWidgets", "colourpicker", "here",
-                "ECharts2Shiny", "shinyjqui")
+                "ECharts2Shiny", "shinyjqui", "later")
 
 # install the base packages needed to start up
 for(package in base.packs){
