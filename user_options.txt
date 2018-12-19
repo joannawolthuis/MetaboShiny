@@ -1,6 +1,6 @@
 db_dir = /Users/jwolthuis/Google Drive/MetaboShiny/backend/db
 work_dir = /Users/jwolthuis/Analysis/SP
-proj_name = URINE_LUNGCANCER
+proj_name = CATS_OCT18
 ppm = 2
 packages_installed = Y
 font1 = Supermercado One

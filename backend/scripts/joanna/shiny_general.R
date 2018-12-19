@@ -156,3 +156,13 @@ p2stars = function(pval){
     else stars <- "****"
   } 
 }
+
+# function to generate names for msets
+get_mset_name <- function(mainvar, subsetvar, subsetgroups, timeseries=FALSE){
+  if(timeseries){
+    mset_name = paste0(mainvar, "(timeseries)" ,if(!is.null(subsetgroups)) ":" else "", tolower(paste0(subsetgroups, collapse="+")))
+  }else{
+    mset_name = paste0(mainvar,if(!is.null(subsetgroups)) ":" else "",tolower(paste0(subsetgroups, collapse="+")))
+  }
+  mset_name
+}

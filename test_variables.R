@@ -46,7 +46,9 @@ input <- list(batch_var = c("batch", "country"),
 )
 
 {
-  mode = "plsda"
+
+mode = "plsda"
+
 input <- list(batch_var = c(""),
               exp_type = "stat",
               perc_limit = .8,
@@ -76,9 +78,9 @@ input <- list(batch_var = c(""),
               venn_tophits = 50,
               venn_members = c("tt", "plsda", "rf"),
               rf_choice = "all",
-              plsda_choice = "PC1"
-)
-}
+              plsda_choice = "PC1",
+              heatmap_topn = 100
+)}
 
 venn_yes <- list(now = data.frame(included = c(
   "tt (disease)",

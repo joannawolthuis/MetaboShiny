@@ -109,7 +109,8 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                              "openxlsx", "doParallel", "missForest", "InterpretMSSpectrum",
                                              "tm", "RISmed", "qdap", "extrafont", "sysfonts", "gmp"
                                 ), # these packages are listed in the first tab and should include all necessary packages
-                                images = list(list(name = 'cute_package', path = 'www/cat.png', dimensions = c(80, 80)),
+                                images = list(list(name = 'load_icon', path = 'www/cute.png', dimensions = c(100, 100)),
+                                              list(name = 'cute_package', path = 'www/cat.png', dimensions = c(80, 80)),
                                               list(name = 'internal_logo', path = 'www/umcinternal.png', dimensions = c(120, 120)),
                                               list(name = 'noise_logo', path = 'www/umcnoise.png', dimensions = c(120, 120)),
                                               list(name = 'hmdb_logo', path = 'www/hmdblogo.png', dimensions = c(150, 100)),
@@ -416,7 +417,14 @@ global$vectors$project_names <- unique(tools::file_path_sans_ext(list.files(opti
 
 # load existing file
 fn <- paste0(tools::file_path_sans_ext(global$paths$patdb), ".metshi")
-# 
+#
+
+if(exists("mSet")){
+  print("TESTING .. resetting analyses")
+  mSet$analSet <- NULL
+}
+
+
 # if(file.exists(fn) & !exists("mSet")){
 #   print("loading existing mset ..")
 #   load(fn)
