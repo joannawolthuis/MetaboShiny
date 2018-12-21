@@ -367,28 +367,51 @@ observe({
            },
            heatmap = {
              
-               output$heatmap <- plotly::renderPlotly({
+             breaks = seq(min(mSet$dataSet$norm), max(mSet$dataSet$norm), length = 256/2)
+             
+              output$heatmap <- plotly::renderPlotly({
                  
                  if(!is.null(mSet$analSet$heatmap$matrix)){
                    # create heatmap object
                    hmap <- suppressWarnings({
-                     heatmaply::heatmaply(mSet$analSet$heatmap$matrix[1:if(input$heatmap_topn < nrow(mSet$analSet$heatmap$matrix)) input$heatmap_topn else nrow(mSet$analSet$heatmap$matrix),],
-                                          Colv = mSet$analSet$heatmap$my_order, 
-                                          Rowv = T,
-                                          branches_lwd = 0.3,
-                                          margins = c(60, 0, NA, 50),
-                                          colors = global$functions$color.functions[[getOptions("user_options.txt")$gspec]](256),
-                                          col_side_colors = mSet$analSet$heatmap$translator[,!1],
-                                          col_side_palette = mSet$analSet$heatmap$colors,
-                                          subplot_widths = c(.9,.1),
-                                          subplot_heights = if(mSet$analSet$heatmap$my_order) c(.1, .05, .85) else c(.05,.95),
-                                          column_text_angle = 90,
-                                          xlab = "Sample",
-                                          ylab = "m/z",
-                                          showticklabels = c(T,F)
-                                          #label_names = c("m/z", "sample", "intensity") #breaks side colours...
-                     )
-                   })
+                     if(input$heatmap_scaleall){
+                       heatmaply::heatmaply(mSet$analSet$heatmap$matrix[1:if(input$heatmap_topn < nrow(mSet$analSet$heatmap$matrix)) input$heatmap_topn else nrow(mSet$analSet$heatmap$matrix),],
+                                            Colv = mSet$analSet$heatmap$my_order, 
+                                            Rowv = T,
+                                            branches_lwd = 0.3,
+                                            margins = c(60, 0, NA, 50),
+                                            col = global$functions$color.functions[[getOptions("user_options.txt")$gspec]],
+                                            col_side_colors = mSet$analSet$heatmap$translator[,!1],
+                                            col_side_palette = mSet$analSet$heatmap$colors,
+                                            subplot_widths = c(.9,.1),
+                                            subplot_heights = if(mSet$analSet$heatmap$my_order) c(.1, .05, .85) else c(.05,.95),
+                                            column_text_angle = 90,
+                                            xlab = "Sample",
+                                            ylab = "m/z",
+                                            showticklabels = c(T,F),
+                                            limits = c(min(mSet$dataSet$norm), max(mSet$dataSet$norm))
+                                            #label_names = c("m/z", "sample", "intensity") #breaks side colours...
+                       )  
+                     }else{
+                       heatmaply::heatmaply(mSet$analSet$heatmap$matrix[1:if(input$heatmap_topn < nrow(mSet$analSet$heatmap$matrix)) input$heatmap_topn else nrow(mSet$analSet$heatmap$matrix),],
+                                            Colv = mSet$analSet$heatmap$my_order, 
+                                            Rowv = T,
+                                            branches_lwd = 0.3,
+                                            margins = c(60, 0, NA, 50),
+                                            colors = global$functions$color.functions[[getOptions("user_options.txt")$gspec]](256),
+                                            col_side_colors = mSet$analSet$heatmap$translator[,!1],
+                                            col_side_palette = mSet$analSet$heatmap$colors,
+                                            subplot_widths = c(.9,.1),
+                                            subplot_heights = if(mSet$analSet$heatmap$my_order) c(.1, .05, .85) else c(.05,.95),
+                                            column_text_angle = 90,
+                                            xlab = "Sample",
+                                            ylab = "m/z",
+                                            showticklabels = c(T,F)
+                                            #label_names = c("m/z", "sample", "intensity") #breaks side colours...
+                       )
+                     }
+                     
+                  })
                    
                    # save the order of mzs for later clicking functionality
                    global$vectors$heatmap <<- hmap$x$layout$yaxis3$ticktext

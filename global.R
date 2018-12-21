@@ -419,10 +419,10 @@ global$vectors$project_names <- unique(tools::file_path_sans_ext(list.files(opti
 fn <- paste0(tools::file_path_sans_ext(global$paths$patdb), ".metshi")
 #
 
-if(exists("mSet")){
-  print("TESTING .. resetting analyses")
-  mSet$analSet <- NULL
-}
+# if(exists("mSet")){
+#   print("TESTING .. resetting analyses")
+#   mSet$analSet <- NULL
+# }
 
 # if(file.exists(fn) & !exists("mSet")){
 #   print("loading existing mset ..")

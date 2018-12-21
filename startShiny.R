@@ -82,6 +82,36 @@ for(package in base.packs){
 wdir <<- dirname(rstudioapi::getSourceEditorContext()$path) # TODO: make this not break when not running from rstudio
 setwd(wdir)
 
+# create options file if it doesnt exist yet
+if(!exists("./user_options.txt")){
+  default_options = 
+    gsubfn::fn$paste(strwrap(
+"db_dir = $wdir/backend/db
+work_dir = $wdir/analysis
+proj_name = MY_PROJECT
+ppm = 2
+packages_installed = Y
+font1 = Supermercado One
+font2 = Supermercado One
+font3 = Open Sans
+font4 = Open Sans
+col1 = #000000
+col2 = #DBDBDB
+col3 = #FFFFFF
+col4 = #FFFFFF
+size1 = 50
+size2 = 20
+size3 = 15
+size4 = 12
+taskbar_image = gemmy_rainbow.png
+gtheme = classic
+gcols = #000000&#FFA1C3&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
+gspec = RdGy", width=10000, simplify=TRUE))
+con = file("./user_options.txt", "w")
+writeLines(text = default_options, con = con, sep = "\n")
+close.connection(con)
+}
+
 # go run it! :-)
 shiny::runApp(".")#, launch.browser = T)
 
