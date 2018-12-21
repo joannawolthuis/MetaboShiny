@@ -31,6 +31,11 @@ observeEvent(input$heatmode, {
   datamanager$reload <- "heatmap"
 },ignoreInit = TRUE, ignoreNULL = T)
 
+observeEvent(input$heatsign, {
+  statsmanager$calculate <- "heatmap"
+  datamanager$reload <- "heatmap"
+},ignoreInit = TRUE, ignoreNULL = T)
+
 observeEvent(input$heatmap_topn, {
   if(!is.null(mSet$analSet$heatmap)){
     datamanager$reload <- "heatmap" # just reload

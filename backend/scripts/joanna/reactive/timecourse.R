@@ -87,14 +87,14 @@ observeEvent(input$timecourse_trigger, {
                               subsetvar = NULL,
                               subsetgroups = subset,
                               timeseries = F)
-    
+
     mSet$storage[[mset_name]] <<- list(analysis = mSet$analSet)
     mSet$analSet$type <<- "stat"
     
     # - - - - - - - - - - - -
     # rename experimental factors
     mSet$dataSet$cls.name <<- mset_name
-    mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,mSet$dataSet$cls.name, with=F][[1]])
+    mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,gsub(mSet$dataSet$cls.name, pattern = ":.*|\\(.*", replacement = ""), with=F][[1]])
     mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
     # remove old analSet
     mSet$analSet$pca <<- NULL
@@ -114,6 +114,10 @@ observeEvent(input$timecourse_trigger, {
     output$curr_name <- renderText({mSet$dataSet$cls.name}) 
     
   }
+  
   global$constants$last_mset <<- mset_name
+  
+  statsmanager$calculate <- input$statistics
+  datamanager$reload <- input$statistics
   
 }, ignoreInit = TRUE)

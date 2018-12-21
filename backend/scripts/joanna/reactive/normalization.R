@@ -392,6 +392,9 @@ observeEvent(input$initialize, {
     output$samp4 <- renderPlot(sampNormPlots$br)
     shiny::setProgress(session=session, value= .8)
     
+    # perform PCA since it's ALWAYS the first tab
+    mSet <<- PCA.Anal(mSet) # perform PCA analysis
+    
     # save the used adducts to mSet
     mSet$dataSet$adducts <<- selected_adduct_list
     shiny::setProgress(session=session, value= .9)

@@ -10,6 +10,7 @@ shinyServer(function(input, output, session) {
   shinyOptions(progress.style="old")
   
   options(digits=22,
+          spinner.size = 0.5,
           spinner.type = 6,
           spinner.color = "black",
           spinner.color.background = "white")
@@ -310,28 +311,39 @@ shinyServer(function(input, output, session) {
     }
   })
   
-  # this SHOULD trigger on closing the app
-  observe({
-    if (input$nav_general == "stop"){ # if on the 'close' tab...
-      # interrupt and ask if you're sure 
-      # TODO: save prompt here too
-      shinyalert::shinyalert(title = "Question", 
-                             text = "Do you want to close metaboShiny?", 
-                             type = "warning",
-                             #imageUrl = "www/question.png", 
-                             showCancelButton = T, 
-                             cancelButtonText = "No",
-                             showConfirmButton = T, 
-                             confirmButtonText = "Yes",
-                             callbackR = function(x) {if(x == TRUE){
-                               print("closing metaboShiny ~ヾ(＾∇＾)")
-                               if(any(!is.na(session_cl))) parallel::stopCluster(session_cl) # close parallel threads
-                               R.utils::gcDLLs() # flush dlls 
-                               stopApp() 
-                             }else{
-                               NULL # if not, do nothing
-                             }})
+  # # this SHOULD trigger on closing the app
+  # observe({
+  #   if (input$nav_general == "stop"){ # if on the 'close' tab...
+  #     # interrupt and ask if you're sure 
+  #     # TODO: save prompt here too
+  #     shinyalert::shinyalert(title = "Question", 
+  #                            text = "Do you want to close metaboShiny?", 
+  #                            type = "warning",
+  #                            #imageUrl = "www/question.png", 
+  #                            showCancelButton = T, 
+  #                            cancelButtonText = "No",
+  #                            showConfirmButton = T, 
+  #                            confirmButtonText = "Yes",
+  #                            callbackR = function(x) {if(x == TRUE){
+  #                              print("closing metaboShiny ~ヾ(＾∇＾)")
+  #                              mSet$storage[[global$constants$last_mset]] <<- mSet
+  #                              if(any(!is.na(session_cl))) parallel::stopCluster(session_cl) # close parallel threads
+  #                              R.utils::gcDLLs() # flush dlls 
+  #                              stopApp() 
+  #                            }else{
+  #                              NULL # if not, do nothing
+  #                            }})
+  #   }
+  # })
+  
+  onStop(function() {
+    print("closing metaboShiny ~ヾ(＾∇＾)")
+    if(exists("mSet")){
+      mSet$storage[[mSet$dataSet$cls.name]] <<- mSet
     }
+    # remove metaboshiny csv files
+    rmv <- list.files(".", pattern = ".csv|.log", full.names = T)
+    if(all(file.remove(rmv))) NULL
   })
   
   removeModal()

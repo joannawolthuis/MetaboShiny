@@ -54,19 +54,30 @@ observe({
                                         threshp = 0.05, # TODO: make the threshold user defined...
                                         paired = FALSE,
                                         equal.var = TRUE
-                                        )
-                                        
-                   tbl <- req(as.data.frame(mSet$analSet$tt$sig.mat))
-                   used.values <- "p.value"
+                                        )           
+                   if(input$heatsign){
+                     tbl <- req(as.data.frame(mSet$analSet$tt$sig.mat))
+                   }else{
+                     tbl <- data.frame('p.value' = mSet$analSet$tt$p.value)
+                   }
+                   
+                   used.values <- "p.value"  
+                   
                    decreasing <- F
+                   
                  }else{
                    
                    mSet <<- FC.Anal.unpaired(mSet,
                                              2.0, # TODO: make this threshold user defined
-                                             1)  
+                                             1) 
                    
-                   tbl <- req(as.data.frame(mSet$analSet$fc$sig.mat))
-                   tbl$abs_log2 <- abs(tbl$`log2(FC)`)
+                   if(input$heatsign){
+                     tbl <- req(as.data.frame(mSet$analSet$fc$sig.mat))
+                     tbl$abs_log2 <- abs(tbl$`log2(FC)`)
+                   }else{
+                     tbl <- data.frame("abs_log2" = abs(mSet$analSet$fc$fc.log))
+                   }
+                   
                    used.values <- "abs_log2"
                    decreasing <- T
                  }

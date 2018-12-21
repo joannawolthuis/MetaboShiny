@@ -84,6 +84,7 @@ observeEvent(input$reset_subset, {
     mSet$dataSet$cls.name <<- mset_name
     mSet$analSet <- NULL
   }
+  
   global$constants$last_mset <<- mset_name
   
   covars <- colnames(mSet$dataSet$covars)
@@ -106,8 +107,8 @@ observeEvent(input$reset_subset, {
   else{
     interface$mode <- "multivar"}
   
-  datamanager$reload <- input$statistics # reload current one
-  
+  statsmanager$calculate <- input$statistics
+  datamanager$reload <- input$statistics
 })
 
 observeEvent(input$subset_var, {

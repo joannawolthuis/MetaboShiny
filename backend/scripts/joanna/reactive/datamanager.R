@@ -13,8 +13,8 @@ observe({
       NULL
     }
     switch(datamanager$reload,
+           
            general = {
-             
              # change interface
              if(mSet$dataSet$cls.num <= 1){
                interface$mode <- NULL } 
@@ -120,8 +120,7 @@ observe({
                  selection = 'single',
                  autoHideNavigation = T,
                  options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-                 
-               })
+                })
              }
            },
            volc = {
@@ -142,7 +141,6 @@ observe({
            },
            pca = {
              if("pca" %in% req(names(mSet$analSet))){
-               
                # create PCA legend plot
                # TODO: re-enable this plot, it was clickable so you could filter out certain groups
                output$pca_legend <- plotly::renderPlotly({

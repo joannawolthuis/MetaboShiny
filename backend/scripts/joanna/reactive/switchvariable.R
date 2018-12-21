@@ -44,6 +44,8 @@ observeEvent(input$change_cls, {
   else{
     interface$mode <- "multivar"}
   
+  output$curr_name <- renderText({mSet$dataSet$cls.name}) 
+  
   statsmanager$calculate <- input$statistics
   datamanager$reload <- input$statistics
   
