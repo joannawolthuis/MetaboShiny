@@ -351,9 +351,10 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                             ),
                                                                             fluidRow(column(align="center",
                                                                                             width=12,
-                                                                                            uiOutput("heatbutton"))
-                                                                            ),
-                                                                            fluidRow(align="center", switchButton("heatsign", label = "Only significant hits?", col = "GB", type = "YN"))
+                                                                                            uiOutput("heatbutton"), 
+                                                                                            switchButton("heatsign", label = "Only significant hits?", col = "GB", type = "YN"),
+                                                                                            switchButton("heatlimits", label = "Color based on -all- metabolites?", col = "GB", type = "YN")
+                                                                                     )) 
                                                                    ),
 																   # this tab enables mummichog pathway analysis (using their own databases...)
 																   tabPanel(h3("Enrichment"), value = "enrich",

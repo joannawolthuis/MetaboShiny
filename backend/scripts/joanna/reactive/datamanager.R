@@ -374,7 +374,7 @@ observe({
                  if(!is.null(mSet$analSet$heatmap$matrix)){
                    # create heatmap object
                    hmap <- suppressWarnings({
-                     if(input$heatmap_scaleall){
+                     if(input$heatlimits){
                        heatmaply::heatmaply(mSet$analSet$heatmap$matrix[1:if(input$heatmap_topn < nrow(mSet$analSet$heatmap$matrix)) input$heatmap_topn else nrow(mSet$analSet$heatmap$matrix),],
                                             Colv = mSet$analSet$heatmap$my_order, 
                                             Rowv = T,
@@ -389,7 +389,8 @@ observe({
                                             xlab = "Sample",
                                             ylab = "m/z",
                                             showticklabels = c(T,F),
-                                            limits = c(min(mSet$dataSet$norm), max(mSet$dataSet$norm))
+                                            limits = c(min(mSet$dataSet$norm), max(mSet$dataSet$norm)),
+                                            symm=F,symkey=F,symbreaks=T
                                             #label_names = c("m/z", "sample", "intensity") #breaks side colours...
                        )  
                      }else{
@@ -406,7 +407,8 @@ observe({
                                             column_text_angle = 90,
                                             xlab = "Sample",
                                             ylab = "m/z",
-                                            showticklabels = c(T,F)
+                                            showticklabels = c(T,F),
+                                            symm=F,symkey=F,symbreaks=T
                                             #label_names = c("m/z", "sample", "intensity") #breaks side colours...
                        )
                      }

@@ -330,7 +330,7 @@ global$vectors$wordcloud$skip <- unique(c( # manual curation(
                                     "these", "they", "this", "those", "through", "thus", "to", "upon", 
                                     "use", "used", "using", "various", "very", "was", "we", "were", 
                                     "what", "when", "which", "while", "with", "within", "without", 
-                                    "would", "p"),
+                                    "would", LETTERS, letters, "acid"),
                                   qdapDictionaries::Top200Words,
                                    global$vectors$db_list))
 

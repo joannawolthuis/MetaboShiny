@@ -83,7 +83,7 @@ wdir <<- dirname(rstudioapi::getSourceEditorContext()$path) # TODO: make this no
 setwd(wdir)
 
 # create options file if it doesnt exist yet
-if(!exists("./user_options.txt")){
+if(!file.exists(file.path(wdir, "user_options.txt"))){
   default_options = 
     gsubfn::fn$paste(
 "db_dir = $wdir/backend/db
