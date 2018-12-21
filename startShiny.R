@@ -85,7 +85,7 @@ setwd(wdir)
 # create options file if it doesnt exist yet
 if(!exists("./user_options.txt")){
   default_options = 
-    gsubfn::fn$paste(strwrap(
+    gsubfn::fn$paste(
 "db_dir = $wdir/backend/db
 work_dir = $wdir/analysis
 proj_name = MY_PROJECT
@@ -106,9 +106,9 @@ size4 = 12
 taskbar_image = gemmy_rainbow.png
 gtheme = classic
 gcols = #000000&#FFA1C3&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
-gspec = RdGy", width=10000, simplify=TRUE))
+gspec = RdGy")
 con = file("./user_options.txt", "w")
-writeLines(text = default_options, con = con, sep = "\n")
+writeLines(text = default_options, con = con)
 close.connection(con)
 }
 
