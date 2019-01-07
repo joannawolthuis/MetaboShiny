@@ -4,12 +4,17 @@ statsmanager <- reactiveValues()
 observe({
   
   if(is.null(statsmanager$calculate)){
+    
     NULL # if not reloading anything, nevermind
+    
   }else{
+    
     if(!exists("mSet")){
       NULL
     }
+    
     print(statsmanager$calculate)
+    
     switch(statsmanager$calculate, 
            venn = {
              # save previous mset 

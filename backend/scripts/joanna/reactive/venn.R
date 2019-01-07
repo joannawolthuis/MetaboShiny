@@ -59,11 +59,12 @@ observeEvent(input$venn_build, {
                     venn_yes, 
                     top = input$venn_tophits, 
                     cols = global$vectors$mycols,
-                    cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+                    cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]],
+                    plotlyfy=F)
     # render plot in UI
-    output$venn_plot <- plotly::renderPlotly({
+    output$venn_plot <- renderPlot({
       
-      ggplotly(p, tooltip = "label", height = "600px")
+      p
       
     })
     # update the selectize input that the user can use to find which hits are intersecting
@@ -79,7 +80,7 @@ observeEvent(input$intersect_venn, {
   
   if(length(input$intersect_venn) == 0){
     global$tables$venn_overlap <<- data.frame()
-  }else if(length(input$intersect_venn == 1)){
+  }else if(length(input$intersect_venn) == 1){
     
     l = global$vectors$venn_lists
     # Get the combinations of names of list elements
@@ -96,6 +97,7 @@ observeEvent(input$intersect_venn, {
     
     uniqies = global$vectors$venn_lists[[input$intersect_venn]]
     global$tables$venn_overlap <<- setdiff(uniqies,intersecties)
+    
   }else{
     global$tables$venn_overlap <<- Reduce("intersect", lapply(input$intersect_venn, function(x){ # get the intersecting hits for the wanted tables
       global$vectors$venn_lists[[x]]

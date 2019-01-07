@@ -390,7 +390,8 @@ observe({
                                             ylab = "m/z",
                                             showticklabels = c(T,F),
                                             limits = c(min(mSet$dataSet$norm), max(mSet$dataSet$norm)),
-                                            symm=F,symkey=F,symbreaks=T
+                                            #symm=F,symkey=F,
+                                            symbreaks=T
                                             #label_names = c("m/z", "sample", "intensity") #breaks side colours...
                        )  
                      }else{
@@ -408,7 +409,8 @@ observe({
                                             xlab = "Sample",
                                             ylab = "m/z",
                                             showticklabels = c(T,F),
-                                            symm=F,symkey=F,symbreaks=T
+                                            #symm=F,symkey=F,
+                                            symbreaks=T
                                             #label_names = c("m/z", "sample", "intensity") #breaks side colours...
                        )
                      }

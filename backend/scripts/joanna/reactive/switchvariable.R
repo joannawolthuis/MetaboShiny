@@ -35,6 +35,7 @@ observeEvent(input$change_cls, {
     # remove old analSet
     mSet$analSet <<- NULL
   }  
+  
   datamanager$reload <- "general" 
   
   if(mSet$dataSet$cls.num <= 1){
@@ -45,8 +46,13 @@ observeEvent(input$change_cls, {
     interface$mode <- "multivar"}
   
   output$curr_name <- renderText({mSet$dataSet$cls.name}) 
+
+  updateNavbarPage(session, "statistics", selected = "pca")
+
+  if(!("pca" %in% names(mSet$analSet))){
+    statsmanager$calculate <- "pca"
+  }
   
-  statsmanager$calculate <- input$statistics
-  datamanager$reload <- input$statistics
-  
+  datamanager$reload <- "pca"
+
 })

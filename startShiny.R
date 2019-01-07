@@ -61,6 +61,9 @@ metanr_packages <- function(){
 # libxml2, libnetcdf, cairo, java, mesa-common, 
 # libgit2, (LIKELY -devel versions)
 # libgl1, libglu1, libpng installed
+# IF RJAVA DOESN'T WANT TO INSTALL
+# sudo R CMD javareconf # FIXES EVERYTHING!!! JUST NEED TO USE ADMIN MODE...
+# install.packages("rJava", type="source")
 
 # packages needed to start up
 base.packs <- c("httr", "curl", "git2r", "devtools", 

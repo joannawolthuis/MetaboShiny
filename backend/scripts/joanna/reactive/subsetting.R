@@ -23,7 +23,12 @@ observeEvent(input$change_subset, {
     mSet$dataSet$procr <<- mSet$dataSet$procr[keep.log.procr,]
     keep.log.norm <<- rownames(mSet$dataSet$norm) %in% keep.samples
     mSet$dataSet$norm <<- mSet$dataSet$norm[keep.log.norm,]
+    keep.log.preproc <<- rownames(mSet$dataSet$preproc) %in% keep.samples
+    mSet$dataSet$preproc <<- mSet$dataSet$preproc[keep.log.preproc,]
     mSet$dataSet$cls <<- mSet$dataSet$cls[keep.log.norm]
+    
+    print(summary(mSet$dataSet))
+    
     if("facA" %in% names(mSet$dataSet)){
       mSet$dataSet$facA <<- mSet$dataSet$facA[keep.log.norm]
       mSet$dataSet$facB <<- mSet$dataSet$facB[keep.log.norm]

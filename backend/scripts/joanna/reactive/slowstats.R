@@ -143,7 +143,9 @@ observeEvent(input$do_ml, {
     # ============ LOOP HERE ============
     
     # get results for the amount of attempts chosen
-    repeats <- pbapply::pblapply(1:goes, cl=0, function(i, ...){
+    repeats <- pbapply::pblapply(1:goes, 
+                                 cl=session_cl, 
+                                 function(i, ...){
       
       shiny::isolate({
         

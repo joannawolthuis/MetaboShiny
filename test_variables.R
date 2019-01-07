@@ -46,14 +46,12 @@ input <- list(batch_var = c("batch", "country"),
 )
 
 {
-
 mode = "plsda"
-
 input <- list(batch_var = c(""),
               exp_type = "stat",
               perc_limit = .8,
               filt_type = "none",
-              miss_type = "knn",
+              miss_type = "rf",
               norm_type = "SumNorm",
               trans_type = "LogNorm",
               scale_type = "AutoNorm",
@@ -79,6 +77,7 @@ input <- list(batch_var = c(""),
               venn_members = c("tt", "plsda", "rf"),
               rf_choice = "all",
               plsda_choice = "PC1",
+              intersect_venn = c("disease: tt", "sex: tt"),
               heatmap_topn = 100
 )}
 

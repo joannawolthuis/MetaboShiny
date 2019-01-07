@@ -582,30 +582,29 @@ ggPlotROC <- function(data,
   require(ggplot2)
   require(data.table)
   
-  print(data$predictions)
   
   pred <- ROCR::prediction(data$predictions, data$labels)
   perf <- ROCR::performance(pred, "tpr", "fpr")
-  
+  perf_auc <- ROCR::performance(pred, "auc")
   # - - - old method - - -
   # plot(perf,col="grey82",lty=3, cex.lab=1.3)
   # plot(perf,lwd=3,avg="vertical",spread.estimate="boxplot",add=TRUE)
   
-  perf.long <<- rbindlist(lapply(1:length(perf@x.values), function(i){
+  perf.long <- rbindlist(lapply(1:length(perf@x.values), function(i){
     xvals <- perf@x.values[[i]]
     yvals <- perf@y.values[[i]]
-
-    # - - - - - - - - -
+    aucs <- signif(perf_auc@y.values[[i]][[1]], digits = 2)
     
     res <- data.table::data.table(attempt = c(i),
                                   FPR = xvals,
-                                  TPR = yvals)
+                                  TPR = yvals,
+                                  AUC = aucs)
     res
   }))
   
-  cols = cf(attempts)
-  
-  #nbins <- length(perf.long$TPR)
+  aucs <- signif(unlist(perf_auc@y.values), digits = 2)
+    
+  scols = cf(attempts)
 
   p <- ggplot(perf.long, aes(FPR,TPR)) +
     #stat_smooth(alpha=.2,color="black") + # fix later, needs to NOT GO ABOVE 1
@@ -613,6 +612,7 @@ ggPlotROC <- function(data,
     geom_path(alpha=.5,
               cex=.5,
               aes(color = attempt, group = attempt)) +
+    geom_text(label = paste0("Average AUC: ", mean(aucs)), size = 8, mapping = aes(x = 0.82, y = 0.03)) + 
     # geom_abline(intercept=seq(0, 1, 25),
     #             slope=1,
     #             colour="gray",
@@ -985,7 +985,10 @@ ggPlotVenn <- function(mSet,
       # fetch involved mz values 
       tbls <- switch(base_name,
                      aov = {
-                       NULL
+                       res = list(as.numeric(rownames(analysis$aov$sig.mat[order(analysis$aov$sig.mat[,2],
+                                                                                  decreasing = F),])))
+                       names(res) = base_name
+                       res
                      },
                      aov2 = {
                        res = list(as.numeric(rownames(analysis$aov2$sig.mat[order(analysis$aov2$sig.mat[,"Interaction(adj.p)"],
@@ -1060,6 +1063,7 @@ ggPlotVenn <- function(mSet,
           tbl[1:top]
         }
       })
+      
       names(tbls_top) <- paste0(experiment, ": ", names(tbls_top))
       tbls_top
     })
@@ -1162,24 +1166,22 @@ ggPlotVenn <- function(mSet,
                            cf(circles)) +
   coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
 
-  # - - white outline - - 
-  theta <- seq(pi/8, 2*pi, length.out=16)
-  xo <- diff(range(headers$x))/200
-  yo <- diff(range(headers$y))/200
-  for(i in theta) {
-    p <- p + geom_text(data = headers,
-                       mapping = aes_q(x = bquote(x+.(cos(i)*xo)),
-                                       y = bquote(y+.(sin(i)*yo)),
-                                       label = quote(gsub(value, 
-                                                    pattern = ":", 
-                                                    replacement = "\n"))),
-                       size=4, colour='white')
-  }
-  p <- p + geom_text(mapping = aes(x=x, y=y, label=gsub(value, 
+  # - - text with white outline - - 
+  # p <- p + geom_text(mapping = aes(x=x, y=y, label=gsub(value, 
+  #                                                       pattern = ":", 
+  #                                                       replacement = "\n")), 
+  #                    data = headers, 
+  #                    size = 4, hjust = 0, 
+  #                    fontface = 2) +
+  #   scale_x_continuous(expand = c(.1, .1)) + 
+  #   scale_y_continuous(expand = c(.1, .1))
+  p <- p + shadowtext::geom_shadowtext(mapping = aes(x=x, y=y, label=gsub(value, 
                                                         pattern = ":", 
                                                         replacement = "\n")), 
+                     color = "black",
+                     bg.color = "white",
                      data = headers, 
-                     size = 4, hjust = 0, 
+                     size = 7, hjust = 0.5, 
                      fontface = 2) +
     scale_x_continuous(expand = c(.1, .1)) + 
     scale_y_continuous(expand = c(.1, .1))

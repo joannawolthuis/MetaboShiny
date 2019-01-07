@@ -134,6 +134,7 @@ shinyServer(function(input, output, session) {
       showTab(inputId = "statistics", tab, select = ifelse(i==1, TRUE, FALSE), session = session)
       i = i + 1
     }
+    
   })
   
   # -----------------

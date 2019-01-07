@@ -107,7 +107,7 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                              "BatchCorrMetabolomics", "R.utils", "rgl", "glmnet", "TSPred", 
                                              "VennDiagram", "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR", 
                                              "openxlsx", "doParallel", "missForest", "InterpretMSSpectrum",
-                                             "tm", "RISmed", "qdap", "extrafont", "sysfonts", "gmp"
+                                             "tm", "RISmed", "qdap", "extrafont", "sysfonts", "gmp", "shadowtext"
                                 ), # these packages are listed in the first tab and should include all necessary packages
                                 images = list(list(name = 'load_icon', path = 'www/cute.png', dimensions = c(100, 100)),
                                               list(name = 'cute_package', path = 'www/cat.png', dimensions = c(80, 80)),
@@ -330,7 +330,7 @@ global$vectors$wordcloud$skip <- unique(c( # manual curation(
                                     "these", "they", "this", "those", "through", "thus", "to", "upon", 
                                     "use", "used", "using", "various", "very", "was", "we", "were", 
                                     "what", "when", "which", "while", "with", "within", "without", 
-                                    "would", LETTERS, letters, "acid"),
+                                    "would", LETTERS, letters, "acid", "cell", "cells", "human", "humans"),
                                   qdapDictionaries::Top200Words,
                                    global$vectors$db_list))
 

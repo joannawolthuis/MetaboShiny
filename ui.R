@@ -465,9 +465,11 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                       #actionButton("do_ml",label=h2("Go"),width = "150px", height="150px")
                                                                                ),
                                                                                column(width=3,align="center",
-                                                                                      textInput("ml_train_regex", label = "Regex for train:"),
-                                                                                      textInput("ml_test_regex", label = "Regex for test:"),
-                                                                                      tags$a(img(src="help.png"), href="https://regex101.com"),
+                                                                                      fluidRow(helpText("..."), actionButton("ml_train_ss", label = "Train on:", icon = icon("angle-double-left"))),
+                                                                                      fluidRow(helpText("..."), actionButton("ml_test_ss", label = "Test on:", icon = icon("angle-double-left"))),
+                                                                                      #textInput("ml_train_regex", label = "Regex for train:"),
+                                                                                      #textInput("ml_test_regex", label = "Regex for test:"),
+                                                                                      #tags$a(img(src="help.png"), href="https://regex101.com"),
                                                                                       textInput("ml_name", label="Name:", value = "all"))
                                                                              ),
                                                                              hr(),
@@ -508,7 +510,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
 																                          ),
 																                          mainPanel = mainPanel(
 																                            hr(),
-																                            plotly::plotlyOutput("venn_plot",inline = F),
+																                            plotOutput("venn_plot",inline = F),
 																                            # find the overlapping compounds between the groups you want to compare (user select)
 																                            # TODO: enable this with clicking the numbers/areas
 																                            fluidRow(selectInput("intersect_venn", label = "Show hits from (only):", selected = 1,choices = "",multiple = T),
