@@ -604,7 +604,7 @@ ggPlotROC <- function(data,
   
   aucs <- signif(unlist(perf_auc@y.values), digits = 2)
     
-  scols = cf(attempts)
+  cols = cf(attempts)
 
   p <- ggplot(perf.long, aes(FPR,TPR)) +
     #stat_smooth(alpha=.2,color="black") + # fix later, needs to NOT GO ABOVE 1
@@ -652,9 +652,9 @@ ggPlotBar <- function(data,
   }
 
   if(ml_type == "ls"){
-    p <- ggplot(data[1:topn,], aes(mz,count))
-    p + geom_bar(stat = "identity", aes(fill = count)) +
-      geom_hline(aes(yintercept=attempts)) + 
+    #p <- ggplot(data[1:topn,], aes(mz,count))
+    p <- ggplot(data[1:topn,], aes(mz,count)) + geom_bar(stat = "identity", aes(fill = count)) +
+      #geom_hline(aes(yintercept=attempts)) + 
       scale_fill_gradientn(colors=cf(20)) +
       plot.theme() + 
       theme(legend.position="none",
@@ -666,6 +666,19 @@ ggPlotBar <- function(data,
             axis.ticks.x=element_blank(),
             text = element_text(family = global$constants$font.aes$font))+
       labs(x="Top hits",y="Times chosen")
+    # p + geom_bar(stat = "identity", aes(fill = count)) +
+    #   geom_hline(aes(yintercept=attempts)) + 
+    #   scale_fill_gradientn(colors=cf(20)) +
+    #   plot.theme() + 
+    #   theme(legend.position="none",
+    #         axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+    #         axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+    #         legend.title.align = 0.5,
+    #         axis.line = element_line(colour = 'black', size = .5),
+    #         axis.text.x=element_blank(),
+    #         axis.ticks.x=element_blank(),
+    #         text = element_text(family = global$constants$font.aes$font))+
+    #   labs(x="Top hits",y="Times chosen")
     
   }else{
     p <- ggplot(data[1:topn,], aes(mz,mda)) + geom_bar(stat = "identity", aes(fill = mda)) +
@@ -960,14 +973,18 @@ ggPlotVenn <- function(mSet,
                        cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], 
                        plotlyfy=TRUE){
 
+  #venn_yes <<- isolate({venn_yes})
+  
   experiments <- str_match(unlist(venn_yes$now), pattern = "\\(.*\\)")[,1]
 
   experiments <- unique(gsub(experiments, pattern = "\\(\\s*(.+)\\s*\\)", replacement="\\1"))
   
   table_list <- lapply(experiments, function(experiment){
 
+    print(experiment)
+    
     analysis = mSet$storage[[experiment]]$analysis
-    data = mSet$storage[[experiment]]$data
+    #data = mSet$storage[[experiment]]$dataset
     
     rgx_exp <- gsub(experiment, pattern = "\\(", replacement = "\\\\(")
     rgx_exp <- gsub(rgx_exp, pattern = "\\)", replacement = "\\\\)")
@@ -979,6 +996,8 @@ ggPlotVenn <- function(mSet,
     
     # go through the to include analyses
     tables <- lapply(categories, function(name){
+      
+      print(name)
       
       base_name <- gsub(name, pattern = " -.*$| ", replacement="")
       
@@ -1021,30 +1040,31 @@ ggPlotVenn <- function(mSet,
                        res
                      },
                      ls = {
-                       which.ls <- gsub(base.name, pattern = "^.*- ", replacement="")
-                       res <- as.numeric(as.character(analysis$ml$ls[[which.ls]]$tophits[order(analysis$ml$ls[[base.name]]$bar$count, 
+                       which.ls <- gsub(name, pattern = "^.*- | ", replacement="")
+                       res <- list(as.character(analysis$ml$ls[[which.ls]]$bar[order(analysis$ml$ls[[which.ls]]$bar$count, 
                                                                          decreasing = T),]$mz))
-                       names(tbls_ls) <- paste0(which.ls, " (LS)")
+                       names(res) <- paste0(which.ls, " (LS)")
                        # - - - 
                        res
 
                      },
                      rf = {
-                       which.rf <- gsub(base.name, pattern = "^.*- ", replacement="")
-                       res <- as.numeric(as.character(analysis$ml$rf[[which.rf]]$bar[order(analysis$ml$rf[[which.rf]]$bar$mda, 
+                       which.rf <- gsub(name, pattern = "^.*- | ", replacement="")
+                       res <- list(as.character(analysis$ml$rf[[which.rf]]$bar[order(analysis$ml$rf[[which.rf]]$bar$mda, 
                                                                   decreasing = T),]$mz))
                        names(res) <- paste0(which.rf, " (RF)")
                        # - - -
                        res
                      },
                      plsda = {
-                       which.plsda <- gsub(base.name, pattern = "^.*- ", replacement="")
+
+                       which.plsda <- gsub(name, pattern = "^.*- | ", replacement="")
                        
                        compounds_pc <- as.data.table(analysis$plsda$vip.mat,keep.rownames = T)
                        colnames(compounds_pc) <- c("rn", paste0("PC", 1:(ncol(compounds_pc)-1)))
                        ordered_pc <- setorderv(compounds_pc, which.plsda, -1)
-                       as.numeric(ordered_pc[, c("rn")][[1]])  
                        
+                       res <- list(ordered_pc$rn)
                        names(res) <- paste0(which.plsda, " (PLS-DA)")
                        # - - -
                        res
@@ -1055,6 +1075,7 @@ ggPlotVenn <- function(mSet,
                        res
                      })
       
+      print(tbls)
       # user specified top hits only
       tbls_top <- lapply(tbls, function(tbl){
         if(length(tbl) < top){

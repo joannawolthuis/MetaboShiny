@@ -126,6 +126,7 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                               list(name = 'massbank_logo', path = 'www/massbank_logo.jpg', dimensions = c(250, 100)),
                                               list(name = 'metabolights_logo', path = 'www/metabolights_logo.png', dimensions = c(200, 200)),
                                               list(name = 'vmh_logo', path = 'www/vmh.png', dimensions = c(250, 200)),
+                                              list(name = 'foodb_logo', path = 'www/foodb_logo.png', dimensions = c(200, 200)),
                                               list(name = 'pos_icon', path = 'www/handpos.png', dimensions = c(120, 120)),
                                               list(name = 'neg_icon', path = 'www/handneg.png', dimensions = c(120, 120)),
                                               list(name = 'excel_icon', path = 'www/excel.png', dimensions = c(120, 120)),
@@ -193,7 +194,10 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                                                          image_id = "metabolights_logo"),
                                                      vmh = list(title = "VMH",
                                                                 description = "Virtual Metabolic Human (VMH) hosts ReconMap, an extensive network of human metabolism, and bacterial metabolites.",
-                                                                image_id = "vmh_logo")
+                                                                image_id = "vmh_logo"),
+                                                     foodb = list(title = "FooDB",
+                                                                  description = "FooDB is the world’s largest and most comprehensive resource on food constituents, chemistry and biology. It provides information on both macronutrients and micronutrients, including many of the constituents that give foods their flavor, color, taste, texture and aroma.",
+                                                                  image_id = "foodb_logo")
                                                      )
 ),
 functions = list(# default color functions at startup, will be re-loaded from options
@@ -279,7 +283,8 @@ vectors = list(
               "vmh",
               "respect",
               "massbank",
-              "metabolights"
+              "metabolights",
+              "foodb"
   ),
   # list of positive adducts
   pos_adducts = adducts[Ion_mode == "positive",
@@ -424,8 +429,8 @@ fn <- paste0(tools::file_path_sans_ext(global$paths$patdb), ".metshi")
 #   mSet$analSet <- NULL
 # }
 
-# if(file.exists(fn) & !exists("mSet")){
-#   print("loading existing mset ..")
-#   load(fn)
-#   print(".. done!")
-# }
+if(file.exists(fn) & !exists("mSet")){
+  print("loading existing mset ..")
+  load(fn)
+  print(".. done!")
+}

@@ -150,8 +150,8 @@ observeEvent(input$do_ml, {
       shiny::isolate({
         
         # get regex user input for filtering testing and training set
-        ml_train_regex <- input$ml_train_regex
-        ml_test_regex <- input$ml_test_regex
+        ml_train_regex <- "" #input$ml_train_regex
+        ml_test_regex <- "" #input$ml_test_regex
         
         # get user training percentage
         ml_train_perc <- input$ml_train_perc/100

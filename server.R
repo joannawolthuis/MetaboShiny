@@ -340,7 +340,8 @@ shinyServer(function(input, output, session) {
   onStop(function() {
     print("closing metaboShiny ~ヾ(＾∇＾)")
     if(exists("mSet")){
-      mSet$storage[[mSet$dataSet$cls.name]] <<- mSet
+      mSet$storage[[mSet$dataSet$cls.name]] <<- list()
+      mSet$storage[[mSet$dataSet$cls.name]]$analysis <<- mSet$analSet
     }
     # remove metaboshiny csv files
     rmv <- list.files(".", pattern = ".csv|.log", full.names = T)

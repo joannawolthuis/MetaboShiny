@@ -1217,7 +1217,54 @@ build.base.db <- function(dbname=NA,
                                  db.formatted$baseformula <- checked$new_formula
                                  
                                  RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
-                               }, 
+                               },
+                               foodb = function(dbname, ...){
+                                 
+                                 file.url <- "http://www.foodb.ca/system/foodb_2017_06_29_csv.tar.gz"
+                                 
+                                 # ----
+                                 #base.loc <- getOptions("user_options.txt")$db_dir
+                                 base.loc <- file.path(getOptions("user_options.txt")$db_dir, "foodb_source")
+                                 if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
+                                 zip.file <- file.path(base.loc, "foodb.zip")
+                                 utils::download.file(file.url, zip.file,mode = "w")
+                                 utils::untar(zip.file, exdir = base.loc,list =  T)
+                                 
+                                 base.table <- data.table::fread(file = file.path(base.loc, "foodb_2017_06_29_csv", "compounds.csv"))
+                                 
+                                 db.formatted <- data.table::data.table(compoundname = base.table$name,
+                                                                        description = base.table$description,
+                                                                        baseformula = base.table$moldb_formula, 
+                                                                        identifier= base.table$id,
+                                                                        charge= base.table$charge,
+                                                                        structure= base.table$moldb_smiles)
+                                 
+                                 db.formatted <- unique(db.formatted)
+                                 missing.charges <- which(is.na(db.formatted$charge))
+                                 
+                                 charges <- pbapply::pbsapply(missing.charges, cl=0, function(i, db){
+                                   smi = db[i, "structure"][[1]]
+                                   charge = 0 # set default placeholder to zero, seems like a decent assumption
+                                   try({
+                                     iatom <- rcdk::parse.smiles(smi)[[1]]
+                                     charge = rcdk::get.total.charge(iatom)
+                                   })
+                                   charge
+                                 }, db = db.formatted)
+                                 
+                                 db.formatted$charge[missing.charges] <- charges
+                                 # --- check formulae ---
+                                 checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
+                                                                                            db.formatted$baseformula))
+                                 
+                                 db.formatted$baseformula <- checked$new_formula
+                                 
+                                 missing.formula <- which(checked$warning)
+                                 
+                                 db.formatted <- db.formatted[-missing.formula,]
+                                 
+                                 RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
+                               },
                                massbank = function(dbname, ...){
                                  file.url <- "https://github.com/MassBank/MassBank-data/archive/master.zip"
                                  base.loc <- file.path(getOptions("user_options.txt")$db_dir, "massbank_source")

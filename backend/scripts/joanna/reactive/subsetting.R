@@ -55,8 +55,13 @@ observeEvent(input$change_subset, {
     interface$mode <- "bivar"}
   else{
     interface$mode <- "multivar"}
-  datamanager$reload <- input$statistics # reload current one
-})
+  
+  if(!("pca" %in% names(mSet$analSet))){
+    statsmanager$calculate <- "pca"
+  }
+  
+  datamanager$reload <- "pca"
+  })
 
 observeEvent(input$reset_subset, {
   

@@ -76,7 +76,7 @@ observeEvent(plotly::event_data("plotly_click"),{
           
         }
       }, bar = { # for bar plot just grab the # bar clicked
-        curr_cpd <<- as.character(mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar[d$x,"mz"])
+        curr_cpd <<- as.character(mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar[d$x,"mz"][[1]])
       })}else if(grepl(pattern = "heatmap", x = input$statistics)){ # heatmap requires the table used to make it saved to global (hmap_mzs)
         req(global$vectors$heatmap)
         if(d$y > length(global$vectors$heatmap)) return(NULL)
