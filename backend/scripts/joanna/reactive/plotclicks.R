@@ -60,7 +60,7 @@ observeEvent(plotly::event_data("plotly_click"),{
                                   }, 
                                   ls = { # lasso specific data fetching
                                     tab = model$beta
-                                    keep = which(tab[,1] > 0)
+                                    keep = which(tab[,1] != 0)
                                     tab_new = data.frame("beta" = tab[keep,1],
                                                          "absbeta" = abs(tab[keep,1]), # use the absolute beta as additional measure (min or plus importance is similar for statistical validity i think)
                                                          row.names = rownames(tab)[keep])

@@ -114,19 +114,23 @@ observeEvent(input$do_ml, {
     # now filter out unique, covariate and with missing columns from $covars
     keep_configs <- which(!(names(config) %in% names(config)[unique(c(which(has.na), which(has.all.unique), which(covariant.with.label)))]))
     keep_configs <- c(keep_configs, which(names(config) == "label"))
+    #keep_configs <- which(names(config) == "label")
     
-    #print("Removing covariates and unique columns. Keeping non-mz variables:")
-    #print(names(config)[keep_configs])
+    print("Removing covariates and unique columns. Keeping non-mz variables:")
+    print(names(config)[keep_configs])
     
     config <- config[,..keep_configs,with=F]
+    
     # - - - - - - - - - - - - - - - - - - - - - - -
+    
+    #curr2=curr
     
     # join halves together, user variables and metabolite data
     curr <- cbind(config, curr)
     curr <- as.data.table(curr)
     
     # remove cols with all NA
-    curr <- curr[,colSums(is.na(curr))<nrow(curr), with=FALSE]
+    curr <- curr[,colSums(is.na(curr)) < nrow(curr), with=FALSE]
     # remove rows with all NA
     curr <- curr[complete.cases(curr),]
     # identify which columns are metabolites and which are config/covars
@@ -146,7 +150,6 @@ observeEvent(input$do_ml, {
     repeats <- pbapply::pblapply(1:goes, 
                                  cl=session_cl, 
                                  function(i, ...){
-      
       shiny::isolate({
         
         # get regex user input for filtering testing and training set
@@ -211,13 +214,16 @@ observeEvent(input$do_ml, {
                                               testing, 
                                               "prob")[,2]
                  # get importance table
-                 importance = as.data.table(model$importance, keep.rownames = T)
-                 rf_tab <- importance[which(MeanDecreaseAccuracy > 0), c("rn", "MeanDecreaseAccuracy")]
+                 importance = as.data.table(model$importance, 
+                                            keep.rownames = T)
+                 rf_tab <- importance[which(MeanDecreaseAccuracy > 0), c("rn", 
+                                                                         "MeanDecreaseAccuracy")]
                  rf_tab <- rf_tab[order(MeanDecreaseAccuracy, decreasing = T)] # reorder for convenience
                  rf_tab <- data.frame(MDA = rf_tab$MeanDecreaseAccuracy, row.names = rf_tab$rn) 
                  # return list with model, prediction on test data etc.
                  list(type="rf",
-                      feats = as.data.table(rf_tab, keep.rownames = T), 
+                      feats = as.data.table(rf_tab, 
+                                            keep.rownames = T), 
                       model = model,
                       prediction = prediction,
                       labels = testY)
@@ -233,13 +239,26 @@ observeEvent(input$do_ml, {
                  
                  family = "binomial" #TODO: enable multinomial for multivariate data!!
                  
+                 #training <- scale(training, T, T)
+                 #testing <- scale(testing, T, T)
+                 
                  #  make model (a. internal cross validation until optimized)
-                 cv1 <- glmnet::cv.glmnet(training, trainY, family = family, type.measure = "auc", alpha = 1, keep = TRUE, nfolds=nfold)
+                 cv1 <- glmnet::cv.glmnet(training, 
+                                          trainY, 
+                                          family = family, 
+                                          type.measure = "auc", 
+                                          alpha = 1, 
+                                          keep = TRUE, 
+                                          nfolds=nfold)
                  # pick the best model (other options, lambda.1se)
                  cv2 <- data.frame(cvm = cv1$cvm[cv1$lambda == cv1[["lambda.min"]]], lambda = cv1[["lambda.min"]], alpha = 1)
                  
                  # save final model
-                 model <- glmnet::glmnet(as.matrix(training), trainY, family = family, lambda = cv2$lambda, alpha = cv2$alpha)
+                 model <- glmnet::glmnet(as.matrix(training), 
+                                         trainY, 
+                                         family = family, 
+                                         lambda = cv2$lambda, 
+                                         alpha = cv2$alpha)
                  
                  # test on testing data and save prediction
                  prediction <- stats::predict(model,
