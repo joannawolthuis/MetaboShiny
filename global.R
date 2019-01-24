@@ -133,6 +133,7 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                               list(name = 'excel_icon_2', path = 'www/excel.png', dimensions = c(120, 120)),
                                               list(name = 'db_icon', path = 'www/servers.png', dimensions = c(150, 150)),
                                               list(name = 'csv_icon', path = 'www/office.png', dimensions = c(100, 100)),
+                                              list(name= 'magicball', path = 'www/magic-ball.png', dimensions = c(250,250)),
                                               list(name = 'dataset_icon', path = 'www/office.png', dimensions = c(100, 100)),
                                               list(name = 'sidebar_icon', path = 'www/detective.png', dimensions = c(60, 60))
                                               
@@ -197,7 +198,10 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                                                 image_id = "vmh_logo"),
                                                      foodb = list(title = "FooDB",
                                                                   description = "FooDB is the world’s largest and most comprehensive resource on food constituents, chemistry and biology. It provides information on both macronutrients and micronutrients, including many of the constituents that give foods their flavor, color, taste, texture and aroma.",
-                                                                  image_id = "foodb_logo")
+                                                                  image_id = "foodb_logo"),
+                                                     magicball = list(title = "MagicBall",
+                                                                      description = "Algorithm to predict molecular formula from m/z value",
+                                                                      image_id = "magicball")
                                                      )
 ),
 functions = list(# default color functions at startup, will be re-loaded from options
@@ -284,7 +288,8 @@ vectors = list(
               "respect",
               "massbank",
               "metabolights",
-              "foodb"
+              "foodb",
+              "magicball"
   ),
   # list of positive adducts
   pos_adducts = adducts[Ion_mode == "positive",

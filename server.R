@@ -228,12 +228,16 @@ shinyServer(function(input, output, session) {
         })),
         # row 4: button
         fluidRow(lapply(global$vectors$db_list[min_i:max_i], function(db){
-          column(width=3,align="center", list(
-            actionButton(paste0("check_", db), "Check", icon = icon("check")),
-            actionButton(paste0("build_", db), "Build", icon = icon("wrench")), 
-            br(),
-            imageOutput(paste0(db, "_check"),inline = T)
-          ))
+          column(width=3,align="center", 
+            if(db != "magicball"){
+              list(actionButton(paste0("check_", db), "Check", icon = icon("check")),
+              actionButton(paste0("build_", db), "Build", icon = icon("wrench")), 
+              br(),
+              imageOutput(paste0(db, "_check"),inline = T))
+            }else{
+              helpText("")
+            }
+          )
         })),
         br(),br()
       )

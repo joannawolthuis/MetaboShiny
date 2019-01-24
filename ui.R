@@ -78,7 +78,9 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                br(),br(),
                                                shinyFilesButton('outlist_neg', 'NEGATIVE PEAKS', 'Please select a csv file', FALSE)
                                         )
-                                        )
+                                        ),
+                                        fluidRow(align="center",
+                                                 sliderInput(ppm,label = "m/z accuracy", min = 1, max = 50, value = 2,post = " ppm"))
                                         )
                     ),
                     hr(),
@@ -638,19 +640,26 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                                                            div(DT::dataTableOutput('match_tab', width="100%"),style='font-size:80%')
                                                                                                                                   ),
                                                                                                                                   tabPanel(title=icon("database"), 
-                                                                                                                                           plotly::plotlyOutput("match_pie_db") %>% shinycssloaders::withSpinner()
+                                                                                                                                           fluidRow(align = "center", 
+                                                                                                                                                    plotly::plotlyOutput("match_pie_db") %>% shinycssloaders::withSpinner()
+                                                                                                                                                    )
                                                                                                                                   ),
                                                                                                                                   tabPanel(title=icon("plus"), 
-                                                                                                                                           plotly::plotlyOutput("match_pie_add") %>% shinycssloaders::withSpinner()
+                                                                                                                                           fluidRow(align = "center", 
+                                                                                                                                                    plotly::plotlyOutput("match_pie_add") %>% shinycssloaders::withSpinner()
+                                                                                                                                                    )
                                                                                                                                   ),
                                                                                                                                   tabPanel(title=icon("cloud"),
-                                                                                                                                           wordcloud2::wordcloud2Output("wordcloud_desc") %>% shinycssloaders::withSpinner(),
-                                                                                                                                           tags$script(HTML(
-                                                                                                                                             "$(document).on('click', '#canvas', function() {",
-                                                                                                                                             'word = document.getElementById("wcSpan").innerHTML;',
-                                                                                                                                             "Shiny.onInputChange('selected_word_desc', word);",
-                                                                                                                                             "});"
-                                                                                                                                           ))
+                                                                                                                                           fluidRow(align = "center",
+                                                                                                                                                    list(
+                                                                                                                                                      wordcloud2::wordcloud2Output("wordcloud_desc") %>% shinycssloaders::withSpinner(),
+                                                                                                                                                      tags$script(HTML(
+                                                                                                                                                        "$(document).on('click', '#canvas', function() {",
+                                                                                                                                                        'word = document.getElementById("wcSpan").innerHTML;',
+                                                                                                                                                        "Shiny.onInputChange('selected_word_desc', word);",
+                                                                                                                                                        "});"
+                                                                                                                                                      )))
+                                                                                                                                           )
                                                                                                                                   ),
                                                                                                                                   tabPanel(title=icon("searchengin"), 
                                                                                                                                            textInput('pm_query', "Search for:"),

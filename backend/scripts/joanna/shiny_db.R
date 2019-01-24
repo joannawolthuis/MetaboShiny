@@ -471,11 +471,15 @@ multimatch <- function(cpd, dbs, searchid="mz", inshiny=T){
     
     #print(dbname)
     
-    res <- get_matches(cpd, 
-                       match.table, 
-                       searchid=searchid,
-                       inshiny=inshiny,
-                       append = if(i == 1) F else T)
+    if(dbname == "magicball"){
+      res <- get_predicted(cpd, ppm = mSet$dataSet$ppm)
+    }else{
+      res <- get_matches(cpd, 
+                         match.table, 
+                         searchid=searchid,
+                         inshiny=inshiny,
+                         append = if(i == 1) F else T)
+    }
     
     #print(res)
     
@@ -483,7 +487,6 @@ multimatch <- function(cpd, dbs, searchid="mz", inshiny=T){
     
     if(nrow(res) > 0){
       res = cbind(res, source = c(dbname))
-      #res$source = c(dbname)
     }
     
     res
@@ -491,7 +494,7 @@ multimatch <- function(cpd, dbs, searchid="mz", inshiny=T){
   
   if(is.null(unlist(match_list))) return(data.table(name = "None",
                                                     description = "Unknown compound",
-                                                    soucre = "None"))
+                                                    source = "None"))
   
   match_table <- (as.data.table(rbindlist(match_list, fill=T))[name != ""])
   # --- sort ---
@@ -505,4 +508,78 @@ multimatch <- function(cpd, dbs, searchid="mz", inshiny=T){
   }
   # --- return ---
   match_table[,-c("identifier")]
+}
+
+get_predicted <- function(mz, 
+                          charge = NULL, 
+                          ppm = 2, 
+                          scanmode = "positive", 
+                          checkdb = T, 
+                          elements = "CHNOPSNaClKILi"){
+  
+  # find which mode we are in
+  if(checkdb){
+    conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb)
+    scanmode <- DBI::dbGetQuery(conn, paste0("SELECT DISTINCT foundinmode FROM mzvals WHERE mzmed = ", mz))[,1]
+  }
+  
+  # get which formulas are possible
+  predicted = Rdisop::decomposeMass(as.numeric(mz), 
+                                    ppm = ppm,
+                                    elements = elements)
+  
+  # charged
+  charged = which( (predicted$DBE %% 1)  == 0.5 )
+  posdbe = which( predicted$DBE > 0 )
+  
+  candidates = a$formula[intersect(charged, posdbe)]
+  
+  res = lapply(candidates, function(formula){
+    checked <- check_chemform(isotopes, formula)
+    new_formula <- checked[1,]$new_formula
+    # switch between positive and negative mode
+    check_adducts <- adducts[Ion_mode == scanmode]
+    # check which adducts are possible
+    adductvars = lapply(1:nrow(check_adducts), function(i){
+      row = check_adducts[i,]
+      theor_orig_formula = new_formula
+      # if there's an adduct, remove it from the original formula
+      if(row$Formula_add != FALSE){
+        add_possible <- !as.logical(enviPat::check_ded(theor_orig_formula, row$Formula_add))
+        if(add_possible){
+          theor_orig_formula <- Rdisop::subMolecules(theor_orig_formula, row$Formula_add)$formula
+        }else{
+          NULL # if not possible, skip this adduct
+        }
+      }
+      if(row$Formula_ded != FALSE){
+        theor_orig_formula <- Rdisop::addMolecules(theor_orig_formula, row$Formula_ded)$formula
+      }
+      if(!is.null(theor_orig_formula)){
+        #if(theor_orig_formula == "C9H17N3O6") print("here!!")
+        # check params of the original formula (DBE must be integer)
+        calc <- Rdisop::getMolecule(theor_orig_formula)
+        
+        # if(new_formula == "C9H18N3O6"){
+        #   print(row$Name)
+        #   print(theor_orig_formula)
+        #   print(calc$DBE)
+        # }
+        #print(calc$DBE)
+        if(calc$DBE %% 1 != 0){
+          NULL
+        }else{
+          data.table(name = theor_orig_formula, 
+                     baseformula = theor_orig_formula, 
+                     adduct = row$Name, 
+                     `%iso` = 100,
+                     structure = NA, 
+                     description = "Predicted possible formula for this m/z value.")
+        }
+      }
+    })
+  })
+  res_proc = flattenlist(res)
+  tbl = rbindlist(res_proc[!sapply(res, is.null)])
+  tbl
 }
