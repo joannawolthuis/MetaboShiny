@@ -133,7 +133,7 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                               list(name = 'excel_icon_2', path = 'www/excel.png', dimensions = c(120, 120)),
                                               list(name = 'db_icon', path = 'www/servers.png', dimensions = c(150, 150)),
                                               list(name = 'csv_icon', path = 'www/office.png', dimensions = c(100, 100)),
-                                              list(name= 'magicball', path = 'www/magic-ball.png', dimensions = c(250,250)),
+                                              list(name= 'magicball', path = 'www/magic-ball2.png', dimensions = c(200,200)),
                                               list(name = 'dataset_icon', path = 'www/office.png', dimensions = c(100, 100)),
                                               list(name = 'sidebar_icon', path = 'www/detective.png', dimensions = c(60, 60))
                                               

@@ -17,7 +17,6 @@ observeEvent(input$search_cpd, {
                                         function(i){
                                           # get description
                                           desc <- global$tables$last_matches$description[[i]]
-                                          
                                           # return
                                           desc
                                         })

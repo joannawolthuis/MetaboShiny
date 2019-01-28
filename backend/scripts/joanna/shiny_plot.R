@@ -206,7 +206,9 @@ blackwhite.colors <- function(n){
 }
 
 #' @export
-ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "pink"), sourceTable = mSet$dataSet$norm, cf=rainbow, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]], mode = "nm", plotlyfy=TRUE){
+ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "pink"), sourceTable = mSet$dataSet$norm, 
+                          cf=rainbow, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]], 
+                          mode = "nm", plotlyfy=TRUE, style="box",scatter = T){
   
   cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
   
@@ -231,18 +233,46 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
            
            # ggplot
            p <- ggplot2::ggplot(data=profile, ggplot2::aes(x=Group,y=Abundance, fill=Group, color=Group)) +
-             ggplot2::geom_boxplot(alpha=0.4) +
-             ggplot2::geom_point(ggplot2::aes(text=Sample, shape=Shape),alpha=0.7, size = 2, position = position_dodge(width=0.1)) +
-             plot.theme(base_size = 15) +
-             ggplot2::scale_fill_manual(values=cols) +
+             plot.theme(base_size = 15)
+           
+           p <- switch(style,
+                       box = {
+                         p + ggplot2::geom_boxplot(alpha=0.4)
+                           #ggplot2::geom_point(ggplot2::aes(text=Sample, shape=Shape),alpha=0.7, size = 2, position = position_dodge(width=0.1))
+                       },
+                       violin = {
+                         p + ggplot2::geom_violin(alpha=0.4)
+                           #ggplot2::geom_point(ggplot2::aes(text=Sample, shape=Shape),alpha=0.7, size = 2, position = position_dodge(width=0.1))
+                       },
+                       beeswarm = {
+                         p + ggbeeswarm::geom_beeswarm(ggplot2::aes(text=Sample, shape=Shape),alpha=0.7, size = 2, position = position_dodge(width=.3))
+                       },
+                       boxviolin = {
+                         p + ggplot2::geom_boxplot(alpha=0.4) + 
+                           ggplot2::geom_violin(alpha=0.4)
+                       },
+                       all = { 
+                         p + ggplot2::geom_boxplot(alpha=0.4) + 
+                           ggplot2::geom_violin(alpha=0.4) + 
+                           ggbeeswarm::geom_beeswarm(ggplot2::aes(text=Sample, shape=Shape),alpha=0.7, size = 2, position = position_dodge(width=.3))
+                         })
+           
+           if(scatter & !(style %in% c("beeswarm", "all"))){
+             p = p + ggplot2::geom_point(ggplot2::aes(text=Sample, shape=Shape),alpha=0.7, size = 2, position = position_dodge(width=0.1))
+           }
+           
+             p <- p + ggplot2::scale_fill_manual(values=cols) +
              ggplot2::scale_color_manual(values=cols) +
              theme(legend.position="none",
                    axis.text=element_text(size=global$constants$font.aes$ax.num.size),
                    axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
                    legend.title.align = 0.5,
                    axis.line = element_line(colour = 'black', size = .5),
-                   text = element_text(family = global$constants$font.aes$font))
-           p <- p + ggplot2::annotate("text", x = 1.5, y = min(profile$Abundance - 0.3), label = stars, size = 8, col = "black") + ggtitle(cpd)
+                   text = element_text(family = global$constants$font.aes$font))+ 
+               ggplot2::annotate("text", x = 1.5, y = min(profile$Abundance - 0.3), 
+                                 label = stars, size = 8, col = "black") + ggtitle(cpd)
+           
+           
            # ---------------
            if(plotlyfy){
              ggplotly(p, tooltip="Sample", originalData=T)
@@ -489,10 +519,12 @@ ggPlotPerm <- function(pls.type = "plsda",
                  color="black",
                  x=bw.vec[1],
                  xend=bw.vec[1],
-                 y=0,aes(yend=.1*nrow(df)),
+                 y=0,
+                 aes(yend=.1*nrow(df)),
                  size=1.5,
-                 linetype=8)+
-    annotate("text",x=bw.vec[1],y=.11*nrow(df),label = pval, color="black",size=4)
+                 linetype=8) +
+    geom_text(mapping = aes(x = bw.vec[1], y =  .11*nrow(df), label = pval), color = "black", size = 4)
+#    annotate("text",x=bw.vec[1],y=.11*nrow(df),label = pval, color="black",size=4)
   
   if(plotlyfy){
     ggplotly(p)

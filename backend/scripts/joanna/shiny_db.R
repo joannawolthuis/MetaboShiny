@@ -472,7 +472,7 @@ multimatch <- function(cpd, dbs, searchid="mz", inshiny=T){
     #print(dbname)
     
     if(dbname == "magicball"){
-      res <- get_predicted(cpd, ppm = mSet$dataSet$ppm)
+      res <- get_predicted(cpd, ppm = mSet$dataSet$ppm, search_pubchem = F)
     }else{
       res <- get_matches(cpd, 
                          match.table, 
@@ -515,8 +515,22 @@ get_predicted <- function(mz,
                           ppm = 2, 
                           scanmode = "positive", 
                           checkdb = T, 
-                          elements = "CHNOPSNaClKILi"){
+                          elements = "CHNOPSNaClKILi",
+                          search_pubchem = T){
   
+  cat(" 
+         _...._
+       .`      `.
+      / ***      \            MagicBall
+     : **         :         is searching...
+     :            :        
+     \\          /       
+       `-.,,,,.-'              
+        _(    )_
+       )        (
+      (          )
+       `-......-`
+      ")
   # find which mode we are in
   if(checkdb){
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb)
@@ -527,14 +541,15 @@ get_predicted <- function(mz,
   predicted = Rdisop::decomposeMass(as.numeric(mz), 
                                     ppm = ppm,
                                     elements = elements)
-  
-  # charged
+    # charged
   charged = which( (predicted$DBE %% 1)  == 0.5 )
   posdbe = which( predicted$DBE > 0 )
   
-  candidates = a$formula[intersect(charged, posdbe)]
-  
+  candidates = predicted$formula[intersect(charged, posdbe)]
+  candidates <- candidates[!is.na(candidates)]
+
   res = lapply(candidates, function(formula){
+    
     checked <- check_chemform(isotopes, formula)
     new_formula <- checked[1,]$new_formula
     # switch between positive and negative mode
@@ -580,6 +595,29 @@ get_predicted <- function(mz,
     })
   })
   res_proc = flattenlist(res)
-  tbl = rbindlist(res_proc[!sapply(res, is.null)])
+  tbl = rbindlist(res_proc[!sapply(res_proc, is.null)])
+  
+  # do a pubchem search
+  
+  uniques <- unique(tbl$baseformula)
+  
+  if(search_pubchem){
+    pc_rows <- pbapply::pblapply(uniques, function(formula){
+      url = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/fastformula/", formula, "/cids/JSON")
+      description = "No PubChem hits for this predicted formula."
+      try({
+        pc_res <- jsonlite::read_json(url,simplifyVector = T)
+        cids <- pc_res$IdentifierList$CID
+        description <- paste0("PubChem found these IDs: ", paste0(cids, collapse = ", "))
+      })  
+      Sys.sleep(0.2)
+      data.table(formula = formula, description = description)
+    })
+    pc_tbl <- rbindlist(pc_rows)
+    tbl <- merge(tbl, pc_tbl, on = formula)
+  }
+  
+  # - - - - - - - - - -
+  
   tbl
 }
