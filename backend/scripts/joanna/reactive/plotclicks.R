@@ -19,7 +19,7 @@ observeEvent(plotly::event_data("plotly_click"),{
     output[[paste0(input$statistics, "_specific_plot")]] <- plotly::renderPlotly({
       # --- ggplot ---
       ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]],
-                    style = input$ggplot_sum_style, scatter = as.logical(input$ggplot_sum_scatter))
+                    style = input$ggplot_sum_style, scatter = as.logical(input$ggplot_sum_scatter), add_stats = input$ggplot_sum_stats)
     })
   }else if(req(input$statistics ) == "pca"){ # deprecated - used to hide and show certain groups
     if(!"z" %in% names(d)){
@@ -89,7 +89,8 @@ observeEvent(plotly::event_data("plotly_click"),{
     # --- ggplot ---
     ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols, 
                   cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]],
-                  style = input$ggplot_sum_style, scatter = as.logical(input$ggplot_sum_scatter))
+                  style = input$ggplot_sum_style, scatter = as.logical(input$ggplot_sum_scatter),
+                  add_stats = input$ggplot_sum_stats)
   })
   
   # change current compound in text

@@ -61,7 +61,8 @@ lapply(unique(res.update.tables), FUN=function(table){
     output$curr_plot <- plotly::renderPlotly({
       # --- ggplot ---
       ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]],
-                    style = input$ggplot_sum_style, scatter = as.logical(input$ggplot_sum_scatter))
+                    style = input$ggplot_sum_style, scatter = as.logical(input$ggplot_sum_scatter),
+                    add_stats = input$ggplot_sum_stats)
     })
     
     outplot_name <- paste0(table, "_specific_plot")
@@ -72,19 +73,23 @@ lapply(unique(res.update.tables), FUN=function(table){
         ggplotMeba(curr_cpd, draw.average = T, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
       }else if(table == 'asca'){ # asca needs a split by time
         ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]], mode = "ts",
-                      style = input$ggplot_sum_style, scatter = as.logical(input$ggplot_sum_scatter))
+                      style = input$ggplot_sum_style, scatter = as.logical(input$ggplot_sum_scatter),
+                      add_stats = input$ggplot_sum_stats)
       }else{ # regular boxplot
         if(!is.null(input$timecourse_trigger)){
           if(input$timecourse_trigger){
             ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]], mode = "ts",
-                          style = input$ggplot_sum_style, scatter = as.logical(input$ggplot_sum_scatter))
+                          style = input$ggplot_sum_style, scatter = as.logical(input$ggplot_sum_scatter),
+                          add_stats = input$ggplot_sum_stats)
           }else{
             ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]],
-                          style = input$ggplot_sum_style, scatter = as.logical(input$ggplot_sum_scatter))
+                          style = input$ggplot_sum_style, scatter = as.logical(input$ggplot_sum_scatter),
+                          add_stats = input$ggplot_sum_stats)
           }
         }else{
           ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]],
-                        style = input$ggplot_sum_style, scatter = as.logical(input$ggplot_sum_scatter))
+                        style = input$ggplot_sum_style, scatter = as.logical(input$ggplot_sum_scatter),
+                        add_stats = input$ggplot_sum_stats)
         }
         
       }

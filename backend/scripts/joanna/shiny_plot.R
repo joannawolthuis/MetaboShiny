@@ -208,7 +208,8 @@ blackwhite.colors <- function(n){
 #' @export
 ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "pink"), sourceTable = mSet$dataSet$norm, 
                           cf=rainbow, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]], 
-                          mode = "nm", plotlyfy=TRUE, style="box",scatter = T){
+                          mode = "nm", plotlyfy=TRUE, 
+                          style="box", scatter = T, add_stats = "mean"){
   
   cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
   
@@ -272,7 +273,19 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
                ggplot2::annotate("text", x = 1.5, y = min(profile$Abundance - 0.3), 
                                  label = stars, size = 8, col = "black") + ggtitle(cpd)
            
-           
+          p <- switch(add_stats,
+                      median = {
+                        p + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                                         geom = "crossbar", width = 0.5)
+                      },
+                      mean = {
+                        p + stat_summary(fun.y = mean, fun.ymin = mean, fun.ymax = mean,
+                                         geom = "crossbar", width = 0.5)
+                      },
+                      none = {
+                        p
+                      }
+                      )
            # ---------------
            if(plotlyfy){
              ggplotly(p, tooltip="Sample", originalData=T)
@@ -281,26 +294,80 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
            }
          }, 
          ts = {
+           
            profile <- getProfile(cpd, mode="time")
            profile$Shape <- if(shape.fac == "label"){
              c("placeholder")
            }else{
              mSet$dataSet$covars[,..shape.fac][[1]]
            }
+           
+           # ---
+           
            p <- ggplot2::ggplot(data=profile, ggplot2::aes(x=Time, y=Abundance, group=Group, fill=Group, color=Group)) +
-             ggplot2::geom_boxplot(alpha=0.4, aes(shape=Shape)) +
-             ggplot2::geom_point(ggplot2::aes(text=Sample),alpha=0.4, size = 2, position = position_dodge(width=0.1)) +
-             plot.theme(base_size = 15) +
-             ggplot2::scale_fill_manual(values=cols) +
-             ggplot2::scale_color_manual(values=cols)+
+             plot.theme(base_size = 15)
+           
+           p <- switch(style,
+                       box = {
+                         p + ggplot2::geom_boxplot(alpha=0.4)
+                       },
+                       violin = {
+                         p + ggplot2::geom_violin(alpha=0.4)
+                       },
+                       beeswarm = {
+                         p + ggbeeswarm::geom_beeswarm(ggplot2::aes(text=Sample, shape=Shape),alpha=0.7, size = 2, position = position_dodge(width=.3))
+                       },
+                       boxviolin = {
+                         p + ggplot2::geom_boxplot(alpha=0.4) + 
+                           ggplot2::geom_violin(alpha=0.4)
+                       },
+                       all = { 
+                         p + ggplot2::geom_boxplot(alpha=0.4) + 
+                           ggplot2::geom_violin(alpha=0.4) + 
+                           ggbeeswarm::geom_beeswarm(ggplot2::aes(text=Sample, shape=Shape),alpha=0.7, size = 2, position = position_dodge(width=.3))
+                       })
+           
+           if(scatter & !(style %in% c("beeswarm", "all"))){
+             p = p + ggplot2::geom_point(ggplot2::aes(text=Sample, shape=Shape),alpha=0.7, size = 2, position = position_dodge(width=0.1))
+           }
+           
+           p <- p + ggplot2::scale_fill_manual(values=cols) +
+             ggplot2::scale_color_manual(values=cols) +
              theme(legend.position="none",
                    axis.text=element_text(size=global$constants$font.aes$ax.num.size),
                    axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
                    legend.title.align = 0.5,
                    axis.line = element_line(colour = 'black', size = .5),
-                   text = element_text(family = global$constants$font.aes$font))+
-             stat_summary(fun.y=median, geom="line", aes(group=paste("median", Group)), linetype="dotted", lwd=1, alpha=0.5) + ggtitle(cpd)
-           # ---------------
+                   text = element_text(family = global$constants$font.aes$font)) + 
+             ggtitle(cpd)
+           
+           p <- switch(add_stats,
+                       median = {
+                         p + stat_summary(fun.y=median, geom="line", aes(group=paste("median", Group)), linetype="dotted", lwd=1, alpha=0.5) 
+
+                       },
+                       mean = {
+                         p + stat_summary(fun.y=mean, geom="line", aes(group=paste("mean", Group)), linetype="dotted", lwd=1, alpha=0.5)
+                       },
+                       none = {
+                         p
+                       }
+           )
+           # previous, works
+           # p <- ggplot2::ggplot(data=profile, ggplot2::aes(x=Time, y=Abundance, group=Group, fill=Group, color=Group)) +
+           #   ggplot2::geom_boxplot(alpha=0.4, aes(shape=Shape)) +
+           #   ggplot2::geom_point(ggplot2::aes(text=Sample),alpha=0.4, size = 2, position = position_dodge(width=0.1)) +
+           #   plot.theme(base_size = 15) +
+           #   ggplot2::scale_fill_manual(values=cols) +
+           #   ggplot2::scale_color_manual(values=cols)+
+           #   theme(legend.position="none",
+           #         axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+           #         axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+           #         legend.title.align = 0.5,
+           #         axis.line = element_line(colour = 'black', size = .5),
+           #         text = element_text(family = global$constants$font.aes$font))+
+           #   stat_summary(fun.y=median, geom="line", aes(group=paste("median", Group)), linetype="dotted", lwd=1, alpha=0.5) + ggtitle(cpd)
+
            if(plotlyfy){
              ggplotly(p, tooltip="Sample", originalData=T)
            }else{

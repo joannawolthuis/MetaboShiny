@@ -716,6 +716,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                                                   "Box + violin"="boxviolin",
                                                                                                                                   "All"="all")
                                                                                   ),
+                                                                      selectInput("ggplot_sum_stats", label = "Stats shown", choices = list("median", "mean", "none")),
                                                                       fluidRow(align="center",
                                                                                switchButton("ggplot_sum_scatter",label = "Show scatterplot overlay?", col = "BW", type = "YN")),
                                                                       h2("Plot theme"),
