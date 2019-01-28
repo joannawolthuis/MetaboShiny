@@ -14,7 +14,7 @@ observeEvent(input$change_cls, {
   global$constants$last_mset <<- mset_name
   
   # change current variable of interest to user pick from covars table
-  mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,input$first_var, with=F][[1]])
+  mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,input$stats_var, with=F][[1]])
   
   # adjust bivariate/multivariate (2, >2)...
   mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
@@ -26,11 +26,11 @@ observeEvent(input$change_cls, {
     subset_name <- ""
   }
   
-  new_name <- paste0(input$first_var, subset_name)
+  new_name <- paste0(input$stats_var, subset_name)
   mSet$dataSet$cls.name <<- new_name
   
   if(new_name %in% names(mSet$storage)){
-    mSet$analSet <<- mSet$storage[[input$first_var]]$analysis
+    mSet$analSet <<- mSet$storage[[input$stats_var]]$analysis
   }else{
     # remove old analSet
     mSet$analSet <<- NULL

@@ -209,7 +209,8 @@ blackwhite.colors <- function(n){
 ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "pink"), sourceTable = mSet$dataSet$norm, 
                           cf=rainbow, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]], 
                           mode = "nm", plotlyfy=TRUE, 
-                          style="box", scatter = T, add_stats = "mean"){
+                          style="box", scatter = T, add_stats = "mean",
+                          col.fac = "label", txt.fac = "label"){
   
   cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
   
@@ -227,26 +228,47 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
            # -----------
            
            profile$Shape <- if(shape.fac == "label"){
-             c("placeholder")
+             as.factor(mSet$dataSet$cls)
            }else{
              as.factor(mSet$dataSet$covars[,..shape.fac][[1]])
            }
            
-           # ggplot
-           p <- ggplot2::ggplot(data=profile, ggplot2::aes(x=Group,y=Abundance, fill=Group, color=Group)) +
-             plot.theme(base_size = 15)
+           profile$Color <- if(col.fac == "label"){
+             as.factor(mSet$dataSet$cls)
+           }else{
+             as.factor(mSet$dataSet$covars[,..col.fac][[1]])
+           }
            
+           if(style != "beeswarm" | scatter){
+            profile$Color <- profile$Group 
+           }
+           
+           ncols = length(unique(profile$Color))
+           
+           profile$Text <- if(txt.fac == "label"){
+             as.factor(mSet$dataSet$cls)
+           }else{
+             as.factor(mSet$dataSet$covars[,..txt.fac][[1]])
+           }
+           
+           # ggplot
+           
+           p <- ggplot2::ggplot(data=profile, 
+                                ggplot2::aes(x = Group, y = Abundance, 
+                                             Shape = Shape, color = Color, fill = Color)) +
+             plot.theme(base_size = 15)
+          
+           # - - - - - - - - 
+
            p <- switch(style,
                        box = {
-                         p + ggplot2::geom_boxplot(alpha=0.4)
-                           #ggplot2::geom_point(ggplot2::aes(text=Sample, shape=Shape),alpha=0.7, size = 2, position = position_dodge(width=0.1))
+                         p + ggplot2::geom_boxplot(alpha=0.4, aes(text=Text))
                        },
                        violin = {
                          p + ggplot2::geom_violin(alpha=0.4)
-                           #ggplot2::geom_point(ggplot2::aes(text=Sample, shape=Shape),alpha=0.7, size = 2, position = position_dodge(width=0.1))
                        },
                        beeswarm = {
-                         p + ggbeeswarm::geom_beeswarm(ggplot2::aes(text=Sample, shape=Shape),alpha=0.7, size = 2, position = position_dodge(width=.3))
+                         p + ggbeeswarm::geom_beeswarm(alpha=0.7, size = 2, position = position_dodge(width=.3), aes(text=Text))
                        },
                        boxviolin = {
                          p + ggplot2::geom_boxplot(alpha=0.4) + 
@@ -255,16 +277,15 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
                        all = { 
                          p + ggplot2::geom_boxplot(alpha=0.4) + 
                            ggplot2::geom_violin(alpha=0.4) + 
-                           ggbeeswarm::geom_beeswarm(ggplot2::aes(text=Sample, shape=Shape),alpha=0.7, size = 2, position = position_dodge(width=.3))
+                           ggbeeswarm::geom_beeswarm(alpha=0.7, size = 2, position = position_dodge(width=.3), aes(text=Text))
                          })
            
            if(scatter & !(style %in% c("beeswarm", "all"))){
-             p = p + ggplot2::geom_point(ggplot2::aes(text=Sample, shape=Shape),alpha=0.7, size = 2, position = position_dodge(width=0.1))
+             p = p + ggplot2::geom_point(alpha=0.7, size = 2, position = position_dodge(width=0.1), aes(text=Text))
            }
            
-             p <- p + ggplot2::scale_fill_manual(values=cols) +
-             ggplot2::scale_color_manual(values=cols) +
-             theme(legend.position="none",
+           
+          p <- p + theme(legend.position="none",
                    axis.text=element_text(size=global$constants$font.aes$ax.num.size),
                    axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
                    legend.title.align = 0.5,
@@ -273,13 +294,25 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
                ggplot2::annotate("text", x = 1.5, y = min(profile$Abundance - 0.3), 
                                  label = stars, size = 8, col = "black") + ggtitle(cpd)
            
+          if(ncols == 2){
+              p <- p + ggplot2::scale_fill_manual(values=cols) +
+                ggplot2::scale_color_manual(values=cols)
+            }else{
+              p <- p + ggplot2::scale_fill_manual(values=cf(ncols)) +
+                ggplot2::scale_color_manual(values=cf(ncols))
+            }
+          
           p <- switch(add_stats,
                       median = {
-                        p + stat_summary(fun.y = median, fun.ymin = median, fun.ymax = median,
+                        p + stat_summary(fun.y = median, 
+                                         fun.ymin = median, 
+                                         fun.ymax = median,
                                          geom = "crossbar", width = 0.5)
                       },
                       mean = {
-                        p + stat_summary(fun.y = mean, fun.ymin = mean, fun.ymax = mean,
+                        p + stat_summary(fun.y = mean, 
+                                         fun.ymin = mean, 
+                                         fun.ymax = mean,
                                          geom = "crossbar", width = 0.5)
                       },
                       none = {
@@ -288,7 +321,7 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
                       )
            # ---------------
            if(plotlyfy){
-             ggplotly(p, tooltip="Sample", originalData=T)
+             ggplotly(p, tooltip = "Text")#, originalData=T)
            }else{
              p
            }

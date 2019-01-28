@@ -18,8 +18,9 @@ observeEvent(plotly::event_data("plotly_click"),{
     # - return -
     output[[paste0(input$statistics, "_specific_plot")]] <- plotly::renderPlotly({
       # --- ggplot ---
-      ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]],
-                    style = input$ggplot_sum_style, scatter = as.logical(input$ggplot_sum_scatter), add_stats = input$ggplot_sum_stats)
+      ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]],
+                    style = input$ggplot_sum_style, scatter = as.logical(input$ggplot_sum_scatter), add_stats = input$ggplot_sum_stats,
+                    col.fac = input$col_var, txt.fac = input$txt_var)
     })
   }else if(req(input$statistics ) == "pca"){ # deprecated - used to hide and show certain groups
     if(!"z" %in% names(d)){
@@ -87,10 +88,11 @@ observeEvent(plotly::event_data("plotly_click"),{
   # render curent miniplot based on current compound
   output$curr_plot <- plotly::renderPlotly({
     # --- ggplot ---
-    ggplotSummary(curr_cpd, shape.fac = input$second_var, cols = global$vectors$mycols, 
+    ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, 
                   cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]],
                   style = input$ggplot_sum_style, scatter = as.logical(input$ggplot_sum_scatter),
-                  add_stats = input$ggplot_sum_stats)
+                  add_stats = input$ggplot_sum_stats,
+                  col.fac = input$col_var, txt.fac = input$txt_var)
   })
   
   # change current compound in text

@@ -529,34 +529,6 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                   sidebarPanel = 
                                     sidebarPanel(align="center",width = 4,
                                                  tabsetPanel(id = "search", #type = "pills",
-                                                             tabPanel(NULL, icon=icon("exchange")
-                                                                      ,h2("Current experiment:")
-                                                                      ,div(
-                                                                        sardine(h2(textOutput("curr_name"),style="padding:10px;")),
-                                                                        style="background-color:white;
-                                                                                                               height:55px;
-                                                                                                               width:115%;
-                                                                                                               position:relative;
-                                                                                                               right:30px;
-                                                                                                               border-top: 1px solid #DFDCDC;
-                                                                                                               border-bottom: 1px solid #DFDCDC;")
-                                                                      ,hr()
-                                                                      ,h2("Change variable of interest")
-                                                                      ,selectInput("first_var", label="Do statistics on:", choices = c("label"))
-                                                                      ,shinyWidgets::circleButton("change_cls", icon = icon("hand-pointer-o"), size = "sm")
-                                                                      ,fluidRow(column(12, align="center", uiOutput("timebutton")))
-                                                                      ,h2("Shape")
-                                                                      ,selectInput("second_var", label="Marker shape based on:", choices = c("label"))
-                                                                      ,hr()
-                                                                      ,h2("Subset data")
-                                                                      ,selectInput("subset_var", label="Subset data based on:", choices = c("label"))
-                                                                      ,selectizeInput("subset_group", label="Group(s) in subset:", choices = c(), multiple=TRUE)
-                                                                      ,shinyWidgets::circleButton("change_subset", icon = icon("hand-pointer-o"), size = "sm")
-                                                                      ,shinyWidgets::circleButton("reset_subset", icon = icon("undo"), size = "sm")
-                                                                      
-                                                                      
-                                                                      
-                                                             ),
                                                              tabPanel(title=NULL, icon=icon("search"),
                                                                       br(),
                                                                       bsCollapse(bsCollapsePanel(title=h2("Settings"), style="info",
@@ -707,6 +679,30 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                            div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
                                                                                   ))
                                                                       ),
+																				  tabPanel(NULL, icon=icon("exchange")
+																				           ,h2("Current experiment:")
+																				           ,div(
+																				             sardine(h2(textOutput("curr_name"),style="padding:10px;")),
+																				             style="background-color:white;
+																				             height:55px;
+																				             width:115%;
+																				             position:relative;
+																				             right:30px;
+																				             border-top: 1px solid #DFDCDC;
+																				             border-bottom: 1px solid #DFDCDC;")
+																				           ,hr()
+																				           ,h2("Change variable of interest")
+																				           ,selectInput("first_var", label="Do statistics on:", choices = c("label"))
+																				           ,shinyWidgets::circleButton("change_cls", icon = icon("hand-pointer-o"), size = "sm")
+																				           ,fluidRow(column(12, align="center", uiOutput("timebutton")))
+																				           ,hr()
+																				           ,h2("Subset data")
+																				           ,selectInput("subset_var", label="Subset data based on:", choices = c("label"))
+																				           ,selectizeInput("subset_group", label="Group(s) in subset:", choices = c(), multiple=TRUE)
+																				           ,shinyWidgets::circleButton("change_subset", icon = icon("hand-pointer-o"), size = "sm")
+																				           ,shinyWidgets::circleButton("reset_subset", icon = icon("undo"), size = "sm")
+																				           
+																				           ),
 															 # this tab is used to select user plot theme and user colours (discrete and continuous)
                                                              tabPanel(NULL, icon=icon("paint-brush"),
                                                                       h2("Summary plot style"),br(),
@@ -719,6 +715,12 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                       selectInput("ggplot_sum_stats", label = "Stats shown", choices = list("median", "mean", "none")),
                                                                       fluidRow(align="center",
                                                                                switchButton("ggplot_sum_scatter",label = "Show scatterplot overlay?", col = "BW", type = "YN")),
+                                                                      h2("Shape")
+                                                                      ,selectInput("shape_var", label="Marker shape based on:", choices = c("label"))
+                                                                      ,h2("Color")
+                                                                      ,selectInput("col_var", label="Marker color based on:", choices = c("label"))
+                                                                      ,h2("Hover text")
+                                                                      ,selectInput("txt_var", label="Marker hover text based on:", choices = c("sample")),
                                                                       h2("Plot theme"),
                                                                       selectInput("ggplot_theme", label = "Theme", choices = list("Grid, white bg"="bw",
                                                                                                                                   "No grid, white bg"="classic",
