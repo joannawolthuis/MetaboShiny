@@ -11,7 +11,7 @@ observe({
 
 # which table names to check for user click events
 res.update.tables <<- c("tt", 
-                        "fc", 
+                        "fc",
                         "aov",
                         "rf",
                         "asca", 

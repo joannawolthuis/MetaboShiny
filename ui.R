@@ -307,6 +307,10 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                    ),
                                                                    tabPanel(h3("T-test"), value="tt", 
                                                                             fluidRow(plotly::plotlyOutput('tt_specific_plot',width="100%")),
+                                                                            fluidRow(align="center",
+                                                                                     sardine(switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = F)),
+                                                                                     sardine(switchButton("tt_eqvar", "Equal variance?", col="BW", type="YN", value = T))
+                                                                                     ),
                                                                             navbarPage(inverse=F,"",
                                                                                        tabPanel("", icon=icon("table"),
                                                                                                 div(DT::dataTableOutput('tt_tab',width="100%"),style='font-size:80%'))

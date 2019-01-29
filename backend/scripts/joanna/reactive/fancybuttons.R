@@ -7,6 +7,16 @@ observeEvent(input$plsda_2d3d, {
   datamanager$reload <- "plsda"
 },ignoreInit = TRUE, ignoreNULL = T)
 
+observeEvent(input$tt_nonpar, {
+  statsmanager$calculate <- "tt"
+  datamanager$reload <- "tt"
+},ignoreInit = TRUE, ignoreNULL = T)
+
+observeEvent(input$tt_eqvar, {
+  statsmanager$calculate <- "tt"
+  datamanager$reload <- "tt"
+},ignoreInit = TRUE, ignoreNULL = T)
+
 # set default mode for heatmap top hits pick button (tt/fc or asca/meba)
 heatbutton <- reactiveValues(status = "ttfc")
 
