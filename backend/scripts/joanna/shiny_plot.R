@@ -9,7 +9,7 @@ ggplotNormSummary <- function(mSet, colmap = global$vectors$mycols, plot.theme =
   orig_data <- as.data.frame(mSet$dataSet$procr)
   # load in normalized data
   norm_data <- as.data.frame(mSet$dataSet$norm)
-
+  
   # isolate which samples and mz values are available in both tables
   candidate.samps <- intersect(rownames(orig_data), rownames(norm_data))
   candidate.mzs <- intersect(colnames(orig_data), colnames(norm_data))
@@ -25,7 +25,7 @@ ggplotNormSummary <- function(mSet, colmap = global$vectors$mycols, plot.theme =
   
   # isolate these samples from normalized table and melt into long format
   norm_melt <- reshape2::melt(cbind(which_samps, norm_data[which_samps, which_cpds]))
-
+  
   # create base plot with base theme and font size for original data
   plot <- ggplot2::ggplot(data=orig_melt) +
     plot.theme(base_size = 15) #+ facet_grid(. ~ variable) 
@@ -103,16 +103,16 @@ ggplotSampleNormSummary <- function(mSet, plot.theme = global$functions$plot.the
   
   sumsOrig <- rowSums(orig_data[which_samps,])
   sumsNorm <- rowSums(norm_data[which_samps,])
-
+  
   orig_data$Label <- rownames(orig_data)
   orig_melt <- reshape2::melt(orig_data[which_samps,],
-                    id.vars = "Label")
+                              id.vars = "Label")
   orig_melt_sums <- reshape2::melt(sumsOrig)
   orig_melt_sums$variable <- rownames(orig_melt_sums)
   
   norm_data$Label <- rownames(norm_data)
   norm_melt <- reshape2::melt(norm_data[which_samps,],
-                    id.vars="Label")
+                              id.vars="Label")
   norm_melt_sums <- reshape2::melt(sumsNorm)
   norm_melt_sums$variable <- rownames(norm_melt_sums)
   
@@ -127,16 +127,16 @@ ggplotSampleNormSummary <- function(mSet, plot.theme = global$functions$plot.the
   
   RES2 <- ggplot2::ggplot(data=orig_melt) +
     plot.theme(base_size = 15) + ggplot2::geom_boxplot(
-                      ggplot2::aes(x=value,y=Label),
-                      color=rainbow(sampsize), 
-                      alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(orig_melt$value),text=Label))+
+      ggplot2::aes(x=value,y=Label),
+      color=rainbow(sampsize), 
+      alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(orig_melt$value),text=Label))+
     theme(legend.position="none",
           axis.text=element_text(size=global$constants$font.aes$ax.num.size),
           axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
           legend.title.align = 0.5,
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = global$constants$font.aes$font))
-
+  
   RES3 <- ggplot2::ggplot(data=norm_melt_sums) +
     plot.theme(base_size = 15) + ggplot2::geom_density(ggplot2::aes(x=value), colour="pink", fill="pink", alpha=0.4)+
     theme(legend.position="none",
@@ -148,16 +148,16 @@ ggplotSampleNormSummary <- function(mSet, plot.theme = global$functions$plot.the
   
   RES4 <- ggplot2::ggplot(data=norm_melt) +
     plot.theme(base_size = 15) + ggplot2::geom_boxplot(
-                      ggplot2::aes(x=value,y=Label),
-                      color=rainbow(sampsize), 
-                      alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(norm_melt$value),text=Label))+
+      ggplot2::aes(x=value,y=Label),
+      color=rainbow(sampsize), 
+      alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(norm_melt$value),text=Label))+
     theme(legend.position="none",
           axis.text=element_text(size=global$constants$font.aes$ax.num.size),
           axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
           legend.title.align = 0.5,
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = global$constants$font.aes$font))
-   
+  
   list(tl=RES1, bl=RES2, tr=RES3, br=RES4)
 } 
 
@@ -181,7 +181,7 @@ ggplotMeba <- function(cpd, draw.average=T, cols=global$vectors$mycols, cf = glo
             text = element_text(family = global$constants$font.aes$font)) +
       ggtitle(cpd)
   } else{
-  ggplot2::ggplot(data=profile) +
+    ggplot2::ggplot(data=profile) +
       ggplot2::geom_line(size=0.7, ggplot2::aes(x=Time, y=Abundance, group=Sample, color=Group, text=Sample)) +
       ggplot2::scale_x_discrete(expand = c(0, 0)) +
       plot.theme(base_size = 15) +
@@ -216,211 +216,142 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
   if(length(styles) == 0){
     styles = c("beeswarm")
   }
-   
-  switch(mode, 
-         nm = {
-           # --- ggplot ---
-           profile <- getProfile(cpd, mode="stat", sourceTable = sourceTable)
-           df_line <- data.table(x = c(1,2),
-                                 y = rep(min(profile$Abundance - 0.1),2))
-           stars = ""
-           try({
-             pval <- mSet$analSet$tt$sig.mat[which(rownames(mSet$analSet$tt$sig.mat) == curr_cpd), "p.value"]
-             stars <- p2stars(pval)
-           })
-           # -----------
-           
-           profile$Shape <- if(shape.fac == "label"){
-             as.factor(mSet$dataSet$cls)
-           }else{
-             as.factor(mSet$dataSet$covars[,..shape.fac][[1]])
-           }
-           
-           profile$Color <- if(col.fac == "label"){
-             as.factor(mSet$dataSet$cls)
-           }else{
-             as.factor(mSet$dataSet$covars[,..col.fac][[1]])
-           }
-           
-           ncols = length(unique(profile$Color))
-           
-           profile$Text <- if(txt.fac == "label"){
-             as.factor(mSet$dataSet$cls)
-           }else{
-             as.factor(mSet$dataSet$covars[,..txt.fac][[1]])
-           }
-           
-           # if only violin and/or boxplot
-           if((length(styles) == 2 & "box" %in% styles & "violin" %in% styles) | (length(styles) == 1 & (styles == "box" | styles == "violin"))){
-             ncol = 2
-             p <- ggplot2::ggplot(data=profile, 
-                                  ggplot2::aes(x = Group, 
-                                               y = Abundance, 
-                                               shape = Shape,
-                                               color = Group, 
-                                               fill = Group
-                                               )) +
-               plot.theme(base_size = 15)
-           }else{
-             p <- ggplot2::ggplot(data=profile, 
-                                  ggplot2::aes(x = Group, 
-                                               y = Abundance, 
-                                               shape = Shape)) +
-               plot.theme(base_size = 15)
-           }
-           
-           # ggplot
-           
-           # - - - - - - - - 
-           
-           for(style in styles){
-             p <- p + switch(style,
-                             box = ggplot2::geom_boxplot(alpha=0.4, aes(text=Text)),
-                             violin = ggplot2::geom_violin(alpha=0.4),
-                             beeswarm = ggbeeswarm::geom_beeswarm(alpha=0.7, size = 2, position = position_dodge(width=.3), aes(text=Text,
-                                                                                                                                color = Color, 
-                                                                                                                                fill = Color)),
-                             scatter = ggplot2::geom_point(alpha=0.7, size = 2, position = position_dodge(width=0.1), aes(text=Text,
-                                                                                                                          color = Color, 
-                                                                                                                          fill = Color))
-             )}
-           
-          p <- p + theme(legend.position="none",
-                   axis.text=element_text(size=global$constants$font.aes$ax.num.size),
-                   axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
-                   legend.title.align = 0.5,
-                   axis.line = element_line(colour = 'black', size = .5),
-                   text = element_text(family = global$constants$font.aes$font))+ 
-               ggplot2::annotate("text", x = 1.5, y = min(profile$Abundance - 0.3), 
-                                 label = stars, size = 8, col = "black") + ggtitle(cpd)
-           
-          if(ncols == 2){
-              p <- p + ggplot2::scale_fill_manual(values=cols) +
-                ggplot2::scale_color_manual(values=cols)
-            }else{
-              p <- p + ggplot2::scale_fill_manual(values=cf(ncols)) +
-                ggplot2::scale_color_manual(values=cf(ncols))
-            }
-          
-          p <- switch(add_stats,
-                      median = {
-                        p + stat_summary(fun.y = median, 
-                                         fun.ymin = median, 
-                                         fun.ymax = median,
-                                         geom = "crossbar", width = 0.5)
-                      },
-                      mean = {
-                        p + stat_summary(fun.y = mean, 
-                                         fun.ymin = mean, 
-                                         fun.ymax = mean,
-                                         geom = "crossbar", width = 0.5)
-                      },
-                      none = {
-                        p
-                      }
-                      )
-           # ---------------
-           if(plotlyfy){
-             ggplotly(p, tooltip = "Text")#, originalData=T)
-           }else{
-             p
-           }
-         }, 
-         ts = {
-           
-           profile <- getProfile(cpd, mode="time")
-           profile$Shape <- if(shape.fac == "label"){
-             c("placeholder")
-           }else{
-             mSet$dataSet$covars[,..shape.fac][[1]]
-           }
-           
-           # ---
-           
-           p <- ggplot2::ggplot(data=profile, ggplot2::aes(x=Time, y=Abundance, group=Group, fill=Group, color=Group)) +
-             plot.theme(base_size = 15)
-           
+  
+  # - - -
+  
+  profile <- getProfile(cpd, mode=if(mode == "nm") "stat" else "time", sourceTable = sourceTable)
+  df_line <- data.table(x = c(1,2),
+                        y = rep(min(profile$Abundance - 0.1),2))
+  stars = ""
+  try({
+    pval <- if(mode == "nm"){
+      mSet$analSet$tt$sig.mat[which(rownames(mSet$analSet$tt$sig.mat) == curr_cpd), "p.value"]
+    }else{
+      mSet$analSet$aov2$sig.mat[which(rownames(mSet$analSet$aov2$sig.mat) == curr_cpd), 'Interaction(adj.p)']
+    }
+    stars <- p2stars(pval)
+  })
+  
+  profile$Shape <- if(shape.fac == "label"){
+    as.factor(mSet$dataSet$cls)
+  }else{
+    as.factor(mSet$dataSet$covars[,..shape.fac][[1]])
+  }
+  
+  profile$Color <- if(col.fac == "label"){
+    as.factor(mSet$dataSet$cls)
+  }else{
+    as.factor(mSet$dataSet$covars[,..col.fac][[1]])
+  }
+  
+  ncols = length(unique(profile$Color))
+  
+  profile$Text <- if(txt.fac == "label"){
+    as.factor(mSet$dataSet$cls)
+  }else{
+    as.factor(mSet$dataSet$covars[,..txt.fac][[1]])
+  }
+  
+  print(mode)
+  
+  if((length(styles) == 2 & "box" %in% styles & "violin" %in% styles) | (length(styles) == 1 & (styles == "box" | styles == "violin"))){
+    ncol = 2
+    p <- ggplot2::ggplot(data=profile, 
+                         switch(mode,
+                                nm = ggplot2::aes(x = Group, 
+                                                  y = Abundance, 
+                                                  shape = Shape,
+                                                  color = Group, 
+                                                  fill = Group),
+                                ts = ggplot2::aes(x = Time, 
+                                                  y = Abundance,
+                                                  group = Group,
+                                                  shape = Shape,
+                                                  color = Group, 
+                                                  fill = Group)
+                                )
+                         
+    ) +
+      plot.theme(base_size = 15)
+  }else{
+    p <- ggplot2::ggplot(data=profile,
+                         switch(mode,
+                                nm = ggplot2::aes(x = Group, 
+                                                  y = Abundance, 
+                                                  shape = Shape),
+                                ts = ggplot2::aes(x = Time, 
+                                                  y = Abundance,
+                                                  group = Time,
+                                                  shape = Shape)
+                         )) +
+      plot.theme(base_size = 15)
+  }
+  
+  if(mode == "ts" & "violin" %in% styles){
+    for(group in unique(profile$Group)){
+      p <- p + ggplot2::geom_violin(data = profile[Group == group], alpha=0.4, position = "identity", aes(group = Time))
+    }
+    styles <- setdiff(styles, "violin")
+  }
+  
+  for(style in styles){
+    p <- p + switch(style,
+                    box = ggplot2::geom_boxplot(alpha=0.4, aes(text=Text)),
+                    violin = ggplot2::geom_violin(alpha=0.4, position = "identity"),
+                    beeswarm = ggbeeswarm::geom_beeswarm(alpha=0.7, size = 2, position = position_dodge(width=.3), aes(text=Text,
+                                                                                                                       color = Color, 
+                                                                                                                       fill = Color)),
+                    scatter = ggplot2::geom_point(alpha=0.7, size = 2, position = position_dodge(width=0.1), aes(text=Text,
+                                                                                                                 color = Color, 
+                                                                                                                 fill = Color))
+    )}
+  
+  p <- p + theme(legend.position="none",
+                 axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+                 axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+                 legend.title.align = 0.5,
+                 axis.line = element_line(colour = 'black', size = .5),
+                 text = element_text(family = global$constants$font.aes$font))+ 
+    ggplot2::annotate("text", 
+                      x = switch(mode, nm = 1.5,
+                                 ts = max(as.numeric(profile$Time))/2 + .5), 
+                      y = min(profile$Abundance - 0.3), 
+                      label = stars, size = 8, col = "black") + ggtitle(cpd)
+  
+  if(ncols == 2){
+    p <- p + ggplot2::scale_fill_manual(values=cols) +
+      ggplot2::scale_color_manual(values=cols)
+  }else{
+    p <- p + ggplot2::scale_fill_manual(values=cf(ncols)) +
+      ggplot2::scale_color_manual(values=cf(ncols))
+  }
+  
+  if(!("box" %in% styles)){
+    p <- switch(add_stats,
+                median = {
+                  p + stat_summary(fun.y = median, 
+                                   fun.ymin = median, 
+                                   fun.ymax = median,
+                                   geom = "crossbar", width = 0.5)
+                },
+                mean = {
+                  p + stat_summary(fun.y = mean, 
+                                   fun.ymin = mean, 
+                                   fun.ymax = mean,
+                                   geom = "crossbar", width = 0.5)
+                },
+                none = {
+                  p
+                }
+    )    
+  }
 
-           # if only violin and/or boxplot
-           if((length(styles) == 2 & "box" %in% styles & "violin" %in% styles) | (length(styles) == 1 & (styles == "box" | styles == "violin"))){
-             ncol = 2
-             p <- ggplot2::ggplot(data=profile, 
-                                  ggplot2::aes(x = Time, 
-                                               y = Abundance, 
-                                               group = Group,
-                                               shape = Shape,
-                                               color = Group, 
-                                               fill = Group
-                                  )) +
-               plot.theme(base_size = 15)  
-           }else{
-             p <- ggplot2::ggplot(data=profile, 
-                                  ggplot2::aes(x = Time, 
-                                               y = Abundance, 
-                                               group = Group, 
-                                               shape = Shape)) +
-               plot.theme(base_size = 15)
-           }
-           
-           # ggplot
-           
-           # - - - - - - - - 
-           
-           for(style in styles){
-             p <- p + switch(style,
-                             box = ggplot2::geom_boxplot(alpha=0.4, aes(text=Text)),
-                             violin = ggplot2::geom_violin(alpha=0.4),
-                             beeswarm = ggbeeswarm::geom_beeswarm(alpha=0.7, size = 2, position = position_dodge(width=.3), aes(text=Text,
-                                                                                                                                color = Color, 
-                                                                                                                                fill = Color)),
-                             scatter = ggplot2::geom_point(alpha=0.7, size = 2, position = position_dodge(width=0.1), aes(text=Text,
-                                                                                                                          color = Color, 
-                                                                                                                          fill = Color))
-             )}
-           
-           p <- p + ggplot2::scale_fill_manual(values=cols) +
-             ggplot2::scale_color_manual(values=cols) +
-             theme(legend.position="none",
-                   axis.text=element_text(size=global$constants$font.aes$ax.num.size),
-                   axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
-                   legend.title.align = 0.5,
-                   axis.line = element_line(colour = 'black', size = .5),
-                   text = element_text(family = global$constants$font.aes$font)) + 
-             ggtitle(cpd)
-           
-           p <- switch(add_stats,
-                       median = {
-                         p + stat_summary(fun.y=median, geom="line", aes(group=paste("median", Group)), linetype="dotted", lwd=1, alpha=0.5) 
-
-                       },
-                       mean = {
-                         p + stat_summary(fun.y=mean, geom="line", aes(group=paste("mean", Group)), linetype="dotted", lwd=1, alpha=0.5)
-                       },
-                       none = {
-                         p
-                       }
-           )
-           # previous, works
-           # p <- ggplot2::ggplot(data=profile, ggplot2::aes(x=Time, y=Abundance, group=Group, fill=Group, color=Group)) +
-           #   ggplot2::geom_boxplot(alpha=0.4, aes(shape=Shape)) +
-           #   ggplot2::geom_point(ggplot2::aes(text=Sample),alpha=0.4, size = 2, position = position_dodge(width=0.1)) +
-           #   plot.theme(base_size = 15) +
-           #   ggplot2::scale_fill_manual(values=cols) +
-           #   ggplot2::scale_color_manual(values=cols)+
-           #   theme(legend.position="none",
-           #         axis.text=element_text(size=global$constants$font.aes$ax.num.size),
-           #         axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
-           #         legend.title.align = 0.5,
-           #         axis.line = element_line(colour = 'black', size = .5),
-           #         text = element_text(family = global$constants$font.aes$font))+
-           #   stat_summary(fun.y=median, geom="line", aes(group=paste("median", Group)), linetype="dotted", lwd=1, alpha=0.5) + ggtitle(cpd)
-
-           if(plotlyfy){
-             ggplotly(p, tooltip="Sample", originalData=T)
-           }else{
-             p
-           }
-         })
+  # ---------------
+  if(plotlyfy){
+    ggplotly(p, tooltip = "Text")#, originalData=T)
+  }else{
+    p
+  }
 }
 
 ggPlotTT <- function(cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]], n, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]], plotlyfy=TRUE){
@@ -463,7 +394,7 @@ ggPlotFC <- function(cf=global$functions$color.functions[[getOptions("user_optio
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = global$constants$font.aes$font))+
     ggplot2::scale_colour_gradientn(colours = cf(n))
-
+  
   if(plotlyfy){
     ggplotly(p, tooltip="log2fc")
   }else{
@@ -472,30 +403,30 @@ ggPlotFC <- function(cf=global$functions$color.functions[[getOptions("user_optio
 }
 
 ggPlotVolc <- function(cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]], n=256, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]], plotlyfy=TRUE){
-    vcn<-mSet$analSet$volcano;
-    dt <- as.data.table(vcn$sig.mat[,c(2,4)],keep.rownames = T)
-    colnames(dt) <- c("cpd", "log2FC", "-log10P")
-    p <- ggplot2::ggplot() +
-      #ggplot2::geom_point(data=dt[!imp.inx], ggplot2::aes(x=log2FC, y=minlog10P)) +
-      ggplot2::geom_point(data=dt, ggplot2::aes(x=log2FC, 
-                                       y=`-log10P`,
-                                       text=cpd,
-                                       color=abs(log2FC*`-log10P`), 
-                                       key=cpd)) +
-      plot.theme(base_size = 15) +
-      theme(legend.position="none",
-            axis.text=element_text(size=global$constants$font.aes$ax.num.size),
-            axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
-            legend.title.align = 0.5,
-            axis.line = element_line(colour = 'black', size = .5),
-            text = element_text(family = global$constants$font.aes$font))+
-      ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE)
-
-    if(plotlyfy){
-      ggplotly(p, tooltop="cpd")
-    }else{
-      p
-    }
+  vcn<-mSet$analSet$volcano;
+  dt <- as.data.table(vcn$sig.mat[,c(2,4)],keep.rownames = T)
+  colnames(dt) <- c("cpd", "log2FC", "-log10P")
+  p <- ggplot2::ggplot() +
+    #ggplot2::geom_point(data=dt[!imp.inx], ggplot2::aes(x=log2FC, y=minlog10P)) +
+    ggplot2::geom_point(data=dt, ggplot2::aes(x=log2FC, 
+                                              y=`-log10P`,
+                                              text=cpd,
+                                              color=abs(log2FC*`-log10P`), 
+                                              key=cpd)) +
+    plot.theme(base_size = 15) +
+    theme(legend.position="none",
+          axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+          axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+          legend.title.align = 0.5,
+          axis.line = element_line(colour = 'black', size = .5),
+          text = element_text(family = global$constants$font.aes$font))+
+    ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE)
+  
+  if(plotlyfy){
+    ggplotly(p, tooltop="cpd")
+  }else{
+    p
+  }
 }
 
 ggPlotPCApairs <- function(cols = c("black", "pink"), 
@@ -514,14 +445,14 @@ ggPlotPCApairs <- function(cols = c("black", "pink"),
   switch(type,
          pca = {
            pclabels <- paste0("PC", 1:pc.num, " (", round(100 * mSet$analSet$pca$variance[1:pc.num], 
-                                                         1), "%)")
+                                                          1), "%)")
            pca_matr <- as.data.table(mSet$analSet$pca$x[, 1:pc.num])
          },
          plsca = {
            pclabels <- paste0("PC", 1:ncol(mSet$analSet$plsr$scores), " (", round(mSet$analSet$plsr$Xvar 
-                                                         / mSet$analSet$plsr$Xtotvar 
-                                                         * 100.0,
-                                                         digits = 2), "%)")
+                                                                                  / mSet$analSet$plsr$Xtotvar 
+                                                                                  * 100.0,
+                                                                                  digits = 2), "%)")
            pca_matr <- as.data.table(mSet$analSet$plsr$scores[, 1:pc.num])
          },
          oplsda = {
@@ -540,7 +471,7 @@ ggPlotPCApairs <- function(cols = c("black", "pink"),
            # mSet$analSet$splsr$variates
            # 
          }
-         )
+  )
   colnames(pca_matr)  <- pclabels
   pca_matr$class <- mSet$dataSet$cls
   p <- GGally::ggpairs(pca_matr, 
@@ -565,11 +496,6 @@ ggPlotPCApairs <- function(cols = c("black", "pink"),
   }else{
     p
   }
-  
-  # }
-  # else {
-  #   pairs(mSet$analSet$pca$x[, 2:pc.num], labels = pclabels)
-  # }
 }
 
 ggPlotClass <- function(pls.type = "plsda", 
@@ -638,8 +564,7 @@ ggPlotPerm <- function(pls.type = "plsda",
                  size=1.5,
                  linetype=8) +
     geom_text(mapping = aes(x = bw.vec[1], y =  .11*nrow(df), label = pval), color = "black", size = 4)
-#    annotate("text",x=bw.vec[1],y=.11*nrow(df),label = pval, color="black",size=4)
-  
+
   if(plotlyfy){
     ggplotly(p)
   }else{
@@ -701,7 +626,7 @@ plot.many <- function(res.obj = models,
   roc_coord <- roc_coord[roc_coord$alpha %in% which_alpha,]
   # plot
   p <- ggplot2::ggplot(roc_coord, 
-                  ggplot2::aes(d = D, m = M, color = alpha)) + 
+                       ggplot2::aes(d = D, m = M, color = alpha)) + 
     plotROC::geom_roc(labelsize=0,show.legend = TRUE) + 
     plotROC::style_roc() + 
     theme(axis.text=element_text(size=19),
@@ -732,10 +657,8 @@ ggPlotROC <- function(data,
   pred <- ROCR::prediction(data$predictions, data$labels)
   perf <- ROCR::performance(pred, "tpr", "fpr")
   perf_auc <- ROCR::performance(pred, "auc")
-  # - - - old method - - -
-  # plot(perf,col="grey82",lty=3, cex.lab=1.3)
-  # plot(perf,lwd=3,avg="vertical",spread.estimate="boxplot",add=TRUE)
   
+  # - - - old method - - -
   perf.long <- rbindlist(lapply(1:length(perf@x.values), function(i){
     xvals <- perf@x.values[[i]]
     yvals <- perf@y.values[[i]]
@@ -749,20 +672,15 @@ ggPlotROC <- function(data,
   }))
   
   aucs <- signif(unlist(perf_auc@y.values), digits = 2)
-    
+  
   cols = cf(attempts)
-
+  
   p <- ggplot(perf.long, aes(FPR,TPR)) +
-    #stat_smooth(alpha=.2,color="black") + # fix later, needs to NOT GO ABOVE 1
     stat_summary_bin(aes(FPR, TPR), fun.y=mean, geom="line", colour="black", cex = 2) +
     geom_path(alpha=.5,
               cex=.5,
               aes(color = attempt, group = attempt)) +
     geom_text(label = paste0("Average AUC: ", mean(aucs)), size = 8, mapping = aes(x = 0.82, y = 0.03)) + 
-    # geom_abline(intercept=seq(0, 1, 25),
-    #             slope=1,
-    #             colour="gray",
-    #             alpha = 0.5) +
     plot.theme(base_size = 10) +
     ggplot2::scale_color_gradientn(colors = cols) +
     theme(legend.position="none",
@@ -796,11 +714,9 @@ ggPlotBar <- function(data,
   }else{
     lname <- paste0(input$ml_train_regex,"|", input$ml_test_regex)
   }
-
+  
   if(ml_type == "ls"){
-    #p <- ggplot(data[1:topn,], aes(mz,count))
     p <- ggplot(data[1:topn,], aes(mz,count)) + geom_bar(stat = "identity", aes(fill = count)) +
-      #geom_hline(aes(yintercept=attempts)) + 
       scale_fill_gradientn(colors=cf(20)) +
       plot.theme() + 
       theme(legend.position="none",
@@ -812,23 +728,9 @@ ggPlotBar <- function(data,
             axis.ticks.x=element_blank(),
             text = element_text(family = global$constants$font.aes$font))+
       labs(x="Top hits",y="Times chosen")
-    # p + geom_bar(stat = "identity", aes(fill = count)) +
-    #   geom_hline(aes(yintercept=attempts)) + 
-    #   scale_fill_gradientn(colors=cf(20)) +
-    #   plot.theme() + 
-    #   theme(legend.position="none",
-    #         axis.text=element_text(size=global$constants$font.aes$ax.num.size),
-    #         axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
-    #         legend.title.align = 0.5,
-    #         axis.line = element_line(colour = 'black', size = .5),
-    #         axis.text.x=element_blank(),
-    #         axis.ticks.x=element_blank(),
-    #         text = element_text(family = global$constants$font.aes$font))+
-    #   labs(x="Top hits",y="Times chosen")
     
   }else{
     p <- ggplot(data[1:topn,], aes(mz,mda)) + geom_bar(stat = "identity", aes(fill = mda)) +
-      #geom_hline(aes(yintercept=attempts)) + 
       scale_fill_gradientn(colors=cf(20)) +
       plot.theme() + 
       theme(legend.position="none",
@@ -860,10 +762,10 @@ plotPCA.3d <- function(mSet,
            y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
            z.var <- round(mSet$analSet$pca$variance[pcz] * 100.00, digits=1)
          }, ipca = {
-             df <- mSet$analSet$pca$x
-             x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
-             y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
-             z.var <- round(mSet$analSet$pca$variance[pcz] * 100.00, digits=1)
+           df <- mSet$analSet$pca$x
+           x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
+           y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
+           z.var <- round(mSet$analSet$pca$variance[pcz] * 100.00, digits=1)
          }, plsda = {
            plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar 
                                               / mSet$analSet$plsr$Xtotvar 
@@ -911,7 +813,7 @@ plotPCA.3d <- function(mSet,
     rep('circle', times = length(classes))
   }
   else if(shape.fac == "label"){
-   rep('circle', times = length(classes))
+    rep('circle', times = length(classes))
   }else{
     as.factor(mSet$dataSet$covars[,..shape.fac][[1]])
   }
@@ -919,7 +821,7 @@ plotPCA.3d <- function(mSet,
   plots_facet <- lapply(1:length(df_list), function(i){
     
     df = df_list[[i]]
-
+    
     orig_idx = which(rownames(df) %in% rownames(mSet$dataSet$norm))
     
     plots <- plotly::plot_ly(showlegend = F)
@@ -985,36 +887,36 @@ plotPCA.3d <- function(mSet,
                   'x',
                   'o')
     ) %>%  layout(font=t,
-      scene = list(
-      aspectmode="cube",
-      xaxis = list(
-        titlefont = list(size = global$constants$font.aes$ax.txt.size * 1.5),
-        title = gsubfn::fn$paste("$pcx ($x.var %)")),
-      yaxis = list(
-        titlefont = list(size = global$constants$font.aes$ax.txt.size * 1.5),
-        title = gsubfn::fn$paste("$pcy ($y.var %)")),
-      zaxis = list(
-        titlefont = list(size = global$constants$font.aes$ax.txt.size * 1.5),
-        title = gsubfn::fn$paste("$pcz ($z.var %)")))) 
+                  scene = list(
+                    aspectmode="cube",
+                    xaxis = list(
+                      titlefont = list(size = global$constants$font.aes$ax.txt.size * 1.5),
+                      title = gsubfn::fn$paste("$pcx ($x.var %)")),
+                    yaxis = list(
+                      titlefont = list(size = global$constants$font.aes$ax.txt.size * 1.5),
+                      title = gsubfn::fn$paste("$pcy ($y.var %)")),
+                    zaxis = list(
+                      titlefont = list(size = global$constants$font.aes$ax.txt.size * 1.5),
+                      title = gsubfn::fn$paste("$pcz ($z.var %)")))) 
     # --- return ---
     pca_plot
   })
   subplot(plots_facet,shareX = F, shareY = F)
-  }
+}
 
 plotPCA.2d <- function(mSet, shape.fac = "label", cols = global$vectors$mycols, pcx, pcy, mode="pca", plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]], plotlyfy="T"){
   
   classes <- switch(mode, 
-           ipca = mSet$dataSet$exp.fac,
-           pca = mSet$dataSet$cls,
-           plsda = mSet$dataSet$cls)
+                    ipca = mSet$dataSet$exp.fac,
+                    pca = mSet$dataSet$cls,
+                    plsda = mSet$dataSet$cls)
   
   symbols = c("16",#'circle',
               "18",#'diamond', 
               "15",#'square', 
               "4",#'x',
               "1"#'o'
-              )
+  )
   
   switch(mode,
          pca={
@@ -1033,20 +935,20 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols = global$vectors$mycols, 
                                   y = yc)
          },
          ipca = {
-             df <- mSet$analSet$pca$x
-             #x =1;y=2;z=3
-             x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
-             y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
-             fac.lvls <- length(levels(mSet$dataSet$exp.fac))
-             
-             xc=mSet$analSet$pca$x[, pcx]
-             yc=mSet$analSet$pca$x[, pcy]
-             
-             dat_long <- data.table(variable = names(xc),
-                                    group = classes,
-                                    time = mSet$dataSet$time.fac,
-                                    x = xc, 
-                                    y = yc)
+           df <- mSet$analSet$pca$x
+           #x =1;y=2;z=3
+           x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
+           y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
+           fac.lvls <- length(levels(mSet$dataSet$exp.fac))
+           
+           xc=mSet$analSet$pca$x[, pcx]
+           yc=mSet$analSet$pca$x[, pcy]
+           
+           dat_long <- data.table(variable = names(xc),
+                                  group = classes,
+                                  time = mSet$dataSet$time.fac,
+                                  x = xc, 
+                                  y = yc)
            
          },
          plsda = {
@@ -1060,7 +962,7 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols = global$vectors$mycols, 
            
            x.var <- plsda.table[PC == pcx]$var
            y.var <- plsda.table[PC == pcy]$var
-
+           
            # --- coordinates ---
            df <- mSet$analSet$plsr$scores
            colnames(df) <- paste0("PC", 1:ncol(df))
@@ -1101,7 +1003,7 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols = global$vectors$mycols, 
     scale_y_continuous(name=gsubfn::fn$paste("$pcy ($y.var%)")) +
     scale_fill_manual(values=cols) +
     scale_color_manual(values = cols)
-
+  
   if(mode == "ipca") p <- p + facet_wrap(~time)
   
   if(plotlyfy){
@@ -1118,15 +1020,15 @@ ggPlotVenn <- function(mSet,
                        cols=global$vectors$mycols, 
                        cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], 
                        plotlyfy=TRUE){
-
+  
   #venn_yes <<- isolate({venn_yes})
   
   experiments <- str_match(unlist(venn_yes$now), pattern = "\\(.*\\)")[,1]
-
+  
   experiments <- unique(gsub(experiments, pattern = "\\(\\s*(.+)\\s*\\)", replacement="\\1"))
   
   table_list <- lapply(experiments, function(experiment){
-
+    
     print(experiment)
     
     analysis = mSet$storage[[experiment]]$analysis
@@ -1151,7 +1053,7 @@ ggPlotVenn <- function(mSet,
       tbls <- switch(base_name,
                      aov = {
                        res = list(as.numeric(rownames(analysis$aov$sig.mat[order(analysis$aov$sig.mat[,2],
-                                                                                  decreasing = F),])))
+                                                                                 decreasing = F),])))
                        names(res) = base_name
                        res
                      },
@@ -1169,7 +1071,7 @@ ggPlotVenn <- function(mSet,
                      },
                      MB = {
                        res = list(as.numeric(rownames(analysis$MB$stats))[order(analysis$MB$stats[,1],
-                                                                              decreasing = T)])
+                                                                                decreasing = T)])
                        names(res) = base_name
                        res
                      },
@@ -1188,22 +1090,22 @@ ggPlotVenn <- function(mSet,
                      ls = {
                        which.ls <- gsub(name, pattern = "^.*- | ", replacement="")
                        res <- list(as.character(analysis$ml$ls[[which.ls]]$bar[order(analysis$ml$ls[[which.ls]]$bar$count, 
-                                                                         decreasing = T),]$mz))
+                                                                                     decreasing = T),]$mz))
                        names(res) <- paste0(which.ls, " (LS)")
                        # - - - 
                        res
-
+                       
                      },
                      rf = {
                        which.rf <- gsub(name, pattern = "^.*- | ", replacement="")
                        res <- list(as.character(analysis$ml$rf[[which.rf]]$bar[order(analysis$ml$rf[[which.rf]]$bar$mda, 
-                                                                  decreasing = T),]$mz))
+                                                                                     decreasing = T),]$mz))
                        names(res) <- paste0(which.rf, " (RF)")
                        # - - -
                        res
                      },
                      plsda = {
-
+                       
                        which.plsda <- gsub(name, pattern = "^.*- | ", replacement="")
                        
                        compounds_pc <- as.data.table(analysis$plsda$vip.mat,keep.rownames = T)
@@ -1323,33 +1225,24 @@ ggPlotVenn <- function(mSet,
   p <- ggplot(datapoly,   
               aes(x = x,
                   y = y)) + geom_polygon(colour="black", alpha=0.5, aes(fill=id, group=id)) +
-  geom_text(mapping = aes(x=x, y=y, label=value), data = numbers, size = 6, hjust = 0) +
-  theme_void() +
-  theme(legend.position="none",
-        text=element_text(size=),
-        panel.grid = element_blank()) +
-  #scale_fill_gradientn(colors = rainbow(circles)) + 
-  scale_fill_gradientn(colours = 
+    geom_text(mapping = aes(x=x, y=y, label=value), data = numbers, size = 6, hjust = 0) +
+    theme_void() +
+    theme(legend.position="none",
+          text=element_text(size=),
+          panel.grid = element_blank()) +
+    scale_fill_gradientn(colours = 
                            cf(circles)) +
-  coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
-
+    coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
+  
   # - - text with white outline - - 
-  # p <- p + geom_text(mapping = aes(x=x, y=y, label=gsub(value, 
-  #                                                       pattern = ":", 
-  #                                                       replacement = "\n")), 
-  #                    data = headers, 
-  #                    size = 4, hjust = 0, 
-  #                    fontface = 2) +
-  #   scale_x_continuous(expand = c(.1, .1)) + 
-  #   scale_y_continuous(expand = c(.1, .1))
   p <- p + shadowtext::geom_shadowtext(mapping = aes(x=x, y=y, label=gsub(value, 
-                                                        pattern = ":", 
-                                                        replacement = "\n")), 
-                     color = "black",
-                     bg.color = "white",
-                     data = headers, 
-                     size = 7, hjust = 0.5, 
-                     fontface = 2) +
+                                                                          pattern = ":", 
+                                                                          replacement = "\n")), 
+                                       color = "black",
+                                       bg.color = "white",
+                                       data = headers, 
+                                       size = 7, hjust = 0.5, 
+                                       fontface = 2) +
     scale_x_continuous(expand = c(.1, .1)) + 
     scale_y_continuous(expand = c(.1, .1))
   if(plotlyfy){
@@ -1357,4 +1250,35 @@ ggPlotVenn <- function(mSet,
   }else{
     p
   }
+}
+
+GeomSplitViolin <- ggproto("GeomSplitViolin", GeomViolin, 
+                           draw_group = function(self, data, ..., draw_quantiles = NULL) {
+                             data <- transform(data, xminv = x - violinwidth * (x - xmin), xmaxv = x + violinwidth * (xmax - x))
+                             grp <- data[1, "group"]
+                             newdata <- plyr::arrange(transform(data, x = if (grp %% 2 == 1) xminv else xmaxv), if (grp %% 2 == 1) y else -y)
+                             newdata <- rbind(newdata[1, ], newdata, newdata[nrow(newdata), ], newdata[1, ])
+                             newdata[c(1, nrow(newdata) - 1, nrow(newdata)), "x"] <- round(newdata[1, "x"])
+                             
+                             if (length(draw_quantiles) > 0 & !scales::zero_range(range(data$y))) {
+                               stopifnot(all(draw_quantiles >= 0), all(draw_quantiles <=
+                                                                         1))
+                               quantiles <- ggplot2:::create_quantile_segment_frame(data, draw_quantiles)
+                               aesthetics <- data[rep(1, nrow(quantiles)), setdiff(names(data), c("x", "y")), drop = FALSE]
+                               aesthetics$alpha <- rep(1, nrow(quantiles))
+                               both <- cbind(quantiles, aesthetics)
+                               quantile_grob <- GeomPath$draw_panel(both, ...)
+                               ggplot2:::ggname("geom_split_violin", grid::grobTree(GeomPolygon$draw_panel(newdata, ...), quantile_grob))
+                             }
+                             else {
+                               ggplot2:::ggname("geom_split_violin", GeomPolygon$draw_panel(newdata, ...))
+                             }
+                           })
+
+geom_split_violin <- function(mapping = NULL, data = NULL, stat = "ydensity", position = "identity", ..., 
+                              draw_quantiles = NULL, trim = TRUE, scale = "area", na.rm = FALSE, 
+                              show.legend = NA, inherit.aes = TRUE) {
+  layer(data = data, mapping = mapping, stat = stat, geom = GeomSplitViolin, 
+        position = position, show.legend = show.legend, inherit.aes = inherit.aes, 
+        params = list(trim = trim, scale = scale, draw_quantiles = draw_quantiles, na.rm = na.rm, ...))
 }
