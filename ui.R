@@ -692,7 +692,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
 																				             border-bottom: 1px solid #DFDCDC;")
 																				           ,hr()
 																				           ,h2("Change variable of interest")
-																				           ,selectInput("first_var", label="Do statistics on:", choices = c("label"))
+																				           ,selectInput("stats_var", label="Do statistics on:", choices = c("label"))
 																				           ,shinyWidgets::circleButton("change_cls", icon = icon("hand-pointer-o"), size = "sm")
 																				           ,fluidRow(column(12, align="center", uiOutput("timebutton")))
 																				           ,hr()
@@ -706,15 +706,13 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
 															 # this tab is used to select user plot theme and user colours (discrete and continuous)
                                                              tabPanel(NULL, icon=icon("paint-brush"),
                                                                       h2("Summary plot style"),br(),
-                                                                      selectInput("ggplot_sum_style", label = "Style", choices = list("Box"="box",
-                                                                                                                                  "Violin"="violin",
-                                                                                                                                  "Beeswarm"="beeswarm",
-                                                                                                                                  "Box + violin"="boxviolin",
-                                                                                                                                  "All"="all")
+                                                                      selectizeInput("ggplot_sum_style", multiple=T, label = "Style(s)", choices = list("Box"="box",
+                                                                                                                                            "Violin"="violin",
+                                                                                                                                            "Beeswarm"="beeswarm",
+                                                                                                                                            "Scatterplot"="scatter"),
+                                                                                     selected = c("box", "beeswarm")
                                                                                   ),
                                                                       selectInput("ggplot_sum_stats", label = "Stats shown", choices = list("median", "mean", "none")),
-                                                                      fluidRow(align="center",
-                                                                               switchButton("ggplot_sum_scatter",label = "Show scatterplot overlay?", col = "BW", type = "YN")),
                                                                       h2("Shape")
                                                                       ,selectInput("shape_var", label="Marker shape based on:", choices = c("label"))
                                                                       ,h2("Color")

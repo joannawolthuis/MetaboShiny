@@ -209,11 +209,14 @@ blackwhite.colors <- function(n){
 ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "pink"), sourceTable = mSet$dataSet$norm, 
                           cf=rainbow, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]], 
                           mode = "nm", plotlyfy=TRUE, 
-                          style="box", scatter = T, add_stats = "mean",
+                          styles=c("box", "beeswarm"), add_stats = "mean",
                           col.fac = "label", txt.fac = "label"){
   
   cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
-  
+  if(length(styles) == 0){
+    styles = c("beeswarm")
+  }
+   
   switch(mode, 
          nm = {
            # --- ggplot ---
@@ -239,10 +242,6 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
              as.factor(mSet$dataSet$covars[,..col.fac][[1]])
            }
            
-           if(style != "beeswarm" | scatter){
-            profile$Color <- profile$Group 
-           }
-           
            ncols = length(unique(profile$Color))
            
            profile$Text <- if(txt.fac == "label"){
@@ -251,39 +250,40 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
              as.factor(mSet$dataSet$covars[,..txt.fac][[1]])
            }
            
-           # ggplot
-           
-           p <- ggplot2::ggplot(data=profile, 
-                                ggplot2::aes(x = Group, y = Abundance, 
-                                             Shape = Shape, color = Color, fill = Color)) +
-             plot.theme(base_size = 15)
-          
-           # - - - - - - - - 
-
-           p <- switch(style,
-                       box = {
-                         p + ggplot2::geom_boxplot(alpha=0.4, aes(text=Text))
-                       },
-                       violin = {
-                         p + ggplot2::geom_violin(alpha=0.4)
-                       },
-                       beeswarm = {
-                         p + ggbeeswarm::geom_beeswarm(alpha=0.7, size = 2, position = position_dodge(width=.3), aes(text=Text))
-                       },
-                       boxviolin = {
-                         p + ggplot2::geom_boxplot(alpha=0.4) + 
-                           ggplot2::geom_violin(alpha=0.4)
-                       },
-                       all = { 
-                         p + ggplot2::geom_boxplot(alpha=0.4) + 
-                           ggplot2::geom_violin(alpha=0.4) + 
-                           ggbeeswarm::geom_beeswarm(alpha=0.7, size = 2, position = position_dodge(width=.3), aes(text=Text))
-                         })
-           
-           if(scatter & !(style %in% c("beeswarm", "all"))){
-             p = p + ggplot2::geom_point(alpha=0.7, size = 2, position = position_dodge(width=0.1), aes(text=Text))
+           # if only violin and/or boxplot
+           if((length(styles) == 2 & "box" %in% styles & "violin" %in% styles) | (length(styles) == 1 & (styles == "box" | styles == "violin"))){
+             ncol = 2
+             p <- ggplot2::ggplot(data=profile, 
+                                  ggplot2::aes(x = Group, 
+                                               y = Abundance, 
+                                               shape = Shape,
+                                               color = Group, 
+                                               fill = Group
+                                               )) +
+               plot.theme(base_size = 15)
+           }else{
+             p <- ggplot2::ggplot(data=profile, 
+                                  ggplot2::aes(x = Group, 
+                                               y = Abundance, 
+                                               shape = Shape)) +
+               plot.theme(base_size = 15)
            }
            
+           # ggplot
+           
+           # - - - - - - - - 
+           
+           for(style in styles){
+             p <- p + switch(style,
+                             box = ggplot2::geom_boxplot(alpha=0.4, aes(text=Text)),
+                             violin = ggplot2::geom_violin(alpha=0.4),
+                             beeswarm = ggbeeswarm::geom_beeswarm(alpha=0.7, size = 2, position = position_dodge(width=.3), aes(text=Text,
+                                                                                                                                color = Color, 
+                                                                                                                                fill = Color)),
+                             scatter = ggplot2::geom_point(alpha=0.7, size = 2, position = position_dodge(width=0.1), aes(text=Text,
+                                                                                                                          color = Color, 
+                                                                                                                          fill = Color))
+             )}
            
           p <- p + theme(legend.position="none",
                    axis.text=element_text(size=global$constants$font.aes$ax.num.size),
@@ -340,29 +340,43 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
            p <- ggplot2::ggplot(data=profile, ggplot2::aes(x=Time, y=Abundance, group=Group, fill=Group, color=Group)) +
              plot.theme(base_size = 15)
            
-           p <- switch(style,
-                       box = {
-                         p + ggplot2::geom_boxplot(alpha=0.4)
-                       },
-                       violin = {
-                         p + ggplot2::geom_violin(alpha=0.4)
-                       },
-                       beeswarm = {
-                         p + ggbeeswarm::geom_beeswarm(ggplot2::aes(text=Sample, shape=Shape),alpha=0.7, size = 2, position = position_dodge(width=.3))
-                       },
-                       boxviolin = {
-                         p + ggplot2::geom_boxplot(alpha=0.4) + 
-                           ggplot2::geom_violin(alpha=0.4)
-                       },
-                       all = { 
-                         p + ggplot2::geom_boxplot(alpha=0.4) + 
-                           ggplot2::geom_violin(alpha=0.4) + 
-                           ggbeeswarm::geom_beeswarm(ggplot2::aes(text=Sample, shape=Shape),alpha=0.7, size = 2, position = position_dodge(width=.3))
-                       })
-           
-           if(scatter & !(style %in% c("beeswarm", "all"))){
-             p = p + ggplot2::geom_point(ggplot2::aes(text=Sample, shape=Shape),alpha=0.7, size = 2, position = position_dodge(width=0.1))
+
+           # if only violin and/or boxplot
+           if((length(styles) == 2 & "box" %in% styles & "violin" %in% styles) | (length(styles) == 1 & (styles == "box" | styles == "violin"))){
+             ncol = 2
+             p <- ggplot2::ggplot(data=profile, 
+                                  ggplot2::aes(x = Time, 
+                                               y = Abundance, 
+                                               group = Group,
+                                               shape = Shape,
+                                               color = Group, 
+                                               fill = Group
+                                  )) +
+               plot.theme(base_size = 15)  
+           }else{
+             p <- ggplot2::ggplot(data=profile, 
+                                  ggplot2::aes(x = Time, 
+                                               y = Abundance, 
+                                               group = Group, 
+                                               shape = Shape)) +
+               plot.theme(base_size = 15)
            }
+           
+           # ggplot
+           
+           # - - - - - - - - 
+           
+           for(style in styles){
+             p <- p + switch(style,
+                             box = ggplot2::geom_boxplot(alpha=0.4, aes(text=Text)),
+                             violin = ggplot2::geom_violin(alpha=0.4),
+                             beeswarm = ggbeeswarm::geom_beeswarm(alpha=0.7, size = 2, position = position_dodge(width=.3), aes(text=Text,
+                                                                                                                                color = Color, 
+                                                                                                                                fill = Color)),
+                             scatter = ggplot2::geom_point(alpha=0.7, size = 2, position = position_dodge(width=0.1), aes(text=Text,
+                                                                                                                          color = Color, 
+                                                                                                                          fill = Color))
+             )}
            
            p <- p + ggplot2::scale_fill_manual(values=cols) +
              ggplot2::scale_color_manual(values=cols) +
