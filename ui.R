@@ -551,7 +551,12 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                                                                "Chi-square"="chisq",
                                                                                                                                                "Mean absolute percentage error"="mape",
                                                                                                                                                "SIRIUS"="sirius",
-                                                                                                                                               "Network-based"="network"))
+                                                                                                                                               "Network-based"="network")),
+                                                                                                                      h2("MagicBall settings"),
+                                                                                                                      fluidRow(align="center",switchButton(inputId = "search_pubchem",
+                                                                                                                                                           label = "Check PubChem for predicted formulas?", 
+                                                                                                                                                           col = "BW", type = "YN", value = F)
+                                                                                                                      )
                                                                                                              )
                                                                                                  ))),
                                                                       tabsetPanel(id="tab_iden_2",  

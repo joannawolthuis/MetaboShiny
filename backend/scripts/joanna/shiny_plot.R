@@ -1255,7 +1255,7 @@ ggPlotVenn <- function(mSet,
   p <- ggplot(datapoly,   
               aes(x = x,
                   y = y)) + geom_polygon(colour="black", alpha=0.5, aes(fill=id, group=id)) +
-    geom_text(mapping = aes(x=x, y=y, label=value), data = numbers, size = 6, hjust = 0) +
+    geom_text(mapping = aes(x=x-.02, y=y, label=value), data = numbers, size = 6, hjust = 0) +
     theme_void() +
     theme(legend.position="none",
           text=element_text(size=),

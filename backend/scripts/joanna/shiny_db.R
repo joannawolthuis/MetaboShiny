@@ -451,7 +451,7 @@ get_all_matches <- function(#exp.condition=NA,
   res
 }
 
-multimatch <- function(cpd, dbs, searchid="mz", inshiny=T){
+multimatch <- function(cpd, dbs, searchid="mz", inshiny=T, search_pubchem=F){
   
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb) # change this to proper var later
   DBI::dbExecute(conn, "DROP TABLE IF EXISTS unfiltered")
@@ -468,11 +468,16 @@ multimatch <- function(cpd, dbs, searchid="mz", inshiny=T){
   
   match_list <- lapply(dbs, FUN=function(match.table){
     dbname <- gsub(basename(match.table), pattern = "\\.full\\.db", replacement = "")
-    
-    #print(dbname)
-    
+  
     if(dbname == "magicball"){
-      res <- get_predicted(cpd, ppm = mSet$dataSet$ppm, search_pubchem = F)
+      # get ppm from db...
+      conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb) # change this to proper var later
+      A = DBI::dbGetQuery(conn, "SELECT * FROM mzvals WHERE ID = 1")
+      B = DBI::dbGetQuery(conn, "SELECT * FROM mzranges WHERE ID = 1")
+      DBI::dbDisconnect(conn)
+      ppm = round((abs(A$mzmed - B$mzmin) / A$mzmed) * 1e6, digits = 0)
+      res <- get_predicted(cpd, ppm = ppm, search_pubchem = search_pubchem)
+      
     }else{
       res <- get_matches(cpd, 
                          match.table, 
@@ -521,10 +526,10 @@ get_predicted <- function(mz,
   cat(" 
          _...._
        .`      `.
-      / ***      \            MagicBall
+      / ***      \\            MagicBall
      : **         :         is searching...
      :            :        
-     \\          /       
+     \\           /       
        `-.,,,,.-'              
         _(    )_
        )        (
@@ -589,7 +594,9 @@ get_predicted <- function(mz,
                      adduct = row$Name, 
                      `%iso` = 100,
                      structure = NA, 
-                     description = "Predicted possible formula for this m/z value.")
+                     identifier = "???",
+#                     description = "Predicted possible formula for this m/z value.",
+                     source = "magicball")
         }
       }
     })
@@ -602,22 +609,27 @@ get_predicted <- function(mz,
   uniques <- unique(tbl$baseformula)
   
   if(search_pubchem){
-    pc_rows <- pbapply::pblapply(uniques, function(formula){
-      url = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/fastformula/", formula, "/cids/JSON")
-      description = "No PubChem hits for this predicted formula."
-      try({
-        pc_res <- jsonlite::read_json(url,simplifyVector = T)
-        cids <- pc_res$IdentifierList$CID
-        description <- paste0("PubChem found these IDs: ", paste0(cids, collapse = ", "))
-      })  
-      Sys.sleep(0.2)
-      data.table(formula = formula, description = description)
+    i = 0
+    count = length(uniques)
+    
+    shiny::withProgress({
+      pc_rows <<- pbapply::pblapply(uniques, function(formula){
+        i <<- i + 1
+        url = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/fastformula/", formula, "/cids/JSON")
+        description = "No PubChem hits for this predicted formula."
+        try({
+          pc_res <- jsonlite::read_json(url,simplifyVector = T)
+          cids <- pc_res$IdentifierList$CID
+          description <- paste0("PubChem found these Compound IDs (check ChemSpider or PubChem): ", paste0(cids, collapse = ", "))
+        }) 
+        shiny::setProgress(value = i/count)
+        row = data.table(baseformula = formula, description = description)
+      })
     })
     pc_tbl <- rbindlist(pc_rows)
-    tbl <- merge(tbl, pc_tbl, on = formula)
+    tbl <- merge(tbl, pc_tbl, by = "baseformula")
+  }else{
+   tbl$description = c("Predicted possible formula for this m/z value.")
   }
-  
-  # - - - - - - - - - -
-  
   tbl
 }
