@@ -80,7 +80,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                         )
                                         ),
                                         fluidRow(align="center",
-                                                 sliderInput(ppm,label = "m/z accuracy", min = 1, max = 50, value = 2,post = " ppm"))
+                                                 sliderInput("ppm",label = "m/z accuracy", min = 1, max = 50, value = 2,post = " ppm"))
                                         )
                     ),
                     hr(),

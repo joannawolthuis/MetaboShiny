@@ -140,7 +140,7 @@ get_matches <- function(cpd = NA,
                            JOIN unfiltered u
                            ON u.baseformula = cpd.baseformula")
       }
-    }
+      }
     
     if(inshiny) withProgress({func()}) else func()
     
@@ -175,14 +175,14 @@ get_matches <- function(cpd = NA,
       (df)
     }
     
-  
+    
     DBI::dbDisconnect(conn)
     
     # - - return - - 
     
     results
     
-    }}
+      }}
 
 score.isos <- function(patdb, method="mscore", inshiny=TRUE){
   
@@ -464,37 +464,46 @@ multimatch <- function(cpd, dbs, searchid="mz", inshiny=T, search_pubchem=F){
     match_table <<- match_table[,-"score"]
   }
   
-  i = 1
+  i <<- 1
   
-  match_list <- lapply(dbs, FUN=function(match.table){
-    dbname <- gsub(basename(match.table), pattern = "\\.full\\.db", replacement = "")
+  count = length(dbs)
   
-    if(dbname == "magicball"){
-      # get ppm from db...
-      conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb) # change this to proper var later
-      A = DBI::dbGetQuery(conn, "SELECT * FROM mzvals WHERE ID = 1")
-      B = DBI::dbGetQuery(conn, "SELECT * FROM mzranges WHERE ID = 1")
-      DBI::dbDisconnect(conn)
-      ppm = round((abs(A$mzmed - B$mzmin) / A$mzmed) * 1e6, digits = 0)
-      res <- get_predicted(cpd, ppm = ppm, search_pubchem = search_pubchem)
+  shiny::withProgress({
+    
+    match_list <- lapply(dbs, FUN=function(match.table){
       
-    }else{
-      res <- get_matches(cpd, 
-                         match.table, 
-                         searchid=searchid,
-                         inshiny=inshiny,
-                         append = if(i == 1) F else T)
-    }
+      shiny::setProgress(i/count)
+      
+      dbname <- gsub(basename(match.table), pattern = "\\.full\\.db", replacement = "")
+
+      if(dbname == "magicball"){
+        # get ppm from db...
+        conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb) # change this to proper var later
+        A = DBI::dbGetQuery(conn, "SELECT * FROM mzvals WHERE ID = 1")
+        B = DBI::dbGetQuery(conn, "SELECT * FROM mzranges WHERE ID = 1")
+        DBI::dbDisconnect(conn)
+        ppm = round((abs(A$mzmed - B$mzmin) / A$mzmed) * 1e6, digits = 0)
+        res <- get_predicted(cpd, ppm = ppm, search_pubchem = search_pubchem)
+        
+      }else{
+        res <- get_matches(cpd, 
+                           match.table, 
+                           searchid=searchid,
+                           inshiny=inshiny,
+                           append = if(i == 1) F else T)
+      }
+      
+      #print(res)
+      
+      i <<- i + 1
+      
+      if(nrow(res) > 0){
+        res = cbind(res, source = c(dbname))
+      }
+      
+      res
+    })
     
-    #print(res)
-    
-    i <<- i + 1
-    
-    if(nrow(res) > 0){
-      res = cbind(res, source = c(dbname))
-    }
-    
-    res
   })
   
   if(is.null(unlist(match_list))) return(data.table(name = "None",
@@ -523,19 +532,19 @@ get_predicted <- function(mz,
                           elements = "CHNOPSNaClKILi",
                           search_pubchem = T){
   
-  cat(" 
-         _...._
-       .`      `.
-      / ***      \\            MagicBall
-     : **         :         is searching...
-     :            :        
-     \\           /       
-       `-.,,,,.-'              
-        _(    )_
-       )        (
-      (          )
-       `-......-`
-      ")
+cat(" 
+      _...._
+    .`      `.
+   / ***      \\            MagicBall
+  : **         :         is searching...
+  :            :        
+  \\           /       
+    `-.,,,,.-'              
+     _(    )_
+    )        (
+   (          )
+    `-......-`
+")
   # find which mode we are in
   if(checkdb){
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb)
@@ -546,13 +555,13 @@ get_predicted <- function(mz,
   predicted = Rdisop::decomposeMass(as.numeric(mz), 
                                     ppm = ppm,
                                     elements = elements)
-    # charged
+  # charged
   charged = which( (predicted$DBE %% 1)  == 0.5 )
   posdbe = which( predicted$DBE > 0 )
   
   candidates = predicted$formula[intersect(charged, posdbe)]
   candidates <- candidates[!is.na(candidates)]
-
+  
   res = lapply(candidates, function(formula){
     
     checked <- check_chemform(isotopes, formula)
@@ -595,7 +604,7 @@ get_predicted <- function(mz,
                      `%iso` = 100,
                      structure = NA, 
                      identifier = "???",
-#                     description = "Predicted possible formula for this m/z value.",
+                     #                     description = "Predicted possible formula for this m/z value.",
                      source = "magicball")
         }
       }
@@ -629,7 +638,7 @@ get_predicted <- function(mz,
     pc_tbl <- rbindlist(pc_rows)
     tbl <- merge(tbl, pc_tbl, by = "baseformula")
   }else{
-   tbl$description = c("Predicted possible formula for this m/z value.")
+    tbl$description = c("Predicted possible formula for this m/z value.")
   }
   tbl
 }

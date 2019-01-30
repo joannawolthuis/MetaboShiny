@@ -1059,8 +1059,6 @@ ggPlotVenn <- function(mSet,
   
   table_list <- lapply(experiments, function(experiment){
     
-    print(experiment)
-    
     analysis = mSet$storage[[experiment]]$analysis
     #data = mSet$storage[[experiment]]$dataset
     
@@ -1074,8 +1072,6 @@ ggPlotVenn <- function(mSet,
     
     # go through the to include analyses
     tables <- lapply(categories, function(name){
-      
-      print(name)
       
       base_name <- gsub(name, pattern = " -.*$| ", replacement="")
       
@@ -1153,7 +1149,6 @@ ggPlotVenn <- function(mSet,
                        res
                      })
       
-      print(tbls)
       # user specified top hits only
       tbls_top <- lapply(tbls, function(tbl){
         if(length(tbl) < top){
