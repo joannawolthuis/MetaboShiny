@@ -62,7 +62,7 @@ lapply(unique(res.update.tables), FUN=function(table){
       # --- ggplot ---
       ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]],
                     styles = input$ggplot_sum_style,
-                    add_stats = input$ggplot_sum_stats, col.fac = input$col_var)
+                    add_stats = input$ggplot_sum_stats, col.fac = input$col_var,txt.fac = input$txt_var)
     })
     
     outplot_name <- paste0(table, "_specific_plot")

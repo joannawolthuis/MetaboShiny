@@ -714,7 +714,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                                                             "Violin"="violin",
                                                                                                                                             "Beeswarm"="beeswarm",
                                                                                                                                             "Scatterplot"="scatter"),
-                                                                                     selected = c("box", "beeswarm")
+                                                                                     selected = c("violin")
                                                                                   ),
                                                                       selectInput("ggplot_sum_stats", label = "Stats shown", choices = list("median", "mean", "none")),
                                                                       h2("Shape")
@@ -722,7 +722,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                       ,h2("Color")
                                                                       ,selectInput("col_var", label="Marker color based on:", choices = c("label"))
                                                                       ,h2("Hover text")
-                                                                      ,selectInput("txt_var", label="Marker hover text based on:", choices = c("sample")),
+                                                                      ,selectInput("txt_var", label="Marker hover text based on:", choices = c("label")),
                                                                       h2("Plot theme"),
                                                                       selectInput("ggplot_theme", label = "Theme", choices = list("Grid, white bg"="bw",
                                                                                                                                   "No grid, white bg"="classic",

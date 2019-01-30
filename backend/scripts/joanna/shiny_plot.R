@@ -206,23 +206,22 @@ blackwhite.colors <- function(n){
 }
 
 #' @export
-ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "pink"), sourceTable = mSet$dataSet$norm, 
-                          cf=rainbow, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]], 
-                          mode = "nm", plotlyfy=TRUE, 
+ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols = c("black", "pink"), sourceTable = mSet$dataSet$norm, 
+                          cf = rainbow, plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]], 
+                          mode = "nm", plotlyfy = TRUE, 
                           styles=c("box", "beeswarm"), add_stats = "mean",
                           col.fac = "label", txt.fac = "label"){
   
-  cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
   if(length(styles) == 0){
     styles = c("beeswarm")
   }
-  
   # - - -
   
   profile <- getProfile(cpd, mode=if(mode == "nm") "stat" else "time", sourceTable = sourceTable)
   df_line <- data.table(x = c(1,2),
                         y = rep(min(profile$Abundance - 0.1),2))
   stars = ""
+  
   try({
     pval <- if(mode == "nm"){
       mSet$analSet$tt$sig.mat[which(rownames(mSet$analSet$tt$sig.mat) == curr_cpd), "p.value"]
@@ -244,73 +243,73 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
     as.factor(mSet$dataSet$covars[,..col.fac][[1]])
   }
   
-  ncols = length(unique(profile$Color))
-  
   profile$Text <- if(txt.fac == "label"){
     as.factor(mSet$dataSet$cls)
   }else{
     as.factor(mSet$dataSet$covars[,..txt.fac][[1]])
   }
   
-  print(mode)
-  print(cols)
-  
-  if((length(styles) == 2 & "box" %in% styles & "violin" %in% styles) | (length(styles) == 1 & (styles == "box" | styles == "violin"))){
-    p <- ggplot2::ggplot(data=profile, 
-                         switch(mode,
-                                nm = ggplot2::aes(x = Group, 
-                                                  y = Abundance, 
-                                                  shape = Shape,
-                                                  color = Group, 
-                                                  fill = Group),
-                                ts = ggplot2::aes(x = Time, 
-                                                  y = Abundance,
-                                                  group = Group,
-                                                  shape = Shape,
-                                                  color = Group, 
-                                                  fill = Group)
-                                )
-                         
-    ) +
-      plot.theme(base_size = 15)
-    
-  }else{
-    p <- ggplot2::ggplot(data=profile,
-                         switch(mode,
-                                nm = ggplot2::aes(x = Group, 
-                                                  y = Abundance, 
-                                                  shape = Shape),
-                                ts = ggplot2::aes(x = Time, 
-                                                  y = Abundance,
-                                                  group = Time,
-                                                  shape = Shape)
-                         )) +
-      plot.theme(base_size = 15)
-  }
-  
-  print(head(profile))
-  if(mode == "ts"){
-    profiles <- split(profile, f = profile$Group)
-  }else{
-    profiles <- list(data.table(profile))
-  }
-  
+  p <- ggplot2::ggplot() + plot.theme(base_size = 15)
+  profiles <- switch(mode, 
+                     ts = split(profile, f = profile$Group),
+                     nm = list(x = data.table(profile)))
+
   i = 1
+  
   for(prof in profiles){
+    
     for(style in styles){
-      p <- p + switch(style,
-                      box = ggplot2::geom_boxplot(data = prof, alpha=0.4, aes(text = Text, 
-                                                                              group = Group, 
-                                                                              color = Group)),
-                      violin = ggplot2::geom_violin(data = prof, alpha=0.4, position = "identity", aes(group=if(mode == "ts") Time else Group, 
-                                                                                                       color = Group)),
-                      beeswarm = ggbeeswarm::geom_beeswarm(data = prof, alpha=0.7, size = 2, position = position_dodge(width=.3), aes(text=Text,
-                                                                                                                         color = Group, 
-                                                                                                                         fill = Color)),
-                      scatter = ggplot2::geom_point(data = prof, alpha=0.7, size = 2, position = position_dodge(width=0.1), aes(text=Text,
-                                                                                                                   color = Group, 
-                                                                                                                   fill = Color))
-      )}
+      
+      switch(mode,
+             nm = {
+               p <- p + switch(style,
+                               box = ggplot2::geom_boxplot(data = prof, alpha=0.4, aes(x = Group,
+                                                                                       y = Abundance,
+                                                                                       text = Text,
+                                                                                       color = Group, 
+                                                                                       fill = Group)),
+                               violin = ggplot2::geom_violin(data = prof, alpha=0.4, position = "identity", aes(x = Group,
+                                                                                                                y = Abundance,
+                                                                                                                color = Group,
+                                                                                                                fill = Group)),
+                               beeswarm = ggbeeswarm::geom_beeswarm(data = prof, alpha=0.7, size = 2, position = position_dodge(width=.3), aes(x = Group,
+                                                                                                                                               y = Abundance,
+                                                                                                                                               text= Text,
+                                                                                                                                               color = Group, 
+                                                                                                                                               fill = Color)),
+                               scatter = ggplot2::geom_point(data = prof, alpha=0.7, size = 2, aes(x = Group, 
+                                                                                                   y = Abundance, 
+                                                                                                   text=Text, 
+                                                                                                   color = Group, 
+                                                                                                   fill = Color), position = position_jitterdodge())
+               )
+             },
+             ts = {
+               p <- p + switch(style,
+                               box = ggplot2::geom_boxplot(data = prof, alpha=0.4, aes(x = Time,
+                                                                                       y = Abundance,
+                                                                                       text = Text,
+                                                                                       color = Group, 
+                                                                                       fill = Group)),
+                               violin = ggplot2::geom_violin(data = prof, alpha=0.4, position = "identity", aes(x = Time,
+                                                                                                                y = Abundance,
+                                                                                                                group = Time,
+                                                                                                                color = Group, 
+                                                                                                                fill = Group)),
+                               beeswarm = ggbeeswarm::geom_beeswarm(data = prof, alpha=0.7, size = 2, position = position_dodge(width=.3), aes(x = Time,
+                                                                                                                                               y = Abundance,
+                                                                                                                                               text=Text,
+                                                                                                                                               color = Group, 
+                                                                                                                                               fill = Color)),
+                               scatter = ggplot2::geom_point(data = prof, alpha=0.7, size = 2, position = position_jitterdodge(), aes(x = Time,
+                                                                                                                                      y = Abundance,
+                                                                                                                                      text=Text,
+                                                                                                                                      color = Group, 
+                                                                                                                                      fill = Color))
+               )
+             })
+
+      }
     
     p <- p + theme(legend.position="none",
                    axis.text=element_text(size=global$constants$font.aes$ax.num.size),
@@ -324,52 +323,59 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols=c("black", "
                         y = min(profile$Abundance - 0.3), 
                         label = stars, size = 8, col = "black") + ggtitle(cpd)
     
-    if(i == 1){
-      ncols = length(unique(profile$Color))
-      print(ncols)
-      
-      p <- p + ggplot2::scale_color_manual(values=cols)
-      
-      if(ncols == 2){
-        p <- p + ggplot2::scale_fill_manual(values=cols)   
-      }else{
-        p <- p + ggplot2::scale_fill_manual(values=cf(ncols))   
-      }
-    }
-    
     if(!("box" %in% styles)){
       p <- switch(add_stats,
-                    median = {
-                      p + stat_summary(data = prof,
-                                       fun.y = median, 
-                                       fun.ymin = median, 
-                                       fun.ymax = median,
-                                       geom = "crossbar", 
-                                       width = 0.5, 
-                                       color = switch(mode, 
-                                                      ts = cols[i],
-                                                      nm = cols))
-                    },
-                    mean = {
-                      p + stat_summary(data = prof,
-                                       fun.y = mean, 
-                                       fun.ymin = mean, 
-                                       fun.ymax = mean,
-                                       geom = "crossbar", 
-                                       width = 0.5, 
-                                       color = switch(mode, 
-                                                      ts = cols[i],
-                                                      nm = cols))
-                    },
-                    none = {
-                      p
-                    }
-        )
+                  median = {
+                    p + stat_summary(data = prof,
+                                     aes( x = Group,
+                                          y = Abundance,
+                                          color = Group),
+                                     fun.y = median, 
+                                     fun.ymin = median, 
+                                     fun.ymax = median,
+                                     geom = "crossbar", 
+                                     width = 0.5, 
+                                     color = switch(mode, 
+                                                    ts = cols[i],
+                                                    nm = cols[1:length(unique(levels(profile$Group)))]))
+                  },
+                  mean = {
+                    p + stat_summary(data = prof,
+                                     aes( x = Group,
+                                     y = Abundance),
+                                     fun.y = mean, 
+                                     fun.ymin = mean, 
+                                     fun.ymax = mean,
+                                     geom = "crossbar", 
+                                     width = 0.5, 
+                                     color = switch(mode, 
+                                                    ts = cols[i],
+                                                    nm = cols[1:length(unique(levels(profile$Group)))]))
+                  },
+                  none = {
+                    p
+                  }
+      )
     }
     i <- i + 1
   }
+  
+  p <- p + ggplot2::scale_color_manual(values=cols[1:length(unique(levels(profile$Group)))])
+  
+  # print(cpd)
+  # print(col.fac)
+  # print(shape.fac)
+  # print(txt.fac)
+  # print(styles)
 
-
+  if(all(as.character(profile$Color) == as.character(profile$Group))){
+    p <- p + ggplot2::scale_fill_manual(values = cols[1:length(unique(levels(profile$Group)))])
+  }else{
+    ncols = length(levels(profile$Color))
+    scale = c(cols[1:length(unique(levels(profile$Group)))],cf(ncols))
+    names(scale) <- c(levels(profile$Group),levels(profile$Color))
+    p <- p + ggplot2::scale_fill_manual(values = scale)
+  }
   # ---------------
   if(plotlyfy){
     ggplotly(p, tooltip = "Text")#, originalData=T)
@@ -588,7 +594,7 @@ ggPlotPerm <- function(pls.type = "plsda",
                  size=1.5,
                  linetype=8) +
     geom_text(mapping = aes(x = bw.vec[1], y =  .11*nrow(df), label = pval), color = "black", size = 4)
-
+  
   if(plotlyfy){
     ggplotly(p)
   }else{
@@ -1274,35 +1280,4 @@ ggPlotVenn <- function(mSet,
   }else{
     p
   }
-}
-
-GeomSplitViolin <- ggproto("GeomSplitViolin", GeomViolin, 
-                           draw_group = function(self, data, ..., draw_quantiles = NULL) {
-                             data <- transform(data, xminv = x - violinwidth * (x - xmin), xmaxv = x + violinwidth * (xmax - x))
-                             grp <- data[1, "group"]
-                             newdata <- plyr::arrange(transform(data, x = if (grp %% 2 == 1) xminv else xmaxv), if (grp %% 2 == 1) y else -y)
-                             newdata <- rbind(newdata[1, ], newdata, newdata[nrow(newdata), ], newdata[1, ])
-                             newdata[c(1, nrow(newdata) - 1, nrow(newdata)), "x"] <- round(newdata[1, "x"])
-                             
-                             if (length(draw_quantiles) > 0 & !scales::zero_range(range(data$y))) {
-                               stopifnot(all(draw_quantiles >= 0), all(draw_quantiles <=
-                                                                         1))
-                               quantiles <- ggplot2:::create_quantile_segment_frame(data, draw_quantiles)
-                               aesthetics <- data[rep(1, nrow(quantiles)), setdiff(names(data), c("x", "y")), drop = FALSE]
-                               aesthetics$alpha <- rep(1, nrow(quantiles))
-                               both <- cbind(quantiles, aesthetics)
-                               quantile_grob <- GeomPath$draw_panel(both, ...)
-                               ggplot2:::ggname("geom_split_violin", grid::grobTree(GeomPolygon$draw_panel(newdata, ...), quantile_grob))
-                             }
-                             else {
-                               ggplot2:::ggname("geom_split_violin", GeomPolygon$draw_panel(newdata, ...))
-                             }
-                           })
-
-geom_split_violin <- function(mapping = NULL, data = NULL, stat = "ydensity", position = "identity", ..., 
-                              draw_quantiles = NULL, trim = TRUE, scale = "area", na.rm = FALSE, 
-                              show.legend = NA, inherit.aes = TRUE) {
-  layer(data = data, mapping = mapping, stat = stat, geom = GeomSplitViolin, 
-        position = position, show.legend = show.legend, inherit.aes = inherit.aes, 
-        params = list(trim = trim, scale = scale, draw_quantiles = draw_quantiles, na.rm = na.rm, ...))
 }
