@@ -420,7 +420,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
 																                                       ),
 																                              tabPanel(title = "", icon = icon("minus"),
 																                                       #plotlyOutput("mummi_neg_plot", height = "300px"),
-																                                       div(DT::dataTableOutput("mummi_neg_tab"))#,style='font-size:80%')
+																                                       div(DT::dataTableOutput("mummi_neg_tab")),style='font-size:80%')
 																                              )
 																                            ),
 																                            div(DT::dataTableOutput("mummi_detail_tab"),style='font-size:80%')

@@ -334,7 +334,7 @@ observeEvent(input$do_mummi, {
       data.table(
         `p.value` = mSet$analSet$tt$sig.mat[,"p.value"],
         `m.z` = rownames(mSet$analSet$tt$sig.mat),
-        `t.score` = mSet$analSet$tt$sig.mat[,"t.stat"]
+        `t.score` = mSet$analSet$tt$sig.mat[,if("V" %in% colnames(mSet$analSet$tt$sig.mat)) "V" else "t.stat"]
       )
     }else{continue=F;
     NULL}
