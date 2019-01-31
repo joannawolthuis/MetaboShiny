@@ -184,38 +184,68 @@ get_matches <- function(cpd = NA,
     
       }}
 
-score.isos <- function(patdb, method="mscore", inshiny=TRUE){
+get.ppm <- function(patdb = global$paths$patdb){
+  # get ppm error retrospectively
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb) # change this to proper var later
+  A = DBI::dbGetQuery(conn, "SELECT * FROM mzvals WHERE ID = 1")
+  B = DBI::dbGetQuery(conn, "SELECT * FROM mzranges WHERE ID = 1")
+  DBI::dbDisconnect(conn)
+  ppm = round((abs(A$mzmed - B$mzmin) / A$mzmed) * 1e6, digits = 0)
+  # - - - 
+  ppm
+}
+
+score.isos <- function(patdb, method="mscore", inshiny=TRUE, intprec){
   
   func <- function(){
+    
+    ppm <- get.ppm()
+    
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb)
     
-    if(inshiny) shiny::setProgress(value = 0.6)
+    if(inshiny) shiny::setProgress(value = 0.2)
     
-    table <- RSQLite::dbGetQuery(conn,gsubfn::fn$paste(strwrap(
-      "SELECT int.mzmed, iso.baseformula, iso.adduct, iso.fullmz, iso.fullformula, iso.isoprevalence, int.filename, int.intensity
+    mzmatches <- RSQLite::dbGetQuery(conn,gsubfn::fn$paste(strwrap(
+      "SELECT mz.mzmed, iso.baseformula, iso.adduct, iso.fullformula, iso.isoprevalence, iso.fullmz
       FROM isotopes iso
       JOIN mzranges rng
       ON iso.fullmz BETWEEN rng.mzmin AND rng.mzmax
-      JOIN mzintensities int
-      ON int.mzmed BETWEEN rng.mzmin AND rng.mzmax
-      WHERE int.filename NOT LIKE 'QC%'"
+      JOIN mzvals mz
+      ON rng.ID = mz.ID"
       , width=10000, simplify=TRUE)))
     
-    if(inshiny) shiny::setProgress(value = 0.8)
+    if(inshiny) shiny::setProgress(value = 0.4)
     
-    table <- as.data.table(table[complete.cases(table),])
+    mapper = unique(mzmatches[,2:4])
     
-    table <- data.table::setDT(table)[, .(mzmed = mean(mzmed), intensity = sum(intensity)),
-                                      by=.(baseformula, fullmz, fullformula, adduct, isoprevalence, filename)]
+    mzmatches <- mzmatches[,-c(2:3)]
+    mzmatches <- as.data.table(unique(mzmatches[complete.cases(mzmatches),]))
+    mzmatches$mzmed <- as.factor(mzmatches$mzmed)
+    
+    sourceTable <- as.data.table(mSet$dataSet$orig, keep.rownames = T)
+    longints <- melt(sourceTable, id.var="rn")
+    
+    colnames(longints) <- c("filename", "mzmed", "intensity")
+    
+    table <- merge(mzmatches, longints)
+    table <- unique(table[,c("fullformula", "isoprevalence", "filename", "mzmed", "fullmz", "intensity")])
+    
+    # table <- data.table::setDT(table)[, .(mzmed = mean(mzmed), intensity = sum(intensity)),
+    #                                   by=.(fullmz, fullformula, isoprevalence, filename)]
+    
     p.cpd <- split(x = table, 
                    f = list(table$fullformula))
     
+    if(inshiny) shiny::setProgress(value = 0.6)
+    
     i <<- 0
     
-    res_rows <- pbapply::pblapply(p.cpd, cl = session_cl, function(cpd_tab, method = method, i = i, inshiny = inshiny){
+    #cpd_tab <- p.cpd$C9H18N3O6
+    
+    res_rows <- pbapply::pblapply(p.cpd, cl = session_cl, function(cpd_tab, method = method, i = i, inshiny = inshiny, ppm = ppm, intprec = intprec){
       
-      formula = unique(cpd_tab$baseformula)
-      adduct = unique(cpd_tab$adduct)
+      formula = unique(cpd_tab$fullformula)
+      #adduct = unique(cpd_tab$adduct)
       
       # https://assets.thermofisher.com/TFS-Assets/CMD/Reference-Materials/pp-absoluteidq-qexactive-ms-targeted-metabolic-lipid-metabolomics2017-en.pdf
       
@@ -235,7 +265,9 @@ score.isos <- function(patdb, method="mscore", inshiny=TRUE){
           samp_tab <- data.table::as.data.table(samp_tab)
           
           if(nrow(samp_tab) == 1){
+            
             res = 0
+            
           }else{
             
             theor_mat <- samp_tab[,c("fullmz", "isoprevalence")]
@@ -257,11 +289,16 @@ score.isos <- function(patdb, method="mscore", inshiny=TRUE){
                             mean(percentageDifference) #Average percentage over all elements.
                           },
                           mscore={
-                            InterpretMSSpectrum::mScore(obs=obs, the=theor, dppm = 1, int_prec = 0.225)
+                            InterpretMSSpectrum::mScore(obs=obs, 
+                                                        the=theor, 
+                                                        dppm = ppm,
+                                                        int_prec = intprec)#, int_prec = 0.225)
                           },
                           sirius={NULL},
                           chisq={
-                            test <- chisq.test( obs[2,], p = theor[2,], rescale.p = T)
+                            test <- chisq.test( obs[2,], 
+                                                p = theor[2,], 
+                                                rescale.p = T)
                             # - - -
                             as.numeric(test$p.value)
                           }
@@ -272,25 +309,28 @@ score.isos <- function(patdb, method="mscore", inshiny=TRUE){
         })
         
         #i <<- i + 1
-        
-        #if(inshiny) shiny::setProgress(value = 0.8 + i * (.2/length(cpd_tab)))
+        #if(inshiny) shiny::setProgress(value = 0.6 + i * (.4/length(cpd_tab)))
         
         mean_error <- round(mean(score, na.rm=TRUE), digits = 1)
         
-        data.table::data.table(baseformula = formula,
-                               adduct = adduct,
+        data.table::data.table(fullformula = formula,
                                score = as.numeric(mean_error))
       }else{
         data.table::data.table()
       } 
-    }, method = method, i = i, inshiny = inshiny)
+    }, method = method, i = i, inshiny = inshiny, ppm = ppm, intprec=intprec)
     
     # - - - - - - - - -
     
-    rbindlist(res_rows)
+    score_tbl <- rbindlist(res_rows)
+    merged_tbl <- merge(score_tbl, mapper)
+    unique(merged_tbl[,-"fullformula"])
+    
   }
   
-  func()
+  tbl <<- func()
+  
+  tbl
   
   #if(inshiny) func() else func()
   
@@ -478,12 +518,8 @@ multimatch <- function(cpd, dbs, searchid="mz", inshiny=T, search_pubchem=F){
 
       if(dbname == "magicball"){
         # get ppm from db...
-        conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb) # change this to proper var later
-        A = DBI::dbGetQuery(conn, "SELECT * FROM mzvals WHERE ID = 1")
-        B = DBI::dbGetQuery(conn, "SELECT * FROM mzranges WHERE ID = 1")
-        DBI::dbDisconnect(conn)
-        ppm = round((abs(A$mzmed - B$mzmin) / A$mzmed) * 1e6, digits = 0)
-        res <- get_predicted(cpd, ppm = ppm, search_pubchem = search_pubchem)
+        
+        res <- get_predicted(cpd, ppm = get.ppm(), search_pubchem = search_pubchem)
         
       }else{
         res <- get_matches(cpd, 

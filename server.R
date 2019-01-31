@@ -94,6 +94,22 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  shown_matches <- reactiveValues(table = global$tables$last_matches)
+
+  output$match_tab <- DT::renderDataTable({
+      remove_cols = global$vectors$remove_match_cols
+      remove_idx <- which(colnames(global$tables$last_matches) %in% remove_cols)
+      # don't show some columns but keep them in the original table, so they can be used
+      # for showing molecule descriptions, structure
+      DT::datatable(shown_matches$table,
+      selection = 'single',
+      autoHideNavigation = T,
+      options = list(lengthMenu = c(5, 10, 15), 
+                     pageLength = 5,
+                     columnDefs = list(list(visible=FALSE, targets=remove_idx)))
+      )
+      
+  })
   # ===== UI SWITCHER ====
   
   # create interface mode storage object.
@@ -138,7 +154,10 @@ shinyServer(function(input, output, session) {
   })
   
   # -----------------
-  
+  observeEvent(input$undo_match_filt, {
+    shown_matches$table <- global$tables$last_matches
+  })
+    
   # change ppm accuracy, ONLY USEFUL if loading in from CSV
   # TODO: make it possible to change this and re-make user database (mzranges table specifically)
   observeEvent(input$set_ppm, {

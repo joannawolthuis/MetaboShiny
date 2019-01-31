@@ -70,6 +70,8 @@ observeEvent(input$search_cpd, {
                                                shape = 'heart')
       output$wordcloud_desc  <- wordcloud2::renderWordcloud2(wordcloud_plot)
       
+      global$vectors$pie_add <<- adduct_dist$Var1
+      
       output$match_pie_add <- plotly::renderPlotly({
         plot_ly(adduct_dist, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
                 textposition = 'inside',
@@ -84,6 +86,8 @@ observeEvent(input$search_cpd, {
           layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
                  yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
       })
+      
+      global$vectors$pie_db <<- db_dist$Var1
       
       output$match_pie_db <- plotly::renderPlotly({
         plot_ly(db_dist, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
@@ -101,23 +105,11 @@ observeEvent(input$search_cpd, {
       })
     }
     
-    output$match_tab <-DT::renderDataTable({
-      
-      remove_cols = global$vectors$remove_match_cols
-      remove_idx <- which(colnames(global$tables$last_matches) %in% remove_cols)
-      # don't show some columns but keep them in the original table, so they can be used
-      # for showing molecule descriptions, structure
-      DT::datatable(if(nrow(global$tables$last_matches)>0){
-        global$tables$last_matches 
-      }else{
-        data.table()
-      },
-      selection = 'single',
-      autoHideNavigation = T,
-      options = list(lengthMenu = c(5, 10, 15), 
-                     pageLength = 5,
-                     columnDefs = list(list(visible=FALSE, targets=remove_idx))))
-    })
+    shown_matches$table <- if(nrow(global$tables$last_matches)>0){
+      global$tables$last_matches 
+    }else{
+      data.table()
+    }
   }
 })
 
@@ -132,27 +124,33 @@ observeEvent(input$score_iso, {
     global$tables$last_matches <<- global$tables$last_matches[,-"score"]
   }
   
+  intprec = as.numeric(input$int_prec)/100.00
+  
   # get table including isotope scores
   # as input, takes user method for doing this scoring
-  score_table <- score.isos(global$paths$patdb, method=input$iso_score_method, inshiny=T) 
+  withProgress({
+    score_table <- score.isos(global$paths$patdb, method=input$iso_score_method, inshiny=T, intprec = intprec)
+    print(score_table)
+    })
   
   # update the match table available to the rest of metaboshiny
   global$tables$last_matches <<- global$tables$last_matches[score_table, on = c("baseformula", "adduct")]
   
-  # re-render match table
-  output$match_tab <-DT::renderDataTable({
-    
-    remove_cols = global$vectors$remove_match_cols
-    remove_idx <- which(colnames(global$tables$last_matches) %in% remove_cols)
-    # don't show some columns but keep them in the original table, so they can be used
-    # for showing molecule descriptions, structure
-    DT::datatable(global$tables$last_matches,
-                  selection = 'single',
-                  autoHideNavigation = T,
-                  options = list(lengthMenu = c(5, 10, 15), 
-                                 pageLength = 5,
-                                 columnDefs = list(list(visible=FALSE, targets=remove_idx))))
-  })  
+  shown_matches$table <<- global$tables$last_matches
+  # # re-render match table
+  # output$match_tab <-DT::renderDataTable({
+  #   
+  #   remove_cols = global$vectors$remove_match_cols
+  #   remove_idx <- which(colnames(global$tables$last_matches) %in% remove_cols)
+  #   # don't show some columns but keep them in the original table, so they can be used
+  #   # for showing molecule descriptions, structure
+  #   DT::datatable(global$tables$last_matches,
+  #                 selection = 'single',
+  #                 autoHideNavigation = T,
+  #                 options = list(lengthMenu = c(5, 10, 15), 
+  #                                pageLength = 5,
+  #                                columnDefs = list(list(visible=FALSE, targets=remove_idx))))
+  # })  
 })
 
 observeEvent(input$search_pubmed, {

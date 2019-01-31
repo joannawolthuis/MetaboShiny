@@ -3,6 +3,29 @@ observeEvent(plotly::event_data("plotly_click"),{
   
   d <- plotly::event_data("plotly_click") # get click details (which point, additional included info, etc..)
   
+  if(input$tab_iden_4 == "pie_add"){
+    
+    i = d$pointNumber + 1
+    show.adduct = global$vectors$pie_add[i]
+    
+    if(nrow(global$tables$last_matches)>0){
+      keep.rows <- which(global$tables$last_matches$adduct == show.adduct)
+      shown_matches$table <- global$tables$last_matches[keep.rows,]
+    }
+  }
+  
+  if(input$tab_iden_4 == "pie_db"){
+    
+    i = d$pointNumber + 1
+    show.db = global$vectors$pie_db[i]
+    
+    if(nrow(global$tables$last_matches)>0){
+      keep.rows <- which(global$tables$last_matches$source == show.db)
+      shown_matches$table <- global$tables$last_matches[keep.rows,]
+    }
+  }
+  
+  # check if we are in a pie chart
   if(req(input$statistics ) %in% c("tt", "fc", "rf", "aov", "volc")){ # these cases need the same processing and use similar scoring systems
     if('key' %not in% colnames(d)) return(NULL)
     mzs <- switch(input$statistics, 

@@ -308,7 +308,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                    tabPanel(h3("T-test"), value="tt", 
                                                                             fluidRow(plotly::plotlyOutput('tt_specific_plot',width="100%")),
                                                                             fluidRow(align="center",
-                                                                                     sardine(switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = F)),
+                                                                                     sardine(uiOutput("tt_parbutton")),
                                                                                      sardine(switchButton("tt_eqvar", "Equal variance?", col="BW", type="YN", value = T))
                                                                                      ),
                                                                             navbarPage(inverse=F,"",
@@ -420,7 +420,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
 																                                       ),
 																                              tabPanel(title = "", icon = icon("minus"),
 																                                       #plotlyOutput("mummi_neg_plot", height = "300px"),
-																                                       div(DT::dataTableOutput("mummi_neg_tab")),style='font-size:80%')
+																                                       div(DT::dataTableOutput("mummi_neg_tab"),style='font-size:80%')
 																                              )
 																                            ),
 																                            div(DT::dataTableOutput("mummi_detail_tab"),style='font-size:80%')
@@ -547,11 +547,15 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                                       selectInput("iso_score_method", 
                                                                                                                                   "Which method used to score compounds of same weight?", 
                                                                                                                                   selected="mscore", 
-                                                                                                                                  choices=list("M-score"="mscore",
-                                                                                                                                               "Chi-square"="chisq",
-                                                                                                                                               "Mean absolute percentage error"="mape",
-                                                                                                                                               "SIRIUS"="sirius",
-                                                                                                                                               "Network-based"="network")),
+                                                                                                                                  choices=list("M-score"="mscore"
+                                                                                                                                               #"Chi-square"="chisq",
+                                                                                                                                               #"Mean absolute percentage error"="mape",
+                                                                                                                                               #"SIRIUS"="sirius",
+                                                                                                                                               #"Network-based"="network"
+                                                                                                                                               )),
+                                                                                                                      sliderInput("int_prec", label = "Intensity imprecision", min = 1, max = 100, value = 2, post = "%"),
+                                                                                                                      shinyWidgets::circleButton("score_iso", icon = icon("award"), size = "sm"), # icon("fingerprint"), size = "sm")
+                                                                                                                      hr(),
                                                                                                                       h2("MagicBall settings"),
                                                                                                                       fluidRow(align="center",switchButton(inputId = "search_pubchem",
                                                                                                                                                            label = "Check PubChem for predicted formulas?", 
@@ -599,7 +603,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                                border-bottom: 1px solid #DFDCDC;")
                                                                                              ),
                                                                                            bsCollapse(bsCollapsePanel(title=h2("Compound info"), style="warning",
-                                                                                                                      tabsetPanel(id="tab_iden_2", 
+                                                                                                                      tabsetPanel(id="tab_iden_3", 
                                                                                                                                   tabPanel(title=icon("atlas"),
                                                                                                                                            wellPanel(id = "def",style = "overflow-y:scroll; max-height: 200px",
                                                                                                                                                      textOutput("curr_definition"))
@@ -610,27 +614,32 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                                                   )
                                                                                                                       ))),
                                                                                            bsCollapse(bsCollapsePanel(title=h2("Search results"), style="error",
-                                                                                                                      tabsetPanel(id="tab_iden_1",selected = "start",
+                                                                                                                      tabsetPanel(id="tab_iden_4",selected = "start",
                                                                                                                                   # forward searching
                                                                                                                                   tabPanel(title=icon("table"), value="start",
+                                                                                                                                           div(DT::dataTableOutput('match_tab', width="100%"),style='font-size:80%'),
+                                                                                                                                           hr(),
                                                                                                                                            fluidRow(
                                                                                                                                              switchButton(inputId = "auto_copy",
                                                                                                                                                           label = "Auto-copy name to clipboard??", 
                                                                                                                                                           value = TRUE, col = "GB", type = "YN"), 
                                                                                                                                              align="center"),
-                                                                                                                                           div(DT::dataTableOutput('match_tab', width="100%"),style='font-size:80%')
+                                                                                                                                           helpText("Undo filtering"),
+                                                                                                                                           fluidRow(
+                                                                                                                                             shinyWidgets::circleButton("undo_match_filt", icon = icon("undo-alt"), size = "sm") # icon("fingerprint"), size = "sm")
+                                                                                                                                           )
                                                                                                                                   ),
-                                                                                                                                  tabPanel(title=icon("database"), 
+                                                                                                                                  tabPanel(title=icon("database"), value="pie_db",
                                                                                                                                            fluidRow(align = "center", 
                                                                                                                                                     plotly::plotlyOutput("match_pie_db") %>% shinycssloaders::withSpinner()
                                                                                                                                                     )
                                                                                                                                   ),
-                                                                                                                                  tabPanel(title=icon("plus"), 
+                                                                                                                                  tabPanel(title=icon("plus"), value = "pie_add", 
                                                                                                                                            fluidRow(align = "center", 
                                                                                                                                                     plotly::plotlyOutput("match_pie_add") %>% shinycssloaders::withSpinner()
                                                                                                                                                     )
                                                                                                                                   ),
-                                                                                                                                  tabPanel(title=icon("cloud"),
+                                                                                                                                  tabPanel(title=icon("cloud"), value = "word_cloud",
                                                                                                                                            fluidRow(align = "center",
                                                                                                                                                     list(
                                                                                                                                                       wordcloud2::wordcloud2Output("wordcloud_desc") %>% shinycssloaders::withSpinner(),

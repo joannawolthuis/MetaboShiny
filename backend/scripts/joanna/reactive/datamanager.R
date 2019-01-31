@@ -328,10 +328,23 @@ observe({
            tt = {
              # save results to table
              res <<- mSet$analSet$tt$sig.mat 
-             if(is.null(res)){
+             
+             if(!is.null(res)){
+               output$tt_parbutton <- shiny::renderUI({
+                 if("V" %in% colnames(mSet$analSet$tt$sig.mat)){
+                   switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = T)
+                 }else{
+                   switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = F)
+                 }
+               })
+             } else {
                res <<- data.table("No significant hits found")
                mSet$analSet$tt <<- NULL
+               output$tt_parbutton <- shiny::renderUI({
+                 switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = F)
+               })
              }
+             # set buttons to proper thingy
              # render results table for UI
              output$tt_tab <-DT::renderDataTable({
                # -------------
