@@ -280,6 +280,7 @@ observe({
            },
            ml = {
              if("ml" %in% names(mSet$analSet)){
+               
                roc_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
                
                output$ml_roc <- plotly::renderPlotly({
@@ -329,21 +330,12 @@ observe({
              # save results to table
              res <<- mSet$analSet$tt$sig.mat 
              
-             if(!is.null(res)){
-               output$tt_parbutton <- shiny::renderUI({
-                 if("V" %in% colnames(mSet$analSet$tt$sig.mat)){
-                   switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = T)
-                 }else{
-                   switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = F)
-                 }
-               })
-             } else {
+             if(is.null(res)){
                res <<- data.table("No significant hits found")
                mSet$analSet$tt <<- NULL
-               output$tt_parbutton <- shiny::renderUI({
-                 switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = F)
-               })
+               
              }
+             
              # set buttons to proper thingy
              # render results table for UI
              output$tt_tab <-DT::renderDataTable({

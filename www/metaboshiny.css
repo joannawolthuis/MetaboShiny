@@ -325,3 +325,60 @@ $buttonColor: rgba(255,255,255,1);
 
 .rightAlign{float:right;}
 
+#curly-brace
+{
+  color: black;
+  width: 100%;
+  position: relative;
+}
+
+.brace
+{
+  border-bottom: 5px solid;
+  margin: 0 10%;
+  width: 30%;
+  height: 20px;  
+  float: left;
+}
+
+.brace:before,
+.brace:after
+{
+  content: "";
+  width: 10%;
+  height: 50px;
+  position: absolute;
+  display: block;
+}
+
+#left:before
+{  
+  border-bottom: 5px solid;  
+  border-bottom-left-radius: 20px;
+  margin-left: -10%;
+  margin-top: -30px;
+}
+
+#left:after
+{
+  border-top: 5px solid;
+  border-top-right-radius: 20px;
+  margin-left: 30%;
+  margin-top: 16px;    
+}
+
+#right:before
+{
+  border-top: 5px solid;
+  border-top-left-radius: 20px;
+  margin-left: -10%;
+  margin-top: 16px;
+}
+
+#right:after
+{
+  border-bottom: 5px solid;
+  border-bottom-right-radius: 20px;
+  margin-left: 30%;
+  margin-top: -30px;
+}

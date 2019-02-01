@@ -37,72 +37,72 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                     h2("Create project"))),
                     hr(),
                     tabsetPanel(id="new_proj",selected = "From DB",
-							   # first tab is the 'new' method that uses a .db file. generally used for very large projects by powerusers
-							   # may want to hide later..
-                               tabPanel(id="db", title="From DB",
-                                        br(),br(),
-                                        fluidRow(
-                                          column(3, align="center",
-                                                        imageOutput("db_icon", inline = T),
-                                                        br(),br()
-                                                ),
-                                                column(3, align="center",
-                                                       br(),br(),
-                                                        imageOutput("excel_icon",inline = T)
-                                                        )
-                                                 ), 
-                                        fluidRow(
-                                          column(3, align="center",
-                                                 shinyFilesButton('database', 'DATABASE', 'Please select an database file', FALSE)
-                                          ),
-                                          column(3, align="center",
-                                                 shinyFilesButton('excel', 'METADATA', 'Please select an excel file', FALSE)
-                                          )
-                                        )
-                                        ),
-							   # second tab is the 'old' method that uses 2 csv files (with columns: "mzmed", "Sample1", "Sample2" etc)
-                               tabPanel(id="csv", title="From CSV",
-                                        br(),br(),
-                                        fluidRow(column(3,  align="center",
-                                                        imageOutput("pos_icon",inline = T),
-                                                        br(),br(),
-                                                        shinyFilesButton('outlist_pos', 'POSITIVE PEAKS', 'Please select a csv file', FALSE)
-                                        ),
-                                        column(3,  align="center",
-                                               imageOutput("excel_icon_2",inline = T),
-                                               br(),br(),
-                                               shinyFilesButton('excel', 'METADATA', 'Please select an excel file', FALSE)
-                                        ),
-                                        column(3,  align="center",
-                                               imageOutput("neg_icon",inline = T),
-                                               br(),br(),
-                                               shinyFilesButton('outlist_neg', 'NEGATIVE PEAKS', 'Please select a csv file', FALSE)
-                                        )
-                                        ),
-                                        fluidRow(align="center",
-                                                 sliderInput("ppm",label = "m/z accuracy", min = 1, max = 50, value = 2,post = " ppm"))
-                                        )
+                                # first tab is the 'new' method that uses a .db file. generally used for very large projects by powerusers
+                                # may want to hide later..
+                                tabPanel(id="db", title="From DB",
+                                         br(),br(),
+                                         fluidRow(
+                                           column(3, align="center",
+                                                  imageOutput("db_icon", inline = T),
+                                                  br(),br()
+                                           ),
+                                           column(3, align="center",
+                                                  br(),br(),
+                                                  imageOutput("excel_icon",inline = T)
+                                           )
+                                         ), 
+                                         fluidRow(
+                                           column(3, align="center",
+                                                  shinyFilesButton('database', 'DATABASE', 'Please select an database file', FALSE)
+                                           ),
+                                           column(3, align="center",
+                                                  shinyFilesButton('excel', 'METADATA', 'Please select an excel file', FALSE)
+                                           )
+                                         )
+                                ),
+                                # second tab is the 'old' method that uses 2 csv files (with columns: "mzmed", "Sample1", "Sample2" etc)
+                                tabPanel(id="csv", title="From CSV",
+                                         br(),br(),
+                                         fluidRow(column(3,  align="center",
+                                                         imageOutput("pos_icon",inline = T),
+                                                         br(),br(),
+                                                         shinyFilesButton('outlist_pos', 'POSITIVE PEAKS', 'Please select a csv file', FALSE)
+                                         ),
+                                         column(3,  align="center",
+                                                imageOutput("excel_icon_2",inline = T),
+                                                br(),br(),
+                                                shinyFilesButton('excel', 'METADATA', 'Please select an excel file', FALSE)
+                                         ),
+                                         column(3,  align="center",
+                                                imageOutput("neg_icon",inline = T),
+                                                br(),br(),
+                                                shinyFilesButton('outlist_neg', 'NEGATIVE PEAKS', 'Please select a csv file', FALSE)
+                                         )
+                                         ),
+                                         fluidRow(align="center",
+                                                  sliderInput("ppm",label = "m/z accuracy", min = 1, max = 50, value = 2,post = " ppm"))
+                                )
                     ),
                     hr(),
-					# contains button to start db creation, mode switches based on tab used entered files in
+                    # contains button to start db creation, mode switches based on tab used entered files in
                     fluidRow(column(9, align="center",
                                     actionButton("create_db", "Go", icon = icon("magic"))
                     ))
            ),
-		   # this tab is used to create a csv file from the database built in the previous tab
+           # this tab is used to create a csv file from the database built in the previous tab
            tabPanel("", icon=icon("file-text-o"), value="document",
                     sidebarLayout(position="left",
                                   sidebarPanel = sidebarPanel(align="center",
                                                               tabsetPanel( id = "adductSettings", selected="db",
-															  # this tab is used to pre-filter mz values based on their matches in certain compound databases
+                                                                           # this tab is used to pre-filter mz values based on their matches in certain compound databases
                                                                            tabPanel(icon("database"), value="db",
                                                                                     br(),
                                                                                     tags$i("Select database(s)"),
                                                                                     br(),
                                                                                     uiOutput("db_add_select")), # this shows all the buttons for the various databases. autogenerated in 'server'.
                                                                            # this tab is used to enable/disable adduct grouping. group compounds by mz (default), compounds (group adducts and isotopes). 
-																		   # TODO: add an option for grouping with isotope variants
-																		   tabPanel(icon("id-card-o"), value = "identifier",
+                                                                           # TODO: add an option for grouping with isotope variants
+                                                                           tabPanel(icon("id-card-o"), value = "identifier",
                                                                                     br(),
                                                                                     tags$i("Select identifier"),
                                                                                     radioButtons(inputId = "group_by", 
@@ -112,9 +112,9 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                         "Mass/charge" = "mz"), 
                                                                                                  selected = "mz",
                                                                                                  width="100%")   
-                          ), 
-                                                                          # this tab is used to pick which adducts to consider in the matchmaking process, either for adduct grouping or pre-searching
-																		  tabPanel(icon("plus-square"), value="adducts",
+                                                                           ), 
+                                                                           # this tab is used to pick which adducts to consider in the matchmaking process, either for adduct grouping or pre-searching
+                                                                           tabPanel(icon("plus-square"), value="adducts",
                                                                                     br(),
                                                                                     tags$i("Select adduct(s)"),
                                                                                     fluidRow(column(width=6, div(style="font-size:120%",icon("search-plus"))), 
@@ -123,7 +123,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                     fluidRow(column(width=6,div(DT::dataTableOutput('pos_add_tab',width="100%"),style='font-size:70%')),
                                                                                              column(width=6,div(DT::dataTableOutput('neg_add_tab',width="100%"),style='font-size:70%'))
                                                                                     ),
-																					# various selection buttons: select all, select none, or select commonly seen adducts
+                                                                                    # various selection buttons: select all, select none, or select commonly seen adducts
                                                                                     fluidRow(sardine(div(actionButton(inputId = "sel_all_adducts",
                                                                                                                       label = "", icon=icon("circle")),style='font-size:70%')),
                                                                                              sardine(div(actionButton(inputId = "sel_comm_adducts",
@@ -137,7 +137,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                               # button to start the csv creation process
                                                               actionButton("create_csv", "Create CSV", icon=icon("file-text-o")),
                                                               hr(),
-															  # load in an already created csv file (will want to have other covariates as columns as well, at the beginning!)
+                                                              # load in an already created csv file (will want to have other covariates as columns as well, at the beginning!)
                                                               imageOutput("csv_icon",inline = T),
                                                               br(),br(),
                                                               fileInput("pat_csv", "Import CSV",
@@ -146,7 +146,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                               actionButton("import_csv", "Import", icon = icon("hand-peace-o")),
                                                               imageOutput("csv_upload_check",inline = T)
                                   ),
-								  # this tab shows a summary of the created/loaded in csv file.
+                                  # this tab shows a summary of the created/loaded in csv file.
                                   mainPanel = mainPanel(align="center",
                                                         fluidRow(div(DT::dataTableOutput('csv_tab'),style='font-size:80%'))
                                   )
@@ -202,8 +202,8 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                                 "Leave them alone"="none"), 
                                                 selected = "knn"),
                                     switchButton(inputId = "remove_outliers",
-                                                                          label = "Exclude outliers?", 
-                                                                          value = FALSE, col = "BW", type = "YN"),
+                                                 label = "Exclude outliers?", 
+                                                 value = FALSE, col = "BW", type = "YN"),
                                     actionButton("initialize", "Go", icon=icon("hand-o-right")),
                                     hr(),
                                     imageOutput("dataset_icon",inline = T),
@@ -213,7 +213,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                     actionButton("import_dataset", "Import", icon = icon("hand-peace-o")),
                                     imageOutput("dataset_upload_check",inline = T)
                     ), column(9, 
-					# show the summary plots post-normalization 
+                              # show the summary plots post-normalization 
                               navbarPage(inverse=TRUE,"Explore",
                                          tabPanel("Variables", icon=icon("braille"),
                                                   fluidRow(column(6,plotOutput("var1",height='300px')),
@@ -237,7 +237,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                   mainPanel = mainPanel(width = 8,
                                                         navbarPage(inverse=F,h2("Statistics"), id="statistics", selected = "pca",collapsible = T,
                                                                    # TODO: T-SNE
-																   # this tab shows general information, mostly a message with 'please give me some data' :-) 
+                                                                   # this tab shows general information, mostly a message with 'please give me some data' :-) 
                                                                    tabPanel(h3("Info"), value = "inf",
                                                                             fluidRow(column(width=12, align="center",
                                                                                             br(),br(),br(),
@@ -247,11 +247,11 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                             br(),br(),
                                                                                             icon("arrow-right","fa-lg"), icon("arrow-right","fa-lg"), icon("arrow-right","fa-lg")
                                                                             ))),
-																   # loading this tab performs PCA. summary and loading tables, alongside a 2d/3d PCA plot, are available here.
+                                                                   # loading this tab performs PCA. summary and loading tables, alongside a 2d/3d PCA plot, are available here.
                                                                    tabPanel(h3("PCA"), value = "pca", #icon=icon("cube"),
                                                                             fluidRow(align="center",column(12,plotly::plotlyOutput("plot_pca",height = "600px", width="600px") %>% shinycssloaders::withSpinner())),
                                                                             fluidRow(align="center",column(12,
-                                                                                            switchButton("pca_2d3d", label = "", col = "BW", type = "2d3d"))),
+                                                                                                           switchButton("pca_2d3d", label = "", col = "BW", type = "2d3d"))),
                                                                             hr(),
                                                                             fluidRow(column(3,
                                                                                             selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:20),selected = "PC1",width="100%"),
@@ -269,19 +269,19 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                             ))
                                                                             )
                                                                    ),
-																   # TODO: enable the sparse and orthogonal PLS-DA options in metaboanalystR
-																   # this tab is used to perform pls-da. it triggers on 'go' button as it is a time costly analysis.
+                                                                   # TODO: enable the sparse and orthogonal PLS-DA options in metaboanalystR
+                                                                   # this tab is used to perform pls-da. it triggers on 'go' button as it is a time costly analysis.
                                                                    tabPanel(h3("PLSDA"), value = "plsda", 
                                                                             fluidRow(align="center",column(12,plotly::plotlyOutput("plot_plsda",height = "500px", width="500px"))),
                                                                             fluidRow(align="center",column(12,
-                                                                                            switchButton("plsda_2d3d", label = "", col = "BW", type = "2d3d"))),
+                                                                                                           switchButton("plsda_2d3d", label = "", col = "BW", type = "2d3d"))),
                                                                             hr(),
                                                                             fluidRow(column(3,
                                                                                             div(style="display:inline-block",
                                                                                                 selectInput("plsda_type", 
                                                                                                             label="Type:", 
                                                                                                             choices=list("Normal"="normal")
-																											#,
+                                                                                                            #,
                                                                                                             #             "Orthogonal"="ortho",
                                                                                                             #             "Sparse"="sparse") 
                                                                                                             ,width = '100px',
@@ -310,7 +310,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                             fluidRow(align="center",
                                                                                      sardine(uiOutput("tt_parbutton")),
                                                                                      sardine(switchButton("tt_eqvar", "Equal variance?", col="BW", type="YN", value = T))
-                                                                                     ),
+                                                                            ),
                                                                             navbarPage(inverse=F,"",
                                                                                        tabPanel("", icon=icon("table"),
                                                                                                 div(DT::dataTableOutput('tt_tab',width="100%"),style='font-size:80%'))
@@ -360,176 +360,176 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                             uiOutput("heatbutton"), 
                                                                                             switchButton("heatsign", label = "Only significant hits?", col = "GB", type = "YN"),
                                                                                             switchButton("heatlimits", label = "Color based on -all- metabolites?", col = "GB", type = "YN")
-                                                                                     )) 
+                                                                            )) 
                                                                    ),
-																   # this tab enables mummichog pathway analysis (using their own databases...)
-																   tabPanel(h3("Enrichment"), value = "enrich",
-																            sidebarLayout(position = "left",
-																                          sidebarPanel = sidebarPanel(width=3,
-																                            fluidRow(align="center", selectInput("mummi_org",label = "Organism DB:",choices = list(
-																                              "Homo sapiens (human) [MFN]" = "hsa_mfn",
-																                              "Homo sapiens (human) [BioCyc]" = "hsa_biocyc",
-																                              "Homo sapiens (human) [KEGG]" = "hsa_kegg",
-																                              "Mus musculus (mouse) [BioCyc]" = "mmu_biocyc",
-																                              "Mus musculus (mouse) [KEGG]" = "mmu_kegg",
-																                              "Rattus norvegicus (rat) [KEGG]" = "rno_kegg",
-																                              "Bos taurus (cow) [KEGG]" = "bta_kegg",
-																                              "Gallus gallus (chicken) [KEGG]" = "gga_kegg",
-																                              "Danio rerio (zebrafish) [KEGG]" = "dre_kegg",
-																                              "Danio rerio (zebrafish) [MTF]" = "dre_mtf",
-																                              "Drosophila melanogaster (fruit fly) [KEGG]" = "dme_kegg",
-																                              "Drosophila melanogaster (fruit fly) [BioCyc]" = "dme_biocyc",
-																                              "Caenorhabditis elegans (nematode) [KEGG]" = "cel_kegg",
-																                              "Saccharomyces cerevisiae (yeast) [KEGG]" = "sce_kegg",
-																                              "Saccharomyces cerevisiae (yeast) [BioCyc]" = "sce_biocyc",
-																                              "Oryza sativa japonica (Japanese rice) [KEGG]" = "osa_kegg",
-																                              "Arabidopsis thaliana (thale cress) [KEGG]" = "ath_kegg",
-																                              "Schistosoma mansoni [KEGG]" = "smm_kegg",
-																                              "Plasmodium falciparum 3D7 (Malaria) [KEGG]" = "pfa_kegg",
-																                              "Trypanosoma brucei [KEGG]" = "tbr_kegg",
-																                              "Escherichia coli K-12 MG1655 [KEGG]" = "eco_kegg",
-																                              "Bacillus subtilis [KEGG]" = "bsu_kegg",
-																                              "Pseudomonas putida KT2440 [KEGG]" = "ppu_kegg",
-																                              "Staphylococcus aureus N315 (MRSA/VSSA) [KEGG]" = "sau_kegg",
-																                              "Thermotoga maritima [KEGG]" = "tma_kegg",
-																                              "Synechococcus elongatus PCC7942 [KEGG]" = "syf_kegg",
-																                              "Mesorhizobium loti [KEGG]" = "mlo_kegg"
-																                            ), selected = "hsa_kegg")),
-																                            hr(),
-																                            fluidRow(align="center",shinyWidgets::sliderTextInput("mummi_sigmin","Min p value:",
-																                                                          choices=c(0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.05, 0.1),
-																                                                          selected=0.05, grid = T)),
-																                            hr(),
-																                            fluidRow(align="center",sliderInput("mummi_ppm", 
-																                                        "ppm accuracy",
-																                                        min = 0.1, 
-																                                        max = 40,
-																                                        value = 2)),
-																                            fluidRow(align="center",
-																                                     shinyWidgets::circleButton("do_mummi",
-																                                                                icon = h3(paste("Go"), 
-																                                                                          icon("hand-pointer-o", "fa-lg")), 
-																                                                                status = "default", 
-																                                                                size = "lg")
-																                                     )),
-																                          mainPanel = mainPanel(
-																                            tabsetPanel(
-																                              tabPanel(title = "", icon = icon("plus"),
-																                                       #plotlyOutput("mummi_pos_plot", height = "300px"),
-																                                       div(DT::dataTableOutput("mummi_pos_tab"),style='font-size:80%')
-																                                       ),
-																                              tabPanel(title = "", icon = icon("minus"),
-																                                       #plotlyOutput("mummi_neg_plot", height = "300px"),
-																                                       div(DT::dataTableOutput("mummi_neg_tab"),style='font-size:80%')
-																                              )
-																                            ),
-																                            div(DT::dataTableOutput("mummi_detail_tab"),style='font-size:80%')
-																                          ))
-																            ),
-																   # this tab enables machine learning
-																   tabPanel(h3("ML"), value = "ml",
-																            fluidRow(
-                                                                               column(width=3,align="center",
-                                                                                      selectInput("ml_method", 
-                                                                                                  label = "Type:", 
-                                                                                                  selected = "rf", 
-                                                                                                  choices = list("Random Forest" = "rf",
-                                                                                                                 "Lasso" = "ls",
-                                                                                                                 "Group lasso" = "gls"),
-                                                                                                  multiple = F),
-                                                                                      sliderInput("ml_train_perc", 
-                                                                                                  label = "Percentage in training", 
-                                                                                                  min = 1,
-                                                                                                  max = 100,
-                                                                                                  step = 1,
-                                                                                                  value = 60, 
-                                                                                                  post = "%"),
-                                                                                      selectInput("ml_folds", label="Fold CV",choices = c("5", 
-                                                                                                                                          "10", 
-                                                                                                                                          "20", 
-                                                                                                                                          "50", 
-                                                                                                                                          "LOOCV"),
-                                                                                                  multiple = F),
-                                                                                      # - - - - - - - - - -
-                                                                                      style="z-index:1002;"
-                                                                               ),
-                                                                               column(width=6,align="center",
-                                                                                      sliderInput("ml_attempts", 
-                                                                                                  label = "Attempts", 
-                                                                                                  min = 1,
-                                                                                                  max = 100,
-                                                                                                  step = 1,
-                                                                                                  value = 20, 
-                                                                                                  post = "x"),
-                                                                                      br(),
-                                                                                      br(),
-                                                                                      shinyWidgets::circleButton("do_ml",
-                                                                                                                 icon = h3(paste("Go"), 
-                                                                                                                           icon("hand-pointer-o", "fa-lg")), 
-                                                                                                                 status = "default", 
-                                                                                                                 size = "lg")
-                                                                                      #actionButton("do_ml",label=h2("Go"),width = "150px", height="150px")
-                                                                               ),
-                                                                               column(width=3,align="center",
-                                                                                      fluidRow(helpText("..."), actionButton("ml_train_ss", label = "Train on:", icon = icon("angle-double-left"))),
-                                                                                      fluidRow(helpText("..."), actionButton("ml_test_ss", label = "Test on:", icon = icon("angle-double-left"))),
-                                                                                      #textInput("ml_train_regex", label = "Regex for train:"),
-                                                                                      #textInput("ml_test_regex", label = "Regex for test:"),
-                                                                                      #tags$a(img(src="help.png"), href="https://regex101.com"),
-                                                                                      textInput("ml_name", label="Name:", value = "all"))
-                                                                             ),
-                                                                             hr(),
-                                                                             navbarPage(title="Results",id="ml_results",inverse=F,
-                                                                                        tabPanel(title = "ROC",value = "roc",icon=icon("area-chart"),
-                                                                                                 plotlyOutput("ml_roc",height = "600px"),
-                                                                                                 div(DT::dataTableOutput("ml_tab",width="100%"),style='font-size:80%')),
-                                                                                        tabPanel("Model",value= "bar",icon=icon("table"),
-                                                                                                 fluidRow(plotlyOutput("ml_bar", width = "100%", height="600px")),
-                                                                                                 fluidRow(
-                                                                                                   column(12, sliderInput("ml_top_x",
+                                                                   # this tab enables mummichog pathway analysis (using their own databases...)
+                                                                   tabPanel(h3("Enrichment"), value = "enrich",
+                                                                            sidebarLayout(position = "left",
+                                                                                          sidebarPanel = sidebarPanel(width=3,
+                                                                                                                      fluidRow(align="center", selectInput("mummi_org",label = "Organism DB:",choices = list(
+                                                                                                                        "Homo sapiens (human) [MFN]" = "hsa_mfn",
+                                                                                                                        "Homo sapiens (human) [BioCyc]" = "hsa_biocyc",
+                                                                                                                        "Homo sapiens (human) [KEGG]" = "hsa_kegg",
+                                                                                                                        "Mus musculus (mouse) [BioCyc]" = "mmu_biocyc",
+                                                                                                                        "Mus musculus (mouse) [KEGG]" = "mmu_kegg",
+                                                                                                                        "Rattus norvegicus (rat) [KEGG]" = "rno_kegg",
+                                                                                                                        "Bos taurus (cow) [KEGG]" = "bta_kegg",
+                                                                                                                        "Gallus gallus (chicken) [KEGG]" = "gga_kegg",
+                                                                                                                        "Danio rerio (zebrafish) [KEGG]" = "dre_kegg",
+                                                                                                                        "Danio rerio (zebrafish) [MTF]" = "dre_mtf",
+                                                                                                                        "Drosophila melanogaster (fruit fly) [KEGG]" = "dme_kegg",
+                                                                                                                        "Drosophila melanogaster (fruit fly) [BioCyc]" = "dme_biocyc",
+                                                                                                                        "Caenorhabditis elegans (nematode) [KEGG]" = "cel_kegg",
+                                                                                                                        "Saccharomyces cerevisiae (yeast) [KEGG]" = "sce_kegg",
+                                                                                                                        "Saccharomyces cerevisiae (yeast) [BioCyc]" = "sce_biocyc",
+                                                                                                                        "Oryza sativa japonica (Japanese rice) [KEGG]" = "osa_kegg",
+                                                                                                                        "Arabidopsis thaliana (thale cress) [KEGG]" = "ath_kegg",
+                                                                                                                        "Schistosoma mansoni [KEGG]" = "smm_kegg",
+                                                                                                                        "Plasmodium falciparum 3D7 (Malaria) [KEGG]" = "pfa_kegg",
+                                                                                                                        "Trypanosoma brucei [KEGG]" = "tbr_kegg",
+                                                                                                                        "Escherichia coli K-12 MG1655 [KEGG]" = "eco_kegg",
+                                                                                                                        "Bacillus subtilis [KEGG]" = "bsu_kegg",
+                                                                                                                        "Pseudomonas putida KT2440 [KEGG]" = "ppu_kegg",
+                                                                                                                        "Staphylococcus aureus N315 (MRSA/VSSA) [KEGG]" = "sau_kegg",
+                                                                                                                        "Thermotoga maritima [KEGG]" = "tma_kegg",
+                                                                                                                        "Synechococcus elongatus PCC7942 [KEGG]" = "syf_kegg",
+                                                                                                                        "Mesorhizobium loti [KEGG]" = "mlo_kegg"
+                                                                                                                      ), selected = "hsa_kegg")),
+                                                                                                                      hr(),
+                                                                                                                      fluidRow(align="center",shinyWidgets::sliderTextInput("mummi_sigmin","Min p value:",
+                                                                                                                                                                            choices=c(0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.05, 0.1),
+                                                                                                                                                                            selected=0.05, grid = T)),
+                                                                                                                      hr(),
+                                                                                                                      fluidRow(align="center",sliderInput("mummi_ppm", 
+                                                                                                                                                          "ppm accuracy",
+                                                                                                                                                          min = 0.1, 
+                                                                                                                                                          max = 40,
+                                                                                                                                                          value = 2)),
+                                                                                                                      fluidRow(align="center",
+                                                                                                                               shinyWidgets::circleButton("do_mummi",
+                                                                                                                                                          icon = h3(paste("Go"), 
+                                                                                                                                                                    icon("hand-pointer-o", "fa-lg")), 
+                                                                                                                                                          status = "default", 
+                                                                                                                                                          size = "lg")
+                                                                                                                      )),
+                                                                                          mainPanel = mainPanel(
+                                                                                            tabsetPanel(
+                                                                                              tabPanel(title = "", icon = icon("plus"),
+                                                                                                       #plotlyOutput("mummi_pos_plot", height = "300px"),
+                                                                                                       div(DT::dataTableOutput("mummi_pos_tab"),style='font-size:80%')
+                                                                                              ),
+                                                                                              tabPanel(title = "", icon = icon("minus"),
+                                                                                                       #plotlyOutput("mummi_neg_plot", height = "300px"),
+                                                                                                       div(DT::dataTableOutput("mummi_neg_tab"),style='font-size:80%')
+                                                                                              )
+                                                                                            ),
+                                                                                            div(DT::dataTableOutput("mummi_detail_tab"),style='font-size:80%')
+                                                                                          ))
+                                                                   ),
+                                                                   # this tab enables machine learning
+                                                                   tabPanel(h3("ML"), value = "ml",
+                                                                            fluidRow(
+                                                                              column(width=3,align="center",
+                                                                                     selectInput("ml_method", 
+                                                                                                 label = "Type:", 
+                                                                                                 selected = "rf", 
+                                                                                                 choices = list("Random Forest" = "rf",
+                                                                                                                "Lasso" = "ls",
+                                                                                                                "Group lasso" = "gls"),
+                                                                                                 multiple = F),
+                                                                                     sliderInput("ml_train_perc", 
+                                                                                                 label = "Percentage in training", 
+                                                                                                 min = 1,
+                                                                                                 max = 100,
+                                                                                                 step = 1,
+                                                                                                 value = 60, 
+                                                                                                 post = "%"),
+                                                                                     selectInput("ml_folds", label="Fold CV",choices = c("5", 
+                                                                                                                                         "10", 
+                                                                                                                                         "20", 
+                                                                                                                                         "50", 
+                                                                                                                                         "LOOCV"),
+                                                                                                 multiple = F),
+                                                                                     # - - - - - - - - - -
+                                                                                     style="z-index:1002;"
+                                                                              ),
+                                                                              column(width=6,align="center",
+                                                                                     sliderInput("ml_attempts", 
+                                                                                                 label = "Attempts", 
+                                                                                                 min = 1,
+                                                                                                 max = 100,
+                                                                                                 step = 1,
+                                                                                                 value = 20, 
+                                                                                                 post = "x"),
+                                                                                     shinyWidgets::circleButton("do_ml",
+                                                                                                                icon = h3(paste("Go"), 
+                                                                                                                          icon("hand-pointer-o", "fa-lg")), 
+                                                                                                                status = "default", 
+                                                                                                                size = "lg"),
+                                                                                     hr(),
+                                                                                     div(selectInput("show_which_ml", label = "Plot which model?", choices = c())),
+                                                                                     style="z-index:1003;"
+                                                                              ),
+                                                                              column(width=3,align="center",
+                                                                                     fluidRow(textOutput("ml_train_ss"), 
+                                                                                              actionButton("ml_train_ss", label = "Train on:", icon = icon("angle-double-left"))),
+                                                                                     fluidRow(textOutput("ml_test_ss"), 
+                                                                                              actionButton("ml_test_ss", label = "Test on:", icon = icon("angle-double-left"))),
+                                                                                     br(),
+                                                                                     textInput("ml_name", label="Name:", value = "all"))
+                                                                            ),
+                                                                            hr(),
+                                                                            navbarPage(title="Results",id="ml_results",inverse=F,
+                                                                                       tabPanel(title = "ROC",value = "roc",icon=icon("area-chart"),
+                                                                                                plotlyOutput("ml_roc",height = "600px"),
+                                                                                                div(DT::dataTableOutput("ml_tab",width="100%"),style='font-size:80%')),
+                                                                                       tabPanel("Model",value= "bar",icon=icon("table"),
+                                                                                                fluidRow(plotlyOutput("ml_bar", width = "100%", height="600px")),
+                                                                                                fluidRow(
+                                                                                                  column(12, sliderInput("ml_top_x",
                                                                                                                          label = "Show top:",
                                                                                                                          min = 10,
                                                                                                                          max = 200,
                                                                                                                          step=10,
                                                                                                                          value=20), align="center")
-                                                                                                 )
-                                                                                        )
-                                                                             )
+                                                                                                )
+                                                                                       )
+                                                                            )
                                                                    ),
-																   # this tab is used to find overlapping features of interest between analyses
-																   # TODO: enable this with multiple saved mSets in mSet$storage
-																   tabPanel(title=h3("Venn"), value="venn",
-																            sidebarLayout(position = "left",
-																                          sidebarPanel = sidebarPanel(
-																                            fluidRow(div(DT::dataTableOutput('venn_unselected'),style='font-size:80%'), align="center"),
-																                            fluidRow(shinyWidgets::circleButton("venn_add", icon=icon("arrow-down"), size="sm"),
-																                                     shinyWidgets::circleButton("venn_remove", icon=icon("arrow-up"), size="sm"),
-																                                     align="center"),
-																                            fluidRow(div(DT::dataTableOutput('venn_selected'),style='font-size:80%'),align="center"),
-																                            hr(),
-																                            fluidRow(
-																                              sliderInput("venn_tophits", label = "Only include top:", min = 1, max = 200, post = " hits", value=20)
-																                              ,align="center"),
-																                            fluidRow(
-																                              shinyWidgets::circleButton("venn_build", icon=icon("hand-pointer-o"),size="default")
-																                            ,align="center")
-																                          ),
-																                          mainPanel = mainPanel(
-																                            hr(),
-																                            plotOutput("venn_plot",inline = F),
-																                            # find the overlapping compounds between the groups you want to compare (user select)
-																                            # TODO: enable this with clicking the numbers/areas
-																                            fluidRow(selectInput("intersect_venn", label = "Show hits from (only):", selected = 1,choices = "",multiple = T),
-																                                     align="center"),
-																                            fluidRow(uiOutput("venn_pval"), align="center"),
-																                            br(),
-																                            fluidRow(div(DT::dataTableOutput('venn_tab'),style='font-size:80%'), 
-																                                     align="center")
-																                          ))   
-																   )
-																   )
+                                                                   # this tab is used to find overlapping features of interest between analyses
+                                                                   # TODO: enable this with multiple saved mSets in mSet$storage
+                                                                   tabPanel(title=h3("Venn"), value="venn",
+                                                                            sidebarLayout(position = "left",
+                                                                                          sidebarPanel = sidebarPanel(
+                                                                                            fluidRow(div(DT::dataTableOutput('venn_unselected'),style='font-size:80%'), align="center"),
+                                                                                            fluidRow(shinyWidgets::circleButton("venn_add", icon=icon("arrow-down"), size="sm"),
+                                                                                                     shinyWidgets::circleButton("venn_remove", icon=icon("arrow-up"), size="sm"),
+                                                                                                     align="center"),
+                                                                                            fluidRow(div(DT::dataTableOutput('venn_selected'),style='font-size:80%'),align="center"),
+                                                                                            hr(),
+                                                                                            fluidRow(
+                                                                                              sliderInput("venn_tophits", label = "Only include top:", min = 1, max = 200, post = " hits", value=20)
+                                                                                              ,align="center"),
+                                                                                            fluidRow(
+                                                                                              shinyWidgets::circleButton("venn_build", icon=icon("hand-pointer-o"),size="default")
+                                                                                              ,align="center")
+                                                                                          ),
+                                                                                          mainPanel = mainPanel(
+                                                                                            hr(),
+                                                                                            plotOutput("venn_plot",inline = F),
+                                                                                            # find the overlapping compounds between the groups you want to compare (user select)
+                                                                                            # TODO: enable this with clicking the numbers/areas
+                                                                                            fluidRow(selectInput("intersect_venn", label = "Show hits from (only):", selected = 1,choices = "",multiple = T),
+                                                                                                     align="center"),
+                                                                                            fluidRow(uiOutput("venn_pval"), align="center"),
+                                                                                            br(),
+                                                                                            fluidRow(div(DT::dataTableOutput('venn_tab'),style='font-size:80%'), 
+                                                                                                     align="center")
+                                                                                          ))   
+                                                                   )
+                                                        )
                                   ),
-								  # this is the sidebar that shows in the analysis tab. contains a lot of settings on the current variable of interest, plot themes and colours, and venn diagrams.
+                                  # this is the sidebar that shows in the analysis tab. contains a lot of settings on the current variable of interest, plot themes and colours, and venn diagrams.
                                   sidebarPanel = 
                                     sidebarPanel(align="center",width = 4,
                                                  tabsetPanel(id = "search", #type = "pills",
@@ -539,7 +539,14 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                  tabsetPanel(id="tab_iden_1", selected = "start",
                                                                                                              # forward searching
                                                                                                              tabPanel(title=icon("database"),value="start",
-                                                                                                                      uiOutput("db_search_select")), # clicky buttons for database selection; this is generated in 'server'
+                                                                                                                      uiOutput("db_search_select"),
+                                                                                                                      div(id = "curly-brace", div(id = "left", class = "brace"),
+                                                                                                                          div(id = "right", class = "brace")),
+                                                                                                                      br(),br(),
+                                                                                                                      shinyWidgets::circleButton("select_db_all", 
+                                                                                                                                                 icon = icon("shopping-cart"), 
+                                                                                                                                                 size = "default") # icon("fingerprint"), size = "sm")
+                                                                                                             ), # clicky buttons for database selection; this is generated in 'server'
                                                                                                              tabPanel(title=icon("chart-bar"),
                                                                                                                       plotly::plotlyOutput("curr_plot", height="300px", width="100%") %>% shinycssloaders::withSpinner()
                                                                                                              ),
@@ -552,7 +559,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                                                                #"Mean absolute percentage error"="mape",
                                                                                                                                                #"SIRIUS"="sirius",
                                                                                                                                                #"Network-based"="network"
-                                                                                                                                               )),
+                                                                                                                                  )),
                                                                                                                       sliderInput("int_prec", label = "Intensity imprecision", min = 1, max = 100, value = 2, post = "%"),
                                                                                                                       shinyWidgets::circleButton("score_iso", icon = icon("award"), size = "sm"), # icon("fingerprint"), size = "sm")
                                                                                                                       hr(),
@@ -564,7 +571,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                              )
                                                                                                  ))),
                                                                       tabsetPanel(id="tab_iden_2",  
-																				                                          # forward searching
+                                                                                  # forward searching
                                                                                   tabPanel(title="mz > molecule",
                                                                                            hr(),
                                                                                            fluidRow(
@@ -577,31 +584,31 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                              div(
                                                                                                sardine(div(icon("paw","fa-xs fa-rotate-90"), 
                                                                                                            style="position:relative;
-                                                                                                                  top:10px;")),
+                                                                                                           top:10px;")),
                                                                                                sardine(div(icon("paw","fa-xs fa-rotate-90"), 
                                                                                                            style="position:relative;
-                                                                                                                  top:25px;")),
+                                                                                                           top:25px;")),
                                                                                                sardine(div(icon("paw","fa-xs fa-rotate-90"), 
                                                                                                            style="position:relative;
-                                                                                                                  top:10px;")),
+                                                                                                           top:10px;")),
                                                                                                sardine(h2(textOutput("curr_cpd"),style="padding:10px;")),
                                                                                                sardine(div(icon("paw","fa-xs fa-rotate-90"), 
                                                                                                            style="position:relative;
-                                                                                                                  top:10px;")),
+                                                                                                           top:10px;")),
                                                                                                sardine(div(icon("paw","fa-xs fa-rotate-90"), 
                                                                                                            style="position:relative;
-                                                                                                                  top:25px;")),
+                                                                                                           top:25px;")),
                                                                                                sardine(div(icon("paw","fa-xs fa-rotate-90"), 
                                                                                                            style="position:relative;
-                                                                                                                  top:10px;")),
-                                                                                                        style="background-color:white;
-                                                                                                               height:55px;
-                                                                                                               width:115%;
-                                                                                                               position:relative;
-                                                                                                               right:30px;
-                                                                                                               border-top: 1px solid #DFDCDC;
-                                                                                                               border-bottom: 1px solid #DFDCDC;")
-                                                                                             ),
+                                                                                                           top:10px;")),
+                                                                                               style="background-color:white;
+                                                                                               height:55px;
+                                                                                               width:115%;
+                                                                                               position:relative;
+                                                                                               right:30px;
+                                                                                               border-top: 1px solid #DFDCDC;
+                                                                                               border-bottom: 1px solid #DFDCDC;")
+                                                                                               ),
                                                                                            bsCollapse(bsCollapsePanel(title=h2("Compound info"), style="warning",
                                                                                                                       tabsetPanel(id="tab_iden_3", 
                                                                                                                                   tabPanel(title=icon("atlas"),
@@ -632,12 +639,12 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                                                   tabPanel(title=icon("database"), value="pie_db",
                                                                                                                                            fluidRow(align = "center", 
                                                                                                                                                     plotly::plotlyOutput("match_pie_db") %>% shinycssloaders::withSpinner()
-                                                                                                                                                    )
+                                                                                                                                           )
                                                                                                                                   ),
                                                                                                                                   tabPanel(title=icon("plus"), value = "pie_add", 
                                                                                                                                            fluidRow(align = "center", 
                                                                                                                                                     plotly::plotlyOutput("match_pie_add") %>% shinycssloaders::withSpinner()
-                                                                                                                                                    )
+                                                                                                                                           )
                                                                                                                                   ),
                                                                                                                                   tabPanel(title=icon("cloud"), value = "word_cloud",
                                                                                                                                            fluidRow(align = "center",
@@ -657,7 +664,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                                                                        min = 1900, max = as.numeric(format(Sys.Date(), '%Y')),
                                                                                                                                                        value = c(2000,as.numeric(format(Sys.Date(), '%Y'))),
                                                                                                                                                        step = 1,sep = ""
-                                                                                                                                                       ),
+                                                                                                                                           ),
                                                                                                                                            sliderInput("pm_max", 
                                                                                                                                                        "Stop after ... papers:",
                                                                                                                                                        min = 1, 
@@ -673,17 +680,17 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                                                                                   "Shiny.onInputChange('selected_word_pubmed', word);",
                                                                                                                                                                   "});"
                                                                                                                                                                 ))
-                                                                                                                                                                ),
+                                                                                                                                                       ),
                                                                                                                                                        tabPanel(title = icon("table"),
                                                                                                                                                                 div(DT::dataTableOutput('pm_tab', width="100%"),style='font-size:80%')
-                                                                                                                                                                )
                                                                                                                                                        )
+                                                                                                                                           )
                                                                                                                                            
                                                                                                                                   )
                                                                                                                       )))
                                                                                            
-                                                                                           ),
-																				  # reverse searching
+                                                                                               ),
+                                                                                  # reverse searching
                                                                                   tabPanel(title="molecule > mz",
                                                                                            br(),
                                                                                            actionButton("browse_db", "Browse compounds", icon=icon("eye")),
@@ -696,40 +703,40 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                            hr(),
                                                                                            div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
                                                                                   ))
+                                                                                               ),
+                                                             tabPanel(NULL, icon=icon("exchange")
+                                                                      ,h2("Current experiment:")
+                                                                      ,div(
+                                                                        sardine(h2(textOutput("curr_name"),style="padding:10px;")),
+                                                                        style="background-color:white;
+                                                                        height:55px;
+                                                                        width:115%;
+                                                                        position:relative;
+                                                                        right:30px;
+                                                                        border-top: 1px solid #DFDCDC;
+                                                                        border-bottom: 1px solid #DFDCDC;")
+                                                                      ,hr()
+                                                                      ,h2("Change variable of interest")
+                                                                      ,selectInput("stats_var", label="Do statistics on:", choices = c("label"))
+                                                                      ,shinyWidgets::circleButton("change_cls", icon = icon("hand-pointer-o"), size = "sm")
+                                                                      ,fluidRow(column(12, align="center", uiOutput("timebutton")))
+                                                                      ,hr()
+                                                                      ,h2("Subset data")
+                                                                      ,selectInput("subset_var", label="Subset data based on:", choices = c("label"))
+                                                                      ,selectizeInput("subset_group", label="Group(s) in subset:", choices = c(), multiple=TRUE)
+                                                                      ,shinyWidgets::circleButton("change_subset", icon = icon("hand-pointer-o"), size = "sm")
+                                                                      ,shinyWidgets::circleButton("reset_subset", icon = icon("undo"), size = "sm")
+                                                                      
                                                                       ),
-																				  tabPanel(NULL, icon=icon("exchange")
-																				           ,h2("Current experiment:")
-																				           ,div(
-																				             sardine(h2(textOutput("curr_name"),style="padding:10px;")),
-																				             style="background-color:white;
-																				             height:55px;
-																				             width:115%;
-																				             position:relative;
-																				             right:30px;
-																				             border-top: 1px solid #DFDCDC;
-																				             border-bottom: 1px solid #DFDCDC;")
-																				           ,hr()
-																				           ,h2("Change variable of interest")
-																				           ,selectInput("stats_var", label="Do statistics on:", choices = c("label"))
-																				           ,shinyWidgets::circleButton("change_cls", icon = icon("hand-pointer-o"), size = "sm")
-																				           ,fluidRow(column(12, align="center", uiOutput("timebutton")))
-																				           ,hr()
-																				           ,h2("Subset data")
-																				           ,selectInput("subset_var", label="Subset data based on:", choices = c("label"))
-																				           ,selectizeInput("subset_group", label="Group(s) in subset:", choices = c(), multiple=TRUE)
-																				           ,shinyWidgets::circleButton("change_subset", icon = icon("hand-pointer-o"), size = "sm")
-																				           ,shinyWidgets::circleButton("reset_subset", icon = icon("undo"), size = "sm")
-																				           
-																				           ),
-															 # this tab is used to select user plot theme and user colours (discrete and continuous)
+                                                             # this tab is used to select user plot theme and user colours (discrete and continuous)
                                                              tabPanel(NULL, icon=icon("paint-brush"),
                                                                       h2("Summary plot style"),br(),
                                                                       selectizeInput("ggplot_sum_style", multiple=T, label = "Style(s)", choices = list("Box"="box",
-                                                                                                                                            "Violin"="violin",
-                                                                                                                                            "Beeswarm"="beeswarm",
-                                                                                                                                            "Scatterplot"="scatter"),
+                                                                                                                                                        "Violin"="violin",
+                                                                                                                                                        "Beeswarm"="beeswarm",
+                                                                                                                                                        "Scatterplot"="scatter"),
                                                                                      selected = c("violin")
-                                                                                  ),
+                                                                      ),
                                                                       selectInput("ggplot_sum_stats", label = "Stats shown", choices = list("median", "mean", "none")),
                                                                       h2("Shape")
                                                                       ,selectInput("shape_var", label="Marker shape based on:", choices = c("label"))
@@ -748,7 +755,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                   selected = getOptions("user_options.txt")$gtheme),
                                                                       fluidRow(plotOutput("ggplot_theme_example",inline = F, width="100%")),
                                                                       h2("Continuous data"),
-																	  # the below options need to match with the corresponding function storage in 'global'. if you want to add more it'll go here!
+                                                                      # the below options need to match with the corresponding function storage in 'global'. if you want to add more it'll go here!
                                                                       selectInput("color_ramp", label = "Color scheme", choices = list("RAINBOW!"="rb",
                                                                                                                                        "Yellow - blue"="y2b",
                                                                                                                                        "Matlab 1"="ml1",
@@ -787,29 +794,29 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                                                        "Accent", "Dark2", "Paired", "Pastel1", 
                                                                                                                                        "Pastel2", "Set1", "Set2", "Set3"),selected = getOptions("user_options.txt")$gspec
                                                                       ),
-																	  # preview plot
+                                                                      # preview plot
                                                                       fluidRow(plotly::plotlyOutput("ramp_plot",inline = T, width="100%") %>% shinycssloaders::withSpinner()),
                                                                       h2("Discrete data"),
                                                                       uiOutput("colorPickers") # colour pickers generated in server.R. default settings taken from user_options.txt.
                                                              ))
                                     )
                     )),
-					
-					# report tab
-					tabPanel("", 
-					         icon = icon("file-invoice"), 
-					         value="reportTab",
-					         fluidRow(
-					           column(width=12, align="center",
-					                  h2("Report"),
-					                  br(),
-					                  helpText("Report contents:"),
-					                  div(DT::dataTableOutput('report_unselected',  width="100%"))
-					           )#close column
-					         )#close fluidrow
-					),#close tabpanel
-					
-		   # this tab is used to change general settings.
+           
+           # report tab
+           tabPanel("", 
+                    icon = icon("file-invoice"), 
+                    value="reportTab",
+                    fluidRow(
+                      column(width=12, align="center",
+                             h2("Report"),
+                             br(),
+                             helpText("Report contents:"),
+                             div(DT::dataTableOutput('report_unselected',  width="100%"))
+                      )#close column
+                    )#close fluidrow
+           ),#close tabpanel
+           
+           # this tab is used to change general settings.
            tabPanel("",  icon = icon("cog"), value="options", 
                     navbarPage(inverse=TRUE,"Settings", id="tab_settings",
                                tabPanel("Project", icon=icon("gift"),
@@ -823,7 +830,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                         helpText("This name will be used in all save files."),
                                         textOutput("proj_name")
                                ),
-							   # user directory picking
+                               # user directory picking
                                tabPanel("Storage", icon=icon("folder-open-o"),
                                         shinyDirButton("get_db_dir", "Choose a database directory" ,
                                                        title = "Browse",
@@ -837,8 +844,8 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                         helpText("Your results will be stored here for later access."),
                                         textOutput("curr_exp_dir")
                                ),
-							   # change list of adducts used, or add your own
-							   # TODO: fix, i think this is currently non-functional
+                               # change list of adducts used, or add your own
+                               # TODO: fix, i think this is currently non-functional
                                tabPanel("Adducts", icon=icon("plus-square"),
                                         h3("Current adduct table:"),
                                         rhandsontable::rHandsontableOutput("adduct_tab", width=800, height=600),
@@ -854,7 +861,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                         sardine(actionButton("import_adducts", "Import", icon = icon("hand-peace-o"))),
                                         sardine(imageOutput("adduct_upload_check",inline = T))
                                ),
-							   # change toolbar colour, text font and size
+                               # change toolbar colour, text font and size
                                tabPanel("Aesthetic", icon=icon("child"),
                                         h3("Change app settings"),
                                         hr(),
@@ -899,18 +906,18 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                )
                     )
            ), 
-		   # prompt user on opening the quit tab. 
-		   # TODO: add 'save project?' dialog
+           # prompt user on opening the quit tab. 
+           # TODO: add 'save project?' dialog
            tabPanel(title = "Quit", value="stop", icon = icon("times-circle")),
            div(class="spinnylocation1",
                div(class="plus", img(class="imagetop", src=getOptions("user_options.txt")$taskbar_image, width="120px", height="120px")),
                div(class="minus", img(class="imagebottom", src=getOptions("user_options.txt")$taskbar_image, width="120px", height="120px"))
            ),
            div(class="line")
-,footer=fluidRow(hr(),
-                 actionButton("show_window", label="", icon = icon("map-marked")),
-                 actionButton("save_mset", label="", icon = icon("save")), 
-                 align="center")
-)
-)
+           ,footer=fluidRow(hr(),
+                            actionButton("show_window", label="", icon = icon("map-marked")),
+                            actionButton("save_mset", label="", icon = icon("save")), 
+                            align="center")
+                                                                      )
+                    )
 )

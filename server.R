@@ -221,6 +221,47 @@ shinyServer(function(input, output, session) {
     
   })
   
+  observe({
+    if("ml" %in% names(mSet$analSet)){
+      # update choice menu
+      choices = c() 
+      for(method in c("rf", "ls")){
+        if(method %in% names(mSet$analSet$ml)){
+          model.names = names(mSet$analSet$ml[[method]])
+          choices <- c(choices, paste0(method, " - ", paste0(model.names)))
+        }
+      }
+      updateSelectInput(session, "show_which_ml", choices = choices, selected = paste0(mSet$analSet$ml$last$method, " - ", mSet$analSet$ml$last$name))
+    }
+  })
+  
+  observeEvent(input$show_which_ml,{
+    split.name = strsplit(input$show_which_ml, split = " - ")[[1]]
+    mSet$analSet$ml$last$method <<- split.name[[1]]
+    mSet$analSet$ml$last$name <<- split.name[[2]]
+    datamanager$reload <- "ml"
+    
+  },ignoreNULL = T, ignoreInit = T)
+  
+  observeEvent(input$select_db_all, {
+
+    dbs <- global$vectors$db_list
+    
+    currently.on <- sapply(dbs, function(db){
+      input[[paste0("search_", db)]]
+    })
+    
+    if(any(currently.on)){
+      set.to = F
+    }else{
+      set.to = T
+    }
+    
+    for(db in dbs){
+      updateCheckboxInput(session, paste0("search_", db), value = set.to)
+    }
+    
+  })
   
   # render the database download area
   output$db_build_ui <- renderUI({
@@ -320,6 +361,17 @@ shinyServer(function(input, output, session) {
     })
   })
   
+  observeEvent(input$ml_train_ss, {
+    keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]
+    subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
+    output$ml_train_ss <- renderText(subset.name)
+  })
+  
+  observeEvent(input$ml_test_ss, {
+    keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]
+    subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
+    output$ml_test_ss <- renderText(subset.name)
+  })
 
   # check if a dataset is already loaded in
   # change mode according to how many levels the experimental variable has

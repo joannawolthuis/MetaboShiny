@@ -143,7 +143,9 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                                     list(name='curr_definition', text="No m/z selected"),
                                                     list(name='ppm',text=options$ppm),
                                                     list(name='proj_name',text=options$proj_name),
-                                                    list(name="curr_cpd", text="...")# default text options at startup
+                                                    list(name="curr_cpd", text="..."),# default text options at startup
+                                                    list(name="ml_train_ss", text="all"),
+                                                    list(name="ml_test_ss", text="all")
                                 ),
                                 font.aes = list(font = options$font4,
                                                 ax.num.size = 11,
@@ -433,6 +435,8 @@ fn <- paste0(tools::file_path_sans_ext(global$paths$patdb), ".metshi")
 #   print("TESTING .. resetting analyses")
 #   mSet$analSet <- NULL
 # }
+
+print("loaded scripts!")
 
 if(file.exists(fn) & !exists("mSet")){
   print("loading existing mset ..")

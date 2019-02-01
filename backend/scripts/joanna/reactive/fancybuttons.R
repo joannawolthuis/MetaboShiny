@@ -7,6 +7,22 @@ observeEvent(input$plsda_2d3d, {
   datamanager$reload <- "plsda"
 },ignoreInit = TRUE, ignoreNULL = T)
 
+# tt
+
+output$tt_parbutton <- shiny::renderUI({
+  if("tt" %in% names(mSet$analSet)){
+    if("V" %in% colnames(mSet$analSet$tt$sig.mat)){
+      switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = T)
+    }else{
+      switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = F)
+    }
+  }else{
+    output$tt_parbutton <- shiny::renderUI({
+      switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = F)
+    })
+  }
+})
+
 observeEvent(input$tt_nonpar, {
   statsmanager$calculate <- "tt"
   datamanager$reload <- "tt"
@@ -51,3 +67,4 @@ observeEvent(input$heatmap_topn, {
     datamanager$reload <- "heatmap" # just reload
   }
 },ignoreInit = TRUE, ignoreNULL = T)
+
