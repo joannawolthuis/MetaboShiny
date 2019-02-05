@@ -250,6 +250,7 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols = c("black",
   }
   
   p <- ggplot2::ggplot() + plot.theme(base_size = 15)
+  
   profiles <- switch(mode, 
                      ts = split(profile, f = profile$Group),
                      nm = list(x = data.table(profile)))
@@ -362,11 +363,7 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols = c("black",
   
   p <- p + ggplot2::scale_color_manual(values=cols[1:length(unique(levels(profile$Group)))])
   
-  # print(cpd)
-  # print(col.fac)
-  # print(shape.fac)
-  # print(txt.fac)
-  # print(styles)
+  print(head(profile))
 
   if(all(as.character(profile$Color) == as.character(profile$Group))){
     p <- p + ggplot2::scale_fill_manual(values = cols[1:length(unique(levels(profile$Group)))])
@@ -742,7 +739,7 @@ ggPlotBar <- function(data,
   if(ml_name != ""){
     lname = ml_name
   }else{
-    lname <- paste0(input$ml_train_regex,"|", input$ml_test_regex)
+    lname <- "all"
   }
   
   if(ml_type == "ls"){
@@ -757,7 +754,22 @@ ggPlotBar <- function(data,
             axis.text.x=element_blank(),
             axis.ticks.x=element_blank(),
             text = element_text(family = global$constants$font.aes$font))+
-      labs(x="Top hits",y="Times chosen")
+      labs(x="Top hits (m/z)",y="Times chosen")
+    
+    if(topn <= 15){
+      p <- p +geom_text(aes(x=mz, y=count, label=sapply(mz, function(x){
+        if(is.na(as.numeric(as.character(x)))){
+          if(grepl(x, pattern = "_")){
+            as.character(gsub(x, pattern = "_", replacement = "\n"))
+          }else{
+            as.character(x)  
+          }
+        }else{
+          round(as.numeric(as.character(x)),digits=1)
+        }
+      })), size = 4, vjust = -.2, lineheight = .6)
+      plotlyfy=F
+    }
     
   }else{
     p <- ggplot(data[1:topn,], aes(mz,mda)) + geom_bar(stat = "identity", aes(fill = mda)) +
@@ -771,7 +783,23 @@ ggPlotBar <- function(data,
             axis.text.x=element_blank(),
             axis.ticks.x=element_blank(),
             text = element_text(family = global$constants$font.aes$font))+
-      labs(x="Top hits",y="Mean Decrease Accuracy")
+      scale_y_continuous(labels = function(x) format(x, scientific = TRUE,digits = 2)) +
+      labs(x="Top hits (m/z)",y="Mean Decrease Accuracy")
+    
+    if(topn <= 15){
+      p <- p +geom_text(aes(x=mz, y=mda, label=sapply(mz, function(x){
+        if(is.na(as.numeric(as.character(x)))){
+          if(grepl(x, pattern = "_")){
+            as.character(gsub(x, pattern = "_", replacement = "\n"))
+          }else{
+            as.character(x)  
+          }
+        }else{
+          round(as.numeric(as.character(x)),digits=1)
+        }
+      })), size = 4, vjust = -.2, lineheight = .6)
+      plotlyfy=F
+    }
   }
   if(plotlyfy){
     ggplotly(p)

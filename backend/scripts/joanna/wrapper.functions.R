@@ -38,19 +38,35 @@ get.csv <-
         #batches
       )
     }else{
-      query <- strwrap(gsubfn::fn$paste("select distinct d.*, s.*, b.batch, b.injection,
+      if(DBI::dbExistsTable(conn, "batchinfo")){
+        query <- strwrap(gsubfn::fn$paste("select distinct d.*, s.*, b.batch, b.injection,
                                         i.mzmed as identifier,
-                                        i.intensity
-                                        from mzintensities i
-                                        join individual_data d
-                                        on i.filename = d.card_id
-                                        join setup s on d.[Group] = s.[Group]
-                                        join batchinfo b on b.sample = d.card_id
-                                        group by d.card_id, b.batch, b.injection, i.mzmed, d.sampling_date"),
-                       #group by d.card_id, 
-                       #, 
-                       width=10000,
-                       simplify=TRUE)
+                                          i.intensity
+                                          from mzintensities i
+                                          join individual_data d
+                                          on i.filename = d.card_id
+                                          join setup s on d.[Group] = s.[Group]
+                                          join batchinfo b on b.sample = d.card_id
+                                          group by d.card_id, b.batch, b.injection, i.mzmed, d.sampling_date"),
+                         #group by d.card_id, 
+                         #, 
+                         width=10000,
+                         simplify=TRUE) 
+      }else{
+        query <- strwrap(gsubfn::fn$paste("select distinct d.*, s.*,
+                                          i.mzmed as identifier,
+                                          i.intensity
+                                          from mzintensities i
+                                          join individual_data d
+                                          on i.filename = d.card_id
+                                          join setup s on d.[Group] = s.[Group]
+                                          group by d.card_id, i.mzmed, d.sampling_date"),
+                         #group by d.card_id, 
+                         #, 
+                         width=10000,
+                         simplify=TRUE)
+      }
+      
       print(query)
       z = RSQLite::dbGetQuery(conn, query)
     View}
@@ -91,7 +107,14 @@ get.csv <-
     # --- rejoin w/ rest ---
     
     small.set <- cbind(small.set, cast.dt[,-exp.vars, with=FALSE])
-    small.set$time <- as.numeric(as.factor(as.Date(small.set$time)))
+    
+    print(length(unique(small.set$time)))
+    
+    if(length(unique(small.set$time)) > 1){
+      small.set$time <- as.numeric(as.factor(as.Date(small.set$time)))
+    }else{
+      small.set$time <- c(1)
+    }
     
     # check for time series
     if(any(duplicated(small.set$animal_internal_id))){

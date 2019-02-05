@@ -2,7 +2,7 @@
 observe({
   shinyFileChoose(input, 'outlist_pos', roots=global$paths$volumes, filetypes=c('csv'))
   shinyFileChoose(input, 'outlist_neg', roots=global$paths$volumes, filetypes=c('csv'))
-  shinyFileChoose(input, 'excel', roots=global$paths$volumes, filetypes=c('xls', 'xlsm', 'xlsx'))
+  shinyFileChoose(input, 'metadata', roots=global$paths$volumes, filetypes=c('xls', 'xlsm', 'xlsx', 'csv'))
   shinyFileChoose(input, 'database', roots=global$paths$volumes, filetypes=c('sqlite3', 'db', 'sqlite'))
   shinyFileChoose(input, 'taskbar_image_path', roots=global$paths$volumes, filetypes=c('png', 'jpg', 'jpeg', 'bmp'))
 })

@@ -327,6 +327,7 @@ observe({
              }
            },
            tt = {
+             
              # save results to table
              res <<- mSet$analSet$tt$sig.mat 
              

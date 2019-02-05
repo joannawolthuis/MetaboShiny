@@ -30,9 +30,11 @@ observeEvent(input$create_db,{
            # if loading in .csv files...
            `From CSV` = {
              
+             updateSelectizeInput(session = session, inputId = "proj_name", selected = input$proj_name_new)
+             
              # build patient db from csv files with a given ppm error margin
              build.pat.db(global$paths$patdb,
-                          ppm = ppm,
+                          ppm = input$ppm,
                           pospath = parseFilePaths(global$paths$volumes, input$outlist_pos)$datapath,
                           negpath = parseFilePaths(global$paths$volumes, input$outlist_neg)$datapath,
                           overwrite = T)
@@ -40,7 +42,15 @@ observeEvent(input$create_db,{
              shiny::setProgress(session=session, value= .95,message = "Adding excel sheets to database...")
              
              # add excel file to .db file generated in previous step
-             exp_vars <<- load.excel(parseFilePaths(global$paths$volumes, input$excel)$datapath, global$paths$patdb)}
+             metadata_path <- parseFilePaths(global$paths$volumes, input$metadata)$datapath
+             print(metadata_path)
+             
+             if(grepl(metadata_path, pattern = "csv")){
+               exp_vars <<- load.metadata.csv(metadata_path, global$paths$patdb)
+             }else{
+               exp_vars <<- load.metadata.excel(metadata_path, global$paths$patdb)
+             }
+          }
     )
   })
 })

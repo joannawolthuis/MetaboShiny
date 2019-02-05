@@ -222,16 +222,20 @@ shinyServer(function(input, output, session) {
   })
   
   observe({
-    if("ml" %in% names(mSet$analSet)){
-      # update choice menu
-      choices = c() 
-      for(method in c("rf", "ls")){
-        if(method %in% names(mSet$analSet$ml)){
-          model.names = names(mSet$analSet$ml[[method]])
-          choices <- c(choices, paste0(method, " - ", paste0(model.names)))
+    if(exists("mSet")){
+      if("analSet" %in% names(mSet)){
+        if("ml" %in% names(mSet$analSet)){
+          # update choice menu
+          choices = c() 
+          for(method in c("rf", "ls")){
+            if(method %in% names(mSet$analSet$ml)){
+              model.names = names(mSet$analSet$ml[[method]])
+              choices <- c(choices, paste0(method, " - ", paste0(model.names)))
+            }
+          }
+          updateSelectInput(session, "show_which_ml", choices = choices, selected = paste0(mSet$analSet$ml$last$method, " - ", mSet$analSet$ml$last$name))
         }
       }
-      updateSelectInput(session, "show_which_ml", choices = choices, selected = paste0(mSet$analSet$ml$last$method, " - ", mSet$analSet$ml$last$name))
     }
   })
   
@@ -364,12 +368,16 @@ shinyServer(function(input, output, session) {
   observeEvent(input$ml_train_ss, {
     keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]
     subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
+    global$vectors$ml_train <<- c(input$subset_var, input$subset_group)
+    print(global$vectors$ml_train)
     output$ml_train_ss <- renderText(subset.name)
   })
   
   observeEvent(input$ml_test_ss, {
     keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]
     subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
+    global$vectors$ml_test <<- c(input$subset_var, input$subset_group)
+    print(global$vectors$ml_test)
     output$ml_test_ss <- renderText(subset.name)
   })
 

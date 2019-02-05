@@ -1618,7 +1618,8 @@ build.pat.db <- function(db.name,
                          overwrite=FALSE,
                          rtree=TRUE,
                          make.full = TRUE,
-                         ppm=2){
+                         ppm=2,
+                         inshiny=F){
   
   
   # ------------------------
@@ -1651,7 +1652,7 @@ build.pat.db <- function(db.name,
     qc.i = qc.i + 1
   }
   # - - - - - - - - - -
-  setProgress(.20)
+  if(inshiny) setProgress(.20)
   
   gc()
   
@@ -1679,12 +1680,12 @@ build.pat.db <- function(db.name,
     colnames(poslist) = gsub(colnames(poslist), pattern = "(\\*.*$)", replacement = "")
     colnames(neglist) = gsub(colnames(poslist), pattern = "(\\*.*$)", replacement = "")
   } else{
-    batch_info = data.table::data.table(sample = colnames(poslist)[2:ncol(poslist)], batch = c(1))
+    batch_info = NULL
   }
   
   gc()
   
-  setProgress(.30)
+  if(inshiny) setProgress(.30)
   
   poslist <- data.table::melt(poslist,#[,(rmv.cols) := NULL], 
                               id.vars="mzmed",
@@ -1698,7 +1699,7 @@ build.pat.db <- function(db.name,
                               value.name="intensity",
                               variable.factor=TRUE
   )
-  setProgress(.40)
+  if(inshiny) setProgress(.40)
   
   #poslist$filename <- trimws(poslist$filename)
   #neglist$filename <- trimws(neglist$filename)
@@ -1717,8 +1718,9 @@ build.pat.db <- function(db.name,
   
   # ------------------------
   
-  #RSQLite::dbCreateTable()
-  RSQLite::dbWriteTable(conn, "batchinfo", batch_info, overwrite=T) # insert into
+  if(!is.null(batch_info)){
+    RSQLite::dbWriteTable(conn, "batchinfo", batch_info, overwrite=T) # insert into
+  }
   
   # ------------------------
   
@@ -1730,7 +1732,7 @@ build.pat.db <- function(db.name,
   
   RSQLite::dbExecute(conn, sql.make.int)
   
-  setProgress(.60)
+  if(inshiny) setProgress(.60)
   
   # --- write intensities to table and index ---
   RSQLite::dbWriteTable(conn, "mzintensities", poslist, append=TRUE) # insert into
@@ -1748,7 +1750,7 @@ build.pat.db <- function(db.name,
   RSQLite::dbExecute(conn, sql.make.meta)
   RSQLite::dbExecute(conn, "create index mzfind on mzvals(mzmed, foundinmode);")
   
-  setProgress(.70)
+  if(inshiny) setProgress(.70)
   
   # --- write vals to table ---
   RSQLite::dbWriteTable(conn, "mzvals", mzvals, append=TRUE) # insert into
@@ -1765,21 +1767,44 @@ build.pat.db <- function(db.name,
                              mzmax decimal(30,13));", width=10000, simplify=TRUE)
   RSQLite::dbExecute(conn, if(rtree) sql.make.rtree else sql.make.normal)
   
-  setProgress(.80)
+  if(inshiny) setProgress(.80)
   
   # --- write ranges to table ---
   RSQLite::dbWriteTable(conn, "mzranges", mzranges, append=TRUE) # insert into
   # --- cleanup ---
   RSQLite::dbExecute(conn, "VACUUM")
   
-  setProgress(.90)
+  if(inshiny) setProgress(.90)
   
   # ----------------
   RSQLite::dbDisconnect(conn)
   print("Made!")}
 
+
 #' @export
-load.excel <- function(path.to.xlsx, 
+load.metadata.csv <- function(path.to.csv,
+                              path.to.patdb){
+  
+  #path.to.csv = "~/Downloads/marc_data/meta.csv"
+  #path.to.patdb = "~/Downloads/marc_data/marc.db"
+  
+  print(path.to.patdb)
+  print(path.to.csv)
+  
+  # --- connect to sqlite db ---
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), path.to.patdb)
+  
+  csv <- data.table::fread(path.to.csv)
+  setup <- data.table(group = as.character(unique(csv[,c("group")][[1]])))
+  
+  RSQLite::dbWriteTable(conn, "setup", setup, overwrite=TRUE) # insert into
+  RSQLite::dbWriteTable(conn, "individual_data", csv, overwrite=TRUE) # insert into
+
+  RSQLite::dbDisconnect(conn)
+}
+
+#' @export
+load.metadata.excel <- function(path.to.xlsx, 
                        path.to.patdb,
                        tabs.to.read = c(
                          #"General",

@@ -168,11 +168,13 @@ observe({
              print("doing tt...")
              withProgress({
                msg.vec <<- c()
+               print(input$tt_nonpar)
+               print(input$tt_eqvar)
                mSet <<- Ttests.Anal(mSet,
-                                    nonpar = input$tt_nonpar, 
+                                    nonpar = req(input$tt_nonpar), 
                                     threshp = 0.05, # TODO: make the threshold user defined...
                                     paired = FALSE,
-                                    equal.var = input$tt_eqvar
+                                    equal.var = req(input$tt_eqvar)
                )
              })
            },

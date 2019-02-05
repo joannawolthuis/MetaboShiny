@@ -144,12 +144,30 @@ observeEvent(input$do_ml, {
     # how many models will be built? user input
     goes = as.numeric(input$ml_attempts)
     
+    if(is.null(global$vectors$ml_train)){
+      global$vectors$ml_train <<- c("all", "all")
+    }
+    if(is.null(global$vectors$ml_test)){
+      global$vectors$ml_test <<- c("all", "all")
+    }
+    
+    if(all(global$vectors$ml_test == global$vectors$ml_train)){
+      print("no can do, need to test on something else than train!!!")
+      if(all(global$vectors$ml_test == c("all", "all"))){
+        print("nothing selected... continuing in normal non-subset mode")
+      }else{
+        return(NULL)
+      }
+    }
+    
     # ============ LOOP HERE ============
     
     # get results for the amount of attempts chosen
     repeats <- pbapply::pblapply(1:goes, 
                                  cl=session_cl, 
-                                 function(i, ...){
+                                 function(i, 
+                                          train_vec = train_vec, 
+                                          test_vec = test_vec...){
       shiny::isolate({
         
         # get regex user input for filtering testing and training set
@@ -159,19 +177,20 @@ observeEvent(input$do_ml, {
         # get user training percentage
         ml_train_perc <- input$ml_train_perc/100
         
-        if(ml_train_regex == "" & ml_test_regex == ""){ # BOTH ARE NOT DEFINED
+        if(all(train_vec == c("all","all")) & all(test_vec == c("all", "all")) ){ # BOTH ARE NOT DEFINED
           test_idx = caret::createDataPartition(y = curr$label, p = ml_train_perc, list = FALSE) # partition data in a balanced way (uses labels)
           train_idx = setdiff(1:nrow(curr), test_idx) #use the other rows for testing
           inTrain = train_idx
           inTest = test_idx
-        }else if(ml_train_regex != ""){ #ONLY TRAIN IS DEFINED
-          train_idx = grep(config$sample, pattern = ml_train_regex) # get training sample ids with regex
+        }else if(all(train_vec != c("all","all"))){ #ONLY TRAIN IS DEFINED
+          train_idx <- which(config[,train_vec[1], with=F][[1]] == train_vec[2])
+          #train_idx = grep(config$sample, pattern = ml_train_regex) # get training sample ids with regex
           test_idx = setdiff(1:nrow(curr), train_idx) # use the other rows for testing
           reTrain <- caret::createDataPartition(y = config[train_idx, label], p = ml_train_perc) # take a user-defined percentage of the regexed training set
           inTrain <- train_idx[reTrain$Resample1]
           inTest = test_idx
         }else{ # ONLY TEST IS DEFINED
-          test_idx = grep(config$sample, pattern = ml_test_regex) # get training sample ids with regex
+          test_idx = which(config[,test_vec[1], with=F][[1]] == test_vec[2])
           train_idx = setdiff(1:nrow(curr), test_idx) # use the other rows for testing
           reTrain <- caret::createDataPartition(y = config[train_idx, label], p = ml_train_perc) # take a user-defined percentage of the regexed training set
           inTrain <- train_idx[reTrain$Resample1] 
@@ -275,7 +294,7 @@ observeEvent(input$do_ml, {
                  NULL
                })
       })
-    })#, input, config, curr) # for session_cl
+    }, train_vec = global$vectors$ml_train, test_vec = global$vectors_ml_test) # for session_cl
     # check if a storage list for machine learning results already exists
     if(!"ml" %in% names(mSet$analSet)){
       

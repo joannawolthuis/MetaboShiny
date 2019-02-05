@@ -17,9 +17,8 @@ output$tt_parbutton <- shiny::renderUI({
       switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = F)
     }
   }else{
-    output$tt_parbutton <- shiny::renderUI({
-      switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = F)
-    })
+    print("no tt done yet...")
+    switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = F)
   }
 })
 

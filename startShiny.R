@@ -74,7 +74,8 @@ base.packs <- c("httr", "curl", "git2r", "devtools",
                 "colorRamps", "enviPat", "shinyalert",
                 "shinyWidgets", "colourpicker", "here",
                 "ECharts2Shiny", "shinyjqui", "later",
-                "shinycssloaders")
+                "shinycssloaders", "qdapDictionaries",
+                "sysfonts", "showtext", "wordcloud2")
 
 # install the base packages needed to start up
 for(package in base.packs){

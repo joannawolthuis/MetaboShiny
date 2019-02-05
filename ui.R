@@ -71,22 +71,26 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                          column(3,  align="center",
                                                 imageOutput("excel_icon_2",inline = T),
                                                 br(),br(),
-                                                shinyFilesButton('excel', 'METADATA', 'Please select an excel file', FALSE)
+                                                shinyFilesButton('metadata', 'METADATA', 'Please select a metadata file', FALSE),
+                                                hr(),
+                                                sliderInput("ppm",label = "m/z accuracy", 
+                                                            min = 1, max = 50, 
+                                                            value = 2, post = " ppm")
                                          ),
                                          column(3,  align="center",
                                                 imageOutput("neg_icon",inline = T),
                                                 br(),br(),
                                                 shinyFilesButton('outlist_neg', 'NEGATIVE PEAKS', 'Please select a csv file', FALSE)
                                          )
-                                         ),
-                                         fluidRow(align="center",
-                                                  sliderInput("ppm",label = "m/z accuracy", min = 1, max = 50, value = 2,post = " ppm"))
+                                         )
                                 )
                     ),
                     hr(),
                     # contains button to start db creation, mode switches based on tab used entered files in
-                    fluidRow(column(9, align="center",
-                                    actionButton("create_db", "Go", icon = icon("magic"))
+                    fluidRow( align="center",
+                              column(9,
+                                    textInput("proj_name_new", label = "Project name:", value = "my_metshi"),
+                                    shinyWidgets::circleButton("create_db", "Go", icon = icon("arrow-right"),size = "lg")
                     ))
            ),
            # this tab is used to create a csv file from the database built in the previous tab

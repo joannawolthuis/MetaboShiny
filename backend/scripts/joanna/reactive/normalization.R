@@ -94,7 +94,7 @@ observeEvent(input$initialize, {
     csv <- csv[sample %in% keep_samps,]
     
     # also remove them in the table with covariates
-    covar_table <- first_part[sample %in% keep_samps,]
+    covar_table <- as.data.frame(first_part[sample %in% keep_samps,])
     
     # if the experimental condition is batch, make sure QC samples are not removed at the end for analysis
     # TODO: this is broken with the new system, move this to the variable switching segment of code
