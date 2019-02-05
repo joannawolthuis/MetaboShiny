@@ -362,8 +362,6 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols = c("black",
   }
   
   p <- p + ggplot2::scale_color_manual(values=cols[1:length(unique(levels(profile$Group)))])
-  
-  print(head(profile))
 
   if(all(as.character(profile$Color) == as.character(profile$Group))){
     p <- p + ggplot2::scale_fill_manual(values = cols[1:length(unique(levels(profile$Group)))])

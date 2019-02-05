@@ -21,7 +21,7 @@ observeEvent(input$initialize, {
     csv_orig[,(1:ncol(csv_orig)) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)})]
     
     # remove whitespace
-    csv_orig$sample <- gsub(csv_orig$sample, pattern=" ", replacement="")
+    csv_orig$sample <- gsub(csv_orig$sample, pattern=" |\\(|\\)|\\+", replacement="")
     
     # find experimental variables by converting to numeric
     as.numi <- as.numeric(colnames(csv_orig)[1:100])
@@ -94,7 +94,7 @@ observeEvent(input$initialize, {
     csv <- csv[sample %in% keep_samps,]
     
     # also remove them in the table with covariates
-    covar_table <- as.data.frame(first_part[sample %in% keep_samps,])
+    covar_table <- first_part[sample %in% keep_samps,]
     
     # if the experimental condition is batch, make sure QC samples are not removed at the end for analysis
     # TODO: this is broken with the new system, move this to the variable switching segment of code
@@ -249,10 +249,6 @@ observeEvent(input$initialize, {
     # lowercase all the covars table column names
     colnames(mSet$dataSet$covars) <- tolower(colnames(mSet$dataSet$covars))
     
-    # remove special characters in sample names 
-    # TODO: find a better fix for samples w/ special characters in name...
-    mSet$dataSet$covars$sample <- gsub(mSet$dataSet$covars$sample, pattern = "\\(|\\)", replacement="")
-    
     if(batch_corr){
       
       if("batch" %in% req(input$batch_var ) & has.qc){
@@ -360,8 +356,10 @@ observeEvent(input$initialize, {
       }
     }
     
-    shiny::setProgress(session=session, value= .5)
+    mSet$dataSet$cls.num <- length(levels(mSet$dataSet$cls))
     
+    shiny::setProgress(session=session, value= .5)
+
     # make sure covars order is consistent with mset$..$norm order
     mSet$dataSet$covars <- mSet$dataSet$covars[match(rownames(mSet$dataSet$norm), 
                                                      mSet$dataSet$covars$sample),]

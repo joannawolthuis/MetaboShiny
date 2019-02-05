@@ -3,6 +3,7 @@ observeEvent(input$search_cpd, {
   req(global$vectors$db_search_list)
   # ----------------
   if(length(global$vectors$db_search_list) > 0){ # go through selected databases
+    
     global$tables$last_matches <<- unique(multimatch(curr_cpd, global$vectors$db_search_list,inshiny = F,search_pubchem=input$search_pubchem)) # match with all
     # - - -
     adduct_dist <- melt(table(global$tables$last_matches$adduct))

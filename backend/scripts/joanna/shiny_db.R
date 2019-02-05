@@ -506,6 +506,12 @@ multimatch <- function(cpd, dbs, searchid="mz", inshiny=T, search_pubchem=F){
   
   i <<- 1
   
+  # check which dbs are even available
+  
+  #dbs
+  
+  # - - - - - - -
+  
   count = length(dbs)
   
   shiny::withProgress({
