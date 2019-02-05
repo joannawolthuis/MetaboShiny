@@ -69,13 +69,7 @@ get.csv <-
       
       print(query)
       z = RSQLite::dbGetQuery(conn, query)
-    View}
-
-    
-    #a = DBI::dbGetQuery(conn,"select distinct card_id from individual_data d")    
-    #b = DBI::dbGetQuery(conn,"select distinct filename from mzintensities i")
-    #nows.a <- gsub(x=a$card_id, " ", "")
-    #nows.b <- gsub(x=b$filename, " ", "")
+    }
     
     RSQLite::dbDisconnect(conn)
     

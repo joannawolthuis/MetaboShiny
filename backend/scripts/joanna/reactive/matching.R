@@ -9,7 +9,7 @@ observeEvent(input$search_cpd, {
     adduct_dist <- melt(table(global$tables$last_matches$adduct))
     db_dist <- melt(table(global$tables$last_matches$source))
     
-    if(nrow(global$tables$last_matches)>0){
+    if(nrow(global$tables$last_matches) > 0){
       # render word cloud
       
       res = {
@@ -106,10 +106,11 @@ observeEvent(input$search_cpd, {
       })
     }
     
-    shown_matches$table <- if(nrow(global$tables$last_matches)>0){
+    shown_matches$table <- 
+    if(nrow(global$tables$last_matches)>0){
       global$tables$last_matches 
     }else{
-      data.table()
+      data.table('name' = "Didn't find anything ( •́ .̫ •̀ )")
     }
   }
 })

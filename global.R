@@ -94,7 +94,7 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                 timeseries = FALSE,
                                 nvars = 2, # Default bivariate setting for statistics
                                 max.cols = 8, # Maximum colours available to choose (need to change if anyone does ANOVA with >8 variables)
-                                packages = c("data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat", 
+                                packages = unique(c(base.packs, "data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat", 
                                              "plotly", "parallel", "shinyFiles", "curl", "httr", "pbapply", 
                                              "sqldf", "plyr", "ChemmineR", "gsubfn", "stringr", "heatmaply", 
                                              "reshape2", "XML", "xlsx", "colourpicker", "DT", "Rserve", "ellipse", 
@@ -107,7 +107,7 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                              "BatchCorrMetabolomics", "R.utils", "rgl", "glmnet", "TSPred", 
                                              "VennDiagram", "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR", 
                                              "openxlsx", "doParallel", "missForest", "InterpretMSSpectrum",
-                                             "tm", "RISmed", "qdap", "extrafont", "sysfonts", "gmp", "shadowtext"
+                                             "tm", "RISmed", "qdap", "extrafont", "sysfonts", "gmp", "shadowtext")
                                 ), # these packages are listed in the first tab and should include all necessary packages
                                 images = list(list(name = 'load_icon', path = 'www/cute.png', dimensions = c(100, 100)),
                                               list(name = 'cute_package', path = 'www/cat.png', dimensions = c(80, 80)),

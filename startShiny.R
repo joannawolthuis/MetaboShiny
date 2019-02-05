@@ -66,7 +66,7 @@ metanr_packages <- function(){
 # install.packages("rJava", type="source")
 
 # packages needed to start up
-base.packs <- c("httr", "curl", "git2r", "devtools", 
+base.packs <<- c("httr", "curl", "git2r", "devtools", 
                 "pacman", "gsubfn", "shiny", "DT", 
                 "R.utils", "data.table", "shinyFiles", 
                 "shinyBS", "rhandsontable", "XML", 

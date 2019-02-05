@@ -508,7 +508,9 @@ multimatch <- function(cpd, dbs, searchid="mz", inshiny=T, search_pubchem=F){
   
   # check which dbs are even available
   
-  #dbs
+  avail.dbs <- gsub(list.files(options$db_dir, pattern = "\\.db"), pattern = "\\.base\\.db|\\.full\\.db", replacement = "")
+  
+  dbs <- intersect(dbs, avail.dbs)
   
   # - - - - - - -
   
@@ -548,9 +550,7 @@ multimatch <- function(cpd, dbs, searchid="mz", inshiny=T, search_pubchem=F){
     
   })
   
-  if(is.null(unlist(match_list))) return(data.table(name = "None",
-                                                    description = "Unknown compound",
-                                                    source = "None"))
+  if(is.null(unlist(match_list))) return(data.table())
   
   match_table <- (as.data.table(rbindlist(match_list, fill=T))[name != ""])
   # --- sort ---

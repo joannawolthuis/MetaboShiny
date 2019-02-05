@@ -52,8 +52,7 @@ lapply(unique(res.update.tables), FUN=function(table){
                                                   plsda_vip = plsda_tab,
                                                   mummi_detail = global$tables$mummi_detail,
                                                   venn = global$tables$venn_overlap
-    )
-    , keep.rownames = T)[curr_row, rn]
+    ), keep.rownames = T)[curr_row, rn]
     # print current compound in sidebar
     output$curr_cpd <- renderText(curr_cpd)
     
@@ -66,6 +65,7 @@ lapply(unique(res.update.tables), FUN=function(table){
     })
     
     outplot_name <- paste0(table, "_specific_plot")
+    
     # send plot to relevant spot in UI
     output[[outplot_name]] <- plotly::renderPlotly({
       # --- ggplot ---
@@ -128,18 +128,20 @@ lapply(c("pos", "neg"), function(mode){
 observeEvent(input$match_tab_rows_selected,{
   curr_row <<- input$match_tab_rows_selected # get current row
   if (is.null(curr_row)) return()
-  curr_name <<- global$tables$last_matches[curr_row,'name'][[1]]
-  updateTextInput(session, "pm_query", value = curr_name)
-  # write to clipboard
-  if(input$auto_copy){
-    clipr::write_clip(curr_name)
-    print('copied to clipboard ( ˘ ³˘)♥')
-  }
-  # -----------------------------
-  curr_def <<- global$tables$last_matches[curr_row,'description'] # get current definition (hidden in table display but not deleted)
-  output$curr_definition <- renderText(curr_def$description) # render definition
-  curr_struct <<- global$tables$last_matches[curr_row,'structure'][[1]] # get current structure
-  output$curr_struct <- renderPlot({plot.mol(curr_struct,style = "cow")}) # plot molecular structure
-  curr_formula <<- global$tables$last_matches[curr_row,'baseformula'][[1]] # get current formula
-  output$curr_formula <- renderText({curr_formula}) # render text of current formula
+  try({
+    curr_name <<- global$tables$last_matches[curr_row,'name'][[1]]
+    updateTextInput(session, "pm_query", value = curr_name)
+    # write to clipboard
+    if(input$auto_copy){
+      clipr::write_clip(curr_name)
+      print('copied to clipboard ( ˘ ³˘)♥')
+    }
+    # -----------------------------
+    curr_def <<- global$tables$last_matches[curr_row,'description'] # get current definition (hidden in table display but not deleted)
+    output$curr_definition <- renderText(curr_def$description) # render definition
+    curr_struct <<- global$tables$last_matches[curr_row,'structure'][[1]] # get current structure
+    output$curr_struct <- renderPlot({plot.mol(curr_struct,style = "cow")}) # plot molecular structure
+    curr_formula <<- global$tables$last_matches[curr_row,'baseformula'][[1]] # get current formula
+    output$curr_formula <- renderText({curr_formula}) # render text of current formula
+  })
 })
