@@ -114,10 +114,10 @@ observeEvent(input$create_csv, {
     
     # create csv table from patient database and user chosen settings in that pane
     tbl <- get.csv(global$paths$patdb,
-                   group_adducts = if(length(global$vectors$db_add_list) == 0) F else T, # group by addicts?
-                   groupfac = input$group_by, # group by mz or formula
-                   which_dbs = global$vectors$db_add_list, # used databases
-                   which_adducts = selected_adduct_list # used adducts
+                   group_adducts = F, # if(length(global$vectors$db_add_list) == 0) F else T, # group by addicts?
+                   groupfac = "mz" #input$group_by, # group by mz or formula
+                   #which_dbs = global$vectors$db_add_list, # used databases
+                   #which_adducts = selected_adduct_list # used adducts
     )
     
     # check if any samples are duplicated in the resulting table 

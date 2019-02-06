@@ -2,9 +2,9 @@
 get.csv <- 
   function(patdb,
            max.vals = -1,
-           group_adducts = T,
-           which_dbs = file.path(options$db_dir, "kegg.full.db"),
-           which_adducts = c("M+H", "M-H", "M"),
+           group_adducts = F,
+           which_dbs = c(),
+           which_adducts = c(),
            groupfac = "mz"
   ){
     
