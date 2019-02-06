@@ -6,7 +6,7 @@ observeEvent(input$search_cpd, {
     global$tables$last_matches <<- unique(multimatch(curr_cpd, 
                                                      global$vectors$db_search_list,
                                                      inshiny = F,
-                                                     input$search_pubchem)) # match with all
+                                                     search_pubchem = input$search_pubchem)) # match with all
     # - - -
     adduct_dist <- melt(table(global$tables$last_matches$adduct))
     db_dist <- melt(table(global$tables$last_matches$source))
@@ -140,20 +140,7 @@ observeEvent(input$score_iso, {
   global$tables$last_matches <<- global$tables$last_matches[score_table, on = c("baseformula", "adduct")]
   
   shown_matches$table <<- global$tables$last_matches
-  # # re-render match table
-  # output$match_tab <-DT::renderDataTable({
-  #   
-  #   remove_cols = global$vectors$remove_match_cols
-  #   remove_idx <- which(colnames(global$tables$last_matches) %in% remove_cols)
-  #   # don't show some columns but keep them in the original table, so they can be used
-  #   # for showing molecule descriptions, structure
-  #   DT::datatable(global$tables$last_matches,
-  #                 selection = 'single',
-  #                 autoHideNavigation = T,
-  #                 options = list(lengthMenu = c(5, 10, 15), 
-  #                                pageLength = 5,
-  #                                columnDefs = list(list(visible=FALSE, targets=remove_idx))))
-  # })  
+ 
 })
 
 observeEvent(input$search_pubmed, {
