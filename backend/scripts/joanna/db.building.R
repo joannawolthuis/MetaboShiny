@@ -1222,13 +1222,12 @@ build.base.db <- function(dbname=NA,
                                  
                                  file.url <- "http://www.foodb.ca/system/foodb_2017_06_29_csv.tar.gz"
                                  
-                                 # ----
-                                 #base.loc <- getOptions("user_options.txt")$db_dir
                                  base.loc <- file.path(getOptions("user_options.txt")$db_dir, "foodb_source")
+                                 
                                  if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                                  zip.file <- file.path(base.loc, "foodb.zip")
                                  utils::download.file(file.url, zip.file,mode = "w")
-                                 utils::untar(zip.file, exdir = base.loc,list =  T)
+                                 utils::untar(zip.file, exdir = base.loc,files = "foodb_2017_06_29_csv/compounds.csv")
                                  
                                  base.table <- data.table::fread(file = file.path(base.loc, "foodb_2017_06_29_csv", "compounds.csv"))
                                  
