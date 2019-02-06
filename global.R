@@ -135,6 +135,7 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                               list(name = 'csv_icon', path = 'www/office.png', dimensions = c(100, 100)),
                                               list(name= 'magicball', path = 'www/magic-ball2.png', dimensions = c(200,200)),
                                               list(name = 'dataset_icon', path = 'www/office.png', dimensions = c(100, 100)),
+                                              list(name= 'maconda_logo', path = 'www/maconda.png', dimensions = c(250,100)),
                                               list(name = 'sidebar_icon', path = 'www/detective.png', dimensions = c(60, 60))
                                               
                                 ), # all image paths, if you add an image you can add it here
@@ -202,6 +203,9 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                                      foodb = list(title = "FooDB",
                                                                   description = "FooDB is the world’s largest and most comprehensive resource on food constituents, chemistry and biology. It provides information on both macronutrients and micronutrients, including many of the constituents that give foods their flavor, color, taste, texture and aroma.",
                                                                   image_id = "foodb_logo"),
+                                                     maconda = list(title = "MaConDa", 
+                                                                    description = "MaConDa currently contains ca. 200 contaminant records detected across several MS platforms. The majority of records include theoretical as well as experimental MS data.",
+                                                                    image_id = "maconda_logo"),
                                                      magicball = list(title = "MagicBall",
                                                                       description = "Algorithm to predict molecular formula from m/z value",
                                                                       image_id = "magicball")
@@ -293,6 +297,7 @@ vectors = list(
               "massbank",
               "metabolights",
               "foodb",
+              "maconda",
               "magicball"
   ),
   # list of positive adducts

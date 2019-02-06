@@ -61,12 +61,14 @@ lapply(global$vectors$db_list, FUN=function(db){
                     cl = session_cl)
       shiny::setProgress(session = session, 0.5)
       
-      # extend base db (identical per db, makes adduct and isotope variants of downloaded compounds)
-      build.extended.db(db, 
-                        outfolder = getOptions("user_options.txt")$db_dir,
-                        adduct.table = adducts, 
-                        cl = session_cl, 
-                        fetch.limit = 500) #TODO: figure out the optimal fetch limit...
+      if(!grepl(db, pattern = "maconda|noise")){
+        # extend base db (identical per db, makes adduct and isotope variants of downloaded compounds)
+        build.extended.db(db, 
+                          outfolder = getOptions("user_options.txt")$db_dir,
+                          adduct.table = adducts, 
+                          cl = session_cl, 
+                          fetch.limit = 500) #TODO: figure out the optimal fetch limit...
+      }
     })
   })
 })
