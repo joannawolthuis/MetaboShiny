@@ -1,10 +1,12 @@
 # triggers on clicking the 'search' button in sidebar
 observeEvent(input$search_cpd, {
-  req(global$vectors$db_search_list)
-  # ----------------
+
   if(length(global$vectors$db_search_list) > 0){ # go through selected databases
     
-    global$tables$last_matches <<- unique(multimatch(curr_cpd, global$vectors$db_search_list,inshiny = F,search_pubchem=input$search_pubchem)) # match with all
+    global$tables$last_matches <<- unique(multimatch(curr_cpd, 
+                                                     global$vectors$db_search_list,
+                                                     inshiny = F,
+                                                     input$search_pubchem)) # match with all
     # - - -
     adduct_dist <- melt(table(global$tables$last_matches$adduct))
     db_dist <- melt(table(global$tables$last_matches$source))
@@ -20,7 +22,7 @@ observeEvent(input$search_cpd, {
                                           desc <- global$tables$last_matches$description[[i]]
                                           # return
                                           desc
-                                        })
+                                          })
         
         require(tm)
         
@@ -132,7 +134,6 @@ observeEvent(input$score_iso, {
   # as input, takes user method for doing this scoring
   withProgress({
     score_table <- score.isos(global$paths$patdb, method=input$iso_score_method, inshiny=T, intprec = intprec)
-    print(score_table)
     })
   
   # update the match table available to the rest of metaboshiny

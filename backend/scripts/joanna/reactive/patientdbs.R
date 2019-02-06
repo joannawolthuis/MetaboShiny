@@ -21,8 +21,14 @@ observeEvent(input$create_db,{
              
              shiny::setProgress(session=session, value= .30)
              
-             # add excel file to this database
-             exp_vars <- load.excel(excel_path, global$paths$patdb)
+             # add metadata file to .db file generated in previous step
+             metadata_path <- parseFilePaths(global$paths$volumes, input$metadata)$datapath
+
+             if(grepl(metadata_path, pattern = "csv")){
+               exp_vars <<- load.metadata.csv(metadata_path, global$paths$patdb)
+             }else{
+               exp_vars <<- load.metadata.excel(metadata_path, global$paths$patdb)
+             }
              
              shiny::setProgress(session=session, value= .60)
              
@@ -54,12 +60,11 @@ observeEvent(input$create_db,{
                           negpath = parseFilePaths(global$paths$volumes, input$outlist_neg)$datapath,
                           overwrite = T)
              
-             shiny::setProgress(session=session, value= .95,message = "Adding excel sheets to database...")
+             shiny::setProgress(session=session, value= .95,message = "Adding metadata to database...")
              
              # add excel file to .db file generated in previous step
              metadata_path <- parseFilePaths(global$paths$volumes, input$metadata)$datapath
-             print(metadata_path)
-             
+
              if(grepl(metadata_path, pattern = "csv")){
                exp_vars <<- load.metadata.csv(metadata_path, global$paths$patdb)
              }else{

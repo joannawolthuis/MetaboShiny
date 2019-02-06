@@ -56,7 +56,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                   shinyFilesButton('database', 'DATABASE', 'Please select an database file', FALSE)
                                            ),
                                            column(3, align="center",
-                                                  shinyFilesButton('excel', 'METADATA', 'Please select an excel file', FALSE)
+                                                  shinyFilesButton('metadata', 'METADATA', 'Please select a metadata file', FALSE)
                                            )
                                          )
                                 ),

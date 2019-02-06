@@ -29,16 +29,15 @@ get_matches <- function(cpd = NA,
                         inshiny=TRUE,
                         append=FALSE){
   
-  # --- connect to db ---
-  
-  req("global$paths$patdb")
-  
   # 0. Attach db
   
-  if(!exists(searchid) && searchid != "mz"){
+  
+  if(!exists("searchid") && searchid != "mz"){
+    
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), chosen.db)
-    cpd <- gsub(cpd, pattern = "http\\/\\/", replacement = "http:\\/\\/")
+    
     query <- if(searchid == "pathway"){
+      cpd <- gsub(cpd, pattern = "http\\/\\/", replacement = "http:\\/\\/")
       gsubfn::fn$paste(strwrap("SELECT DISTINCT name as Name
                                FROM pathways
                                WHERE identifier = '$cpd'"
@@ -56,8 +55,6 @@ get_matches <- function(cpd = NA,
   }else{
     
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb)
-    
-    #cpd = curr_cpd
     
     RSQLite::dbExecute(conn, gsubfn::fn$paste("ATTACH '$chosen.db' AS db"))
     
@@ -146,20 +143,19 @@ get_matches <- function(cpd = NA,
     
     # - - - save adducts too - - - 
     
-    
     results <- DBI::dbGetQuery(conn, "SELECT 
-                               b.compoundname as name, 
-                               b.baseformula,
-                               u.adduct,
-                               u.isoprevalence as perciso,
-                               u.dppm,
-                               b.identifier,
-                               b.description, 
-                               b.structure 
-                               FROM unfiltered u
-                               JOIN db.base b
-                               ON u.baseformula = b.baseformula
-                               AND u.charge = b.charge")
+                                     b.compoundname as name, 
+                                     b.baseformula,
+                                     u.adduct,
+                                     u.isoprevalence as perciso,
+                                     u.dppm,
+                                     b.identifier,
+                                     b.description, 
+                                     b.structure 
+                                     FROM unfiltered u
+                                     JOIN db.base b
+                                     ON u.baseformula = b.baseformula
+                                     AND u.charge = b.charge")
     
     results$perciso <- round(results$perciso, 2)
     results$dppm <- signif(results$dppm, 2)
@@ -174,7 +170,6 @@ get_matches <- function(cpd = NA,
       
       (df)
     }
-    
     
     DBI::dbDisconnect(conn)
     
@@ -508,17 +503,16 @@ multimatch <- function(cpd, dbs, searchid="mz", inshiny=T, search_pubchem=F){
   
   # check which dbs are even available
   
-  avail.dbs <- gsub(list.files(options$db_dir, pattern = "\\.db"), pattern = "\\.base\\.db|\\.full\\.db", replacement = "")
-  
-  dbs <- intersect(dbs, avail.dbs)
+  avail.dbs <- list.files(options$db_dir, pattern = "\\.full\\.db",full.names = T)
+  keep.dbs <- c(intersect(unlist(dbs),avail.dbs), "magicball")
   
   # - - - - - - -
   
-  count = length(dbs)
+  count = length(keep.dbs)
   
   shiny::withProgress({
     
-    match_list <- lapply(dbs, FUN=function(match.table){
+    match_list <- lapply(keep.dbs, FUN=function(match.table){
       
       shiny::setProgress(i/count)
       
@@ -576,15 +570,15 @@ get_predicted <- function(mz,
   
 cat(" 
       _...._
-    .`      `.
-   / ***      \\            MagicBall
-  : **         :         is searching...
+    .`      `.    *             *
+   / ***      \\            MagicBall   *
+  : **         :    *     is searching...
   :            :        
   \\           /       
-    `-.,,,,.-'              
-     _(    )_
-    )        (
-   (          )
+*   `-.,,,,.-'        *             
+     _(    )_             *
+  * )        (                  *
+   (          ) * 
     `-......-`
 ")
   # find which mode we are in

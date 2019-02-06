@@ -1,15 +1,11 @@
 #' @export
 get.csv <- 
-  function(patdb, 
-           #time.series = F, 
-           #exp.condition = "diet",
+  function(patdb,
            max.vals = -1,
            group_adducts = T,
            which_dbs = file.path(options$db_dir, "kegg.full.db"),
            which_adducts = c("M+H", "M-H", "M"),
            groupfac = "mz"
-           #,var_table = "setup",
-           #batches = NULL
   ){
     
     library(data.table)
@@ -29,13 +25,11 @@ get.csv <-
     # - - - - - - - - - - - - - - - - 
     
     if(group_adducts){
-      z = get_all_matches(#exp.condition, 
+      z = get_all_matches(
         pat.conn = conn,
         which_dbs,
         which_adducts,
         groupfac
-        #,var_table,
-        #batches
       )
     }else{
       if(DBI::dbExistsTable(conn, "batchinfo")){
@@ -48,8 +42,6 @@ get.csv <-
                                           join setup s on d.[Group] = s.[Group]
                                           join batchinfo b on b.sample = d.card_id
                                           group by d.card_id, b.batch, b.injection, i.mzmed, d.sampling_date"),
-                         #group by d.card_id, 
-                         #, 
                          width=10000,
                          simplify=TRUE) 
       }else{
@@ -61,8 +53,6 @@ get.csv <-
                                           on i.filename = d.card_id
                                           join setup s on d.[Group] = s.[Group]
                                           group by d.card_id, i.mzmed, d.sampling_date"),
-                         #group by d.card_id, 
-                         #, 
                          width=10000,
                          simplify=TRUE)
       }
@@ -102,8 +92,6 @@ get.csv <-
     
     small.set <- cbind(small.set, cast.dt[,-exp.vars, with=FALSE])
     
-    print(length(unique(small.set$time)))
-    
     if(length(unique(small.set$time)) > 1){
       small.set$time <- as.numeric(as.factor(as.Date(small.set$time)))
     }else{
@@ -116,13 +104,9 @@ get.csv <-
       small.set$sample <- small.set$animal_internal_id
     }
     
-    print(small.set[1:20,1:20])
-    
     # - - measure file size - -
     
     size <- object.size(small.set)
-    
-    print(small.set[1:5,1:10])
     
     cat(paste("Resulting file will be approximately "))
     
