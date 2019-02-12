@@ -132,6 +132,7 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                               list(name = 'excel_icon', path = 'www/excel.png', dimensions = c(120, 120)),
                                               list(name = 'excel_icon_2', path = 'www/excel.png', dimensions = c(120, 120)),
                                               list(name = 'db_icon', path = 'www/servers.png', dimensions = c(150, 150)),
+                                              list(name = 'lipidmaps_logo', path = 'www/lipidmaps.png', dimensions = c(200, 150)),
                                               list(name = 'bloodexposome_logo', path = 'www/bloodexposome.png', dimensions = c(250, 200)),
                                               list(name = 'csv_icon', path = 'www/office.png', dimensions = c(100, 100)),
                                               list(name= 'magicball', path = 'www/magic-ball2.png', dimensions = c(200,200)),
@@ -210,6 +211,9 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                                      maconda = list(title = "MaConDa", 
                                                                     description = "MaConDa currently contains ca. 200 contaminant records detected across several MS platforms. The majority of records include theoretical as well as experimental MS data.",
                                                                     image_id = "maconda_logo"),
+                                                     lipidmaps = list(title = "LIPID MAPS", 
+                                                                    description = "The LIPID MAPS Structure Database (LMSD) is a relational database encompassing structures and annotations of biologically relevant lipids.",
+                                                                    image_id = "lipidmaps_logo"),
                                                      # - - leave magicball last - - 
                                                      magicball = list(title = "MagicBall",
                                                                       description = "Algorithm to predict molecular formula from m/z value",
@@ -293,8 +297,8 @@ vectors = list(
               "chebi", 
               "kegg",
               "metacyc",
-              "wikipathways"
-              ,"smpdb",
+              "wikipathways",
+              "smpdb",
               "dimedb",
               "wikidata",
               "vmh",
@@ -304,6 +308,7 @@ vectors = list(
               "foodb",
               "maconda",
               "bloodexposome",
+              "lipidmaps",
               "magicball"
   ),
   # list of positive adducts

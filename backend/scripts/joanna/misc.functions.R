@@ -292,6 +292,8 @@ download.chebi.joanna <- function (release = "latest", woAssociations = FALSE) {
 sdfStream.joanna <- function (input, output, append = FALSE, fct, Nlines = 10000, 
                               startline = 1, restartNlines = 10000, silent = FALSE, ...) 
 {
+  require(ChemmineR)
+  
   stop <- FALSE
   f <- file(input, "r")
   n <- Nlines

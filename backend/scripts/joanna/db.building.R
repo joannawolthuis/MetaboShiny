@@ -420,7 +420,7 @@ build.base.db <- function(dbname=NA,
                                  
                                  # --- get charges from smiles ---
                                  
-                                 charges = pbapply::pbsapply(db.formatted$structure, cl=0, FUN=function(smile){
+                                 charges = pbapply::pbsapply(db.formatted$structure, cl=session_cl, FUN=function(smile){
                                    m <- rcdk::parse.smiles(smile)
                                    #print(m)
                                    ## perform operations on this molecule
@@ -643,6 +643,75 @@ build.base.db <- function(dbname=NA,
                                  
                                  RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
                                  RSQLite::dbWriteTable(conn, "pathways", db.pathways, overwrite=TRUE)
+                               },
+                               lipidmaps = function(dbname, ...){
+                                 
+                                 file.url = "http://www.lipidmaps.org/resources/downloads/LMSDFDownload3Jan19.zip"
+                                 
+                                 # ----
+                                 base.loc <- file.path(getOptions("user_options.txt")$db_dir, "lipidmaps_source")
+                                 if(!dir.exists(base.loc)) dir.create(base.loc)
+                                 zip.file <- file.path(base.loc, "lipidmaps.zip")
+                                 utils::download.file(file.url, zip.file)
+                                 utils::unzip(zip.file, exdir = base.loc)
+                                 # -------------------------------
+                                 
+                                 sdf.path <- list.files(base.loc, 
+                                                        pattern = "sdf",
+                                                        full.names = T)
+                                 
+                                 desc <- function(sdfset){
+                                   
+                                   datablock = data.table::as.data.table(datablock2ma(datablocklist=datablock(sdfset)))
+                                   
+                                   last_cn <<- colnames(datablock)
+                                   
+                                   if(!("FORMULA" %in% last_cn)){
+                                     mat = as.matrix(data.table::data.table(
+                                       identifier=datablock$PUBCHEM_COMPOUND_CID, 
+                                       compoundname = datablock$PUBCHEM_IUPAC_NAME,
+                                       baseformula = datablock$PUBCHEM_MOLECULAR_FORMULA,
+                                       structure = datablock$PUBCHEM_OPENEYE_CAN_SMILES,
+                                       description = paste0("Alternative names: ",
+                                                            apply( datablock[ , grep(colnames(datablock), pattern="NAME"),with=F ] , 1 , paste , collapse = "-" ))
+                                     )) 
+                                   }else{
+                                     mat = as.matrix(data.table::data.table(
+                                       identifier = as.character(datablock$LM_ID), 
+                                       compoundname = as.character(if("NAME" %in% colnames(datablock)) datablock$NAME else datablock$SYSTEMATIC_NAME),
+                                       baseformula = as.character(datablock$FORMULA),
+                                       structure = as.character(if("SMILES" %in% last_cn) datablock$SMILES else datablock$INCHI),
+                                       description = as.character(paste0("Main class: ", datablock$MAIN_CLASS,
+                                                                         ". Subclass: ", datablock$SUB_CLASS))
+                                     )) 
+                                   }
+                                   
+                                   return(mat)
+                                 }
+                                 
+                                 sdfStream.joanna(input=sdf.path, output=file.path(base.loc, "lipidmaps_parsed.csv"), append=FALSE, fct=desc, silent = T) 
+                                 
+                                 db.base <- data.table::fread(file.path(base.loc, "lipidmaps_parsed.csv"), fill = T, header=T)
+                                 
+                                 db.base$charge <- pbapply::pbsapply(db.base$structure, cl = 0, function(smi){
+                                   charge = 0 # set default charge to zero
+                                   try({
+                                     iatom <- rcdk::parse.smiles(smi)[[1]]
+                                     charge = rcdk::get.total.charge(iatom)
+                                   })
+                                   charge
+                                 })
+                                 
+                                 db.formatted <- db.base[,-1,with=F]
+                                 
+                                 checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
+                                                                                            db.formatted$baseformula))
+                                 db.formatted$baseformula <- checked$new_formula
+                                 keep <- checked[warning == FALSE, which = TRUE]
+                                 db.formatted <- db.formatted[keep]
+                                 
+                                 RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
+                                 
                                },
                                metabolights = function(dbname, ...){
                                  require(webchem)
