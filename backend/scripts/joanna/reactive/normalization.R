@@ -228,6 +228,17 @@ observeEvent(input$initialize, {
       norm.vec <- rep(1, length(mSet$dataSet$cls)) # empty
     }
     
+    # write these to mset!!!
+    mSet$metshiParams <- list(
+      perc_limit = input$perc_limit,
+      filt_type = input$filt_type,
+      miss_type = input$miss_type,
+      norm_type = input$norm_type,
+      trans_type = input$trans_type,
+      scale_type = input$scale_type,
+      ref_var = input$ref_var
+    )
+    
     # normalize dataset with user settings(result: mSet$dataSet$norm)
     mSet <- Normalization(mSet,
                           rowNorm = input$norm_type,

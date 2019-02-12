@@ -132,6 +132,7 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                               list(name = 'excel_icon', path = 'www/excel.png', dimensions = c(120, 120)),
                                               list(name = 'excel_icon_2', path = 'www/excel.png', dimensions = c(120, 120)),
                                               list(name = 'db_icon', path = 'www/servers.png', dimensions = c(150, 150)),
+                                              list(name = 'bloodexposome_logo', path = 'www/bloodexposome.png', dimensions = c(250, 200)),
                                               list(name = 'csv_icon', path = 'www/office.png', dimensions = c(100, 100)),
                                               list(name= 'magicball', path = 'www/magic-ball2.png', dimensions = c(200,200)),
                                               list(name = 'dataset_icon', path = 'www/office.png', dimensions = c(100, 100)),
@@ -203,9 +204,13 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                                      foodb = list(title = "FooDB",
                                                                   description = "FooDB is the world’s largest and most comprehensive resource on food constituents, chemistry and biology. It provides information on both macronutrients and micronutrients, including many of the constituents that give foods their flavor, color, taste, texture and aroma.",
                                                                   image_id = "foodb_logo"),
+                                                     bloodexposome = list(title = "Blood Exposome DB",
+                                                                  description = " This new blood exposome database can be applied to prioritize literature-based chemical reviews, developing target assays in exposome research, identifying compounds in untargeted mass spectrometry and biological interpretation in metabolomics data.",
+                                                                  image_id = "bloodexposome_logo"),
                                                      maconda = list(title = "MaConDa", 
                                                                     description = "MaConDa currently contains ca. 200 contaminant records detected across several MS platforms. The majority of records include theoretical as well as experimental MS data.",
                                                                     image_id = "maconda_logo"),
+                                                     # - - leave magicball last - - 
                                                      magicball = list(title = "MagicBall",
                                                                       description = "Algorithm to predict molecular formula from m/z value",
                                                                       image_id = "magicball")
@@ -281,7 +286,7 @@ vectors = list(
   neg_selected_add = c(1, 2, 14, 15, nrow(adducts[Ion_mode == "negative",
                                                   c("Name")])),
   # list of available databases!!
-  db_list = c(
+  db_list = c( # this dermines the show order of dbs in the app
               #"internal",
               #"noise", 
               "hmdb", 
@@ -298,6 +303,7 @@ vectors = list(
               "metabolights",
               "foodb",
               "maconda",
+              "bloodexposome",
               "magicball"
   ),
   # list of positive adducts

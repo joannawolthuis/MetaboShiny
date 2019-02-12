@@ -400,6 +400,53 @@ build.base.db <- function(dbname=NA,
                                  RSQLite::dbWriteTable(conn, "pathways", db.pathways, overwrite=TRUE)
                                  RSQLite::dbRemoveTable(conn.chebi, "wikipathways")
                                },
+                               bloodexposome = function(dbname){
+                                 
+                                 file.url = "http://exposome.fiehnlab.ucdavis.edu/blood_exposome_database_v1_08_2018.xlsx"
+                                 
+                                 base.loc <- file.path(getOptions("user_options.txt")$db_dir, "bloodexposome_source")
+                                 if(!dir.exists(base.loc)) dir.create(base.loc)
+                                 excel.file <- file.path(base.loc, "exposome.xlsx")
+                                 utils::download.file(file.url, excel.file)
+                                 
+                                 db.full <- openxlsx::read.xlsx(excel.file, sheet = 2, colNames=T, startRow = 3)
+                                 
+                                 db.formatted <- unique(data.table::data.table(compoundname = db.full$CompoundName, 
+                                                                       description = c("No description available."),
+                                                                       baseformula = db.full$Formula,
+                                                                       identifier = db.full$PubChemCID, 
+                                                                       charge = c(0),
+                                                                       structure = db.full$SMILES))
+                                 
+                                 # --- get charges from smiles ---
+                                 
+                                 charges = pbapply::pbsapply(db.formatted$structure, cl=0, FUN=function(smile){
+                                   m <- rcdk::parse.smiles(smile)
+                                   #print(m)
+                                   ## perform operations on this molecule
+                                   try({
+                                     charge = rcdk::get.total.formal.charge(m[[1]])
+                                     # --- return ---
+                                     return(charge)
+                                   })
+                                 }) 
+                                 charges[grep("Error", charges)] <- 0
+                                 charges = as.numeric(charges)
+                                 
+                                 db.formatted$charge <- charges
+                                 
+                                 # --- check formulae ---
+                                 checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
+                                                                                            db.formatted$baseformula))
+                                 db.formatted$baseformula <- checked$new_formula
+                                 keep <- checked[warning == FALSE, which = TRUE]
+                                 db.formatted <- db.formatted[keep]
+                                 
+                                 # ----------------------
+                                 
+                                 RSQLite::dbWriteTable(conn, "base", db.formatted, append=TRUE)
+                                 
+                               },
                                smpdb = function(dbname){
                                  # ---------------
                                  file.url <- "http://smpdb.ca/downloads/smpdb_metabolites.csv.zip"

@@ -504,7 +504,7 @@ multimatch <- function(cpd, dbs, searchid="mz", inshiny=T, search_pubchem=F){
   # check which dbs are even available
   
   avail.dbs <- list.files(options$db_dir, pattern = "\\.full\\.db",full.names = T)
-  keep.dbs <- c(intersect(unlist(dbs),avail.dbs), "magicball")
+  keep.dbs <- c(intersect(unlist(dbs), c(avail.dbs,"magicball")))
   
   # - - - - - - -
   
@@ -572,7 +572,7 @@ get_predicted <- function(mz,
                           checkdb = T, 
                           elements = "CHNOPSNaClKILi",
                           search_pubchem = T,
-                          pubchem_detailed = F){
+                          pubchem_detailed = T){
   
 cat(" 
       _...._

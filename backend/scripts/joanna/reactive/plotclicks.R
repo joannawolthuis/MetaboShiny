@@ -12,10 +12,13 @@ observeEvent(plotly::event_data("plotly_click"),{
       keep.rows <- which(global$tables$last_matches$adduct == show.adduct)
       shown_matches$table <- global$tables$last_matches[keep.rows,]
     }
+    
+    print("!")
+    
+    return(NULL)
   }
   
   if(input$tab_iden_4 == "pie_db"){
-    
     i = d$pointNumber + 1
     show.db = global$vectors$pie_db[i]
     
@@ -23,7 +26,14 @@ observeEvent(plotly::event_data("plotly_click"),{
       keep.rows <- which(global$tables$last_matches$source == show.db)
       shown_matches$table <- global$tables$last_matches[keep.rows,]
     }
+    
+    print("!!")
+    
+    return(NULL)
+    
   }
+  
+  print("...")
   
   # check if we are in a pie chart
   if(req(input$statistics ) %in% c("tt", "fc", "rf", "aov", "volc")){ # these cases need the same processing and use similar scoring systems
