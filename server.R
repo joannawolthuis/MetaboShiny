@@ -288,12 +288,21 @@ shinyServer(function(input, output, session) {
         })),
         # row 3: image
         fluidRow(lapply(global$vectors$db_list[min_i:max_i], function(db){
-          column(width=3,align="center",imageOutput(global$constants$db.build.info[[db]]$image_id, inline=T))
+          if(db != "custom"){
+            column(width=3,align="center", imageOutput(global$constants$db.build.info[[db]]$image_id, inline=T))
+          }else{
+            column(width=3,align="center", shinyWidgets::circleButton("make_custom_db",
+                                                                    size = "lg",
+                                                                    icon = icon("plus",class = "fa-lg"),
+                                                                    style = "stretch",
+                                                                    color = "default")
+                   )
+          }
         })),
         # row 4: button
         fluidRow(lapply(global$vectors$db_list[min_i:max_i], function(db){
           column(width=3,align="center", 
-            if(db != "magicball"){
+            if(!(db %in% c("magicball", "custom"))){
               list(actionButton(paste0("check_", db), "Check", icon = icon("check")),
               actionButton(paste0("build_", db), "Build", icon = icon("wrench")), 
               br(),
@@ -395,31 +404,6 @@ shinyServer(function(input, output, session) {
     }
   })
   
-  # # this SHOULD trigger on closing the app
-  # observe({
-  #   if (input$nav_general == "stop"){ # if on the 'close' tab...
-  #     # interrupt and ask if you're sure 
-  #     # TODO: save prompt here too
-  #     shinyalert::shinyalert(title = "Question", 
-  #                            text = "Do you want to close metaboShiny?", 
-  #                            type = "warning",
-  #                            #imageUrl = "www/question.png", 
-  #                            showCancelButton = T, 
-  #                            cancelButtonText = "No",
-  #                            showConfirmButton = T, 
-  #                            confirmButtonText = "Yes",
-  #                            callbackR = function(x) {if(x == TRUE){
-  #                              print("closing metaboShiny ~ヾ(＾∇＾)")
-  #                              mSet$storage[[global$constants$last_mset]] <<- mSet
-  #                              if(any(!is.na(session_cl))) parallel::stopCluster(session_cl) # close parallel threads
-  #                              R.utils::gcDLLs() # flush dlls 
-  #                              stopApp() 
-  #                            }else{
-  #                              NULL # if not, do nothing
-  #                            }})
-  #   }
-  # })
-  
   onStop(function() {
     print("closing metaboShiny ~ヾ(＾∇＾)")
     if(exists("mSet")){
@@ -429,6 +413,86 @@ shinyServer(function(input, output, session) {
     # remove metaboshiny csv files
     rmv <- list.files(".", pattern = ".csv|.log", full.names = T)
     if(all(file.remove(rmv))) NULL
+  })
+  
+  output$db_example <- DT::renderDataTable({
+    DT::datatable(data = data.table::data.table(
+      compoundname = c("1-Methylhistidine", "1,3-Diaminopropane", "2-Ketobutyric acid"),
+      description = c("One-methylhistidine (1-MHis) is derived mainly from the anserine of dietary flesh sources, especially poultry.", 
+                      "1,3-Diaminopropane is a stable, flammable and highly hydroscopic fluid. It is a polyamine that is normally quite toxic if swallowed, inhaled or absorbed through the skin.", 
+                      "2-Ketobutyric acid is a substance that is involved in the metabolism of many amino acids (glycine, methionine, valine, leucine, serine, threonine, isoleucine) as well as propanoate metabolism and C-5 branched dibasic acid metabolism. "),
+      baseformula = c("C7H11N3O2", "C3H10N2", "C4H6O3"),
+      identifier = c("HMDB1", "HMDB2", "HMDB3"),
+      charge = c(0, 0, 0),
+      structure = c("CN1C=NC(C[C@H](N)C(O)=O)=C1", "NCCCN", "CCC(=O)C(O)=O")
+    ),
+    options = list(searching = FALSE,
+                   paging = FALSE,
+                   info = FALSE))
+  })
+  
+  # observeEvent
+  observeEvent(input$make_custom_db, {
+    
+    # get window
+    showModal(modalDialog(
+      fluidRow(align="center",
+               textInput("my_db_name", label = "Database full name", value = "MyDb"),
+               textInput("my_db_short", label = "Database shorthand name", value = "mydb"),
+               textInput("my_db_description", label = "Database description", value = "Custom database for MetaboShiny."),
+               hr(),
+               helpText("Please input a CSV file with at these columns (example below):"),
+               helpText("'baseformula', 'charge', 'compoundname', 'identifier', 'description', 'structure' (in SMILES!)"),
+               div(DT::dataTableOutput("db_example"), style="font-size:60%"),
+               br(),
+               shinyFiles::shinyFilesButton("custom_db", title = "Please pick a .csv file", multiple = F, label = "Select"),
+               hr(),
+               helpText("Please upload a database logo"),
+               shinyFilesButton("custom_db_img_path", 
+                                'Select image', 
+                                'Please select a png file', 
+                                FALSE),br(),
+               imageOutput("custom_db_img", inline=T),br(),
+               hr(),
+               shinyWidgets::circleButton("build_custom_db",icon = icon("arrow-right", "fa-lg"), size = "lg")
+      ),
+      title = "Custom database creation",
+      easyClose = TRUE,
+      size = "l",
+      footer = NULL
+    )
+    )
+  
+  })
+  
+  observeEvent(input$build_custom_db, {
+    
+    csv_path <- parseFilePaths(global$paths$volumes, input$custom_db)$datapath
+    
+    print(csv_path)
+    
+    # input <- list(
+    #   my_db_name = "My testy DB!",
+    #   my_db_short = "mydb",
+    #   my_db_description = "Hello world, this is a test run",
+    #   my_db_icon = "www/rainbow.png"
+    # )
+    # csv_path <-  "~/Desktop/test_csv.csv"
+    
+    # build base db
+    db.build.custom(
+      db.name = input$my_db_name,
+      db.short = input$my_db_short,
+      db.description = input$my_db_description,
+      db.icon = global$paths$custom.db.path,
+      csv = csv_path
+    )
+
+    # build extended db
+    build.extended.db(tolower(input$my_db_short), 
+                      outfolder = file.path(getOptions("user_options.txt")$db_dir, "custom"),
+                      adduct.table = adducts,cl = 0)
+    
   })
   
   removeModal()

@@ -2,9 +2,30 @@
 observe({
   shinyFileChoose(input, 'outlist_pos', roots=global$paths$volumes, filetypes=c('csv'))
   shinyFileChoose(input, 'outlist_neg', roots=global$paths$volumes, filetypes=c('csv'))
+  shinyFileChoose(input, 'custom_db', roots=global$paths$volumes, filetypes=c('csv'))
   shinyFileChoose(input, 'metadata', roots=global$paths$volumes, filetypes=c('xls', 'xlsm', 'xlsx', 'csv'))
   shinyFileChoose(input, 'database', roots=global$paths$volumes, filetypes=c('sqlite3', 'db', 'sqlite'))
   shinyFileChoose(input, 'taskbar_image_path', roots=global$paths$volumes, filetypes=c('png', 'jpg', 'jpeg', 'bmp'))
+  shinyFileChoose(input, 'custom_db_img_path', roots=global$paths$volumes, filetypes=c('png', 'jpg', 'jpeg', 'bmp'))
+})
+
+# observes if a new taskbar image is chosen by user
+observe({
+  # - - - - 
+  if(!is.list(input$custom_db_img_path)) return() # if nothing is chosen, do nothing
+  img_path <- parseFilePaths(global$paths$volumes, input$custom_db_img_path)$datapath
+  new_path <- file.path(getwd(), "www", basename(img_path)) # set path to copy to
+  global$paths$custom.db.path <<- new_path
+  # copy image to the www folder
+  if(img_path != new_path) file.copy(img_path, new_path, overwrite = T)
+  # - - -
+  # render taskbar image preview
+  output$custom_db_img <- renderImage({
+    list(src = new_path, 
+         width = 150,
+         height = 150,
+         style = "background-image:linear-gradient(0deg, transparent 50%, #aaa 50%),linear-gradient(90deg, #aaa 50%, #ccc 50%);background-size:10px 10px,10px 10px;")
+  }, deleteFile = FALSE)
 })
 
 # observes if a new taskbar image is chosen by user

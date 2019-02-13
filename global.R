@@ -138,6 +138,7 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                               list(name = 'csv_icon', path = 'www/office.png', dimensions = c(100, 100)),
                                               list(name= 'magicball', path = 'www/magic-ball2.png', dimensions = c(200,200)),
                                               list(name = 'dataset_icon', path = 'www/office.png', dimensions = c(100, 100)),
+                                              list(name = 'plus', path = 'www/add.png', dimensions = c(150, 150)),
                                               list(name= 'maconda_logo', path = 'www/maconda.png', dimensions = c(250,100)),
                                               list(name = 'sidebar_icon', path = 'www/detective.png', dimensions = c(60, 60))
                                               
@@ -218,7 +219,10 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                                      # - - leave magicball last - - 
                                                      magicball = list(title = "MagicBall",
                                                                       description = "Algorithm to predict molecular formula from m/z value",
-                                                                      image_id = "magicball")
+                                                                      image_id = "magicball"),
+                                                     custom = list(title = "Custom",
+                                                                   description = "Please select to start your own database creation!",
+                                                                   image_id = "plus")
                                                      )
 ),
 functions = list(# default color functions at startup, will be re-loaded from options
@@ -310,7 +314,8 @@ vectors = list(
               "maconda",
               "bloodexposome",
               "lipidmaps",
-              "magicball"
+              "magicball",
+              "custom"
   ),
   # list of positive adducts
   pos_adducts = adducts[Ion_mode == "positive",
@@ -364,6 +369,38 @@ global$vectors$wordcloud$skip <- unique(c( # manual curation(
                                     "would", LETTERS, letters, "acid", "cell", "cells", "human", "humans"),
                                   qdapDictionaries::Top200Words,
                                    global$vectors$db_list))
+
+# load in custom databases
+has.customs <- dir.exists(file.path(options$db_dir, "custom"))
+
+if(has.customs){
+  
+  print("loading custom dbs...")
+  
+  customs = list.files(path = file.path(options$db_dir, "custom"), 
+                       pattern = "\\.RData")
+  
+  dbnames = unique(tools::file_path_sans_ext(customs))
+  
+  for(db in dbnames){
+    print(db)
+    # add name to global
+    dblist <- global$vectors$db_list
+    dblist <- dblist[-which(dblist == "custom")]
+    dblist <- c(dblist, db, "custom")
+    global$vectors$db_list <- dblist
+    
+    metadata.path <- file.path(getOptions("user_options.txt")$db_dir, "custom", paste0(db, ".RData"))
+    load(metadata.path)
+    
+    # add description to global
+    global$constants$db.build.info[[db]] <- meta.dbpage
+    
+    # add image to global
+    maxi = length(global$constants$images)
+    global$constants$images[[maxi + 1]] <- meta.img 
+  }
+}
 
 # split <- strsplit(str, split = ",")[[1]]
 # split_words <- gsub(x = split, pattern = " ", replacement = "")

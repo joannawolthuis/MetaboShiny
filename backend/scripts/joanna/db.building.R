@@ -1542,7 +1542,7 @@ build.extended.db <- function(dbname,
       # --- return ---
       meta.table
     }
-    tab.list <- pbapply::pblapply(cl=session_cl, 1:nrow(adduct.table), FUN=function(x) do.calc(x))
+    tab.list <- pbapply::pblapply(cl=cl, 1:nrow(adduct.table), FUN=function(x) do.calc(x))
     #tab.list <- parallel::parLapply(cl=session_cl, 1:nrow(adduct.table), fun=function(x) do.calc(x))
     # --- progress bar... ---
     pbapply::setpb(pb, RSQLite::dbGetRowCount(results))
@@ -1904,3 +1904,62 @@ load.metadata.excel <- function(path.to.xlsx,
   # --- disconnect ---
   RSQLite::dbDisconnect(conn)
 }
+
+db.build.custom <- function(db.name = "MyDb", 
+                            db.short = "mydb",
+                            db.description = "Personal custom database.",
+                            db.icon = "www/questionmark.png",
+                            outfolder = getOptions("user_options.txt")$db_dir,
+                            csv){
+  
+  db.base = data.table::fread(csv)
+  
+  columns =  c("compoundname",  
+               "description", 
+               "baseformula", 
+               "identifier", 
+               "charge", 
+               "structure")
+  
+  keep.columns <- intersect(columns,colnames(db.base))
+  
+  db.formatted <- db.base[, ..keep.columns]
+  
+  if(all(is.na(db.formatted$identifier))){
+    db.formatted$identifier <- c(1:nrow(db.formatted))
+  }
+  
+  # check the formulas
+  checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
+                                                             db.formatted$baseformula))
+  db.formatted$baseformula <- checked$new_formula
+  keep <- checked[warning == FALSE, which = TRUE]
+  db.formatted <- db.formatted[keep]
+  
+  # open db
+  outfolder <- file.path(outfolder, "custom")
+  if(!dir.exists(outfolder)) dir.create(outfolder)
+  
+  db <- file.path(outfolder, paste0(db.short, ".base.db"))
+  if(file.exists(db)) file.remove(db)
+  print(db)
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), db)
+  RSQLite::dbExecute(conn, statement = "create table base(compoundname text, description text, baseformula text, identifier text, charge text, structure text)")
+  
+  print(db.formatted)
+  # create folder for db
+  RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
+  RSQLite::dbDisconnect(conn)
+  
+  # write metadata to file.. json?
+  meta.dbpage = 
+    list(title = db.name,
+         description = db.description,
+         image_id = paste0(db.short, "_icon"))
+  
+  meta.img = 
+    list(name = paste0(db.short, "_icon"), path = db.icon, dimensions = c(200, 200))
+  
+  save(list = c("meta.img", "meta.dbpage"), file = file.path(outfolder, paste0(db.short, ".RData")))
+}
+
