@@ -23,7 +23,7 @@ library(stringr)
 #' \code{sourceDir} searches the given directory for .R files and sources them into the current session.
 #' 
 #' @param path Path to search for scripts in.
-sourceDir <- function(path, trace = TRUE, ...) {
+sourceDir <- function(path, ...) {
   for (nm in list.files(path, pattern = "\\.[RrSsQq]$")) {
     #if(trace) cat(nm,":")           
     source(file.path(path, nm), ...)
@@ -383,7 +383,6 @@ if(has.customs){
   dbnames = unique(tools::file_path_sans_ext(customs))
   
   for(db in dbnames){
-    print(db)
     # add name to global
     dblist <- global$vectors$db_list
     dblist <- dblist[-which(dblist == "custom")]

@@ -131,11 +131,11 @@ shinyServer(function(input, output, session) {
     if(is.null(interface$mode)) {
       show.tabs <- c("inf")
     }else if(interface$mode == 'multivar'){ 
-      show.tabs <- c("pca", "aov", "heatmap", "enrich", "venn")
+      show.tabs <- c("inf","pca", "aov", "heatmap", "enrich", "venn")
     }else if(interface$mode == 'bivar'){  
-      show.tabs <- c("pca", "plsda", "tt", "fc", "volc", "heatmap", "ml", "enrich", "venn")
+      show.tabs <- c("inf","pca", "plsda", "tt", "fc", "volc", "heatmap", "ml", "enrich", "venn")
     }else if(interface$mode == 'time'){
-      show.tabs <- c("pca", "aov", "asca", "meba", "heatmap", "ml", "venn")
+      show.tabs <- c("inf", "pca", "aov", "asca", "meba", "heatmap", "ml", "venn")
     }else{
       show.tabs <- c("inf") # 'info' tab that loads when no data is loaded currently
     }
@@ -209,16 +209,14 @@ shinyServer(function(input, output, session) {
   
   # triggered when user enters the statistics tab
   observeEvent(input$statistics, {
-    
     # check if an mset is present, otherwise abort
     if(!exists("mSet")) return(NULL)
-    
+    print(input$statistics)
     # depending on the present tab, perform analyses accordingly
     if(input$statistics %not in% names(mSet$analSet)){
       statsmanager$calculate <- input$statistics
     }
     datamanager$reload <- input$statistics 
-    
   })
   
   observe({

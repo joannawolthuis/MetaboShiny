@@ -38,6 +38,19 @@ observe({
              }else{
                timebutton$status <- "off"
              }
+             # t-test...
+             
+             if("tt" %in% names(mSet$analSet)){
+               if("V" %in% colnames(mSet$analSet$tt$sig.mat)){
+                 updateCheckboxInput(session, "tt_nonpar", value = T)
+               }else{
+                 updateCheckboxInput(session, "tt_nonpar", value = F)
+               }
+             }else{
+               print("no tt done yet...")
+               updateCheckboxInput(session, "tt_nonpar", value = F)
+             }
+             
              # show a button with t-test or fold-change analysis if data is bivariate. hide otherwise.
              # TODO: add button for anova/other type of sorting...
              if(mSet$dataSet$cls.num == 2 ){
@@ -142,7 +155,7 @@ observe({
              })
            },
            pca = {
-             if("pca" %in% req(names(mSet$analSet))){
+             if("pca" %in% names(mSet$analSet)){
                # create PCA legend plot
                # TODO: re-enable this plot, it was clickable so you could filter out certain groups
                output$pca_legend <- plotly::renderPlotly({
@@ -197,6 +210,8 @@ observe({
                }
                
                # - - - - -
+               print(input$pca_2d3d)
+               
                if(input$pca_2d3d){ # check if switch button is in 2d or 3d mode
                  # render 2d plot
                  output$plot_pca <- plotly::renderPlotly({
@@ -216,7 +231,7 @@ observe({
                  })
                }
              }else{
-               
+               print("???")
              } # do nothing
            },
            plsda = {
@@ -327,7 +342,6 @@ observe({
              }
            },
            tt = {
-             
              # save results to table
              res <<- mSet$analSet$tt$sig.mat 
              
@@ -336,7 +350,6 @@ observe({
                mSet$analSet$tt <<- NULL
                
              }
-             
              # set buttons to proper thingy
              # render results table for UI
              output$tt_tab <-DT::renderDataTable({

@@ -1,36 +1,21 @@
 # reload plots (pca/plsda) if the 2d/3d button is triggered
 observeEvent(input$pca_2d3d, {
   datamanager$reload <- "pca"
-},ignoreInit = TRUE, ignoreNULL = T)
+}, ignoreNULL = T)
 
 observeEvent(input$plsda_2d3d, {
   datamanager$reload <- "plsda"
-},ignoreInit = TRUE, ignoreNULL = T)
-
-# tt
-
-output$tt_parbutton <- shiny::renderUI({
-  if("tt" %in% names(mSet$analSet)){
-    if("V" %in% colnames(mSet$analSet$tt$sig.mat)){
-      switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = T)
-    }else{
-      switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = F)
-    }
-  }else{
-    print("no tt done yet...")
-    switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = F)
-  }
-})
+}, ignoreNULL = T)
 
 observeEvent(input$tt_nonpar, {
   statsmanager$calculate <- "tt"
   datamanager$reload <- "tt"
-},ignoreInit = TRUE, ignoreNULL = T)
+},ignoreInit = TRUE)
 
 observeEvent(input$tt_eqvar, {
   statsmanager$calculate <- "tt"
   datamanager$reload <- "tt"
-},ignoreInit = TRUE, ignoreNULL = T)
+},ignoreInit = TRUE)
 
 # set default mode for heatmap top hits pick button (tt/fc or asca/meba)
 heatbutton <- reactiveValues(status = "ttfc")
