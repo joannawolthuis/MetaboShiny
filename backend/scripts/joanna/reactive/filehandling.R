@@ -9,6 +9,24 @@ observe({
   shinyFileChoose(input, 'custom_db_img_path', roots=global$paths$volumes, filetypes=c('png', 'jpg', 'jpeg', 'bmp'))
 })
 
+
+# observes if a new tbl csv is chosen by user
+observe({
+  # - - - - 
+  if(!is.list(input$custom_db)) return() # if nothing is chosen, do nothing
+  db_path <- parseFilePaths(global$paths$volumes, input$custom_db)$datapath
+  print(db_path)
+  preview <- data.table::fread(db_path, header = T, nrows = 3)
+
+  output$db_example <- DT::renderDataTable({
+    DT::datatable(data = preview,
+    options = list(searching = FALSE,
+                   paging = FALSE,
+                   info = FALSE))
+  })
+  
+})
+
 # observes if a new taskbar image is chosen by user
 observe({
   # - - - - 

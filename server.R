@@ -249,7 +249,7 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$select_db_all, {
 
-    dbs <- global$vectors$db_list
+    dbs <- global$vectors$db_list[-which(global$vectors$db_list == "custom")]
     
     currently.on <- sapply(dbs, function(db){
       input[[paste0("search_", db)]]
