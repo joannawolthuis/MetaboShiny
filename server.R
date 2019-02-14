@@ -325,7 +325,7 @@ shinyServer(function(input, output, session) {
   lapply(db_button_prefixes, function(prefix){
     output[[paste0("db_", prefix, "_select")]] <- renderUI({
       fluidRow(
-        lapply(global$vectors$db_list, function(db){
+        lapply(global$vectors$db_list[-which(global$vectors$db_list == "custom")], function(db){
           which_idx = grep(sapply(global$constants$images, function(x) x$name), pattern = db) # find the matching image (NAME MUST HAVE DB NAME IN IT COMPLETELY)
           sardine(fadeImageButton(inputId = paste0(prefix, "_", db), img.path = basename(global$constants$images[[which_idx]]$path))) # generate fitting html
         })
@@ -337,7 +337,7 @@ shinyServer(function(input, output, session) {
   lapply(db_button_prefixes, function(prefix){
     observe({
       # ---------------------------------
-      db_path_list <- lapply(global$vectors$db_list, # go through the dbs defined in db_lists
+      db_path_list <- lapply(global$vectors$db_list[-which(global$vectors$db_list == "custom")], # go through the dbs defined in db_lists
                              FUN = function(db){
                                button_id = input[[paste0(prefix, "_", db)]]
                                if(is.null(button_id)){
