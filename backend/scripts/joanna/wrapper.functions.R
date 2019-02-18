@@ -16,9 +16,7 @@ get.csv <-
     
     max.cols <- if(max.vals == -1) "unlimited" else max.vals + 3
     
-    cat(gsubfn::fn$paste("Creating csv for metabolomics analysis with max $max.cols columns.
-                         - Grouping by $groupfac
-                         - Using adducts $adducts"))
+    cat(gsubfn::fn$paste("Creating csv for metabolomics analysis with max $max.cols columns."))
     
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
     
@@ -34,7 +32,7 @@ get.csv <-
     }else{
       if(DBI::dbExistsTable(conn, "batchinfo")){
         query <- strwrap(gsubfn::fn$paste("select distinct d.*, s.*, b.batch, b.injection,
-                                        i.mzmed as identifier,
+                                          i.mzmed as identifier,
                                           i.intensity
                                           from mzintensities i
                                           join individual_data d
@@ -56,7 +54,6 @@ get.csv <-
                          width=10000,
                          simplify=TRUE)
       }
-      
       print(query)
       z = RSQLite::dbGetQuery(conn, query)
     }
@@ -66,10 +63,12 @@ get.csv <-
     cast.dt <- dcast.data.table(as.data.table(z), 
                                 formula = ... ~ identifier,
                                 fun.aggregate = sum, 
-                                value.var = "intensity",verbose = T) # what to do w/ duplicates? 
+                                value.var = "intensity",
+                                verbose = T) # what to do w/ duplicates? 
     
     cast.dt <<- cast.dt
     
+    #all(cast.dt[10,1:30] == cast.dt[11,1:30])
     # - - - check the first 100 rows for variables - - -
     
     as.numi <- as.numeric(colnames(cast.dt)[1:100])
@@ -98,6 +97,7 @@ get.csv <-
       small.set$time <- c(1)
     }
     
+    small.set$animal_internal_id[which(duplicated(small.set$animal_internal_id))]
     # check for time series
     if(any(duplicated(small.set$animal_internal_id))){
       print("detecting duplicates, assuming time series")
