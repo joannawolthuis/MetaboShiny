@@ -511,7 +511,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                              tabPanel(title=icon("chart-bar"),
                                                                                                                       plotly::plotlyOutput("curr_plot", height="300px", width="100%") %>% shinycssloaders::withSpinner()
                                                                                                              ),
-                                                                                                             tabPanel(title=icon("sparkle"),
+                                                                                                             tabPanel(title=icon("magic"),
                                                                                                                       h2("MagicBall settings"),
                                                                                                                       fluidRow(align="center",switchButton(inputId = "magicball_pubchem_cids",
                                                                                                                                                            label = "Check PubChem for predicted formulas?", 
