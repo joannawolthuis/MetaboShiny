@@ -511,6 +511,22 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                              tabPanel(title=icon("chart-bar"),
                                                                                                                       plotly::plotlyOutput("curr_plot", height="300px", width="100%") %>% shinycssloaders::withSpinner()
                                                                                                              ),
+                                                                                                             tabPanel(title=icon("sparkle"),
+                                                                                                                      h2("MagicBall settings"),
+                                                                                                                      fluidRow(align="center",switchButton(inputId = "magicball_pubchem_cids",
+                                                                                                                                                           label = "Check PubChem for predicted formulas?", 
+                                                                                                                                                           col = "BW", type = "YN", value = F)
+                                                                                                                      ),
+                                                                                                                      fluidRow(align="center",switchButton(inputId = "magicball_pubchem_details",
+                                                                                                                                                           label = "Get detailed PubChem matches? (SLOW!)", 
+                                                                                                                                                           col = "BW", type = "YN", value = F)
+                                                                                                                      ),
+                                                                                                                      fluidRow(align="center", helpText("Calculated adducts..")),
+                                                                                                                      
+                                                                                                                      fluidRow(column(6, div(DT::dataTableOutput('pos_add_tab'),style='font-size:60%')),
+                                                                                                                               column(6, div(DT::dataTableOutput('neg_add_tab'),style='font-size:60%')), 
+                                                                                                                               align="center")
+                                                                                                                      ),
                                                                                                              tabPanel(title=icon("star-half-alt"),
                                                                                                                       selectInput("iso_score_method", 
                                                                                                                                   "Which method used to score compounds of same weight?", 
@@ -522,13 +538,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                                                                #"Network-based"="network"
                                                                                                                                   )),
                                                                                                                       sliderInput("int_prec", label = "Intensity imprecision", min = 1, max = 100, value = 2, post = "%"),
-                                                                                                                      shinyWidgets::circleButton("score_iso", icon = icon("award"), size = "sm"), # icon("fingerprint"), size = "sm")
-                                                                                                                      hr(),
-                                                                                                                      h2("MagicBall settings"),
-                                                                                                                      fluidRow(align="center",switchButton(inputId = "search_pubchem",
-                                                                                                                                                           label = "Check PubChem for predicted formulas?", 
-                                                                                                                                                           col = "BW", type = "YN", value = F)
-                                                                                                                      )
+                                                                                                                      shinyWidgets::circleButton("score_iso", icon = icon("award"), size = "sm") # icon("fingerprint"), size = "sm")
                                                                                                              )
                                                                                                  ))),
                                                                       tabsetPanel(id="tab_iden_2",  

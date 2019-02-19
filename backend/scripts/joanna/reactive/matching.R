@@ -6,7 +6,9 @@ observeEvent(input$search_cpd, {
     global$tables$last_matches <<- unique(multimatch(curr_cpd, 
                                                      global$vectors$db_search_list,
                                                      inshiny = F,
-                                                     search_pubchem = input$search_pubchem)) # match with all
+                                                     search_pubchem = input$magicball_pubchem_cids,
+                                                     pubchem_detailed = input$magicball_pubchem_details,
+                                                     calc_adducts = global$vectors$add_list)) # match with all
     # - - -
     adduct_dist <- melt(table(global$tables$last_matches$adduct))
     db_dist <- melt(table(global$tables$last_matches$source))

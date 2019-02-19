@@ -3,10 +3,10 @@
 observe({
   modes = c("pos", "neg")
   lapply(modes, function(mode){
-    output[[paste0(mode, "add_tab")]] <- DT::renderDataTable({
+    output[[paste0(mode, "_add_tab")]] <- DT::renderDataTable({
       DT::datatable(global$vectors$pos_adducts,
                     selection = list(mode = 'multiple', 
-                                     selected = global$vectors[[paste0(mode, "selected_adducts")]], target="row"),
+                                     selected = global$vectors[[paste0(mode, "_selected_add")]], target="row"),
                     options = list(pageLength = 5, dom = 'tp'), 
                     rownames = F)
     })
@@ -57,14 +57,13 @@ observeEvent(input$nav_general, {
 )
 
 # triggers when 'update' button is pressed on the packages table tab
-observeEvent(input$update_packages, {
+observeEvent(input$update_packages, { 
   # use pacman package to update packages (should swap between normal installed and bioconductor)
   pacman::p_load(char = global$constants$packages, update = T, character.only = T)
   # refresh package list 
   pkg_tbl <- get.package.table() 
   # reload table
   output$package_tab <- DT::renderDataTable({
-    # - - - - - - - - - - -
     DT::datatable(pkg_tbl,
                   selection = 'none',
                   autoHideNavigation = T,

@@ -4,8 +4,8 @@ observe({
   wanted.adducts.pos <- global$vectors$pos_adducts[input$pos_add_tab_rows_selected, "Name"]
   wanted.adducts.neg <- global$vectors$neg_adducts[input$neg_add_tab_rows_selected, "Name"]
   # ---------
-  selected_adduct_list <<- rbind(wanted.adducts.neg, 
-                                 wanted.adducts.pos)$Name
+  global$vectors$add_list <<- rbind(wanted.adducts.neg, 
+                                       wanted.adducts.pos)$Name
 })
 
 

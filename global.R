@@ -290,10 +290,10 @@ tables = list(tbl = NA),
 vectors = list(
   remove_match_cols = c("description","structure", "baseformula", "dppm", "source"),
   # default indices of chosen adducts
-  pos_selected_add = c(1:3, nrow(adducts[Ion_mode == "positive",
-                                         c("Name")])),
-  neg_selected_add = c(1, 2, 14, 15, nrow(adducts[Ion_mode == "negative",
-                                                  c("Name")])),
+  pos_selected_add = c(2),#, nrow(adducts[Ion_mode == "positive",
+                          #               c("Name")])),
+  neg_selected_add = c(2),# 14, 15, nrow(adducts[Ion_mode == "negative",
+                          #                        c("Name")])),
   # list of available databases!!
   db_list = c( # this dermines the show order of dbs in the app
               #"internal",
