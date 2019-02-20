@@ -666,13 +666,19 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                            br(),
                                                                                            actionButton("browse_db", "Browse compounds", icon=icon("eye")),
                                                                                            hr(),
-                                                                                           div(DT::dataTableOutput('browse_tab'),style='font-size:80%'),
-                                                                                           hr(),
-                                                                                           div(textOutput("browse_definition"),style='font-size:80%'),
-                                                                                           hr(),
-                                                                                           actionButton("revsearch_cpd", "Find hits", icon=icon("search")),
-                                                                                           hr(),
-                                                                                           div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
+                                                                                           tabsetPanel(
+                                                                                             tabPanel(NULL, icon = icon("database"),
+                                                                                                      wellPanel(id = "def",style = "overflow-y:scroll; max-height: 200px",
+                                                                                                                textOutput("browse_definition")),
+                                                                                                      div(DT::dataTableOutput('browse_tab'),style='font-size:80%'),
+                                                                                                      hr(),
+                                                                                                      actionButton("revsearch_cpd", "Find hits", icon=icon("search"))
+                                                                                                      ),
+                                                                                             tabPanel(NULL, icon = icon("search-location"),
+                                                                                                      div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
+                                                                                                      )
+                                                                                           )
+                                                                                           
                                                                                   ))
                                                                                                ),
                                                              tabPanel(NULL, icon=icon("exchange")

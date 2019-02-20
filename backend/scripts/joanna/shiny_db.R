@@ -334,7 +334,6 @@ score.isos <- function(patdb, method="mscore", inshiny=TRUE, intprec){
 #' @export
 get_mzs <- function(baseformula, charge, chosen.db){
   # --- connect to db ---
-  req("patdb")
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb) # change this to proper var later
   query.zero <- gsubfn::fn$paste("ATTACH '$chosen.db' AS db")
   RSQLite::dbExecute(conn, query.zero)
@@ -361,9 +360,8 @@ get_mzs <- function(baseformula, charge, chosen.db){
   RSQLite::dbExecute(conn, query.two)
   # isofilter and only in
   query.three <-  strwrap(
-    "SELECT DISTINCT iso.mzmed, adduct
-    FROM isotopes iso
-    GROUP BY iso.adduct"
+    "SELECT DISTINCT iso.mzmed, adduct, iso.isoprevalence
+    FROM isotopes iso"
     #HAVING COUNT(iso.isoprevalence > 99.99999999999) > 0"
     , width=10000, simplify=TRUE)
   results <- RSQLite::dbGetQuery(conn,query.three)
