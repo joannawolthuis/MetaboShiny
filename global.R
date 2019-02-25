@@ -140,6 +140,7 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                               list(name = 'dataset_icon', path = 'www/office.png', dimensions = c(100, 100)),
                                               list(name = 'plus', path = 'www/add.png', dimensions = c(150, 150)),
                                               list(name= 'maconda_logo', path = 'www/maconda.png', dimensions = c(250,100)),
+                                              list(name= 'expoexplorer_logo', path = 'www/exposome_explorer.png', dimensions = c(250,100)),
                                               list(name = 'sidebar_icon', path = 'www/detective.png', dimensions = c(60, 60))
                                               
                                 ), # all image paths, if you add an image you can add it here
@@ -216,6 +217,9 @@ global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people
                                                      lipidmaps = list(title = "LIPID MAPS", 
                                                                     description = "The LIPID MAPS Structure Database (LMSD) is a relational database encompassing structures and annotations of biologically relevant lipids.",
                                                                     image_id = "lipidmaps_logo"),
+                                                     expoexplorer = list(title = "Exposome-Explorer", 
+                                                                      description = "Exposome-Explorer is the first database dedicated to biomarkers of exposure to environmental risk factors for diseases.",
+                                                                      image_id = "expoexplorer_logo"),
                                                      # - - leave magicball last - - 
                                                      magicball = list(title = "MagicBall",
                                                                       description = "Algorithm to predict molecular formula from m/z value",
@@ -313,6 +317,7 @@ vectors = list(
               "foodb",
               "maconda",
               "bloodexposome",
+              "expoexplorer",
               "lipidmaps",
               "magicball",
               "custom"

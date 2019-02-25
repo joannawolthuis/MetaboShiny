@@ -1208,6 +1208,94 @@ build.base.db <- function(dbname=NA,
                                maconda = function(dbname, ...){
                                  
                                  },
+                               expoexplorer = function(dbname, ...){
+                                 
+                                 file.url <- "http://exposome-explorer.iarc.fr/system/downloads/current/biomarkers.csv.zip"
+                                 
+                                 base.loc <- file.path(getOptions("user_options.txt")$db_dir, "exex_source")
+                                 
+                                 if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
+                                 zip.file <- file.path(base.loc, "expoexpo_comp.zip")
+                                 utils::download.file(file.url, zip.file,mode = "w")
+                                 utils::untar(zip.file, exdir = base.loc)
+                                 
+                                 base.table <- data.table::fread(file = file.path(base.loc, "biomarkers.csv"))
+                                 
+                                 db.formatted <- data.table::data.table(compoundname = base.table$Name,
+                                                                        description = base.table$Description,
+                                                                        baseformula = base.table$Formula, 
+                                                                        identifier= base.table$ID,
+                                                                        charge= c(NA),
+                                                                        structure= base.table$SMILES)
+                                 
+                                 db.formatted <- unique(db.formatted)
+                                 
+                                 # - - use correlations to get some custom descriptions :) - -
+                                 
+                                 file.url <- "http://exposome-explorer.iarc.fr/system/downloads/current/correlation_values.csv.zip"
+                                 
+                                 zip.file <- file.path(base.loc, "expoexpo_corr.zip")
+                                 utils::download.file(file.url, zip.file,mode = "w")
+                                 utils::untar(zip.file, exdir = base.loc)
+                                 
+                                 corr.table <- data.table::fread(file = file.path(base.loc, "correlation_values.csv"))
+                                 
+                                 descriptions <- pbapply::pbsapply(1:nrow(corr.table), function(i){
+                                   row = corr.table[i,]
+                                   desc <- paste("Found in", R.utils::decapitalize(row$Biospecimen),
+                                                 "of", R.utils::decapitalize(row$`Subject group`), 
+                                                 "under", R.utils::decapitalize(row$Population), 
+                                                 "in", row$Country, 
+                                                 "after taking in", R.utils::decapitalize(row$Intake),
+                                                 paste0("(", row$`Analytical method`, ", p ", row$`Correlation p-value`, ")."))
+                                 })
+                                 
+                                 corr.table$`Pasted` <- descriptions
+                                 
+                                 df <- corr.table[,c("Excretion ID", "Pasted")]
+                                 aggr = aggregate( Pasted ~ `Excretion ID`, df, function(x) toString(paste(unique(x),collapse = " ")))
+                                 
+                                 final.table <- merge(db.formatted, aggr, by.x = "identifier", by.y = "Excretion ID", all.x=T)
+                                 
+                                 final.table$description <- pbapply::pbsapply(1:nrow(final.table), function(i){
+                                   row = final.table[i,]
+                                   a = if(!is.na(row$description) & row$description != "NA") row$description else ""
+                                   b = row$Pasted
+                                   paste0(a,b)
+                                 })
+                                   
+                                 db.formatted <- final.table[,-"Pasted"]
+                                 
+                                 # - - - 
+                                 
+                                 missing.charges <- which(is.na(db.formatted$charge))
+                                 
+                                 charges <- pbapply::pbsapply(missing.charges, cl=0, function(i, db){
+                                   smi = db[i, "structure"][[1]]
+                                   charge = 0 # set default placeholder to zero, seems like a decent assumption
+                                   try({
+                                     iatom <- rcdk::parse.smiles(smi)[[1]]
+                                     charge = rcdk::get.total.charge(iatom)
+                                   })
+                                   charge
+                                 }, db = db.formatted)
+                                 
+                                 db.formatted$charge[missing.charges] <- charges
+                                 # --- check formulae ---
+                                 checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
+                                                                                            db.formatted$baseformula))
+                                 
+                                 db.formatted$baseformula <- checked$new_formula
+                                 
+                                 missing.formula <- which(checked$warning)
+                                 
+                                 db.formatted <- db.formatted[-missing.formula,]
+                                 
+                                 # - - - 
+                                 
+                                 RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
+                                 
+                               },
                                foodb = function(dbname, ...){
                                  
                                  file.url <- "http://www.foodb.ca/system/foodb_2017_06_29_csv.tar.gz"
@@ -1326,22 +1414,11 @@ build.extended.db <- function(dbname,
                               cl = 0,
                               fetch.limit = -1,
                               cpd.limit = -1){
-  # ------------------------
-  
-  # build.base.db("internal")
-  # dbname = "noise"
-  # outfolder = getOptions("user_options.txt")$db_dir
-  # adduct.table = adducts
-  # continue = F
-  # cpd.limit = 100
-  # fetch.limit = 100
-  
-  # ------------------------
+
   data(isotopes, package = "enviPat")
   base.db <- file.path(outfolder, paste0(dbname, ".base.db"))
   full.db <- file.path(outfolder, paste0(dbname, ".full.db"))
-  # ------------------------
-  
+
   full.conn <- RSQLite::dbConnect(RSQLite::SQLite(), full.db)
   base.conn <- RSQLite::dbConnect(RSQLite::SQLite(), base.db)
   
@@ -1470,16 +1547,6 @@ build.extended.db <- function(dbname,
       
       # --- get isotopes ---
       
-      # base_mzs <- enviPat::isopattern(
-      #   isotopes,
-      #   backtrack$baseformula, #backtrack$final,
-      #   threshold = 0.1,
-      #   plotit = FALSE,
-      #   charge = FALSE, #backtrack$final.charge,
-      #   algo = 2,
-      #   verbose = FALSE
-      # )
-      
       isotables <- enviPat::isopattern(
         isotopes,
         backtrack$final,
@@ -1489,24 +1556,6 @@ build.extended.db <- function(dbname,
         algo = 2,
         verbose = FALSE
       )
-      
-      # for(i in 1:length(full_mzs)){
-      #   match = all(full_mzs[[i]][,"abundance"] == base_mzs[[i]][,"abundance"])
-      #   # - - -
-      #   if(!match){
-      #     print(nrow(base_mzs[[i]]))
-      #     # print(gsubfn::fn$paste("--- M ---"))
-      #     # print(base_mzs[[i]])
-      #     # print(gsubfn::fn$paste("--- $name ---"))
-      #     # print(full_mzs[[i]])
-      #     # replace
-      #     full_mzs[[i]] <- full_mzs[[i]][1:nrow(base_mzs[[i]]),]
-      #     full_mzs[[i]][,"abundance"] <- full_mzs[[i]][,"abundance"]
-      #   }
-      #   #print(full_mzs[[i]])
-      # }
-      # print("here???")
-      # -------------------------
       
       isolist <- lapply(isotables, function(isotable){
         #print(isotable)
