@@ -118,4 +118,3 @@ close.connection(con)
 
 # go run it! :-)
 shiny::runApp(".")#, launch.browser = T)
-
