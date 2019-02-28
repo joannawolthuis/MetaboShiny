@@ -80,7 +80,8 @@ input <- list(batch_var = c(""),
               intersect_venn = c("disease: tt", "sex: tt"),
               heatmap_topn = 100,
               timecourse_trigger = F
-)}
+)
+}
 
 venn_yes <- list(now = data.frame(included = c(
   "tt (disease)",

@@ -213,27 +213,58 @@ observeEvent(input$do_ml, {
         training <- curr[inTrain, -"label"]
         testing <- curr[inTest, -"label"]
         
-        # ======= WIP =======
         
-        # caret method?
-     
-        # require(caret)
+        
+        # ======= WIP =======
         # 
-        # fit <- train(
+        # # all methods
+        # caret.mdls <- getModelInfo()
+        # caret.methods <- names(caret.mdls)
+        # tune.opts <- lapply(caret.methods, function(mdl) caret.mdls[[mdl]]$parameters)
+        # names(tune.opts) <- caret.methods
+        # 
+        # # caret method?
+        # 
+        # require(caret)
+        #  
+        # training <- curr[inTrain,]
+        # testing <- curr[inTest,]
+        # 
+        # trainCtrl <- trainControl(verboseIter = T,
+        #                           method="repeatedcv",
+        #                           number=10,
+        #                           repeats=3)
+        # 
+        # tuneGrid=expand.grid(
+        #   alpha = 1,
+        #   lambda = 0
+        #   )
+        # 
+        # fitls <- train(
         #   label ~ .,
         #   data = training,
         #   method = "glmnet",
         #   ## Center and scale the predictors for the training
         #   ## set and all future samples.
-        #   preProc = c("center", "scale")
+        #   preProc = c("center", "scale"),
+        #   tuneGrid = tuneGrid,
+        #   trControl = trainCtrl
         # )
+        
+        # rfTuneGrid = expand.grid(
+        #   .mtry=3
+        #   )
         # 
-        # fitControl <- trainControl(## 10-fold CV
-        #   method = "repeatedcv",
-        #   number = 10,
-        #   ## repeated ten times
-        #   repeats = 10)
-        # 
+        # fitrf <- train(
+        #   label ~ .,
+        #   data = training,
+        #   method = "rf",
+        #   ## Center and scale the predictors for the training
+        #   ## set and all future samples.
+        #   preProc = c("center", "scale"),
+        #   ntree=10,
+        #   tuneGrid = rfTuneGrid
+        # )
         
         # train and cross validate model
         switch(input$ml_method,
