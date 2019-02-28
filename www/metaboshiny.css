@@ -24,10 +24,16 @@
   display: none;
 }
 
+.outlined {
+ font-size: 1.5em;
+ -webkit-text-stroke: .5px #000;
+ -webkit-text-fill-color: white;
+}
+
 /* rainbow gradient line */
 
 .line {
-  height: 5px;
+  height: 10px;
   width: calc(100% - 190px);
   position: absolute;
   top: 52px;
@@ -258,9 +264,9 @@
   /*filter: invert(100%);*/
   margin-top: 20px;
   margin-left: 15px;
-    -webkit-filter: drop-shadow(2px 1px 0 black)
+    -webkit-filter: drop-shadow(1px 1px 0 black)
                   drop-shadow(-1px -1px 0 black);
-  filter: drop-shadow(2px 1px 0 black) 
+  filter: drop-shadow(1px 1px 0 black) 
           drop-shadow(-1px -1px 0 black);
 }
 
@@ -271,9 +277,9 @@
   animation:spin 30s linear infinite;
   margin-top: -60px;
   margin-left: 15px;
-    -webkit-filter: drop-shadow(2px 1px 0 black)
+    -webkit-filter: drop-shadow(1px 1px 0 black)
                   drop-shadow(-1px -1px 0 black);
-  filter: drop-shadow(2px 1px 0 black) 
+  filter: drop-shadow(1px 1px 0 black) 
           drop-shadow(-1px -1px 0 black);
 }
 
