@@ -94,6 +94,7 @@ font.css <- function(font.h1 = "Press Start 2P",
   line-height: 0.5;
   -webkit-text-stroke-color: black;
   -webkit-text-stroke-width: 1.00px;
+  z-index:99998 !important;
   }
   
   h2 {

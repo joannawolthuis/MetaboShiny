@@ -171,15 +171,15 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                     imageOutput("dataset_upload_check",inline = T)
                     ), column(9, 
                               # show the summary plots post-normalization 
-                              navbarPage(inverse=TRUE,"Explore",
-                                         tabPanel("Variables", icon=icon("braille"),
+                              navbarPage(inverse=TRUE,h3("Explore"),
+                                         tabPanel(h3("Variables"), icon=icon("braille"),
                                                   fluidRow(column(6,plotOutput("var1",height='300px')),
                                                            column(6,plotOutput("var3", height='300px'))
                                                   ),
                                                   fluidRow(column(6,plotOutput("var2", height='500px')),
                                                            column(6,plotOutput("var4", height='500px')))
                                          ),
-                                         tabPanel("Samples", icon=icon("tint"),
+                                         tabPanel(h3("Samples"), icon=icon("tint"),
                                                   fluidRow(column(6,plotOutput("samp1",height='300px')),
                                                            column(6,plotOutput("samp3", height='300px'))
                                                   ),
@@ -192,7 +192,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
            tabPanel("",  icon = icon("bar-chart"), value = "analysis",
                     sidebarLayout(position="right",
                                   mainPanel = mainPanel(width = 8,
-                                                        navbarPage(inverse=F,h2("Statistics"), id="statistics", selected = "pca", collapsible = T,
+                                                        navbarPage(inverse=F,h3("Statistics"), id="statistics", selected = "pca", collapsible = T,
                                                                    # TODO: T-SNE
                                                                    # this tab shows general information, mostly a message with 'please give me some data' :-) 
                                                                    tabPanel(icon("star"), value = "inf",
@@ -208,7 +208,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                             #icon("arrow-right","fa-lg"), icon("arrow-right","fa-lg"), icon("arrow-right","fa-lg")
                                                                             ))),
                                                                    # loading this tab performs PCA. summary and loading tables, alongside a 2d/3d PCA plot, are available here.
-                                                                   tabPanel(h3("PCA"), value = "pca", #icon=icon("cube"),
+                                                                   tabPanel(h3("pca"), value = "pca", #icon=icon("cube"),
                                                                             fluidRow(align="center",column(12,plotly::plotlyOutput("plot_pca",height = "600px", width="600px") %>% shinycssloaders::withSpinner())),
                                                                             fluidRow(align="center",column(12,
                                                                                                            switchButton("pca_2d3d", label = "", col = "BW", type = "2d3d"))),
@@ -231,7 +231,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                    ),
                                                                    # TODO: enable the sparse and orthogonal PLS-DA options in metaboanalystR
                                                                    # this tab is used to perform pls-da. it triggers on 'go' button as it is a time costly analysis.
-                                                                   tabPanel(h3("PLSDA"), value = "plsda", 
+                                                                   tabPanel(h3("pls-da"), value = "plsda", 
                                                                             fluidRow(align="center",column(12,plotly::plotlyOutput("plot_plsda",height = "500px", width="500px"))),
                                                                             fluidRow(align="center",column(12,
                                                                                                            switchButton("plsda_2d3d", label = "", col = "BW", type = "2d3d"))),
@@ -265,7 +265,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                             ))
                                                                             )
                                                                    ),
-                                                                   tabPanel(h3("T-test"), value="tt", 
+                                                                   tabPanel(h3("t-test"), value="tt", 
                                                                             fluidRow(plotly::plotlyOutput('tt_specific_plot',width="100%")),
                                                                             fluidRow(align="center",
                                                                                      sardine(switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = T)),
@@ -279,7 +279,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                  plotly::plotlyOutput('tt_overview_plot',height="300px") %>% shinycssloaders::withSpinner()
                                                                                        )
                                                                             )),
-                                                                   tabPanel(h3("ANOVA"), value="aov",
+                                                                   tabPanel(h3("anova"), value="aov",
                                                                             fluidRow(plotly::plotlyOutput('aov_specific_plot',width="100%")),
                                                                             navbarPage(inverse=F,"",
                                                                                        tabPanel("", icon=icon("table"),
@@ -288,7 +288,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                  plotly::plotlyOutput('aov_overview_plot',height="300px") %>% shinycssloaders::withSpinner()
                                                                                        )
                                                                             )),
-                                                                   tabPanel(h3("Fold-change"), value="fc",
+                                                                   tabPanel(h3("fold-change"), value="fc",
                                                                             fluidRow(plotly::plotlyOutput('fc_specific_plot',width="100%")),
                                                                             navbarPage(inverse=F,"",
                                                                                        tabPanel("", icon=icon("table"),
@@ -297,19 +297,19 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                                  plotly::plotlyOutput('fc_overview_plot',height="300px") %>% shinycssloaders::withSpinner()
                                                                                        ))
                                                                    ),
-                                                                   tabPanel(h3("Volcano"), value="volc",
+                                                                   tabPanel(h3("volc"), value="volc",
                                                                             fluidRow(plotly::plotlyOutput('volc_plot',width="100%",height="600px") %>% shinycssloaders::withSpinner()),
                                                                             fluidRow(div(DT::dataTableOutput('volc_tab',width="100%"),style='font-size:80%'))
                                                                    ),
-                                                                   tabPanel(h3("MEBA"), value="meba", 
+                                                                   tabPanel(h3("meba"), value="meba", 
                                                                             fluidRow(plotly::plotlyOutput('meba_specific_plot',height="600px")),
                                                                             fluidRow(div(DT::dataTableOutput('meba_tab', width="100%"),style='font-size:80%'))
                                                                    ),
-                                                                   tabPanel(h3("ASCA"), value="asca",
+                                                                   tabPanel(h3("asca"), value="asca",
                                                                             fluidRow(plotly::plotlyOutput('asca_specific_plot', height="600px")),
                                                                             fluidRow(div(DT::dataTableOutput('asca_tab',width="100%"),style='font-size:80%'))
                                                                    ),
-                                                                   tabPanel(h3("Heatmap"), value="heatmap",
+                                                                   tabPanel(h3("heat"), value="heatmap",
                                                                             plotly::plotlyOutput("heatmap",width="100%",height="700px") %>% shinycssloaders::withSpinner(),
                                                                             br(),
                                                                             fluidRow(column(align="center",
@@ -324,7 +324,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                             )) 
                                                                    ),
                                                                    # this tab enables mummichog pathway analysis (using their own databases...)
-                                                                   tabPanel(h3("Enrichment"), value = "enrich",
+                                                                   tabPanel(h3("mummichog"), value = "enrich",
                                                                             sidebarLayout(position = "left",
                                                                                           sidebarPanel = sidebarPanel(width=3,
                                                                                                                       fluidRow(align="center", selectInput("mummi_org",label = "Organism DB:",choices = list(
@@ -388,7 +388,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                           ))
                                                                    ),
                                                                    # this tab enables machine learning
-                                                                   tabPanel(h3("ML"), value = "ml",
+                                                                   tabPanel(h3("machine learning"), value = "ml",
                                                                             fluidRow(
                                                                               column(width=3,align="center",
                                                                                      selectInput("ml_method", 
@@ -459,7 +459,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                    ),
                                                                    # this tab is used to find overlapping features of interest between analyses
                                                                    # TODO: enable this with multiple saved mSets in mSet$storage
-                                                                   tabPanel(title=h3("Venn"), value="venn",
+                                                                   tabPanel(title=h3("venn diagrams"), value="venn",
                                                                             sidebarLayout(position = "left",
                                                                                           sidebarPanel = sidebarPanel(
                                                                                             fluidRow(div(DT::dataTableOutput('venn_unselected'),style='font-size:80%'), align="center"),

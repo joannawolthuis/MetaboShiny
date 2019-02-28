@@ -1103,31 +1103,38 @@ build.base.db <- function(dbname=NA,
                                  
                                  RSQLite::dbWriteTable(conn, "base", db.formatted[, lapply(.SD, as.character),], overwrite=TRUE)
                                  
+                               }, mona = function(dbname, ...){
+                                 json <- jsonlite::read_json("~/Downloads/MoNA-export-All_Spectra.json")
+                                 
                                }, knapsack = function(dbname, ...){
                                  # TOO SLOW 
-                                 # url <- "http://kanaya.naist.jp/KNApSAcK/"
-                                 # response <- XML::htmlParse(url)
-                                 # tab <- as.data.table(XML::readHTMLTable(response)[[1]])
-                                 # metab_count <- as.numeric(gsub(tab[V1 == "metabolite", 2], pattern = " entries", replacement = ""))
-                                 # 
-                                 # url2 = "http://kanaya.naist.jp/knapsack_jsp/information.jsp?sname=C_ID&word=C00001001"
-                                 # response <- XML::htmlParse(url2)
-                                 # 
-                                 # 
-                                 # url <- "http://kanaya.naist.jp/knapsack_jsp/information.jsp?sname=C_ID&word="
-                                 # hrefs <- list()
-                                 # 
-                                 # max_digits = 8 #C00000001
-                                 # ids <- sapply(1:metab_count, function(i){
-                                 #   paste0("C", str_pad(i, max_digits, pad = "0"))
-                                 #   })
-                                 # cl = makeCluster(3, "FORK")
-                                 # responses = pbapply::pblapply(ids, cl=session_cl, function(id){
-                                 #   #print(id)
-                                 #   response <- XML::htmlParse(paste0(url,id))
-                                 #   # - - - return - - -
-                                 #   response
-                                 # })
+                                 require(data.table)
+                                 url <- "http://kanaya.naist.jp/KNApSAcK/"
+                                 response <- XML::htmlParse(url)
+                                 tab <- as.data.table(XML::readHTMLTable(response)[[1]])
+                                 metab_count <- as.numeric(gsub(tab[V1 == "metabolite", 2], pattern = " entries", replacement = ""))
+
+                                 #url2 = "http://kanaya.naist.jp/knapsack_jsp/information.jsp?sname=C_ID&word=C00001001"
+                                 #response <- XML::htmlParse(url2)
+
+
+                                 url <- "http://kanaya.naist.jp/knapsack_jsp/information.jsp?sname=C_ID&word="
+                                 hrefs <- list()
+
+                                 max_digits = 8 #C00000001
+                                 ids <- sapply(1:metab_count, function(i){
+                                   paste0("C", stringr::str_pad(i, max_digits, pad = "0"))
+                                   })
+                                 #cl = makeCluster(3, "FORK")
+                                 responses = pbapply::pblapply(ids, cl=0, function(id){
+                                   print(id)
+                                   response <- XML::readHTMLTable(paste0(url,id))
+                                   # - - - return - - -
+                                   response
+                                 })
+                                 
+                                 
+                                 
                                }, respect = function(dbname, ...){
                                  # - - download reSpect database, phytochemicals - - 
                                  

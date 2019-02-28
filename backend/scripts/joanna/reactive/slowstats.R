@@ -133,13 +133,6 @@ observeEvent(input$do_ml, {
     curr <- curr[,colSums(is.na(curr)) < nrow(curr), with=FALSE]
     # remove rows with all NA
     curr <- curr[complete.cases(curr),]
-    # identify which columns are metabolites and which are config/covars
-    configCols <- which(!(gsub(x = colnames(curr), pattern = "_T\\d", replacement="") %in% colnames(mSet$dataSet$norm)))
-    mzCols <- which(gsub(x = colnames(curr), pattern = "_T\\d", replacement="") %in% colnames(mSet$dataSet$norm))
-    
-    # make the covars factors and the metabolites numeric.
-    curr[,(configCols):= lapply(.SD, function(x) as.factor(x)), .SDcols = configCols]
-    curr[,(mzCols):= lapply(.SD, function(x) as.numeric(x)), .SDcols = mzCols]
     
     # how many models will be built? user input
     goes = as.numeric(input$ml_attempts)
@@ -153,12 +146,25 @@ observeEvent(input$do_ml, {
     
     if(all(global$vectors$ml_test == global$vectors$ml_train)){
       print("no can do, need to test on something else than train!!!")
-      if(all(global$vectors$ml_test == c("all", "all"))){
+      if(unique(global$vectors$ml_test) == "all"){
         print("nothing selected... continuing in normal non-subset mode")
       }else{
         return(NULL)
       }
     }
+    
+    # identify which columns are metabolites and which are config/covars
+    configCols <- which(!(gsub(x = colnames(curr), pattern = "_T\\d", replacement="") %in% colnames(mSet$dataSet$norm)))
+    mzCols <- which(gsub(x = colnames(curr), pattern = "_T\\d", replacement="") %in% colnames(mSet$dataSet$norm))
+    
+    # make the covars factors and the metabolites numeric.
+    curr[,(configCols):= lapply(.SD, function(x) as.factor(x)), .SDcols = configCols]
+    curr[,(mzCols):= lapply(.SD, function(x) as.numeric(x)), .SDcols = mzCols]
+    
+    # - remove columns with only 1 factor -
+    
+    rmv.configCols <- which(sapply(configCols, function(i, curr) ifelse(length(levels(as.factor(curr[,..i][[1]]))) == 1, TRUE, FALSE), curr = curr))
+    curr[, (rmv.configCols) := NULL]
     
     # ============ LOOP HERE ============
     
@@ -170,19 +176,15 @@ observeEvent(input$do_ml, {
                                           test_vec = test_vec...){
       shiny::isolate({
         
-        # get regex user input for filtering testing and training set
-        ml_train_regex <- "" #input$ml_train_regex
-        ml_test_regex <- "" #input$ml_test_regex
-        
         # get user training percentage
         ml_train_perc <- input$ml_train_perc/100
         
-        if(all(train_vec == c("all","all")) & all(test_vec == c("all", "all")) ){ # BOTH ARE NOT DEFINED
+        if(unique(train_vec)[1] == "all" & unique(test_vec)[1] == "all"){ # BOTH ARE NOT DEFINED
           test_idx = caret::createDataPartition(y = curr$label, p = ml_train_perc, list = FALSE) # partition data in a balanced way (uses labels)
           train_idx = setdiff(1:nrow(curr), test_idx) #use the other rows for testing
           inTrain = train_idx
           inTest = test_idx
-        }else if(all(train_vec != c("all","all"))){ #ONLY TRAIN IS DEFINED
+        }else if(unique(train_vec)[1] != "all"){ #ONLY TRAIN IS DEFINED
           train_idx <- which(config[,train_vec[1], with=F][[1]] == train_vec[2])
           #train_idx = grep(config$sample, pattern = ml_train_regex) # get training sample ids with regex
           test_idx = setdiff(1:nrow(curr), train_idx) # use the other rows for testing
@@ -207,19 +209,31 @@ observeEvent(input$do_ml, {
                       ..predictor][[1]]
         
         # remove predictive column from training set 
-        remove.cols <- c("label") #TODO: make group column removed at start
-        remove.idx <- which(colnames(curr) %in% remove.cols)
-        training <- curr[inTrain,-remove.idx, with=FALSE]
-        testing <- curr[inTest,-remove.idx, with=FALSE]
+        #remove.cols <- c("label") #TODO: make group column removed at start
+        training <- curr[inTrain, -"label"]
+        testing <- curr[inTest, -"label"]
         
-        # get covar indices
-        predIdx <- which(colnames(curr) %in% colnames(config))
+        # ======= WIP =======
         
-        # remove unused levels in the factor part of the table after filtering
-        training <- data.matrix(gdata::drop.levels(training))
-        testing <- data.matrix(gdata::drop.levels(testing))
-        
-        #shiny::setProgress(value = i/goes)
+        # caret method?
+     
+        # require(caret)
+        # 
+        # fit <- train(
+        #   label ~ .,
+        #   data = training,
+        #   method = "glmnet",
+        #   ## Center and scale the predictors for the training
+        #   ## set and all future samples.
+        #   preProc = c("center", "scale")
+        # )
+        # 
+        # fitControl <- trainControl(## 10-fold CV
+        #   method = "repeatedcv",
+        #   number = 10,
+        #   ## repeated ten times
+        #   repeats = 10)
+        # 
         
         # train and cross validate model
         switch(input$ml_method,
@@ -294,7 +308,7 @@ observeEvent(input$do_ml, {
                  NULL
                })
       })
-    }, train_vec = global$vectors$ml_train, test_vec = global$vectors_ml_test) # for session_cl
+    }, train_vec = global$vectors$ml_train, test_vec = global$vectors$ml_test) # for session_cl
     # check if a storage list for machine learning results already exists
     if(!"ml" %in% names(mSet$analSet)){
       

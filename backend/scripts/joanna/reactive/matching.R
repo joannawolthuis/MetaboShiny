@@ -16,97 +16,99 @@ observeEvent(input$search_cpd, {
     if(nrow(global$tables$last_matches) > 0){
       # render word cloud
       
-      res = {
-        # remove unwanted words (defined in global) from description
-        filtered_descriptions <- sapply(1:length(global$tables$last_matches$description), 
-                                        function(i){
-                                          # get description
-                                          desc <- global$tables$last_matches$description[[i]]
-                                          # return
-                                          desc
+      try({
+        res = {
+          # remove unwanted words (defined in global) from description
+          filtered_descriptions <- sapply(1:length(global$tables$last_matches$description), 
+                                          function(i){
+                                            # get description
+                                            desc <- global$tables$last_matches$description[[i]]
+                                            # return
+                                            desc
                                           })
+          
+          require(tm)
+          
+          docs <- tm::VCorpus(tm::VectorSource(filtered_descriptions))
+          
+          # Convert all text to lower case
+          docs <- tm::tm_map(docs, tm::content_transformer(tolower))
+          
+          # Remove punctuations
+          docs <- tm::tm_map(docs, tm::removePunctuation)
+          
+          # Remove numbers
+          docs <- tm::tm_map(docs, tm::removeNumbers)
+          
+          # Remove english common stopwords
+          docs <- tm::tm_map(docs, tm::removeWords, tm::stopwords("english"))
+          # Remove your own stop word
+          # ADD stopwords as a character vector
+          docs <- tm::tm_map(docs, tm::removeWords, global$vectors$wordcloud$skip) 
+          
+          # Remove whitespace
+          docs <- tm::tm_map(docs, tm::stripWhitespace)
+          
+          # # Text stemming
+          # docs <- tm_map(docs, stemDocument)
+          
+          doc_mat <- tm::TermDocumentMatrix(docs)
+          
+          m <- as.matrix(doc_mat)
+          
+          v <- sort(rowSums(m), decreasing = TRUE)
+          
+          word_freq <- data.frame(name = names(v), value = v)
+          
+          # - - return - - 
+          
+          head(word_freq, 30)
+        }
         
-        require(tm)
+        wordcloud_plot <- wordcloud2::wordcloud2(data = data.frame(word = res$name,
+                                                                   freq = res$value), 
+                                                 size = 0.7, 
+                                                 shuffle = FALSE,
+                                                 fontFamily = options$font4,
+                                                 ellipticity = 1, 
+                                                 minRotation = -pi/8, 
+                                                 maxRotation = pi/8,
+                                                 shape = 'heart')
+        output$wordcloud_desc  <- wordcloud2::renderWordcloud2(wordcloud_plot)
         
-        docs <- tm::VCorpus(tm::VectorSource(filtered_descriptions))
+        global$vectors$pie_add <<- adduct_dist$Var1
         
-        # Convert all text to lower case
-        docs <- tm::tm_map(docs, tm::content_transformer(tolower))
+        output$match_pie_add <- plotly::renderPlotly({
+          plot_ly(adduct_dist, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
+                  textposition = 'inside',
+                  textinfo = 'label+percent',
+                  insidetextfont = list(color = '#FFFFFF'),
+                  hoverinfo = 'text',
+                  text = ~paste0(Var1, ": ", value, ' matches'),
+                  marker = list(colors = colors,
+                                line = list(color = '#FFFFFF', width = 1)),
+                  #The 'pull' attribute can also be used to create space between the sectors
+                  showlegend = FALSE) %>%
+            layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                   yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+        })
         
-        # Remove punctuations
-        docs <- tm::tm_map(docs, tm::removePunctuation)
+        global$vectors$pie_db <<- db_dist$Var1
         
-        # Remove numbers
-        docs <- tm::tm_map(docs, tm::removeNumbers)
-        
-        # Remove english common stopwords
-        docs <- tm::tm_map(docs, tm::removeWords, tm::stopwords("english"))
-        # Remove your own stop word
-        # ADD stopwords as a character vector
-        docs <- tm::tm_map(docs, tm::removeWords, global$vectors$wordcloud$skip) 
-        
-        # Remove whitespace
-        docs <- tm::tm_map(docs, tm::stripWhitespace)
-        
-        # # Text stemming
-        # docs <- tm_map(docs, stemDocument)
-        
-        doc_mat <- tm::TermDocumentMatrix(docs)
-        
-        m <- as.matrix(doc_mat)
-        
-        v <- sort(rowSums(m), decreasing = TRUE)
-        
-        word_freq <- data.frame(name = names(v), value = v)
-        
-        # - - return - - 
-        
-        head(word_freq, 30)
-      }
-      
-      wordcloud_plot <- wordcloud2::wordcloud2(data = data.frame(word = res$name,
-                                                                 freq = res$value), 
-                                               size = 0.7, 
-                                               shuffle = FALSE,
-                                               fontFamily = options$font4,
-                                               ellipticity = 1, 
-                                               minRotation = -pi/8, 
-                                               maxRotation = pi/8,
-                                               shape = 'heart')
-      output$wordcloud_desc  <- wordcloud2::renderWordcloud2(wordcloud_plot)
-      
-      global$vectors$pie_add <<- adduct_dist$Var1
-      
-      output$match_pie_add <- plotly::renderPlotly({
-        plot_ly(adduct_dist, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
-                textposition = 'inside',
-                textinfo = 'label+percent',
-                insidetextfont = list(color = '#FFFFFF'),
-                hoverinfo = 'text',
-                text = ~paste0(Var1, ": ", value, ' matches'),
-                marker = list(colors = colors,
-                              line = list(color = '#FFFFFF', width = 1)),
-                #The 'pull' attribute can also be used to create space between the sectors
-                showlegend = FALSE) %>%
-          layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-                 yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
-      })
-      
-      global$vectors$pie_db <<- db_dist$Var1
-      
-      output$match_pie_db <- plotly::renderPlotly({
-        plot_ly(db_dist, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
-                textposition = 'inside',
-                textinfo = 'label+percent',
-                insidetextfont = list(color = '#FFFFFF'),
-                hoverinfo = 'text',
-                text = ~paste0(Var1, ": ", value, ' matches'),
-                marker = list(colors = colors,
-                              line = list(color = '#FFFFFF', width = 1)),
-                #The 'pull' attribute can also be used to create space between the sectors
-                showlegend = FALSE) %>%
-          layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-                 yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+        output$match_pie_db <- plotly::renderPlotly({
+          plot_ly(db_dist, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
+                  textposition = 'inside',
+                  textinfo = 'label+percent',
+                  insidetextfont = list(color = '#FFFFFF'),
+                  hoverinfo = 'text',
+                  text = ~paste0(Var1, ": ", value, ' matches'),
+                  marker = list(colors = colors,
+                                line = list(color = '#FFFFFF', width = 1)),
+                  #The 'pull' attribute can also be used to create space between the sectors
+                  showlegend = FALSE) %>%
+            layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                   yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+        })
       })
     }
     

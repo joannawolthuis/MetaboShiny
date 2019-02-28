@@ -674,16 +674,18 @@ ggPlotROC <- function(data,
                       plot.theme = global$functions$plot.themes[[getOptions("user_options.txt")$gtheme]],
                       plotlyfy=TRUE){
   
+  # - - - - - - - - - - - -
+  
   require(ROCR)
   require(ggplot2)
   require(data.table)
-  
   
   pred <- ROCR::prediction(data$predictions, data$labels)
   perf <- ROCR::performance(pred, "tpr", "fpr")
   perf_auc <- ROCR::performance(pred, "auc")
   
   # - - - old method - - -
+  
   perf.long <- rbindlist(lapply(1:length(perf@x.values), function(i){
     xvals <- perf@x.values[[i]]
     yvals <- perf@y.values[[i]]
@@ -696,8 +698,8 @@ ggPlotROC <- function(data,
     res
   }))
   
-  aucs <- signif(unlist(perf_auc@y.values), digits = 2)
-  
+  mean.auc <- mean(unlist(perf_auc@y.values))
+
   cols = cf(attempts)
   
   p <- ggplot(perf.long, aes(FPR,TPR)) +
@@ -705,7 +707,16 @@ ggPlotROC <- function(data,
     geom_path(alpha=.5,
               cex=.5,
               aes(color = attempt, group = attempt)) +
-    geom_text(label = paste0("Average AUC: ", mean(aucs)), size = 8, mapping = aes(x = 0.82, y = 0.03)) + 
+    ggplot2::annotate("text", 
+             label = paste0("Average AUC: ",
+                            format(mean.auc,
+                                   2,
+                                   drop0trailing = TRUE,
+                                   digits = 2)), 
+             size = 8, 
+             x = 0.77,
+             y = 0.03) + 
+#   geom_text(label = paste0("Average AUC: ", format(mean.auc,2, drop0trailing = TRUE,digits = 2)), size = 8, mapping = aes(x = 0.82, y = 0.03)) + 
     plot.theme(base_size = 10) +
     ggplot2::scale_color_gradientn(colors = cols) +
     theme(legend.position="none",
