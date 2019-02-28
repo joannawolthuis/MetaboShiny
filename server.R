@@ -125,29 +125,46 @@ shinyServer(function(input, output, session) {
                    "volc", "heatmap", "enrich", 
                    "venn")
     
+    hide.tabs <- list(
+      list("statistics", "inf"),
+      list("dimred", "pca"),
+      list("dimred", "plsda"),
+      list("permz", "asca"),
+      list("permz", "meba"),
+      list("permz", "aov"),
+      list("statistics", "ml"),
+      list("overview", "volc"),
+      list("overview", "venn"),
+      list("overview", "heatmap")
+    )
     # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
     # then show the relevent tabs
     # TODO: enable multivariate time series analysis
     if(is.null(interface$mode)) {
-      show.tabs <- c("inf")
+      show.tabs <- hide.tabs[1]
     }else if(interface$mode == 'multivar'){ 
-      show.tabs <- c("inf","pca", "aov", "heatmap", "enrich", "venn")
+      show.tabs <- hide.tabs[c(1,2,6,8,9)]
+      #show.tabs <- c("inf","pca", "aov", "heatmap", "enrich", "venn")
     }else if(interface$mode == 'bivar'){  
-      show.tabs <- c("inf","pca", "plsda", "tt", "fc", "volc", "heatmap", "ml", "enrich", "venn")
+      show.tabs <- hide.tabs[c(1,2,3,7,8,9,10)]
+      #show.tabs <- c("inf","pca", "plsda", "tt", "fc", "volc", "heatmap", "ml", "enrich", "venn")
     }else if(interface$mode == 'time'){
-      show.tabs <- c("inf", "pca", "aov", "asca", "meba", "heatmap", "ml", "venn")
+      show.tabs <- hide.tabs[c(1,2,4,5,6,7,9,10)]
+      #show.tabs <- c("inf", "pca", "aov", "asca", "meba", "heatmap", "ml", "venn")
     }else{
-      show.tabs <- c("inf") # 'info' tab that loads when no data is loaded currently
+      show.tabs <- hide.tabs[1]
+      #show.tabs <- c("inf") # 'info' tab that loads when no data is loaded currently
     }
     
     # hide all the tabs to begin with
     for(tab in hide.tabs){
-      hideTab(inputId = "statistics", tab, session = session)
+      hideTab(inputId = tab[[1]], tab[[2]], session = session)
     }
     i=1
     # show the relevant tabs
     for(tab in show.tabs){
-      showTab(inputId = "statistics", tab, select = ifelse(i==1, TRUE, FALSE), session = session)
+      showTab(inputId = tab[[1]], tab[[2]], session = session, select = ifelse(i==1, TRUE, FALSE))
+      #showTab(inputId = "statistics", tab, select = ifelse(i==1, TRUE, FALSE), session = session)
       i = i + 1
     }
     
@@ -213,10 +230,42 @@ shinyServer(function(input, output, session) {
     if(!exists("mSet")) return(NULL)
     print(input$statistics)
     # depending on the present tab, perform analyses accordingly
-    if(input$statistics %not in% names(mSet$analSet)){
-      statsmanager$calculate <- input$statistics
+    if(input$statistics == c("ml")){
+      datamanager$reload <- input$statistics 
     }
-    datamanager$reload <- input$statistics 
+  })
+  
+  observeEvent(input$dimred, {
+    # check if an mset is present, otherwise abort
+    if(!exists("mSet")) return(NULL)
+    print(input$dimred)
+    # depending on the present tab, perform analyses accordingly
+    if(input$dimred %not in% names(mSet$analSet)){
+      statsmanager$calculate <- input$dimred
+    }
+    datamanager$reload <- input$dimred 
+  })
+  
+  observeEvent(input$permz, {
+    # check if an mset is present, otherwise abort
+    if(!exists("mSet")) return(NULL)
+    print(input$permz)
+    # depending on the present tab, perform analyses accordingly
+    if(input$permz %not in% names(mSet$analSet)){
+      statsmanager$calculate <- input$permz
+    }
+    datamanager$reload <- input$permz 
+  })
+  
+  observeEvent(input$overview, {
+    # check if an mset is present, otherwise abort
+    if(!exists("mSet")) return(NULL)
+    print(input$overview)
+    # depending on the present tab, perform analyses accordingly
+    if(input$overview %not in% names(mSet$analSet)){
+      statsmanager$calculate <- input$overview
+    }
+    datamanager$reload <- input$overview 
   })
   
   observe({
@@ -466,16 +515,6 @@ shinyServer(function(input, output, session) {
   observeEvent(input$build_custom_db, {
     
     csv_path <- parseFilePaths(global$paths$volumes, input$custom_db)$datapath
-    
-    print(csv_path)
-    
-    # input <- list(
-    #   my_db_name = "My testy DB!",
-    #   my_db_short = "mydb",
-    #   my_db_description = "Hello world, this is a test run",
-    #   my_db_icon = "www/rainbow.png"
-    # )
-    # csv_path <-  "~/Desktop/test_csv.csv"
     
     # build base db
     db.build.custom(

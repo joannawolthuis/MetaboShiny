@@ -171,28 +171,29 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                     imageOutput("dataset_upload_check",inline = T)
                     ), column(9, 
                               # show the summary plots post-normalization 
-                              navbarPage(inverse=TRUE,h3("Explore"),
-                                         tabPanel(h3("Variables"), icon=icon("braille"),
+                              navbarPage(inverse=TRUE,h3("explore"),
+                                         tabPanel("m/z values",# icon=icon("braille"),
                                                   fluidRow(column(6,plotOutput("var1",height='300px')),
                                                            column(6,plotOutput("var3", height='300px'))
                                                   ),
                                                   fluidRow(column(6,plotOutput("var2", height='500px')),
                                                            column(6,plotOutput("var4", height='500px')))
                                          ),
-                                         tabPanel(h3("Samples"), icon=icon("tint"),
+                                         tabPanel("samples",# icon=icon("tint"),
                                                   fluidRow(column(6,plotOutput("samp1",height='300px')),
                                                            column(6,plotOutput("samp3", height='300px'))
                                                   ),
                                                   fluidRow(column(6,plotOutput("samp2", height='500px')),
                                                            column(6,plotOutput("samp4", height='500px')))
                                          )
-                              ))
+                              )
+                              )
                     )),
            # this tab is the main analysis tab. all tabs for all analyses are listed here, but the visibility is changed depending on the current experiment
            tabPanel("",  icon = icon("bar-chart"), value = "analysis",
                     sidebarLayout(position="right",
                                   mainPanel = mainPanel(width = 8,
-                                                        navbarPage(inverse=F,h3("Statistics"), id="statistics", selected = "pca", collapsible = T,
+                                                        navbarPage(inverse=F, "", id="statistics", selected = "pca", collapsible = T,
                                                                    # TODO: T-SNE
                                                                    # this tab shows general information, mostly a message with 'please give me some data' :-) 
                                                                    tabPanel(icon("star"), value = "inf",
@@ -207,188 +208,138 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                             #hr()
                                                                                             #icon("arrow-right","fa-lg"), icon("arrow-right","fa-lg"), icon("arrow-right","fa-lg")
                                                                             ))),
-                                                                   # loading this tab performs PCA. summary and loading tables, alongside a 2d/3d PCA plot, are available here.
-                                                                   tabPanel(h3("pca"), value = "pca", #icon=icon("cube"),
-                                                                            fluidRow(align="center",column(12,plotly::plotlyOutput("plot_pca",height = "600px", width="600px") %>% shinycssloaders::withSpinner())),
-                                                                            fluidRow(align="center",column(12,
-                                                                                                           switchButton("pca_2d3d", label = "", col = "BW", type = "2d3d"))),
-                                                                            hr(),
-                                                                            fluidRow(column(3,
-                                                                                            selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:20),selected = "PC1",width="100%"),
-                                                                                            selectInput("pca_y", label = "Y axis:", choices = paste0("PC",1:20),selected = "PC2",width="100%"),
-                                                                                            selectInput("pca_z", label = "Z axis:", choices = paste0("PC",1:20),selected = "PC3",width="100%")),
-                                                                                     column(9,
-                                                                                            tabsetPanel(id="pca_2", 
-                                                                                                        tabPanel(title="Table", 
-                                                                                                                 div(DT::dataTableOutput('pca_tab',width="100%"),style='font-size:80%')),
-                                                                                                        tabPanel(title="Scree",
-                                                                                                                 plotOutput("pca_scree")
-                                                                                                        ),
-                                                                                                        tabPanel(title="Loadings", 
-                                                                                                                 div(DT::dataTableOutput('pca_load_tab',width="100%"),style='font-size:80%'))
-                                                                                            ))
-                                                                            )
-                                                                   ),
-                                                                   # TODO: enable the sparse and orthogonal PLS-DA options in metaboanalystR
-                                                                   # this tab is used to perform pls-da. it triggers on 'go' button as it is a time costly analysis.
-                                                                   tabPanel(h3("pls-da"), value = "plsda", 
-                                                                            fluidRow(align="center",column(12,plotly::plotlyOutput("plot_plsda",height = "500px", width="500px"))),
-                                                                            fluidRow(align="center",column(12,
-                                                                                                           switchButton("plsda_2d3d", label = "", col = "BW", type = "2d3d"))),
-                                                                            hr(),
-                                                                            fluidRow(column(3,
-                                                                                            div(style="display:inline-block",
-                                                                                                selectInput("plsda_type", 
-                                                                                                            label="Type:", 
-                                                                                                            choices=list("Normal"="normal")
-                                                                                                            #,
-                                                                                                            #             "Orthogonal"="ortho",
-                                                                                                            #             "Sparse"="sparse") 
-                                                                                                            ,width = '100px',
-                                                                                                            selected=1)),
-                                                                                            div(style="display:inline-block",
-                                                                                                shinyWidgets::circleButton("do_plsda", icon = icon("hand-pointer-o"), size = "sm")
-                                                                                            ),
-                                                                                            selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:8),selected = "PC1",width="100%"),
-                                                                                            selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:8),selected = "PC2",width="100%"),
-                                                                                            selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:8),selected = "PC3",width="100%")),
-                                                                                     column(9,
-                                                                                            tabsetPanel(id="plsda_2", 
-                                                                                                        tabPanel(title="Cross-validation", 
-                                                                                                                 plotOutput("plsda_cv_plot")),
-                                                                                                        tabPanel(title="Permutation", 
-                                                                                                                 plotOutput("plsda_perm_plot")),
-                                                                                                        tabPanel(title="Table", 
-                                                                                                                 div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')),
-                                                                                                        tabPanel(title="Loadings", 
-                                                                                                                 div(DT::dataTableOutput('plsda_load_tab',width="100%"),style='font-size:80%'))
-                                                                                            ))
-                                                                            )
-                                                                   ),
-                                                                   tabPanel(h3("t-test"), value="tt", 
-                                                                            fluidRow(plotly::plotlyOutput('tt_specific_plot',width="100%")),
-                                                                            fluidRow(align="center",
-                                                                                     sardine(switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = T)),
-                                                                                     #sardine(uiOutput("tt_parbutton")),
-                                                                                     sardine(switchButton("tt_eqvar", "Equal variance?", col="BW", type="YN", value = T))
-                                                                            ),
-                                                                            navbarPage(inverse=F,"",
-                                                                                       tabPanel("", icon=icon("table"),
-                                                                                                div(DT::dataTableOutput('tt_tab',width="100%"),style='font-size:80%'))
-                                                                                       ,tabPanel("", icon=icon("area-chart"),
-                                                                                                 plotly::plotlyOutput('tt_overview_plot',height="300px") %>% shinycssloaders::withSpinner()
+                                                                   tabPanel("dimension reduction", value = "dimred",  icon=icon("cube"),
+                                                                            navbarPage(inverse=F, icon("cube"), id = "which_dimred",
+                                                                                       # loading this tab performs PCA. summary and loading tables, alongside a 2d/3d PCA plot, are available here.
+                                                                                       tabPanel("pca", value = "pca", #icon=icon("cube"),
+                                                                                                fluidRow(align="center",column(12,plotly::plotlyOutput("plot_pca",height = "600px", width="600px") %>% shinycssloaders::withSpinner())),
+                                                                                                fluidRow(align="center",column(12,
+                                                                                                                               switchButton("pca_2d3d", label = "", col = "BW", type = "2d3d"))),
+                                                                                                hr(),
+                                                                                                fluidRow(column(3,
+                                                                                                                selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:20),selected = "PC1",width="100%"),
+                                                                                                                selectInput("pca_y", label = "Y axis:", choices = paste0("PC",1:20),selected = "PC2",width="100%"),
+                                                                                                                selectInput("pca_z", label = "Z axis:", choices = paste0("PC",1:20),selected = "PC3",width="100%")),
+                                                                                                         column(9,
+                                                                                                                tabsetPanel(id="pca_2", 
+                                                                                                                            tabPanel(title="Table", 
+                                                                                                                                     div(DT::dataTableOutput('pca_tab',width="100%"),style='font-size:80%')),
+                                                                                                                            tabPanel(title="Scree",
+                                                                                                                                     plotOutput("pca_scree")
+                                                                                                                            ),
+                                                                                                                            tabPanel(title="Loadings", 
+                                                                                                                                     div(DT::dataTableOutput('pca_load_tab',width="100%"),style='font-size:80%'))
+                                                                                                                ))
+                                                                                                )
+                                                                                       ),
+                                                                                       # TODO: enable the sparse and orthogonal PLS-DA options in metaboanalystR
+                                                                                       # this tab is used to perform pls-da. it triggers on 'go' button as it is a time costly analysis.
+                                                                                       tabPanel("pls-da", value = "plsda", 
+                                                                                                fluidRow(align="center",column(12,plotly::plotlyOutput("plot_plsda",height = "500px", width="500px"))),
+                                                                                                fluidRow(align="center",column(12,
+                                                                                                                               switchButton("plsda_2d3d", label = "", col = "BW", type = "2d3d"))),
+                                                                                                hr(),
+                                                                                                fluidRow(column(3,
+                                                                                                                div(style="display:inline-block",
+                                                                                                                    selectInput("plsda_type", 
+                                                                                                                                label="Type:", 
+                                                                                                                                choices=list("Normal"="normal")
+                                                                                                                                #,
+                                                                                                                                #             "Orthogonal"="ortho",
+                                                                                                                                #             "Sparse"="sparse") 
+                                                                                                                                ,width = '100px',
+                                                                                                                                selected=1)),
+                                                                                                                div(style="display:inline-block",
+                                                                                                                    shinyWidgets::circleButton("do_plsda", icon = icon("hand-pointer-o"), size = "sm")
+                                                                                                                ),
+                                                                                                                selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:8),selected = "PC1",width="100%"),
+                                                                                                                selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:8),selected = "PC2",width="100%"),
+                                                                                                                selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:8),selected = "PC3",width="100%")),
+                                                                                                         column(9,
+                                                                                                                tabsetPanel(id="plsda_2", 
+                                                                                                                            tabPanel(title="Cross-validation", 
+                                                                                                                                     plotOutput("plsda_cv_plot")),
+                                                                                                                            tabPanel(title="Permutation", 
+                                                                                                                                     plotOutput("plsda_perm_plot")),
+                                                                                                                            tabPanel(title="Table", 
+                                                                                                                                     div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')),
+                                                                                                                            tabPanel(title="Loadings", 
+                                                                                                                                     div(DT::dataTableOutput('plsda_load_tab',width="100%"),style='font-size:80%'))
+                                                                                                                ))
+                                                                                                )
+                                                                                       ),
+                                                                                       tabPanel("t-sne", value = "tsne", 
+                                                                                           helpText("working on it")     
                                                                                        )
-                                                                            )),
-                                                                   tabPanel(h3("anova"), value="aov",
-                                                                            fluidRow(plotly::plotlyOutput('aov_specific_plot',width="100%")),
-                                                                            navbarPage(inverse=F,"",
-                                                                                       tabPanel("", icon=icon("table"),
-                                                                                                div(DT::dataTableOutput('aov_tab',width="100%"),style='font-size:80%'))
-                                                                                       ,tabPanel("", icon=icon("area-chart"),
-                                                                                                 plotly::plotlyOutput('aov_overview_plot',height="300px") %>% shinycssloaders::withSpinner()
+                                                                   )),
+                                                                   tabPanel("per m/z", value = "dimred", icon=icon("fingerprint"),
+                                                                            navbarPage(inverse=F, icon("fingerprint"), id = "which_permz",
+                                                                                       tabPanel("t-test", value="tt", 
+                                                                                                fluidRow(plotly::plotlyOutput('tt_specific_plot',width="100%")),
+                                                                                                fluidRow(align="center",
+                                                                                                         sardine(switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = T)),
+                                                                                                         #sardine(uiOutput("tt_parbutton")),
+                                                                                                         sardine(switchButton("tt_eqvar", "Equal variance?", col="BW", type="YN", value = T))
+                                                                                                ),
+                                                                                                navbarPage(inverse=F,"",
+                                                                                                           tabPanel("", icon=icon("table"),
+                                                                                                                    div(DT::dataTableOutput('tt_tab',width="100%"),style='font-size:80%'))
+                                                                                                           ,tabPanel("", icon=icon("area-chart"),
+                                                                                                                     plotly::plotlyOutput('tt_overview_plot',height="300px") %>% shinycssloaders::withSpinner()
+                                                                                                           )
+                                                                                                )),
+                                                                                       tabPanel("anova", value="aov",
+                                                                                                fluidRow(plotly::plotlyOutput('aov_specific_plot',width="100%")),
+                                                                                                navbarPage(inverse=F,"",
+                                                                                                           tabPanel("", icon=icon("table"),
+                                                                                                                    div(DT::dataTableOutput('aov_tab',width="100%"),style='font-size:80%'))
+                                                                                                           ,tabPanel("", icon=icon("area-chart"),
+                                                                                                                     plotly::plotlyOutput('aov_overview_plot',height="300px") %>% shinycssloaders::withSpinner()
+                                                                                                           )
+                                                                                                )),
+                                                                                       tabPanel("fold-change", value="fc",
+                                                                                                fluidRow(plotly::plotlyOutput('fc_specific_plot',width="100%")),
+                                                                                                navbarPage(inverse=F,"",
+                                                                                                           tabPanel("", icon=icon("table"),
+                                                                                                                    div(DT::dataTableOutput('fc_tab',width="100%"),style='font-size:80%'))
+                                                                                                           ,tabPanel("", icon=icon("area-chart"),
+                                                                                                                     plotly::plotlyOutput('fc_overview_plot',height="300px") %>% shinycssloaders::withSpinner()
+                                                                                                           ))
+                                                                                       ),
+                                                                                       tabPanel("meba", value="meba", 
+                                                                                                fluidRow(plotly::plotlyOutput('meba_specific_plot',height="600px")),
+                                                                                                fluidRow(div(DT::dataTableOutput('meba_tab', width="100%"),style='font-size:80%'))
+                                                                                       ),
+                                                                                       tabPanel("asca", value="asca",
+                                                                                                fluidRow(plotly::plotlyOutput('asca_specific_plot', height="600px")),
+                                                                                                fluidRow(div(DT::dataTableOutput('asca_tab',width="100%"),style='font-size:80%'))
                                                                                        )
-                                                                            )),
-                                                                   tabPanel(h3("fold-change"), value="fc",
-                                                                            fluidRow(plotly::plotlyOutput('fc_specific_plot',width="100%")),
-                                                                            navbarPage(inverse=F,"",
-                                                                                       tabPanel("", icon=icon("table"),
-                                                                                                div(DT::dataTableOutput('fc_tab',width="100%"),style='font-size:80%'))
-                                                                                       ,tabPanel("", icon=icon("area-chart"),
-                                                                                                 plotly::plotlyOutput('fc_overview_plot',height="300px") %>% shinycssloaders::withSpinner()
-                                                                                       ))
-                                                                   ),
-                                                                   tabPanel(h3("volc"), value="volc",
-                                                                            fluidRow(plotly::plotlyOutput('volc_plot',width="100%",height="600px") %>% shinycssloaders::withSpinner()),
-                                                                            fluidRow(div(DT::dataTableOutput('volc_tab',width="100%"),style='font-size:80%'))
-                                                                   ),
-                                                                   tabPanel(h3("meba"), value="meba", 
-                                                                            fluidRow(plotly::plotlyOutput('meba_specific_plot',height="600px")),
-                                                                            fluidRow(div(DT::dataTableOutput('meba_tab', width="100%"),style='font-size:80%'))
-                                                                   ),
-                                                                   tabPanel(h3("asca"), value="asca",
-                                                                            fluidRow(plotly::plotlyOutput('asca_specific_plot', height="600px")),
-                                                                            fluidRow(div(DT::dataTableOutput('asca_tab',width="100%"),style='font-size:80%'))
-                                                                   ),
-                                                                   tabPanel(h3("heat"), value="heatmap",
-                                                                            plotly::plotlyOutput("heatmap",width="100%",height="700px") %>% shinycssloaders::withSpinner(),
-                                                                            br(),
-                                                                            fluidRow(column(align="center",
-                                                                                            width=12,
-                                                                                            sliderInput("heatmap_topn", "Use top ... from table:", value=100, min = 10, max = 200))
+                                                                                       )
                                                                             ),
-                                                                            fluidRow(column(align="center",
-                                                                                            width=12,
-                                                                                            uiOutput("heatbutton"), 
-                                                                                            switchButton("heatsign", label = "Only significant hits?", col = "GB", type = "YN"),
-                                                                                            switchButton("heatlimits", label = "Color based on -all- metabolites?", col = "GB", type = "YN")
-                                                                            )) 
-                                                                   ),
-                                                                   # this tab enables mummichog pathway analysis (using their own databases...)
-                                                                   tabPanel(h3("mummichog"), value = "enrich",
-                                                                            sidebarLayout(position = "left",
-                                                                                          sidebarPanel = sidebarPanel(width=3,
-                                                                                                                      fluidRow(align="center", selectInput("mummi_org",label = "Organism DB:",choices = list(
-                                                                                                                        "Homo sapiens (human) [MFN]" = "hsa_mfn",
-                                                                                                                        "Homo sapiens (human) [BioCyc]" = "hsa_biocyc",
-                                                                                                                        "Homo sapiens (human) [KEGG]" = "hsa_kegg",
-                                                                                                                        "Mus musculus (mouse) [BioCyc]" = "mmu_biocyc",
-                                                                                                                        "Mus musculus (mouse) [KEGG]" = "mmu_kegg",
-                                                                                                                        "Rattus norvegicus (rat) [KEGG]" = "rno_kegg",
-                                                                                                                        "Bos taurus (cow) [KEGG]" = "bta_kegg",
-                                                                                                                        "Gallus gallus (chicken) [KEGG]" = "gga_kegg",
-                                                                                                                        "Danio rerio (zebrafish) [KEGG]" = "dre_kegg",
-                                                                                                                        "Danio rerio (zebrafish) [MTF]" = "dre_mtf",
-                                                                                                                        "Drosophila melanogaster (fruit fly) [KEGG]" = "dme_kegg",
-                                                                                                                        "Drosophila melanogaster (fruit fly) [BioCyc]" = "dme_biocyc",
-                                                                                                                        "Caenorhabditis elegans (nematode) [KEGG]" = "cel_kegg",
-                                                                                                                        "Saccharomyces cerevisiae (yeast) [KEGG]" = "sce_kegg",
-                                                                                                                        "Saccharomyces cerevisiae (yeast) [BioCyc]" = "sce_biocyc",
-                                                                                                                        "Oryza sativa japonica (Japanese rice) [KEGG]" = "osa_kegg",
-                                                                                                                        "Arabidopsis thaliana (thale cress) [KEGG]" = "ath_kegg",
-                                                                                                                        "Schistosoma mansoni [KEGG]" = "smm_kegg",
-                                                                                                                        "Plasmodium falciparum 3D7 (Malaria) [KEGG]" = "pfa_kegg",
-                                                                                                                        "Trypanosoma brucei [KEGG]" = "tbr_kegg",
-                                                                                                                        "Escherichia coli K-12 MG1655 [KEGG]" = "eco_kegg",
-                                                                                                                        "Bacillus subtilis [KEGG]" = "bsu_kegg",
-                                                                                                                        "Pseudomonas putida KT2440 [KEGG]" = "ppu_kegg",
-                                                                                                                        "Staphylococcus aureus N315 (MRSA/VSSA) [KEGG]" = "sau_kegg",
-                                                                                                                        "Thermotoga maritima [KEGG]" = "tma_kegg",
-                                                                                                                        "Synechococcus elongatus PCC7942 [KEGG]" = "syf_kegg",
-                                                                                                                        "Mesorhizobium loti [KEGG]" = "mlo_kegg"
-                                                                                                                      ), selected = "hsa_kegg")),
-                                                                                                                      hr(),
-                                                                                                                      fluidRow(align="center",shinyWidgets::sliderTextInput("mummi_sigmin","Min p value:",
-                                                                                                                                                                            choices=c(0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.05, 0.1),
-                                                                                                                                                                            selected=0.05, grid = T)),
-                                                                                                                      hr(),
-                                                                                                                      fluidRow(align="center",sliderInput("mummi_ppm", 
-                                                                                                                                                          "ppm accuracy",
-                                                                                                                                                          min = 0.1, 
-                                                                                                                                                          max = 40,
-                                                                                                                                                          value = 2)),
-                                                                                                                      fluidRow(align="center",
-                                                                                                                               shinyWidgets::circleButton("do_mummi",
-                                                                                                                                                          icon = h3(paste("Go"), 
-                                                                                                                                                                    icon("hand-pointer-o", "fa-lg")), 
-                                                                                                                                                          status = "default", 
-                                                                                                                                                          size = "lg")
-                                                                                                                      )),
-                                                                                          mainPanel = mainPanel(
-                                                                                            tabsetPanel(
-                                                                                              tabPanel(title = "", icon = icon("plus"),
-                                                                                                       #plotlyOutput("mummi_pos_plot", height = "300px"),
-                                                                                                       div(DT::dataTableOutput("mummi_pos_tab"),style='font-size:80%')
-                                                                                              ),
-                                                                                              tabPanel(title = "", icon = icon("minus"),
-                                                                                                       #plotlyOutput("mummi_neg_plot", height = "300px"),
-                                                                                                       div(DT::dataTableOutput("mummi_neg_tab"),style='font-size:80%')
-                                                                                              )
-                                                                                            ),
-                                                                                            div(DT::dataTableOutput("mummi_detail_tab"),style='font-size:80%')
-                                                                                          ))
+                                                                   tabPanel("overview analyses", value = "dimred", icon=icon("globe"),
+                                                                            navbarPage(inverse=F, icon("globe"), id = "overview",
+                                                                                       tabPanel("volcano plot", value="volc",
+                                                                                                fluidRow(plotly::plotlyOutput('volc_plot',width="100%",height="600px") %>% shinycssloaders::withSpinner()),
+                                                                                                fluidRow(div(DT::dataTableOutput('volc_tab',width="100%"),style='font-size:80%'))
+                                                                                       ),
+                                                                                       tabPanel("heatmap", value="heatmap",
+                                                                                                plotly::plotlyOutput("heatmap",width="100%",height="700px") %>% shinycssloaders::withSpinner(),
+                                                                                                br(),
+                                                                                                fluidRow(column(align="center",
+                                                                                                                width=12,
+                                                                                                                sliderInput("heatmap_topn", "Use top ... from table:", value=100, min = 10, max = 200))
+                                                                                                ),
+                                                                                                fluidRow(column(align="center",
+                                                                                                                width=12,
+                                                                                                                uiOutput("heatbutton"), 
+                                                                                                                switchButton("heatsign", label = "Only significant hits?", col = "GB", type = "YN"),
+                                                                                                                switchButton("heatlimits", label = "Color based on -all- metabolites?", col = "GB", type = "YN")
+                                                                                                )) 
+                                                                                       )
+                                                                            )
                                                                    ),
                                                                    # this tab enables machine learning
-                                                                   tabPanel(h3("machine learning"), value = "ml",
+                                                                   tabPanel("machine learning", value = "ml", icon=icon("signature"),
                                                                             fluidRow(
                                                                               column(width=3,align="center",
                                                                                      selectInput("ml_method", 
@@ -459,7 +410,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                    ),
                                                                    # this tab is used to find overlapping features of interest between analyses
                                                                    # TODO: enable this with multiple saved mSets in mSet$storage
-                                                                   tabPanel(title=h3("venn diagrams"), value="venn",
+                                                                   tabPanel(title="venn diagrams", value="venn", icon=icon("comments"),
                                                                             sidebarLayout(position = "left",
                                                                                           sidebarPanel = sidebarPanel(
                                                                                             fluidRow(div(DT::dataTableOutput('venn_unselected'),style='font-size:80%'), align="center"),
