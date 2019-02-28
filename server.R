@@ -119,11 +119,11 @@ shinyServer(function(input, output, session) {
   observe({
     
     # hide all tabs by default, easier to hide them and then make visible selectively
-    hide.tabs <- c("inf", "pca", "plsda", 
-                   "tt", "fc", "aov", 
-                   "meba", "asca", "ml", 
-                   "volc", "heatmap", "enrich", 
-                   "venn")
+    # hide.tabs <- c("inf", "pca", "plsda", 
+    #                "tt", "fc", "aov", 
+    #                "meba", "asca", "ml", 
+    #                "volc", "heatmap", "enrich", 
+    #                "venn")
     
     hide.tabs <- list(
       list("statistics", "inf"),
@@ -135,7 +135,10 @@ shinyServer(function(input, output, session) {
       list("statistics", "ml"),
       list("overview", "volc"),
       list("overview", "venn"),
-      list("overview", "heatmap")
+      list("overview", "heatmap"),
+      list("permz", "tt"),
+      list("permz", "fc"),
+      list("dimred", "tsne")
     )
     # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
     # then show the relevent tabs
@@ -143,13 +146,13 @@ shinyServer(function(input, output, session) {
     if(is.null(interface$mode)) {
       show.tabs <- hide.tabs[1]
     }else if(interface$mode == 'multivar'){ 
-      show.tabs <- hide.tabs[c(1,2,6,8,9)]
+      show.tabs <- hide.tabs[c(1,2,6,8,9,13)]
       #show.tabs <- c("inf","pca", "aov", "heatmap", "enrich", "venn")
     }else if(interface$mode == 'bivar'){  
-      show.tabs <- hide.tabs[c(1,2,3,7,8,9,10)]
+      show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13)]
       #show.tabs <- c("inf","pca", "plsda", "tt", "fc", "volc", "heatmap", "ml", "enrich", "venn")
     }else if(interface$mode == 'time'){
-      show.tabs <- hide.tabs[c(1,2,4,5,6,7,9,10)]
+      show.tabs <- hide.tabs[c(1,2,4,5,6,7,9,10,13)]
       #show.tabs <- c("inf", "pca", "aov", "asca", "meba", "heatmap", "ml", "venn")
     }else{
       show.tabs <- hide.tabs[1]
@@ -158,12 +161,13 @@ shinyServer(function(input, output, session) {
     
     # hide all the tabs to begin with
     for(tab in hide.tabs){
-      hideTab(inputId = tab[[1]], tab[[2]], session = session)
+      hideTab(inputId = unlist(tab)[1], unlist(tab)[2], session = session)
     }
+    
     i=1
     # show the relevant tabs
     for(tab in show.tabs){
-      showTab(inputId = tab[[1]], tab[[2]], session = session, select = ifelse(i==1, TRUE, FALSE))
+      showTab(inputId = unlist(tab)[1], unlist(tab)[2], session = session, select = ifelse(i==1, TRUE, FALSE))
       #showTab(inputId = "statistics", tab, select = ifelse(i==1, TRUE, FALSE), session = session)
       i = i + 1
     }
@@ -230,7 +234,7 @@ shinyServer(function(input, output, session) {
     if(!exists("mSet")) return(NULL)
     print(input$statistics)
     # depending on the present tab, perform analyses accordingly
-    if(input$statistics == c("ml")){
+    if(input$statistics %in% c("ml", "venn")){
       datamanager$reload <- input$statistics 
     }
   })

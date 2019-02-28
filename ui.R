@@ -209,7 +209,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                             #icon("arrow-right","fa-lg"), icon("arrow-right","fa-lg"), icon("arrow-right","fa-lg")
                                                                             ))),
                                                                    tabPanel("dimension reduction", value = "dimred",  icon=icon("cube"),
-                                                                            navbarPage(inverse=F, icon("cube"), id = "which_dimred",
+                                                                            navbarPage(inverse=F, icon("cube"), id = "dimred",
                                                                                        # loading this tab performs PCA. summary and loading tables, alongside a 2d/3d PCA plot, are available here.
                                                                                        tabPanel("pca", value = "pca", #icon=icon("cube"),
                                                                                                 fluidRow(align="center",column(12,plotly::plotlyOutput("plot_pca",height = "600px", width="600px") %>% shinycssloaders::withSpinner())),
@@ -273,7 +273,7 @@ navbarPage(inverse=TRUE,title=div(h1("MetaboShiny"), tags$head(tags$style(type="
                                                                                        )
                                                                    )),
                                                                    tabPanel("per m/z", value = "dimred", icon=icon("fingerprint"),
-                                                                            navbarPage(inverse=F, icon("fingerprint"), id = "which_permz",
+                                                                            navbarPage(inverse=F, icon("fingerprint"), id = "permz",
                                                                                        tabPanel("t-test", value="tt", 
                                                                                                 fluidRow(plotly::plotlyOutput('tt_specific_plot',width="100%")),
                                                                                                 fluidRow(align="center",
