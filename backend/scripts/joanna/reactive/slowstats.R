@@ -170,7 +170,8 @@ observeEvent(input$do_ml, {
     
     # get results for the amount of attempts chosen
     repeats <- pbapply::pblapply(1:goes, 
-                                 cl=session_cl, 
+                                 cl=0,
+                                 #cl=session_cl, 
                                  function(i, 
                                           train_vec = train_vec, 
                                           test_vec = test_vec...){
@@ -217,129 +218,62 @@ observeEvent(input$do_ml, {
         
         # ======= WIP =======
         # 
-        # # all methods
-        # caret.mdls <- getModelInfo()
-        # caret.methods <- names(caret.mdls)
-        # tune.opts <- lapply(caret.methods, function(mdl) caret.mdls[[mdl]]$parameters)
-        # names(tune.opts) <- caret.methods
-        # 
-        # # caret method?
-        # 
-        # require(caret)
-        #  
-        # training <- curr[inTrain,]
-        # testing <- curr[inTest,]
-        # 
-        # trainCtrl <- trainControl(verboseIter = T,
-        #                           method="repeatedcv",
-        #                           number=10,
-        #                           repeats=3)
-        # 
-        # tuneGrid=expand.grid(
-        #   alpha = 1,
-        #   lambda = 0
-        #   )
-        # 
-        # fitls <- train(
-        #   label ~ .,
-        #   data = training,
-        #   method = "glmnet",
-        #   ## Center and scale the predictors for the training
-        #   ## set and all future samples.
-        #   preProc = c("center", "scale"),
-        #   tuneGrid = tuneGrid,
-        #   trControl = trainCtrl
-        # )
+        # all methods
+        caret.mdls <- getModelInfo()
+        caret.methods <- names(caret.mdls)
+        tune.opts <- lapply(caret.methods, function(mdl) caret.mdls[[mdl]]$parameters)
+        names(tune.opts) <- caret.methods
+
+        # caret method?
+
+        require(caret)
         
-        # rfTuneGrid = expand.grid(
-        #   .mtry=3
-        #   )
-        # 
-        # fitrf <- train(
-        #   label ~ .,
-        #   data = training,
-        #   method = "rf",
-        #   ## Center and scale the predictors for the training
-        #   ## set and all future samples.
-        #   preProc = c("center", "scale"),
-        #   ntree=10,
-        #   tuneGrid = rfTuneGrid
-        # )
+        training <- curr[inTrain,]
+        testing <- curr[inTest,]
+
+        trainCtrl <- trainControl(verboseIter = T,
+                                  allowParallel = T,
+                                  method=input$ml_perf_metr,
+                                  number=input$ml_folds,
+                                  repeats=3) # need something here...
+
+       
+        meth.info <- caret::getModelInfo()[[input$ml_method]]
+        params = meth.info$parameters$parameter
+        
+        tuneGrid = expand.grid(
+          {
+            lst = lapply(params, function(param) input[[paste0("ml_", param)]])
+            names(lst) = params
+            lst
+          }
+          )
+
+        fit <- train(
+          label ~ .,
+          data = training,
+          method = input$ml_method,
+          ## Center and scale the predictors for the training
+          ## set and all future samples.
+          preProc = input$ml_preproc,
+          tuneGrid = tuneGrid,
+          trControl = trainCtrl
+        )
+
+        result.predicted.prob <- predict(fit, testing, type="prob") # Prediction
+        
+        data = list(predictions = result.predicted.prob$`Population`, labels = testing$label)
         
         # train and cross validate model
-        switch(input$ml_method,
-               rf = { # random forest
-                 model = randomForest::randomForest(x = training, 
-                                                    y = trainY, 
-                                                    ntree = 500, # amount of trees made TODO: make user choice
-                                                    importance=TRUE) # include variable importance in model
-                 
-                 prediction <- stats::predict(model, 
-                                              testing, 
-                                              "prob")[,2]
-                 # get importance table
-                 importance = as.data.table(model$importance, 
-                                            keep.rownames = T)
-                 rf_tab <- importance[which(MeanDecreaseAccuracy > 0), c("rn", 
-                                                                         "MeanDecreaseAccuracy")]
-                 rf_tab <- rf_tab[order(MeanDecreaseAccuracy, decreasing = T)] # reorder for convenience
-                 rf_tab <- data.frame(MDA = rf_tab$MeanDecreaseAccuracy, row.names = rf_tab$rn) 
-                 # return list with model, prediction on test data etc.
-                 list(type="rf",
-                      feats = as.data.table(rf_tab, 
-                                            keep.rownames = T), 
-                      model = model,
-                      prediction = prediction,
-                      labels = testY)
-               }, 
-               ls = { # lasso
-                 # user x cross validation input
-                 nfold = switch(input$ml_folds, 
-                                "5" = 5,
-                                "10" = 10,
-                                "20" = 20,
-                                "50" = 50,
-                                "LOOCV" = length(trainY)) # leave one out CV
-                 
-                 family = "binomial" #TODO: enable multinomial for multivariate data!!
-                 
-                 #training <- scale(training, T, T)
-                 #testing <- scale(testing, T, T)
-                 
-                 #  make model (a. internal cross validation until optimized)
-                 cv1 <- glmnet::cv.glmnet(training, 
-                                          trainY, 
-                                          family = family, 
-                                          type.measure = "auc", 
-                                          alpha = 1, 
-                                          keep = TRUE, 
-                                          nfolds=nfold)
-                 # pick the best model (other options, lambda.1se)
-                 cv2 <- data.frame(cvm = cv1$cvm[cv1$lambda == cv1[["lambda.min"]]], lambda = cv1[["lambda.min"]], alpha = 1)
-                 
-                 # save final model
-                 model <- glmnet::glmnet(as.matrix(training), 
-                                         trainY, 
-                                         family = family, 
-                                         lambda = cv2$lambda, 
-                                         alpha = cv2$alpha)
-                 
-                 # test on testing data and save prediction
-                 prediction <- stats::predict(model,
-                                              type = "response", 
-                                              newx = testing, 
-                                              s = "lambda.min")#[,2] # add if necessary
-                 # return list with mode, prediction on test data etc.s
-                 list(type = "ls",
-                      model = model,
-                      prediction = prediction, 
-                      labels = testY)
-               }, 
-               gls = {
-                 NULL
-               })
+        # return list with mode, prediction on test data etc.s
+                 list(type = input$ml_method ,
+                      model = fit,
+                      prediction = result.predicted.prob[,2], 
+                      labels = testing$label)
       })
-    }, train_vec = global$vectors$ml_train, test_vec = global$vectors$ml_test) # for session_cl
+    }, 
+    train_vec = global$vectors$ml_train, 
+    test_vec = global$vectors$ml_test) # for session_cl
     # check if a storage list for machine learning results already exists
     if(!"ml" %in% names(mSet$analSet)){
       
@@ -354,28 +288,14 @@ observeEvent(input$do_ml, {
                      predictions = {lapply(repeats, function(x) x$prediction)},
                      labels = {lapply(repeats, function(x) x$labels)})
     
-    bar_data <- switch(input$ml_method,
-                       rf = {
-                         res <- aggregate(. ~ rn, rbindlist(lapply(repeats, function(x) as.data.table(x$feats, keep.rownames=T))), mean)
-                         data <- res[order(res$MDA, decreasing = TRUE),]
-                         colnames(data) <- c("mz", "mda")
-                         # - - -
-                         data
-                       },
-                       ls = {
-                         feat_count <- lapply(repeats, function(x){
-                           beta <- x$model$beta
-                           feats <- which(beta[,1] > 0)
-                           names(feats)
-                         })
-                         feat_count_tab <- table(unlist(feat_count))
-                         feat_count_dt <- data.table::data.table(feat_count_tab)
-                         colnames(feat_count_dt) <- c("mz", "count")
-                         data <- feat_count_dt[order(feat_count_dt$count, decreasing = T)]
-                         # - - -
-                         data
-                       })
-    bar_data$mz <- factor(bar_data$mz, levels=bar_data$mz)
+    bar_data <- rbindlist(lapply(1:length(repeats), function(i){
+      x = repeats[[i]]
+      tbl = as.data.table(varImp(x$model)$importance, keep.rownames=T)
+      tbl$rep = c(i)
+      colnames(tbl) = c("mz", "importance", "rep")
+      # - - - 
+      tbl
+    }))
     
     # save results to mset
     mSet$analSet$ml[[input$ml_method]][[input$ml_name]] <<- list("roc" = roc_data,

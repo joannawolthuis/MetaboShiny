@@ -273,6 +273,25 @@ shinyServer(function(input, output, session) {
   })
   
   observe({
+    mdl = caret::getModelInfo()[[input$ml_method]]
+    params <- mdl$parameters
+    output$ml_params <- renderUI({
+      list(
+        helpText(mdl$label),
+        hr(),
+        h2("Tuning settings"),
+        lapply(1:nrow(params), function(i){
+          row = params[i,]
+          list(
+            textInput(inputId = paste0("ml_", row$parameter), label = row$parameter),
+            helpText(paste0(row$label, " (", row$class, ")."))
+          )
+        })
+      )
+    })
+  })
+
+  observe({
     if(exists("mSet")){
       if("analSet" %in% names(mSet)){
         if("ml" %in% names(mSet$analSet)){

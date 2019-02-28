@@ -750,23 +750,33 @@ ggPlotBar <- function(data,
   }else{
     lname <- "all"
   }
+
+  library(Rmisc)
   
-  if(ml_type == "ls"){
-    p <- ggplot(data[1:topn,], aes(mz,count)) + geom_bar(stat = "identity", aes(fill = count)) +
-      scale_fill_gradientn(colors=cf(20)) +
-      plot.theme() + 
-      theme(legend.position="none",
-            axis.text=element_text(size=global$constants$font.aes$ax.num.size),
-            axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
-            legend.title.align = 0.5,
-            axis.line = element_line(colour = 'black', size = .5),
-            axis.text.x=element_blank(),
-            axis.ticks.x=element_blank(),
-            text = element_text(family = global$constants$font.aes$font))+
-      labs(x="Top hits (m/z)",y="Times chosen")
+  #data.ci = group.CI(importance ~ mz, data)[,-3]
+
+  data.aggr = ... #need to aggregate somehow...
+  # and sort and get the top x ...
+  
+  p <- ggplot(data, aes(x = reorder(mz, -importance, mean), 
+                        y = importance)) + 
+       geom_bar(stat = "identity", 
+                aes(fill = importance)) +
+       scale_fill_gradientn(colors=cf(20)) +
+       plot.theme() + 
+       stat_summary(geom = "errorbar", fun.data = mean_se, position = "dodge")
+       theme(legend.position="none",
+             axis.text=element_text(size=global$constants$font.aes$ax.num.size),
+             axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
+             legend.title.align = 0.5,
+             axis.line = element_line(colour = 'black', size = .5),
+             axis.text.x=element_blank(),
+             axis.ticks.x=element_blank(),
+             text = element_text(family = global$constants$font.aes$font))+
+       labs(x="Top hits (m/z)",y="Relative importance (%)")
     
     if(topn <= 15){
-      p <- p +geom_text(aes(x=mz, y=count, label=sapply(mz, function(x){
+      p <- p +geom_text(aes(x=mz, y=importance, label=sapply(mz, function(x){
         if(is.na(as.numeric(as.character(x)))){
           if(grepl(x, pattern = "_")){
             as.character(gsub(x, pattern = "_", replacement = "\n"))
@@ -779,37 +789,7 @@ ggPlotBar <- function(data,
       })), size = 4, vjust = -.2, lineheight = .6)
       plotlyfy=F
     }
-    
-  }else{
-    p <- ggplot(data[1:topn,], aes(mz,mda)) + geom_bar(stat = "identity", aes(fill = mda)) +
-      scale_fill_gradientn(colors=cf(20)) +
-      plot.theme() + 
-      theme(legend.position="none",
-            axis.text=element_text(size=global$constants$font.aes$ax.num.size),
-            axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
-            legend.title.align = 0.5,
-            axis.line = element_line(colour = 'black', size = .5),
-            axis.text.x=element_blank(),
-            axis.ticks.x=element_blank(),
-            text = element_text(family = global$constants$font.aes$font))+
-      scale_y_continuous(labels = function(x) format(x, scientific = TRUE,digits = 2)) +
-      labs(x="Top hits (m/z)",y="Mean Decrease Accuracy")
-    
-    if(topn <= 15){
-      p <- p +geom_text(aes(x=mz, y=mda, label=sapply(mz, function(x){
-        if(is.na(as.numeric(as.character(x)))){
-          if(grepl(x, pattern = "_")){
-            as.character(gsub(x, pattern = "_", replacement = "\n"))
-          }else{
-            as.character(x)  
-          }
-        }else{
-          round(as.numeric(as.character(x)),digits=1)
-        }
-      })), size = 4, vjust = -.2, lineheight = .6)
-      plotlyfy=F
-    }
-  }
+
   if(plotlyfy){
     ggplotly(p)
   }else{
