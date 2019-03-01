@@ -29,8 +29,7 @@ observeEvent(input$do_ml, {
   withProgress({
     
     setProgress(value = 0)
-    # prepare matrix
-    
+
     # get base table to use for process
     curr <- as.data.table(mSet$dataSet$preproc) # the filtered BUT NOT IMPUTED table, ML should be able to deal w/ missing values
     
@@ -123,8 +122,6 @@ observeEvent(input$do_ml, {
     
     # - - - - - - - - - - - - - - - - - - - - - - -
     
-    #curr2=curr
-    
     # join halves together, user variables and metabolite data
     curr <- cbind(config, curr)
     curr <- as.data.table(curr)
@@ -145,10 +142,10 @@ observeEvent(input$do_ml, {
     }
     
     if(all(global$vectors$ml_test == global$vectors$ml_train)){
-      print("no can do, need to test on something else than train!!!")
       if(unique(global$vectors$ml_test) == "all"){
         print("nothing selected... continuing in normal non-subset mode")
       }else{
+        print("no can do, need to test on something else than train!!!")
         return(NULL)
       }
     }
@@ -174,7 +171,7 @@ observeEvent(input$do_ml, {
                                  #cl=session_cl, 
                                  function(i, 
                                           train_vec = train_vec, 
-                                          test_vec = test_vec...){
+                                          test_vec = test_vec){
       shiny::isolate({
         
         # get user training percentage
@@ -211,44 +208,49 @@ observeEvent(input$do_ml, {
         
         # remove predictive column from training set 
         #remove.cols <- c("label") #TODO: make group column removed at start
-        training <- curr[inTrain, -"label"]
-        testing <- curr[inTest, -"label"]
-        
-        
+        training <- curr[inTrain,]#-"label"]
+        testing <- curr[inTest,]#-"label"]
         
         # ======= WIP =======
-        # 
+        
+        require(caret)
+        
         # all methods
         caret.mdls <- getModelInfo()
         caret.methods <- names(caret.mdls)
         tune.opts <- lapply(caret.methods, function(mdl) caret.mdls[[mdl]]$parameters)
         names(tune.opts) <- caret.methods
 
-        # caret method?
-
-        require(caret)
-        
-        training <- curr[inTrain,]
-        testing <- curr[inTest,]
-
-        trainCtrl <- trainControl(verboseIter = T,
-                                  allowParallel = T,
-                                  method=input$ml_perf_metr,
-                                  number=input$ml_folds,
-                                  repeats=3) # need something here...
-
+        if(input$ml_folds == "LOOCV"){
+          trainCtrl <- trainControl(verboseIter = T,
+                                    allowParallel = F,
+                                    method="LOOCV") # need something here...          
+          
+        }else{
+          trainCtrl <- trainControl(verboseIter = T,
+                                    allowParallel = F,
+                                    method=as.character(input$ml_perf_metr),
+                                    number=as.numeric(input$ml_folds),
+                                    repeats=3) # need something here...
+        }
        
         meth.info <- caret::getModelInfo()[[input$ml_method]]
-        params = meth.info$parameters$parameter
+        params = meth.info$parameters
         
         tuneGrid = expand.grid(
           {
-            lst = lapply(params, function(param) input[[paste0("ml_", param)]])
-            names(lst) = params
+            lst = lapply(1:nrow(params), function(i){
+              info = params[i,]
+              inp.val = input[[paste0("ml_", info$parameter)]]
+              switch(as.character(info$class),
+                     numeric = as.numeric(inp.val),
+                     character = as.character(inp.val))
+            })
+            #lst = lapply(params, function(param) input[[paste0("ml_", param)]])
+            names(lst) = params$parameter
             lst
-          }
-          )
-
+          })
+        
         fit <- train(
           label ~ .,
           data = training,
@@ -266,21 +268,19 @@ observeEvent(input$do_ml, {
         
         # train and cross validate model
         # return list with mode, prediction on test data etc.s
-                 list(type = input$ml_method ,
-                      model = fit,
-                      prediction = result.predicted.prob[,2], 
-                      labels = testing$label)
+         list(type = input$ml_method,
+              model = fit,
+              prediction = result.predicted.prob[,2],
+              labels = testing$label)
       })
     }, 
     train_vec = global$vectors$ml_train, 
-    test_vec = global$vectors$ml_test) # for session_cl
+    test_vec = global$vectors$ml_test
+    ) # for session_cl
     # check if a storage list for machine learning results already exists
     if(!"ml" %in% names(mSet$analSet)){
-      
       mSet$analSet$ml <<- list(ls=list(), 
                                rf=list()) # otherwise make it
-      
-      
     }
     # save the summary of all repeats (will be used in plots)
     roc_data <- list(type = {unique(lapply(repeats, function(x) x$type))},

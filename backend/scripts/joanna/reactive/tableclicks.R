@@ -35,7 +35,7 @@ lapply(unique(res.update.tables), FUN=function(table){
                                                   fc = mSet$analSet$fc$sig.mat,
                                                   pca_load = mSet$analSet$pca$rotation,
                                                   plsda_load = mSet$analSet$plsda$vip.mat,
-                                                  ml = ml_tab, #TODO: fix this, now in global
+                                                  ml = global$tables$ml_roc, #TODO: fix this, now in global
                                                   asca = mSet$analSet$asca$sig.list$Model.ab,
                                                   aov = {
                                                     if(!is.null(input$timecourse_trigger)){

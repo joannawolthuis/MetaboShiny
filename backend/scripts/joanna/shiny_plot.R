@@ -750,21 +750,25 @@ ggPlotBar <- function(data,
   }else{
     lname <- "all"
   }
-
+  
   library(Rmisc)
+  require(data.table)
   
-  #data.ci = group.CI(importance ~ mz, data)[,-3]
+  data.norep <- data[,-3]
+  data.ci = group.CI(importance ~ mz, data.norep)
 
-  data.aggr = ... #need to aggregate somehow...
-  # and sort and get the top x ...
+  data.ordered <- data.ci[order(data.ci$importance.mean, decreasing = T),]
   
-  p <- ggplot(data, aes(x = reorder(mz, -importance, mean), 
-                        y = importance)) + 
-       geom_bar(stat = "identity", 
-                aes(fill = importance)) +
+  data.subset <- data.ordered[1:topn,]
+
+  p <- ggplot(data.subset, aes(x = reorder(mz,-importance.mean),
+                               y = importance.mean,
+                               label = mz)) + 
+       geom_bar(stat = "identity",
+                aes(fill = importance.mean)) +
        scale_fill_gradientn(colors=cf(20)) +
        plot.theme() + 
-       stat_summary(geom = "errorbar", fun.data = mean_se, position = "dodge")
+       #geom_errorbar(mapping = aes(x=mz,ymin=importance.lower, ymax=importance.upper))+
        theme(legend.position="none",
              axis.text=element_text(size=global$constants$font.aes$ax.num.size),
              axis.title=element_text(size=global$constants$font.aes$ax.txt.size),
@@ -776,7 +780,7 @@ ggPlotBar <- function(data,
        labs(x="Top hits (m/z)",y="Relative importance (%)")
     
     if(topn <= 15){
-      p <- p +geom_text(aes(x=mz, y=importance, label=sapply(mz, function(x){
+      p <- p + geom_text(aes(x=mz, y=importance.mean, label=sapply(mz, function(x){
         if(is.na(as.numeric(as.character(x)))){
           if(grepl(x, pattern = "_")){
             as.character(gsub(x, pattern = "_", replacement = "\n"))
@@ -789,9 +793,12 @@ ggPlotBar <- function(data,
       })), size = 4, vjust = -.2, lineheight = .6)
       plotlyfy=F
     }
-
+  
+  global$tables$ml_bar <<- p$data
+  global$tables$ml_bar$mz <<- gsub(global$tables$ml_bar$mz, pattern = "`", replacement="")
+  
   if(plotlyfy){
-    ggplotly(p)
+    ggplotly(p, tooltip="label")
   }else{
     p
   }

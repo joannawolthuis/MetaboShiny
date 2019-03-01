@@ -79,39 +79,20 @@ observeEvent(plotly::event_data("plotly_click"),{
         if(attempt > 1){
           ml_type <- xvals$type[[1]]
           model <- xvals$models[[attempt]]
-          output$ml_tab <- switch(ml_type,
-                                  rf = { # random forest specific data fetching
-                                    importance = as.data.table(model$importance, keep.rownames = T)
-                                    rf_tab <- importance[which(MeanDecreaseAccuracy > 0), c("rn", "MeanDecreaseAccuracy")]
-                                    rf_tab <- rf_tab[order(MeanDecreaseAccuracy, decreasing = T)] # order descending
-                                    # - - - return - - -
-                                    ml_tab <<- data.frame(MDA = rf_tab$MeanDecreaseAccuracy, row.names = rf_tab$rn) 
-                                    DT::renderDataTable({ # render importance table for selected model
-                                      DT::datatable(rf_tab,
-                                                    selection = 'single',
-                                                    autoHideNavigation = T,
-                                                    options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-                                    })
-                                  }, 
-                                  ls = { # lasso specific data fetching
-                                    tab = model$beta
-                                    keep = which(tab[,1] != 0)
-                                    tab_new = data.frame("beta" = tab[keep,1],
-                                                         "absbeta" = abs(tab[keep,1]), # use the absolute beta as additional measure (min or plus importance is similar for statistical validity i think)
-                                                         row.names = rownames(tab)[keep])
-                                    colnames(tab_new) <- c("beta", "abs_beta")
-                                    ml_tab <<- tab_new[order(tab_new[,1],decreasing = T),] # order descending
-                                    DT::renderDataTable({ #  render importance table for selected model
-                                      DT::datatable(ml_tab,
-                                                    selection = 'single',
-                                                    autoHideNavigation = T,
-                                                    options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-                                    })
-                                  })
           
+          output$ml_tab <- DT::renderDataTable({
+            imp <- as.data.table(caret::varImp(model)$importance, keep.rownames = T)
+            colnames(imp) <- c("mz", "importance")
+            imp <- imp[importance > 0,]
+            global$tables$ml_roc <<- data.frame(importance = imp$importance, row.names = gsub(imp$mz, pattern = "`|`", replacement=""))
+            DT::datatable(global$tables$ml_roc,
+                          selection = 'single',
+                          autoHideNavigation = T,
+                          options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+          })
         }
       }, bar = { # for bar plot just grab the # bar clicked
-        curr_cpd <<- as.character(mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar[d$x,"mz"][[1]])
+        curr_cpd <<- as.character(global$tables$ml_bar[d$x,"mz"][[1]])
       })}else if(grepl(pattern = "heatmap", x = input$statistics)){ # heatmap requires the table used to make it saved to global (hmap_mzs)
         req(global$vectors$heatmap)
         if(d$y > length(global$vectors$heatmap)) return(NULL)
