@@ -379,7 +379,7 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                   column(width=6,align="center",
                                                                                                          selectInput("ml_method", 
                                                                                                                      label = h2("Used algorithm"), 
-                                                                                                                     selected = "rf", 
+                                                                                                                     selected = "glmnet", 
                                                                                                                      choices = {
                                                                                                                        lst = as.list(global$constants$ml.models)
                                                                                                                        # names(lst) <- sapply(global$constants$ml.models, function(mdl) caret.mdls[[mdl]]$label)

@@ -283,7 +283,13 @@ shinyServer(function(input, output, session) {
         lapply(1:nrow(params), function(i){
           row = params[i,]
           list(
-            textInput(inputId = paste0("ml_", row$parameter), label = row$parameter),
+            textInput(inputId = paste0("ml_", row$parameter), 
+                      label = row$parameter, 
+                      value=if(input$ml_method=="glmnet"){
+              switch(row$parameter,
+                     alpha = 1,
+                     lambda = "1:10:0.5")
+            }),
             helpText(paste0(row$label, " (", row$class, ")."))
           )
         })

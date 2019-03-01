@@ -237,17 +237,34 @@ observeEvent(input$do_ml, {
         meth.info <- caret::getModelInfo()[[input$ml_method]]
         params = meth.info$parameters
         
+        #grid.def <- meth.info$grid(training, trainY, len = 1)
+        
         tuneGrid = expand.grid(
           {
             lst = lapply(1:nrow(params), function(i){
               info = params[i,]
               inp.val = input[[paste0("ml_", info$parameter)]]
+              # - - check for ranges - - 
+              if(grepl(inp.val, pattern=":")){
+                split = strsplit(inp.val,split = ":")[[1]]
+                inp.val <- seq(as.numeric(split[1]), 
+                               as.numeric(split[2]), 
+                               as.numeric(split[3]))
+              }else if(grepl(inp.val, pattern = ",")){
+                split = strsplit(inp.val,split = ",")[[1]]
+                inp.val <- split
+              }
+              # - - - - - - - - - - - - -
               switch(as.character(info$class),
                      numeric = as.numeric(inp.val),
                      character = as.character(inp.val))
             })
-            #lst = lapply(params, function(param) input[[paste0("ml_", param)]])
             names(lst) = params$parameter
+            if(any(sapply(lst,function(x)all(is.na(x))))){
+              cat("Missing param, auto-tuning...")
+              lst <- list()
+              }
+            #lst <- lst[sapply(lst,function(x)all(!is.na(x)))]
             lst
           })
         
@@ -258,7 +275,7 @@ observeEvent(input$do_ml, {
           ## Center and scale the predictors for the training
           ## set and all future samples.
           preProc = input$ml_preproc,
-          tuneGrid = tuneGrid,
+          tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
           trControl = trainCtrl
         )
 
