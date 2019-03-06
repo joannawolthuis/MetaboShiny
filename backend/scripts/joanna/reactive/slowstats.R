@@ -158,11 +158,6 @@ observeEvent(input$do_ml, {
     curr[,(configCols):= lapply(.SD, function(x) as.factor(x)), .SDcols = configCols]
     curr[,(mzCols):= lapply(.SD, function(x) as.numeric(x)), .SDcols = mzCols]
     
-    # - remove columns with only 1 factor -
-    
-    rmv.configCols <- which(sapply(configCols, function(i, curr) ifelse(length(levels(as.factor(curr[,..i][[1]]))) == 1, TRUE, FALSE), curr = curr))
-    curr[, (rmv.configCols) := NULL]
-    
     # ============ LOOP HERE ============
     
     # get results for the amount of attempts chosen
@@ -171,7 +166,8 @@ observeEvent(input$do_ml, {
                                  #cl=session_cl, 
                                  function(i, 
                                           train_vec = train_vec, 
-                                          test_vec = test_vec){
+                                          test_vec = test_vec,
+                                          configCols = configCols){
       shiny::isolate({
         
         # get user training percentage
@@ -210,6 +206,12 @@ observeEvent(input$do_ml, {
         #remove.cols <- c("label") #TODO: make group column removed at start
         training <- curr[inTrain,]#-"label"]
         testing <- curr[inTest,]#-"label"]
+        
+        rmv.configCols.tr <- which(sapply(configCols, function(i, training) ifelse(length(levels(as.factor(training[,..i][[1]]))) == 1, TRUE, FALSE), training = training))
+        training[, (rmv.configCols.tr) := NULL]
+
+        rmv.configCols.te <- which(sapply(configCols, function(i, testing) ifelse(length(levels(as.factor(testing[,..i][[1]]))) == 1, TRUE, FALSE), testing = testing))
+        testing[, (rmv.configCols.te) := NULL]
         
         # ======= WIP =======
         
@@ -292,7 +294,8 @@ observeEvent(input$do_ml, {
       })
     }, 
     train_vec = global$vectors$ml_train, 
-    test_vec = global$vectors$ml_test
+    test_vec = global$vectors$ml_test,
+    configCols = configCols
     ) # for session_cl
     # check if a storage list for machine learning results already exists
     if(!"ml" %in% names(mSet$analSet)){
@@ -309,7 +312,9 @@ observeEvent(input$do_ml, {
       x = repeats[[i]]
       tbl = as.data.table(varImp(x$model)$importance, keep.rownames=T)
       tbl$rep = c(i)
-      colnames(tbl) = c("mz", "importance", "rep")
+      colnames(tbl) = c("mz", 
+                        "importance", 
+                        "rep")
       # - - - 
       tbl
     }))

@@ -1,10 +1,8 @@
 # - - helloo - - 
 "
-- - -
 This script is currently used to start MetaboShiny.
 It takes care of installing packages necessary for 
 MetaboShiny to even start.
-- - -
 "
 
 
@@ -28,7 +26,6 @@ install.if.not <- function(package){
     }
   }
 }
-
 
 # installs packages that metaboanalyst needs to run
 metanr_packages <- function(){

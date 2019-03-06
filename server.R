@@ -288,7 +288,7 @@ shinyServer(function(input, output, session) {
                       value=if(input$ml_method=="glmnet"){
               switch(row$parameter,
                      alpha = 1,
-                     lambda = "1:10:0.5")
+                     lambda = "0:1:0.01")
             }),
             helpText(paste0(row$label, " (", row$class, ")."))
           )
