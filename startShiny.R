@@ -12,8 +12,7 @@ install.if.not <- function(package){
   if(package %in% rownames(installed.packages())){
     print(paste("Already installed base package", package))
   }else{
-    if(package %in% c("MetaboAnalystR", "BatchCorrMetabolomics", "showtext")){
-      metanr_packages() # Installs MetaboAnalyst-specific packages
+    if(package %in% c("MetaboAnalystR", "BatchCorrMetabolomics")){
       # Step 1: Install devtools
       install.if.not("devtools")
       # Step 2: Install MetaboAnalystR with documentation
@@ -58,12 +57,20 @@ if(length(missing.packages)>0){
   BiocManager::install(missing.packages)
 }
 
-# used to create the docker run statements
+## used to create the docker run statements
 # groupies <- split(unique(to.install), ceiling(seq_along(unique(to.install))/10))
 # for(group in groupies){
 #   packages <- paste0("'",paste0(group, collapse="', '"), "'")
 #   cat(gsubfn::fn$paste('RUN R -e "BiocManager::install(c($packages))"\n'))
 # }
+## docker internet
+# docker run --net=host -it metaboshiny/test1
+## docker with volume mounted
+# docker run -p 8080:8080 --net=host -it --mount src='~/MetaboShiny',target='/databases/,type=bind metaboshiny/test1
+
+# attempt 1:
+# make metaboshiny_storage dir in home first..
+# docker run -p 8080:8080 --mount src=~/MetaboShiny_storage,target=/databases/,type=bind --rm -it metaboshiny/test1 sh
 
 # packages needed to start up
 git.packages <<- c("MetaboAnalystR", "BatchCorrMetabolomics")
