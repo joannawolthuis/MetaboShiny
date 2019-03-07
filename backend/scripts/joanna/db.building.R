@@ -176,7 +176,7 @@ build.base.db <- function(dbname=NA,
                                  RSQLite::dbDisconnect(full.conn)
                                },
                                maconda = function(dbname, ...){
-                                 file.url = "https://www.maconda.bham.ac.uk/downloads/MaConDa__v1_0__csv.zip"
+                                 file.url = "http://www.maconda.bham.ac.uk/downloads/MaConDa__v1_0__csv.zip"
                                  
                                  base.loc <- file.path(getOptions("user_options.txt")$db_dir, "maconda_source")
                                  
@@ -375,7 +375,7 @@ build.base.db <- function(dbname=NA,
                                                                      JOIN wikipathways w
                                                                      ON b.identifier = w.identifier")
                                  # --- get pathway info ---
-                                 # -- R PACKAGE EXISTS: source("https://bioconductor.org/biocLite.R"); biocLite("rWikiPathways"); --
+                                 # -- R PACKAGE EXISTS: source("http://bioconductor.org/biocLite.R"); biocLite("rWikiPathways"); --
                                  sparql.pathways <- SPARQL::SPARQL(url="http://sparql.wikipathways.org/",
                                                                    query='PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                                                                    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -558,12 +558,12 @@ build.base.db <- function(dbname=NA,
                                  RSQLite::dbWriteTable(conn, "pathways", db.pathways, overwrite=TRUE)
                                },
                                metacyc = function(dbname, ...){
-                                 # NOTE: Requires downloading this SmartTable as delimited file: https://metacyc.org/group?id=biocyc17-31223-3729417004
+                                 # NOTE: Requires downloading this SmartTable as delimited file: http://metacyc.org/group?id=biocyc17-31223-3729417004
                                  # May need to remake smartTable if anything on the website changes unfortunately
                                  # TODO: download file directly from link, will need a javascript. Maybe Rselenium??
                                  source.file = "./backend/db/metacyc_source/All_compounds_of_MetaCyc.txt"
                                  if(!file.exists(source.file)){
-                                   message("Please download SmartTable from 'https://metacyc.org/group?id=biocyc17-31223-3729417004' as .txt and save in the backend/db/metacyc_source folder.")
+                                   message("Please download SmartTable from 'http://metacyc.org/group?id=biocyc17-31223-3729417004' as .txt and save in the backend/db/metacyc_source folder.")
                                    return(NULL)
                                  }
                                  metacyc.raw = read.table(source.file, fill = T, header = T)
@@ -726,7 +726,7 @@ build.base.db <- function(dbname=NA,
                                  metabs <- pbapply::pblapply(metabs, cl = session_cl, FUN=function(id){
                                    met_info = NA
                                    try({
-                                     url <- paste0("https://www.ebi.ac.uk/metabolights/webservice/beta/compound/", id)
+                                     url <- paste0("http://www.ebi.ac.uk/metabolights/webservice/beta/compound/", id)
                                      tries = 4
                                      while(is.na(met_info) & tries > 0){
                                        #if(tries < 4) print(paste0("retrying ",id))
@@ -828,7 +828,7 @@ build.base.db <- function(dbname=NA,
                                    "dimedb_sources.zip",
                                    "dimedb_pc_info.zip",
                                    "dimedb_id_info.zip")
-                                 file.url <- "https://dimedb.ibers.aber.ac.uk/help/downloads/"
+                                 file.url <- "http://dimedb.ibers.aber.ac.uk/help/downloads/"
                                  file.urls <- paste0(file.url, files)
                                  # ----
                                  print("Downloading files...")
@@ -893,7 +893,7 @@ build.base.db <- function(dbname=NA,
                                  db.1$chemical_compoundDescription[db.1$chemical_compoundDescription == "chemical compound"] <- NA
                                  db.1$roleLabel[db.1$roleLabel == ""] <- NA
                                  
-                                 # https://spark.apache.org/ for speed increases? is it useful locally? more an HPC thing?
+                                 # http://spark.apache.org/ for speed increases? is it useful locally? more an HPC thing?
                                  
                                  #cl = parallel::makeCluster(3, "FORK")
                                  
@@ -949,7 +949,7 @@ build.base.db <- function(dbname=NA,
                                  
                                },vmh = function(dbname, ...){
                                  
-                                 api_url <- "https://vmh.uni.lu/_api/metabolites/"
+                                 api_url <- "http://vmh.uni.lu/_api/metabolites/"
                                  
                                  pagerange = 150
                                  # get the first page
@@ -1324,7 +1324,7 @@ build.base.db <- function(dbname=NA,
                                  RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
                                },
                                massbank = function(dbname, ...){
-                                 file.url <- "https://github.com/MassBank/MassBank-data/archive/master.zip"
+                                 file.url <- "http://github.com/MassBank/MassBank-data/archive/master.zip"
                                  base.loc <- file.path(getOptions("user_options.txt")$db_dir, "massbank_source")
                                  if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                                  zip.file <- file.path(base.loc, "massbank.zip")
