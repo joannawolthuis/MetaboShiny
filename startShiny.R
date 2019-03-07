@@ -30,7 +30,7 @@ install.if.not <- function(package){
 # installs packages that metaboanalyst needs to run
 metanr_packages <- function(){
   # - - - - - - - - - - - - - -
-  metr_pkgs <- c("Rserve", "BatchCorrMetabolomics", "RColorBrewer",
+  metr_pkgs <- c("Rserve", "RColorBrewer",
                  "xtable", "som", "ROCR", "RJSONIO", "gplots",
                  "e1071", "caTools", "igraph", "randomForest", "Cairo",
                  "pls", "pheatmap", "lattice", "rmarkdown", "knitr",
@@ -80,7 +80,7 @@ for(package in base.packs){
 }
 
 # set working directory to where the rstudio file currently is
-wdir <<- dirname(rstudioapi::getSourceEditorContext()$path) # TODO: make this not break when not running from rstudio
+wdir <<- dirname("/srv/shiny-server/") # TODO: make this not break when not running from rstudio
 setwd(wdir)
 
 # create options file if it doesnt exist yet
