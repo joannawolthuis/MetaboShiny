@@ -182,7 +182,7 @@ build.base.db <- function(dbname=NA,
                                  
                                  if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                                  zip.file <- file.path(base.loc, "maconda.zip")
-                                 utils::download.file(file.url, zip.file,mode = "w")
+                                 utils::download.file(file.url, zip.file, mode = "w")
                                  utils::unzip(zip.file,files = "MaConDa__v1_0__extensive.csv",exdir = base.loc)
                                  
                                  base.table <- data.table::fread(file = file.path(base.loc, "MaConDa__v1_0__extensive.csv"))

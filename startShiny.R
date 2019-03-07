@@ -80,6 +80,11 @@ for(package in git.packages){
   install.if.not(package)
 }
 
+library(httr)
+options('download.file.method'='curl')
+options('unzip.unzip'=getOption("unzip"))
+#set_config(config(ssl_verifypeer = 0L))
+
 # go run it! :-)
 shiny::runApp(".",
               port = 8080, 

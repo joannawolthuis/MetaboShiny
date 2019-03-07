@@ -22,7 +22,9 @@ RUN apt-get update && apt-get install -y \
     libpng-dev \
     librsvg2-dev \
     default-jre \
-    default-jdk
+    default-jdk \
+    ca-certificates \
+    curl
 
 RUN sudo R CMD javareconf
 
@@ -31,7 +33,7 @@ COPY / /
 
 RUN R -e "install.packages('BiocManager')"
 
-RUN R -e "BiocManager::install(c('rJava', 'shiny', 'shinydashboard', 'httr', 'curl', 'git2r', 'devtools', 'pacman', 'gsubfn', 'DT', 'R.utils'))"
+RUN R -e "BiocManager::install(c('openssl', 'rJava', 'shiny', 'shinydashboard', 'httr', 'curl', 'git2r', 'devtools', 'pacman', 'gsubfn', 'DT', 'R.utils'))"
 RUN R -e "BiocManager::install(c('data.table', 'shinyFiles', 'shinyBS', 'rhandsontable', 'XML', 'colorRamps', 'enviPat', 'shinyalert', 'shinyWidgets', 'colourpicker'))"
 RUN R -e "BiocManager::install(c('here', 'ECharts2Shiny', 'shinyjqui', 'later', 'shinycssloaders', 'qdapDictionaries', 'sysfonts', 'showtext', 'wordcloud2', 'Rserve'))"
 RUN R -e "BiocManager::install(c('RColorBrewer', 'xtable', 'som', 'ROCR', 'RJSONIO', 'gplots', 'e1071', 'caTools', 'igraph', 'randomForest'))"
