@@ -84,7 +84,7 @@ wdir <<- dirname("/srv/shiny-server/") # TODO: make this not break when not runn
 setwd(wdir)
 
 # create options file if it doesnt exist yet
-if(!file.exists(file.path(wdir, "user_options.txt"))){
+#if(!file.exists(file.path(wdir, "user_options.txt"))){
   default_options = 
 gsubfn::fn$paste(
   "db_dir = $wdir/backend/db
