@@ -1,10 +1,5 @@
-<<<<<<< HEAD
 db_dir = ~/MetaboShiny/database
 work_dir = ~/MetaboShiny/userfiles
-=======
-db_dir = ~/MetaboShiny_database
-work_dir = ~/MetaboShiny_userfiles
->>>>>>> 89207aab168902a8b1494361577db293cf322b26
 proj_name = My_Project
 ppm = 3
 packages_installed = N
