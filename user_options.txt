@@ -1,4 +1,4 @@
-db_dir = ~/MetaboShiny/database
+db_dir = //databases
 work_dir = ~/MetaboShiny/userfiles
 proj_name = My_Project
 ppm = 3

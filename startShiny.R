@@ -12,8 +12,7 @@ install.if.not <- function(package){
   if(package %in% rownames(installed.packages())){
     print(paste("Already installed base package", package))
   }else{
-    if(package %in% c("MetaboAnalystR", "BatchCorrMetabolomics", "showtext")){
-      metanr_packages() # Installs MetaboAnalyst-specific packages
+    if(package %in% c("MetaboAnalystR", "BatchCorrMetabolomics")){
       # Step 1: Install devtools
       install.if.not("devtools")
       # Step 2: Install MetaboAnalystR with documentation
@@ -76,5 +75,5 @@ for(package in git.packages){
 # go run it! :-)
 shiny::runApp(".",
               port = 8080, 
-              host = "0.0.0.0", 
-              launch.browser = T)
+              host = "0.0.0.0",
+launch.browser=FALSE)
