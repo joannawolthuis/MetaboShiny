@@ -30,7 +30,7 @@ install.if.not <- function(package){
 # installs packages that metaboanalyst needs to run
 metanr_packages <- function(){
   # - - - - - - - - - - - - - -
-  metr_pkgs <- c("Rserve", "BatchCorrMetabolomics", "RColorBrewer",
+  metr_pkgs <- c("Rserve", "RColorBrewer",
                  "xtable", "som", "ROCR", "RJSONIO", "gplots",
                  "e1071", "caTools", "igraph", "randomForest", "Cairo",
                  "pls", "pheatmap", "lattice", "rmarkdown", "knitr",
@@ -63,16 +63,16 @@ metanr_packages <- function(){
 # install.packages("rJava", type="source")
 
 # packages needed to start up
-base.packs <<- c("httr", "curl", "git2r", "devtools", 
-                "pacman", "gsubfn", "shiny", "DT", 
-                "R.utils", "data.table", "shinyFiles", 
-                "shinyBS", "rhandsontable", "XML", 
-                "MetaboAnalystR", "BatchCorrMetabolomics", 
-                "colorRamps", "enviPat", "shinyalert",
-                "shinyWidgets", "colourpicker", "here",
-                "ECharts2Shiny", "shinyjqui", "later",
-                "shinycssloaders", "qdapDictionaries",
-                "sysfonts", "showtext", "wordcloud2")
+base.packs <<- c('httr', 'curl', 'git2r', 'devtools', 
+                'pacman', 'gsubfn', 'shiny', 'DT', 
+                'R.utils', 'data.table', 'shinyFiles', 
+                'shinyBS', 'rhandsontable', 'XML', 
+                'MetaboAnalystR', 'BatchCorrMetabolomics', 
+                'colorRamps', 'enviPat', 'shinyalert',
+                'shinyWidgets', 'colourpicker', 'here',
+                'ECharts2Shiny', 'shinyjqui', 'later',
+                'shinycssloaders', 'qdapDictionaries',
+                'sysfonts', 'showtext', 'wordcloud2')
 
 # install the base packages needed to start up
 for(package in base.packs){

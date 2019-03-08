@@ -51,8 +51,7 @@ lapply(unique(res.update.tables), FUN=function(table){
                                                   meba = mSet$analSet$MB$stats,
                                                   plsda_vip = plsda_tab,
                                                   mummi_detail = global$tables$mummi_detail,
-                                                  venn = global$tables$venn_overlap
-    ), keep.rownames = T)[curr_row, rn]
+                                                  venn = global$tables$venn_overlap), keep.rownames = T)[curr_row, rn]
     # print current compound in sidebar
     output$curr_cpd <- renderText(curr_cpd)
     
