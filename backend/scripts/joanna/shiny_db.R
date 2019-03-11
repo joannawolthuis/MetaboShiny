@@ -618,10 +618,12 @@ cat("
     }
     
     # wiley, seven golden rules
-    def.ele = c("C","H","N","O","P","S","F","Cl","Br","Si")
+    def.ele = c("C","H","N","O","P","S")
     
-    minformula = "C1H0N0O0P0S0F0Cl0Br0Si0"
-    maxformula = "C78H126N20O27P9S14F34Cl12Br8Si14"
+    #< 10, O < 20, P < 4, S < 3
+    
+    minformula = "C1H0N0O0P0S0"
+    maxformula = "C999H999N10O20P4S3"
     filter="."
     
     add.only.ele <- setdiff(add.ele, def.ele)
@@ -700,6 +702,9 @@ cat("
       
       f <- function(){
         pbapply::pblapply(uniques, function(formula){
+          
+          print(formula)
+          
           i <<- i + 1
           url = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/fastformula/", formula, "/cids/JSON")
           description = "No PubChem hits for this predicted formula."
@@ -745,13 +750,11 @@ info_from_cids <- function(cids,
                            charges = c(0),
                            maxn = 30, 
                            write2db=F){
-  
   # structural info
   split.cids = split(cids, 
                      ceiling(seq_along(cids) / maxn))
   
-  chunk.row.list <- pbapply::pblapply(split.cids, cl=session_cl, function(cidgroup){
-    
+  chunk.row.list <- lapply(split.cids, function(cidgroup){
     
     url_struct = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/", 
                         paste0(cidgroup, collapse=","),
@@ -762,45 +765,83 @@ info_from_cids <- function(cids,
     
     # CHECK IF ORIGINAL CHARGE IS ZERO 
     
-    if(struct_res$PropertyTable$Properties$Charge == 0){
-      
-      structures <- struct_res$PropertyTable$Properties
-      
-      # descriptions
-      url_desc = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/", 
-                        paste0(cidgroup, collapse=","),
-                        "/description/JSON")
-      
-      desc_res <- jsonlite::fromJSON(url_desc,
-                                     simplifyVector = T) 
-      
-      descs <- as.data.table(desc_res$InformationList$Information)
-      
-      if("Description" %in% colnames(descs)){
-        descs.adj <- descs[, list(name = Title[!is.na(Title)], Description = paste(Description[!is.na(Description)], collapse=" ")), by = CID]
-      }else{
-        descs.adj <- descs[, list(name = Title[!is.na(Title)], Description = c("No description available")), by = CID]
-      }
-      
-      descs.adj$Description <- gsub(descs.adj$Description, 
-                                    pattern = "</?a(|\\s+[^>]+)>", 
-                                    replacement = "", 
-                                    perl = T)
-      if(any(descs.adj$Description == "")){
-        descs.adj[Description == ""]$Description <- c("No description available")
-      }
-      
-      rows <- unique(merge(structures, descs.adj, by.x="CID", by.y="CID"))
-      colnames(rows) <- c("identifier", "baseformula", "structure", "name", "description")
-      
-      # - - - return rows - - -
-      
-      rows[,c(1,4,2,3,5)]
+    keep.cids <- which(struct_res$PropertyTable$Properties$Charge == 0)
+    
+    cidgroup = cidgroup[keep.cids]
+    
+    structures <- struct_res$PropertyTable$Properties[keep.cids,]
+    
+    # descriptions
+    url_desc = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/", 
+                      paste0(cidgroup, collapse=","),
+                      "/description/JSON")
+    
+    desc_res <- jsonlite::fromJSON(url_desc,
+                                   simplifyVector = T) 
+    
+    descs <- as.data.table(desc_res$InformationList$Information)
+    
+    if("Description" %in% colnames(descs)){
+      descs.adj <- descs[, list(name = Title[!is.na(Title)], Description = paste(Description[!is.na(Description)], collapse=" ")), by = CID]
     }else{
-      NA
+      descs.adj <- descs[, list(name = Title[!is.na(Title)], Description = c("No description available")), by = CID]
     }
+    
+    descs.adj$Description <- gsub(descs.adj$Description, 
+                                  pattern = "</?a(|\\s+[^>]+)>", 
+                                  replacement = "", 
+                                  perl = T)
+    
+    if(any(descs.adj$Description == "")){
+      descs.adj[Description == ""]$Description <- c("No description available")
+    }
+    
+    rows <- unique(merge(structures, descs.adj, by.x="CID", by.y="CID"))
+    colnames(rows) <- c("identifier", "baseformula", "structure", "charge", "name", "description")
+    
+    url_syn = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/", 
+                      paste0(cidgroup, collapse=","),
+                      "/synonyms/JSON")
+    
+    syn.adj = data.table()
+    
+    try({
+      synonyms <- jsonlite::fromJSON(url_syn,
+                                     simplifyVector = T)
+      syn.adj = synonyms$InformationList$Information  
+    })
+    
+    if(nrow(syn.adj) > 0){
+      rows.adj <- merge(rows, syn.adj, by.x="identifier", by.y="CID")
+      rows.renamed <- lapply(1:nrow(rows.adj), function(i){
+        row = rows.adj[i,]
+        synonyms = row$Synonym[[1]]
+        old.name <- row$name
+        new.name <- synonyms[1]
+        
+        if(is.null(new.name)) new.name <- old.name
+        
+        desc.names <- synonyms[-1]
+        row$name <- new.name
+        row$description <- paste0(paste0("Other names: ", 
+                                         paste0(c(old.name, desc.names), collapse="; "),
+                                         ". ",
+                                         row$description))
+        row <- as.data.table(row)
+        row[,-"Synonym"]
+        
+      })
+      tbl.renamed <- rbindlist(rows.renamed, fill=T)
+    }
+    
+    tbl.fin <- tbl.renamed[,-"charge"]
+
+    tbl.fin$source <- "PubChem"
+    # - - - return rows - - -
+    
+    tbl.fin[,c(1,4,2,3,5)]
   })
   
-  chunk.row.list[lapply(chunk.row.list, function(x) !is.na(x))]
+  chunk.row.list[sapply(chunk.row.list, function(x) !is.na(x))]
 
 }
