@@ -1,11 +1,9 @@
 # check which adducts are currently selected by user
 observe({
   # --------------
-  wanted.adducts.pos <- global$vectors$pos_adducts[input$pos_add_tab_rows_selected, "Name"]
-  wanted.adducts.neg <- global$vectors$neg_adducts[input$neg_add_tab_rows_selected, "Name"]
+  wanted.adducts <- global$vectors$calc_adducts[input$magicball_add_tab_rows_selected]
   # ---------
-  global$vectors$add_list <<- rbind(wanted.adducts.neg, 
-                                       wanted.adducts.pos)$Name
+  global$vectors$add_list <<- wanted.adducts
 })
 
 

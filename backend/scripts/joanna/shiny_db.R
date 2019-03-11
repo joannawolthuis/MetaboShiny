@@ -583,7 +583,7 @@ multimatch <- function(cpd, dbs, searchid="mz",
 get_predicted <- function(mz, 
                           charge = NULL, 
                           ppm = 2, 
-                          scanmode = "positive", 
+                          #scanmode = "positive", 
                           checkdb = T, 
                           elements = "CHNOPSNaClKILi",
                           search_pubchem = T,
@@ -605,46 +605,71 @@ cat("
     `-......-`
 ")
   # find which mode we are in
-  if(checkdb){
-    conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb)
-    scanmode <- DBI::dbGetQuery(conn, paste0("SELECT DISTINCT foundinmode FROM mzvals WHERE mzmed = ", mz))[,1]
-  }
   
-  # get which formulas are possible
-  predicted = Rdisop::decomposeMass(as.numeric(mz), 
-                                    ppm = ppm,
-                                    elements = elements)
-  # charged
-  charged = which( (predicted$DBE %% 1)  == 0.5 )
-  posdbe = which( predicted$DBE > 0 )
-  
-  candidates = predicted$formula[intersect(charged, posdbe)]
-  candidates <- candidates[!is.na(candidates)]
-  
-  res = pbapply::pblapply(candidates, function(formula){
+  per_adduct_results <- pbapply::pblapply(calc_adducts, function(add_name){
     
-    checked <- check_chemform(isotopes, formula)
-    new_formula <- checked[1,]$new_formula
-    # switch between positive and negative mode
-    check_adducts <- adducts[Ion_mode == scanmode & Name %in% calc_adducts]
-    # check which adducts are possible
-    adductvars = lapply(1:nrow(check_adducts), function(i){
-      row = check_adducts[i,]
+    row <- adducts[Name == add_name]
+    
+    if(row$Formula_add != "FALSE"){
+      add.ele = unlist(strsplit(row$Formula_add, 
+                                split = "\\d"))
+    }else{
+      add.ele = c()
+    }
+    
+    # wiley, seven golden rules
+    def.ele = c("C","H","N","O","P","S","F","Cl","Br","Si")
+    
+    minformula = "C1H0N0O0P0S0F0Cl0Br0Si0"
+    maxformula = "C78H126N20O27P9S14F34Cl12Br8Si14"
+    filter="."
+    
+    add.only.ele <- setdiff(add.ele, def.ele)
+    
+    if(length(add.only.ele) > 0){
+      maxformula <- paste0(maxformula, sapply(add.ele, function(ele){
+        gsub(row$Formula_add, pattern = paste0("(",ele, "\\d*)"), replacement = "\\1")
+      }))
+      minformula <- paste0(minformula, sapply(add.ele, function(ele){
+        gsub(row$Formula_add, pattern = paste0("(",ele, "\\d*)"), replacement = "\\1")
+      }))
+      filter = paste0(add.only.ele, collapse = "|")
+    }
+    
+    # get which formulas are possible
+    predicted = Rdisop::decomposeMass(as.numeric(mz), 
+                                      ppm = ppm,
+                                      minElements = minformula,
+                                      maxElements = maxformula,
+                                      elements = Rdisop::initializeElements(names = unique(c(def.ele,
+                                                                                             add.ele)))
+    )
+    
+    charged = which( (predicted$DBE %% 1)  == 0.5 )
+    posdbe = which( predicted$DBE > 0 )
+    
+    candidates = predicted$formula[intersect(charged, posdbe)]
+    candidates <- candidates[!is.na(candidates)]
+    
+    keep.candidates <- grep(x = candidates, pattern = filter, value=T)
+    
+    res = pbapply::pblapply(keep.candidates, function(formula, row){
+      
+      checked <- check_chemform(isotopes, formula)
+      new_formula <- checked[1,]$new_formula
+      # check which adducts are possible
       theor_orig_formula = new_formula
+
       # if there's an adduct, remove it from the original formula
-      if(row$Formula_add != FALSE){
-        add_possible <- !as.logical(enviPat::check_ded(theor_orig_formula, row$Formula_add))
-        if(add_possible){
-          theor_orig_formula <- Rdisop::subMolecules(theor_orig_formula, row$Formula_add)$formula
-        }else{
-          NULL # if not possible, skip this adduct
-        }
+      if(row$Formula_add != "FALSE"){
+        theor_orig_formula <- Rdisop::subMolecules(theor_orig_formula, row$Formula_add)$formula
       }
-      if(row$Formula_ded != FALSE){
+      if(row$Formula_ded != "FALSE"){
         theor_orig_formula <- Rdisop::addMolecules(theor_orig_formula, row$Formula_ded)$formula
       }
       if(!is.null(theor_orig_formula)){
         calc <- Rdisop::getMolecule(theor_orig_formula)
+
         if(calc$DBE %% 1 != 0){
           NULL
         }else{
@@ -658,62 +683,66 @@ cat("
                      source = "magicball")
         }
       }
-    })
-  })
-  
-  res_proc = flattenlist(res)
-  tbl = rbindlist(res_proc[!sapply(res_proc, is.null)])
-  
-  # do a pubchem search
-  
-  uniques <- unique(tbl$baseformula)
-  
-  if(search_pubchem){
-    i = 0
-    count = length(uniques)
+    }, row = row)
     
-    f <- function(){
-      pbapply::pblapply(uniques, function(formula){
-        i <<- i + 1
-        url = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/fastformula/", formula, "/cids/JSON")
-        description = "No PubChem hits for this predicted formula."
-        rows = data.table(identifier = i, 
-                          name = formula, 
-                          baseformula = formula, 
-                          structure = NA,
-                          description = description)
-        try({
-          pc_res <- jsonlite::read_json(url,simplifyVector = T)
-          cids <- pc_res$IdentifierList$CID
-          if(pubchem_detailed){ # SLOW!!
-            rows <- info_from_cids(cids)
-          }else{
-            rows$description <- paste0("PubChem found these Compound IDs (check ChemSpider or PubChem): ", paste0(cids, collapse = ", "))
-          }
-        }) 
-        if(inshiny) shiny::setProgress(value = i/count)
-        rows
-      })
-    }
+    res_proc = flattenlist(res)
+    tbl = rbindlist(res_proc[!sapply(res_proc, is.null)])
     
-    pc_rows <- if(inshiny){
-      shiny::withProgress({
+    if(nrow(tbl) == 0) return(NULL)
+    
+    # do a pubchem search
+    
+    uniques <- unique(tbl$baseformula)
+    
+    if(search_pubchem){
+      i = 0
+      count = length(uniques)
+      
+      f <- function(){
+        pbapply::pblapply(uniques, function(formula){
+          i <<- i + 1
+          url = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/fastformula/", formula, "/cids/JSON")
+          description = "No PubChem hits for this predicted formula."
+          rows = data.table(identifier = i, 
+                            name = formula, 
+                            baseformula = formula, 
+                            structure = NA,
+                            description = description)
+          try({
+            pc_res <- jsonlite::read_json(url,simplifyVector = T)
+            cids <- pc_res$IdentifierList$CID
+            if(pubchem_detailed){ # SLOW!!
+              rows <- info_from_cids(cids)
+            }else{
+              rows$description <- paste0("PubChem found these Compound IDs (check ChemSpider or PubChem): ", paste0(cids, collapse = ", "))
+            }
+          }) 
+          if(inshiny) shiny::setProgress(value = i/count)
+          rows
+        })
+      }
+      
+      pc_rows <- if(inshiny){
+        shiny::withProgress({
+          f()
+        })
+      }else{
         f()
-      })
+      }
+      
+      pc_tbl <- rbindlist(flattenlist(pc_rows))
+      tbl <- merge(tbl, pc_tbl, by = "baseformula")
+      tbl <- tbl[, list(name = name.y, baseformula, adduct, `%iso`, structure = structure.y, identifier = identifier.y, description)]
     }else{
-      f()
+      tbl$description = c("Predicted possible formula for this m/z value.")
     }
-    
-    pc_tbl <- rbindlist(flattenlist(pc_rows))
-    tbl <- merge(tbl, pc_tbl, by = "baseformula")
-    tbl <- tbl[, list(name = name.y, baseformula, adduct, `%iso`, structure = structure.y, identifier = identifier.y, description)]
-  }else{
-    tbl$description = c("Predicted possible formula for this m/z value.")
-  }
-  tbl
+    tbl
+  })
+ rbindlist(per_adduct_results[sapply(per_adduct_results, function(x)!is.null(x))])  
 }
 
-info_from_cids <- function(cids, 
+info_from_cids <- function(cids,
+                           charges = c(0),
                            maxn = 30, 
                            write2db=F){
   
@@ -723,48 +752,55 @@ info_from_cids <- function(cids,
   
   chunk.row.list <- pbapply::pblapply(split.cids, cl=session_cl, function(cidgroup){
     
+    
     url_struct = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/", 
                         paste0(cidgroup, collapse=","),
-                        "/property/MolecularFormula,CanonicalSMILES/JSON")
+                        "/property/MolecularFormula,CanonicalSMILES,Charge/JSON")
     
     struct_res <- jsonlite::fromJSON(url_struct,
                                     simplifyVector = T)
     
-    structures <- struct_res$PropertyTable$Properties
+    # CHECK IF ORIGINAL CHARGE IS ZERO 
     
-    # descriptions
-    url_desc = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/", 
-                      paste0(cidgroup, collapse=","),
-                      "/description/JSON")
-    
-    desc_res <- jsonlite::fromJSON(url_desc,
-                                    simplifyVector = T) 
-    
-    descs <- as.data.table(desc_res$InformationList$Information)
-    
-    if("Description" %in% colnames(descs)){
-      descs.adj <- descs[, list(name = Title[!is.na(Title)], Description = paste(Description[!is.na(Description)], collapse=" ")), by = CID]
+    if(struct_res$PropertyTable$Properties$Charge == 0){
+      
+      structures <- struct_res$PropertyTable$Properties
+      
+      # descriptions
+      url_desc = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/", 
+                        paste0(cidgroup, collapse=","),
+                        "/description/JSON")
+      
+      desc_res <- jsonlite::fromJSON(url_desc,
+                                     simplifyVector = T) 
+      
+      descs <- as.data.table(desc_res$InformationList$Information)
+      
+      if("Description" %in% colnames(descs)){
+        descs.adj <- descs[, list(name = Title[!is.na(Title)], Description = paste(Description[!is.na(Description)], collapse=" ")), by = CID]
+      }else{
+        descs.adj <- descs[, list(name = Title[!is.na(Title)], Description = c("No description available")), by = CID]
+      }
+      
+      descs.adj$Description <- gsub(descs.adj$Description, 
+                                    pattern = "</?a(|\\s+[^>]+)>", 
+                                    replacement = "", 
+                                    perl = T)
+      if(any(descs.adj$Description == "")){
+        descs.adj[Description == ""]$Description <- c("No description available")
+      }
+      
+      rows <- unique(merge(structures, descs.adj, by.x="CID", by.y="CID"))
+      colnames(rows) <- c("identifier", "baseformula", "structure", "name", "description")
+      
+      # - - - return rows - - -
+      
+      rows[,c(1,4,2,3,5)]
     }else{
-      descs.adj <- descs[, list(name = Title[!is.na(Title)], Description = c("No description available")), by = CID]
+      NA
     }
-    
-    descs.adj$Description <- gsub(descs.adj$Description, 
-                               pattern = "</?a(|\\s+[^>]+)>", 
-                               replacement = "", 
-                               perl = T)
-    
-    if(any(descs.adj$Description == "")){
-      descs.adj[Description == ""]$Description <- c("No description available")
-    }
-    
-    rows <- unique(merge(structures, descs.adj, by.x="CID", by.y="CID"))
-    colnames(rows) <- c("identifier", "baseformula", "structure", "name", "description")
-    
-    # - - - return rows - - -
-    
-    rows[,c(1,4,2,3,5)]
   })
   
-  chunk.row.list
+  chunk.row.list[lapply(chunk.row.list, function(x) !is.na(x))]
 
 }

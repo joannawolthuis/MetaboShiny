@@ -263,66 +263,44 @@ build.base.db <- function(dbname=NA,
                                  print("Downloading XML database...")
                                  file.url <- "http://www.hmdb.ca/system/downloads/current/hmdb_metabolites.zip"
                                  # ----
+                                 #base.loc <- getOptions("user_options.txt")$db_dir
                                  base.loc <- file.path(getOptions("user_options.txt")$db_dir, "hmdb_source")
                                  if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                                  zip.file <- file.path(base.loc, "HMDB.zip")
                                  utils::download.file(file.url, zip.file,mode = "w")
                                  utils::unzip(zip.file, exdir = base.loc)
-                                 
                                  # --- go through xml ---
-                                 
                                  print("Parsing XML...")
-                                 
-                                 require(XML)
-                                 
-                                 input = file.path(base.loc,"hmdb_metabolites.xml")
-                                 
-                                 n <- as.numeric(system(gsubfn::fn$paste("sed -n '$=' '$input'"),intern = TRUE))
-                                 #n <- as.numeric(system(gsubfn::fn$paste("grep '<metabolite>' '$input'  | wc -l"),intern = TRUE))
-                                 
-                                 pb <- pbapply::startpb(min = 0, max = n)
-                                 
-                                 idx <- 1
-                                 
-                                 data <- XML::xmlEventParse(input, 
-                                                            handlers = NULL, 
-                                                            branches = list(
-                                                              name = function(x){
-                                                                value <- xmlValue(x[[1]])
-                                                                # - progress bar - 
-                                                                if(idx %% 1000 == 0){
-                                                                  pbapply::setpb(pb, idx)
-                                                                }
-                                                                idx <<- idx + 1
-                                                                # - - - - - - - - -
-                                                                value
-                                                              },
-                                                              chemical_formula = function(x){
-                                                                value <- xmlValue(x[[1]])
-                                                                value
-                                                              },
-                                                              accession = function(x){
-                                                                value <- xmlValue(x[[1]])
-                                                                value
-                                                              },
-                                                              predicted_properties = function(x){
-                                                                ns <- XML::getNodeSet(x, 
-                                                                                      "//property[kind='formal_charge']/value", 
-                                                                                      c(pf = "http://www.hmdb.ca"))
-                                                                value <- xmlValue(ns[[1]])
-                                                                value
-                                                              },
-                                                              description = function(x){
-                                                                value <- xmlValue(x[[1]])
-                                                                value
-                                                              },
-                                                              smiles = function(x){
-                                                                value <- xmlValue(x[[1]])
-                                                                value
-                                                              }
-                                                            ))
-                                 
-                                 s# --- check formulae ---
+                                 data <- XML::xmlParse(file.path(base.loc,"hmdb_metabolites.xml"), useInternalNodes = T)
+                                 # --- xpath magic! :-) --- [NOTE: leaves out anything that doens't have formal charge available, another option would be to default to zero]
+                                 compoundnames <- XML::getNodeSet(data, 
+                                                                  "/*/pf:metabolite[pf:predicted_properties/pf:property[pf:kind='formal_charge']]/pf:name", 
+                                                                  c(pf = "http://www.hmdb.ca"))
+                                 formulae <- XML::getNodeSet(data, 
+                                                             "/*/pf:metabolite[pf:predicted_properties/pf:property[pf:kind='formal_charge']]/pf:chemical_formula", 
+                                                             c(pf = "http://www.hmdb.ca"))
+                                 identifiers <- XML::getNodeSet(data, 
+                                                                "/*/pf:metabolite[pf:predicted_properties/pf:property[pf:kind='formal_charge']]/pf:accession", 
+                                                                c(pf = "http://www.hmdb.ca"))
+                                 charges <- XML::getNodeSet(data, 
+                                                            "/*/pf:metabolite/pf:predicted_properties/pf:property[pf:kind='formal_charge']/pf:value", 
+                                                            c(pf = "http://www.hmdb.ca"))
+                                 description <- XML::getNodeSet(data, 
+                                                                "/*/pf:metabolite[pf:predicted_properties/pf:property[pf:kind='formal_charge']]/pf:description", 
+                                                                c(pf = "http://www.hmdb.ca"))
+                                 structures <- XML::getNodeSet(data, 
+                                                               "/*/pf:metabolite[pf:predicted_properties/pf:property[pf:kind='formal_charge']]/pf:smiles", 
+                                                               c(pf = "http://www.hmdb.ca"))
+                                 # --- make nice big table ---
+                                 db.formatted <- data.table::data.table(
+                                   compoundname = sapply(compoundnames, XML::xmlValue),
+                                   description = sapply(description, XML::xmlValue),
+                                   baseformula = sapply(formulae, XML::xmlValue),
+                                   identifier =  gsub(sapply(identifiers, XML::xmlValue), pattern = "(HMDB0*)", replacement = ""),
+                                   charge = sapply(charges, XML::xmlValue),
+                                   structure = sapply(structures, XML::xmlValue)
+                                 )
+                                 # --- check formulae ---
                                  checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
                                                                                             db.formatted$baseformula))
                                  db.formatted$baseformula <- checked$new_formula
