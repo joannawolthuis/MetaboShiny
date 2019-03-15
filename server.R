@@ -54,11 +54,13 @@ shinyServer(function(input, output, session) {
   
   # default match table fill
   output$match_tab <-DT::renderDataTable({
-    DT::datatable(data.table("no m/z chosen" = "Please choose m/z value from results ٩(｡•́‿•̀｡)۶	"),
-                  selection = 'single',
-                  autoHideNavigation = T,
-                  options = list(lengthMenu = c(5, 10, 15), 
-                                 pageLength = 5))
+    if(is.null(global$tables$last_matches)){
+      DT::datatable(data.table("no m/z chosen" = "Please choose m/z value from results ٩(｡•́‿•̀｡)۶	"),
+                    selection = 'single',
+                    autoHideNavigation = T,
+                    options = list(lengthMenu = c(5, 10, 15), 
+                                   pageLength = 5))
+    }
   })  
   
   # create image objects in UI

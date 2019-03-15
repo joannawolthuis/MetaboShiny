@@ -612,89 +612,101 @@ cat("
     
     if(row$Formula_add != "FALSE"){
       add.ele = unlist(strsplit(row$Formula_add, 
-                                split = "\\d"))
+                                split = "\\d*"))
+      add.ele <<- add.ele[add.ele != ""]
     }else{
-      add.ele = c()
+      add.ele <<- c()
     }
     
-    # wiley, seven golden rules
-    def.ele = c("C","H","N","O","P","S")
-    
-    #< 10, O < 20, P < 4, S < 3
-    
-    minformula = "C1H0N0O0P0S0"
-    maxformula = "C999H999N10O20P4S3"
+    settings = list(
+      CHNOPS = c("C","H","N","O","P","S"),
+      CHNOP = c("C","H","N","O","P"),
+      CHNO = c("C","H","N","O"),
+      CHO = c("C","H","O")
+    )
+
     filter="."
     
-    add.only.ele <- setdiff(add.ele, def.ele)
-    
-    if(length(add.only.ele) > 0){
-      maxformula <- paste0(maxformula, sapply(add.ele, function(ele){
-        gsub(row$Formula_add, pattern = paste0("(",ele, "\\d*)"), replacement = "\\1")
-      }))
-      minformula <- paste0(minformula, sapply(add.ele, function(ele){
-        gsub(row$Formula_add, pattern = paste0("(",ele, "\\d*)"), replacement = "\\1")
-      }))
-      filter = paste0(add.only.ele, collapse = "|")
-    }
-    
-    # get which formulas are possible
-    predicted = Rdisop::decomposeMass(as.numeric(mz), 
-                                      ppm = ppm,
-                                      minElements = minformula,
-                                      maxElements = maxformula,
-                                      elements = Rdisop::initializeElements(names = unique(c(def.ele,
-                                                                                             add.ele)))
-    )
-    
-    charged = which( (predicted$DBE %% 1)  == 0.5 )
-    posdbe = which( predicted$DBE > 0 )
-    
-    candidates = predicted$formula[intersect(charged, posdbe)]
-    candidates <- candidates[!is.na(candidates)]
-    
-    keep.candidates <- grep(x = candidates, pattern = filter, value=T)
-    
-    res = pbapply::pblapply(keep.candidates, function(formula, row){
+    formulae <- pbapply::pblapply(settings, function(def.ele){
       
-      checked <- check_chemform(isotopes, formula)
-      new_formula <- checked[1,]$new_formula
-      # check which adducts are possible
-      theor_orig_formula = new_formula
-
-      # if there's an adduct, remove it from the original formula
-      if(row$Formula_add != "FALSE"){
-        theor_orig_formula <- Rdisop::subMolecules(theor_orig_formula, row$Formula_add)$formula
+      add.only.ele <- setdiff(add.ele,
+                              def.ele)
+      
+      if(length(add.only.ele) > 0){
+        maxformula <- paste0(maxformula, sapply(add.ele, function(ele){
+          gsub(row$Formula_add, pattern = paste0("(",ele, "\\d*)"), replacement = "\\1")
+        }))
+        minformula <- paste0(minformula, sapply(add.ele, function(ele){
+          gsub(row$Formula_add, pattern = paste0("(",ele, "\\d*)"), replacement = "\\1")
+        }))
+        filter = paste0(add.only.ele, collapse = "|")
       }
-      if(row$Formula_ded != "FALSE"){
-        theor_orig_formula <- Rdisop::addMolecules(theor_orig_formula, row$Formula_ded)$formula
-      }
-      if(!is.null(theor_orig_formula)){
-        calc <- Rdisop::getMolecule(theor_orig_formula)
-
-        if(calc$DBE %% 1 != 0){
-          NULL
-        }else{
-          data.table(name = theor_orig_formula, 
-                     baseformula = theor_orig_formula, 
-                     adduct = row$Name, 
-                     `%iso` = 100,
-                     structure = NA, 
-                     identifier = "???",
-                     #                     description = "Predicted possible formula for this m/z value.",
-                     source = "magicball")
+      
+      # get which formulas are possible
+      predicted = Rdisop::decomposeMass(as.numeric(mz), 
+                                        ppm = ppm,
+                                        elements = Rdisop::initializeElements(names = unique(c(def.ele,
+                                                                                               add.ele)))
+      )
+      
+      charged = which( (predicted$DBE %% 1)  == 0.5 )
+      posdbe = which( predicted$DBE > 0 )
+      
+      candidates = predicted$formula[intersect(charged, posdbe)]
+      candidates <- candidates[!is.na(candidates)]
+      
+      keep.candidates <- grep(x = candidates, pattern = filter, value=T)
+      
+      res = lapply(keep.candidates, function(formula, row){
+        
+        checked <- check_chemform(isotopes, formula)
+        new_formula <- checked[1,]$new_formula
+        # check which adducts are possible
+        theor_orig_formula = new_formula
+        
+        # if there's an adduct, remove it from the original formula
+        if(row$Formula_add != "FALSE"){
+          theor_orig_formula <- Rdisop::subMolecules(theor_orig_formula, row$Formula_add)$formula
         }
+        if(row$Formula_ded != "FALSE"){
+          theor_orig_formula <- Rdisop::addMolecules(theor_orig_formula, row$Formula_ded)$formula
+        }
+        if(!is.null(theor_orig_formula)){
+          calc <- Rdisop::getMolecule(theor_orig_formula)
+          
+          if(calc$DBE %% 1 != 0){
+            NULL
+          }else{
+            data.table(name = theor_orig_formula, 
+                       baseformula = theor_orig_formula, 
+                       adduct = row$Name, 
+                       `%iso` = 100,
+                       structure = NA, 
+                       identifier = "???",
+                       #                     description = "Predicted possible formula for this m/z value.",
+                       source = "magicball")
+          }
+        }
+      }, row = row)
+      
+      if(length(res) > 0){
+
+        res_proc = flattenlist(res)
+        
+        tbl = rbindlist(res_proc[!sapply(res_proc, is.null)])
+        
+        if(nrow(tbl) == 0) return(NULL)
+        
+        uniques <- unique(tbl$baseformula)
+        
+
+      }else{
+        uniques <- c()
       }
-    }, row = row)
-    
-    res_proc = flattenlist(res)
-    tbl = rbindlist(res_proc[!sapply(res_proc, is.null)])
-    
-    if(nrow(tbl) == 0) return(NULL)
-    
-    # do a pubchem search
-    
-    uniques <- unique(tbl$baseformula)
+      uniques
+    })
+
+    uniques <- unique(unlist(formulae))
     
     if(search_pubchem){
       i = 0
@@ -702,8 +714,6 @@ cat("
       
       f <- function(){
         pbapply::pblapply(uniques, function(formula){
-          
-          print(formula)
           
           i <<- i + 1
           url = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/fastformula/", formula, "/cids/JSON")
@@ -743,8 +753,18 @@ cat("
     }
     tbl
   })
- rbindlist(per_adduct_results[sapply(per_adduct_results, function(x)!is.null(x))])  
-}
+ total_tbl <- rbindlist(per_adduct_results[sapply(per_adduct_results, function(x)!is.null(x))])  
+ 
+ # get more info 
+ has.struct <- which(!is.na(total_tbl$structure))
+ iatoms = rcdk::parse.smiles(total_tbl$structure[has.struct])
+ tpsas <- sapply(iatoms, rcdk::get.tpsa)
+ total_tbl$tpsa <- c(NA)
+ total_tbl$tpsa[has.struct] <- tpsas
+ # - - - - - - -
+ 
+ total_tbl
+ }
 
 info_from_cids <- function(cids,
                            charges = c(0),

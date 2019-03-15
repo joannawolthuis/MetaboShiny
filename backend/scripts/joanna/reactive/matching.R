@@ -17,53 +17,52 @@ observeEvent(input$search_cpd, {
       # render word cloud
       
       try({
-        res = {
-          # remove unwanted words (defined in global) from description
-          filtered_descriptions <- sapply(1:length(global$tables$last_matches$description), 
-                                          function(i){
-                                            # get description
-                                            desc <- global$tables$last_matches$description[[i]]
-                                            # return
-                                            desc
-                                          })
-          
-          require(tm)
-          
-          docs <- tm::VCorpus(tm::VectorSource(filtered_descriptions))
-          
-          # Convert all text to lower case
-          docs <- tm::tm_map(docs, tm::content_transformer(tolower))
-          
-          # Remove punctuations
-          docs <- tm::tm_map(docs, tm::removePunctuation)
-          
-          # Remove numbers
-          docs <- tm::tm_map(docs, tm::removeNumbers)
-          
-          # Remove english common stopwords
-          docs <- tm::tm_map(docs, tm::removeWords, tm::stopwords("english"))
-          # Remove your own stop word
-          # ADD stopwords as a character vector
-          docs <- tm::tm_map(docs, tm::removeWords, global$vectors$wordcloud$skip) 
-          
-          # Remove whitespace
-          docs <- tm::tm_map(docs, tm::stripWhitespace)
-          
-          # # Text stemming
-          # docs <- tm_map(docs, stemDocument)
-          
-          doc_mat <- tm::TermDocumentMatrix(docs)
-          
-          m <- as.matrix(doc_mat)
-          
-          v <- sort(rowSums(m), decreasing = TRUE)
-          
-          word_freq <- data.frame(name = names(v), value = v)
-          
-          # - - return - - 
-          
-          head(word_freq, 30)
-        }
+        
+        # remove unwanted words (defined in global) from description
+        filtered_descriptions <- sapply(1:length(global$tables$last_matches$description), 
+                                        function(i){
+                                          # get description
+                                          desc <- global$tables$last_matches$description[[i]]
+                                          # return
+                                          desc
+                                        })
+        
+        require(tm)
+        
+        docs <- tm::VCorpus(tm::VectorSource(filtered_descriptions))
+        
+        # Convert all text to lower case
+        docs <- tm::tm_map(docs, tm::content_transformer(tolower))
+        
+        # Remove punctuations
+        docs <- tm::tm_map(docs, tm::removePunctuation)
+        
+        # Remove numbers
+        docs <- tm::tm_map(docs, tm::removeNumbers)
+        
+        # Remove english common stopwords
+        docs <- tm::tm_map(docs, tm::removeWords, tm::stopwords("english"))
+        # Remove your own stop word
+        # ADD stopwords as a character vector
+        docs <- tm::tm_map(docs, tm::removeWords, global$vectors$wordcloud$skip) 
+        
+        # Remove whitespace
+        docs <- tm::tm_map(docs, tm::stripWhitespace)
+        
+        # # Text stemming
+        # docs <- tm_map(docs, stemDocument)
+        
+        doc_mat <- tm::TermDocumentMatrix(docs)
+        
+        m <- as.matrix(doc_mat)
+        
+        v <- sort(rowSums(m), decreasing = TRUE)
+        
+        global$tables$word_freq <<- data.frame(name = names(v), value = v)
+        
+        # - - return - - 
+        
+        res = head(word_freq, 30)
         
         wordcloud_plot <- wordcloud2::wordcloud2(data = data.frame(word = res$name,
                                                                    freq = res$value), 
