@@ -325,7 +325,10 @@ build.base.db <- function(dbname=NA,
                                    
                                    if(idx %% 10 == 0){
                                      pbapply::setpb(pb, idx)
+                                     # needs 'withprogress'
+                                     # if(inshiny) setProgress(value = (idx/n * 100)/2 )
                                    }
+                                   
                                    idx <<- idx + 1
                                    
                                    currNode <<- currNode
@@ -348,13 +351,13 @@ build.base.db <- function(dbname=NA,
                                  xmlEventParse(input, branches=
                                                  list(metabolite = metabolite))
                                  
-                                 # --- check formulae ---
+                                 # - - check formulae - -
                                  checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
                                                                                             db.formatted$baseformula))
                                  db.formatted$baseformula <- checked$new_formula
                                  keep <- checked[warning == FALSE, which = TRUE]
-                                 db.formatted <- db.formatted[keep]
-                                 # ----------------------
+                                 db.formatted <- db.formatted[keep,]
+                                 # - - - - - - - - - - - -
                                  RSQLite::dbWriteTable(conn, "base", db.formatted, append=TRUE)
                                },
                                chebi = function(dbname, ...){

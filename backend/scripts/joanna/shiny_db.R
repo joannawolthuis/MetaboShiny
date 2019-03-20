@@ -627,26 +627,22 @@ cat("
 
     filter="."
     
-    formulae <- pbapply::pblapply(settings, function(def.ele){
+    temp_res <- pbapply::pblapply(settings, function(def.ele){
+      
+      print(def.ele)
       
       add.only.ele <- setdiff(add.ele,
                               def.ele)
       
-      if(length(add.only.ele) > 0){
-        maxformula <- paste0(maxformula, sapply(add.ele, function(ele){
-          gsub(row$Formula_add, pattern = paste0("(",ele, "\\d*)"), replacement = "\\1")
-        }))
-        minformula <- paste0(minformula, sapply(add.ele, function(ele){
-          gsub(row$Formula_add, pattern = paste0("(",ele, "\\d*)"), replacement = "\\1")
-        }))
-        filter = paste0(add.only.ele, collapse = "|")
-      }
+      total.ele <- unique(c(def.ele,
+                            add.ele))
+                          
+      total.ele <- total.ele[total.ele != ""]
       
       # get which formulas are possible
       predicted = Rdisop::decomposeMass(as.numeric(mz), 
                                         ppm = ppm,
-                                        elements = Rdisop::initializeElements(names = unique(c(def.ele,
-                                                                                               add.ele)))
+                                        elements = Rdisop::initializeElements(names = total.ele)
       )
       
       charged = which( (predicted$DBE %% 1)  == 0.5 )
@@ -689,27 +685,28 @@ cat("
         }
       }, row = row)
       
+      
       if(length(res) > 0){
 
         res_proc = flattenlist(res)
         
-        tbl = rbindlist(res_proc[!sapply(res_proc, is.null)])
+        tbl <<- rbindlist(res_proc[!sapply(res_proc, is.null)])
         
         if(nrow(tbl) == 0) return(NULL)
         
-        uniques <- unique(tbl$baseformula)
-        
-
-      }else{
-        uniques <- c()
       }
-      uniques
+      
+      tbl
+      
     })
 
-    uniques <- unique(unlist(formulae))
+    tbl <- unique(rbindlist(temp_res[!sapply(temp_res, is.null)]))
+    uniques <- unique(tbl$baseformula)
     
     if(search_pubchem){
+      
       i = 0
+      
       count = length(uniques)
       
       f <- function(){
@@ -718,14 +715,15 @@ cat("
           i <<- i + 1
           url = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/fastformula/", formula, "/cids/JSON")
           description = "No PubChem hits for this predicted formula."
-          rows = data.table(identifier = i, 
-                            name = formula, 
+          rows = data.table(name = formula, 
                             baseformula = formula, 
                             structure = NA,
                             description = description)
+          
           try({
             pc_res <- jsonlite::read_json(url,simplifyVector = T)
             cids <- pc_res$IdentifierList$CID
+            
             if(pubchem_detailed){ # SLOW!!
               rows <- info_from_cids(cids)
             }else{
@@ -733,6 +731,7 @@ cat("
             }
           }) 
           if(inshiny) shiny::setProgress(value = i/count)
+          
           rows
         })
       }
@@ -745,14 +744,23 @@ cat("
         f()
       }
       
-      pc_tbl <- rbindlist(flattenlist(pc_rows))
-      tbl <- merge(tbl, pc_tbl, by = "baseformula")
-      tbl <- tbl[, list(name = name.y, baseformula, adduct, `%iso`, structure = structure.y, identifier = identifier.y, description)]
-    }else{
-      tbl$description = c("Predicted possible formula for this m/z value.")
-    }
-    tbl
+      pc_tbl <- rbindlist(flattenlist(pc_rows), fill=T)
+      
+      checked <- check.chemform.joanna(chemforms = pc_tbl$baseformula, isotopes = isotopes)
+      pc_tbl$baseformula <- checked$new_formula
+      
+      tbl.merge <- merge(pc_tbl, tbl, by = "baseformula")
+      
+      tbl <- tbl.merge[, list(name = name.x, baseformula, adduct, `%iso`, structure = structure.x, description = description)]
+    
+      }else{
+        tbl$description = c("Predicted possible formula for this m/z value.")
+      }
+    
+    unique(tbl)
+    
   })
+ 
  total_tbl <- rbindlist(per_adduct_results[sapply(per_adduct_results, function(x)!is.null(x))])  
  
  # get more info 
@@ -761,9 +769,11 @@ cat("
  tpsas <- sapply(iatoms, rcdk::get.tpsa)
  total_tbl$tpsa <- c(NA)
  total_tbl$tpsa[has.struct] <- tpsas
+ 
  # - - - - - - -
  
  total_tbl
+ 
  }
 
 info_from_cids <- function(cids,
@@ -789,35 +799,40 @@ info_from_cids <- function(cids,
     
     cidgroup = cidgroup[keep.cids]
     
-    structures <- struct_res$PropertyTable$Properties[keep.cids,]
+    rows <- struct_res$PropertyTable$Properties[keep.cids,]
     
     # descriptions
     url_desc = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/", 
                       paste0(cidgroup, collapse=","),
                       "/description/JSON")
     
-    desc_res <- jsonlite::fromJSON(url_desc,
-                                   simplifyVector = T) 
-    
-    descs <- as.data.table(desc_res$InformationList$Information)
-    
-    if("Description" %in% colnames(descs)){
-      descs.adj <- descs[, list(name = Title[!is.na(Title)], Description = paste(Description[!is.na(Description)], collapse=" ")), by = CID]
-    }else{
-      descs.adj <- descs[, list(name = Title[!is.na(Title)], Description = c("No description available")), by = CID]
-    }
-    
-    descs.adj$Description <- gsub(descs.adj$Description, 
-                                  pattern = "</?a(|\\s+[^>]+)>", 
-                                  replacement = "", 
-                                  perl = T)
-    
-    if(any(descs.adj$Description == "")){
-      descs.adj[Description == ""]$Description <- c("No description available")
-    }
-    
-    rows <- unique(merge(structures, descs.adj, by.x="CID", by.y="CID"))
-    colnames(rows) <- c("identifier", "baseformula", "structure", "charge", "name", "description")
+    try({
+      
+      desc_res <- jsonlite::fromJSON(url_desc,
+                                     simplifyVector = T) 
+      
+      descs <- as.data.table(desc_res$InformationList$Information)
+      
+      if("Description" %in% colnames(descs)){
+        descs.adj <- descs[, list(name = Title[!is.na(Title)], Description = paste(Description[!is.na(Description)], collapse=" ")), by = CID]
+      }else{
+        descs.adj <- descs[, list(name = Title[!is.na(Title)], Description = c("No further description available")), by = CID]
+      }
+      
+      descs.adj$Description <- gsub(descs.adj$Description, 
+                                    pattern = "</?a(|\\s+[^>]+)>", 
+                                    replacement = "", 
+                                    perl = T)
+      
+      if(any(descs.adj$Description == "")){
+        descs.adj[Description == ""]$Description <- c("No further description available")
+      }
+      
+      rows <- unique(merge(rows, descs.adj, by.x="CID", by.y="CID"))
+      
+    })
+
+    colnames(rows) <- c("identifier", "baseformula", "structure", "charge","name","description")
     
     url_syn = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/", 
                       paste0(cidgroup, collapse=","),
@@ -842,11 +857,14 @@ info_from_cids <- function(cids,
         if(is.null(new.name)) new.name <- old.name
         
         desc.names <- synonyms[-1]
+        
         row$name <- new.name
-        row$description <- paste0(paste0("Other names: ", 
-                                         paste0(c(old.name, desc.names), collapse="; "),
-                                         ". ",
-                                         row$description))
+        
+        row$description <- paste0(paste0("PubChem(", row$identifier, "). ",
+                                        "Other names: ",
+                                         paste0(if(length(desc.names) > 0) c(old.name, desc.names) else old.name, collapse="; "),
+                                         ". "),
+                                         row$description)
         row <- as.data.table(row)
         row[,-"Synonym"]
         
@@ -857,11 +875,22 @@ info_from_cids <- function(cids,
     tbl.fin <- tbl.renamed[,-"charge"]
 
     tbl.fin$source <- "PubChem"
+    
     # - - - return rows - - -
     
-    tbl.fin[,c(1,4,2,3,5)]
-  })
+    result <- tbl.fin[,c("name", "baseformula", "structure", "description", "source")]
+    result
+    
+    })
   
-  chunk.row.list[sapply(chunk.row.list, function(x) !is.na(x))]
+  chunk.row.list <<- chunk.row.list
+  res <- chunk.row.list[sapply(chunk.row.list, function(x){
+    print(x)
+    if(!is.na(nrow(x)) | is.null(nrow(x))) TRUE else FALSE
+  })]
+  
+  print(head(res))
+  
+  res
 
 }

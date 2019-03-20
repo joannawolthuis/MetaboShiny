@@ -62,7 +62,7 @@ observeEvent(input$search_cpd, {
         
         # - - return - - 
         
-        res = head(word_freq, 30)
+        res = head(global$tables$word_freq, 30)
         
         wordcloud_plot <- wordcloud2::wordcloud2(data = data.frame(word = res$name,
                                                                    freq = res$value), 

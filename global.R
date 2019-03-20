@@ -92,8 +92,6 @@ sourceDir("backend/scripts/joanna")
 caret.mdls <- caret::getModelInfo()
 # === THE BELOW LIST CONTAINS ALL GLOBAL VARIABLES THAT METABOSHINY CALLS UPON LATER ===
 
-if(!exists("global")){
-  
   global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people importing their data through csv
                                   timeseries = FALSE,
                                   nvars = 2, # Default bivariate setting for statistics
@@ -385,7 +383,7 @@ if(!exists("global")){
     qdapDictionaries::Top200Words,
     global$vectors$db_list))
   
-}
+
 # load in custom databases
 has.customs <- dir.exists(file.path(options$db_dir, "custom"))
 
@@ -402,9 +400,10 @@ if(has.customs){
     # add name to global
     dblist <- global$vectors$db_list
     dblist <- dblist[-which(dblist == "custom")]
-    dblist <- c(dblist, db, "custom")
-    global$vectors$db_list <- dblist
-    
+    if(!(db %in% dblist)){
+      dblist <- c(dblist, db, "custom")
+      global$vectors$db_list <- dblist
+    }
     metadata.path <- file.path(getOptions("user_options.txt")$db_dir, "custom", paste0(db, ".RData"))
     load(metadata.path)
     
