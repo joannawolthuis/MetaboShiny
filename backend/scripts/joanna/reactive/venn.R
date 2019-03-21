@@ -76,8 +76,6 @@ observeEvent(input$venn_build, {
 # triggers when users pick which intersecting hits they want
 observeEvent(input$intersect_venn, {
   
-  print(input$intersect_venn)
-  
   if(length(input$intersect_venn) == 0){
     global$tables$venn_overlap <<- data.frame()
   }else if(length(input$intersect_venn) == 1){
@@ -90,7 +88,9 @@ observeEvent(input$intersect_venn, {
     ll <- combn( l , 2 , simplify = FALSE )
     
     # Intersect the list elements
-    out <- lapply( ll , function(x) ( intersect( x[[1]] , x[[2]] ) ) )
+    out <- lapply(ll , function(x) (intersect(x[[1]], 
+                                              x[[2]])
+                                    ))
     
     # Output with names
     intersecties <- unique(unlist(out))

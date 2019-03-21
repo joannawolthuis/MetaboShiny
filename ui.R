@@ -494,8 +494,7 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                                       ),
                                                                                                                       fluidRow(align="center", helpText("Calculated adducts..")),
                                                                                                                       
-                                                                                                                      fluidRow(column(6, div(DT::dataTableOutput('pos_add_tab'),style='font-size:60%')),
-                                                                                                                               column(6, div(DT::dataTableOutput('neg_add_tab'),style='font-size:60%')), 
+                                                                                                                      fluidRow(div(DT::dataTableOutput('magicball_add_tab'),style='font-size:60%'), 
                                                                                                                                align="center")
                                                                                                                       ),
                                                                                                              tabPanel(title=icon("star-half-alt"),

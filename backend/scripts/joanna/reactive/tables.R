@@ -13,6 +13,27 @@ observe({
   })
 })
 
+observe({
+  
+  print(curr_cpd)
+  print("changing table...")
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb)
+  scanmode <- DBI::dbGetQuery(conn, paste0("SELECT DISTINCT foundinmode FROM mzvals WHERE mzmed = ", curr_cpd))[,1]
+  DBI::dbDisconnect(conn)
+  
+  global$vectors$calc_adducts <<- adducts[Ion_mode == scanmode]$Name
+  
+  output$magicball_add_tab <- DT::renderDataTable({
+    DT::datatable(data.table(Adduct = global$vectors$calc_adducts),
+                  selection = list(mode = 'multiple', 
+                                   selected = global$vectors[[paste0(mode, "_selected_add")]], target="row"),
+                  options = list(pageLength = 5, dom = 'tp'), 
+                  rownames = F)
+  })
+  
+})
+
+
 # toggles when 'select all adducts' is pressed (filled circle)
 observeEvent(input$sel_all_adducts, {
   global$vectors$neg_selected_adducts <<- c(1:nrow(global$vectors$pos_adducts))

@@ -27,8 +27,6 @@ observeEvent(input$change_subset, {
     mSet$dataSet$preproc <<- mSet$dataSet$preproc[keep.log.preproc,]
     mSet$dataSet$cls <<- mSet$dataSet$cls[keep.log.norm]
     
-    print(summary(mSet$dataSet))
-    
     if("facA" %in% names(mSet$dataSet)){
       mSet$dataSet$facA <<- mSet$dataSet$facA[keep.log.norm]
       mSet$dataSet$facB <<- mSet$dataSet$facB[keep.log.norm]

@@ -1,7 +1,7 @@
-# - - helloo - - 
+# - - helloo - -
 "
 This script is currently used to start MetaboShiny.
-It takes care of installing packages necessary for 
+It takes care of installing packages necessary for
 MetaboShiny to even start.
 "
 
@@ -31,22 +31,22 @@ install.packages('BiocManager')
 # Install R packages that are required
 # TODO: add further package if you need!
 
-needed.packages <- c("shiny", "shinydashboard", "httr", "curl", "git2r", "devtools", 
-                     "pacman", "gsubfn", "DT", "R.utils", "data.table", "shinyFiles", 
-                     "shinyBS", "rhandsontable", "XML", "colorRamps", "enviPat", "shinyalert", 
-                     "shinyWidgets", "colourpicker", "here", "ECharts2Shiny", "shinyjqui", 
-                     "later", "shinycssloaders", "qdapDictionaries", "sysfonts", "showtext", 
-                     "wordcloud2", "Rserve", "RColorBrewer", "xtable", "som", "ROCR", 
-                     "RJSONIO", "gplots", "e1071", "caTools", "igraph", "randomForest", 
-                     "Cairo", "pls", "lattice", "rmarkdown", "knitr", "pROC", "Rcpp", 
-                     "caret", "ellipse", "scatterplot3d", "impute", "pcaMethods", 
-                     "siggenes", "globaltest", "GlobalAncova", "Rgraphviz", "KEGGgraph", 
-                     "preprocessCore", "genefilter", "SSPA", "sva", "DBI", "RSQLite", 
-                     "ggplot2", "minval", "plotly", "pbapply", "sqldf", "plyr", "ChemmineR", 
-                     "stringr", "heatmaply", "reshape2", "xlsx", "pheatmap", "rJava", 
-                     "KEGGREST", "manhattanly", "rgl", "glmnet", "TSPred", "VennDiagram", 
-                     "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR", "openxlsx", 
-                     "doParallel", "missForest", "InterpretMSSpectrum", "tm", "RISmed", 
+needed.packages <- c("shiny", "shinydashboard", "httr", "curl", "git2r", "devtools",
+                     "pacman", "gsubfn", "DT", "R.utils", "data.table", "shinyFiles",
+                     "shinyBS", "rhandsontable", "XML", "colorRamps", "enviPat", "shinyalert",
+                     "shinyWidgets", "colourpicker", "here", "ECharts2Shiny", "shinyjqui",
+                     "later", "shinycssloaders", "qdapDictionaries", "sysfonts", "showtext",
+                     "wordcloud2", "Rserve", "RColorBrewer", "xtable", "som", "ROCR",
+                     "RJSONIO", "gplots", "e1071", "caTools", "igraph", "randomForest",
+                     "Cairo", "pls", "lattice", "rmarkdown", "knitr", "pROC", "Rcpp",
+                     "caret", "ellipse", "scatterplot3d", "impute", "pcaMethods",
+                     "siggenes", "globaltest", "GlobalAncova", "Rgraphviz", "KEGGgraph",
+                     "preprocessCore", "genefilter", "SSPA", "sva", "DBI", "RSQLite",
+                     "ggplot2", "minval", "plotly", "pbapply", "sqldf", "plyr", "ChemmineR",
+                     "stringr", "heatmaply", "reshape2", "xlsx", "pheatmap", "rJava",
+                     "KEGGREST", "manhattanly", "rgl", "glmnet", "TSPred", "VennDiagram",
+                     "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR", "openxlsx",
+                     "doParallel", "missForest", "InterpretMSSpectrum", "tm", "RISmed",
                      "qdap", "extrafont", "gmp", "shadowtext")
 
 missing.packages <- setdiff(needed.packages,rownames(installed.packages()))
@@ -88,6 +88,6 @@ options('unzip.unzip'=getOption("unzip"))
 
 # go run it! :-)
 shiny::runApp(".",
-              port = 8080, 
-              host = "0.0.0.0", 
+              port = 8080,
+              host = "0.0.0.0",
               launch.browser = FALSE)
