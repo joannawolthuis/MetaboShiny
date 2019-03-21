@@ -33,10 +33,10 @@ COPY / /
 
 RUN R -e "install.packages('BiocManager')"
 
-RUN R -e "BiocManager::install(c('openssl', 'rJava', 'shiny', 'shinydashboard', 'httr', 'curl', 'git2r', 'devtools', 'pacman', 'gsubfn', 'DT', 'R.utils'))"
+RUN R -e "BiocManager::install(c('rJava', 'shiny', 'shinydashboard', 'httr', 'curl', 'git2r', 'devtools', 'pacman', 'gsubfn', 'DT', 'R.utils'))"
 RUN R -e "BiocManager::install(c('data.table', 'shinyFiles', 'shinyBS', 'rhandsontable', 'XML', 'colorRamps', 'enviPat', 'shinyalert', 'shinyWidgets', 'colourpicker'))"
-RUN R -e "BiocManager::install(c('here', 'ECharts2Shiny', 'shinyjqui', 'later', 'shinycssloaders', 'qdapDictionaries', 'sysfonts', 'showtext', 'wordcloud2', 'Rserve'))"
-RUN R -e "BiocManager::install(c('RColorBrewer', 'xtable', 'som', 'ROCR', 'RJSONIO', 'gplots', 'e1071', 'caTools', 'igraph', 'randomForest'))"
+RUN R -e "BiocManager::install(c('ECharts2Shiny', 'shinyjqui', 'later', 'shinycssloaders', 'qdapDictionaries', 'sysfonts', 'showtext', 'wordcloud2', 'Rserve'))"
+RUN R -e "BiocManager::install(c('RColorBrewer', 'xtable', 'som', 'ROCR', 'RJSONIO', 'gplots', 'e1071', 'caTools', 'igraph'))"
 RUN R -e "BiocManager::install(c('Cairo', 'pls', 'lattice', 'rmarkdown', 'knitr', 'pROC', 'Rcpp', 'caret', 'ellipse', 'scatterplot3d'))"
 RUN R -e "BiocManager::install(c('impute', 'pcaMethods', 'siggenes', 'globaltest', 'GlobalAncova', 'Rgraphviz', 'KEGGgraph', 'preprocessCore', 'genefilter', 'SSPA'))"
 RUN R -e "BiocManager::install(c('sva', 'DBI', 'RSQLite', 'ggplot2', 'minval', 'plotly', 'pbapply', 'sqldf', 'plyr', 'ChemmineR'))"

@@ -68,7 +68,8 @@ if(length(missing.packages)>0){
 ## docker with volume mounted
 # docker run -p 8080:8080 --net=host -it --mount src='~/MetaboShiny',target='/databases/,type=bind metaboshiny/test1
 
-# attempt 1:
+# attempt 1: WORKS FOR NOW
+# had to set memory to max lol
 # make metaboshiny_storage dir in home first..
 # docker run -p 8080:8080 --mount src=~/MetaboShiny_storage,target=/databases/,type=bind --rm -it metaboshiny/test1 sh
 
