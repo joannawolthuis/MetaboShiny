@@ -18,24 +18,24 @@ library(colorRamps)
 library(enviPat)
 library(stringr)
 
-#' Sources all R scripts in a given directory. 
+#' Sources all R scripts in a given directory.
 #' 
 #' \code{sourceDir} searches the given directory for .R files and sources them into the current session.
-#' 
+#'
 #' @param path Path to search for scripts in.
 sourceDir <- function(path, ...) {
   for (nm in list.files(path, pattern = "\\.[RrSsQq]$")) {
-    #if(trace) cat(nm,":")           
+    #if(trace) cat(nm,":")
     source(file.path(path, nm), ...)
     #if(trace) cat("\n")
   }
-  
+
 }
 
 #' Load user options saved in file.
-#' 
+#'
 #' \code{getOptions} returns all current user options defined in the given options file.
-#' 
+#'
 #' @param file.loc Path to user options file to read in.
 #' @return R list with keys as option types and values as option values.
 getOptions <- function(file.loc){
@@ -50,13 +50,13 @@ getOptions <- function(file.loc){
     options[[split[[1]]]] = split[[2]]
   }
   # --- return ---
-  options 
+  options
 }
 
-#' Changes an option in the given MetaboShiny user options file. 
-#' 
+#' Changes an option in the given MetaboShiny user options file.
+#'
 #' \code{setOption} changes an option in the options file. Can also be used to add new options to the file.
-#' 
+#'
 #' @param file.loc Location of user options file. Usually .txt but any format is fine.
 #' @param key Name of the new option / to change option
 #' @param value Value of the option to change or add
@@ -103,21 +103,21 @@ caret.mdls <- caret::getModelInfo()
                                     can.classify & has.importance
                                   })],
                                   max.cols = 8, # Maximum colours available to choose (need to change if anyone does ANOVA with >8 variables)
-                                  packages = unique(c(base.packs, "data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat", 
-                                                      "plotly", "parallel", "shinyFiles", "curl", "httr", "pbapply", 
-                                                      "sqldf", "plyr", "ChemmineR", "gsubfn", "stringr", "heatmaply", 
-                                                      "reshape2", "XML", "xlsx", "colourpicker", "DT", "Rserve", "ellipse", 
-                                                      "scatterplot3d", "pls", "caret", "lattice", "compiler", "Cairo", 
-                                                      "randomForest", "e1071", "gplots", "som", "xtable", "RColorBrewer", 
-                                                      "impute", "pcaMethods", "siggenes", "globaltest", "GlobalAncova", 
-                                                      "Rgraphviz", "KEGGgraph", "preprocessCore", "genefilter", "pheatmap", 
-                                                      "igraph", "RJSONIO", "SSPA", "caTools", "ROCR", "pROC", "sva", 
-                                                      "rJava", "colorRamps", "grDevices", "KEGGREST", "manhattanly", 
-                                                      "BatchCorrMetabolomics", "R.utils", "rgl", "glmnet", "TSPred", 
-                                                      "VennDiagram", "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR", 
-                                                      "openxlsx", "doParallel", "missForest", "InterpretMSSpectrum",
-                                                      "tm", "RISmed", "qdap", "extrafont", "sysfonts", "gmp", "shadowtext")
-                                  ), # these packages are listed in the first tab and should include all necessary packages
+                                  # packages = unique(c(base.packs, "data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
+                                  #                     "plotly", "parallel", "shinyFiles", "curl", "httr", "pbapply",
+                                  #                     "sqldf", "plyr", "ChemmineR", "gsubfn", "stringr", "heatmaply",
+                                  #                     "reshape2", "XML", "xlsx", "colourpicker", "DT", "Rserve", "ellipse",
+                                  #                     "scatterplot3d", "pls", "caret", "lattice", "compiler", "Cairo",
+                                  #                     "randomForest", "e1071", "gplots", "som", "xtable", "RColorBrewer",
+                                  #                     "impute", "pcaMethods", "siggenes", "globaltest", "GlobalAncova",
+                                  #                     "Rgraphviz", "KEGGgraph", "preprocessCore", "genefilter", "pheatmap",
+                                  #                     "igraph", "RJSONIO", "SSPA", "caTools", "ROCR", "pROC", "sva",
+                                  #                     "rJava", "colorRamps", "grDevices", "KEGGREST", "manhattanly",
+                                  #                     "BatchCorrMetabolomics", "R.utils", "rgl", "glmnet", "TSPred",
+                                  #                     "VennDiagram", "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR",
+                                  #                     "openxlsx", "doParallel", "missForest", "InterpretMSSpectrum",
+                                  #                     "tm", "RISmed", "qdap", "extrafont", "sysfonts", "gmp", "shadowtext")
+                                  #), # these packages are listed in the first tab and should include all necessary packages
                                   images = list(list(name = 'load_icon', path = 'www/cute.png', dimensions = c(100, 100)),
                                                 list(name = 'cute_package', path = 'www/cat.png', dimensions = c(80, 80)),
                                                 list(name = 'internal_logo', path = 'www/umcinternal.png', dimensions = c(120, 120)),
@@ -150,7 +150,7 @@ caret.mdls <- caret::getModelInfo()
                                                 list(name= 'maconda_logo', path = 'www/maconda.png', dimensions = c(250,100)),
                                                 list(name= 'expoexplorer_logo', path = 'www/exposome_explorer.png', dimensions = c(250,100)),
                                                 list(name = 'sidebar_icon', path = 'www/detective.png', dimensions = c(60, 60))
-                                                
+
                                   ), # all image paths, if you add an image you can add it here
                                   default.text = list(list(name='curr_exp_dir',text=options$work_dir),
                                                       list(name='curr_db_dir',text=options$db_dir),
@@ -167,47 +167,47 @@ caret.mdls <- caret::getModelInfo()
                                                   ann.size = 20,
                                                   title.size = 25),
                                   db.build.info = list(
-                                    # internal = list(title = "UMC Internal", 
+                                    # internal = list(title = "UMC Internal",
                                     #                  description = "Internal commonly known metabolites",
                                     #                  image_id = "internal_logo"),
-                                    #  noise = list(title = "UMC Noise", 
+                                    #  noise = list(title = "UMC Noise",
                                     #               description = "Internal common pollutants found in DIMS using local method.",
                                     #               image_id = "noise_logo"),
-                                    hmdb = list(title = "HMDB", 
+                                    hmdb = list(title = "HMDB",
                                                 description = "Metabolites commonly found in human biological samples.",
                                                 image_id = "hmdb_logo"),
-                                    metacyc = list(title = "MetaCyc", 
+                                    metacyc = list(title = "MetaCyc",
                                                    description = "Large pathway database with over 10 000 available compounds. Spans several organisms!",
                                                    image_id = "metacyc_logo"),
-                                    chebi = list(title = "ChEBI", 
+                                    chebi = list(title = "ChEBI",
                                                  description = "A broad database with known chemicals of biological interest.",
                                                  image_id = "chebi_logo"),
-                                    wikipathways = list(title = "WikiPathways", 
+                                    wikipathways = list(title = "WikiPathways",
                                                         description = "Open source biological pathway database. Currently only partially available. Requires CHEBI to be built.",
                                                         image_id = "wikipathways_logo"),
-                                    kegg = list(title = "KEGG", 
+                                    kegg = list(title = "KEGG",
                                                 description = "Large pathway database with info on pathways in various organisms, involved enzymes, and connected disease phenotypes.",
                                                 image_id = "kegg_logo"),
-                                    # pubchem = list(title = "PubChem", 
+                                    # pubchem = list(title = "PubChem",
                                     #                description = "Internal commonly known metabolites",
                                     #                image_id = "internal_logo"),
-                                    smpdb = list(title = "SMPDB", 
+                                    smpdb = list(title = "SMPDB",
                                                  description = "Small molecule pathway database. Compounds overlap with HMDB.",
                                                  image_id = "smpdb_logo"),
-                                    dimedb = list(title = "DimeDB", 
+                                    dimedb = list(title = "DimeDB",
                                                   description = "A direct infusion database of biologically relevant metabolite structures and annotations.",
                                                   image_id = "dimedb_logo"),
-                                    wikidata = list(title = "Wikidata", 
+                                    wikidata = list(title = "Wikidata",
                                                     description = "Central storage for the data of its Wikimedia sister projects including Wikipedia, Wikivoyage, Wikisource, and others.",
                                                     image_id = "wikidata_logo"),
-                                    respect = list(title = "ReSpect", 
+                                    respect = list(title = "ReSpect",
                                                    description = "RIKEN MSn spectral database for phytochemicals (ReSpect) is a collection of literature and in-house MSn spectra data for research on plant metabolomics.",
                                                    image_id = "respect_logo"),
-                                    massbank = list(title = "MassBank", 
-                                                    description = "This site presents the database of comprehensive, high-resolution mass spectra of metabolites. Supported by the JST-BIRD project, it offers various query methods for standard spectra from Keio Univ., RIKEN PSC, and others. 
+                                    massbank = list(title = "MassBank",
+                                                    description = "This site presents the database of comprehensive, high-resolution mass spectra of metabolites. Supported by the JST-BIRD project, it offers various query methods for standard spectra from Keio Univ., RIKEN PSC, and others.
                                                     In 2008, MassBank was authorized as the official mass spectral database of The Mass Spectrometry Society of Japan.",
                                                     image_id = "massbank_logo"),
-                                    metabolights = list(title = "MetaboLights", 
+                                    metabolights = list(title = "MetaboLights",
                                                         description = "MetaboLights is a database for Metabolomics experiments and derived information. The database is cross-species, cross-technique and covers metabolite structures and their reference spectra as well as their biological roles, locations and concentrations, and experimental data from metabolic experiments.",
                                                         image_id = "metabolights_logo"),
                                     vmh = list(title = "VMH",
@@ -219,16 +219,16 @@ caret.mdls <- caret::getModelInfo()
                                     bloodexposome = list(title = "Blood Exposome DB",
                                                          description = " This new blood exposome database can be applied to prioritize literature-based chemical reviews, developing target assays in exposome research, identifying compounds in untargeted mass spectrometry and biological interpretation in metabolomics data.",
                                                          image_id = "bloodexposome_logo"),
-                                    maconda = list(title = "MaConDa", 
+                                    maconda = list(title = "MaConDa",
                                                    description = "MaConDa currently contains ca. 200 contaminant records detected across several MS platforms. The majority of records include theoretical as well as experimental MS data.",
                                                    image_id = "maconda_logo"),
-                                    lipidmaps = list(title = "LIPID MAPS", 
+                                    lipidmaps = list(title = "LIPID MAPS",
                                                      description = "The LIPID MAPS Structure Database (LMSD) is a relational database encompassing structures and annotations of biologically relevant lipids.",
                                                      image_id = "lipidmaps_logo"),
-                                    expoexplorer = list(title = "Exposome-Explorer", 
+                                    expoexplorer = list(title = "Exposome-Explorer",
                                                         description = "Exposome-Explorer is the first database dedicated to biomarkers of exposure to environmental risk factors for diseases.",
                                                         image_id = "expoexplorer_logo"),
-                                    # - - leave magicball last - - 
+                                    # - - leave magicball last - -
                                     magicball = list(title = "MagicBall",
                                                      description = "Algorithm to predict molecular formula from m/z value",
                                                      image_id = "magicball"),
@@ -241,7 +241,7 @@ caret.mdls <- caret::getModelInfo()
                    cf = rainbow,
                    color.function = rainbow,
                    color.vec = rainbow,
-                   # available plot themes for ggplot. Can add more,also user-defined ones, 
+                   # available plot themes for ggplot. Can add more,also user-defined ones,
                    # but put them in shiny_general.R first so they are sourced properly.
                    plot.themes = list(bw=ggplot2::theme_bw,
                                       classic=ggplot2::theme_classic,
@@ -250,19 +250,19 @@ caret.mdls <- caret::getModelInfo()
                                       dark=ggplot2::theme_dark,
                                       light=ggplot2::theme_light,
                                       line=ggplot2::theme_linedraw),
-                   color.functions = { 
+                   color.functions = {
                      # available colorbrewer themes to load into ggplot. These are the standard brew names used in their functions color.brewer etc.
                      brew.cols <- c("Blues", "BuGn", "BuPu", "GnBu", "Greens", "Greys", # - - sequential - -
-                                    "Oranges", "OrRd", "PuBu", "PuBuGn", "PuRd", "Purples", 
-                                    "RdPu", "Reds", "YlGn", "YlGnBu", "YlOrBr", "YlOrRd", 
+                                    "Oranges", "OrRd", "PuBu", "PuBuGn", "PuRd", "Purples",
+                                    "RdPu", "Reds", "YlGn", "YlGnBu", "YlOrBr", "YlOrRd",
                                     "BrBG", "PiYG", "PRGn", "PuOr", "RdBu", "RdGy", "RdYlBu", "RdYlGn", "Spectral", # - - diverging - -
                                     "Accent", "Dark2", "Paired", "Pastel1", "Pastel2", "Set1", "Set2", "Set3" # - - qualitative - -
                      )
-                     
+
                      # generate direct functions from the brewer colours
                      brew.opts <- lapply(brew.cols, function(opt) colorRampPalette(rev(RColorBrewer::brewer.pal(RColorBrewer::brewer.pal.info[opt,]$maxcolors, opt))))
                      names(brew.opts) <- brew.cols
-                     
+
                      # add the more general color scale functions as options
                      base.opts <- list("rb"=rainbow,
                                        "y2b"=ygobb,
@@ -279,7 +279,7 @@ caret.mdls <- caret::getModelInfo()
                                        "gyw"=terrain.colors,
                                        "ryw"=heat.colors,
                                        "bw"=blackwhite.colors)
-                     
+
                      # add into a single list for use in interface
                      append(base.opts, brew.opts)
                    }),
@@ -309,9 +309,9 @@ caret.mdls <- caret::getModelInfo()
                    # list of available databases!!
                    db_list = c( # this dermines the show order of dbs in the app
                      #"internal",
-                     #"noise", 
-                     "hmdb", 
-                     "chebi", 
+                     #"noise",
+                     "hmdb",
+                     "chebi",
                      "kegg",
                      "metacyc",
                      "wikipathways",
@@ -339,10 +339,10 @@ caret.mdls <- caret::getModelInfo()
                    wordcloud = list(top = 20)
                  )
                  )
-  
+
   global$vectors$wordcloud$skip <- unique(c( # manual curation(
-    "on", "in", "and", "at", 
-    "an", "by", "is", "it", "that", 
+    "on", "in", "and", "at",
+    "an", "by", "is", "it", "that",
     "as", "be", "like", "can", "a", "of",
     "to", "but", "not", "mainly", "the",
     "", "which", "from",
@@ -362,40 +362,40 @@ caret.mdls <- caret::getModelInfo()
     "compounds", "having", "lcesiqq", "different", "more",
     "ec", "activity", "metabolite", "biotransformer","biotransformer¹",
     # pubmed words https://www.ncbi.nlm.nih.gov/books/NBK3827/table/pubmedhelp.T.stopwords/
-    c("a", "about", "again", "all", "almost", "also", "although", 
-      "always", "among", "an", "and", "another", "any", "are", "as", 
-      "at", "be", "because", "been", "before", "being", "between", 
-      "both", "but", "by", "can", "could", "did", "do", "does", "done", 
-      "due", "during", "each", "either", "enough", "especially", "etc", 
-      "for", "found", "from", "further", "had", "has", "have", "having", 
-      "here", "how", "however", "i", "if", "in", "into", "is", "it", 
-      "its", "itself", "just", "kg", "km", "made", "mainly", "make", 
-      "may", "mg", "might", "ml", "mm", "most", "mostly", "must", "nearly", 
-      "neither", "no", "nor", "obtained", "of", "often", "on", "our", 
-      "overall", "perhaps", "pmid", "quite", "rather", "really", "regarding", 
-      "seem", "seen", "several", "should", "show", "showed", "shown", 
-      "shows", "significantly", "since", "so", "some", "such", "than", 
-      "that", "the", "their", "theirs", "them", "then", "there", "therefore", 
-      "these", "they", "this", "those", "through", "thus", "to", "upon", 
-      "use", "used", "using", "various", "very", "was", "we", "were", 
-      "what", "when", "which", "while", "with", "within", "without", 
+    c("a", "about", "again", "all", "almost", "also", "although",
+      "always", "among", "an", "and", "another", "any", "are", "as",
+      "at", "be", "because", "been", "before", "being", "between",
+      "both", "but", "by", "can", "could", "did", "do", "does", "done",
+      "due", "during", "each", "either", "enough", "especially", "etc",
+      "for", "found", "from", "further", "had", "has", "have", "having",
+      "here", "how", "however", "i", "if", "in", "into", "is", "it",
+      "its", "itself", "just", "kg", "km", "made", "mainly", "make",
+      "may", "mg", "might", "ml", "mm", "most", "mostly", "must", "nearly",
+      "neither", "no", "nor", "obtained", "of", "often", "on", "our",
+      "overall", "perhaps", "pmid", "quite", "rather", "really", "regarding",
+      "seem", "seen", "several", "should", "show", "showed", "shown",
+      "shows", "significantly", "since", "so", "some", "such", "than",
+      "that", "the", "their", "theirs", "them", "then", "there", "therefore",
+      "these", "they", "this", "those", "through", "thus", "to", "upon",
+      "use", "used", "using", "various", "very", "was", "we", "were",
+      "what", "when", "which", "while", "with", "within", "without",
       "would", LETTERS, letters, "acid", "cell", "cells", "human", "humans"),
     qdapDictionaries::Top200Words,
     global$vectors$db_list))
-  
+
 
 # load in custom databases
 has.customs <- dir.exists(file.path(options$db_dir, "custom"))
 
 if(has.customs){
-  
+
   print("loading custom dbs...")
-  
-  customs = list.files(path = file.path(options$db_dir, "custom"), 
+
+  customs = list.files(path = file.path(options$db_dir, "custom"),
                        pattern = "\\.RData")
-  
+
   dbnames = unique(tools::file_path_sans_ext(customs))
-  
+
   for(db in dbnames){
     # add name to global
     dblist <- global$vectors$db_list
@@ -406,13 +406,13 @@ if(has.customs){
     }
     metadata.path <- file.path(getOptions("user_options.txt")$db_dir, "custom", paste0(db, ".RData"))
     load(metadata.path)
-    
+
     # add description to global
     global$constants$db.build.info[[db]] <- meta.dbpage
-    
+
     # add image to global
     maxi = length(global$constants$images)
-    global$constants$images[[maxi + 1]] <- meta.img 
+    global$constants$images[[maxi + 1]] <- meta.img
   }
 }
 
@@ -421,7 +421,7 @@ if(has.customs){
 #' Gets the current used operating system. Important for parallel/multithreaded functions if using makeCluster("FORK")
 
 #' \code{get_os} finds the name of the OS the user is running this function on.
-#' 
+#'
 #' @return osx, windows/win or linux
 get_os <- function(){
   sysinf <- Sys.info()
@@ -451,7 +451,7 @@ session_cl <- parallel::makeCluster(max(c(1, parallel::detectCores()-1))) # leav
 source("./Rsource/SwitchButton.R")
 
 #' Squishes HTML elements close together.
-#' 
+#'
 #' \code{sardine} used on consequtive html objects will make them sit next to each other neatly.
 #'
 #' @param content TagList or shiny function that generates HTML (such as an image..)

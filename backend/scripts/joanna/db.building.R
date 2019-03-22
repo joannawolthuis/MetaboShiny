@@ -282,6 +282,7 @@ build.base.db <- function(dbname=NA,
                                  
                                  library(XML)
                                  library(RCurl)
+                                 library(rlist)
                                  theurl <- getURL("http://www.hmdb.ca/statistics",.opts = list(ssl.verifypeer = FALSE) )
                                  tables <- readHTMLTable(theurl)
                                  stats = data.table::rbindlist(tables)

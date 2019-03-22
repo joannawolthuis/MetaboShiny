@@ -52,48 +52,6 @@ observeEvent(input$sel_comm_adducts, {
   global$vectors$pos_selected_adducts <<- c(1, 2, 14:15, nrow(global$vectors$neg_adducts))
 })
 
-# if general tab selection changes, load package table
-observeEvent(input$nav_general, {
-  # - - - - - -
-  pkg_tbl <- get.package.table() 
-  
-  # Sort by 'No' first!
-  is.no <- which(pkg_tbl$Installed == "No")
-  if(length(is.no) > 0){
-    pkg_tbl <- rbind(pkg_tbl[is.no,],
-                     pkg_tbl[-is.no,])
-  }
-  output$package_tab <- DT::renderDataTable({
-    # - - - - - -
-    DT::datatable(pkg_tbl,
-                  selection = 'none',
-                  autoHideNavigation = T,
-                  options = list(lengthMenu = c(10, 20, 30), pageLength = 10), 
-                  rownames = F) %>% DT::formatStyle( # make yes green and no red for warning user
-                    'Installed',
-                    backgroundColor = DT::styleEqual(c("No"), c('pink'))
-                  )
-  })
-}
-)
-
-# triggers when 'update' button is pressed on the packages table tab
-observeEvent(input$update_packages, { 
-  # use pacman package to update packages (should swap between normal installed and bioconductor)
-  pacman::p_load(char = global$constants$packages, update = T, character.only = T)
-  # refresh package list 
-  pkg_tbl <- get.package.table() 
-  # reload table
-  output$package_tab <- DT::renderDataTable({
-    DT::datatable(pkg_tbl,
-                  selection = 'none',
-                  autoHideNavigation = T,
-                  options = list(lengthMenu = c(10, 20, 30), pageLength = 10), 
-                  rownames = F)
-  })
-})
-
-
 # adduct table editing from settings tab
 
 values = reactiveValues()

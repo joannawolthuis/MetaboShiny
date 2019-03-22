@@ -1,7 +1,7 @@
-# - - helloo - - 
+# - - helloo - -
 "
 This script is currently used to start MetaboShiny.
-It takes care of installing packages necessary for 
+It takes care of installing packages necessary for
 MetaboShiny to even start.
 "
 
@@ -12,8 +12,7 @@ install.if.not <- function(package){
   if(package %in% rownames(installed.packages())){
     print(paste("Already installed base package", package))
   }else{
-    if(package %in% c("MetaboAnalystR", "BatchCorrMetabolomics", "showtext")){
-      metanr_packages() # Installs MetaboAnalyst-specific packages
+    if(package %in% c("MetaboAnalystR", "BatchCorrMetabolomics")){
       # Step 1: Install devtools
       install.if.not("devtools")
       # Step 2: Install MetaboAnalystR with documentation
@@ -27,91 +26,79 @@ install.if.not <- function(package){
   }
 }
 
-# installs packages that metaboanalyst needs to run
-metanr_packages <- function(){
-  # - - - - - - - - - - - - - -
-  metr_pkgs <- c("Rserve", "RColorBrewer",
-                 "xtable", "som", "ROCR", "RJSONIO", "gplots",
-                 "e1071", "caTools", "igraph", "randomForest", "Cairo",
-                 "pls", "pheatmap", "lattice", "rmarkdown", "knitr",
-                 "data.table", "pROC", "Rcpp", "caret", "ellipse",
-                 "scatterplot3d", "impute", "rhandsontable", "pcaMethods", 
-                 "siggenes", "globaltest", "GlobalAncova", "Rgraphviz", 
-                 "KEGGgraph", "preprocessCore", "genefilter", "SSPA",
-                 "sva", "showtext", "wordcloud2")
-  list_installed <- installed.packages()
-  
-  new_pkgs <- subset(metr_pkgs, !(metr_pkgs %in% list_installed[, "Package"]))
-  
-  if(length(new_pkgs) != 0){
-    source("https://bioconductor.org/biocLite.R")
-    BiocInstaller::biocLite(new_pkgs, dependencies = TRUE, ask = FALSE)
-    print(paste0(new_pkgs, " added..."))
-  }
-  if((length(new_pkgs) < 1)){
-    print("No new packages added...")
-  }
+install.packages('BiocManager')
+
+# Install R packages that are required
+# TODO: add further package if you need!
+
+needed.packages <- c("shiny", "shinydashboard", "httr", "curl", "git2r", "devtools",
+                     "pacman", "gsubfn", "DT", "R.utils", "data.table", "shinyFiles",
+                     "shinyBS", "rhandsontable", "XML", "colorRamps", "enviPat", "shinyalert",
+                     "shinyWidgets", "colourpicker", "here", "ECharts2Shiny", "shinyjqui",
+                     "later", "shinycssloaders", "qdapDictionaries", "sysfonts", "showtext",
+                     "wordcloud2", "Rserve", "RColorBrewer", "xtable", "som", "ROCR",
+                     "RJSONIO", "gplots", "e1071", "caTools", "igraph", "randomForest",
+                     "Cairo", "pls", "lattice", "rmarkdown", "knitr", "pROC", "Rcpp",
+                     "caret", "ellipse", "scatterplot3d", "impute", "pcaMethods",
+                     "siggenes", "globaltest", "GlobalAncova", "Rgraphviz", "KEGGgraph",
+                     "preprocessCore", "genefilter", "SSPA", "sva", "DBI", "RSQLite",
+                     "ggplot2", "minval", "plotly", "pbapply", "sqldf", "plyr", "ChemmineR",
+                     "stringr", "heatmaply", "reshape2", "xlsx", "pheatmap", "rJava",
+                     "KEGGREST", "manhattanly", "rgl", "glmnet", "TSPred", "VennDiagram",
+                     "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR", "openxlsx",
+                     "doParallel", "missForest", "InterpretMSSpectrum", "tm", "RISmed",
+                     "qdap", "extrafont", "gmp", "shadowtext")
+
+missing.packages <- setdiff(needed.packages,rownames(installed.packages()))
+
+print(missing.packages)
+
+if(length(missing.packages)>0){
+  BiocManager::install(missing.packages)
 }
 
-# -- IF YOU HAVE PROBLEMS STARTING UP --
-# requires openssl, libcurl, libxt, 
-# libxml2, libnetcdf, cairo, java, mesa-common, 
-# libgit2, (LIKELY -devel versions)
-# libgl1, libglu1, libpng installed
-# IF RJAVA DOESN'T WANT TO INSTALL
-# sudo R CMD javareconf # FIXES EVERYTHING!!! JUST NEED TO USE ADMIN MODE...
-# install.packages("rJava", type="source")
+## used to create the docker run statements
+# groupies <- split(unique(to.install), ceiling(seq_along(unique(to.install))/10))
+# for(group in groupies){
+#   packages <- paste0("'",paste0(group, collapse="', '"), "'")
+#   cat(gsubfn::fn$paste('RUN R -e "BiocManager::install(c($packages))"\n'))
+# }
+## docker internet
+# docker run --net=host -it metaboshiny/test1
+## docker with volume mounted
+# docker run -p 8080:8080 --net=host -it --mount src='~/MetaboShiny',target='/databases/,type=bind metaboshiny/test1
+
+# attempt 1: WORKS FOR NOW
+# had to set memory to max lol
+# make metaboshiny_storage dir in home first..
+# docker run -p 8080:8080 --mount src=~/MetaboShiny_storage,target=/databases/,type=bind --rm -it metaboshiny/test1 sh
 
 # packages needed to start up
-base.packs <<- c('httr', 'curl', 'git2r', 'devtools', 
-                'pacman', 'gsubfn', 'shiny', 'DT', 
-                'R.utils', 'data.table', 'shinyFiles', 
-                'shinyBS', 'rhandsontable', 'XML', 
-                'MetaboAnalystR', 'BatchCorrMetabolomics', 
-                'colorRamps', 'enviPat', 'shinyalert',
-                'shinyWidgets', 'colourpicker', 'here',
-                'ECharts2Shiny', 'shinyjqui', 'later',
-                'shinycssloaders', 'qdapDictionaries',
-                'sysfonts', 'showtext', 'wordcloud2')
+git.packages <<- c("MetaboAnalystR", 
+                   "BatchCorrMetabolomics")
 
 # install the base packages needed to start up
-for(package in base.packs){
+for(package in git.packages){
   install.if.not(package)
 }
 
-# set working directory to where the rstudio file currently is
-wdir <<- dirname(rstudioapi::getSourceEditorContext()$path) # TODO: make this not break when not running from rstudio
-setwd(wdir)
+library(httr)
+options('download.file.method' = 'curl')
+options('unzip.unzip' = getOption("unzip"))
+#set_config(config(ssl_verifypeer = 0L))
 
-# create options file if it doesnt exist yet
-if(!file.exists(file.path(wdir, "user_options.txt"))){
-  default_options = 
-gsubfn::fn$paste(
-  "db_dir = $wdir/backend/db
-  work_dir = $wdir/analysis
-  proj_name = MY_PROJECT
-  ppm = 2
-  packages_installed = Y
-  font1 = Supermercado One
-  font2 = Supermercado One
-  font3 = Open Sans
-  font4 = Open Sans
-  col1 = #000000
-  col2 = #DBDBDB
-  col3 = #FFFFFF
-  col4 = #FFFFFF
-  size1 = 50
-  size2 = 20
-  size3 = 15
-  size4 = 12
-  taskbar_image = gemmy_rainbow.png
-  gtheme = classic
-  gcols = #000000&#FFA1C3&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
-  gspec = RdGy")
-con = file("./user_options.txt", "w")
-writeLines(text = default_options, con = con)
-close.connection(con)
-}
+mode = "local"
 
+switch(mode,
+       local = {
+         wdir <<- dirname(rstudioapi::getSourceEditorContext()$path) # TODO: make this not break when not running from rstudio
+         setwd(wdir)
+         shiny::runApp(".")
+       }, docker = {
+         shiny::runApp(".",
+                       port = 8080,
+                       host = "0.0.0.0",
+                       launch.browser = FALSE)
+       })
 # go run it! :-)
-shiny::runApp(".")#, launch.browser = T)
+
