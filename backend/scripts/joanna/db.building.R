@@ -277,7 +277,19 @@ build.base.db <- function(dbname=NA,
 
                                  input = file.path(base.loc,"hmdb_metabolites.xml")
 
-                                 n <- as.numeric(system(gsubfn::fn$paste("grep -o '/metabolite' '$input' | wc -l"),intern = TRUE))
+                                 
+                                 # - - -
+                                 
+                                 library(XML)
+                                 library(RCurl)
+                                 library(rlist)
+                                 theurl <- getURL("http://www.hmdb.ca/statistics",.opts = list(ssl.verifypeer = FALSE) )
+                                 tables <- readHTMLTable(theurl)
+                                 stats = data.table::rbindlist(tables)
+                                 n = as.numeric(as.character(gsub(x = stats[Description == "Total Number of Metabolites"]$Count, pattern = ",", replacement="")))
+                                 
+                                 # - - - 
+                                 # n <- as.numeric(system(gsubfn::fn$paste("grep -o '/metabolite' '$input' | wc -l"),intern = TRUE))
 
                                  {
                                    name = function(x){

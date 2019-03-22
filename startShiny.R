@@ -74,7 +74,8 @@ if(length(missing.packages)>0){
 # docker run -p 8080:8080 --mount src=~/MetaboShiny_storage,target=/databases/,type=bind --rm -it metaboshiny/test1 sh
 
 # packages needed to start up
-git.packages <<- c("MetaboAnalystR", "BatchCorrMetabolomics")
+git.packages <<- c("MetaboAnalystR", 
+                   "BatchCorrMetabolomics")
 
 # install the base packages needed to start up
 for(package in git.packages){
@@ -82,8 +83,8 @@ for(package in git.packages){
 }
 
 library(httr)
-options('download.file.method'='curl')
-options('unzip.unzip'=getOption("unzip"))
+options('download.file.method' = 'curl')
+options('unzip.unzip' = getOption("unzip"))
 #set_config(config(ssl_verifypeer = 0L))
 
 # go run it! :-)
