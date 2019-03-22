@@ -87,8 +87,18 @@ options('download.file.method' = 'curl')
 options('unzip.unzip' = getOption("unzip"))
 #set_config(config(ssl_verifypeer = 0L))
 
+mode = "local"
+
+switch(mode,
+       local = {
+         wdir <<- dirname(rstudioapi::getSourceEditorContext()$path) # TODO: make this not break when not running from rstudio
+         setwd(wdir)
+         shiny::runApp(".")
+       }, docker = {
+         shiny::runApp(".",
+                       port = 8080,
+                       host = "0.0.0.0",
+                       launch.browser = FALSE)
+       })
 # go run it! :-)
-shiny::runApp(".",
-              port = 8080,
-              host = "0.0.0.0",
-              launch.browser = FALSE)
+

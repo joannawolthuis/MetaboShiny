@@ -103,21 +103,21 @@ caret.mdls <- caret::getModelInfo()
                                     can.classify & has.importance
                                   })],
                                   max.cols = 8, # Maximum colours available to choose (need to change if anyone does ANOVA with >8 variables)
-                                  packages = unique(c(base.packs, "data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
-                                                      "plotly", "parallel", "shinyFiles", "curl", "httr", "pbapply",
-                                                      "sqldf", "plyr", "ChemmineR", "gsubfn", "stringr", "heatmaply",
-                                                      "reshape2", "XML", "xlsx", "colourpicker", "DT", "Rserve", "ellipse",
-                                                      "scatterplot3d", "pls", "caret", "lattice", "compiler", "Cairo",
-                                                      "randomForest", "e1071", "gplots", "som", "xtable", "RColorBrewer",
-                                                      "impute", "pcaMethods", "siggenes", "globaltest", "GlobalAncova",
-                                                      "Rgraphviz", "KEGGgraph", "preprocessCore", "genefilter", "pheatmap",
-                                                      "igraph", "RJSONIO", "SSPA", "caTools", "ROCR", "pROC", "sva",
-                                                      "rJava", "colorRamps", "grDevices", "KEGGREST", "manhattanly",
-                                                      "BatchCorrMetabolomics", "R.utils", "rgl", "glmnet", "TSPred",
-                                                      "VennDiagram", "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR",
-                                                      "openxlsx", "doParallel", "missForest", "InterpretMSSpectrum",
-                                                      "tm", "RISmed", "qdap", "extrafont", "sysfonts", "gmp", "shadowtext")
-                                  ), # these packages are listed in the first tab and should include all necessary packages
+                                  # packages = unique(c(base.packs, "data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
+                                  #                     "plotly", "parallel", "shinyFiles", "curl", "httr", "pbapply",
+                                  #                     "sqldf", "plyr", "ChemmineR", "gsubfn", "stringr", "heatmaply",
+                                  #                     "reshape2", "XML", "xlsx", "colourpicker", "DT", "Rserve", "ellipse",
+                                  #                     "scatterplot3d", "pls", "caret", "lattice", "compiler", "Cairo",
+                                  #                     "randomForest", "e1071", "gplots", "som", "xtable", "RColorBrewer",
+                                  #                     "impute", "pcaMethods", "siggenes", "globaltest", "GlobalAncova",
+                                  #                     "Rgraphviz", "KEGGgraph", "preprocessCore", "genefilter", "pheatmap",
+                                  #                     "igraph", "RJSONIO", "SSPA", "caTools", "ROCR", "pROC", "sva",
+                                  #                     "rJava", "colorRamps", "grDevices", "KEGGREST", "manhattanly",
+                                  #                     "BatchCorrMetabolomics", "R.utils", "rgl", "glmnet", "TSPred",
+                                  #                     "VennDiagram", "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR",
+                                  #                     "openxlsx", "doParallel", "missForest", "InterpretMSSpectrum",
+                                  #                     "tm", "RISmed", "qdap", "extrafont", "sysfonts", "gmp", "shadowtext")
+                                  #), # these packages are listed in the first tab and should include all necessary packages
                                   images = list(list(name = 'load_icon', path = 'www/cute.png', dimensions = c(100, 100)),
                                                 list(name = 'cute_package', path = 'www/cat.png', dimensions = c(80, 80)),
                                                 list(name = 'internal_logo', path = 'www/umcinternal.png', dimensions = c(120, 120)),
