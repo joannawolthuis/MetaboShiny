@@ -13,6 +13,7 @@ build.base.db <- function(dbname=NA,
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), db)
   RSQLite::dbExecute(conn, statement = "create table base(compoundname text, description text, baseformula text, identifier text, charge text, structure text)")
   # --- create base ---
+  print(dbname)
   db.formatted <- switch(tolower(dbname),
                                maconda = function(dbname, ...){
                                  file.url = "https://www.maconda.bham.ac.uk/downloads/MaConDa__v1_0__csv.zip"
@@ -47,15 +48,13 @@ build.base.db <- function(dbname=NA,
                                  desc.gsub.4 <- gsub(desc.gsub.3, pattern = "NEG", replacement = "found in negative mode.")
                                  db.base$description <- Hmisc::capitalize(desc.gsub.4)
                                  
-                                 RSQLite::dbWriteTable(conn, "base", db.base, append=TRUE)
+                                 #RSQLite::dbWriteTable(conn, "base", db.base, append=TRUE)
+                                 #RSQLite::dbExecute(conn, "create index b_idx1 on base(baseformula, charge)")
+                                 
                                  
                                  ### do extended table and write to additional db (exception...)
-                                 db.full <- file.path(outfolder, paste0(dbname, ".full.db"))
-                                 if(file.exists(db.full)) file.remove(db.full)
+                                 db.full <- file.path(outfolder, "extended.db")
                                  full.conn <- RSQLite::dbConnect(RSQLite::SQLite(), db.full)
-                                 # --- create base table here too ---
-                                 RSQLite::dbExecute(full.conn, statement = "create table base(compoundname text, description text,
-                                                    baseformula text, identifier text, charge text, structure text)")
                                  # --- create extended table ---
                                  sql.make.meta <- strwrap("CREATE TABLE IF NOT EXISTS extended(
                                                           baseformula text,
@@ -92,12 +91,8 @@ build.base.db <- function(dbname=NA,
                                                        db.formatted.full,
                                                        append=TRUE)
                                  # --- index ---
-                                 RSQLite::dbExecute(full.conn, "create index b_idx1 on base(baseformula, charge)")
-                                 RSQLite::dbExecute(full.conn, "create index e_idx1 on extended(baseformula, basecharge)")
-                                 RSQLite::dbExecute(full.conn, "create index e_idx2 on extended(fullmz, foundinmode)")# -------------
-                                 RSQLite::dbDisconnect(full.conn)
                                  
-                                 db.formatted
+                                 db.base
                                },
                                hmdb = function(dbname){
                                  print("Downloading XML database...")
@@ -1365,9 +1360,14 @@ build.extended.db <- function(dbname,
   
   # --- indexy ---
   print("Indexing extended table...")
-  RSQLite::dbExecute(full.conn, "create index e_idx1 on extended(baseformula, basecharge)")
-  RSQLite::dbExecute(full.conn, "create index e_idx2 on extended(fullmz, foundinmode)")
- 
+  
+  if(first.db){
+    RSQLite::dbExecute(full.conn, "create index e_idx1 on extended(baseformula, basecharge)")
+    RSQLite::dbExecute(full.conn, "create index e_idx2 on extended(fullmz, foundinmode)")
+  }else{
+    RSQLite::dbExecute(full.conn, "ANALYZE extended")
+  }
+  
   # --- cleanup ---
   RSQLite::dbExecute(full.conn, "VACUUM")
   # ==========================
