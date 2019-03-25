@@ -5,6 +5,7 @@ It takes care of installing packages necessary for
 MetaboShiny to even start.
 "
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 #' Function to install packages, either through regular method or through downloading from git directly
 #' @param package package name to install, either CRAN or bioconductor
@@ -26,12 +27,10 @@ install.if.not <- function(package){
   }
 }
 
-install.packages('BiocManager')
-
 # Install R packages that are required
 # TODO: add further package if you need!
 
-needed.packages <- c("shiny", "shinydashboard", "httr", "curl", "git2r", "devtools",
+needed.packages <- c("BiocManager", "shiny", "shinydashboard", "httr", "curl", "git2r", "devtools",
                      "pacman", "gsubfn", "DT", "R.utils", "data.table", "shinyFiles",
                      "shinyBS", "rhandsontable", "XML", "colorRamps", "enviPat", "shinyalert",
                      "shinyWidgets", "colourpicker", "here", "ECharts2Shiny", "shinyjqui",
@@ -50,6 +49,10 @@ needed.packages <- c("shiny", "shinydashboard", "httr", "curl", "git2r", "devtoo
                      "qdap", "extrafont", "gmp", "shadowtext")
 
 missing.packages <- setdiff(needed.packages,rownames(installed.packages()))
+
+if("BiocManager" %in% missing.packages){
+  install.packages('BiocManager')
+}
 
 print(missing.packages)
 

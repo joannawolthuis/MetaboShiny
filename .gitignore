@@ -1,6 +1,7 @@
 .Rproj.user
 .Rhistory
-.RData
+*.RData
+/backend/appdata/*
 .Ruserdata
-.db
+/backend/db/*
 
