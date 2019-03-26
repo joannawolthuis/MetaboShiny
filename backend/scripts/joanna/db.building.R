@@ -347,7 +347,6 @@ build.base.db <- function(dbname=NA,
                            
                            db.formatted <- rbindlist(db.rows)
                            
-                           
                            db.formatted
                          },
                          kegg = function(dbname){ #ok
