@@ -60,6 +60,7 @@ if(length(missing.packages)>0){
   BiocManager::install(missing.packages)
 }
 
+
 ## used to create the docker run statements
 # groupies <- split(unique(to.install), ceiling(seq_along(unique(to.install))/10))
 # for(group in groupies){
@@ -97,12 +98,66 @@ options('unzip.unzip' = getOption("unzip"))
 
 mode = if(file.exists(".dockerenv")) 'docker' else 'local'
 
+opt.loc <- if(mode == 'local') 'user_options.txt' else '/userfiles/userfiles/user_options.txt'
+
+if(!file.exists(opt.loc)){
+  # write options file if it doesn't exist yet
+  contents <- switch(mode,
+         local = {
+'db_dir = /userfiles/db
+work_dir = /userfiles/userfiles
+proj_name = MY_METSHI
+ppm = 2
+packages_installed = Y
+font1 = Pacifico
+font2 = Pacifico
+font3 = Open Sans
+font4 = Open Sans
+col1 = #000000
+col2 = #DBDBDB
+col3 = #FFFFFF
+col4 = #FFFFFF
+size1 = 40
+size2 = 20
+size3 = 15
+size4 = 11
+taskbar_image = gemmy_rainbow.png
+gtheme = classic
+gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
+gspec = RdBu'
+         }, docker = {
+'db_dir = PlsChange
+work_dir = PlsChange
+proj_name = MY_METSHI
+ppm = 2
+packages_installed = Y
+font1 = Pacifico
+font2 = Pacifico
+font3 = Open Sans
+font4 = Open Sans
+col1 = #000000
+col2 = #DBDBDB
+col3 = #FFFFFF
+col4 = #FFFFFF
+size1 = 40
+size2 = 20
+size3 = 15
+size4 = 11
+taskbar_image = gemmy_rainbow.png
+gtheme = classic
+gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
+gspec = RdBu'
+         })
+  writeLines(contents, opt.loc)
+}
+
 switch(mode,
        local = {
          wdir <<- dirname(rstudioapi::getSourceEditorContext()$path) # TODO: make this not break when not running from rstudio
          setwd(wdir)
          shiny::runApp(".")
-       }, docker = {
+       }, 
+       docker = {
          shiny::runApp(".",
                        port = 8080,
                        host = "0.0.0.0",
