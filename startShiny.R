@@ -124,8 +124,7 @@ size4 = 11
 taskbar_image = gemmy_rainbow.png
 gtheme = classic
 gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
-gspec = RdBu'
-         }, docker = {
+gspec = RdBu'}, docker = {
 'db_dir = PlsChange
 work_dir = PlsChange
 proj_name = MY_METSHI
@@ -146,8 +145,7 @@ size4 = 11
 taskbar_image = gemmy_rainbow.png
 gtheme = classic
 gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
-gspec = RdBu'
-         })
+gspec = RdBu'})
   writeLines(contents, opt.loc)
 }
 
