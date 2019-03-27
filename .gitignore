@@ -4,4 +4,5 @@
 /backend/appdata/*
 .Ruserdata
 /backend/db/*
-
+*.csv
+*.txt

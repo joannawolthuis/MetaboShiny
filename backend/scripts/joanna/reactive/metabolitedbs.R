@@ -8,7 +8,7 @@ lapply(global$vectors$db_list, FUN=function(db){
   observeEvent(input[[paste0("check_", db)]],{
     # see which db files are present in folder
     db_folder_files <- list.files(getOptions("user_options.txt")$db_dir)
-    is.present <- paste0(db, ".full.db") %in% db_folder_files
+    is.present <- paste0(db, ".base.db") %in% db_folder_files
     check_pic <- if(is.present) "yes.png" else "no.png"
     # generate checkmark image objects
     output[[paste0(db,"_check")]] <- renderImage({
@@ -66,7 +66,7 @@ lapply(global$vectors$db_list, FUN=function(db){
         build.extended.db(db, 
                           outfolder = getOptions("user_options.txt")$db_dir,
                           adduct.table = adducts, 
-                          cl = session_cl, 
+                          cl = F,#session_cl, 
                           fetch.limit = 500) #TODO: figure out the optimal fetch limit...
       }
     })

@@ -23,7 +23,7 @@ browse_db <- function(chosen.db){
 
 #' @export
 get_matches <- function(cpd = NA, 
-                        chosen.db, 
+                        base.db, 
                         search_formula = F,
                         searchid = "mz",
                         inshiny=TRUE,
@@ -34,7 +34,7 @@ get_matches <- function(cpd = NA,
   
   if(!exists("searchid") && searchid != "mz"){
     
-    conn <- RSQLite::dbConnect(RSQLite::SQLite(), chosen.db)
+    conn <- RSQLite::dbConnect(RSQLite::SQLite(), base.db)
     
     query <- if(searchid == "pathway"){
       cpd <- gsub(cpd, pattern = "http\\/\\/", replacement = "http:\\/\\/")
@@ -56,7 +56,11 @@ get_matches <- function(cpd = NA,
     
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb)
     
-    RSQLite::dbExecute(conn, gsubfn::fn$paste("ATTACH '$chosen.db' AS db"))
+    RSQLite::dbExecute(conn, gsubfn::fn$paste("ATTACH '$base.db' AS base"))
+    
+    ext.db <- file.path(getOptions('user_options.txt')$db_dir, 'extended.db')
+
+    RSQLite::dbExecute(conn, gsubfn::fn$paste("ATTACH '$ext.db' AS full"))
     
     func <- function(){
       if(!DBI::dbExistsTable(conn, "unfiltered") | !append)
@@ -73,7 +77,7 @@ get_matches <- function(cpd = NA,
           (ABS($cpd - cpd.fullmz) / $cpd)/1e6 AS dppm
           FROM mzvals mz
           JOIN mzranges rng ON rng.ID = mz.ID
-          JOIN db.extended cpd indexed by e_idx2
+          JOIN full.extended cpd indexed by e_idx2
           ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
           AND mz.foundinmode = cpd.foundinmode
           WHERE $cpd BETWEEN rng.mzmin AND rng.mzmax",width=10000, simplify=TRUE)))
@@ -89,7 +93,7 @@ get_matches <- function(cpd = NA,
           (ABS($cpd - cpd.fullmz) / $cpd)/1e6 AS dppm
           FROM mzvals mz
           JOIN mzranges rng ON rng.ID = mz.ID
-          JOIN db.extended cpd indexed by e_idx2
+          JOIN full.extended cpd indexed by e_idx2
           ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
           AND mz.foundinmode = cpd.foundinmode
           WHERE $cpd BETWEEN rng.mzmin AND rng.mzmax",width=10000, simplify=TRUE)))
@@ -98,46 +102,46 @@ get_matches <- function(cpd = NA,
       # 1. Find matches in range (reasonably fast <3)
       if(inshiny) shiny::setProgress(value = 0.4)
       
-      if(!DBI::dbExistsTable(conn, "isotopes") | !append){
-        RSQLite::dbExecute(conn, 'DROP TABLE IF EXISTS isotopes')
-        # create
-        RSQLite::dbExecute(conn,
-                           "CREATE TABLE isotopes AS
-                           SELECT DISTINCT cpd.*
-                           FROM db.extended cpd
-                           JOIN unfiltered u
-                           ON u.baseformula = cpd.baseformula
-                           AND u.adduct = cpd.adduct")
-      }else{
-        # append
-        RSQLite::dbExecute(conn,
-                           "INSERT INTO isotopes
-                           SELECT cpd.*
-                           FROM db.extended cpd
-                           JOIN unfiltered u
-                           ON u.baseformula = cpd.baseformula
-                           AND u.adduct = cpd.adduct")
-      }
-      
-      if(!DBI::dbExistsTable(conn, "adducts") | !append){
-        RSQLite::dbExecute(conn, 'DROP TABLE IF EXISTS adducts')
-        # - - - - - - - - -
-        RSQLite::dbExecute(conn,
-                           "CREATE TABLE adducts AS
-                           SELECT DISTINCT cpd.*
-                           FROM db.extended cpd
-                           JOIN unfiltered u
-                           ON u.baseformula = cpd.baseformula")
-      }else{
-        # append
-        RSQLite::dbExecute(conn,
-                           "INSERT INTO adducts
-                           SELECT cpd.*
-                           FROM db.extended cpd
-                           JOIN unfiltered u
-                           ON u.baseformula = cpd.baseformula")
-      }
-      }
+      # if(!DBI::dbExistsTable(conn, "isotopes") | !append){
+      #   RSQLite::dbExecute(conn, 'DROP TABLE IF EXISTS isotopes')
+      #   # create
+      #   RSQLite::dbExecute(conn,
+      #                      "CREATE TABLE isotopes AS
+      #                      SELECT DISTINCT cpd.*
+      #                      FROM full.extended cpd
+      #                      JOIN unfiltered u
+      #                      ON u.baseformula = cpd.baseformula
+      #                      AND u.adduct = cpd.adduct")
+      # }else{
+      #   # append
+      #   RSQLite::dbExecute(conn,
+      #                      "INSERT INTO isotopes
+      #                      SELECT cpd.*
+      #                      FROM db.extended cpd
+      #                      JOIN unfiltered u
+      #                      ON u.baseformula = cpd.baseformula
+      #                      AND u.adduct = cpd.adduct")
+      # }
+      # 
+      # if(!DBI::dbExistsTable(conn, "adducts") | !append){
+      #   RSQLite::dbExecute(conn, 'DROP TABLE IF EXISTS adducts')
+      #   # - - - - - - - - -
+      #   RSQLite::dbExecute(conn,
+      #                      "CREATE TABLE adducts AS
+      #                      SELECT DISTINCT cpd.*
+      #                      FROM db.extended cpd
+      #                      JOIN unfiltered u
+      #                      ON u.baseformula = cpd.baseformula")
+      # }else{
+      #   # append
+      #   RSQLite::dbExecute(conn,
+      #                      "INSERT INTO adducts
+      #                      SELECT cpd.*
+      #                      FROM db.extended cpd
+      #                      JOIN unfiltered u
+      #                      ON u.baseformula = cpd.baseformula")
+      # }
+    }
     
     if(inshiny) withProgress({func()}) else func()
     
@@ -153,7 +157,7 @@ get_matches <- function(cpd = NA,
                                      b.description, 
                                      b.structure 
                                      FROM unfiltered u
-                                     JOIN db.base b
+                                     JOIN base.base b indexed by b_idx1
                                      ON u.baseformula = b.baseformula
                                      AND u.charge = b.charge")
     
@@ -177,7 +181,7 @@ get_matches <- function(cpd = NA,
     
     results
     
-      }}
+    }}
 
 get.ppm <- function(patdb = global$paths$patdb){
   # get ppm error retrospectively
@@ -505,7 +509,7 @@ multimatch <- function(cpd, dbs, searchid="mz",
   
   # check which dbs are even available
   
-  avail.dbs <- list.files(options$db_dir, pattern = "\\.full\\.db",full.names = T)
+  avail.dbs <- list.files(options$db_dir, pattern = "\\.base\\.db",full.names = T)
   
   # fix magicball name
   
@@ -527,7 +531,7 @@ multimatch <- function(cpd, dbs, searchid="mz",
       
       if(inshiny) shiny::setProgress(i/count)
       
-      dbname <- gsub(basename(match.table), pattern = "\\.full\\.db", replacement = "")
+      dbname <- gsub(basename(match.table), pattern = "\\.base\\.db", replacement = "")
       
       if(dbname == "magicball"){
         # get ppm from db...

@@ -49,8 +49,6 @@ build.base.db <- function(dbname=NA,
                            db.base$description <- Hmisc::capitalize(desc.gsub.4)
                            
                            #RSQLite::dbWriteTable(conn, "base", db.base, append=TRUE)
-                           #RSQLite::dbExecute(conn, "create index b_idx1 on base(baseformula, charge)")
-                           
                            
                            ### do extended table and write to additional db (exception...)
                            db.full <- file.path(outfolder, "extended.db")
@@ -711,13 +709,16 @@ build.base.db <- function(dbname=NA,
                                                             cl=session_cl,
                                                             function(smi){
                                                               row = data.table(canonical_SMILES = smi,
-                                                                               charge = 0)
+                                                                               charge = 0,
+                                                                               baseformula = NA)
                                                               # - - - - -
                                                               try({
                                                                 iatom <- rcdk::parse.smiles(smi)[[1]]
-                                                                charge = rcdk::get.total.charge(iatom)
+                                                                #charge = rcdk::get.total.charge(iatom)
+                                                                formula = rcdk::get.mol2formula(iatom)
                                                                 row = data.table(canonical_SMILES = smi,
-                                                                                 charge =charge[[1]])
+                                                                                 charge = formula@charge, 
+                                                                                 baseformula = as.character(formula@string))
                                                               },silent = TRUE)
                                                               # - return -
                                                               row
@@ -736,22 +737,24 @@ build.base.db <- function(dbname=NA,
                            
                            db.3$description = apply(db.3[,c("roleLabel", "chemical_compoundDescription")], 1, FUN=function(x){
                              x <- unlist(x)
-                             print(x)
+                             #print(x)
                              paste(x[!is.na(x)], collapse=", ")
                            })
                            
-                           db.formatted <<- data.table::data.table(compoundname = db.3$chemical_compoundLabel,
-                                                                   description = db.3$description,
-                                                                   baseformula = db.3$chemical_formula,
-                                                                   identifier= db.3$chemical_compound,
-                                                                   charge= db.3$charge,
-                                                                   structure=db.3$canonical_SMILES)
+                           db.formatted <- data.table::data.table(compoundname = as.character(db.3$chemical_compoundLabel),
+                                                                   description = as.character(db.3$description),
+                                                                   baseformula = as.character(db.3$baseformula),
+                                                                   identifier= as.character(db.3$chemical_compound),
+                                                                   charge= as.character(db.3$charge),
+                                                                   structure = as.character(db.3$canonical_SMILES))
                            
-                           from = "\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089"
-                           to = "0123456789"
-                           db.formatted$baseformula <- chartr(from, to, db.formatted$baseformula)
+                           #from = "\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089"
+                           #to = "0123456789"
+                           #db.formatted$baseformula <- chartr(from, to, db.formatted$baseformula)
                            
-                           db.formatted$description[db.formatted$description == ""] <<- "Unknown"
+                           db.formatted$description[db.formatted$description == ""] <- "Unknown"
+                           db.formatted$baseformula <- as.character(db.formatted$baseformula)
+                           db.formatted <- db.formatted[!is.na(db.formatted$baseformula),]
                            
                            # - - write - -
                            
@@ -1123,6 +1126,7 @@ build.base.db <- function(dbname=NA,
                            
                          })()
   
+
   if(dbname != "maconda"){
     
     formulae <- unique(db.formatted$baseformula)
@@ -1145,6 +1149,8 @@ build.base.db <- function(dbname=NA,
   # - - write - -
   
   RSQLite::dbWriteTable(conn, "base", db.formatted, append=TRUE)
+  RSQLite::dbExecute(conn, "create index b_idx1 on base(baseformula, charge)")
+  
   RSQLite::dbDisconnect(conn)
   
   print("did base db!")
@@ -1159,7 +1165,7 @@ build.extended.db <- function(dbname,
   
   data(isotopes, package = "enviPat")
   base.db <- file.path(outfolder, paste0(dbname, ".base.db"))
-  full.db <- file.path(outfolder, paste0("extended.db"))
+  full.db <<- file.path(outfolder, paste0("extended.db"))
   
   base.conn <- RSQLite::dbConnect(RSQLite::SQLite(), base.db)
   
@@ -1206,7 +1212,7 @@ build.extended.db <- function(dbname,
   
   chunks = split(1:nrow(results), ceiling(seq_along(1:nrow(results))/fetch.limit))
   
-  pbapply::pblapply(chunks, function(selection){
+  pbapply::pblapply(chunks, function(selection, full.db){
     
     partial.results <- as.data.frame(results[selection,])
     
@@ -1304,6 +1310,7 @@ build.extended.db <- function(dbname,
                                            isoprevalence = isotable$isoprevalence,
                                            foundinmode = c(mode),
                                            source = c(dbname))
+      
       # - - return - -
       
       core.conn <- DBI::dbConnect(RSQLite::SQLite(), dbname = full.db)
@@ -1329,9 +1336,9 @@ build.extended.db <- function(dbname,
       sapply(1:nrow(adduct.table), FUN=function(x) do.calc(x))
     }else{
       parallel::clusterExport(cl, "full.db")
-      parallel::parSapply(cl=cl, 1:nrow(adduct.table), FUN=function(x) do.calc(x))
+      parallel::parSapply(cl=cl, 1:nrow(adduct.table), FUN=do.calc)
     }
-  })
+  }, full.db = full.db)
   
   # --- indexy ---
   print("Indexing extended table...")

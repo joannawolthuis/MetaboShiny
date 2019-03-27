@@ -422,7 +422,7 @@ shinyServer(function(input, output, session) {
                                  NA
                                }else{
                                  if(!button_id){
-                                   c(file.path(getOptions("user_options.txt")$db_dir, paste0(db, ".full.db"))) # add path to list of dbpaths
+                                   c(file.path(getOptions("user_options.txt")$db_dir, paste0(db, ".base.db"))) # add path to list of dbpaths
                                  }
                                  else{NA}
                                }

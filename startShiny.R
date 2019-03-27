@@ -73,6 +73,7 @@ if(length(missing.packages)>0){
 
 # attempt 1: WORKS FOR NOW
 # had to saet memory to max lol
+
 # make metaboshiny_storage dir in home first..
 # docker run -p 8080:8080 --mount src=~/MetaboShiny_storage,target=/userfiles/,type=bind --rm -it metaboshiny/test1 sh
 
@@ -86,6 +87,10 @@ for(package in git.packages){
 }
 
 library(httr)
+
+# does this work?
+# https://stackoverflow.com/questions/3160909/how-do-i-deal-with-certificates-using-curl-while-trying-to-access-an-https-url
+# nope..
 options('download.file.method' = 'curl')
 options('unzip.unzip' = getOption("unzip"))
 #set_config(config(ssl_verifypeer = 0L))
