@@ -6,7 +6,7 @@
 #' @return list of four plots that fit in a 2x2 raster used in MetaboShiny.
 ggplotNormSummary <- function(mSet, colmap = global$vectors$mycols, plot.theme = global$functions$plot.themes[[getOptions()$gtheme]]){
   # load in original data (pre-normalization, post-filter)
-  orig_data <- as.data.frame(mSet$dataSet$procr)
+  orig_data <- as.data.frame(mSet$dataSet$prenorm)
   # load in normalized data
   norm_data <- as.data.frame(mSet$dataSet$norm)
 
@@ -88,7 +88,7 @@ ggplotNormSummary <- function(mSet, colmap = global$vectors$mycols, plot.theme =
 #' @return list of four plots that fit in a 2x2 raster used in MetaboShiny.
 ggplotSampleNormSummary <- function(mSet, plot.theme = global$functions$plot.themes[[getOptions()$gtheme]]){
   # 4 by 4 plot, based on random 20-30 picked
-  orig_data <- as.data.frame(mSet$dataSet$procr)
+  orig_data <- as.data.frame(mSet$dataSet$prenorm)
   norm_data <- as.data.frame(mSet$dataSet$norm)
 
   candidate.samps <- intersect(rownames(orig_data), rownames(norm_data))

@@ -46,7 +46,7 @@ needed.packages <- c("BiocManager", "shiny", "shinydashboard", "httr", "curl", "
                      "KEGGREST", "manhattanly", "rgl", "glmnet", "TSPred", "VennDiagram",
                      "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR", "openxlsx",
                      "doParallel", "missForest", "InterpretMSSpectrum", "tm", "RISmed",
-                     "qdap", "extrafont", "gmp", "shadowtext")
+                     "qdap", "extrafont", "gmp", "shadowtext", "fgsea")
 
 missing.packages <- setdiff(needed.packages,rownames(installed.packages()))
 

@@ -200,7 +200,7 @@ observeEvent(input$initialize, {
       }else{
         # use built in imputation methods, knn means etc.
         mSet <- ImputeVar(mSet,
-                          method = # "knn"
+                          method =  #"knn"
                             input$miss_type
         )
       }
@@ -238,6 +238,10 @@ observeEvent(input$initialize, {
       scale_type = input$scale_type,
       ref_var = input$ref_var
     )
+    
+    dput(mSet$metshiParams)
+    
+    mSet<-PreparePrenormData(mSet)
     
     # normalize dataset with user settings(result: mSet$dataSet$norm)
     mSet <- Normalization(mSet,
