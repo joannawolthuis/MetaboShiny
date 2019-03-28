@@ -405,7 +405,6 @@ observeEvent(input$initialize, {
     mSet <<- PCA.Anal(mSet) # perform PCA analysis
     
     # save the used adducts to mSet
-    mSet$dataSet$adducts <<- selected_adduct_list
     shiny::setProgress(session=session, value= .9)
     
   })
