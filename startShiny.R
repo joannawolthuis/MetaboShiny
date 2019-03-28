@@ -96,18 +96,18 @@ options('download.file.method' = 'curl')
 options('unzip.unzip' = getOption("unzip"))
 #set_config(config(ssl_verifypeer = 0L))
 
-mode = if(file.exists(".dockerenv")) 'docker' else 'local'
+runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
 
-opt.loc <- if(mode == 'local') '~/Documents/MetaboShiny/user_options.txt' else '/userfiles/userfiles/user_options.txt'
+opt.loc <<- if(runmode == 'local') '~/Documents/MetaboShiny/user_options_local.txt' else '/userfiles/user_options_docker.txt'
 
-optfolder <<- dirname(opt.loc)
+optfolder <- dirname(opt.loc)
 
 if(!dir.exists(optfolder)) dir.create(optfolder,recursive = T)
 
 
 if(!file.exists(opt.loc)){
   # write options file if it doesn't exist yet
-  contents <- switch(mode,
+  contents <- switch(runmode,
          local = {
 'db_dir = ~/Documents/MetaboShiny/databases
 work_dir = ~/Documents/MetaboShiny/userfiles
@@ -153,6 +153,8 @@ gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
 gspec = RdBu'})
   writeLines(contents, opt.loc)
 }
+
+print('...')
 
 switch(mode,
        local = {

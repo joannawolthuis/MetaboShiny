@@ -38,7 +38,7 @@ sourceDir <- function(path, ...) {
 #'
 #' @param file.loc Path to user options file to read in.
 #' @return R list with keys as option types and values as option values.
-getOptions <- function(file.loc=file.path(optfolder, 'user_options.txt')){
+getOptions <- function(file.loc=opt.loc){
   opt_conn <- file(file.loc)
   # ----------------
   options_raw <<- readLines(opt_conn)
@@ -60,7 +60,7 @@ getOptions <- function(file.loc=file.path(optfolder, 'user_options.txt')){
 #' @param file.loc Location of user options file. Usually .txt but any format is fine.
 #' @param key Name of the new option / to change option
 #' @param value Value of the option to change or add
-setOption <- function(file.loc=file.path(optfolder, 'user_options.txt'), key, value){
+setOption <- function(file.loc=opt.loc, key, value){
   opt_conn <- file(file.loc)
   # -------------------------
   options <- getOptions(file.loc)
