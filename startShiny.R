@@ -130,8 +130,8 @@ taskbar_image = gemmy_rainbow.png
 gtheme = classic
 gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
 gspec = RdBu'}, docker = {
-'db_dir = PlsChange
-work_dir = PlsChange
+'db_dir = /userfiles/databases
+work_dir = /userfiles/userfiles
 proj_name = MY_METSHI
 ppm = 2
 packages_installed = Y
@@ -154,9 +154,8 @@ gspec = RdBu'})
   writeLines(contents, opt.loc)
 }
 
-print('...')
 
-switch(mode,
+switch(runmode,
        local = {
          wdir <<- dirname(rstudioapi::getSourceEditorContext()$path) # TODO: make this not break when not running from rstudio
          setwd(wdir)
