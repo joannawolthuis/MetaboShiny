@@ -496,7 +496,7 @@ plot.theme <<- ggplot2::theme_minimal
 taskbar_image <<- options$task_img
 
 # parse color options
-global$vectors$mycols <- get.col.map("user_options.txt") # colours for discrete sets, like group A vs group B etc.
+global$vectors$mycols <- get.col.map(opt.loc) # colours for discrete sets, like group A vs group B etc.
 global$constants$spectrum <- options$gspec # gradient function for heatmaps, volcano plot etc.
 global$vectors$project_names <- unique(tools::file_path_sans_ext(list.files(options$work_dir, pattern=".csv|.db"))) # the names listed in the 'choose project' tab of options.
 
