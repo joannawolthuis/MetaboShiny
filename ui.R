@@ -11,7 +11,7 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
            id="nav_general",
            windowTitle = "MetaboShiny",
            # this tab shows the currently installed packages.
-           # tabPanel("", icon = icon("share-alt",class = c("outlined","fa-2x")), value="setup", 
+           # tabPanel("", icon = icon("share-alt",class = c("outlined","fa-2x")), value="setup",
            #          # --- db check cols ---
            #          fluidRow(column(width=2),column(width=8, align="center",
            #                                          h2("Setup"),
@@ -22,7 +22,7 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
            #                                          div(DT::dataTableOutput('package_tab',  # table with current packages, should be generated in 'server'
            #                                                                  width="100%"),
            #                                              style='font-size:80%'),
-           #                                          br(),                                  
+           #                                          br(),
            #                                          actionButton("update_packages", "Install missing packages", icon = icon("heart")),
            #                                          br(),br(),
            #                                          imageOutput("package_check") # generate a checkmark once installing/updating has completed
@@ -33,7 +33,7 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
            ),
            # this tab shows the options for creating a new project, either from 2 csv files and an excel, or from a .db file and an excel.
            tabPanel("", icon = icon("upload",class = "outlined"), value="upload",
-                    fluidRow(column(9, align="center", 
+                    fluidRow(column(9, align="center",
                                     h2("Create project"))),
                     hr(),
                     tabsetPanel(id="new_proj",selected = "From DB",
@@ -50,7 +50,7 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                   br(),br(),
                                                   imageOutput("excel_icon",inline = T)
                                            )
-                                         ), 
+                                         ),
                                          fluidRow(
                                            column(3, align="center",
                                                   shinyFilesButton('database', 'DATABASE', 'Please select an database file', FALSE)
@@ -73,8 +73,8 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                 br(),br(),
                                                 shinyFilesButton('metadata', 'METADATA', 'Please select a metadata file', FALSE),
                                                 hr(),
-                                                sliderInput("ppm",label = "m/z accuracy", 
-                                                            min = 1, max = 50, 
+                                                sliderInput("ppm",label = "m/z accuracy",
+                                                            min = 1, max = 50,
                                                             value = 2, post = " ppm")
                                          ),
                                          column(3,  align="center",
@@ -156,10 +156,10 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                                 "Median"="median",
                                                                                                                 "Mean"="mean",
                                                                                                                 "Leave them out"="exclude",
-                                                                                                                "Leave them alone"="none"), 
+                                                                                                                "Leave them alone"="none"),
                                                 selected = "knn"),
                                     switchButton(inputId = "remove_outliers",
-                                                 label = "Exclude outliers?", 
+                                                 label = "Exclude outliers?",
                                                  value = FALSE, col = "BW", type = "YN"),
                                     actionButton("initialize", "Go", icon=icon("hand-o-right")),
                                     hr(),
@@ -169,8 +169,8 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                               accept = c(".RData")),
                                     actionButton("import_dataset", "Import", icon = icon("hand-peace-o")),
                                     imageOutput("dataset_upload_check",inline = T)
-                    ), column(9, 
-                              # show the summary plots post-normalization 
+                    ), column(9,
+                              # show the summary plots post-normalization
                               navbarPage(inverse=F,h3("explore"),
                                          tabPanel("m/z values",# icon=icon("braille"),
                                                   fluidRow(column(6,plotOutput("var1",height='300px')),
@@ -192,11 +192,11 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
            # this tab is the main analysis tab. all tabs for all analyses are listed here, but the visibility is changed depending on the current experiment
            tabPanel("",  icon = icon("bar-chart",class = "outlined"), value = "analysis",
                     sidebarLayout(position="right",
-                                  mainPanel = mainPanel(width = 8, 
+                                  mainPanel = mainPanel(width = 8,
                                                         tabsetPanel(id="statistics",selected = "pca",
                                                         #navbarPage(inverse=F, "", id="statistics", selected = "pca", collapsible = T,
                                                                    # TODO: T-SNE
-                                                                   # this tab shows general information, mostly a message with 'please give me some data' :-) 
+                                                                   # this tab shows general information, mostly a message with 'please give me some data' :-)
                                                                    tabPanel(icon("star"), value = "inf",
                                                                             fluidRow(column(width=12, align="center",
                                                                                             br(),br(),br(),br(),
@@ -222,32 +222,32 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                                 selectInput("pca_y", label = "Y axis:", choices = paste0("PC",1:20),selected = "PC2",width="100%"),
                                                                                                                 selectInput("pca_z", label = "Z axis:", choices = paste0("PC",1:20),selected = "PC3",width="100%")),
                                                                                                          column(9,
-                                                                                                                tabsetPanel(id="pca_2", 
-                                                                                                                            tabPanel(title="Table", 
+                                                                                                                tabsetPanel(id="pca_2",
+                                                                                                                            tabPanel(title="Table",
                                                                                                                                      div(DT::dataTableOutput('pca_tab',width="100%"),style='font-size:80%')),
                                                                                                                             tabPanel(title="Scree",
                                                                                                                                      plotOutput("pca_scree")
                                                                                                                             ),
-                                                                                                                            tabPanel(title="Loadings", 
+                                                                                                                            tabPanel(title="Loadings",
                                                                                                                                      div(DT::dataTableOutput('pca_load_tab',width="100%"),style='font-size:80%'))
                                                                                                                 ))
                                                                                                 )
                                                                                        ),
                                                                                        # TODO: enable the sparse and orthogonal PLS-DA options in metaboanalystR
                                                                                        # this tab is used to perform pls-da. it triggers on 'go' button as it is a time costly analysis.
-                                                                                       tabPanel("pls-da", value = "plsda", 
+                                                                                       tabPanel("pls-da", value = "plsda",
                                                                                                 fluidRow(align="center",column(12,plotly::plotlyOutput("plot_plsda",height = "500px", width="500px"))),
                                                                                                 fluidRow(align="center",column(12,
                                                                                                                                switchButton("plsda_2d3d", label = "", col = "BW", type = "2d3d"))),
                                                                                                 hr(),
                                                                                                 fluidRow(column(3,
                                                                                                                 div(style="display:inline-block",
-                                                                                                                    selectInput("plsda_type", 
-                                                                                                                                label="Type:", 
+                                                                                                                    selectInput("plsda_type",
+                                                                                                                                label="Type:",
                                                                                                                                 choices=list("Normal"="normal")
                                                                                                                                 #,
                                                                                                                                 #             "Orthogonal"="ortho",
-                                                                                                                                #             "Sparse"="sparse") 
+                                                                                                                                #             "Sparse"="sparse")
                                                                                                                                 ,width = '100px',
                                                                                                                                 selected=1)),
                                                                                                                 div(style="display:inline-block",
@@ -257,25 +257,25 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                                 selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:8),selected = "PC2",width="100%"),
                                                                                                                 selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:8),selected = "PC3",width="100%")),
                                                                                                          column(9,
-                                                                                                                tabsetPanel(id="plsda_2", 
-                                                                                                                            tabPanel(title="Cross-validation", 
+                                                                                                                tabsetPanel(id="plsda_2",
+                                                                                                                            tabPanel(title="Cross-validation",
                                                                                                                                      plotOutput("plsda_cv_plot")),
-                                                                                                                            tabPanel(title="Permutation", 
+                                                                                                                            tabPanel(title="Permutation",
                                                                                                                                      plotOutput("plsda_perm_plot")),
-                                                                                                                            tabPanel(title="Table", 
+                                                                                                                            tabPanel(title="Table",
                                                                                                                                      div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')),
-                                                                                                                            tabPanel(title="Loadings", 
+                                                                                                                            tabPanel(title="Loadings",
                                                                                                                                      div(DT::dataTableOutput('plsda_load_tab',width="100%"),style='font-size:80%'))
                                                                                                                 ))
                                                                                                 )
                                                                                        ),
-                                                                                       tabPanel("t-sne", value = "tsne", 
-                                                                                           helpText("working on it")     
+                                                                                       tabPanel("t-sne", value = "tsne",
+                                                                                           helpText("working on it")
                                                                                        )
                                                                    )),
                                                                    tabPanel("per m/z", value = "dimred", icon=icon("fingerprint"),
                                                                             navbarPage(inverse=F, icon("fingerprint"), id = "permz",
-                                                                                       tabPanel("t-test", value="tt", 
+                                                                                       tabPanel("t-test", value="tt",
                                                                                                 fluidRow(plotly::plotlyOutput('tt_specific_plot',width="100%")),
                                                                                                 fluidRow(align="center",
                                                                                                          sardine(switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = T)),
@@ -307,7 +307,7 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                                      plotly::plotlyOutput('fc_overview_plot',height="300px") %>% shinycssloaders::withSpinner()
                                                                                                            ))
                                                                                        ),
-                                                                                       tabPanel("meba", value="meba", 
+                                                                                       tabPanel("meba", value="meba",
                                                                                                 fluidRow(plotly::plotlyOutput('meba_specific_plot',height="600px")),
                                                                                                 fluidRow(div(DT::dataTableOutput('meba_tab', width="100%"),style='font-size:80%'))
                                                                                        ),
@@ -332,10 +332,10 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                 ),
                                                                                                 fluidRow(column(align="center",
                                                                                                                 width=12,
-                                                                                                                uiOutput("heatbutton"), 
+                                                                                                                uiOutput("heatbutton"),
                                                                                                                 switchButton("heatsign", label = "Only significant hits?", col = "GB", type = "YN"),
                                                                                                                 switchButton("heatlimits", label = "Color based on -all- metabolites?", col = "GB", type = "YN")
-                                                                                                )) 
+                                                                                                ))
                                                                                        )
                                                                             )
                                                                    ),
@@ -347,39 +347,39 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                 fluidRow(
                                                                                                   column(width=3,align="center",
                                                                                                          selectInput("ml_perf_metr", label=h2("Performance metric"),
-                                                                                                                     choices = c("boot", "boot632", "optimism_boot", 
-                                                                                                                                 "boot_all", "cv", "repeatedcv", 
-                                                                                                                                 "LOOCV", "LGOCV", "none", "oob", 
+                                                                                                                     choices = c("boot", "boot632", "optimism_boot",
+                                                                                                                                 "boot_all", "cv", "repeatedcv",
+                                                                                                                                 "LOOCV", "LGOCV", "none", "oob",
                                                                                                                                  "timeslice", "addaptive_cv", "adaptive_boot",
                                                                                                                                  "adaptive_LGOCV"),
                                                                                                                      multiple = F, selected = "repeatedcv"),
-                                                                                                         sliderInput("ml_train_perc", 
-                                                                                                                     label = h2("Percentage in training"), 
+                                                                                                         sliderInput("ml_train_perc",
+                                                                                                                     label = h2("Percentage in training"),
                                                                                                                      min = 1,
                                                                                                                      max = 100,
                                                                                                                      step = 1,
-                                                                                                                     value = 60, 
+                                                                                                                     value = 60,
                                                                                                                      post = "%"),
-                                                                                                         selectInput("ml_folds", label=h2("Fold CV"),choices = c("5", 
-                                                                                                                                                                 "10", 
-                                                                                                                                                                 "20", 
-                                                                                                                                                                 "50", 
+                                                                                                         selectInput("ml_folds", label=h2("Fold CV"),choices = c("5",
+                                                                                                                                                                 "10",
+                                                                                                                                                                 "20",
+                                                                                                                                                                 "50",
                                                                                                                                                                  "LOOCV"),
                                                                                                                      multiple = F),
-                                                                                                         sliderInput("ml_attempts", 
-                                                                                                                     label = "Attempts", 
+                                                                                                         sliderInput("ml_attempts",
+                                                                                                                     label = "Attempts",
                                                                                                                      min = 1,
                                                                                                                      max = 100,
                                                                                                                      step = 1,
-                                                                                                                     value = 20, 
+                                                                                                                     value = 20,
                                                                                                                      post = "x"),
                                                                                                          # - - - - - - - - - -
                                                                                                          style="z-index:1002;"
                                                                                                   ),
                                                                                                   column(width=6,align="center",
-                                                                                                         selectInput("ml_method", 
-                                                                                                                     label = h2("Used algorithm"), 
-                                                                                                                     selected = "glmnet", 
+                                                                                                         selectInput("ml_method",
+                                                                                                                     label = h2("Used algorithm"),
+                                                                                                                     selected = "glmnet",
                                                                                                                      choices = {
                                                                                                                        lst = as.list(global$constants$ml.models)
                                                                                                                        # names(lst) <- sapply(global$constants$ml.models, function(mdl) caret.mdls[[mdl]]$label)
@@ -387,20 +387,20 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                                      },
                                                                                                                      multiple = F),
                                                                                                          div(uiOutput("ml_params"), style = "font-size:60%"),
-                                                                                                         selectizeInput("ml_preproc", label = h2("Data reprocessing"), 
-                                                                                                                        choices = c("center", "scale"), 
+                                                                                                         selectizeInput("ml_preproc", label = h2("Data reprocessing"),
+                                                                                                                        choices = c("center", "scale"),
                                                                                                                         selected = c("center", "scale"), multiple=T),
                                                                                                          shinyWidgets::circleButton("do_ml",
-                                                                                                                                    icon = h3(paste("Go"), 
-                                                                                                                                              icon("hand-pointer-o", "fa-lg")), 
-                                                                                                                                    status = "default", 
+                                                                                                                                    icon = h3(paste("Go"),
+                                                                                                                                              icon("hand-pointer-o", "fa-lg")),
+                                                                                                                                    status = "default",
                                                                                                                                     size = "lg"),
                                                                                                          style="z-index:1003;"
                                                                                                   ),
                                                                                                   column(width=3,align="center",
-                                                                                                         fluidRow(textOutput("ml_train_ss"), 
+                                                                                                         fluidRow(textOutput("ml_train_ss"),
                                                                                                                   actionButton("ml_train_ss", label = "train on:", icon = icon("arrow-up"))),
-                                                                                                         fluidRow(textOutput("ml_test_ss"), 
+                                                                                                         fluidRow(textOutput("ml_test_ss"),
                                                                                                                   actionButton("ml_test_ss", label = "test on:", icon = icon("arrow-up"))),
                                                                                                          br(),
                                                                                                          textInput("ml_name", label=h3("Name:"), value = "all"))
@@ -455,14 +455,14 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                      align="center"),
                                                                                             fluidRow(uiOutput("venn_pval"), align="center"),
                                                                                             br(),
-                                                                                            fluidRow(div(DT::dataTableOutput('venn_tab'),style='font-size:80%'), 
+                                                                                            fluidRow(div(DT::dataTableOutput('venn_tab'),style='font-size:80%'),
                                                                                                      align="center")
-                                                                                          ))   
+                                                                                          ))
                                                                    )
                                                         )
                                   ),
                                   # this is the sidebar that shows in the analysis tab. contains a lot of settings on the current variable of interest, plot themes and colours, and venn diagrams.
-                                  sidebarPanel = 
+                                  sidebarPanel =
                                     sidebarPanel(align="center",width = 4,
                                                  tabsetPanel(id = "search", #type = "pills",
                                                              tabPanel(title=NULL, icon=icon("search"),
@@ -475,8 +475,8 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                                       div(id = "curly-brace", div(id = "left", class = "brace"),
                                                                                                                           div(id = "right", class = "brace")),
                                                                                                                       br(),br(),
-                                                                                                                      shinyWidgets::circleButton("select_db_all", 
-                                                                                                                                                 icon = icon("shopping-cart"), 
+                                                                                                                      shinyWidgets::circleButton("select_db_all",
+                                                                                                                                                 icon = icon("shopping-cart"),
                                                                                                                                                  size = "default") # icon("fingerprint"), size = "sm")
                                                                                                              ), # clicky buttons for database selection; this is generated in 'server'
                                                                                                              tabPanel(title=icon("chart-bar"),
@@ -485,22 +485,22 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                              tabPanel(title=icon("magic"),
                                                                                                                       h2("MagicBall settings"),
                                                                                                                       fluidRow(align="center",switchButton(inputId = "magicball_pubchem_cids",
-                                                                                                                                                           label = "Check PubChem for predicted formulas?", 
+                                                                                                                                                           label = "Check PubChem for predicted formulas?",
                                                                                                                                                            col = "BW", type = "YN", value = F)
                                                                                                                       ),
                                                                                                                       fluidRow(align="center",switchButton(inputId = "magicball_pubchem_details",
-                                                                                                                                                           label = "Get detailed PubChem matches? (SLOW!)", 
+                                                                                                                                                           label = "Get detailed PubChem matches? (SLOW!)",
                                                                                                                                                            col = "BW", type = "YN", value = F)
                                                                                                                       ),
                                                                                                                       fluidRow(align="center", helpText("Calculated adducts..")),
-                                                                                                                      
-                                                                                                                      fluidRow(div(DT::dataTableOutput('magicball_add_tab'),style='font-size:60%'), 
+
+                                                                                                                      fluidRow(div(DT::dataTableOutput('magicball_add_tab'),style='font-size:60%'),
                                                                                                                                align="center")
                                                                                                                       ),
                                                                                                              tabPanel(title=icon("star-half-alt"),
-                                                                                                                      selectInput("iso_score_method", 
-                                                                                                                                  "Which method used to score compounds of same weight?", 
-                                                                                                                                  selected="mscore", 
+                                                                                                                      selectInput("iso_score_method",
+                                                                                                                                  "Which method used to score compounds of same weight?",
+                                                                                                                                  selected="mscore",
                                                                                                                                   choices=list("M-score"="mscore"
                                                                                                                                                #"Chi-square"="chisq",
                                                                                                                                                #"Mean absolute percentage error"="mape",
@@ -511,7 +511,7 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                                       shinyWidgets::circleButton("score_iso", icon = icon("award"), size = "sm") # icon("fingerprint"), size = "sm")
                                                                                                              )
                                                                                                  ))),
-                                                                      tabsetPanel(id="tab_iden_2",  
+                                                                      tabsetPanel(id="tab_iden_2",
                                                                                   # forward searching
                                                                                   tabPanel(title="mz > molecule",
                                                                                            hr(),
@@ -523,23 +523,23 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                    height = "50px")
                                                                                              ),
                                                                                              div(
-                                                                                               sardine(div(icon("paw","fa-xs fa-rotate-90"), 
+                                                                                               sardine(div(icon("paw","fa-xs fa-rotate-90"),
                                                                                                            style="position:relative;
                                                                                                            top:10px;")),
-                                                                                               sardine(div(icon("paw","fa-xs fa-rotate-90"), 
+                                                                                               sardine(div(icon("paw","fa-xs fa-rotate-90"),
                                                                                                            style="position:relative;
                                                                                                            top:25px;")),
-                                                                                               sardine(div(icon("paw","fa-xs fa-rotate-90"), 
+                                                                                               sardine(div(icon("paw","fa-xs fa-rotate-90"),
                                                                                                            style="position:relative;
                                                                                                            top:10px;")),
                                                                                                sardine(h2(textOutput("curr_cpd"),style="padding:10px;")),
-                                                                                               sardine(div(icon("paw","fa-xs fa-rotate-90"), 
+                                                                                               sardine(div(icon("paw","fa-xs fa-rotate-90"),
                                                                                                            style="position:relative;
                                                                                                            top:10px;")),
-                                                                                               sardine(div(icon("paw","fa-xs fa-rotate-90"), 
+                                                                                               sardine(div(icon("paw","fa-xs fa-rotate-90"),
                                                                                                            style="position:relative;
                                                                                                            top:25px;")),
-                                                                                               sardine(div(icon("paw","fa-xs fa-rotate-90"), 
+                                                                                               sardine(div(icon("paw","fa-xs fa-rotate-90"),
                                                                                                            style="position:relative;
                                                                                                            top:10px;")),
                                                                                                style="background-color:white;
@@ -551,7 +551,7 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                border-bottom: 1px solid #DFDCDC;")
                                                                                                ),
                                                                                            bsCollapse(bsCollapsePanel(title=h2("Compound info"), style="warning",
-                                                                                                                      tabsetPanel(id="tab_iden_3", 
+                                                                                                                      tabsetPanel(id="tab_iden_3",
                                                                                                                                   tabPanel(title=icon("atlas"),
                                                                                                                                            wellPanel(id = "def",style = "overflow-y:scroll; max-height: 200px",
                                                                                                                                                      textOutput("curr_definition"))
@@ -569,8 +569,8 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                                                            hr(),
                                                                                                                                            fluidRow(
                                                                                                                                              switchButton(inputId = "auto_copy",
-                                                                                                                                                          label = "Auto-copy name to clipboard??", 
-                                                                                                                                                          value = TRUE, col = "GB", type = "YN"), 
+                                                                                                                                                          label = "Auto-copy name to clipboard??",
+                                                                                                                                                          value = TRUE, col = "GB", type = "YN"),
                                                                                                                                              align="center"),
                                                                                                                                            helpText("Undo filtering"),
                                                                                                                                            fluidRow(
@@ -578,12 +578,12 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                                                            )
                                                                                                                                   ),
                                                                                                                                   tabPanel(title=icon("database"), value="pie_db",
-                                                                                                                                           fluidRow(align = "center", 
+                                                                                                                                           fluidRow(align = "center",
                                                                                                                                                     plotly::plotlyOutput("match_pie_db") %>% shinycssloaders::withSpinner()
                                                                                                                                            )
                                                                                                                                   ),
-                                                                                                                                  tabPanel(title=icon("plus"), value = "pie_add", 
-                                                                                                                                           fluidRow(align = "center", 
+                                                                                                                                  tabPanel(title=icon("plus"), value = "pie_add",
+                                                                                                                                           fluidRow(align = "center",
                                                                                                                                                     plotly::plotlyOutput("match_pie_add") %>% shinycssloaders::withSpinner()
                                                                                                                                            )
                                                                                                                                   ),
@@ -599,20 +599,20 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                                                                       )))
                                                                                                                                            )
                                                                                                                                   ),
-                                                                                                                                  tabPanel(title=icon("searchengin"), 
+                                                                                                                                  tabPanel(title=icon("searchengin"),
                                                                                                                                            textInput('pm_query', "Search for:"),
                                                                                                                                            sliderInput('pm_year', "Paper publication range:",
                                                                                                                                                        min = 1900, max = as.numeric(format(Sys.Date(), '%Y')),
                                                                                                                                                        value = c(2000,as.numeric(format(Sys.Date(), '%Y'))),
                                                                                                                                                        step = 1,sep = ""
                                                                                                                                            ),
-                                                                                                                                           sliderInput("pm_max", 
+                                                                                                                                           sliderInput("pm_max",
                                                                                                                                                        "Stop after ... papers:",
-                                                                                                                                                       min = 1, 
-                                                                                                                                                       max = 1000, 
+                                                                                                                                                       min = 1,
+                                                                                                                                                       max = 1000,
                                                                                                                                                        value = 500),
                                                                                                                                            shinyWidgets::circleButton("search_pubmed", icon = icon("search"), size = "sm"),
-                                                                                                                                           tabsetPanel(selected = 1, 
+                                                                                                                                           tabsetPanel(selected = 1,
                                                                                                                                                        tabPanel(title = icon("cloud"),
                                                                                                                                                                 wordcloud2::wordcloud2Output("wordcloud_pubmed") %>% shinycssloaders::withSpinner(),
                                                                                                                                                                 tags$script(HTML(
@@ -626,10 +626,10 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                                                                                 div(DT::dataTableOutput('pm_tab', width="100%"),style='font-size:80%')
                                                                                                                                                        )
                                                                                                                                            )
-                                                                                                                                           
+
                                                                                                                                   )
                                                                                                                       )))
-                                                                                           
+
                                                                                                ),
                                                                                   # reverse searching
                                                                                   tabPanel(title="molecule > mz",
@@ -648,7 +648,7 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                       div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
                                                                                                       )
                                                                                            )
-                                                                                           
+
                                                                                   ))
                                                                                                ),
                                                              tabPanel(NULL, icon=icon("exchange")
@@ -673,7 +673,7 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                       ,selectizeInput("subset_group", label="Group(s) in subset:", choices = c(), multiple=TRUE)
                                                                       ,shinyWidgets::circleButton("change_subset", icon = icon("hand-pointer-o"), size = "sm")
                                                                       ,shinyWidgets::circleButton("reset_subset", icon = icon("undo"), size = "sm")
-                                                                      
+
                                                                       ),
                                                              # this tab is used to select user plot theme and user colours (discrete and continuous)
                                                              tabPanel(NULL, icon=icon("paint-brush"),
@@ -699,7 +699,7 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                                                   "Grid, black bg"="dark",
                                                                                                                                   "Grid, white bg, gray axes"="light",
                                                                                                                                   "Line drawing"="line"),
-                                                                                  selected = getOptions("user_options.txt")$gtheme),
+                                                                                  selected = getOptions()$gtheme),
                                                                       fluidRow(plotOutput("ggplot_theme_example",inline = F, width="100%")),
                                                                       h2("Continuous data"),
                                                                       # the below options need to match with the corresponding function storage in 'global'. if you want to add more it'll go here!
@@ -718,28 +718,28 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                                                        "Green - yellow - white"="gyw",
                                                                                                                                        "Red - yellow - white"="ryw",
                                                                                                                                        "Grayscale"="bw",
-                                                                                                                                       "Blues (brew)" = "Blues", 
-                                                                                                                                       "Blue - green (brew)" = "BuGn", 
-                                                                                                                                       "Blue - purple (brew)" = "BuPu", 
-                                                                                                                                       "Green - blue (brew)" = "GnBu", 
-                                                                                                                                       "Greens (brew)" = "Greens", 
+                                                                                                                                       "Blues (brew)" = "Blues",
+                                                                                                                                       "Blue - green (brew)" = "BuGn",
+                                                                                                                                       "Blue - purple (brew)" = "BuPu",
+                                                                                                                                       "Green - blue (brew)" = "GnBu",
+                                                                                                                                       "Greens (brew)" = "Greens",
                                                                                                                                        "Grayscale (brew)" = "Greys",
-                                                                                                                                       "Oranges (brew)" = "Oranges", 
-                                                                                                                                       "Orange - red (brew)" = "OrRd", 
-                                                                                                                                       "Purple - blue (brew)" = "PuBu", 
+                                                                                                                                       "Oranges (brew)" = "Oranges",
+                                                                                                                                       "Orange - red (brew)" = "OrRd",
+                                                                                                                                       "Purple - blue (brew)" = "PuBu",
                                                                                                                                        "Purple - blue - green (brew)" = "PuBuGn",
-                                                                                                                                       "Purple - red (brew)" = "PuRd", 
-                                                                                                                                       "Purples (brew)" = "Purples", 
-                                                                                                                                       "Red - purple (brew)" = "RdPu", 
-                                                                                                                                       "Reds (brew)" = "Reds", 
-                                                                                                                                       "Yellow - green (brew)" = "YlGn", 
-                                                                                                                                       "Yellow - green - blue (brew)" = "YlGnBu", 
-                                                                                                                                       "Yellow - orange - brown (brew)" = "YlOrBr", 
-                                                                                                                                       "Yellow - orange - red (brew)"="YlOrRd", 
+                                                                                                                                       "Purple - red (brew)" = "PuRd",
+                                                                                                                                       "Purples (brew)" = "Purples",
+                                                                                                                                       "Red - purple (brew)" = "RdPu",
+                                                                                                                                       "Reds (brew)" = "Reds",
+                                                                                                                                       "Yellow - green (brew)" = "YlGn",
+                                                                                                                                       "Yellow - green - blue (brew)" = "YlGnBu",
+                                                                                                                                       "Yellow - orange - brown (brew)" = "YlOrBr",
+                                                                                                                                       "Yellow - orange - red (brew)"="YlOrRd",
                                                                                                                                        "BrBG", "PiYG", "PRGn", "PuOr", "RdBu", #TODO: add descriptions (or remove all?)
-                                                                                                                                       "RdGy", "RdYlBu", "RdYlGn", "Spectral", 
-                                                                                                                                       "Accent", "Dark2", "Paired", "Pastel1", 
-                                                                                                                                       "Pastel2", "Set1", "Set2", "Set3"),selected = getOptions("user_options.txt")$gspec
+                                                                                                                                       "RdGy", "RdYlBu", "RdYlGn", "Spectral",
+                                                                                                                                       "Accent", "Dark2", "Paired", "Pastel1",
+                                                                                                                                       "Pastel2", "Set1", "Set2", "Set3"),selected = getOptions()$gspec
                                                                       ),
                                                                       # preview plot
                                                                       fluidRow(plotly::plotlyOutput("ramp_plot",inline = T, width="100%") %>% shinycssloaders::withSpinner()),
@@ -748,10 +748,10 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                              ))
                                     )
                     )),
-           
+
            # report tab
-           tabPanel("", 
-                    icon = icon("file-invoice", class = "outlined"), 
+           tabPanel("",
+                    icon = icon("file-invoice", class = "outlined"),
                     value="reportTab",
                     fluidRow(
                       column(width=12, align="center",
@@ -762,16 +762,16 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                       )#close column
                     )#close fluidrow
            ),#close tabpanel
-           
+
            # this tab is used to change general settings.
-           tabPanel("",  icon = icon("cog",class = "outlined"), value="options", 
+           tabPanel("",  icon = icon("cog",class = "outlined"), value="options",
                     navbarPage(inverse=TRUE,"Settings", id="tab_settings",
                                tabPanel("Project", icon=icon("gift"),
                                         #textInput(inputId="proj_name", label="Project name", value = ''),
-                                        selectizeInput(inputId="proj_name", 
-                                                       label="Project name", 
+                                        selectizeInput(inputId="proj_name",
+                                                       label="Project name",
                                                        choices=global$vectors$project_names, # existing projects in user folder (generated in 'global')
-                                                       selected = getOptions("user_options.txt")$proj_name,
+                                                       selected = getOptions()$proj_name,
                                                        options=list(create = TRUE)), # let users add new names
                                         actionButton("set_proj_name", label="Apply"),
                                         helpText("This name will be used in all save files."),
@@ -796,9 +796,9 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                tabPanel("Adducts", icon=icon("plus-square"),
                                         h3("Current adduct table:"),
                                         rhandsontable::rHandsontableOutput("adduct_tab", width=800, height=600),
-                                        shinySaveButton("save_adducts", 
-                                                        "Save changed table", 
-                                                        "Save file as ...", 
+                                        shinySaveButton("save_adducts",
+                                                        "Save changed table",
+                                                        "Save file as ...",
                                                         filetype=list(RData="RData", csv="csv")
                                         ),
                                         hr(),
@@ -813,20 +813,20 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                         h3("Change app settings"),
                                         hr(),
                                         h2("Navigation bar colours"),
-                                        colourpicker::colourInput(inputId = "bar.col.1", 
-                                                                  label = paste("Active background"), 
+                                        colourpicker::colourInput(inputId = "bar.col.1",
+                                                                  label = paste("Active background"),
                                                                   value = options$col1,
                                                                   allowTransparent = FALSE),
-                                        colourpicker::colourInput(inputId = "bar.col.2", 
-                                                                  label = paste("Inactive background"), 
+                                        colourpicker::colourInput(inputId = "bar.col.2",
+                                                                  label = paste("Inactive background"),
                                                                   value = options$col2,
                                                                   allowTransparent = FALSE),
-                                        colourpicker::colourInput(inputId = "bar.col.3", 
-                                                                  label = paste("Active tab"), 
+                                        colourpicker::colourInput(inputId = "bar.col.3",
+                                                                  label = paste("Active tab"),
                                                                   value = options$col3,
                                                                   allowTransparent = FALSE),
-                                        colourpicker::colourInput(inputId = "bar.col.4", 
-                                                                  label = paste("Inactive tab"), 
+                                        colourpicker::colourInput(inputId = "bar.col.4",
+                                                                  label = paste("Inactive tab"),
                                                                   value = options$col4,
                                                                   allowTransparent = FALSE),
                                         br(),
@@ -844,26 +844,26 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                         br(),
                                         h3("Taskbar image"),
                                         div(imageOutput("taskbar_image",inline = T)),
-                                        shinyFilesButton('taskbar_image_path', 
-                                                         'Select image', 
-                                                         'Please select an image file', 
+                                        shinyFilesButton('taskbar_image_path',
+                                                         'Select image',
+                                                         'Please select an image file',
                                                          FALSE),
                                         hr(),
                                         actionButton("change_css", "Save settings (restart to apply)") # need to reload CSS to enable new settings
                                )
                     )
-           ), 
-           # prompt user on opening the quit tab. 
+           ),
+           # prompt user on opening the quit tab.
            # TODO: add 'save project?' dialog
            tabPanel(title = "", value="stop", icon = icon("times-circle",class = "outlined")),
            div(class="spinnylocation1",
-               div(class="plus", img(class="imagetop", src=getOptions("user_options.txt")$taskbar_image, width="120px", height="120px")),
-               div(class="minus", img(class="imagebottom", src=getOptions("user_options.txt")$taskbar_image, width="120px", height="120px"))
+               div(class="plus", img(class="imagetop", src=getOptions()$taskbar_image, width="120px", height="120px")),
+               div(class="minus", img(class="imagebottom", src=getOptions()$taskbar_image, width="120px", height="120px"))
            ),
            div(class="line")
            ,footer=fluidRow(hr(),
                             actionButton("show_window", label="", icon = icon("map-marked")),
-                            actionButton("save_mset", label="", icon = icon("save")), 
+                            actionButton("save_mset", label="", icon = icon("save")),
                             align="center")
                                                                       )
                     )

@@ -13,13 +13,13 @@ observe({
              general = {
                # change interface
                if(mSet$dataSet$cls.num <= 1){
-                 interface$mode <- NULL } 
+                 interface$mode <- NULL }
                else if(mSet$dataSet$cls.num == 2){
                  interface$mode <- "bivar"}
                else{
                  interface$mode <- "multivar"}
                # reload sidebar
-               output$curr_name <- renderText({mSet$dataSet$cls.name}) 
+               output$curr_name <- renderText({mSet$dataSet$cls.name})
                # reload pca, plsda, ml(make datamanager do that)
                # update select input bars with current variable and covariables defined in excel
                updateSelectInput(session, "stats_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
@@ -27,15 +27,15 @@ observe({
                updateSelectInput(session, "col_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
                updateSelectInput(session, "txt_var", selected = "sample", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
                updateSelectInput(session, "subset_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
-               output$curr_name <- renderText({mSet$dataSet$cls.name}) 
-               # if _T in sample names, data is time series. This makes the time series swap button visible. 
+               output$curr_name <- renderText({mSet$dataSet$cls.name})
+               # if _T in sample names, data is time series. This makes the time series swap button visible.
                if(all(grepl(pattern = "_T\\d", x = rownames(mSet$dataSet$norm)))){
                  timebutton$status <- "on"
                }else{
                  timebutton$status <- "off"
                }
                # t-test...
-               
+
                if("tt" %in% names(mSet$analSet)){
                  if("V" %in% colnames(mSet$analSet$tt$sig.mat)){
                    updateCheckboxInput(session, "tt_nonpar", value = T)
@@ -46,7 +46,7 @@ observe({
                  print("no tt done yet...")
                  updateCheckboxInput(session, "tt_nonpar", value = F)
                }
-               
+
                # show a button with t-test or fold-change analysis if data is bivariate. hide otherwise.
                # TODO: add button for anova/other type of sorting...
                if(mSet$dataSet$cls.num == 2 ){
@@ -56,7 +56,7 @@ observe({
                }
                # tab loading
                if(mSet$dataSet$cls.num <= 1){
-                 interface$mode <- NULL } 
+                 interface$mode <- NULL }
                else if(mSet$dataSet$cls.num == 2){
                  interface$mode <- "bivar"}
                else{
@@ -120,14 +120,14 @@ observe({
                    keep <- c("p.value", "FDR", "Fisher's LSD")
                  }
                }
-               
+
                if(present){
                  # render results table for UI
                  output$aov_tab <- DT::renderDataTable({
                    DT::datatable(if(is.null(mSet$analSet[[which.anova]]$sig.mat)){
                      data.table("No significant hits found")
                    }else{mSet$analSet[[which.anova]]$sig.mat[,keep]
-                   }, 
+                   },
                    selection = 'single',
                    autoHideNavigation = T,
                    options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -138,16 +138,16 @@ observe({
                # render volcano plot with user defined colours
                output$volc_plot <- plotly::renderPlotly({
                  # --- ggplot ---
-                 ggPlotVolc(global$functions$color.functions[[getOptions("user_options.txt")$gspec]], 20)
+                 ggPlotVolc(global$functions$color.functions[[getOptions()$gspec]], 20)
                })
                # render results table
                output$volc_tab <-DT::renderDataTable({
                  # -------------
-                 DT::datatable(mSet$analSet$volc$sig.mat, 
+                 DT::datatable(mSet$analSet$volc$sig.mat,
                                selection = 'single',
                                autoHideNavigation = T,
                                options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-                 
+
                })
              },
              pca = {
@@ -155,18 +155,18 @@ observe({
                  # create PCA legend plot
                  # TODO: re-enable this plot, it was clickable so you could filter out certain groups
                  output$pca_legend <- plotly::renderPlotly({
-                   frame <- data.table(x = c(1), 
+                   frame <- data.table(x = c(1),
                                        y = mSet$dataSet$cls.num)
                    p <- ggplot(data=frame,
-                               aes(x, 
-                                   y, 
+                               aes(x,
+                                   y,
                                    color=factor(y),
                                    fill=factor(y)
                                )
-                   ) + 
+                   ) +
                      geom_point(shape = 21, size = 5, stroke = 5) +
                      scale_colour_manual(values=global$vectors$mycols) +
-                     theme_void() + 
+                     theme_void() +
                      theme(legend.position="none")
                    # --- return ---
                    ggplotly(p, tooltip = NULL) %>% config(displayModeBar = F)
@@ -177,8 +177,8 @@ observe({
                                                     digits = 2),
                                               keep.rownames = T)
                    colnames(pca.table) <- c("Principal Component", "% variance")
-                   
-                   DT::datatable(pca.table, 
+
+                   DT::datatable(pca.table,
                                  selection = 'single',
                                  autoHideNavigation = T,
                                  options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -189,7 +189,7 @@ observe({
                                                                 input$pca_y,
                                                                 input$pca_z)]
                    #colnames(pca.loadings)[1] <- "m/z"
-                   DT::datatable(pca.loadings, 
+                   DT::datatable(pca.loadings,
                                  selection = 'single',
                                  autoHideNavigation = T,
                                  options = list(lengthMenu = c(5, 10, 15), pageLength = 10))
@@ -200,14 +200,14 @@ observe({
                      "ipca" # interactive PCA (old name, i like tpca more :P )
                    }else{
                      "pca" # normal pca
-                   } 
+                   }
                  }else{
                    "pca"
                  }
-                 
+
                  # - - - - -
                  print(input$pca_2d3d)
-                 
+
                  if(input$pca_2d3d){ # check if switch button is in 2d or 3d mode
                    # render 2d plot
                    output$plot_pca <- plotly::renderPlotly({
@@ -231,29 +231,29 @@ observe({
                } # do nothing
              },
              plsda = {
-               
+
                if("plsda" %in% names(mSet$analSet)){ # if plsda has been performed...
-                 
+
                  # render cross validation plot
                  output$plsda_cv_plot <- renderPlot({
-                   ggPlotClass(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], plotlyfy = F)
+                   ggPlotClass(cf = global$functions$color.functions[[getOptions()$gspec]], plotlyfy = F)
                  })
                  # render permutation plot
                  output$plsda_perm_plot <- renderPlot({
-                   ggPlotPerm(cf = global$functions$color.functions[[getOptions("user_options.txt")$gspec]], plotlyfy = F)
+                   ggPlotPerm(cf = global$functions$color.functions[[getOptions()$gspec]], plotlyfy = F)
                  })
                  # render table with variance per PC
                  output$plsda_tab <- DT::renderDataTable({
                    # - - - -
-                   plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar 
-                                                      / mSet$analSet$plsr$Xtotvar 
+                   plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar
+                                                      / mSet$analSet$plsr$Xtotvar
                                                       * 100.0,
                                                       digits = 2),
                                                 keep.rownames = T)
                    colnames(plsda.table) <- c("Principal Component", "% variance")
                    plsda.table[, "Principal Component"] <- paste0("PC", 1:nrow(plsda.table))
                    # -------------
-                   DT::datatable(plsda.table, 
+                   DT::datatable(plsda.table,
                                  selection = 'single',
                                  autoHideNavigation = T,
                                  options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
@@ -291,23 +291,23 @@ observe({
              },
              ml = {
                if("ml" %in% names(mSet$analSet)){
-                 
+
                  roc_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
-                 
+
                  output$ml_roc <- plotly::renderPlotly({
-                   plotly::ggplotly(ggPlotROC(roc_data, 
-                                              input$ml_attempts, 
-                                              global$functions$color.functions[[getOptions("user_options.txt")$gspec]]))
+                   plotly::ggplotly(ggPlotROC(roc_data,
+                                              input$ml_attempts,
+                                              global$functions$color.functions[[getOptions()$gspec]]))
                  })
-                 
+
                  bar_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar
-                 
+
                  output$ml_bar <- plotly::renderPlotly({
-                   
-                   plotly::ggplotly(ggPlotBar(bar_data, 
-                                              input$ml_attempts, 
-                                              global$functions$color.functions[[getOptions("user_options.txt")$gspec]], 
-                                              input$ml_top_x, 
+
+                   plotly::ggplotly(ggPlotBar(bar_data,
+                                              input$ml_attempts,
+                                              global$functions$color.functions[[getOptions()$gspec]],
+                                              input$ml_top_x,
                                               ml_name = mSet$analSet$ml$last$name,
                                               ml_type = mSet$analSet$ml$last$method))
                  })
@@ -317,7 +317,7 @@ observe({
                if("asca" %in% names(mSet$analSet)){
                  output$asca_tab <-DT::renderDataTable({ # render results table for UI
                    # -------------
-                   DT::datatable(mSet$analSet$asca$sig.list$Model.ab, 
+                   DT::datatable(mSet$analSet$asca$sig.list$Model.ab,
                                  selection = 'single',
                                  colnames = c("Compound", "Leverage", "SPE"),
                                  autoHideNavigation = T,
@@ -327,9 +327,9 @@ observe({
              },
              meba = {
                if("MB" %in% names(mSet$analSet)){
-                 output$meba_tab <-DT::renderDataTable({ 
+                 output$meba_tab <-DT::renderDataTable({
                    # -------------
-                   DT::datatable(mSet$analSet$MB$stats, 
+                   DT::datatable(mSet$analSet$MB$stats,
                                  selection = 'single',
                                  colnames = c("Compound", "Hotelling/T2 score"),
                                  autoHideNavigation = T,
@@ -339,65 +339,65 @@ observe({
              },
              tt = {
                # save results to table
-               res <<- mSet$analSet$tt$sig.mat 
-               
+               res <<- mSet$analSet$tt$sig.mat
+
                if(is.null(res)){
                  res <<- data.table("No significant hits found")
                  mSet$analSet$tt <<- NULL
-                 
+
                }
                # set buttons to proper thingy
                # render results table for UI
                output$tt_tab <-DT::renderDataTable({
                  # -------------
-                 DT::datatable(res, 
+                 DT::datatable(res,
                                selection = 'single',
                                autoHideNavigation = T,
                                options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-                 
+
                })
                # render manhattan-like plot for UI
                output$tt_overview_plot <- plotly::renderPlotly({
                  # --- ggplot ---
-                 ggPlotTT(global$functions$color.functions[[getOptions("user_options.txt")$gspec]], 20)
+                 ggPlotTT(global$functions$color.functions[[getOptions()$gspec]], 20)
                })
              },
              fc = {
                # save results table
-               res <<- mSet$analSet$fc$sig.mat 
+               res <<- mSet$analSet$fc$sig.mat
                # if none found, give the below table...
                if(is.null(res)) res <<- data.table("No significant hits found")
                # render result table for UI
                output$fc_tab <-DT::renderDataTable({
                  # -------------
-                 DT::datatable(res, 
+                 DT::datatable(res,
                                selection = 'single',
                                autoHideNavigation = T,
                                options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-                 
+
                })
                # render manhattan-like plot for UI
                output$fc_overview_plot <- plotly::renderPlotly({
                  # --- ggplot ---
-                 ggPlotFC(global$functions$color.functions[[getOptions("user_options.txt")$gspec]], 20)
+                 ggPlotFC(global$functions$color.functions[[getOptions()$gspec]], 20)
                })
              },
              heatmap = {
-               
+
                breaks = seq(min(mSet$dataSet$norm), max(mSet$dataSet$norm), length = 256/2)
-               
+
                output$heatmap <- plotly::renderPlotly({
-                 
+
                  if(!is.null(mSet$analSet$heatmap$matrix)){
                    # create heatmap object
                    hmap <- suppressWarnings({
                      if(input$heatlimits){
                        heatmaply::heatmaply(mSet$analSet$heatmap$matrix[1:if(input$heatmap_topn < nrow(mSet$analSet$heatmap$matrix)) input$heatmap_topn else nrow(mSet$analSet$heatmap$matrix),],
-                                            Colv = mSet$analSet$heatmap$my_order, 
+                                            Colv = mSet$analSet$heatmap$my_order,
                                             Rowv = T,
                                             branches_lwd = 0.3,
                                             margins = c(60, 0, NA, 50),
-                                            col = global$functions$color.functions[[getOptions("user_options.txt")$gspec]],
+                                            col = global$functions$color.functions[[getOptions()$gspec]],
                                             col_side_colors = mSet$analSet$heatmap$translator[,!1],
                                             col_side_palette = mSet$analSet$heatmap$colors,
                                             subplot_widths = c(.9,.1),
@@ -410,14 +410,14 @@ observe({
                                             #symm=F,symkey=F,
                                             symbreaks=T
                                             #label_names = c("m/z", "sample", "intensity") #breaks side colours...
-                       )  
+                       )
                      }else{
                        heatmaply::heatmaply(mSet$analSet$heatmap$matrix[1:if(input$heatmap_topn < nrow(mSet$analSet$heatmap$matrix)) input$heatmap_topn else nrow(mSet$analSet$heatmap$matrix),],
-                                            Colv = mSet$analSet$heatmap$my_order, 
+                                            Colv = mSet$analSet$heatmap$my_order,
                                             Rowv = T,
                                             branches_lwd = 0.3,
                                             margins = c(60, 0, NA, 50),
-                                            colors = global$functions$color.functions[[getOptions("user_options.txt")$gspec]](256),
+                                            colors = global$functions$color.functions[[getOptions()$gspec]](256),
                                             col_side_colors = mSet$analSet$heatmap$translator[,!1],
                                             col_side_palette = mSet$analSet$heatmap$colors,
                                             subplot_widths = c(.9,.1),
@@ -431,12 +431,12 @@ observe({
                                             #label_names = c("m/z", "sample", "intensity") #breaks side colours...
                        )
                      }
-                     
+
                    })
-                   
+
                    # save the order of mzs for later clicking functionality
                    global$vectors$heatmap <<- hmap$x$layout$yaxis3$ticktext
-                   
+
                    # return
                    hmap
                  }else{
@@ -448,7 +448,7 @@ observe({
                })
              })
     }
-    # - - - - 
+    # - - - -
     datamanager$reload <- NULL # set reloading to 'off'
   }
 })

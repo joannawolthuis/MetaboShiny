@@ -15,7 +15,7 @@ observeEvent(input$browse_db,{
     DT::datatable(global$tables$browse_table,
                   selection = 'single',
                   autoHideNavigation = T,
-                  options = list(lengthMenu = c(5, 10, 15), 
+                  options = list(lengthMenu = c(5, 10, 15),
                                  pageLength = 5,
                                  columnDefs = list(list(visible=FALSE, targets=remove_idx)))
     )
@@ -60,7 +60,7 @@ observeEvent(input$hits_tab_rows_selected,{
   # make miniplot for sidebar with current compound
   output$curr_plot <- plotly::renderPlotly({
     # --- ggplot ---
-    ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]],
+    ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions()$gspec]],
                   styles = input$ggplot_sum_style,
                   add_stats = input$ggplot_sum_stats, col.fac = input$col_var,txt.fac = input$txt_var)
   })

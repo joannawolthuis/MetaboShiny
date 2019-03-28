@@ -1,44 +1,44 @@
 # triggers when a plotly plot is clicked by user
-observeEvent(plotly::event_data("plotly_click"),{ 
-  
+observeEvent(plotly::event_data("plotly_click"),{
+
   d <- plotly::event_data("plotly_click") # get click details (which point, additional included info, etc..)
-  
+
   if(input$tab_iden_4 == "pie_add"){
-    
+
     i = d$pointNumber + 1
     show.adduct = global$vectors$pie_add[i]
-    
+
     if(nrow(global$tables$last_matches)>0){
       keep.rows <- which(global$tables$last_matches$adduct == show.adduct)
       shown_matches$table <- global$tables$last_matches[keep.rows,]
     }
-    
+
     print("!")
-    
+
     return(NULL)
   }
-  
+
   if(input$tab_iden_4 == "pie_db"){
     i = d$pointNumber + 1
     show.db = global$vectors$pie_db[i]
-    
+
     if(nrow(global$tables$last_matches)>0){
       keep.rows <- which(global$tables$last_matches$source == show.db)
       shown_matches$table <- global$tables$last_matches[keep.rows,]
     }
-    
+
     print("!!")
-    
+
     return(NULL)
-    
+
   }
-  
+
   print("...")
-  
+
   # check if we are in a pie chart
   if(req(input$statistics ) %in% c("tt", "fc", "rf", "aov", "volc")){ # these cases need the same processing and use similar scoring systems
     if('key' %not in% colnames(d)) return(NULL)
-    mzs <- switch(input$statistics, 
+    mzs <- switch(input$statistics,
                   tt = names(mSet$analSet$tt$p.value),
                   fc = names(mSet$analSet$fc$fc.log),
                   aov = switch(input$timecourse_trigger,
@@ -51,7 +51,7 @@ observeEvent(plotly::event_data("plotly_click"),{
     # - return -
     output[[paste0(input$statistics, "_specific_plot")]] <- plotly::renderPlotly({
       # --- ggplot ---
-      ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]],
+      ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions()$gspec]],
                     styles = input$ggplot_sum_style, add_stats = input$ggplot_sum_stats,
                     col.fac = input$col_var, txt.fac = input$txt_var)
     })
@@ -79,7 +79,7 @@ observeEvent(plotly::event_data("plotly_click"),{
         if(attempt > 1){
           ml_type <- xvals$type[[1]]
           model <- xvals$models[[attempt]]
-          
+
           output$ml_tab <- DT::renderDataTable({
             imp <- as.data.table(caret::varImp(model)$importance, keep.rownames = T)
             colnames(imp) <- c("mz", "importance")
@@ -98,17 +98,17 @@ observeEvent(plotly::event_data("plotly_click"),{
         if(d$y > length(global$vectors$heatmap)) return(NULL)
         curr_cpd <<- global$vectors$heatmap[d$y]
       }
-  
+
   # render curent miniplot based on current compound
   output$curr_plot <- plotly::renderPlotly({
     # --- ggplot ---
-    ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, 
-                  cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]],
+    ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols,
+                  cf=global$functions$color.functions[[getOptions()$gspec]],
                   styles = input$ggplot_sum_style,
                   add_stats = input$ggplot_sum_stats,
                   col.fac = input$col_var, txt.fac = input$txt_var)
   })
-  
+
   # change current compound in text
   output$curr_cpd <- renderText(curr_cpd)
 })

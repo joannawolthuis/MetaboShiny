@@ -98,14 +98,19 @@ options('unzip.unzip' = getOption("unzip"))
 
 mode = if(file.exists(".dockerenv")) 'docker' else 'local'
 
-opt.loc <- if(mode == 'local') 'user_options.txt' else '/userfiles/userfiles/user_options.txt'
+opt.loc <- if(mode == 'local') '~/Documents/MetaboShiny/user_options.txt' else '/userfiles/userfiles/user_options.txt'
+
+optfolder <<- dirname(opt.loc)
+
+if(!dir.exists(optfolder)) dir.create(optfolder,recursive = T)
+
 
 if(!file.exists(opt.loc)){
   # write options file if it doesn't exist yet
   contents <- switch(mode,
          local = {
-'db_dir = /userfiles/db
-work_dir = /userfiles/userfiles
+'db_dir = ~/Documents/MetaboShiny/databases
+work_dir = ~/Documents/MetaboShiny/userfiles
 proj_name = MY_METSHI
 ppm = 2
 packages_installed = Y
@@ -117,7 +122,7 @@ col1 = #000000
 col2 = #DBDBDB
 col3 = #FFFFFF
 col4 = #FFFFFF
-size1 = 40
+size1 = 50
 size2 = 20
 size3 = 15
 size4 = 11

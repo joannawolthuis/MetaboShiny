@@ -19,7 +19,7 @@ get_ref_cpds <- function(){
 getProfile <- function(varName, title=varName, sourceTable = mSet$dataSet$norm, mode="stat"){
   # ---------------
   varInx <- colnames(sourceTable) == varName;
-  var <- as.data.table(sourceTable, 
+  var <- as.data.table(sourceTable,
                        keep.rownames = T)[,varInx, with=FALSE];
   samp.names <- rownames(sourceTable)
   # ---------------
@@ -48,7 +48,7 @@ kegg.charge <- function(atomlist){
   charges  <-regmatches(
     atomlist,
     regexpr(atomlist, pattern = "#[+-]|#\\d*[+-]",perl = T)
-  ) 
+  )
   formal_charge = 0
   for(ch in charges[!is.na(charges)]){
     ch.base <- gsub(ch, pattern = "#", replacement = "")
@@ -66,10 +66,10 @@ mape <- function(actual,pred){
   return (mape)
 }
 
-flattenlist <- function(x){  
+flattenlist <- function(x){
   morelists <- sapply(x, function(xprime) class(xprime)[1]=="list")
   out <- c(x[!morelists], unlist(x[morelists], recursive=FALSE, use.names = T))
-  if(sum(morelists)){ 
+  if(sum(morelists)){
     Recall(out)
   }else{
     return(out)
@@ -88,10 +88,10 @@ set.col.map <- function(optionfile, colmap){
   joined <- paste0(
     colmap, collapse="&")
   # - - - -
-  setOption(optionfile, "gcols", joined)
+  setOption(key="gcols", value=joined)
 }
 
-# - - - mset actions - - - 
+# - - - mset actions - - -
 
 # function to generate names for msets
 get_mset_name <- function(mainvar, subsetvar, subsetgroups, timeseries=FALSE){
@@ -119,8 +119,8 @@ subset.mSet <- function(mSetObj, used.variable, keep.groups, new.name){
       mSetObj$dataSet$facB <<- mSetObj$dataSet$facB[keep.log.norm]
       mSetObj$dataSet$time.fac <<- mSetObj$dataSet$time.fac[keep.log.norm]
       mSetObj$dataSet$exp.fac <<- mSetObj$dataSet$exp.fac[keep.log.norm]
-    } 
-    print(paste0("Samples left: ", length(keep.samples))) 
+    }
+    print(paste0("Samples left: ", length(keep.samples)))
   }
   mSetObj
 }
@@ -145,7 +145,7 @@ p2stars = function(pval){
     else if(pval < 0.05 & pval > 0.01) stars <- "*"
     else if(pval < 0.01 & pval > 0.001) stars <- "***"
     else stars <- "****"
-  } 
+  }
 }
 
 # function to generate names for msets

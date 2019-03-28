@@ -38,7 +38,7 @@ sourceDir <- function(path, ...) {
 #'
 #' @param file.loc Path to user options file to read in.
 #' @return R list with keys as option types and values as option values.
-getOptions <- function(file.loc){
+getOptions <- function(file.loc=file.path(optfolder, 'user_options.txt')){
   opt_conn <- file(file.loc)
   # ----------------
   options_raw <<- readLines(opt_conn)
@@ -60,7 +60,7 @@ getOptions <- function(file.loc){
 #' @param file.loc Location of user options file. Usually .txt but any format is fine.
 #' @param key Name of the new option / to change option
 #' @param value Value of the option to change or add
-setOption <- function(file.loc, key, value){
+setOption <- function(file.loc=file.path(optfolder, 'user_options.txt'), key, value){
   opt_conn <- file(file.loc)
   # -------------------------
   options <- getOptions(file.loc)
@@ -73,11 +73,14 @@ setOption <- function(file.loc, key, value){
   })
   #print(new_options)
   writeLines(opt_conn, text = unlist(new_options))
+  
+  
+  
   close(opt_conn)
 }
 
 # load in options
-options <- getOptions("user_options.txt")
+options <- getOptions()
 
 # load adduct table (if you add/remove any adducts, change them in the below file!)
 #adducts <- fread("backend/umcfiles/adducts/AdductTable2.0.csv", header = T)
@@ -404,7 +407,7 @@ if(has.customs){
       dblist <- c(dblist, db, "custom")
       global$vectors$db_list <- dblist
     }
-    metadata.path <- file.path(getOptions("user_options.txt")$db_dir, "custom", paste0(db, ".RData"))
+    metadata.path <- file.path(getOptions()$db_dir, "custom", paste0(db, ".RData"))
     load(metadata.path)
 
     # add description to global

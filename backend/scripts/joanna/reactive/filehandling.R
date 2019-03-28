@@ -12,7 +12,7 @@ observe({
 
 # observes if a new tbl csv is chosen by user
 observe({
-  # - - - - 
+  # - - - -
   if(!is.list(input$custom_db)) return() # if nothing is chosen, do nothing
   db_path <- parseFilePaths(global$paths$volumes, input$custom_db)$datapath
   print(db_path)
@@ -24,12 +24,12 @@ observe({
                    paging = FALSE,
                    info = FALSE))
   })
-  
+
 })
 
 # observes if a new taskbar image is chosen by user
 observe({
-  # - - - - 
+  # - - - -
   if(!is.list(input$custom_db_img_path)) return() # if nothing is chosen, do nothing
   img_path <- parseFilePaths(global$paths$volumes, input$custom_db_img_path)$datapath
   new_path <- file.path(getwd(), "www", basename(img_path)) # set path to copy to
@@ -39,7 +39,7 @@ observe({
   # - - -
   # render taskbar image preview
   output$custom_db_img <- renderImage({
-    list(src = new_path, 
+    list(src = new_path,
          width = 150,
          height = 150,
          style = "background-image:linear-gradient(0deg, transparent 50%, #aaa 50%),linear-gradient(90deg, #aaa 50%, #ccc 50%);background-size:10px 10px,10px 10px;")
@@ -48,46 +48,45 @@ observe({
 
 # observes if a new taskbar image is chosen by user
 observe({
-  # - - - - 
+  # - - - -
   if(!is.list(input$taskbar_image_path)) return() # if nothing is chosen, do nothing
   img_path <- parseFilePaths(global$paths$volumes, input$taskbar_image_path)$datapath
   new_path <- file.path(getwd(), "www", basename(img_path)) # set path to copy to
-  
+
   # copy image to the www folder
   if(img_path != new_path) file.copy(img_path, new_path, overwrite = T)
   # - - -
   # render taskbar image preview
   output$taskbar_image <- renderImage({
-    list(src = new_path, 
+    list(src = new_path,
          width = 120,
          height = 120,
          style = "background-image:linear-gradient(0deg, transparent 50%, #aaa 50%),linear-gradient(90deg, #aaa 50%, #ccc 50%);background-size:10px 10px,10px 10px;")
   }, deleteFile = FALSE)
   # change chosen taskbar image in user option file
-  setOption('user_options.txt', 
-            'taskbar_image', 
-            basename(new_path))
+  setOption(key='taskbar_image',
+            value=basename(new_path))
 })
 
 # observes if user is choosing a different database storage folder
-observe({  
+observe({
   # trigger window
-  shinyDirChoose(input, "get_db_dir", 
-                 roots=global$paths$volumes, 
+  shinyDirChoose(input, "get_db_dir",
+                 roots=global$paths$volumes,
                  session = session)
-  
+
   if(typeof(input$get_db_dir) != "list") return() # if nothing selected or done, ignore
-  
+
   # parse the file path given based on the possible base folders (defined in global)
-  given_dir <- parseDirPath(global$paths$volumes, 
+  given_dir <- parseDirPath(global$paths$volumes,
                             input$get_db_dir)
-  
+
   if(is.null(given_dir)) return()
   # change db storage directory in user options file
-  setOption("user_options.txt", "db_dir", given_dir)
-  
+  setOption(key="db_dir", value=given_dir)
+
   # render current db location in text
-  output$curr_db_dir <- renderText({getOptions('user_options.txt')$db_dir})
+  output$curr_db_dir <- renderText({getOptions()$db_dir})
 })
 
 # see above, but for working directory. CSV/DB files with user data are stored here.
@@ -95,15 +94,15 @@ observe({
   shinyDirChoose(input, "get_work_dir",
                  roots = global$paths$volumes,
                  session = session)
-  
+
   if(typeof(input$get_work_dir) != "list") return()
-  
+
   given_dir <- parseDirPath(global$paths$volumes,
                             input$get_work_dir)
   if(is.null(given_dir)) return()
-  setOption("user_options.txt", "work_dir", given_dir)
-  
-  output$curr_exp_dir <- renderText({getOptions('user_options.txt')$work_dir})
+  setOption(key="work_dir", value=given_dir)
+
+  output$curr_exp_dir <- renderText({getOptions()$work_dir})
 })
 
 # triggers if user changes their current project name
@@ -111,12 +110,12 @@ observeEvent(input$set_proj_name, {
   proj_name <<- input$proj_name
   if(proj_name == "") return(NULL) # if empty, ignore
   # change path of current db in global
-  global$paths$patdb <<- file.path(getOptions("user_options.txt")$work_dir, paste0(proj_name,".db", sep=""))
+  global$paths$patdb <<- file.path(getOptions()$work_dir, paste0(proj_name,".db", sep=""))
   # change project name in user options file
-  setOption("user_options.txt", "proj_name", proj_name)
+  setOption(key="proj_name", value=proj_name)
   # print the changed name in the UI
   output$proj_name <<- renderText(proj_name)
   # change path CSV should be / is saved to in session
-  global$paths$csv_loc <<- file.path(getOptions("user_options.txt")$work_dir, paste0(getOptions("user_options.txt")$proj_name,".csv"))
-  
+  global$paths$csv_loc <<- file.path(getOptions()$work_dir, paste0(getOptions()$proj_name,".csv"))
+
 })

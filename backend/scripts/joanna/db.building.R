@@ -1,8 +1,8 @@
 #' @export
 build.base.db <- function(dbname=NA,
-                          outfolder=getOptions("user_options.txt")$db_dir,
+                          outfolder=getOptions()$db_dir,
                           cl=FALSE){
-  
+
   # --- check if user chose something ---
   if(is.na(dbname)) return("~ Please choose one of the following options: HMDB, ChEBI, PubChem, MetaCyc, internal, noise, KEGG! d(>..w.<)b ~")
   # --- make dir if not exists ---
@@ -17,20 +17,20 @@ build.base.db <- function(dbname=NA,
   db.formatted <- switch(tolower(dbname),
                          maconda = function(dbname, ...){ #ok
                            file.url = "https://www.maconda.bham.ac.uk/downloads/MaConDa__v1_0__csv.zip"
-                           
-                           base.loc <- file.path(getOptions("user_options.txt")$db_dir, "maconda_source")
-                           
+
+                           base.loc <- file.path(getOptions()$db_dir, "maconda_source")
+
                            if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                            zip.file <- file.path(base.loc, "maconda.zip")
                            utils::download.file(file.url, zip.file,mode = "w")
                            utils::unzip(zip.file,files = "MaConDa__v1_0__extensive.csv",exdir = base.loc)
-                           
+
                            base.table <- data.table::fread(file = file.path(base.loc, "MaConDa__v1_0__extensive.csv"))
-                           
+
                            mysterious = which(base.table$name == "unknown")
-                           
+
                            base.table$formula[mysterious] <- paste0("IDK", 1:length(mysterious))
-                           
+
                            db.base <- data.table::data.table(compoundname = base.table$name,
                                                              description = paste(base.table$type_of_contaminant,
                                                                                  base.table$ion_source_type,
@@ -39,7 +39,7 @@ build.base.db <- function(dbname=NA,
                                                              identifier=base.table$id,
                                                              charge=c(0),
                                                              structure=base.table$std_inchi)
-                           
+
                            db.base <- unique(db.base)
                            desc.orig <- db.base$description
                            desc.gsub.1 <- gsub(desc.orig, pattern = "^ |^  ", replacement = "")
@@ -47,9 +47,9 @@ build.base.db <- function(dbname=NA,
                            desc.gsub.3 <- gsub(desc.gsub.2, pattern = "POS", replacement = "found in positive mode.")
                            desc.gsub.4 <- gsub(desc.gsub.3, pattern = "NEG", replacement = "found in negative mode.")
                            db.base$description <- Hmisc::capitalize(desc.gsub.4)
-                           
+
                            #RSQLite::dbWriteTable(conn, "base", db.base, append=TRUE)
-                           
+
                            ### do extended table and write to additional db (exception...)
                            db.full <- file.path(outfolder, "extended.db")
                            full.conn <- RSQLite::dbConnect(RSQLite::SQLite(), db.full)
@@ -78,41 +78,41 @@ build.base.db <- function(dbname=NA,
                                isoprevalence = 100,
                                foundinmode = sapply(base.table$ion_mode, function(x){ if(x == "POS") "positive" else "negative" })
                              )
-                           
+
                            missing <- db.formatted$basemz == 0
                            db.formatted.full <- db.formatted[!missing,]
-                           
+
                            # --- write to db ---
-                           
+
                            RSQLite::dbWriteTable(full.conn,
                                                  "extended",
                                                  db.formatted.full,
                                                  append=TRUE)
                            # --- index ---
-                           
+
                            db.base
                          },
                          hmdb = function(dbname){ #ok
                            print("Downloading XML database...")
                            file.url <- "http://www.hmdb.ca/system/downloads/current/hmdb_metabolites.zip"
                            # ----
-                           base.loc <- file.path(getOptions("user_options.txt")$db_dir, "hmdb_source")
+                           base.loc <- file.path(getOptions()$db_dir, "hmdb_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                            zip.file <- file.path(base.loc, "HMDB.zip")
                            utils::download.file(file.url, zip.file,mode = "w")
                            utils::unzip(zip.file, exdir = base.loc)
-                           
+
                            # --- go through xml ---
-                           
+
                            print("Parsing XML...")
-                           
+
                            require(XML)
-                           
+
                            input = file.path(base.loc,"hmdb_metabolites.xml")
-                           
-                           
+
+
                            # - - -
-                           
+
                            library(XML)
                            library(RCurl)
                            library(rlist)
@@ -120,7 +120,7 @@ build.base.db <- function(dbname=NA,
                            tables <- readHTMLTable(theurl)
                            stats = data.table::rbindlist(tables)
                            n = as.numeric(as.character(gsub(x = stats[Description == "Total Number of Metabolites"]$Count, pattern = ",", replacement="")))
-                           
+
                            db.formatted <- data.frame(
                              compoundname = rep(NA, n),
                              baseformula = rep(NA, n),
@@ -129,21 +129,21 @@ build.base.db <- function(dbname=NA,
                              charge = rep(NA, n),
                              description = rep(NA, n)
                            )
-                           
+
                            pb <- pbapply::startpb(min = 0, max = n)
-                           
+
                            idx <<- 0
-                           
+
                            metabolite = function(currNode){
-                             
+
                              if(idx %% 1000 == 0){
                                pbapply::setpb(pb, idx)
                              }
-                             
+
                              idx <<- idx + 1
-                             
+
                              currNode <<- currNode
-                             
+
                              db.formatted[idx, "compoundname"] <<- xmlValue(currNode[['name']])
                              db.formatted[idx, "identifier"] <<- xmlValue(currNode[['accession']])
                              db.formatted[idx, "baseformula"] <<- xmlValue(currNode[['chemical_formula']])
@@ -158,17 +158,17 @@ build.base.db <- function(dbname=NA,
                              db.formatted[idx, "charge"] <<- str_match(xmlValue(properties),
                                                                        pattern = "formal_charge([+|\\-]\\d*|\\d*)")[,2]
                            }
-                           
+
                            xmlEventParse(input, branches =
                                            list(metabolite = metabolite))
-                           
+
                            # - - - - - - - - - - - -
                            db.formatted
                          },
                          chebi = function(dbname, ...){ #ok
-                           
+
                            # ----------------------
-                           
+
                            db.full <- data.table::as.data.table(download.chebi.joanna(release = "latest",
                                                                                       woAssociations = FALSE))
                            db.formatted <- unique(db.full[, list(compoundname = ChEBI,
@@ -178,12 +178,12 @@ build.base.db <- function(dbname=NA,
                                                                  charge = gsub(CHARGE,pattern = "$\\+\\d", replacement = ""),
                                                                  structure = toupper(STRUCTURE)
                            )])
-                           
+
                            # ----------------------
                            db.formatted
                          },
                          wikipathways = function(dbname){ #ok
-                           chebi.loc <- file.path(getOptions("user_options.txt")$db_dir, "chebi.base.db")
+                           chebi.loc <- file.path(getOptions()$db_dir, "chebi.base.db")
                            # ---------------------------------------------------
                            chebi <- SPARQL::SPARQL(url="http://sparql.wikipathways.org/",
                                                    query='prefix wp:      <http://vocabularies.wikipathways.org/wp#>
@@ -191,7 +191,7 @@ build.base.db <- function(dbname=NA,
                                                    prefix dcterms: <http://purl.org/dc/terms/>
                                                    prefix xsd:     <http://www.w3.org/2001/XMLSchema#>
                                                    PREFIX wdt: <http://www.wikidata.org/prop/direct/>
-                                                   
+
                                                    select  ?mb
                                                    (group_concat(distinct str(?labelLit);separator=", ") as ?label )
                                                    ?idurl as ?csid
@@ -233,7 +233,7 @@ build.base.db <- function(dbname=NA,
                            #                                   PREFIX schema: <http://schema.org/>
                            #                                   PREFIX wp:      <http://vocabularies.wikipathways.org/wp#>
                            #                                   PREFIX dcterms:  <http://purl.org/dc/terms/>
-                           #                                   
+                           #
                            #                                   SELECT DISTINCT str(?titleLit) as ?name ?identifier ?ontology
                            #                                   WHERE {
                            #                                   ?pathway dc:title ?titleLit .
@@ -247,29 +247,29 @@ build.base.db <- function(dbname=NA,
                            # ---------------------------------
                            #RSQLite::dbWriteTable(conn, "pathways", db.pathways, overwrite=TRUE)
                            RSQLite::dbRemoveTable(conn.chebi, "wikipathways")
-                           
+
                            db.formatted
                          },
                          bloodexposome = function(dbname){ #ok
-                           
+
                            file.url = "http://exposome.fiehnlab.ucdavis.edu/blood_exposome_database_v1_08_2018.xlsx"
-                           
-                           base.loc <- file.path(getOptions("user_options.txt")$db_dir, "bloodexposome_source")
+
+                           base.loc <- file.path(getOptions()$db_dir, "bloodexposome_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc)
                            excel.file <- file.path(base.loc, "exposome.xlsx")
                            utils::download.file(file.url, excel.file)
-                           
+
                            db.full <- openxlsx::read.xlsx(excel.file, sheet = 2, colNames=T, startRow = 3)
-                           
+
                            db.formatted <- unique(data.table::data.table(compoundname = db.full$CompoundName,
                                                                          description = c("No description available."),
                                                                          baseformula = db.full$Formula,
                                                                          identifier = db.full$PubChemCID,
                                                                          charge = c(0),
                                                                          structure = db.full$SMILES))
-                           
+
                            # --- get charges from smiles ---
-                           
+
                            charges = pbapply::pbsapply(db.formatted$structure, cl=session_cl, FUN=function(smile){
                              m <- rcdk::parse.smiles(smile)
                              #print(m)
@@ -280,71 +280,71 @@ build.base.db <- function(dbname=NA,
                                return(charge)
                              })
                            })
-                           
+
                            charges[grep("Error", charges)] <- 0
                            charges = as.numeric(charges)
-                           
+
                            db.formatted$charge <- charges
-                           
+
                            # --- check formulae ---
                            checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
                                                                                       db.formatted$baseformula))
                            db.formatted$baseformula <- checked$new_formula
                            keep <- checked[warning == FALSE, which = TRUE]
                            db.formatted <- db.formatted[keep]
-                           
+
                            # ----------------------
-                           
+
                            db.formatted
-                           
+
                          },
                          smpdb = function(dbname){ #ok
                            # ---------------
                            file.url <- "http://smpdb.ca/downloads/smpdb_metabolites.csv.zip"
                            # ----
-                           base.loc <- file.path(getOptions("user_options.txt")$db_dir, "smpdb_source")
+                           base.loc <- file.path(getOptions()$db_dir, "smpdb_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc)
                            zip.file <- file.path(base.loc, "SMPDB.zip")
                            utils::download.file(file.url, zip.file)
                            utils::unzip(zip.file, exdir = base.loc)
                            # -------------------------------
-                           
+
                            smpdb.paths <- list.files(path = base.loc, pattern = "\\.csv$", full.names = T)
-                           
+
                            subtables <- pbapply::pblapply(smpdb.paths, cl = session_cl, fread)
                            smpdb.tab <- rbindlist(subtables, fill = T)
-                           
+
                            db.formatted <- data.table::data.table(compoundname = smpdb.tab$`Metabolite Name`,
                                                                   description = paste0(smpdb.tab$`Pathway Name`,
-                                                                                       " (", 
-                                                                                       smpdb.tab$`Pathway Subject`, 
+                                                                                       " (",
+                                                                                       smpdb.tab$`Pathway Subject`,
                                                                                        " pathway)"),
                                                                   baseformula = smpdb.tab$Formula,
                                                                   identifier = smpdb.tab$`Metabolite ID`,
                                                                   structure = smpdb.tab$SMILES)
-                           
-                           
+
+
                            db.formatted <- db.formatted[,.(description=paste0(unique(description),collapse=", ")),by=list(compoundname, baseformula, identifier, structure)]
                            db.formatted <- db.formatted[-1,]
-                           
+
                            igroups = split(1:nrow(db.formatted), ceiling(seq_along(1:nrow(db.formatted))/200))
-                           
+
                            db.rows <- pbapply::pblapply(igroups, cl = F, function(is, db.formatted){
                              db.frag = db.formatted[is,]
                              iatoms = rcdk::parse.smiles(db.frag$structure)
-                             
+
                              db.frag$charge <- sapply(iatoms, function(iat){
                                charge = 0 # set default charge to zero
                                try({
                                    charge = rcdk::get.total.charge(iat)
                                  })
                              })
-                             
+
                              db.frag
                            }, db.formatted = db.formatted)
-                           
+
                            db.formatted <- rbindlist(db.rows)
-                           
+
                            db.formatted
                          },
                          kegg = function(dbname){ #ok
@@ -355,10 +355,10 @@ build.base.db <- function(dbname=NA,
                            })
                            cpd.ids <- Reduce(c, cpds)
                            id.batches <- split(cpd.ids, ceiling(seq_along(cpd.ids)/10))
-                           
+
                            # --- GET COMPOUNDS ---
                            parallel::clusterExport(session_cl, c("kegg.charge", "rbindlist"))
-                           
+
                            kegg.cpd.list <- pbapply::pblapply(id.batches, cl=session_cl, FUN=function(batch){
                              rest.result <- KEGGREST::keggGet(batch)
                              # ---------------------------
@@ -376,11 +376,11 @@ build.base.db <- function(dbname=NA,
                              })
                              rbindlist(base.list)
                            })
-                           
+
                            db.formatted <- rbindlist(kegg.cpd.list)
-                           
+
                            db.formatted$baseformula <- gsub(pattern = " |\\.", replacement = "", db.formatted$baseformula) # fix salt and spacing issues
-                           
+
                            # checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
                            #                                                            db.formatted$baseformula))
                            # db.formatted$baseformula <- checked$new_formula
@@ -403,19 +403,19 @@ build.base.db <- function(dbname=NA,
                            # })
                            # db.pathways <- rbindlist(kegg.pw.list)
                            # -------------------------------------------------------
-                           
+
                            #RSQLite::dbWriteTable(conn, "pathways", db.pathways, overwrite=TRUE)
-                           
+
                            db.formatted
                          },
                          metacyc = function(dbname, ...){ #ok
                            # NOTE: Requires downloading this SmartTable as delimited file: https://metacyc.org/group?id=biocyc17-31223-3729417004
                            # May need to remake smartTable if anything on the website changes unfortunately
                            # TODO: download file directly from link, will need a javascript. Maybe Rselenium??
-                           
-                           base.loc <- file.path(getOptions("user_options.txt")$db_dir, "metacyc_source")
+
+                           base.loc <- file.path(getOptions()$db_dir, "metacyc_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc)
-                           
+
                            source.file = file.path(base.loc, "All_compounds_of_MetaCyc.txt")
                            if(!file.exists(source.file)){
                              message("Please download SmartTable from 'https://metacyc.org/group?id=biocyc17-31223-3729417004' as 'All_compounds_of_MetaCyc.txt' and save in the backend/db/metacyc_source folder.")
@@ -433,10 +433,10 @@ build.base.db <- function(dbname=NA,
                                return(charge)
                              })
                            })
-                           
+
                            charges[grep("Error", charges)] <- 0
                            charges = as.numeric(charges)
-                           
+
                            compounds <- pbapply::pbsapply(metacyc.raw$Compound, cl=session_cl, FUN=function(pw){
                              pw <- pw[pw != " // "]
                              pw <- gsub(pw, pattern = "&", replacement="")
@@ -444,7 +444,7 @@ build.base.db <- function(dbname=NA,
                              res <- gsub(pw, pattern = "<((i|\\/i)|sub)>|\\/|\\|", replacement = "",perl = T)
                              paste0(res, collapse=" --- ")
                            })
-                           
+
                            # pathways <- pbapply::pbsapply(metacyc.raw$Pathways.of.compound, cl=session_cl, FUN=function(pw){
                            #   pw <- unlist(strsplit(pw, split = '\\"'))
                            #   pw <- pw[pw != " // "]
@@ -453,13 +453,13 @@ build.base.db <- function(dbname=NA,
                            #   res <- gsub(pw, pattern = "<((i|\\/i)|sub)>|\\/|\\|", replacement = "",perl = T)
                            #   paste0(res, collapse=" --- ")
                            # })
-                           # 
+                           #
                            # # give the pathwys some identifiers
                            # uniq.pws <- unique(unlist(pbapply::pbsapply(pathways, cl=session_cl, function(x){unlist(strsplit(x, split = " --- "))})))
-                           # 
+                           #
                            # db.pathways <- data.table::data.table(name = uniq.pws,
                            #                                       identifier = paste0("METACYC_PW_", 1:length(uniq.pws)))
-                           
+
                            db.formatted <- data.table(compoundname = compounds,
                                                       description = metacyc.raw$Summary,
                                                       baseformula = metacyc.raw$Chemical.Formula,
@@ -468,7 +468,7 @@ build.base.db <- function(dbname=NA,
                                                       structure = metacyc.raw$SMILES
                                                       #, pathway = pathways
                            )
-                           
+
                            # # --- fix the multiple pathway thingy ---
                            # db.fixed.rows <- pbapply::pblapply(1:nrow(db.formatted), cl = session_cl, FUN=function(i, db.cpd = db.cpd, db.pw = db.pw){
                            #   row <- db.cpd[i,]
@@ -485,37 +485,37 @@ build.base.db <- function(dbname=NA,
                            #   # - - - - - - - - - -
                            #   res
                            # }, db.cpd=db.formatted, db.pw = db.pathways)
-                           
+
                            #db.formatted <- rbindlist(db.fixed.rows)
-                           
+
                            #db.formatted$pathway <- as.character(db.formatted$pathway)
-                           
+
                            #RSQLite::dbWriteTable(conn, "pathways", db.pathways, overwrite=TRUE)
-                           
+
                            db.formatted
                          },
                          lipidmaps = function(dbname, ...){ #ok
-                           
+
                            file.url = "http://www.lipidmaps.org/resources/downloads/LMSDFDownload3Jan19.zip"
-                           
+
                            # ----
-                           base.loc <- file.path(getOptions("user_options.txt")$db_dir, "lipidmaps_source")
+                           base.loc <- file.path(getOptions()$db_dir, "lipidmaps_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc)
                            zip.file <- file.path(base.loc, "lipidmaps.zip")
                            utils::download.file(file.url, zip.file)
                            utils::unzip(zip.file, exdir = base.loc)
                            # -------------------------------
-                           
+
                            sdf.path <- list.files(base.loc,
                                                   pattern = "sdf",
                                                   full.names = T)
-                           
+
                            desc <- function(sdfset){
-                             
+
                              datablock = data.table::as.data.table(datablock2ma(datablocklist=datablock(sdfset)))
-                             
+
                              last_cn <<- colnames(datablock)
-                             
+
                              if(!("FORMULA" %in% last_cn)){
                                mat = as.matrix(data.table::data.table(
                                  identifier=datablock$PUBCHEM_COMPOUND_CID,
@@ -535,14 +535,14 @@ build.base.db <- function(dbname=NA,
                                                                    ". Subclass: ", datablock$SUB_CLASS))
                                ))
                              }
-                             
+
                              return(mat)
                            }
-                           
+
                            sdfStream.joanna(input=sdf.path, output=file.path(base.loc, "lipidmaps_parsed.csv"), append=FALSE, fct=desc, silent = T)
-                           
+
                            db.base <- data.table::fread(file.path(base.loc, "lipidmaps_parsed.csv"), fill = T, header=T)
-                           
+
                            db.base$charge <- pbapply::pbsapply(db.base$structure, cl = 0, function(smi){
                              charge = 0 # set default charge to zero
                              try({
@@ -551,27 +551,27 @@ build.base.db <- function(dbname=NA,
                              })
                              charge
                            })
-                           
+
                            db.formatted <- db.base[,-1,with=F]
-                           
+
                            db.formatted
-                           
+
                          },
                          metabolights = function(dbname, ...){ # times out...
                            require(webchem)
                            require(rcdk)
                            require(curl)
-                           
+
                            all_ids <- read.table("ftp://ftp.ebi.ac.uk/pub/databases/metabolights/eb-eye/unichem.tsv", sep="\t")
                            colnames(all_ids) <- c("identifier", "inchi", "inchikey")
-                           
+
                            metabs <- all_ids$identifier
-                           
+
                            metabs <- pbapply::pblapply(metabs, cl = F, FUN=function(id){
                              met_info = NA
-                             
+
                              print(id)
-                             
+
                              try({
                                url <- paste0("https://www.ebi.ac.uk/metabolights/webservice/beta/compound/", id)
                                tries = 4
@@ -584,9 +584,9 @@ build.base.db <- function(dbname=NA,
                              Sys.sleep(time = .1)
                              met_info
                            })
-                           
+
                            print(length(metabs))
-                           
+
                            db_rows <- pbapply::pblapply(metabs[!is.na(metabs)], cl = 0, FUN=function(met_info){
                              formula <- NA
                              charge <- NA
@@ -623,12 +623,12 @@ build.base.db <- function(dbname=NA,
                              # -------
                              list(metabs=met_dt, pathway=met_info$pathways)
                            })
-                           
+
                            db_rows_a <- lapply(db_rows, function(x) x$metabs)
                            db.formatted <- rbindlist(db_rows_a[!is.na(db_rows_a)])
-                           
+
                            db.formatted
-                           
+
                          }, dimedb = function(dbname, ...){ #ok
                            files = c(#"structures.zip",
                              "dimedb_pathways.zip",
@@ -639,7 +639,7 @@ build.base.db <- function(dbname=NA,
                            file.urls <- paste0(file.url, files)
                            # ----
                            print("Downloading files...")
-                           base.loc <- file.path(getOptions("user_options.txt")$db_dir, "dimedb_source")
+                           base.loc <- file.path(getOptions()$db_dir, "dimedb_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc)
                            pbapply::pbsapply(file.urls, function(url){
                              zip.file <- file.path(base.loc, basename(url))
@@ -650,12 +650,12 @@ build.base.db <- function(dbname=NA,
                            ids <- fread(file.path(base.loc,"dimedb_id_info.tsv"))
                            source <- fread(file.path(base.loc,"dimedb_sources.tsv"))
                            pathway <- fread(file.path(base.loc, "dimedb_pathways.tsv"))
-                           
+
                            unique.inchi <- unique(ids$InChIKey)
-                           
+
                            joined <- rbind(ids, atom)
                            casted <- reshape2::dcast(joined, InChIKey ~ Property, function(vec) paste0(vec, collapse=","))
-                           
+
                            db.formatted <- data.table(compoundname = Hmisc::capitalize(tolower(casted$Name)),
                                                       description = do.call(paste0, c(casted[,c("IUPAC Name", "Synonym")], col="-")),
                                                       baseformula = casted$`Molecular Formula`,
@@ -664,18 +664,18 @@ build.base.db <- function(dbname=NA,
                                                       structure = casted$SMILES
                                                       #pathway = c(NA)
                            )
-                           
+
                            # - - -
-                           
+
                            db.formatted[which(db.formatted$description == "-")] <- c("Unknown")
                            db.formatted$description <- gsub(db.formatted$description, pattern = "^-|-$", replacement = "")
-                           
+
                            # - - -
-                           
+
                            db.formatted
-                           
+
                          }, wikidata = function(dbname, ...){
-                           
+
                            sparql_query <- 'PREFIX wd: <http://www.wikidata.org/entity/>
                            PREFIX wds: <http://www.wikidata.org/entity/statement/>
                            PREFIX wdv: <http://www.wikidata.org/value/>
@@ -686,25 +686,25 @@ build.base.db <- function(dbname=NA,
                            PREFIX pq: <http://www.wikidata.org/prop/qualifier/>
                            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
                            PREFIX bd: <http://www.bigdata.com/rdf#>
-                           
+
                            SELECT ?chemical_compound ?chemical_compoundLabel ?chemical_formula ?chemical_compoundDescription ?canonical_SMILES ?roleLabel WHERE {
                            SERVICE wikibase:label { bd:serviceParam wikibase:language "en, de". }
                            ?chemical_compound wdt:P31 wd:Q11173.
                            ?chemical_compound wdt:P274 ?chemical_formula.
                            ?chemical_compound wdt:P233 ?canonical_SMILES.
                            OPTIONAL {?chemical_compound wdt:P2868 ?role.}}'
-                           
+
                            db.1 <- WikidataQueryServiceR::query_wikidata(sparql_query,
                                                                          format = "simple")
-                           
+
                            db.1$chemical_compound <- basename(db.1$chemical_compound)
                            db.1$chemical_compoundDescription[db.1$chemical_compoundDescription == "chemical compound"] <- NA
                            db.1$roleLabel[db.1$roleLabel == ""] <- NA
-                           
+
                            # https://spark.apache.org/ for speed increases? is it useful locally? more an HPC thing?
-                           
+
                            #cl = parallel::makeCluster(3, "FORK")
-                           
+
                            charge.rows <- pbapply::pblapply(unique(db.1$canonical_SMILES),
                                                             cl=session_cl,
                                                             function(smi){
@@ -717,56 +717,56 @@ build.base.db <- function(dbname=NA,
                                                                 #charge = rcdk::get.total.charge(iatom)
                                                                 formula = rcdk::get.mol2formula(iatom)
                                                                 row = data.table(canonical_SMILES = smi,
-                                                                                 charge = formula@charge, 
+                                                                                 charge = formula@charge,
                                                                                  baseformula = as.character(formula@string))
                                                               },silent = TRUE)
                                                               # - return -
                                                               row
                                                             })
-                           
+
                            charge.dt <- rbindlist(charge.rows)
-                           
+
                            db.2 <- merge(db.1,
                                          charge.dt,
                                          by = "canonical_SMILES",
                                          all.y = TRUE)
-                           
+
                            # NOTE: tool - myFAIR, SOAR, EUDAT, JUNIPER (ML, can use R, jupyter notebooks?), GALAXY'S GUI/API CAN BE CHANGED??
-                           
+
                            db.3 <- as.data.table(aggregate(db.2, by=list(db.2$chemical_compoundLabel), function(x) c(unique((x)))))
-                           
+
                            db.3$description = apply(db.3[,c("roleLabel", "chemical_compoundDescription")], 1, FUN=function(x){
                              x <- unlist(x)
                              #print(x)
                              paste(x[!is.na(x)], collapse=", ")
                            })
-                           
+
                            db.formatted <- data.table::data.table(compoundname = as.character(db.3$chemical_compoundLabel),
                                                                    description = as.character(db.3$description),
                                                                    baseformula = as.character(db.3$baseformula),
                                                                    identifier= as.character(db.3$chemical_compound),
                                                                    charge= as.character(db.3$charge),
                                                                    structure = as.character(db.3$canonical_SMILES))
-                           
+
                            #from = "\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089"
                            #to = "0123456789"
                            #db.formatted$baseformula <- chartr(from, to, db.formatted$baseformula)
-                           
+
                            db.formatted$description[db.formatted$description == ""] <- "Unknown"
                            db.formatted$baseformula <- as.character(db.formatted$baseformula)
                            db.formatted <- db.formatted[!is.na(db.formatted$baseformula),]
-                           
+
                            # - - write - -
-                           
+
                            db.formatted
-                           
+
                          },vmh = function(dbname, ...){
-                           
+
                            api_url <- "https://vmh.uni.lu/_api/metabolites/"
-                           
+
                            pagerange = 150
                            # get the first page
-                           
+
                            table_list <- pbapply::pblapply(1:pagerange, function(i){
                              tbl = NA
                              try({
@@ -780,9 +780,9 @@ build.base.db <- function(dbname=NA,
                              # - - return - -
                              tbl
                            })
-                           
+
                            table_main <- data.table::rbindlist(table_list[!is.na(table_list)])
-                           
+
                            db.formatted <- data.table::data.table(compoundname = table_main$fullName,
                                                                   description = table_main$description,
                                                                   baseformula = table_main$chargedFormula,
@@ -791,19 +791,19 @@ build.base.db <- function(dbname=NA,
                                                                   structure= table_main$smile,
                                                                   isHuman = table_main$isHuman,
                                                                   isMicrobe = table_main$isMicrobe)
-                           
+
                            #filter for weights that are way too much w/ weird formulas
-                           
+
                            missing.desc <- which(db.formatted$description == "<NA>" | db.formatted$description == "" | is.na(db.formatted$description))
                            replacements <- table_main$synonyms # use synonum instead
                            db.formatted$description[missing.desc] <- replacements[missing.desc]
                            missing.desc <- which(db.formatted$description == "<NA>" | db.formatted$description == "" | is.na(db.formatted$description))
                            db.formatted$description[missing.desc] <- c("Unknown")
-                           
+
                            descriptions <- sapply(1:nrow(db.formatted), function(i){
-                             
+
                              row = db.formatted[i,]
-                             
+
                              if(row$isHuman & row$isMicrobe){
                                suffix = "Found in humans and microbes."
                              }else if(row$isHuman & !row$isMicrobe){
@@ -811,7 +811,7 @@ build.base.db <- function(dbname=NA,
                              }else{
                                suffix = "Found in microbes"
                              }
-                             
+
                              if(length(row$description) > 1){
                                if(substring(row$description, nchar(row$description)) == "."){
                                  paste0(row$description," -- ", suffix, " -- ")
@@ -822,15 +822,15 @@ build.base.db <- function(dbname=NA,
                                paste0(row$description," -- ", suffix, " -- ")
                              }
                            })
-                           
+
                            db.formatted$description <- descriptions
-                           
+
                            db.formatted <- db.formatted[,-c("isHuman", "isMicrobe")]
-                           
+
                            # find formula and charge of some molecules through SMILES
-                           
+
                            structs <- db.formatted$structure
-                           
+
                            charges_formulae <- pbapply::pblapply(structs, function(smi){
                              res = list(charge = NA, formula = NA)
                              try({
@@ -842,31 +842,31 @@ build.base.db <- function(dbname=NA,
                              # - - return - -
                              res
                            })
-                           
+
                            formulae <- sapply(charges_formulae, function(x) x$formula)
                            charges <- sapply(charges_formulae, function(x) x$charge)
-                           
+
                            found.formula <- which(!is.na(formulae))
                            found.charges <- which(!is.na(charges))
-                           
+
                            db.formatted$baseformula[found.formula] <- formulae[found.formula]
                            db.formatted$charge[found.charges] <- charges[found.charges]
-                           
+
                            # check integrity of formulae
-                           
+
                            checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
                                                                                       db.formatted$baseformula))
                            db.formatted$baseformula <- checked$new_formula
-                           
+
                            keep <- checked[warning == FALSE, which = TRUE]
-                           
+
                            db.formatted <- db.formatted[keep,]
-                           
+
                            db.formatted
-                           
+
                          }, mona = function(dbname, ...){
                            json <- jsonlite::read_json("~/Downloads/MoNA-export-All_Spectra.json")
-                           
+
                          }, knapsack = function(dbname, ...){
                            # TOO SLOW
                            require(data.table)
@@ -874,14 +874,14 @@ build.base.db <- function(dbname=NA,
                            response <- XML::htmlParse(url)
                            tab <- as.data.table(XML::readHTMLTable(response)[[1]])
                            metab_count <- as.numeric(gsub(tab[V1 == "metabolite", 2], pattern = " entries", replacement = ""))
-                           
+
                            #url2 = "http://kanaya.naist.jp/knapsack_jsp/information.jsp?sname=C_ID&word=C00001001"
                            #response <- XML::htmlParse(url2)
-                           
-                           
+
+
                            url <- "http://kanaya.naist.jp/knapsack_jsp/information.jsp?sname=C_ID&word="
                            hrefs <- list()
-                           
+
                            max_digits = 8 #C00000001
                            ids <- sapply(1:metab_count, function(i){
                              paste0("C", stringr::str_pad(i, max_digits, pad = "0"))
@@ -893,25 +893,25 @@ build.base.db <- function(dbname=NA,
                              # - - - return - - -
                              response
                            })
-                           
-                           
-                           
+
+
+
                          }, respect = function(dbname, ...){
                            # - - download reSpect database, phytochemicals - -
-                           
+
                            file.url <- "http://spectra.psc.riken.jp/menta.cgi/static/respect/respect.zip"
-                           
+
                            # ----
-                           #base.loc <- getOptions("user_options.txt")$db_dir
-                           base.loc <- file.path(getOptions("user_options.txt")$db_dir, "respect_source")
+                           #base.loc <- getOptions()$db_dir
+                           base.loc <- file.path(getOptions()$db_dir, "respect_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                            zip.file <- file.path(base.loc, "respect.zip")
                            utils::download.file(file.url, zip.file,mode = "w")
                            utils::unzip(zip.file, exdir = base.loc)
-                           
+
                            cpd_files <- list.files(base.loc,
                                                    full.names = T)
-                           
+
                            db_rows <- pbapply::pblapply(cpd_files, function(fn){
                              row = NA
                              try({
@@ -939,44 +939,44 @@ build.base.db <- function(dbname=NA,
                              })
                              row
                            })
-                           
+
                            db.formatted <- rbindlist(db_rows[!is.na(db_rows)])
                            db.formatted <- unique(db.formatted[!is.na(baseformula),])
-                           
+
                            db.formatted
                          },
                          expoexplorer = function(dbname, ...){
-                           
+
                            file.url <- "http://exposome-explorer.iarc.fr/system/downloads/current/biomarkers.csv.zip"
-                           
-                           base.loc <- file.path(getOptions("user_options.txt")$db_dir, "exex_source")
-                           
+
+                           base.loc <- file.path(getOptions()$db_dir, "exex_source")
+
                            if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                            zip.file <- file.path(base.loc, "expoexpo_comp.zip")
                            utils::download.file(file.url, zip.file,mode = "w")
                            utils::untar(zip.file, exdir = base.loc)
-                           
+
                            base.table <- data.table::fread(file = file.path(base.loc, "biomarkers.csv"))
-                           
+
                            db.formatted <- data.table::data.table(compoundname = base.table$Name,
                                                                   description = base.table$Description,
                                                                   baseformula = base.table$Formula,
                                                                   identifier= base.table$ID,
                                                                   charge= c(NA),
                                                                   structure= base.table$SMILES)
-                           
+
                            db.formatted <- unique(db.formatted)
-                           
+
                            # - - use correlations to get some custom descriptions :) - -
-                           
+
                            file.url <- "http://exposome-explorer.iarc.fr/system/downloads/current/correlation_values.csv.zip"
-                           
+
                            zip.file <- file.path(base.loc, "expoexpo_corr.zip")
                            utils::download.file(file.url, zip.file,mode = "w")
                            utils::untar(zip.file, exdir = base.loc)
-                           
+
                            corr.table <- data.table::fread(file = file.path(base.loc, "correlation_values.csv"))
-                           
+
                            descriptions <- pbapply::pbsapply(1:nrow(corr.table), function(i){
                              row = corr.table[i,]
                              desc <- paste("Found in", R.utils::decapitalize(row$Biospecimen),
@@ -986,27 +986,27 @@ build.base.db <- function(dbname=NA,
                                            "after taking in", R.utils::decapitalize(row$Intake),
                                            paste0("(", row$`Analytical method`, ", p ", row$`Correlation p-value`, ")."))
                            })
-                           
+
                            corr.table$`Pasted` <- descriptions
-                           
+
                            df <- corr.table[,c("Excretion ID", "Pasted")]
                            aggr = aggregate( Pasted ~ `Excretion ID`, df, function(x) toString(paste(unique(x),collapse = " ")))
-                           
+
                            final.table <- merge(db.formatted, aggr, by.x = "identifier", by.y = "Excretion ID", all.x=T)
-                           
+
                            final.table$description <- pbapply::pbsapply(1:nrow(final.table), function(i){
                              row = final.table[i,]
                              a = if(!is.na(row$description) & row$description != "NA") row$description else ""
                              b = row$Pasted
                              paste0(a,b)
                            })
-                           
+
                            db.formatted <- final.table[,-"Pasted"]
-                           
+
                            # - - -
-                           
+
                            missing.charges <- which(is.na(db.formatted$charge))
-                           
+
                            charges <- pbapply::pbsapply(missing.charges, cl=0, function(i, db){
                              smi = db[i, "structure"][[1]]
                              charge = 0 # set default placeholder to zero, seems like a decent assumption
@@ -1016,44 +1016,44 @@ build.base.db <- function(dbname=NA,
                              })
                              charge
                            }, db = db.formatted)
-                           
+
                            db.formatted$charge[missing.charges] <- charges
                            # --- check formulae ---
                            checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
                                                                                       db.formatted$baseformula))
-                           
+
                            db.formatted$baseformula <- checked$new_formula
-                           
+
                            missing.formula <- which(checked$warning)
-                           
+
                            db.formatted <- db.formatted[-missing.formula,]
-                           
+
                            db.formatted
-                           
+
                          },
                          foodb = function(dbname, ...){ #ok
-                           
+
                            file.url <- "http://www.foodb.ca/system/foodb_2017_06_29_csv.tar.gz"
-                           
-                           base.loc <- file.path(getOptions("user_options.txt")$db_dir, "foodb_source")
-                           
+
+                           base.loc <- file.path(getOptions()$db_dir, "foodb_source")
+
                            if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                            zip.file <- file.path(base.loc, "foodb.zip")
                            utils::download.file(file.url, zip.file, mode = 'wb', method = 'libcurl')
                            utils::untar(zip.file, exdir = base.loc)
-                           
+
                            base.table <- data.table::fread(file = file.path(base.loc, "foodb_2017_06_29_csv", "compounds.csv"))
-                           
+
                            db.formatted <- data.table::data.table(compoundname = base.table$name,
                                                                   description = base.table$description,
                                                                   baseformula = base.table$moldb_formula,
                                                                   identifier= base.table$id,
                                                                   charge= base.table$charge,
                                                                   structure= base.table$moldb_smiles)
-                           
+
                            db.formatted <- unique(db.formatted)
                            missing.charges <- which(is.na(db.formatted$charge))
-                           
+
                            charges <- pbapply::pbsapply(missing.charges, cl=0, function(i, db){
                              smi = db[i, "structure"][[1]]
                              charge = 0 # set default placeholder to zero, seems like a decent assumption
@@ -1063,14 +1063,14 @@ build.base.db <- function(dbname=NA,
                              })
                              charge
                            }, db = db.formatted)
-                           
+
                            db.formatted$charge[missing.charges] <- charges
-                           
+
                            db.formatted
                          },
                          massbank = function(dbname, ...){
                            file.url <- "https://github.com/MassBank/MassBank-data/archive/master.zip"
-                           base.loc <- file.path(getOptions("user_options.txt")$db_dir, "massbank_source")
+                           base.loc <- file.path(getOptions()$db_dir, "massbank_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                            zip.file <- file.path(base.loc, "massbank.zip")
                            utils::download.file(file.url, zip.file,mode = "w", method='libcurl')
@@ -1079,12 +1079,12 @@ build.base.db <- function(dbname=NA,
                                                    pattern = ".txt$",
                                                    full.names = T,
                                                    recursive = T)
-                           
+
                            # - - - - - - - - - - - - - - -
-                           
+
                            db_rows <- pbapply::pblapply(cpd_files, cl=session_cl, function(fn){
                              row = NA
-                             
+
                              try({
                                lines <- readLines(fn)
                                split.lines <- sapply(lines, strsplit, ": ")
@@ -1118,17 +1118,17 @@ build.base.db <- function(dbname=NA,
                              })
                              row
                            })
-                           
+
                            db.formatted <- rbindlist(db_rows[!is.na(db_rows)], fill=TRUE)
                            db.formatted <- db.formatted[!is.na(baseformula),]
-                           
+
                            db.formatted
-                           
+
                          })()
-  
+
 
   if(dbname != "maconda"){
-    
+
     formulae <- unique(db.formatted$baseformula)
     # - - check formulae - -
     checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
@@ -1136,49 +1136,49 @@ build.base.db <- function(dbname=NA,
     conv.table <- data.table(old = formulae, new = checked$new_formula)
     keep <- checked[warning == FALSE, which = TRUE]
     conv.table.keep <- conv.table[keep,]
-    
+
     order = match(db.formatted$baseformula, conv.table.keep$old)
-    
+
     db.formatted <- as.data.table(merge(db.formatted, conv.table.keep, by.x = "baseformula", by.y = "old"))
     db.formatted$baseformula <- db.formatted$new
-    
+
     db.formatted <- db.formatted[!is.na(db.formatted$baseformula),-"new", with=F]
-    
+
   }
-  
+
   # - - write - -
-  
+
   RSQLite::dbWriteTable(conn, "base", db.formatted, append=TRUE)
   RSQLite::dbExecute(conn, "create index b_idx1 on base(baseformula, charge)")
-  
+
   RSQLite::dbDisconnect(conn)
-  
+
   print("did base db!")
 }
 
 #' @export
 build.extended.db <- function(dbname,
-                              outfolder=getOptions("user_options.txt")$db_dir,
+                              outfolder=getOptions()$db_dir,
                               adduct.table=adducts,
                               cl = FALSE,
                               fetch.limit = -1){
-  
+
   data(isotopes, package = "enviPat")
   base.db <- file.path(outfolder, paste0(dbname, ".base.db"))
   full.db <<- file.path(outfolder, paste0("extended.db"))
-  
+
   base.conn <- RSQLite::dbConnect(RSQLite::SQLite(), base.db)
-  
-  # - - - - - - - - - - - - - - - - 
-  
+
+  # - - - - - - - - - - - - - - - -
+
   first.db = if(!file.exists(full.db)) T else F
-  
+
   full.conn <- RSQLite::dbConnect(RSQLite::SQLite(), full.db)
-  
+
   # --- add base db to the new one ---
   print("Attaching base...")
   RSQLite::dbExecute(full.conn, gsubfn::fn$paste("ATTACH '$base.db' AS tmp"))
-  
+
   sql.make.meta <- strwrap("CREATE TABLE IF NOT EXISTS extended(
                            baseformula text,
                            fullformula text,
@@ -1191,7 +1191,7 @@ build.extended.db <- function(dbname,
                            foundinmode text,
                            source text)", width=10000, simplify=TRUE)
   RSQLite::dbExecute(full.conn, sql.make.meta)
-  
+
   if(first.db){
     # do all of the formulae
     get.query = "SELECT DISTINCT a.baseformula, a.charge FROM tmp.base a"
@@ -1199,29 +1199,29 @@ build.extended.db <- function(dbname,
     # only do the ones not yet present in the extended database
     get.query = "SELECT DISTINCT a.baseformula, a.charge FROM tmp.base a LEFT JOIN extended b ON a.baseformula = b.baseformula AND a.charge = b.basecharge WHERE b.baseformula IS NULL AND b.basecharge IS NULL"
   }
-  
+
   results <- RSQLite::dbGetQuery(full.conn, get.query)
   formula.count <- nrow(results)
-  
+
   if(formula.count == 0){
     print("Everything already in current database, aborting! ")
     return(NULL)
   }
-  
+
   # --- start pb ---
-  
+
   chunks = split(1:nrow(results), ceiling(seq_along(1:nrow(results))/fetch.limit))
-  
+
   pbapply::pblapply(chunks, function(selection, full.db){
-    
+
     partial.results <- as.data.frame(results[selection,])
-    
-    
+
+
     checked.formulae <- data.table::as.data.table(check.chemform.joanna(isotopes,
                                                                         partial.results$baseformula))
-    
+
     keep.rows <- checked.formulae[warning == FALSE, which=TRUE]
-    
+
     if(length(keep.rows) == 0) next
     backtrack <- data.table::data.table(baseformula = checked.formulae[keep.rows, new_formula],
                                         basemz = checked.formulae[keep.rows, monoisotopic_mass],
@@ -1230,9 +1230,9 @@ build.extended.db <- function(dbname,
     do.calc <- function(x){
       row <- adduct.table[x,]
       name <- row$Name
-      
+
       #print(paste("--- CURRENT ADDUCT:", name, "---"))
-      
+
       adduct <- row$Formula_add
       deduct <- row$Formula_ded
       # --- fix booleans ---
@@ -1268,9 +1268,9 @@ build.extended.db <- function(dbname,
       backtrack$final.charge <- c(as.numeric(backtrack$charge)) + c(as.numeric(row$Charge))
       backtrack <- backtrack[final.charge != 0]
       if(nrow(backtrack) == 0) return(NA)
-      
+
       # --- get isotopes ---
-      
+
       isotables <- enviPat::isopattern(
         isotopes,
         backtrack$final,
@@ -1280,7 +1280,7 @@ build.extended.db <- function(dbname,
         algo = 2,
         verbose = FALSE
       )
-      
+
       isolist <- lapply(isotables, function(isotable){
         if(isotable[[1]] == "error") return(NA)
         iso.dt <- data.table::data.table(isotable, fill=TRUE)
@@ -1289,15 +1289,15 @@ build.extended.db <- function(dbname,
         # --- return ---
         result
       })
-      
+
       isolist.nonas <- isolist[!is.na(isolist)]
       isotable <- rbindlist(isolist.nonas)
-      
+
       keep.isos <- names(isolist.nonas)
-      
+
       # --- remove 'backtrack' rows that couldn't be calculated ---
       backtrack.final <- backtrack[final %in% keep.isos]
-      
+
       # --------------------
       repeat.times <- c(unlist(lapply(isolist.nonas, FUN=function(list) nrow(list)), use.names = FALSE))
       meta.table <- data.table::data.table(baseformula = rep(backtrack.final$baseformula, repeat.times),
@@ -1310,13 +1310,13 @@ build.extended.db <- function(dbname,
                                            isoprevalence = isotable$isoprevalence,
                                            foundinmode = c(mode),
                                            source = c(dbname))
-      
+
       # - - return - -
-      
+
       core.conn <- DBI::dbConnect(RSQLite::SQLite(), dbname = full.db)
       res <- DBI::dbSendQuery(core.conn, "PRAGMA busy_timeout=5000;")
       DBI::dbClearResult(res)
-      
+
       repeat {
         rv <- try(
           DBI::dbWriteTable(core.conn, "extended", meta.table, append= T )
@@ -1325,7 +1325,7 @@ build.extended.db <- function(dbname,
       }
       DBI::dbDisconnect(core.conn)
     }
-    
+
     if(length(cl)==1){
       if(cl == FALSE){
         cl = NULL
@@ -1339,17 +1339,17 @@ build.extended.db <- function(dbname,
       parallel::parSapply(cl=cl, 1:nrow(adduct.table), FUN=do.calc)
     }
   }, full.db = full.db)
-  
+
   # --- indexy ---
   print("Indexing extended table...")
-  
+
   if(first.db){
     RSQLite::dbExecute(full.conn, "create index e_idx1 on extended(baseformula, basecharge)")
     RSQLite::dbExecute(full.conn, "create index e_idx2 on extended(fullmz, foundinmode)")
   }else{
     RSQLite::dbExecute(full.conn, "ANALYZE extended")
   }
-  
+
   # --- cleanup ---
   RSQLite::dbExecute(full.conn, "VACUUM")
   # ==========================
@@ -1368,27 +1368,27 @@ build.pat.db <- function(db.name,
                          make.full = TRUE,
                          ppm=2,
                          inshiny=F){
-  
-  
+
+
   # ------------------------
   ppm = as.numeric(ppm)
   # ------------------------
-  
+
   poslist <- fread(pospath,header = T)
   neglist <- fread(negpath,header = T)
-  
+
   # ------------------------------------
-  
+
   keepcols <- intersect(colnames(poslist), colnames(neglist))
-  
+
   poslist <- poslist[,..keepcols]
   neglist <- neglist[,..keepcols]
-  
+
   # - - - fix QCs - - -
-  
+
   which.qc <- grep(colnames(poslist), pattern = "^QC")
   qc.i = 1
-  
+
   for(qc in which.qc){
     print(qc.i)
     new.qc.name <- paste0("QC", qc.i)
@@ -1401,23 +1401,23 @@ build.pat.db <- function(db.name,
   }
   # - - - - - - - - - -
   if(inshiny) setProgress(.20)
-  
+
   gc()
-  
+
   mzvals <- data.table::data.table(mzmed = c(as.numeric(poslist$mzmed), as.numeric(neglist$mzmed)),
                                    foundinmode = c(rep("positive", nrow(poslist)), rep("negative", nrow(neglist))))
-  
+
   mzranges <- data.table::data.table(mzmin = sapply(c(as.numeric(poslist$mzmed), as.numeric(neglist$mzmed)),
                                                     FUN=function(mz, ppm){
                                                       mz - mz * (ppm / 1E6)}, ppm=ppm),
                                      mzmax = sapply(c(as.numeric(poslist$mzmed), as.numeric(neglist$mzmed)),
                                                     FUN=function(mz, ppm){
                                                       mz + mz * (ppm / 1E6)}, ppm=ppm))
-  
+
   mzvals$foundinmode <- trimws(mzvals$foundinmode)
-  
+
   # --- SAVE BATCH INFO (kinda ugly...  ; _;") ---
-  
+
   if(any(grepl("\\*", x = colnames(poslist)))){
     samp_split = strsplit(colnames(poslist)[2:ncol(poslist)], "\\*")
     batch_split = strsplit(unlist(lapply(samp_split, function(x) x[2])), "\\_")
@@ -1430,11 +1430,11 @@ build.pat.db <- function(db.name,
   } else{
     batch_info = NULL
   }
-  
+
   gc()
-  
+
   if(inshiny) setProgress(.30)
-  
+
   poslist <- data.table::melt(poslist,#[,(rmv.cols) := NULL],
                               id.vars="mzmed",
                               variable.name="filename",
@@ -1448,61 +1448,61 @@ build.pat.db <- function(db.name,
                               variable.factor=TRUE
   )
   if(inshiny) setProgress(.40)
-  
+
   #poslist$filename <- trimws(poslist$filename)
   #neglist$filename <- trimws(neglist$filename)
-  
+
   # COMPUTER CANT HANDLE THE RBIND, WRITE THEM SEPERATELY
-  
+
   #mzintensities = rbind(poslist, neglist)
-  
+
   # ------------------------
-  
+
   if(overwrite==TRUE & file.exists(db.name)) file.remove(db.name)
-  
+
   # --- reconnect / remake ---
-  
+
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), db.name)
-  
+
   # ------------------------
-  
+
   if(!is.null(batch_info)){
     RSQLite::dbWriteTable(conn, "batchinfo", batch_info, overwrite=T) # insert into
   }
-  
+
   # ------------------------
-  
+
   sql.make.int <- strwrap("CREATE TABLE mzintensities(
                           ID INTEGER PRIMARY KEY AUTOINCREMENT,
                           mzmed decimal(30,13),
                           filename text,
                           intensity float)", width=10000, simplify=TRUE)
-  
+
   RSQLite::dbExecute(conn, sql.make.int)
-  
+
   if(inshiny) setProgress(.60)
-  
+
   # --- write intensities to table and index ---
   RSQLite::dbWriteTable(conn, "mzintensities", poslist, append=TRUE) # insert into
   RSQLite::dbWriteTable(conn, "mzintensities", neglist, append=TRUE) # insert into
-  
+
   RSQLite::dbExecute(conn, "CREATE INDEX intindex ON mzintensities(filename,'mzmed',intensity)")
   RSQLite::dbExecute(conn, "CREATE INDEX intindex2 ON mzintensities('mzmed')")
-  
+
   # ------------------------
-  
+
   sql.make.meta <- strwrap("CREATE TABLE mzvals(
                            ID INTEGER PRIMARY KEY AUTOINCREMENT,
                            mzmed decimal(30,13),
                            foundinmode text)", width=10000, simplify=TRUE)
   RSQLite::dbExecute(conn, sql.make.meta)
   RSQLite::dbExecute(conn, "create index mzfind on mzvals(mzmed, foundinmode);")
-  
+
   if(inshiny) setProgress(.70)
-  
+
   # --- write vals to table ---
   RSQLite::dbWriteTable(conn, "mzvals", mzvals, append=TRUE) # insert into
-  
+
   # --- make range table (choose if R*tree or not) ---
   sql.make.rtree <- strwrap("CREATE VIRTUAL TABLE mzranges USING rtree(
                             ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1514,16 +1514,16 @@ build.pat.db <- function(db.name,
                              mzmin decimal(30,13),
                              mzmax decimal(30,13));", width=10000, simplify=TRUE)
   RSQLite::dbExecute(conn, if(rtree) sql.make.rtree else sql.make.normal)
-  
+
   if(inshiny) setProgress(.80)
-  
+
   # --- write ranges to table ---
   RSQLite::dbWriteTable(conn, "mzranges", mzranges, append=TRUE) # insert into
   # --- cleanup ---
   RSQLite::dbExecute(conn, "VACUUM")
-  
+
   if(inshiny) setProgress(.90)
-  
+
   # ----------------
   RSQLite::dbDisconnect(conn)
   print("Made!")}
@@ -1532,22 +1532,22 @@ build.pat.db <- function(db.name,
 #' @export
 load.metadata.csv <- function(path.to.csv,
                               path.to.patdb){
-  
+
   #path.to.csv = "~/Downloads/marc_data/meta.csv"
   #path.to.patdb = "~/Downloads/marc_data/marc.db"
-  
+
   print(path.to.patdb)
   print(path.to.csv)
-  
+
   # --- connect to sqlite db ---
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), path.to.patdb)
-  
+
   csv <- data.table::fread(path.to.csv)
   setup <- data.table(group = as.character(unique(csv[,c("group")][[1]])))
-  
+
   RSQLite::dbWriteTable(conn, "setup", setup, overwrite=TRUE) # insert into
   RSQLite::dbWriteTable(conn, "individual_data", csv, overwrite=TRUE) # insert into
-  
+
   RSQLite::dbDisconnect(conn)
 }
 
@@ -1561,13 +1561,13 @@ load.metadata.excel <- function(path.to.xlsx,
                                   #,"Pen Data",
                                   #"Admin"
                                 )){
-  
+
   #path.to.xlsx <- "~/Desktop/xls/DSM_NL_BR_IT.xlsx"
   #path.to.patdb <- global$paths$patdb
-  
+
   print(path.to.patdb)
   print(path.to.xlsx)
-  
+
   # --- connect to sqlite db ---
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), path.to.patdb)
   # -------------------------------
@@ -1582,55 +1582,55 @@ load.metadata.excel <- function(path.to.xlsx,
     # -----------------------------------------------------------------------------------------
     data.table::as.data.table(tab, keep.rownames=F)
   })
-  
+
   # --- convert to data table --- ## make this nicer loooking in the future
   #general <- data.store[[1]]
   setup <- data.store[[1]]
   individual.data <- data.store[[2]]
-  
+
   # --- fill empty cells w/ na ---
-  
+
   indx <- which(sapply(setup, is.character))
   for (j in indx) set(setup, i = grep("^$|^ $", setup[[j]]), j = j, value = NA_character_)
-  
+
   # indx <- which(sapply(general, is.character))
   # for (j in indx) set(general, i = grep("^$|^ $", general[[j]]), j = j, value = NA_character_)
-  
+
   indx <- which(sapply(individual.data, is.character))
   for (j in indx) set(individual.data, i = grep("^$|^ $", individual.data[[j]]), j = j, value = NA_character_)
-  
+
   # --- remove empty lines ---
-  
+
   #general <- general[rowSums(is.na(general)) != ncol(general),]
   setup <- setup[rowSums(is.na(setup)) != ncol(setup),]
   individual.data <- individual.data[rowSums(is.na(individual.data)) != ncol(individual.data),]
-  
+
   # --------------------------
-  
+
   if(any(is.na(as.numeric(individual.data$sampling_date)))){
     individual.data$sampling_date <- as.factor(as.Date(as.character(individual.data$sampling_date),
                                                        format = "%d-%m-%y"))
   }else{
     individual.data$sampling_date <- as.factor(as.Date(as.numeric(individual.data$sampling_date),
                                                        origin = "1899-12-30"))
-    
+
   }
-  
+
   individual.data$card_id <- as.character(individual.data$card_id)
   individual.data$animal_internal_id <- as.character(individual.data$animal_internal_id)
-  
+
   if(is.na(individual.data$sampling_date[1])) levels(individual.data$sampling_date) <- factor(1)
-  
+
   setup <- data.table::as.data.table(apply(setup, MARGIN=2, trimws))
   individual.data <- data.table::as.data.table(apply(individual.data, MARGIN=2, trimws))
   #general <- data.table::as.data.table(apply(general, MARGIN=2, trimws))
-  
+
   # --- add the QC samples ---
-  
+
   qc_samps = RSQLite::dbGetQuery(conn, "SELECT * FROM batchinfo WHERE sample LIKE '%QC%'")
-  
+
   placeholder_date <- individual.data$sampling_date[[1]]
-  
+
   qc_ind_data <- lapply(qc_samps$sample, function(qc) {
     data.table(label = c(1),
                card_id = qc,
@@ -1640,20 +1640,20 @@ load.metadata.excel <- function(path.to.xlsx,
                group = "qc",
                farm = "QcLand")
   })
-  
+
   qc_tab_setup = data.table(group = "qc",
                             stool_condition = "qc")
   qc_tab_ind = unique(rbindlist(qc_ind_data))
-  
+
   # --- join to existing ---
-  
+
   setup <- rbind(setup, qc_tab_setup, fill=TRUE)
   individual.data <- rbindlist(list(individual.data, qc_tab_ind), fill=TRUE)
   individual.data$label <- 1:nrow(individual.data)
-  
+
   #pen.data <- data.table::as.data.table(apply(pen.data, MARGIN=2, trimws))
   #admin <- data.table::as.data.table(apply(admin, MARGIN=2, trimws))
-  
+
   # --- import to patient sql file ---
   #RSQLite::dbWriteTable(conn, "general", general, overwrite=TRUE) # insert into BUGGED FIX LATER
   RSQLite::dbWriteTable(conn, "setup", setup, overwrite=TRUE) # insert into
@@ -1668,56 +1668,56 @@ db.build.custom <- function(db.name = "MyDb",
                             db.short = "mydb",
                             db.description = "Personal custom database.",
                             db.icon = "www/questionmark.png",
-                            outfolder = getOptions("user_options.txt")$db_dir,
+                            outfolder = getOptions()$db_dir,
                             csv){
-  
+
   db.base = data.table::fread(csv)
-  
+
   columns =  c("compoundname",
                "description",
                "baseformula",
                "identifier",
                "charge",
                "structure")
-  
+
   keep.columns <- intersect(columns,colnames(db.base))
-  
+
   db.formatted <- db.base[, ..keep.columns]
-  
+
   if(all(is.na(db.formatted$identifier))){
     db.formatted$identifier <- c(1:nrow(db.formatted))
   }
-  
+
   # check the formulas
   checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
                                                              db.formatted$baseformula))
   db.formatted$baseformula <- checked$new_formula
   keep <- checked[warning == FALSE, which = TRUE]
   db.formatted <- db.formatted[keep]
-  
+
   # open db
   outfolder <- file.path(outfolder, "custom")
   if(!dir.exists(outfolder)) dir.create(outfolder)
-  
+
   db <- file.path(outfolder, paste0(db.short, ".base.db"))
   if(file.exists(db)) file.remove(db)
   print(db)
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), db)
   RSQLite::dbExecute(conn, statement = "create table base(compoundname text, description text, baseformula text, identifier text, charge text, structure text)")
-  
+
   print(db.formatted)
   # create folder for db
   RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
   RSQLite::dbDisconnect(conn)
-  
+
   # write metadata to file.. json?
   meta.dbpage =
     list(title = db.name,
          description = db.description,
          image_id = paste0(db.short, "_icon"))
-  
+
   meta.img =
     list(name = paste0(db.short, "_icon"), path = db.icon, dimensions = c(200, 200))
-  
+
   save(list = c("meta.img", "meta.dbpage"), file = file.path(outfolder, paste0(db.short, ".RData")))
 }

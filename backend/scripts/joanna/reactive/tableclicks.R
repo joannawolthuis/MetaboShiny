@@ -8,11 +8,11 @@ observe({
 
 
 # which table names to check for user click events
-res.update.tables <<- c("tt", 
+res.update.tables <<- c("tt",
                         "fc",
                         "aov",
                         "rf",
-                        "asca", 
+                        "asca",
                         "meba",
                         "pca_load",
                         "plsda_load",
@@ -38,8 +38,8 @@ lapply(unique(res.update.tables), FUN=function(table){
                                                   aov = {
                                                     if(!is.null(input$timecourse_trigger)){
                                                       switch(input$timecourse_trigger,
-                                                             mSet$analSet$aov2$sig.mat, 
-                                                             mSet$analSet$aov$sig.mat)  
+                                                             mSet$analSet$aov2$sig.mat,
+                                                             mSet$analSet$aov$sig.mat)
                                                     }else{
                                                       mSet$analSet$aov$sig.mat
                                                     }
@@ -52,43 +52,43 @@ lapply(unique(res.update.tables), FUN=function(table){
                                                   venn = global$tables$venn_overlap), keep.rownames = T)[curr_row, rn]
     # print current compound in sidebar
     output$curr_cpd <- renderText(curr_cpd)
-    
+
     # make miniplot for sidebar with current compound
     output$curr_plot <- plotly::renderPlotly({
       # --- ggplot ---
-      ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]],
+      ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions()$gspec]],
                     styles = input$ggplot_sum_style,
                     add_stats = input$ggplot_sum_stats, col.fac = input$col_var,txt.fac = input$txt_var)
     })
-    
+
     outplot_name <- paste0(table, "_specific_plot")
-    
+
     # send plot to relevant spot in UI
     output[[outplot_name]] <- plotly::renderPlotly({
       # --- ggplot ---
       if(table == 'meba'){ # meba needs a split by time
-        ggplotMeba(curr_cpd, draw.average = T, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]])
+        ggplotMeba(curr_cpd, draw.average = T, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions()$gspec]])
       }else if(table == 'asca'){ # asca needs a split by time
-        ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]], mode = "ts",
+        ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions()$gspec]], mode = "ts",
                       styles = input$ggplot_sum_style,
                       add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var)
       }else{ # regular boxplot
         if(!is.null(input$timecourse_trigger)){
           if(input$timecourse_trigger){
-            ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]], mode = "ts",
+            ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions()$gspec]], mode = "ts",
                           styles = input$ggplot_sum_style,
                           add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var)
           }else{
-            ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]],
+            ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions()$gspec]],
                           styles = input$ggplot_sum_style,
                           add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var)
           }
         }else{
-          ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions("user_options.txt")$gspec]],
+          ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions()$gspec]],
                         styles = input$ggplot_sum_style,
                         add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var)
         }
-        
+
       }
     })
   })
@@ -105,14 +105,14 @@ lapply(c("pos", "neg"), function(mode){
     keep <- sapply(mzs, function(x) !is.null(x))
     mzs <- mzs[keep]
     mzs <- unique(unlist(mzs))
-    # - - - - - - - - 
+    # - - - - - - - -
     tbl = data.frame("p-value" = if(mSet$dataSet$cls.num == 2){
       mSet$analSet$tt$sig.mat[match(mzs, rownames(mSet$analSet$tt$sig.mat)),"p.value"]
     }else{
       mSet$analSet$aov$sig.mat[match(mzs, rownames(mSet$analSet$tt$sig.mat)),"p.value"]
     })
     rownames(tbl) <- mzs
-    # - - - - - - - - 
+    # - - - - - - - -
     global$tables$mummi_detail <<- tbl
     # - - - - - - - -
     output$mummi_detail_tab <- DT::renderDataTable({
