@@ -973,7 +973,7 @@ build.base.db <- function(dbname=NA,
 
                            zip.file <- file.path(base.loc, "expoexpo_corr.zip")
                            utils::download.file(file.url, zip.file,mode = "w")
-                           utils::untar(zip.file, exdir = base.loc)
+                           utils::unzip(zip.file, exdir = base.loc)
 
                            corr.table <- data.table::fread(file = file.path(base.loc, "correlation_values.csv"))
 
@@ -1040,7 +1040,7 @@ build.base.db <- function(dbname=NA,
                            if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                            zip.file <- file.path(base.loc, "foodb.zip")
                            utils::download.file(file.url, zip.file, mode = 'wb', method = 'libcurl')
-                           utils::untar(zip.file, exdir = base.loc)
+                           utils::unzip(zip.file, exdir = base.loc)
 
                            base.table <- data.table::fread(file = file.path(base.loc, "foodb_2017_06_29_csv", "compounds.csv"))
 
