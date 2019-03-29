@@ -47,4 +47,4 @@ RUN R -e "BiocManager::install(c('tm', 'RISmed', 'qdap', 'extrafont', 'gmp', 'sh
 # Make the ShinyApp available at port 8080
 EXPOSE 8080
 
-RUN R -e "source('startShiny.R')"
+RUN Rscript startShiny.R

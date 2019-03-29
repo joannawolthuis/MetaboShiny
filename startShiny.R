@@ -93,8 +93,9 @@ library(httr)
 # https://stackoverflow.com/questions/3160909/how-do-i-deal-with-certificates-using-curl-while-trying-to-access-an-https-url
 # nope..
 options('download.file.method' = 'curl')
+
 options('unzip.unzip' = getOption("unzip"))
-#set_config(config(ssl_verifypeer = 0L))
+set_config(config(ssl_verifypeer = FALSE))
 
 runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
 
