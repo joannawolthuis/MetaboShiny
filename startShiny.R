@@ -5,6 +5,9 @@ It takes care of installing packages necessary for
 MetaboShiny to even start.
 "
 
+Sys.setenv(LIBCURL_BUILD="winssl")
+install.packages("https://github.com/jeroen/curl/archive/master.tar.gz", repos = NULL)
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 #' Function to install packages, either through regular method or through downloading from git directly
@@ -92,7 +95,7 @@ library(httr)
 # does this work?
 # https://stackoverflow.com/questions/3160909/how-do-i-deal-with-certificates-using-curl-while-trying-to-access-an-https-url
 # nope..
-options('download.file.method' = 'curl')
+#options('download.file.method' = 'curl')
 
 options('unzip.unzip' = getOption("unzip"))
 set_config(config(ssl_verifypeer = FALSE))
