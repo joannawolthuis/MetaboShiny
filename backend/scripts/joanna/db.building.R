@@ -63,7 +63,8 @@ build.base.db <- function(dbname=NA,
                                                     basecharge int,
                                                     totalcharge int,
                                                     isoprevalence float,
-                                                    foundinmode text)", width=10000, simplify=TRUE)
+                                                    foundinmode text,
+                                                    source text)", width=10000, simplify=TRUE)
                            RSQLite::dbExecute(full.conn, sql.make.meta)
                            # -- reformat noise table ---
                            db.formatted <-
@@ -76,7 +77,8 @@ build.base.db <- function(dbname=NA,
                                basecharge = 0,
                                totalcharge = sapply(base.table$ion_mode, function(x){ if(x == "POS") 1 else -1 }),
                                isoprevalence = 100,
-                               foundinmode = sapply(base.table$ion_mode, function(x){ if(x == "POS") "positive" else "negative" })
+                               foundinmode = sapply(base.table$ion_mode, function(x){ if(x == "POS") "positive" else "negative" }),
+                               source = c(dbname)
                              )
 
                            missing <- db.formatted$basemz == 0
