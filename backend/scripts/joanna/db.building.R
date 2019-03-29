@@ -954,7 +954,7 @@ build.base.db <- function(dbname=NA,
                            if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                            zip.file <- file.path(base.loc, "expoexpo_comp.zip")
                            utils::download.file(file.url, zip.file,mode = "w")
-                           utils::untar(zip.file, exdir = base.loc)
+                           utils::unzip(zip.file, exdir = base.loc)
 
                            base.table <- data.table::fread(file = file.path(base.loc, "biomarkers.csv"))
 
