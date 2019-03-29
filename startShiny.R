@@ -5,9 +5,6 @@ It takes care of installing packages necessary for
 MetaboShiny to even start.
 "
 
-Sys.setenv(LIBCURL_BUILD="winssl")
-install.packages("https://github.com/jeroen/curl/archive/master.tar.gz", repos = NULL)
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 #' Function to install packages, either through regular method or through downloading from git directly
@@ -97,8 +94,7 @@ library(httr)
 # nope..
 #options('download.file.method' = 'curl')
 
-options('unzip.unzip' = getOption("unzip"))
-set_config(config(ssl_verifypeer = FALSE))
+options('unzip.unzip' = getOption("unzip"), 'download.file.extra' = "--insecure", 'download.file.method' = 'curl')
 
 runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
 
@@ -107,7 +103,6 @@ opt.loc <<- if(runmode == 'local') '~/Documents/MetaboShiny/user_options_local.t
 optfolder <- dirname(opt.loc)
 
 if(!dir.exists(optfolder)) dir.create(optfolder,recursive = T)
-
 
 if(!file.exists(opt.loc)){
   # write options file if it doesn't exist yet
