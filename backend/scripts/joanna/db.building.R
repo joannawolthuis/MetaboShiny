@@ -78,7 +78,7 @@ build.base.db <- function(dbname=NA,
                                totalcharge = sapply(base.table$ion_mode, function(x){ if(x == "POS") 1 else -1 }),
                                isoprevalence = 100,
                                foundinmode = sapply(base.table$ion_mode, function(x){ if(x == "POS") "positive" else "negative" }),
-                               source = c(dbname)
+                               source = c('maconda')
                              )
 
                            missing <- db.formatted$basemz == 0

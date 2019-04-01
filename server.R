@@ -92,7 +92,7 @@ shinyServer(function(input, output, session) {
     }))
     if(!any(is.null(values))){
       set.col.map(file.path(optfolder, 'user_options.txt'), values)
-      global$vectors$mycols <<- get.col.map(file.path(optfolder, 'user_options.txt'))
+      global$vectors$mycols <<- get.col.map(file.path(optfolder, paste0('user_options_', runmode, ".txt")))
     }
   })
 
