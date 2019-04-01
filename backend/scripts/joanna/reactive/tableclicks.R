@@ -129,10 +129,10 @@ observeEvent(input$match_tab_rows_selected,{
     curr_name <<- global$tables$last_matches[curr_row,'name'][[1]]
     updateTextInput(session, "pm_query", value = curr_name)
     # write to clipboard
-    if(input$auto_copy){
-      clipr::write_clip(curr_name)
-      print('copied to clipboard ( ˘ ³˘)♥')
-    }
+    #if(input$auto_copy){
+    #  clipr::write_clip(curr_name)
+    #  print('copied to clipboard ( ˘ ³˘)♥')
+    #}
     # -----------------------------
     curr_def <<- global$tables$last_matches[curr_row,'description'] # get current definition (hidden in table display but not deleted)
     output$curr_definition <- renderText(curr_def$description) # render definition
