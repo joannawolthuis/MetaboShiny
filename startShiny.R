@@ -60,26 +60,12 @@ if(length(missing.packages)>0){
   BiocManager::install(missing.packages)
 }
 
-
-## used to create the docker run statements
-# groupies <- split(unique(to.install), ceiling(seq_along(unique(to.install))/10))
-# for(group in groupies){
-#   packages <- paste0("'",paste0(group, collapse="', '"), "'")
-#   cat(gsubfn::fn$paste('RUN R -e "BiocManager::install(c($packages))"\n'))
-# }
-## docker internet
-# docker run --net=host -it metaboshiny/test1
-## docker with volume mounted
-# docker run -p 8080:8080 --net=host -it --mount src='~/MetaboShiny',target='/databases/,type=bind metaboshiny/test1
-
-# attempt 1: WORKS FOR NOW
-# had to saet memory to max lol
-
 # make metaboshiny_storage dir in home first..
-# docker run -p 8080:8080 --mount src=~/MetaboShiny_storage,target=/userfiles/,type=bind --rm -it metaboshiny/test1 sh
+# docker run -p 8080:8080 --mount src=~/Documents/MetaboShiny,target=/userfiles/,type=bind --rm -it metaboshiny/master /bin/bash
+# docker run -p 8080:8080 -v ~/Documents/MetaboShiny/:/userfiles/:cached --rm -it metaboshiny/master /bin/bash
 
 # packages needed to start up
-git.packages <<- c("MetaboAnalystR", 
+git.packages <<- c("MetaboAnalystR",
                    "BatchCorrMetabolomics")
 
 # install the base packages needed to start up
@@ -89,12 +75,9 @@ for(package in git.packages){
 
 library(httr)
 
-# does this work?
-# https://stackoverflow.com/questions/3160909/how-do-i-deal-with-certificates-using-curl-while-trying-to-access-an-https-url
-# nope..
-#options('download.file.method' = 'curl')
-
-options('unzip.unzip' = getOption("unzip"), 'download.file.extra' = "--insecure", 'download.file.method' = 'curl')
+options('unzip.unzip' = getOption("unzip"), 
+        'download.file.extra' = "--insecure", 
+        'download.file.method' = 'curl')
 
 runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
 

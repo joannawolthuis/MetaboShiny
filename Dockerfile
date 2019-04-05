@@ -24,7 +24,9 @@ RUN apt-get update && apt-get install -y \
     default-jre \
     default-jdk \
     ca-certificates \
-    curl
+    curl \
+    sqlite3 \
+    libsqlite3-dev
 
 RUN sudo R CMD javareconf
 
@@ -42,7 +44,7 @@ RUN R -e "BiocManager::install(c('impute', 'pcaMethods', 'siggenes', 'globaltest
 RUN R -e "BiocManager::install(c('sva', 'DBI', 'RSQLite', 'ggplot2', 'minval', 'plotly', 'pbapply', 'sqldf', 'plyr', 'ChemmineR'))"
 RUN R -e "BiocManager::install(c('stringr', 'heatmaply', 'reshape2', 'xlsx', 'pheatmap', 'rJava', 'KEGGREST', 'manhattanly', 'rgl', 'glmnet'))"
 RUN R -e "BiocManager::install(c('TSPred', 'VennDiagram', 'rcdk', 'SPARQL', 'webchem', 'WikidataQueryServiceR', 'openxlsx', 'doParallel', 'missForest', 'InterpretMSSpectrum'))"
-RUN R -e "BiocManager::install(c('tm', 'RISmed', 'qdap', 'extrafont', 'gmp', 'shadowtext', 'xcms', 'CAMERA', 'fgsea', 'MSnbase'))"
+RUN R -e "BiocManager::install(c('tm', 'RISmed', 'qdap', 'extrafont', 'gmp', 'shadowtext', 'xcms', 'CAMERA', 'fgsea', 'MSnbase', 'Rmisc', 'ggbeeswarm'))"
 
 # Make the ShinyApp available at port 8080
 EXPOSE 8080

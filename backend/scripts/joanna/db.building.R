@@ -112,9 +112,6 @@ build.base.db <- function(dbname=NA,
 
                            input = file.path(base.loc,"hmdb_metabolites.xml")
 
-
-                           # - - -
-
                            library(XML)
                            library(RCurl)
                            library(rlist)
@@ -1126,6 +1123,38 @@ build.base.db <- function(dbname=NA,
 
                            db.formatted
 
+                         }, supernatural = function(dbname, ...){
+                           
+                           base.loc <- file.path(getOptions()$db_dir, "supernatural_source")
+                           if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
+                           
+                           library(XML)
+                           library(RCurl)
+                           library(rlist)
+                           theurl <- getURL("http://bioinf-applied.charite.de/supernatural_new/",.opts = list(ssl.verifypeer = FALSE) )
+                           tables <- readHTMLTable(theurl)
+                           stats = data.table::rbindlist(tables)
+                           n = as.numeric(
+                             gsub(str_match(theurl, pattern="contains (.*) natural compounds")[,2], pattern = ",", replacement = '')
+                           )
+                           
+                           # http://bioinf-applied.charite.de/supernatural_new/src/download_mol.php?sn_id=SN00000001
+                           base.url = "http://bioinf-applied.charite.de/supernatural_new/src/download_mol.php?sn_id="
+                           id.nr = str_pad(i, 8, pad = "0")
+                           id.str = paste0("SN", id.nr)
+                           file.url = paste0(base.url, id.str)
+                           
+                           all.ids = paste0("SN", str_pad(1:n, 8, pad = "0"))
+                           
+                           print("Downloading molfiles...")
+                           
+                           pbapply::pbsapply(all.ids, cl = F, function(id, file.url, base.loc){
+                             mol.file <- file.path(base.loc, paste0(id, ".mol"))
+                             utils::download.file(file.url, mol.file, mode = "w",quiet = T)  
+                           }, file.url = file.url, base.loc = base.loc)
+                           
+                           # this might be too big... mail the ppl if they want to upload the whole thing..
+                           
                          })()
 
 

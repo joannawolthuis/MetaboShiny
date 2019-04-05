@@ -401,7 +401,8 @@ plot.mol = function(smi,
                     marg=0,
                     main='',
                     style="bow") {
-  if(is.na(smi)){
+  
+  if(is.null(smi)){
     return(NULL)
   }
   #curcumin = parse.smiles("O=C(\\C=C\\c1ccc(O)c(OC)c1)CC(=O)\\C=C\\c2cc(OC)c(O)cc2")[[1]] 
