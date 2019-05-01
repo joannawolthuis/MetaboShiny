@@ -861,11 +861,13 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                div(class="minus", img(class="imagebottom", src=getOptions()$taskbar_image, width="120px", height="120px"))
            ),
            div(class="line")
-           ,footer=fluidRow(hr(),
-                            actionButton("show_window", label="", icon = icon("map-marked")),
-                            actionButton("load_mset", label="", icon = icon("folder-open")),
-                            actionButton("save_mset", label="", icon = icon("save")),
-                            align="center")
-                                                                      )
-                    )
+           ,footer=fluidRow(div(
+                            #actionButton("show_window", label="", icon = icon("map-marked")),
+                            actionButton("load_mset", label="load", icon = icon("folder-open"),style=gsubfn::fn$paste("background-color:$bgcol; border-color:$bgcol;")),
+                            actionButton("save_mset", label="save", icon = icon("save"),style=gsubfn::fn$paste("background-color:$bgcol; border-color:$bgcol;"))
+                            , style=gsubfn::fn$paste("position:fixed;bottom:0;width:100%;height:40px;z-index:1005;background-color:$bgcol;border-style:solid; border-color:black;border-width:1px;")),
+                            align="center"))
 )
+)
+                    
+

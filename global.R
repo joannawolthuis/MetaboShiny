@@ -502,13 +502,7 @@ global$constants$spectrum <- options$gspec # gradient function for heatmaps, vol
 global$vectors$project_names <- unique(tools::file_path_sans_ext(list.files(options$work_dir, pattern=".csv|.db"))) # the names listed in the 'choose project' tab of options.
 
 # load existing file
-fn <- paste0(tools::file_path_sans_ext(global$paths$patdb), ".metshi")
-#
-
-# if(exists("mSet")){
-#   print("TESTING .. resetting analyses")
-#   mSet$analSet <- NULL
-# }
+bgcol <<- options$col1
 
 print("loaded scripts!")
 
