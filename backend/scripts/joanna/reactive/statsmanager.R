@@ -40,9 +40,6 @@ observe({
              
            },
            heatmap = {
-            
-             #if(!is.null(input$heatmode)){}
-             
              # reset
              mSet$analSet$heatmap <<- NULL
              

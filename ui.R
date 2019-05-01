@@ -336,6 +336,37 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                                 switchButton("heatsign", label = "Only significant hits?", col = "GB", type = "YN"),
                                                                                                                 switchButton("heatlimits", label = "Color based on -all- metabolites?", col = "GB", type = "YN")
                                                                                                 ))
+                                                                                       ),
+                                                                                       # this tab is used to find overlapping features of interest between analyses
+                                                                                       # TODO: enable this with multiple saved mSets in mSet$storage
+                                                                                       tabPanel(title="venn", value="venn", #icon=icon("comments"),
+                                                                                                sidebarLayout(position = "left",
+                                                                                                              sidebarPanel = sidebarPanel(
+                                                                                                                fluidRow(div(DT::dataTableOutput('venn_unselected'),style='font-size:80%'), align="center"),
+                                                                                                                fluidRow(shinyWidgets::circleButton("venn_add", icon=icon("arrow-down"), size="sm"),
+                                                                                                                         shinyWidgets::circleButton("venn_remove", icon=icon("arrow-up"), size="sm"),
+                                                                                                                         align="center"),
+                                                                                                                fluidRow(div(DT::dataTableOutput('venn_selected'),style='font-size:80%'),align="center"),
+                                                                                                                hr(),
+                                                                                                                fluidRow(
+                                                                                                                  sliderInput("venn_tophits", label = "Only include top:", min = 1, max = 200, post = " hits", value=20)
+                                                                                                                  ,align="center"),
+                                                                                                                fluidRow(
+                                                                                                                  shinyWidgets::circleButton("venn_build", icon=icon("hand-pointer-o"),size="default")
+                                                                                                                  ,align="center")
+                                                                                                              ),
+                                                                                                              mainPanel = mainPanel(
+                                                                                                                hr(),
+                                                                                                                plotOutput("venn_plot",inline = F),
+                                                                                                                # find the overlapping compounds between the groups you want to compare (user select)
+                                                                                                                # TODO: enable this with clicking the numbers/areas
+                                                                                                                fluidRow(selectInput("intersect_venn", label = "Show hits from (only):", selected = 1,choices = "",multiple = T),
+                                                                                                                         align="center"),
+                                                                                                                fluidRow(uiOutput("venn_pval"), align="center"),
+                                                                                                                br(),
+                                                                                                                fluidRow(div(DT::dataTableOutput('venn_tab'),style='font-size:80%'),
+                                                                                                                         align="center")
+                                                                                                              ))
                                                                                        )
                                                                             )
                                                                    ),
@@ -427,37 +458,6 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                                 )
                                                                                        )
                                                                                        )
-                                                                   ),
-                                                                   # this tab is used to find overlapping features of interest between analyses
-                                                                   # TODO: enable this with multiple saved mSets in mSet$storage
-                                                                   tabPanel(title="venn diagrams", value="venn", icon=icon("comments"),
-                                                                            sidebarLayout(position = "left",
-                                                                                          sidebarPanel = sidebarPanel(
-                                                                                            fluidRow(div(DT::dataTableOutput('venn_unselected'),style='font-size:80%'), align="center"),
-                                                                                            fluidRow(shinyWidgets::circleButton("venn_add", icon=icon("arrow-down"), size="sm"),
-                                                                                                     shinyWidgets::circleButton("venn_remove", icon=icon("arrow-up"), size="sm"),
-                                                                                                     align="center"),
-                                                                                            fluidRow(div(DT::dataTableOutput('venn_selected'),style='font-size:80%'),align="center"),
-                                                                                            hr(),
-                                                                                            fluidRow(
-                                                                                              sliderInput("venn_tophits", label = "Only include top:", min = 1, max = 200, post = " hits", value=20)
-                                                                                              ,align="center"),
-                                                                                            fluidRow(
-                                                                                              shinyWidgets::circleButton("venn_build", icon=icon("hand-pointer-o"),size="default")
-                                                                                              ,align="center")
-                                                                                          ),
-                                                                                          mainPanel = mainPanel(
-                                                                                            hr(),
-                                                                                            plotOutput("venn_plot",inline = F),
-                                                                                            # find the overlapping compounds between the groups you want to compare (user select)
-                                                                                            # TODO: enable this with clicking the numbers/areas
-                                                                                            fluidRow(selectInput("intersect_venn", label = "Show hits from (only):", selected = 1,choices = "",multiple = T),
-                                                                                                     align="center"),
-                                                                                            fluidRow(uiOutput("venn_pval"), align="center"),
-                                                                                            br(),
-                                                                                            fluidRow(div(DT::dataTableOutput('venn_tab'),style='font-size:80%'),
-                                                                                                     align="center")
-                                                                                          ))
                                                                    )
                                                         )
                                   ),

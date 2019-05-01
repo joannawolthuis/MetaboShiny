@@ -143,7 +143,7 @@ shinyServer(function(input, output, session) {
     if(is.null(interface$mode)) {
       show.tabs <- hide.tabs[1]
     }else if(interface$mode == 'multivar'){
-      show.tabs <- hide.tabs[c(1,2,6,7,9,10,13)]
+      show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,13)]
       #show.tabs <- c("inf","pca", "aov", "heatmap", "enrich", "venn")
     }else if(interface$mode == 'bivar'){
       show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13)]
@@ -253,9 +253,10 @@ shinyServer(function(input, output, session) {
     # check if an mset is present, otherwise abort
     if(!exists("mSet")) return(NULL)
     # depending on the present tab, perform analyses accordingly
-    if(input$overview %not in% names(mSet$analSet)){
+    if(input$overview %not in% names(mSet$analSet) | input$overview == "venn"){
       statsmanager$calculate <- input$overview
     }
+    print(input$overview)
     datamanager$reload <- input$overview
   })
 

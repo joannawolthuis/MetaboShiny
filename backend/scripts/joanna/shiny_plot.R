@@ -865,8 +865,7 @@ plotPCA.3d <- function(mSet,
 
   symbol.vec<-if(is.null(shape.fac)){
     rep('circle', times = length(classes))
-  }
-  else if(shape.fac == "label"){
+  }else if(shape.fac == "label"){
     rep('circle', times = length(classes))
   }else{
     as.factor(mSet$dataSet$covars[,..shape.fac][[1]])
@@ -890,23 +889,25 @@ plotPCA.3d <- function(mSet,
       zc=df[row, pcz]
 
       # --- plot ellipse ---
-      o <- rgl::ellipse3d(cov(cbind(xc,yc,zc)),
-                          centre=c(mean(xc),
-                                   mean(yc),
-                                   mean(zc)),
-                          level = 0.95)
-      mesh <- c(list(x = o$vb[1, o$ib]/o$vb[4, o$ib],
-                     y = o$vb[2, o$ib]/o$vb[4, o$ib],
-                     z = o$vb[3, o$ib]/o$vb[4, o$ib]))
-      plots = plots %>% add_trace(
-        x=mesh$x,
-        y=mesh$y,
-        z=mesh$z,
-        type='mesh3d',
-        alphahull=0,
-        opacity=0.1,
-        hoverinfo="none"
-      )
+      try({
+        o <- rgl::ellipse3d(cov(cbind(xc,yc,zc)),
+                            centre=c(mean(xc),
+                                     mean(yc),
+                                     mean(zc)),
+                            level = 0.95)
+        mesh <- c(list(x = o$vb[1, o$ib]/o$vb[4, o$ib],
+                       y = o$vb[2, o$ib]/o$vb[4, o$ib],
+                       z = o$vb[3, o$ib]/o$vb[4, o$ib]))
+        plots = plots %>% add_trace(
+          x=mesh$x,
+          y=mesh$y,
+          z=mesh$z,
+          type='mesh3d',
+          alphahull=0,
+          opacity=0.1,
+          hoverinfo="none"
+        )
+      })
     }
     adj_plot <<- plotly_build(plots)
     rgbcols <- toRGB(cols)
@@ -1045,7 +1046,7 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols = global$vectors$mycols, 
                            text=variable,
                            fill=group,
                            color=group), alpha=0.7)+
-    stat_ellipse(geom = "polygon", aes(fill=group), alpha = 0.3) +
+    stat_ellipse(geom = "polygon", aes(fill=group), alpha = 0.3,level = .95) +
     plot.theme() +
     theme(legend.position="none",
           axis.text=element_text(size=global$constants$font.aes$ax.num.size),
@@ -1070,8 +1071,8 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols = global$vectors$mycols, 
 
 ggPlotVenn <- function(mSet,
                        venn_yes,
-                       top=100,
-                       cols=global$vectors$mycols,
+                       top = 100,
+                       cols = global$vectors$mycols,
                        cf = global$functions$color.functions[[getOptions()$gspec]],
                        plotlyfy=TRUE){
 
