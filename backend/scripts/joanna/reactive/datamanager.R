@@ -7,16 +7,20 @@ observe({
     NULL # if not reloading anything, nevermind
   }else{
     if(!exists("mSet")){
+      print("no exist mset T_T")
       NULL
     }else{
       switch(datamanager$reload,
              general = {
+               print("Reloading general features...")
                # change interface
                if(mSet$dataSet$cls.num <= 1){
+                 print("null...")
                  interface$mode <- NULL }
                else if(mSet$dataSet$cls.num == 2){
                  interface$mode <- "bivar"}
                else{
+                 print("multivariate mode...")
                  interface$mode <- "multivar"}
                # reload sidebar
                output$curr_name <- renderText({mSet$dataSet$cls.name})
@@ -435,10 +439,8 @@ observe({
                      }
 
                    })
-
                    # save the order of mzs for later clicking functionality
                    global$vectors$heatmap <<- hmap$x$layout$yaxis3$ticktext
-
                    # return
                    hmap
                  }else{

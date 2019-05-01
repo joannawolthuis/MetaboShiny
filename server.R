@@ -436,6 +436,16 @@ shinyServer(function(input, output, session) {
       save(mSet, file = fn)
     })
   })
+  
+  observeEvent(input$load_mset, {
+    # load mset
+    withProgress({
+      fn <- paste0(tools::file_path_sans_ext(global$paths$patdb), ".metshi")
+      load(fn)
+    },env = .GlobalEnv)
+    print("loading...")
+    datamanager$reload <- "general"
+  })
 
   observeEvent(input$ml_train_ss, {
     keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]

@@ -863,6 +863,7 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
            div(class="line")
            ,footer=fluidRow(hr(),
                             actionButton("show_window", label="", icon = icon("map-marked")),
+                            actionButton("load_mset", label="", icon = icon("folder-open")),
                             actionButton("save_mset", label="", icon = icon("save")),
                             align="center")
                                                                       )

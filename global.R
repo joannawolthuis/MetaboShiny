@@ -512,8 +512,3 @@ fn <- paste0(tools::file_path_sans_ext(global$paths$patdb), ".metshi")
 
 print("loaded scripts!")
 
-if(file.exists(fn) & !exists("mSet")){
-  print("loading existing mset ..")
-  load(fn)
-  print(".. done!")
-}
