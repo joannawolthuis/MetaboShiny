@@ -5,8 +5,6 @@ It takes care of installing packages necessary for
 MetaboShiny to even start.
 "
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 #' Function to install packages, either through regular method or through downloading from git directly
 #' @param package package name to install, either CRAN or bioconductor
 install.if.not <- function(package){
@@ -29,7 +27,6 @@ install.if.not <- function(package){
 
 # Install R packages that are required
 # TODO: add further package if you need!
-
 needed.packages <- c("BiocManager", "shiny", "shinydashboard", "httr", "curl", "git2r", "devtools",
                      "pacman", "gsubfn", "DT", "R.utils", "data.table", "shinyFiles",
                      "shinyBS", "rhandsontable", "XML", "colorRamps", "enviPat", "shinyalert",
@@ -61,7 +58,6 @@ if(length(missing.packages)>0){
 }
 
 # make metaboshiny_storage dir in home first..
-# docker run -p 8080:8080 --mount src=~/Documents/MetaboShiny,target=/userfiles/,type=bind --rm -it metaboshiny/master /bin/bash
 # docker run -p 8080:8080 -v ~/Documents/MetaboShiny/:/userfiles/:cached --rm -it metaboshiny/master /bin/bash
 
 # packages needed to start up
@@ -75,11 +71,13 @@ for(package in git.packages){
 
 library(httr)
 
-options('unzip.unzip' = getOption("unzip"), 
-        'download.file.extra' = "--insecure", 
-        'download.file.method' = 'curl')
+# rjava.so error.. or rdb corrupt.. 'sudo R CMD javareconf'
 
 runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
+
+options('unzip.unzip' = getOption("unzip"), 
+        'download.file.extra' = switch(runmode, docker="--insecure",local=""),  # bad but only way to have internet in docker...
+        'download.file.method' = 'curl')
 
 opt.loc <<- if(runmode == 'local') '~/Documents/MetaboShiny/user_options_local.txt' else '/userfiles/user_options_docker.txt'
 

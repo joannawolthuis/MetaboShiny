@@ -121,11 +121,6 @@ shinyServer(function(input, output, session) {
   observe({
 
     # hide all tabs by default, easier to hide them and then make visible selectively
-    # hide.tabs <- c("inf", "pca", "plsda",
-    #                "tt", "fc", "aov",
-    #                "meba", "asca", "ml",
-    #                "volc", "heatmap", "enrich",
-    #                "venn")
 
     hide.tabs <- list(
       list("statistics", "inf"),
@@ -148,7 +143,7 @@ shinyServer(function(input, output, session) {
     if(is.null(interface$mode)) {
       show.tabs <- hide.tabs[1]
     }else if(interface$mode == 'multivar'){
-      show.tabs <- hide.tabs[c(1,2,6,8,9,13)]
+      show.tabs <- hide.tabs[c(1,2,6,7,9,10,13)]
       #show.tabs <- c("inf","pca", "aov", "heatmap", "enrich", "venn")
     }else if(interface$mode == 'bivar'){
       show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13)]
@@ -163,7 +158,9 @@ shinyServer(function(input, output, session) {
 
     # hide all the tabs to begin with
     for(tab in hide.tabs){
-      hideTab(inputId = unlist(tab)[1], unlist(tab)[2], session = session)
+      hideTab(inputId = unlist(tab)[1], 
+              unlist(tab)[2], 
+              session = session)
     }
 
     i=1
@@ -226,25 +223,15 @@ shinyServer(function(input, output, session) {
 
   # init all observers
   for(fp in list.files("./backend/scripts/joanna/reactive", full.names = T)){
-    print(paste("Loading:", fp))
+    #print(paste("Loading:", fp))
     source(fp, local = T)
   }
 
   # triggered when user enters the statistics tab
-  observeEvent(input$statistics, {
-    # check if an mset is present, otherwise abort
-    if(!exists("mSet")) return(NULL)
-    print(input$statistics)
-    # depending on the present tab, perform analyses accordingly
-    if(input$statistics %in% c("ml", "venn")){
-      datamanager$reload <- input$statistics
-    }
-  })
 
   observeEvent(input$dimred, {
     # check if an mset is present, otherwise abort
     if(!exists("mSet")) return(NULL)
-    print(input$dimred)
     # depending on the present tab, perform analyses accordingly
     if(input$dimred %not in% names(mSet$analSet)){
       statsmanager$calculate <- input$dimred
@@ -255,7 +242,6 @@ shinyServer(function(input, output, session) {
   observeEvent(input$permz, {
     # check if an mset is present, otherwise abort
     if(!exists("mSet")) return(NULL)
-    print(input$permz)
     # depending on the present tab, perform analyses accordingly
     if(input$permz %not in% names(mSet$analSet)){
       statsmanager$calculate <- input$permz
@@ -266,7 +252,6 @@ shinyServer(function(input, output, session) {
   observeEvent(input$overview, {
     # check if an mset is present, otherwise abort
     if(!exists("mSet")) return(NULL)
-    print(input$overview)
     # depending on the present tab, perform analyses accordingly
     if(input$overview %not in% names(mSet$analSet)){
       statsmanager$calculate <- input$overview

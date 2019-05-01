@@ -94,6 +94,73 @@ build.base.db <- function(dbname=NA,
 
                            db.base
                          },
+                         hsdb = function(dbname, ...){
+                           file.url = "ftp://ftp.nlm.nih.gov/nlmdata/.hsdblease/hsdb.xml.20190328.zip"
+                           base.loc <- file.path(getOptions()$db_dir, "hsdb_source")
+                           if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
+                           zip.file <- file.path(base.loc, "HSDB.zip")
+                           utils::download.file(file.url, zip.file,mode = "w")
+                           utils::unzip(zip.file, exdir = base.loc)
+                           
+                           library(XML)
+                           library(RCurl)
+                           library(rlist)
+                           
+                           input = file.path(base.loc,"hsdb.xml.20190328")
+                           
+                           theurl <- getURL("https://toxnet.nlm.nih.gov/help/hsdbcasrn.html",.opts = list(ssl.verifypeer = FALSE) )
+                           
+                           n = str_count(as.character(theurl), pattern = "cgi-bin")
+                           
+                           db.formatted <- data.frame(
+                             compoundname = rep(NA, n),
+                             baseformula = rep(NA, n),
+                             identifier = rep(NA, n),
+                             structure = rep(NA, n),
+                             charge = rep(NA, n),
+                             description = rep(NA, n)
+                           )
+                           
+                           f = XML::xml
+                           pb <- pbapply::startpb(min = 0, max = n)
+                           
+                           idx <<- 0
+                           
+                           metabolite = function(currNode){
+                             
+                             if(idx %% 1000 == 0){
+                               pbapply::setpb(pb, idx)
+                             }
+                             
+                             print(currNode)
+                             
+                             # - - - - -
+                             idx <<- idx + 1
+                             
+                             # currNode <<- currNode
+                             # 
+                             # db.formatted[idx, "compoundname"] <<- xmlValue(currNode[['name']])
+                             # db.formatted[idx, "identifier"] <<- xmlValue(currNode[['accession']])
+                             # db.formatted[idx, "baseformula"] <<- xmlValue(currNode[['chemical_formula']])
+                             # db.formatted[idx, "structure"] <<- xmlValue(currNode[['smiles']])
+                             # db.formatted[idx, "description"] <<- paste("HMDB:",
+                             #                                            xmlValue(currNode[['cs_description']]),
+                             #                                            "CHEMSPIDER:",
+                             #                                            xmlValue(currNode[['description']]))
+                             # x <- currNode[['predicted_properties']]
+                             # properties <- currNode[['predicted_properties']]
+                             # db.formatted[idx, "charge"] <<- str_match(xmlValue(properties),
+                             #                                           pattern = "formal_charge([+|\\-]\\d*|\\d*)")[,2]
+                           }
+                           
+                           xmlEventParse(input, branches =
+                                           list(metabolite = metabolite))
+                           
+                           # - - - - - - - - - - - -
+                           db.formatted
+                           
+                           
+                         },
                          hmdb = function(dbname){ #ok
                            print("Downloading XML database...")
                            file.url <- "http://www.hmdb.ca/system/downloads/current/hmdb_metabolites.zip"
@@ -1039,7 +1106,7 @@ build.base.db <- function(dbname=NA,
                            if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                            zip.file <- file.path(base.loc, "foodb.zip")
                            utils::download.file(file.url, zip.file, mode = 'wb', method = 'libcurl')
-                           utils::unzip(zip.file, exdir = base.loc)
+                           utils::untar(zip.file, exdir = base.loc)
 
                            base.table <- data.table::fread(file = file.path(base.loc, "foodb_2017_06_29_csv", "compounds.csv"))
 
@@ -1564,8 +1631,8 @@ build.pat.db <- function(db.name,
 load.metadata.csv <- function(path.to.csv,
                               path.to.patdb){
 
-  #path.to.csv = "~/Downloads/marc_data/meta.csv"
-  #path.to.patdb = "~/Downloads/marc_data/marc.db"
+  #path.to.csv = "~/Downloads/maria_meta.csv"
+  #path.to.patdb = "~/Downloads/maria_3ppm.db"
 
   print(path.to.patdb)
   print(path.to.csv)
@@ -1574,6 +1641,7 @@ load.metadata.csv <- function(path.to.csv,
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), path.to.patdb)
 
   csv <- data.table::fread(path.to.csv)
+  colnames(csv) <- tolower(colnames(csv))
   setup <- data.table(group = as.character(unique(csv[,c("group")][[1]])))
 
   RSQLite::dbWriteTable(conn, "setup", setup, overwrite=TRUE) # insert into

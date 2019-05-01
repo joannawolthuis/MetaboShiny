@@ -273,7 +273,7 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                            helpText("working on it")
                                                                                        )
                                                                    )),
-                                                                   tabPanel("per m/z", value = "dimred", icon=icon("fingerprint"),
+                                                                   tabPanel("per m/z", value = "permz", icon=icon("fingerprint"),
                                                                             navbarPage(inverse=F, icon("fingerprint"), id = "permz",
                                                                                        tabPanel("t-test", value="tt",
                                                                                                 fluidRow(plotly::plotlyOutput('tt_specific_plot',width="100%")),
@@ -317,7 +317,7 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                                                                        )
                                                                                        )
                                                                             ),
-                                                                   tabPanel("overview analyses", value = "dimred", icon=icon("globe"),
+                                                                   tabPanel("overview analyses", value = "overview", icon=icon("globe"),
                                                                             navbarPage(inverse=F, icon("globe"), id = "overview",
                                                                                        tabPanel("volcano plot", value="volc",
                                                                                                 fluidRow(plotly::plotlyOutput('volc_plot',width="100%",height="600px") %>% shinycssloaders::withSpinner()),

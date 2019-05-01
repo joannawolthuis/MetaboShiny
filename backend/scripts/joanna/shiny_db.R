@@ -657,6 +657,8 @@ cat("
 
       keep.candidates <- grep(x = candidates, pattern = filter, value=T)
 
+      print(keep.candidates)
+      
       res = lapply(keep.candidates, function(formula, row){
 
         checked <- check_chemform(isotopes, formula)
@@ -683,7 +685,7 @@ cat("
                        `%iso` = 100,
                        structure = NA,
                        identifier = "???",
-                       #                     description = "Predicted possible formula for this m/z value.",
+                       # description = "Predicted possible formula for this m/z value.",
                        source = "magicball")
           }
         }
@@ -750,11 +752,11 @@ cat("
 
       pc_tbl <- rbindlist(flattenlist(pc_rows), fill=T)
 
-      checked <- check.chemform.joanna(chemforms = pc_tbl$baseformula, isotopes = isotopes)
-      pc_tbl$baseformula <- checked$new_formula
-
       tbl.merge <- merge(pc_tbl, tbl, by = "baseformula")
 
+      checked <- check.chemform.joanna(chemforms = tbl.merge$baseformula, isotopes = isotopes)
+      tbl.merge$baseformula <- checked$new_formula
+      
       tbl <- tbl.merge[, list(name = name.x, baseformula, adduct, `%iso`, structure = structure.x, description = description)]
 
       }else{
@@ -769,10 +771,15 @@ cat("
 
  # get more info
  has.struct <- which(!is.na(total_tbl$structure))
- iatoms = rcdk::parse.smiles(total_tbl$structure[has.struct])
- tpsas <- sapply(iatoms, rcdk::get.tpsa)
- total_tbl$tpsa <- c(NA)
- total_tbl$tpsa[has.struct] <- tpsas
+ if(length(has.struct) > 0){
+   iatoms = rcdk::parse.smiles(total_tbl$structure[has.struct])
+   tpsas <- sapply(iatoms, rcdk::get.tpsa)
+   total_tbl$tpsa <- c(NA)
+   total_tbl$tpsa[has.struct] <- tpsas
+ }
+ else{
+   total_tbl$tpsa <- c(NA)
+ }
 
  # - - - - - - -
 

@@ -339,7 +339,8 @@ caret.mdls <- caret::getModelInfo()
                    # list of negative adducts
                    neg_adducts = adducts[Ion_mode == "negative",
                                          c("Name")],
-                   wordcloud = list(top = 20)
+                   wordcloud = list(top = 20),
+                   calc_adducts = c("M+H", "M-H")
                  )
                  )
 

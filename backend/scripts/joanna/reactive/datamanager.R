@@ -36,17 +36,19 @@ observe({
                }
                # t-test...
 
-               if("tt" %in% names(mSet$analSet)){
-                 if("V" %in% colnames(mSet$analSet$tt$sig.mat)){
-                   updateCheckboxInput(session, "tt_nonpar", value = T)
+               if(interface$mode == 'bivar'){
+                 if("tt" %in% names(mSet$analSet)){
+                   if("V" %in% colnames(mSet$analSet$tt$sig.mat)){
+                     updateCheckboxInput(session, "tt_nonpar", value = T)
+                   }else{
+                     updateCheckboxInput(session, "tt_nonpar", value = F)
+                   }
                  }else{
+                   print("no tt done yet...")
                    updateCheckboxInput(session, "tt_nonpar", value = F)
                  }
-               }else{
-                 print("no tt done yet...")
-                 updateCheckboxInput(session, "tt_nonpar", value = F)
                }
-
+              
                # show a button with t-test or fold-change analysis if data is bivariate. hide otherwise.
                # TODO: add button for anova/other type of sorting...
                if(mSet$dataSet$cls.num == 2 ){
