@@ -29,7 +29,6 @@ sourceDir <- function(path, ...) {
     source(file.path(path, nm), ...)
     #if(trace) cat("\n")
   }
-
 }
 
 #' Load user options saved in file.
@@ -481,8 +480,17 @@ font.css <<- font.css(options$font1, options$font2, options$font3, options$font4
 # === GOOGLE FONT SUPPORT FOR GGPLOT2 ===
 
 # Download a webfont
+
+error_font = "Comic Sans MS"
+
 lapply(c(options[grepl(pattern = "font", names(options))]), function(font){
-  sysfonts::font_add_google(name = font, family = font, regular.wt = 400, bold.wt = 700)
+  print(font)
+  try({
+    sysfonts::font_add_google(name = font, 
+                              family = font, 
+                              regular.wt = 400, 
+                              bold.wt = 700)
+    })
 })
 
 # Perhaps the only tricky bit is remembering to run the following function to enable webfonts

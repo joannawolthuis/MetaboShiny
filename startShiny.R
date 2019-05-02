@@ -81,7 +81,7 @@ options('unzip.unzip' = getOption("unzip"),
         'download.file.extra' = switch(runmode, docker="--insecure",local=""),  # bad but only way to have internet in docker...
         'download.file.method' = 'curl')
 
-opt.loc <<- if(runmode == 'local') '~/Documents/MetaboShiny/user_options_local.txt' else '/userfiles/user_options_docker.txt'
+opt.loc <<- if(runmode == 'local') '~/MetaboShiny/user_options_local.txt' else '/userfiles/user_options_docker.txt'
 
 optfolder <- dirname(opt.loc)
 
@@ -140,7 +140,7 @@ switch(runmode,
        local = {
          wdir <<- dirname(rstudioapi::getSourceEditorContext()$path) # TODO: make this not break when not running from rstudio
          setwd(wdir)
-         shiny::runApp(".")
+         shiny::runApp(".",launch.browser = F)
        }, 
        docker = {
          shiny::runApp(".",

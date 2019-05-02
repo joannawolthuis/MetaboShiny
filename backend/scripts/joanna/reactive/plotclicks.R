@@ -12,33 +12,33 @@ observeEvent(plotly::event_data("plotly_click"),{
       keep.rows <- which(global$tables$last_matches$adduct == show.adduct)
       shown_matches$table <- global$tables$last_matches[keep.rows,]
     }
-
-    print("!")
-
     return(NULL)
   }
 
   if(input$tab_iden_4 == "pie_db"){
     i = d$pointNumber + 1
     show.db = global$vectors$pie_db[i]
-
     if(nrow(global$tables$last_matches)>0){
       keep.rows <- which(global$tables$last_matches$source == show.db)
       shown_matches$table <- global$tables$last_matches[keep.rows,]
     }
-
-    print("!!")
-
     return(NULL)
-
   }
 
-  print("...")
-
-  # check if we are in a pie chart
-  if(req(input$statistics ) %in% c("tt", "fc", "rf", "aov", "volc")){ # these cases need the same processing and use similar scoring systems
+  curr_tab <- switch(input$statistics,
+                     dimred = {
+                       input$dimred
+                     }, permz = {
+                       input$permz
+                     }, overview = {
+                       input$overview
+                     })
+  
+  print(curr_tab)
+  
+  if(req(curr_tab ) %in% c("tt", "fc", "rf", "aov", "volc")){ # these cases need the same processing and use similar scoring systems
     if('key' %not in% colnames(d)) return(NULL)
-    mzs <- switch(input$statistics,
+    mzs <- switch(curr_tab,
                   tt = names(mSet$analSet$tt$p.value),
                   fc = names(mSet$analSet$fc$fc.log),
                   aov = switch(input$timecourse_trigger,
@@ -49,13 +49,13 @@ observeEvent(plotly::event_data("plotly_click"),{
     if(d$key %not in% mzs) return(NULL)
     curr_cpd <<- d$key
     # - return -
-    output[[paste0(input$statistics, "_specific_plot")]] <- plotly::renderPlotly({
+    output[[paste0(curr_tab, "_specific_plot")]] <- plotly::renderPlotly({
       # --- ggplot ---
       ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions()$gspec]],
                     styles = input$ggplot_sum_style, add_stats = input$ggplot_sum_stats,
                     col.fac = input$col_var, txt.fac = input$txt_var)
     })
-  }else if(req(input$statistics ) == "pca"){ # deprecated - used to hide and show certain groups
+  }else if(req(curr_tab) == "pca"){ # deprecated - used to hide and show certain groups
     if(!"z" %in% names(d)){
       which_group = 1
       which_group <- d$curveNumber + 1
@@ -72,7 +72,7 @@ observeEvent(plotly::event_data("plotly_click"),{
       pca_plot$x$attrs[[traceLoc]] <- scatter
       pca_plot <<- pca_plot
       output$plot_pca <- plotly::renderPlotly({pca_plot})
-    }}else if(req(input$statistics ) == "ml"){ # makes ROC curves and boxplots clickable
+    }}else if(req(curr_tab) == "ml"){ # makes ROC curves and boxplots clickable
       switch(input$ml_results, roc = { # if roc, check the curve numbers of the roc plot
         attempt = d$curveNumber - 1
         xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
@@ -84,7 +84,10 @@ observeEvent(plotly::event_data("plotly_click"),{
             imp <- as.data.table(caret::varImp(model)$importance, keep.rownames = T)
             colnames(imp) <- c("mz", "importance")
             imp <- imp[importance > 0,]
-            global$tables$ml_roc <<- data.frame(importance = imp$importance, row.names = gsub(imp$mz, pattern = "`|`", replacement=""))
+            global$tables$ml_roc <<- data.frame(importance = imp$importance, 
+                                                row.names = gsub(imp$mz, 
+                                                                 pattern = "`|`", 
+                                                                 replacement=""))
             DT::datatable(global$tables$ml_roc,
                           selection = 'single',
                           autoHideNavigation = T,
@@ -93,7 +96,7 @@ observeEvent(plotly::event_data("plotly_click"),{
         }
       }, bar = { # for bar plot just grab the # bar clicked
         curr_cpd <<- as.character(global$tables$ml_bar[d$x,"mz"][[1]])
-      })}else if(grepl(pattern = "heatmap", x = input$statistics)){ # heatmap requires the table used to make it saved to global (hmap_mzs)
+      })}else if(grepl(pattern = "heatmap", x = curr_tab)){ # heatmap requires the table used to make it saved to global (hmap_mzs)
         req(global$vectors$heatmap)
         if(d$y > length(global$vectors$heatmap)) return(NULL)
         curr_cpd <<- global$vectors$heatmap[d$y]

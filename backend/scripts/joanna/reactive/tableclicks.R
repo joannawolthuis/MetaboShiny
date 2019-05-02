@@ -26,71 +26,78 @@ lapply(unique(res.update.tables), FUN=function(table){
   observeEvent(input[[paste0(table, "_tab_rows_selected")]], {
     curr_row = input[[paste0(table, "_tab_rows_selected")]]
     # do nothing if not clicked yet, or the clicked cell is not in the 1st column
+    
     if (is.null(curr_row)) return()
-    # get current selected compound from the original table (needs to be available in global env)
-    curr_cpd <<- data.table::as.data.table(switch(table,
-                                                  tt = mSet$analSet$tt$sig.mat,
-                                                  fc = mSet$analSet$fc$sig.mat,
-                                                  pca_load = mSet$analSet$pca$rotation,
-                                                  plsda_load = mSet$analSet$plsda$vip.mat,
-                                                  ml = global$tables$ml_roc, #TODO: fix this, now in global
-                                                  asca = mSet$analSet$asca$sig.list$Model.ab,
-                                                  aov = {
-                                                    if(!is.null(input$timecourse_trigger)){
-                                                      switch(input$timecourse_trigger,
-                                                             mSet$analSet$aov2$sig.mat,
-                                                             mSet$analSet$aov$sig.mat)
-                                                    }else{
-                                                      mSet$analSet$aov$sig.mat
-                                                    }
-                                                  },
-                                                  rf = vip.score,
-                                                  enrich_pw = enrich_overview_tab,
-                                                  meba = mSet$analSet$MB$stats,
-                                                  plsda_vip = plsda_tab,
-                                                  mummi_detail = global$tables$mummi_detail,
-                                                  venn = global$tables$venn_overlap), keep.rownames = T)[curr_row, rn]
-    # print current compound in sidebar
-    output$curr_cpd <- renderText(curr_cpd)
 
-    # make miniplot for sidebar with current compound
-    output$curr_plot <- plotly::renderPlotly({
-      # --- ggplot ---
-      ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions()$gspec]],
-                    styles = input$ggplot_sum_style,
-                    add_stats = input$ggplot_sum_stats, col.fac = input$col_var,txt.fac = input$txt_var)
-    })
-
-    outplot_name <- paste0(table, "_specific_plot")
-
-    # send plot to relevant spot in UI
-    output[[outplot_name]] <- plotly::renderPlotly({
-      # --- ggplot ---
-      if(table == 'meba'){ # meba needs a split by time
-        ggplotMeba(curr_cpd, draw.average = T, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions()$gspec]])
-      }else if(table == 'asca'){ # asca needs a split by time
-        ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions()$gspec]], mode = "ts",
+    res_tbl <- data.table::as.data.table(switch(table,
+                                                tt = mSet$analSet$tt$sig.mat,
+                                                fc = mSet$analSet$fc$sig.mat,
+                                                pca_load = mSet$analSet$pca$rotation,
+                                                plsda_load = mSet$analSet$plsda$vip.mat,
+                                                ml = global$tables$ml_roc, #TODO: fix this, now in global
+                                                asca = mSet$analSet$asca$sig.list$Model.ab,
+                                                aov = {
+                                                  if(!is.null(input$timecourse_trigger)){
+                                                    switch(input$timecourse_trigger,
+                                                           mSet$analSet$aov2$sig.mat,
+                                                           mSet$analSet$aov$sig.mat)
+                                                  }else{
+                                                    mSet$analSet$aov$sig.mat
+                                                  }
+                                                },
+                                                rf = vip.score,
+                                                enrich_pw = enrich_overview_tab,
+                                                meba = mSet$analSet$MB$stats,
+                                                plsda_vip = plsda_tab,
+                                                mummi_detail = global$tables$mummi_detail,
+                                                venn = global$tables$venn_overlap), keep.rownames = T)
+    if(nrow(res_tbl) > 0){
+      
+      # get current selected compound from the original table (needs to be available in global env)
+      curr_cpd <<- res_tbl[curr_row, rn]
+      # print current compound in sidebar
+      output$curr_cpd <- renderText(curr_cpd)
+      
+      # make miniplot for sidebar with current compound
+      output$curr_plot <- plotly::renderPlotly({
+        # --- ggplot ---
+        ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions()$gspec]],
                       styles = input$ggplot_sum_style,
-                      add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var)
-      }else{ # regular boxplot
-        if(!is.null(input$timecourse_trigger)){
-          if(input$timecourse_trigger){
-            ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions()$gspec]], mode = "ts",
-                          styles = input$ggplot_sum_style,
-                          add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var)
+                      add_stats = input$ggplot_sum_stats, col.fac = input$col_var,txt.fac = input$txt_var)
+      })
+      
+      outplot_name <- paste0(table, "_specific_plot")
+      
+      # send plot to relevant spot in UI
+      output[[outplot_name]] <- plotly::renderPlotly({
+        # --- ggplot ---
+        if(table == 'meba'){ # meba needs a split by time
+          ggplotMeba(curr_cpd, draw.average = T, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions()$gspec]])
+        }else if(table == 'asca'){ # asca needs a split by time
+          ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions()$gspec]], mode = "ts",
+                        styles = input$ggplot_sum_style,
+                        add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var)
+        }else{ # regular boxplot
+          if(!is.null(input$timecourse_trigger)){
+            if(input$timecourse_trigger){
+              ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions()$gspec]], mode = "ts",
+                            styles = input$ggplot_sum_style,
+                            add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var)
+            }else{
+              ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions()$gspec]],
+                            styles = input$ggplot_sum_style,
+                            add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var)
+            }
           }else{
             ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions()$gspec]],
                           styles = input$ggplot_sum_style,
                           add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var)
           }
-        }else{
-          ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions()$gspec]],
-                        styles = input$ggplot_sum_style,
-                        add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var)
+          
         }
-
-      }
-    })
+      })
+    }
+    
   })
 })
 

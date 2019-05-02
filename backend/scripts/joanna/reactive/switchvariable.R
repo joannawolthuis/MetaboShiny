@@ -37,22 +37,10 @@ observeEvent(input$change_cls, {
   }  
   
   datamanager$reload <- "general" 
-  
-  if(mSet$dataSet$cls.num <= 1){
-    interface$mode <- NULL } 
-  else if(mSet$dataSet$cls.num == 2){
-    interface$mode <- "bivar"}
-  else{
-    interface$mode <- "multivar"}
-  
+
   output$curr_name <- renderText({mSet$dataSet$cls.name}) 
 
-  updateNavbarPage(session, "statistics", selected = "pca")
+  updateNavbarPage(session, "statistics", selected = "inf")
 
-  if(!("pca" %in% names(mSet$analSet))){
-    statsmanager$calculate <- "pca"
-  }
-  
-  datamanager$reload <- "pca"
 
 })
