@@ -447,6 +447,11 @@ shinyServer(function(input, output, session) {
     print("loading...")
     datamanager$reload <- "general"
   })
+  
+  observeEvent(input$debug, {
+    dput(isolate(as.list(input)))
+  })
+    
 
   observeEvent(input$ml_train_ss, {
     keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]

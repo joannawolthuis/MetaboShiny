@@ -19,13 +19,14 @@ observeEvent(input$change_subset, {
     mSet$dataSet$cls.name <<- mset_name
     keep.samples <<- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]
     mSet$dataSet$covars <<- mSet$dataSet$covars[sample %in% keep.samples]
-    keep.log.procr <<- rownames(mSet$dataSet$procr) %in% keep.samples
-    mSet$dataSet$procr <<- mSet$dataSet$procr[keep.log.procr,]
+    keep.log.proc <<- rownames(mSet$dataSet$proc) %in% keep.samples
+    mSet$dataSet$proc <<- mSet$dataSet$proc[keep.log.proc,]
     keep.log.norm <<- rownames(mSet$dataSet$norm) %in% keep.samples
     mSet$dataSet$norm <<- mSet$dataSet$norm[keep.log.norm,]
     keep.log.preproc <<- rownames(mSet$dataSet$preproc) %in% keep.samples
     mSet$dataSet$preproc <<- mSet$dataSet$preproc[keep.log.preproc,]
-    mSet$dataSet$cls <<- mSet$dataSet$cls[keep.log.norm]
+    mSet$dataSet$cls <<- droplevels(mSet$dataSet$cls[keep.log.norm])
+    mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
     
     if("facA" %in% names(mSet$dataSet)){
       mSet$dataSet$facA <<- mSet$dataSet$facA[keep.log.norm]
@@ -87,6 +88,8 @@ observeEvent(input$reset_subset, {
     mSet$analSet <<- mSet$storage[[keep]]$analysis
     # change current variable of interest to user pick from covars table
     mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,main.var, with=F][[1]])
+    levels(mSet$dataSet$cls) <<- droplevels(mSet$dataSet$cls)
+    
     # adjust bivariate/multivariate (2, >2)...
     mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
     mSet$dataSet$cls.name <<- mset_name

@@ -210,3 +210,4 @@ observe({
     statsmanager$calculate <- NULL # set reloading to 'off'
   }
 })
+

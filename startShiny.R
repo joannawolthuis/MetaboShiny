@@ -59,6 +59,8 @@ if(length(missing.packages)>0){
 
 # make metaboshiny_storage dir in home first..
 # docker run -p 8080:8080 -v ~/Documents/MetaboShiny/:/userfiles/:cached --rm -it metaboshiny/master /bin/bash
+# with autorun
+# docker run -p 8080:8080 -v ~/MetaboShiny/:/userfiles/:cached --rm metaboshiny/master Rscript startShiny.R
 
 # packages needed to start up
 git.packages <<- c("MetaboAnalystR",

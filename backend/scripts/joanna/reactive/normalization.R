@@ -164,7 +164,7 @@ observeEvent(input$initialize, {
           }
           x
         })
-        mSet$dataSet$procr <- t(new.mat)
+        mSet$dataSet$proc <- t(new.mat)
       }
       else if(req(input$miss_type ) == "pmm"){ # use predictive mean matching
         # TODO: re-enable, it's very slow
@@ -194,8 +194,8 @@ observeEvent(input$initialize, {
                                       #ntree = 10,
                                       mtry = mtry)
         
-        mSet$dataSet$procr <- imp$ximp
-        rownames(mSet$dataSet$procr) <- rownames(mSet$dataSet$preproc)
+        mSet$dataSet$proc <- imp$ximp
+        rownames(mSet$dataSet$proc) <- rownames(mSet$dataSet$preproc)
         # - - - - - - - - - - - - 
       }else{
         # use built in imputation methods, knn means etc.
