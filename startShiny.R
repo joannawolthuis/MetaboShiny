@@ -83,59 +83,62 @@ options('unzip.unzip' = getOption("unzip"),
 
 opt.loc <<- if(runmode == 'local') '~/MetaboShiny/user_options_local.txt' else '/userfiles/user_options_docker.txt'
 
+print(opt.loc)
 optfolder <- dirname(opt.loc)
 
 if(!dir.exists(optfolder)) dir.create(optfolder,recursive = T)
 
 if(!file.exists(opt.loc)){
+  print("creating options file...")
   # write options file if it doesn't exist yet
   contents <- switch(runmode,
-         local = {'db_dir = ~/Documents/MetaboShiny/databases
-                  work_dir = ~/Documents/MetaboShiny/userfiles
-                  proj_name = MY_METSHI
-                  ppm = 2
-                  packages_installed = Y
-                  font1 = Pacifico
-                  font2 = Pacifico
-                  font3 = Open Sans
-                  font4 = Open Sans
-                  col1 = #000000
-                  col2 = #DBDBDB
-                  col3 = #FFFFFF
-                  col4 = #FFFFFF
-                  size1 = 50
-                  size2 = 20
-                  size3 = 15
-                  size4 = 11
-                  taskbar_image = gemmy_rainbow.png
-                  gtheme = classic
-                  gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
-                  gspec = RdBu'}, 
+         local = {'db_dir = ~/MetaboShiny/databases
+work_dir = ~/MetaboShiny/userfiles
+proj_name = MY_METSHI
+ppm = 2
+packages_installed = Y
+font1 = Pacifico
+font2 = Pacifico
+font3 = Open Sans
+font4 = Open Sans
+col1 = #000000
+col2 = #DBDBDB
+col3 = #FFFFFF
+col4 = #FFFFFF
+size1 = 50
+size2 = 20
+size3 = 15
+size4 = 11
+taskbar_image = gemmy_rainbow.png
+gtheme = classic
+gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
+gspec = RdBu'}, 
          docker = {
                   'db_dir = /userfiles/databases
-                  work_dir = /userfiles/userfiles
-                  proj_name = MY_METSHI
-                  ppm = 2
-                  packages_installed = Y
-                  font1 = Pacifico
-                  font2 = Pacifico
-                  font3 = Open Sans
-                  font4 = Open Sans
-                  col1 = #000000
-                  col2 = #DBDBDB
-                  col3 = #FFFFFF
-                  col4 = #FFFFFF
-                  size1 = 40
-                  size2 = 20
-                  size3 = 15
-                  size4 = 11
-                  taskbar_image = gemmy_rainbow.png
-                  gtheme = classic
-                  gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
-                  gspec = RdBu'})
+work_dir = /userfiles/saves
+proj_name = MY_METSHI
+ppm = 2
+packages_installed = Y
+font1 = Pacifico
+font2 = Pacifico
+font3 = Open Sans
+font4 = Open Sans
+col1 = #000000
+col2 = #DBDBDB
+col3 = #FFFFFF
+col4 = #FFFFFF
+size1 = 40
+size2 = 20
+size3 = 15
+size4 = 11
+taskbar_image = gemmy_rainbow.png
+gtheme = classic
+gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
+gspec = RdBu'})
   writeLines(contents, opt.loc)
 }
 
+print(runmode)
 switch(runmode,
        local = {
          wdir <<- dirname(rstudioapi::getSourceEditorContext()$path) # TODO: make this not break when not running from rstudio

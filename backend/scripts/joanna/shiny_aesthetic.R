@@ -17,7 +17,7 @@ nav.bar.css <- function(RGB.bg = "#ffc8c2",
   filled
   }
 
-font.css <- function(font.h1 = "Press Start 2P",
+app.font.css <- function(font.h1 = "Press Start 2P",
                      font.h2 = "Raleway bold",
                      font.h3 = "Raleway",
                      font.body = "Raleway serif",

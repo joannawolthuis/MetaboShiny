@@ -467,7 +467,7 @@ sort_order <<- unlist(c(global$vectors$pos_adducts$Name, global$vectors$neg_addu
 
 # generate CSS for the interface based on user settings for colours, fonts etc.
 bar.css <<- nav.bar.css(options$col1, options$col2, options$col3, options$col4)
-font.css <<- font.css(options$font1, options$font2, options$font3, options$font4,
+font.css <<- app.font.css(options$font1, options$font2, options$font3, options$font4,
                       options$size1, options$size2, options$size3, options$size4)
 
 # google fonts
