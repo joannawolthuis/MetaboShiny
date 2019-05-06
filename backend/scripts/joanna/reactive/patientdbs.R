@@ -8,6 +8,24 @@ observeEvent(input$create_db,{
 
     shiny::setProgress(session=session, value= .1)
 
+    proj_name = input$proj_name_new
+    
+    updateSelectizeInput(session = session,
+                         inputId = "proj_name",
+                         choices = c(global$vectors$project_names, proj_name))
+    
+    updateSelectizeInput(session = session,
+                         inputId = "proj_name",
+                         selected = proj_name)
+    
+    global$paths$patdb <<- file.path(getOptions()$work_dir, paste0(proj_name,".db", sep=""))
+    # change project name in user options file
+    setOption(key="proj_name", value=proj_name)
+    # print the changed name in the UI
+    output$proj_name <<- renderText(proj_name)
+    # change path CSV should be / is saved to in session
+    global$paths$csv_loc <<- file.path(getOptions()$work_dir, paste0(getOptions()$proj_name,".csv"))
+    
     switch(input$new_proj,
            # if loading in a .db file... (FAST, MOSTLY FOR ADMINS USING HPC)
            `From DB` = {
@@ -35,23 +53,6 @@ observeEvent(input$create_db,{
            },
            # if loading in .csv files...
            `From CSV` = {
-
-             proj_name = input$proj_name_new
-             updateSelectizeInput(session = session,
-                                  inputId = "proj_name",
-                                  choices = c(global$vectors$project_names, proj_name))
-
-             updateSelectizeInput(session = session,
-                                  inputId = "proj_name",
-                                  selected = proj_name)
-
-             global$paths$patdb <<- file.path(getOptions()$work_dir, paste0(proj_name,".db", sep=""))
-             # change project name in user options file
-             setOption(key="proj_name", value=proj_name)
-             # print the changed name in the UI
-             output$proj_name <<- renderText(proj_name)
-             # change path CSV should be / is saved to in session
-             global$paths$csv_loc <<- file.path(getOptions()$work_dir, paste0(getOptions()$proj_name,".csv"))
 
              # build patient db from csv files with a given ppm error margin
              build.pat.db(global$paths$patdb,

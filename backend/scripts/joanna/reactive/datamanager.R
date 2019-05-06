@@ -160,23 +160,23 @@ observe({
                if("pca" %in% names(mSet$analSet)){
                  # create PCA legend plot
                  # TODO: re-enable this plot, it was clickable so you could filter out certain groups
-                 output$pca_legend <- plotly::renderPlotly({
-                   frame <- data.table(x = c(1),
-                                       y = mSet$dataSet$cls.num)
-                   p <- ggplot(data=frame,
-                               aes(x,
-                                   y,
-                                   color=factor(y),
-                                   fill=factor(y)
-                               )
-                   ) +
-                     geom_point(shape = 21, size = 5, stroke = 5) +
-                     scale_colour_manual(values=global$vectors$mycols) +
-                     theme_void() +
-                     theme(legend.position="none")
-                   # --- return ---
-                   ggplotly(p, tooltip = NULL) %>% config(displayModeBar = F)
-                 })
+                 # output$pca_legend <- plotly::renderPlotly({
+                 #   frame <- data.table(x = c(1),
+                 #                       y = mSet$dataSet$cls.num)
+                 #   p <- ggplot(data=frame,
+                 #               aes(x,
+                 #                   y,
+                 #                   color=factor(y),
+                 #                   fill=factor(y)
+                 #               )
+                 #   ) +
+                 #     geom_point(shape = 21, size = 5, stroke = 5) +
+                 #     scale_colour_manual(values=global$vectors$mycols) +
+                 #     theme_void() +
+                 #     theme(legend.position="none")
+                 #   # --- return ---
+                 #   ggplotly(p, tooltip = NULL) %>% config(displayModeBar = F)
+                 # })
                  # render PCA variance per PC table for UI
                  output$pca_tab <-DT::renderDataTable({
                    pca.table <- as.data.table(round(mSet$analSet$pca$variance * 100.00,
@@ -210,9 +210,6 @@ observe({
                  }else{
                    "pca"
                  }
-
-                 # - - - - -
-                 print(input$pca_2d3d)
 
                  if(input$pca_2d3d){ # check if switch button is in 2d or 3d mode
                    # render 2d plot

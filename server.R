@@ -144,12 +144,15 @@ shinyServer(function(input, output, session) {
       show.tabs <- hide.tabs[1]
     }else if(interface$mode == 'multivar'){
       show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,13)]
+      heatbutton$status <- NULL
       #show.tabs <- c("inf","pca", "aov", "heatmap", "enrich", "venn")
     }else if(interface$mode == 'bivar'){
       show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13)]
+      heatbutton$status <- "ttfc"
       #show.tabs <- c("inf","pca", "plsda", "tt", "fc", "volc", "heatmap", "ml", "enrich", "venn")
     }else if(interface$mode == 'time'){
       show.tabs <- hide.tabs[c(1,2,4,5,6,7,9,10,13)]
+      heatbutton$status <- "asmb"
       #show.tabs <- c("inf", "pca", "aov", "asca", "meba", "heatmap", "ml", "venn")
     }else{
       show.tabs <- hide.tabs[1]
@@ -449,6 +452,7 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$debug, {
+    input <<- isolate(as.list(input))
     dput(isolate(as.list(input)))
   })
     

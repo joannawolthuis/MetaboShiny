@@ -18,22 +18,24 @@ observe({
   if(exists("curr_cpd")){
     print(curr_cpd)
     print("changing table...")
-    conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb)
-    scanmode <- DBI::dbGetQuery(conn, paste0("SELECT DISTINCT foundinmode FROM mzvals WHERE mzmed LIKE '", curr_cpd, "%'"))[,1]
-    DBI::dbDisconnect(conn)
     
-    print(scanmode)
-    
-    global$vectors$calc_adducts <<- adducts[Ion_mode == scanmode]$Name
-    
-    output$magicball_add_tab <- DT::renderDataTable({
-      DT::datatable(data.table(Adduct = global$vectors$calc_adducts),
-                    selection = list(mode = 'multiple', 
-                                     selected = global$vectors[[paste0(scanmode, "_selected_add")]], target="row"),
-                    options = list(pageLength = 5, dom = 'tp'), 
-                    rownames = F)
-    })
-    
+    if(file.exists(global$paths$patdb)){
+      conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb)
+      scanmode <- DBI::dbGetQuery(conn, paste0("SELECT DISTINCT foundinmode FROM mzvals WHERE mzmed LIKE '", curr_cpd, "%'"))[,1]
+      DBI::dbDisconnect(conn)
+      
+      print(scanmode)
+      
+      global$vectors$calc_adducts <<- adducts[Ion_mode == scanmode]$Name
+      
+      output$magicball_add_tab <- DT::renderDataTable({
+        DT::datatable(data.table(Adduct = global$vectors$calc_adducts),
+                      selection = list(mode = 'multiple', 
+                                       selected = global$vectors[[paste0(scanmode, "_selected_add")]], target="row"),
+                      options = list(pageLength = 5, dom = 'tp'), 
+                      rownames = F)
+      })
+    }
   }
   
 })

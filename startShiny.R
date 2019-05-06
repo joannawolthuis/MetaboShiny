@@ -93,7 +93,7 @@ if(!file.exists(opt.loc)){
   # write options file if it doesn't exist yet
   contents <- switch(runmode,
          local = {'db_dir = ~/MetaboShiny/databases
-work_dir = ~/MetaboShiny/userfiles
+work_dir = ~/MetaboShiny/saves
 proj_name = MY_METSHI
 ppm = 2
 packages_installed = Y
@@ -143,7 +143,7 @@ switch(runmode,
        local = {
          wdir <<- dirname(rstudioapi::getSourceEditorContext()$path) # TODO: make this not break when not running from rstudio
          setwd(wdir)
-         shiny::runApp(".",launch.browser = F)
+         shiny::runApp(".")
        }, 
        docker = {
          shiny::runApp(".",

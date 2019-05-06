@@ -879,6 +879,8 @@ plotPCA.3d <- function(mSet,
 
     plots <- plotly::plot_ly(showlegend = F)
 
+    show.orbs <- c()
+    
     for(class in levels(classes)){
 
       samps <- rownames(mSet$dataSet$norm)[which(classes == class)]
@@ -889,6 +891,7 @@ plotPCA.3d <- function(mSet,
       zc=df[row, pcz]
 
       # --- plot ellipse ---
+      worked = F
       try({
         o <- rgl::ellipse3d(cov(cbind(xc,yc,zc)),
                             centre=c(mean(xc),
@@ -907,10 +910,17 @@ plotPCA.3d <- function(mSet,
           opacity=0.1,
           hoverinfo="none"
         )
+        worked = T
       })
+      
+      show.orbs <- c(show.orbs, worked)
+      
     }
+    
+    print(show.orbs)
+    
     adj_plot <<- plotly_build(plots)
-    rgbcols <- toRGB(cols)
+    rgbcols <- toRGB(cols[show.orbs])
     c = 1
     for(i in seq_along(adj_plot$x$data)){
       item = adj_plot$x$data[[i]]

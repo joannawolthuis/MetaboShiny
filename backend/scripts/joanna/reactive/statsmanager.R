@@ -41,8 +41,8 @@ observe({
            },
            heatmap = {
              # reset
-             mSet$analSet$heatmap <<- NULL
              
+             mSet$analSet$heatmap <<- NULL
              if(!is.null(input$heatmode)){
 
                # change top hits used in heatmap depending on time series / bivariate / multivariate mode

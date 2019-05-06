@@ -53,7 +53,7 @@ navbarPage(inverse=TRUE,title=div(div(h1("MetaboShiny"),class="outlined"), tags$
                                          ),
                                          fluidRow(
                                            column(3, align="center",
-                                                  shinyFilesButton('database', 'DATABASE', 'Please select an database file', FALSE)
+                                                  shinyFilesButton('database', 'DATABASE', 'Please select a database file', FALSE)
                                            ),
                                            column(3, align="center",
                                                   shinyFilesButton('metadata', 'METADATA', 'Please select a metadata file', FALSE)

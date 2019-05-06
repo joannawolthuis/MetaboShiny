@@ -37,19 +37,16 @@ output$heatbutton <- renderUI({
 })
 
 observeEvent(input$heatmode, {
-  print("lol 1")
   statsmanager$calculate <- "heatmap"
   datamanager$reload <- "heatmap"
 },ignoreInit = TRUE, ignoreNULL = T)
 
 observeEvent(input$heatsign, {
-  print("lol 2")
   statsmanager$calculate <- "heatmap"
   datamanager$reload <- "heatmap"
 },ignoreInit = TRUE, ignoreNULL = T)
 
 observeEvent(input$heatmap_topn, {
-  print("lol 3")
   if(!is.null(mSet$analSet$heatmap)){
     datamanager$reload <- "heatmap" # just reload
   }
