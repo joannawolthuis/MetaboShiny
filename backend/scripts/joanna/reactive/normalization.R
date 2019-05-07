@@ -382,9 +382,6 @@ observeEvent(input$initialize, {
     # set name of variable of interest
     mSet$dataSet$cls.name <- condition
     
-    # save mset to global environment
-    mSet <<- mSet
-    
     # tell datamanager that an mset is present 
     datamanager$reload <- "general"    
     
@@ -406,10 +403,13 @@ observeEvent(input$initialize, {
     shiny::setProgress(session=session, value= .8)
     
     # perform PCA since it's ALWAYS the first tab
-    mSet <<- PCA.Anal(mSet) # perform PCA analysis
+    mSet <- PCA.Anal(mSet) # perform PCA analysis
     
     # save the used adducts to mSet
     shiny::setProgress(session=session, value= .9)
+    
+    # return?
+    mSet <<- mSet
     
   })
 })

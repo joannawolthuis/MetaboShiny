@@ -905,3 +905,15 @@ info_from_cids <- function(cids,
   res
 
 }
+
+get_user_role <- function(username, password){
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), "users.db") # change this to proper var later
+  role = RSQLite::dbGetQuery(conn, gsubfn::fn$paste(
+    "SELECT role FROM users WHERE username = '$username' AND password = '$password'"))
+  if(nrow(role) == 0){
+    NULL
+  }else{
+    return(role[1,1])
+  }
+  RSQLite::dbDisconnect(conn)
+}

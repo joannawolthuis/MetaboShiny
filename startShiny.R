@@ -58,7 +58,7 @@ if(length(missing.packages)>0){
 }
 
 # make metaboshiny_storage dir in home first..
-# docker run -p 8080:8080 -v ~/Documents/MetaboShiny/:/userfiles/:cached --rm -it metaboshiny/master /bin/bash
+# docker run -p 8080:8080 -v ~/MetaboShiny/:/userfiles/:cached --rm -it metaboshiny/master /bin/bash
 # with autorun
 # docker run -p 8080:8080 -v ~/MetaboShiny/:/userfiles/:cached --rm metaboshiny/master Rscript startShiny.R
 
@@ -81,64 +81,6 @@ options('unzip.unzip' = getOption("unzip"),
         'download.file.extra' = switch(runmode, docker="--insecure",local=""),  # bad but only way to have internet in docker...
         'download.file.method' = 'curl')
 
-opt.loc <<- if(runmode == 'local') '~/MetaboShiny/user_options_local.txt' else '/userfiles/user_options_docker.txt'
-
-print(opt.loc)
-optfolder <- dirname(opt.loc)
-
-if(!dir.exists(optfolder)) dir.create(optfolder,recursive = T)
-
-if(!file.exists(opt.loc)){
-  print("creating options file...")
-  # write options file if it doesn't exist yet
-  contents <- switch(runmode,
-         local = {'db_dir = ~/MetaboShiny/databases
-work_dir = ~/MetaboShiny/saves
-proj_name = MY_METSHI
-ppm = 2
-packages_installed = Y
-font1 = Pacifico
-font2 = Pacifico
-font3 = Open Sans
-font4 = Open Sans
-col1 = #000000
-col2 = #DBDBDB
-col3 = #FFFFFF
-col4 = #FFFFFF
-size1 = 50
-size2 = 20
-size3 = 15
-size4 = 11
-taskbar_image = gemmy_rainbow.png
-gtheme = classic
-gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
-gspec = RdBu'}, 
-         docker = {
-                  'db_dir = /userfiles/databases
-work_dir = /userfiles/saves
-proj_name = MY_METSHI
-ppm = 2
-packages_installed = Y
-font1 = Pacifico
-font2 = Pacifico
-font3 = Open Sans
-font4 = Open Sans
-col1 = #000000
-col2 = #DBDBDB
-col3 = #FFFFFF
-col4 = #FFFFFF
-size1 = 40
-size2 = 20
-size3 = 15
-size4 = 11
-taskbar_image = gemmy_rainbow.png
-gtheme = classic
-gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
-gspec = RdBu'})
-  writeLines(contents, opt.loc)
-}
-
-print(runmode)
 switch(runmode,
        local = {
          wdir <<- dirname(rstudioapi::getSourceEditorContext()$path) # TODO: make this not break when not running from rstudio

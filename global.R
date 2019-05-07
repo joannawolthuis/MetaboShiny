@@ -37,7 +37,7 @@ sourceDir <- function(path, ...) {
 #'
 #' @param file.loc Path to user options file to read in.
 #' @return R list with keys as option types and values as option values.
-getOptions <- function(file.loc=opt.loc){
+getOptions <- function(file.loc){
   opt_conn <- file(file.loc)
   # ----------------
   options_raw <<- readLines(opt_conn)
@@ -51,6 +51,7 @@ getOptions <- function(file.loc=opt.loc){
   # --- return ---
   options
 }
+
 
 #' Changes an option in the given MetaboShiny user options file.
 #'
@@ -78,9 +79,6 @@ setOption <- function(file.loc=opt.loc, key, value){
   close(opt_conn)
 }
 
-# load in options
-options <- getOptions()
-
 # load adduct table (if you add/remove any adducts, change them in the below file!)
 #adducts <- fread("backend/umcfiles/adducts/AdductTable2.0.csv", header = T)
 adducts <- fread("backend/umcfiles/adducts/AdductTable2.0.csv", header = T) # V2 has di/trimers
@@ -95,8 +93,6 @@ caret.mdls <- caret::getModelInfo()
 # === THE BELOW LIST CONTAINS ALL GLOBAL VARIABLES THAT METABOSHINY CALLS UPON LATER ===
 
   global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people importing their data through csv
-                                  timeseries = FALSE,
-                                  nvars = 2, # Default bivariate setting for statistics
                                   # get all caret models that can do classification and have some kind of importance metric
                                   ml.models = names(caret.mdls)[sapply(1:length(caret.mdls), function(i){
                                     curr.mdl = caret.mdls[[i]]
@@ -118,11 +114,12 @@ caret.mdls <- caret::getModelInfo()
                                   #                     "BatchCorrMetabolomics", "R.utils", "rgl", "glmnet", "TSPred",
                                   #                     "VennDiagram", "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR",
                                   #                     "openxlsx", "doParallel", "missForest", "InterpretMSSpectrum",
-                                  #                     "tm", "RISmed", "qdap", "extrafont", "sysfonts", "gmp", "shadowtext")
+                                  #                     "tm", "RISmed", "qdap", "extrafont", "sysfonts", "gmp", "shadowtext", "rlist")
                                   #), # these packages are listed in the first tab and should include all necessary packages
                                   images = list(list(name = 'load_icon', path = 'www/cute.png', dimensions = c(100, 100)),
                                                 list(name = 'cute_package', path = 'www/cat.png', dimensions = c(80, 80)),
                                                 list(name = 'internal_logo', path = 'www/umcinternal.png', dimensions = c(120, 120)),
+                                                list(name = 'login_header', path = 'www/login_icon.png', dimensions = c(200, 200)),
                                                 list(name = 'noise_logo', path = 'www/umcnoise.png', dimensions = c(120, 120)),
                                                 list(name = 'hmdb_logo', path = 'www/hmdblogo.png', dimensions = c(150, 100)),
                                                 list(name = 'metacyc_logo', path = 'www/metacyc.png', dimensions = c(300, 80)),
@@ -169,12 +166,6 @@ caret.mdls <- caret::getModelInfo()
                                                   ann.size = 20,
                                                   title.size = 25),
                                   db.build.info = list(
-                                    # internal = list(title = "UMC Internal",
-                                    #                  description = "Internal commonly known metabolites",
-                                    #                  image_id = "internal_logo"),
-                                    #  noise = list(title = "UMC Noise",
-                                    #               description = "Internal common pollutants found in DIMS using local method.",
-                                    #               image_id = "noise_logo"),
                                     hmdb = list(title = "HMDB",
                                                 description = "Metabolites commonly found in human biological samples.",
                                                 image_id = "hmdb_logo"),
@@ -190,9 +181,6 @@ caret.mdls <- caret::getModelInfo()
                                     kegg = list(title = "KEGG",
                                                 description = "Large pathway database with info on pathways in various organisms, involved enzymes, and connected disease phenotypes.",
                                                 image_id = "kegg_logo"),
-                                    # pubchem = list(title = "PubChem",
-                                    #                description = "Internal commonly known metabolites",
-                                    #                image_id = "internal_logo"),
                                     smpdb = list(title = "SMPDB",
                                                  description = "Small molecule pathway database. Compounds overlap with HMDB.",
                                                  image_id = "smpdb_logo"),
@@ -387,37 +375,6 @@ caret.mdls <- caret::getModelInfo()
     global$vectors$db_list))
 
 
-# load in custom databases
-has.customs <- dir.exists(file.path(options$db_dir, "custom"))
-
-if(has.customs){
-
-  print("loading custom dbs...")
-
-  customs = list.files(path = file.path(options$db_dir, "custom"),
-                       pattern = "\\.RData")
-
-  dbnames = unique(tools::file_path_sans_ext(customs))
-
-  for(db in dbnames){
-    # add name to global
-    dblist <- global$vectors$db_list
-    dblist <- dblist[-which(dblist == "custom")]
-    if(!(db %in% dblist)){
-      dblist <- c(dblist, db, "custom")
-      global$vectors$db_list <- dblist
-    }
-    metadata.path <- file.path(getOptions()$db_dir, "custom", paste0(db, ".RData"))
-    load(metadata.path)
-
-    # add description to global
-    global$constants$db.build.info[[db]] <- meta.dbpage
-
-    # add image to global
-    maxi = length(global$constants$images)
-    global$constants$images[[maxi + 1]] <- meta.img
-  }
-}
 
 # split <- strsplit(str, split = ",")[[1]]
 # split_words <- gsub(x = split, pattern = " ", replacement = "")
@@ -465,52 +422,6 @@ sardine <- function(content) div(style="display: inline-block;vertical-align:top
 add_idx <- order(c(seq_along(global$vectors$pos_adducts$Name), seq_along(global$vectors$neg_adducts$Name)))
 sort_order <<- unlist(c(global$vectors$pos_adducts$Name, global$vectors$neg_adducts$Name))[add_idx]
 
-# generate CSS for the interface based on user settings for colours, fonts etc.
-bar.css <<- nav.bar.css(options$col1, options$col2, options$col3, options$col4)
-font.css <<- app.font.css(options$font1, options$font2, options$font3, options$font4,
-                      options$size1, options$size2, options$size3, options$size4)
-
-# google fonts
-
-# name = the name of the font in Google's Library (https://fonts.google.com)
-# family = how you want to refer to the font inside R
-# regular.wt = the weight of font used in axis, labels etc.
-# bolt.wt = the weight of font used in the title
-
-# === GOOGLE FONT SUPPORT FOR GGPLOT2 ===
-
-# Download a webfont
-
-error_font = "Comic Sans MS"
-
-lapply(c(options[grepl(pattern = "font", names(options))]), function(font){
-  print(font)
-  try({
-    sysfonts::font_add_google(name = font, 
-                              family = font, 
-                              regular.wt = 400, 
-                              bold.wt = 700)
-    })
-})
-
-# Perhaps the only tricky bit is remembering to run the following function to enable webfonts
-showtext::showtext_auto(enable = T)
-
-# ======================================
-
-# set default plot theme to minimal
-plot.theme <<- ggplot2::theme_minimal
-
-# set taskbar image as set in options
-taskbar_image <<- options$task_img
-
-# parse color options
-global$vectors$mycols <- get.col.map(opt.loc) # colours for discrete sets, like group A vs group B etc.
-global$constants$spectrum <- options$gspec # gradient function for heatmaps, volcano plot etc.
-global$vectors$project_names <- unique(tools::file_path_sans_ext(list.files(options$work_dir, pattern=".csv|.db"))) # the names listed in the 'choose project' tab of options.
-
-# load existing file
-bgcol <<- options$col1
 
 print("loaded scripts!")
 

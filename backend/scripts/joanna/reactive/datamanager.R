@@ -6,10 +6,7 @@ observe({
   if(is.null(datamanager$reload)){
     NULL # if not reloading anything, nevermind
   }else{
-    if(!exists("mSet")){
-      print("no exist mset")
-      NULL
-    }else{
+    if(!is.null(mSet)){
       switch(datamanager$reload,
              general = {
                print("Reloading general features...")
@@ -39,7 +36,7 @@ observe({
                  timebutton$status <- "off"
                }
                # t-test...
-
+               
                if(interface$mode == 'bivar'){
                  if("tt" %in% names(mSet$analSet)){
                    if("V" %in% colnames(mSet$analSet$tt$sig.mat)){
@@ -52,7 +49,7 @@ observe({
                    updateCheckboxInput(session, "tt_nonpar", value = F)
                  }
                }
-              
+               
                # show a button with t-test or fold-change analysis if data is bivariate. hide otherwise.
                # TODO: add button for anova/other type of sorting...
                if(mSet$dataSet$cls.num == 2 ){
@@ -126,7 +123,7 @@ observe({
                    keep <- c("p.value", "FDR", "Fisher's LSD")
                  }
                }
-
+               
                if(present){
                  # render results table for UI
                  output$aov_tab <- DT::renderDataTable({
@@ -153,7 +150,7 @@ observe({
                                selection = 'single',
                                autoHideNavigation = T,
                                options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-
+                 
                })
              },
              pca = {
@@ -183,7 +180,7 @@ observe({
                                                     digits = 2),
                                               keep.rownames = T)
                    colnames(pca.table) <- c("Principal Component", "% variance")
-
+                   
                    DT::datatable(pca.table,
                                  selection = 'single',
                                  autoHideNavigation = T,
@@ -210,7 +207,7 @@ observe({
                  }else{
                    "pca"
                  }
-
+                 
                  if(input$pca_2d3d){ # check if switch button is in 2d or 3d mode
                    # render 2d plot
                    output$plot_pca <- plotly::renderPlotly({
@@ -234,9 +231,9 @@ observe({
                } # do nothing
              },
              plsda = {
-
+               
                if("plsda" %in% names(mSet$analSet)){ # if plsda has been performed...
-
+                 
                  # render cross validation plot
                  output$plsda_cv_plot <- renderPlot({
                    ggPlotClass(cf = global$functions$color.functions[[getOptions()$gspec]], plotlyfy = F)
@@ -294,19 +291,19 @@ observe({
              },
              ml = {
                if("ml" %in% names(mSet$analSet)){
-
+                 
                  roc_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
-
+                 
                  output$ml_roc <- plotly::renderPlotly({
                    plotly::ggplotly(ggPlotROC(roc_data,
                                               input$ml_attempts,
                                               global$functions$color.functions[[getOptions()$gspec]]))
                  })
-
+                 
                  bar_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar
-
+                 
                  output$ml_bar <- plotly::renderPlotly({
-
+                   
                    plotly::ggplotly(ggPlotBar(bar_data,
                                               input$ml_attempts,
                                               global$functions$color.functions[[getOptions()$gspec]],
@@ -343,11 +340,11 @@ observe({
              tt = {
                # save results to table
                res <<- mSet$analSet$tt$sig.mat
-
+               
                if(is.null(res)){
                  res <<- data.table("No significant hits found")
                  mSet$analSet$tt <<- NULL
-
+                 
                }
                # set buttons to proper thingy
                # render results table for UI
@@ -357,7 +354,7 @@ observe({
                                selection = 'single',
                                autoHideNavigation = T,
                                options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-
+                 
                })
                # render manhattan-like plot for UI
                output$tt_overview_plot <- plotly::renderPlotly({
@@ -377,7 +374,7 @@ observe({
                                selection = 'single',
                                autoHideNavigation = T,
                                options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-
+                 
                })
                # render manhattan-like plot for UI
                output$fc_overview_plot <- plotly::renderPlotly({
@@ -386,11 +383,11 @@ observe({
                })
              },
              heatmap = {
-
+               
                breaks = seq(min(mSet$dataSet$norm), max(mSet$dataSet$norm), length = 256/2)
-
+               
                output$heatmap <- plotly::renderPlotly({
-
+                 
                  if(!is.null(mSet$analSet$heatmap$matrix)){
                    # create heatmap object
                    hmap <- suppressWarnings({
@@ -434,7 +431,7 @@ observe({
                                             #label_names = c("m/z", "sample", "intensity") #breaks side colours...
                        )
                      }
-
+                     
                    })
                    # save the order of mzs for later clicking functionality
                    global$vectors$heatmap <<- hmap$x$layout$yaxis3$ticktext
@@ -449,6 +446,7 @@ observe({
                })
              })
     }
+    
     # - - - -
     datamanager$reload <- NULL # set reloading to 'off'
   }

@@ -9,9 +9,7 @@ observe({
     
   }else{
     
-    if(!exists("mSet")){
-      NULL
-    }
+    if(!is.null(mSet)){
     
     switch(statsmanager$calculate, 
            venn = {
@@ -210,8 +208,9 @@ observe({
                mSet <<- Volcano.Anal(mSet,FALSE, 2.0, 0, 0.75,F, 0.1, TRUE, "raw") # TODO: make thresholds user-defined
              })
            })
-               # - - - - 
-               statsmanager$calculate <- NULL # set reloading to 'off'
+      }
+          # - - - - 
+          statsmanager$calculate <- NULL # set reloading to 'off'
   }
 })
     
