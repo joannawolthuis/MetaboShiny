@@ -24,14 +24,14 @@ observeEvent(input$browse_db,{
 })
 
 # triggers on reverse searching TODO: fix this, it's broken
-observeEvent(input$revsearch_cpd, {
+observeEvent(input$revsearch_mz, {
   curr_row <- input$browse_tab_rows_selected
   # curr_row <- grep(local$tables$browse_table$description, pattern="Creatine riboside")
   # -------------------
   search_cmd <- local$tables$browse_table[curr_row,c('formula', 'charge')]
   # -------------------
   cpd_list <- lapply(local$vectors$db_search_list, FUN=function(match.table){
-    get_mzs(search_cmd$formula, search_cmd$charge, match.table)})
+    get_mzs(search_cmd$formula, search_cmd$charge, match.table, patdb=local$paths$patdb)})
   # ------------------
   local$tables$hits_table <<- unique(as.data.table(rbindlist(cpd_list)))
   output$hits_tab <-DT::renderDataTable({

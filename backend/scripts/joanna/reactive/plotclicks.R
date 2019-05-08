@@ -34,8 +34,6 @@ observeEvent(plotly::event_data("plotly_click"),{
                        input$overview
                      })
   
-  print(curr_tab)
-  
   if(req(curr_tab ) %in% c("tt", "fc", "rf", "aov", "volc")){ # these cases need the same processing and use similar scoring systems
     if('key' %not in% colnames(d)) return(NULL)
     mzs <- switch(curr_tab,

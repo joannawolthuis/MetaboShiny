@@ -5,30 +5,31 @@ observe({
   lapply(modes, function(mode){
     output[[paste0(mode, "_add_tab")]] <- DT::renderDataTable({
       DT::datatable(global$vectors$pos_adducts,
-                    selection = list(mode = 'multiple', 
+                    selection = list(mode = 'multiple',
                                      selected = local$vectors[[paste0(mode, "_selected_add")]], target="row"),
-                    options = list(pageLength = 5, dom = 'tp'), 
+                    options = list(pageLength = 5, dom = 'tp'),
                     rownames = F)
     })
   })
 })
 
 observe({
+
   if(local$paths$patdb != ""){
     if(file.exists(local$paths$patdb)){
       conn <- RSQLite::dbConnect(RSQLite::SQLite(), local$paths$patdb)
-      scanmode <- DBI::dbGetQuery(conn, paste0("SELECT DISTINCT foundinmode FROM mzvals WHERE mzmed LIKE '", curr_cpd, "%'"))[,1]
+      scanmode <- DBI::dbGetQuery(conn, paste0("SELECT DISTINCT foundinmode FROM mzvals WHERE mzmed LIKE '", local$curr_mz, "%'"))[,1]
       DBI::dbDisconnect(conn)
-      
+
       print(scanmode)
-      
+
       local$vectors$calc_adducts <<- adducts[Ion_mode == scanmode]$Name
-      
+
       output$magicball_add_tab <- DT::renderDataTable({
         DT::datatable(data.table(Adduct = local$vectors$calc_adducts),
-                      selection = list(mode = 'multiple', 
+                      selection = list(mode = 'multiple',
                                        selected = local$vectors[[paste0(scanmode, "_selected_add")]], target="row"),
-                      options = list(pageLength = 5, dom = 'tp'), 
+                      options = list(pageLength = 5, dom = 'tp'),
                       rownames = F)
       })
     }

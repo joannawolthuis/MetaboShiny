@@ -1,9 +1,9 @@
 # check which adducts are currently selected by user
 observe({
   # --------------
-  wanted.adducts <- global$vectors$calc_adducts[input$magicball_add_tab_rows_selected]
+  wanted.adducts <- local$vectors$calc_adducts[input$magicball_add_tab_rows_selected]
   # ---------
-  global$vectors$add_list <<- wanted.adducts
+  local$vectors$add_list <<- wanted.adducts
 })
 
 
@@ -26,7 +26,7 @@ lapply(unique(res.update.tables), FUN=function(table){
   observeEvent(input[[paste0(table, "_tab_rows_selected")]], {
     curr_row = input[[paste0(table, "_tab_rows_selected")]]
     # do nothing if not clicked yet, or the clicked cell is not in the 1st column
-    
+
     if (is.null(curr_row)) return()
 
     res_tbl <- data.table::as.data.table(switch(table,
@@ -34,7 +34,7 @@ lapply(unique(res.update.tables), FUN=function(table){
                                                 fc = mSet$analSet$fc$sig.mat,
                                                 pca_load = mSet$analSet$pca$rotation,
                                                 plsda_load = mSet$analSet$plsda$vip.mat,
-                                                ml = global$tables$ml_roc, #TODO: fix this, now in global
+                                                ml = local$tables$ml_roc, #TODO: fix this, now in global
                                                 asca = mSet$analSet$asca$sig.list$Model.ab,
                                                 aov = {
                                                   if(!is.null(input$timecourse_trigger)){
@@ -49,15 +49,15 @@ lapply(unique(res.update.tables), FUN=function(table){
                                                 enrich_pw = enrich_overview_tab,
                                                 meba = mSet$analSet$MB$stats,
                                                 plsda_vip = plsda_tab,
-                                                mummi_detail = global$tables$mummi_detail,
-                                                venn = global$tables$venn_overlap), keep.rownames = T)
+                                                mummi_detail = local$tables$mummi_detail,
+                                                venn = local$tables$venn_overlap), keep.rownames = T)
     if(nrow(res_tbl) > 0){
-      
+
       # get current selected compound from the original table (needs to be available in global env)
       local$curr_mz <<- res_tbl[curr_row, rn]
       # print current compound in sidebar
       output$curr_mz <- renderText(local$curr_mz)
-      
+
       # make miniplot for sidebar with current compound
       output$curr_plot <- plotly::renderPlotly({
         # --- ggplot ---
@@ -67,15 +67,15 @@ lapply(unique(res.update.tables), FUN=function(table){
                       plot.theme = global$functions$plot.themes[[local$aes$theme]],
                       font = local$aes$font)
       })
-      
+
       outplot_name <- paste0(table, "_specific_plot")
-      
+
       # send plot to relevant spot in UI
       output[[outplot_name]] <- plotly::renderPlotly({
         # --- ggplot ---
         if(table == 'meba'){ # meba needs a split by time
-          ggplotMeba(mSet, local$curr_mz, 
-                     draw.average = T, 
+          ggplotMeba(mSet, local$curr_mz,
+                     draw.average = T,
                      cols = local$aes$mycols,
                      cf=global$functions$color.functions[[local$aes$spectrum]],
                      plot.theme = global$functions$plot.themes[[local$aes$theme]],
@@ -109,11 +109,11 @@ lapply(unique(res.update.tables), FUN=function(table){
                           plot.theme = global$functions$plot.themes[[local$aes$theme]],
                           font = local$aes$font)
           }
-          
+
         }
       })
     }
-    
+
   })
 })
 
@@ -122,9 +122,9 @@ lapply(c("pos", "neg"), function(mode){
   observeEvent(input[[paste0("mummi_", mode, "_tab_rows_selected")]],{
     curr_row <- input[[paste0("mummi_", mode, "_tab_rows_selected")]] # get current row
     if (is.null(curr_row)) return()
-    curr_pw <- rownames(global$vectors[[paste0("mummi_", mode)]]$sig)[curr_row]
-    cpds <- global$vectors[[paste0("mummi_", mode)]]$pw2cpd[[curr_pw]]
-    mzs <- global$vectors[[paste0("mummi_", mode)]]$cpd2mz[cpds]
+    curr_pw <- rownames(local$vectors[[paste0("mummi_", mode)]]$sig)[curr_row]
+    cpds <- local$vectors[[paste0("mummi_", mode)]]$pw2cpd[[curr_pw]]
+    mzs <- local$vectors[[paste0("mummi_", mode)]]$cpd2mz[cpds]
     keep <- sapply(mzs, function(x) !is.null(x))
     mzs <- mzs[keep]
     mzs <- unique(unlist(mzs))
@@ -136,7 +136,7 @@ lapply(c("pos", "neg"), function(mode){
     })
     rownames(tbl) <- mzs
     # - - - - - - - -
-    global$tables$mummi_detail <<- tbl
+    local$tables$mummi_detail <<- tbl
     # - - - - - - - -
     output$mummi_detail_tab <- DT::renderDataTable({
       DT::datatable(tbl, selection = 'single')
@@ -149,7 +149,7 @@ observeEvent(input$match_tab_rows_selected,{
   curr_row <<- input$match_tab_rows_selected # get current row
   if (is.null(curr_row)) return()
   try({
-    curr_name <<- global$tables$last_matches[curr_row,'name'][[1]]
+    curr_name <<- local$tables$last_matches[curr_row,'name'][[1]]
     updateTextInput(session, "pm_query", value = curr_name)
     # write to clipboard
     #if(input$auto_copy){
@@ -157,11 +157,11 @@ observeEvent(input$match_tab_rows_selected,{
     #  print('copied to clipboard ( ˘ ³˘)♥')
     #}
     # -----------------------------
-    curr_def <<- global$tables$last_matches[curr_row,'description'] # get current definition (hidden in table display but not deleted)
+    curr_def <<- local$tables$last_matches[curr_row,'description'] # get current definition (hidden in table display but not deleted)
     output$curr_definition <- renderText(curr_def$description) # render definition
-    curr_struct <<- global$tables$last_matches[curr_row,'structure'][[1]] # get current structure
+    curr_struct <<- local$tables$last_matches[curr_row,'structure'][[1]] # get current structure
     output$curr_struct <- renderPlot({plot.mol(curr_struct,style = "cow")}) # plot molecular structure
-    curr_formula <<- global$tables$last_matches[curr_row,'baseformula'][[1]] # get current formula
+    curr_formula <<- local$tables$last_matches[curr_row,'baseformula'][[1]] # get current formula
     output$curr_formula <- renderText({curr_formula}) # render text of current formula
   })
 })

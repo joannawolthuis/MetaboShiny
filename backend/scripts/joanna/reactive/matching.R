@@ -1,15 +1,18 @@
 # triggers on clicking the 'search' button in sidebar
-observeEvent(input$search_cpd, {
+observeEvent(input$search_mz, {
 
   if(length(local$vectors$db_search_list) > 0){ # go through selected databases
     
     local$tables$last_matches <<- unique(multimatch(local$curr_mz, 
-                                                     local$vectors$db_search_list,
-                                                     inshiny = F,
-                                                     search_pubchem = input$magicball_pubchem_cids,
-                                                     pubchem_detailed = input$magicball_pubchem_details,
-                                                     calc_adducts = local$vectors$add_list)) # match with all
-    # - - -
+                                                    local$vectors$db_search_list,
+                                                    inshiny = F,
+                                                    search_pubchem = input$magicball_pubchem_cids,
+                                                    pubchem_detailed = input$magicball_pubchem_details,
+                                                    calc_adducts = local$vectors$add_list,
+                                                    patdb = normalizePath(local$paths$patdb),
+                                                    db_dir = normalizePath(local$paths$db_dir)
+                                                    )) # match with all
+    
     adduct_dist <- melt(table(local$tables$last_matches$adduct))
     db_dist <- melt(table(local$tables$last_matches$source))
     
@@ -111,8 +114,7 @@ observeEvent(input$search_cpd, {
       })
     }
     
-    shown_matches$table <- 
-    if(nrow(local$tables$last_matches)>0){
+    shown_matches$table <- if(nrow(local$tables$last_matches) > 0){
       local$tables$last_matches 
     }else{
       data.table('name' = "Didn't find anything ( •́ .̫ •̀ )")

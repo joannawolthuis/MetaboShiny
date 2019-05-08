@@ -19,7 +19,7 @@ library(enviPat)
 library(stringr)
 
 #' Sources all R scripts in a given directory.
-#' 
+#'
 #' \code{sourceDir} searches the given directory for .R files and sources them into the current session.
 #'
 #' @param path Path to search for scripts in.
@@ -73,9 +73,9 @@ setOption <- function(file.loc, key, value){
   })
   #print(new_options)
   writeLines(opt_conn, text = unlist(new_options))
-  
-  
-  
+
+
+
   close(opt_conn)
 }
 
@@ -285,7 +285,7 @@ caret.mdls <- caret::getModelInfo()
                    neg_selected_add = c(2),# 14, 15, nrow(adducts[Ion_mode == "negative",
                    #                        c("Name")])),
                    # list of available databases!!
-                   db_list = c( # this dermines the show order of dbs in the app
+                   db_list = c( # this determines the show order of dbs in the app
                      #"internal",
                      #"noise",
                      "hmdb",
@@ -414,4 +414,3 @@ debug_local <- NULL
 debug_input <- NULL
 
 print("loaded scripts!")
-

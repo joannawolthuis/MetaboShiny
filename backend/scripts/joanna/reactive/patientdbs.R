@@ -10,15 +10,15 @@ observeEvent(input$create_db,{
     shiny::setProgress(session=session, value= .1)
 
     proj_name = input$proj_name_new
-    
+
     updateSelectizeInput(session = session,
                          inputId = "proj_name",
                          choices = c(local$vectors$project_names, proj_name))
-    
+
     updateSelectizeInput(session = session,
                          inputId = "proj_name",
                          selected = proj_name)
-    
+
     local$paths$patdb <<- file.path(local$paths$work_dir, paste0(proj_name,".db", sep=""))
     # change project name in user options file
     setOption(local$paths$opt.loc, key="proj_name", value=proj_name)
@@ -26,9 +26,9 @@ observeEvent(input$create_db,{
     output$proj_name <<- renderText(proj_name)
     # change path CSV should be / is saved to in session
     local$paths$csv_loc <<- file.path(local$paths$work_dir, paste0(local$proj_name,".csv"))
-    
+
     print(local$paths$patdb)
-    
+
     switch(input$new_proj,
            # if loading in a .db file... (FAST, MOSTLY FOR ADMINS USING HPC)
            `From DB` = {
@@ -120,9 +120,9 @@ observeEvent(input$create_csv, {
 
     # create csv table from patient database and user chosen settings in that pane
     tbl <- get.csv(local$paths$patdb,
-                   group_adducts = F, # if(length(global$vectors$db_add_list) == 0) F else T, # group by addicts?
+                   group_adducts = F, # if(length(local$vectors$db_add_list) == 0) F else T, # group by addicts?
                    groupfac = "mz" #input$group_by, # group by mz or formula
-                   #which_dbs = global$vectors$db_add_list, # used databases
+                   #which_dbs = local$vectors$db_add_list, # used databases
                    #which_adducts = selected_adduct_list # used adducts
     )
 

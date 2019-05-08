@@ -1,5 +1,5 @@
-get_exp_vars <- function(from){
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb) # change this to proper var later
+get_exp_vars <- function(from, patdb){
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
   RSQLite::dbGetQuery(conn, gsubfn::fn$paste("PRAGMA table_info($from)"))$name
 }
 
@@ -27,7 +27,8 @@ get_matches <- function(cpd = NA,
                         search_formula = F,
                         searchid = "mz",
                         inshiny=TRUE,
-                        append=FALSE){
+                        append=FALSE,
+                        patdb,db_dir){
 
   # 0. Attach db
 
@@ -54,11 +55,11 @@ get_matches <- function(cpd = NA,
 
   }else{
 
-    conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb)
+    conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
 
     RSQLite::dbExecute(conn, gsubfn::fn$paste("ATTACH '$base.db' AS base"))
 
-    ext.db <- file.path(getOptions()$db_dir, 'extended.db')
+    ext.db <- file.path(db_dir, 'extended.db')
 
     RSQLite::dbExecute(conn, gsubfn::fn$paste("ATTACH '$ext.db' AS full"))
 
@@ -183,9 +184,9 @@ get_matches <- function(cpd = NA,
 
     }}
 
-get.ppm <- function(patdb = global$paths$patdb){
+get.ppm <- function(patdb){
   # get ppm error retrospectively
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb) # change this to proper var later
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
   A = DBI::dbGetQuery(conn, "SELECT * FROM mzvals WHERE ID = 1")
   B = DBI::dbGetQuery(conn, "SELECT * FROM mzranges WHERE ID = 1")
   DBI::dbDisconnect(conn)
@@ -198,9 +199,9 @@ score.isos <- function(patdb, method="mscore", inshiny=TRUE, intprec){
 
   func <- function(){
 
-    ppm <- get.ppm()
+    ppm <- get.ppm(patdb=patdb)
 
-    conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb)
+    conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
 
     if(inshiny) shiny::setProgress(value = 0.2)
 
@@ -336,9 +337,9 @@ score.isos <- function(patdb, method="mscore", inshiny=TRUE, intprec){
 }
 
 #' @export
-get_mzs <- function(baseformula, charge, chosen.db){
+get_mzs <- function(baseformula, charge, chosen.db, patdb){
   # --- connect to db ---
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb) # change this to proper var later
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
   query.zero <- gsubfn::fn$paste("ATTACH '$chosen.db' AS db")
   RSQLite::dbExecute(conn, query.zero)
   # search combo of baseformula and charge matching your choice and find all possible mzvals and adducts
@@ -490,11 +491,14 @@ get_all_matches <- function(#exp.condition=NA,
 
 multimatch <- function(cpd, dbs, searchid="mz",
                        inshiny=T, calc_adducts = c("M+H", "M-H"),
-                       search_pubchem=F, pubchem_detailed=F){
+                       search_pubchem=F, pubchem_detailed=F, patdb, db_dir){
 
-  # - - - - - - - -
 
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb) # change this to proper var later
+  patdb <- normalizePath(patdb)
+  db_dir <- normalizePath(db_dir)
+  dbs <- lapply(dbs, normalizePath)
+  
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
   DBI::dbExecute(conn, "DROP TABLE IF EXISTS unfiltered")
   DBI::dbExecute(conn, "DROP TABLE IF EXISTS isotopes")
   DBI::dbExecute(conn, "DROP TABLE IF EXISTS adducts")
@@ -509,7 +513,7 @@ multimatch <- function(cpd, dbs, searchid="mz",
 
   # check which dbs are even available
 
-  avail.dbs <- list.files(options$db_dir, pattern = "\\.base\\.db",full.names = T)
+  avail.dbs <- list.files(db_dir, pattern = "\\.base\\.db",full.names = T)
 
   # fix magicball name
 
@@ -537,17 +541,19 @@ multimatch <- function(cpd, dbs, searchid="mz",
         # get ppm from db...
 
         res <- get_predicted(cpd,
-                             ppm = get.ppm(),
+                             ppm = get.ppm(patdb=patdb),
                              search_pubchem = search_pubchem,
                              pubchem_detailed = pubchem_detailed,
                              calc_adducts = calc_adducts, inshiny=inshiny)
 
       }else{
         res <- get_matches(cpd,
-                           match.table,
+                           normalizePath(match.table),
                            searchid=searchid,
                            inshiny=inshiny,
-                           append = if(i == 1) F else T)
+                           append = if(i == 1) F else T,
+                           patdb = patdb,
+                           db_dir=db_dir)
       }
 
       i <<- i + 1
@@ -658,7 +664,7 @@ cat("
       keep.candidates <- grep(x = candidates, pattern = filter, value=T)
 
       print(keep.candidates)
-      
+
       res = lapply(keep.candidates, function(formula, row){
 
         checked <- check_chemform(isotopes, formula)
@@ -756,7 +762,7 @@ cat("
 
       checked <- check.chemform.joanna(chemforms = tbl.merge$baseformula, isotopes = isotopes)
       tbl.merge$baseformula <- checked$new_formula
-      
+
       tbl <- tbl.merge[, list(name = name.x, baseformula, adduct, `%iso`, structure = structure.x, description = description)]
 
       }else{

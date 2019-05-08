@@ -41,7 +41,10 @@ observe({
              # reset
              
              mSet$analSet$heatmap <<- NULL
+             
              if(!is.null(input$heatmode)){
+               
+               print("calc...")
 
                # change top hits used in heatmap depending on time series / bivariate / multivariate mode
                # reordering of hits according to most significant at the top
@@ -59,9 +62,12 @@ observe({
                      used.values <- "p.value"  
                      
                      decreasing <- F
+                     
                    }else{
+                     
                      NULL
-                   }
+                   
+                     }
                    
                    
                  }else{
@@ -82,6 +88,8 @@ observe({
                    
                  }
                }else if(interface$mode == "multivar"){
+                 print("multivar mode")
+                 
                  tbl <- as.data.frame(mSet$analSet$aov$sig.mat)
                  used.values <- "p.value"
                  decreasing <- F

@@ -36,7 +36,7 @@ observe({
                  timebutton$status <- "off"
                }
                # t-test...
-               
+
                if(interface$mode == 'bivar'){
                  if("tt" %in% names(mSet$analSet)){
                    if("V" %in% colnames(mSet$analSet$tt$sig.mat)){
@@ -49,7 +49,7 @@ observe({
                    updateCheckboxInput(session, "tt_nonpar", value = F)
                  }
                }
-               
+
                # show a button with t-test or fold-change analysis if data is bivariate. hide otherwise.
                # TODO: add button for anova/other type of sorting...
                if(mSet$dataSet$cls.num == 2 ){
@@ -123,7 +123,7 @@ observe({
                    keep <- c("p.value", "FDR", "Fisher's LSD")
                  }
                }
-               
+
                if(present){
                  # render results table for UI
                  output$aov_tab <- DT::renderDataTable({
@@ -135,13 +135,13 @@ observe({
                    autoHideNavigation = T,
                    options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
                  })
-                 
+
                  # render manhattan-like plot for UI
                  output$aov_overview_plot <- plotly::renderPlotly({
                    # --- ggplot ---
                    ggPlotAOV(mSet,
                              cf = global$functions$color.functions[[local$aes$spectrum]], 20,
-                             plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                             plot.theme = global$functions$plot.themes[[local$aes$theme]],
                              plotlyfy=TRUE,font = local$aes$font)
                  })
                }
@@ -152,7 +152,7 @@ observe({
                  # --- ggplot ---
                  ggPlotVolc(global$functions$color.functions[[local$aes$spectrum]],
                             20,
-                            plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                            plot.theme = global$functions$plot.themes[[local$aes$theme]],
                             plotlyfy=TRUE,font = local$aes$font)
                })
                # render results table
@@ -162,7 +162,7 @@ observe({
                                selection = 'single',
                                autoHideNavigation = T,
                                options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-                 
+
                })
              },
              pca = {
@@ -180,7 +180,7 @@ observe({
                  #               )
                  #   ) +
                  #     geom_point(shape = 21, size = 5, stroke = 5) +
-                 #     scale_colour_manual(values=global$vectors$mycols) +
+                 #     scale_colour_manual(values=local$aes$$mycols) +
                  #     theme_void() +
                  #     theme(legend.position="none")
                  #   # --- return ---
@@ -192,7 +192,7 @@ observe({
                                                     digits = 2),
                                               keep.rownames = T)
                    colnames(pca.table) <- c("Principal Component", "% variance")
-                   
+
                    DT::datatable(pca.table,
                                  selection = 'single',
                                  autoHideNavigation = T,
@@ -210,9 +210,9 @@ observe({
                                  options = list(lengthMenu = c(5, 10, 15), pageLength = 10))
                  })
                  output$pca_scree <- renderPlot({
-                   ggPlotScree(mSet, 
+                   ggPlotScree(mSet,
                                cf = global$functions$color.functions[[local$aes$spectrum]],
-                               plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                               plot.theme = global$functions$plot.themes[[local$aes$theme]],
                                font = local$aes$font)
                  })
                  # chekc which mode we're in
@@ -225,7 +225,7 @@ observe({
                  }else{
                    "pca"
                  }
-                 
+
                  if(input$pca_2d3d){ # check if switch button is in 2d or 3d mode
                    # render 2d plot
                    output$plot_pca <- plotly::renderPlotly({
@@ -233,7 +233,7 @@ observe({
                                 pcx = input$pca_x,
                                 pcy = input$pca_y, mode = mode,
                                 shape.fac = input$second_var,
-                                plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                                plot.theme = global$functions$plot.themes[[local$aes$theme]],
                                 plotlyfy=TRUE,
                                 font = local$aes$font
                                )
@@ -255,19 +255,19 @@ observe({
                } # do nothing
              },
              plsda = {
-               
+
                if("plsda" %in% names(mSet$analSet)){ # if plsda has been performed...
-                 
+
                  # render cross validation plot
                  output$plsda_cv_plot <- renderPlot({
                    ggPlotClass(mSet, cf = global$functions$color.functions[[local$aes$spectrum]], plotlyfy = F,
-                               plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                               plot.theme = global$functions$plot.themes[[local$aes$theme]],
                                font = local$aes$font)
                  })
                  # render permutation plot
                  output$plsda_perm_plot <- renderPlot({
                    ggPlotPerm(mSet,cf = global$functions$color.functions[[local$aes$spectrum]], plotlyfy = F,
-                              plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                              plot.theme = global$functions$plot.themes[[local$aes$theme]],
                               font = local$aes$font)
                  })
                  # render table with variance per PC
@@ -304,7 +304,7 @@ observe({
                                 pcx = input$plsda_x,
                                 pcy = input$plsda_y, mode = "plsda",
                                 shape.fac = input$second_var,
-                                plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                                plot.theme = global$functions$plot.themes[[local$aes$theme]],
                                 font = local$aes$font)
                    })
                  }else{
@@ -322,28 +322,28 @@ observe({
              },
              ml = {
                if("ml" %in% names(mSet$analSet)){
-                 
+
                  roc_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
-                 
+
                  output$ml_roc <- plotly::renderPlotly({
                    plotly::ggplotly(ggPlotROC(roc_data,
                                               input$ml_attempts,
                                               global$functions$color.functions[[local$aes$spectrum]],
-                                              plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                                              plot.theme = global$functions$plot.themes[[local$aes$theme]],
                                               plotlyfy=TRUE,font = local$aes$font))
                  })
-                 
+
                  bar_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar
-                 
+
                  output$ml_bar <- plotly::renderPlotly({
-                   
+
                    plotly::ggplotly(ggPlotBar(bar_data,
                                               input$ml_attempts,
                                               global$functions$color.functions[[local$aes$spectrum]],
                                               input$ml_top_x,
                                               ml_name = mSet$analSet$ml$last$name,
                                               ml_type = mSet$analSet$ml$last$method,
-                                              plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                                              plot.theme = global$functions$plot.themes[[local$aes$theme]],
                                               plotlyfy=TRUE,font = local$aes$font))
                  })
                }else{NULL}
@@ -375,11 +375,11 @@ observe({
              tt = {
                # save results to table
                res <<- mSet$analSet$tt$sig.mat
-               
+
                if(is.null(res)){
                  res <<- data.table("No significant hits found")
                  mSet$analSet$tt <<- NULL
-                 
+
                }
                # set buttons to proper thingy
                # render results table for UI
@@ -389,14 +389,14 @@ observe({
                                selection = 'single',
                                autoHideNavigation = T,
                                options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-                 
+
                })
                # render manhattan-like plot for UI
                output$tt_overview_plot <- plotly::renderPlotly({
                  # --- ggplot ---
                  ggPlotTT(mSet,
                           global$functions$color.functions[[local$aes$spectrum]], 20,
-                          plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                          plot.theme = global$functions$plot.themes[[local$aes$theme]],
                           plotlyfy=TRUE,font = local$aes$font)
                })
              },
@@ -412,23 +412,23 @@ observe({
                                selection = 'single',
                                autoHideNavigation = T,
                                options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-                 
+
                })
                # render manhattan-like plot for UI
                output$fc_overview_plot <- plotly::renderPlotly({
                  # --- ggplot ---
                  ggPlotFC(mSet,
                           global$functions$color.functions[[local$aes$spectrum]], 20,
-                          plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                          plot.theme = global$functions$plot.themes[[local$aes$theme]],
                           plotlyfy=TRUE,font = local$aes$font)
                })
              },
              heatmap = {
-               
+
                breaks = seq(min(mSet$dataSet$norm), max(mSet$dataSet$norm), length = 256/2)
-               
+
                output$heatmap <- plotly::renderPlotly({
-                 
+
                  if(!is.null(mSet$analSet$heatmap$matrix)){
                    # create heatmap object
                    hmap <- suppressWarnings({
@@ -472,7 +472,7 @@ observe({
                                             #label_names = c("m/z", "sample", "intensity") #breaks side colours...
                        )
                      }
-                     
+
                    })
                    # save the order of mzs for later clicking functionality
                    local$vectors$heatmap <<- hmap$x$layout$yaxis3$ticktext
@@ -487,7 +487,7 @@ observe({
                })
              })
     }
-    
+
     # - - - -
     datamanager$reload <- NULL # set reloading to 'off'
   }

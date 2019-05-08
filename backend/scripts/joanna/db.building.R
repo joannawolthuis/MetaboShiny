@@ -101,17 +101,17 @@ build.base.db <- function(dbname=NA,
                            zip.file <- file.path(base.loc, "HSDB.zip")
                            utils::download.file(file.url, zip.file,mode = "w")
                            utils::unzip(zip.file, exdir = base.loc)
-                           
+
                            library(XML)
                            library(RCurl)
                            library(rlist)
-                           
+
                            input = file.path(base.loc,"hsdb.xml.20190328")
-                           
+
                            theurl <- getURL("https://toxnet.nlm.nih.gov/help/hsdbcasrn.html",.opts = list(ssl.verifypeer = FALSE) )
-                           
+
                            n = str_count(as.character(theurl), pattern = "cgi-bin")
-                           
+
                            db.formatted <- data.frame(
                              compoundname = rep(NA, n),
                              baseformula = rep(NA, n),
@@ -120,25 +120,25 @@ build.base.db <- function(dbname=NA,
                              charge = rep(NA, n),
                              description = rep(NA, n)
                            )
-                           
+
                            f = XML::xml
                            pb <- pbapply::startpb(min = 0, max = n)
-                           
+
                            idx <<- 0
-                           
+
                            metabolite = function(currNode){
-                             
+
                              if(idx %% 1000 == 0){
                                pbapply::setpb(pb, idx)
                              }
-                             
+
                              print(currNode)
-                             
+
                              # - - - - -
                              idx <<- idx + 1
-                             
+
                              # currNode <<- currNode
-                             # 
+                             #
                              # db.formatted[idx, "compoundname"] <<- xmlValue(currNode[['name']])
                              # db.formatted[idx, "identifier"] <<- xmlValue(currNode[['accession']])
                              # db.formatted[idx, "baseformula"] <<- xmlValue(currNode[['chemical_formula']])
@@ -152,14 +152,14 @@ build.base.db <- function(dbname=NA,
                              # db.formatted[idx, "charge"] <<- str_match(xmlValue(properties),
                              #                                           pattern = "formal_charge([+|\\-]\\d*|\\d*)")[,2]
                            }
-                           
+
                            xmlEventParse(input, branches =
                                            list(metabolite = metabolite))
-                           
+
                            # - - - - - - - - - - - -
                            db.formatted
-                           
-                           
+
+
                          },
                          hmdb = function(dbname){ #ok
                            print("Downloading XML database...")
@@ -1191,10 +1191,10 @@ build.base.db <- function(dbname=NA,
                            db.formatted
 
                          }, supernatural = function(dbname, ...){
-                           
+
                            base.loc <- file.path(getOptions()$db_dir, "supernatural_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
-                           
+
                            library(XML)
                            library(RCurl)
                            library(rlist)
@@ -1204,24 +1204,24 @@ build.base.db <- function(dbname=NA,
                            n = as.numeric(
                              gsub(str_match(theurl, pattern="contains (.*) natural compounds")[,2], pattern = ",", replacement = '')
                            )
-                           
+
                            # http://bioinf-applied.charite.de/supernatural_new/src/download_mol.php?sn_id=SN00000001
                            base.url = "http://bioinf-applied.charite.de/supernatural_new/src/download_mol.php?sn_id="
                            id.nr = str_pad(i, 8, pad = "0")
                            id.str = paste0("SN", id.nr)
                            file.url = paste0(base.url, id.str)
-                           
+
                            all.ids = paste0("SN", str_pad(1:n, 8, pad = "0"))
-                           
+
                            print("Downloading molfiles...")
-                           
+
                            pbapply::pbsapply(all.ids, cl = F, function(id, file.url, base.loc){
                              mol.file <- file.path(base.loc, paste0(id, ".mol"))
-                             utils::download.file(file.url, mol.file, mode = "w",quiet = T)  
+                             utils::download.file(file.url, mol.file, mode = "w",quiet = T)
                            }, file.url = file.url, base.loc = base.loc)
-                           
+
                            # this might be too big... mail the ppl if they want to upload the whole thing..
-                           
+
                          })()
 
 
@@ -1660,12 +1660,6 @@ load.metadata.excel <- function(path.to.xlsx,
                                   #,"Pen Data",
                                   #"Admin"
                                 )){
-
-  #path.to.xlsx <- "~/Desktop/xls/DSM_NL_BR_IT.xlsx"
-  #path.to.patdb <- global$paths$patdb
-
-  print(path.to.patdb)
-  print(path.to.xlsx)
 
   # --- connect to sqlite db ---
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), path.to.patdb)

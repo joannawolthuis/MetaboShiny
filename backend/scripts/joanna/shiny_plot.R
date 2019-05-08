@@ -4,11 +4,11 @@
 #' @param colmap character vector of colours used in plotting
 #' @param plot.theme function for ggplot theme used.
 #' @return list of four plots that fit in a 2x2 raster used in MetaboShiny.
-ggplotNormSummary <- function(mSet, 
+ggplotNormSummary <- function(mSet,
                               colmap,
                               plot.theme,
                               font){
-  
+
   # load in original data (pre-normalization, post-filter)
   orig_data <- as.data.frame(mSet$dataSet$prenorm)
   # load in normalized data
@@ -90,7 +90,7 @@ ggplotNormSummary <- function(mSet,
 #' @param mSet input user mSet
 #' @param plot.theme function for ggplot theme used.
 #' @return list of four plots that fit in a 2x2 raster used in MetaboShiny.
-ggplotSampleNormSummary <- function(mSet, 
+ggplotSampleNormSummary <- function(mSet,
                                     plot.theme,
                                     font){
   # 4 by 4 plot, based on random 20-30 picked
@@ -169,9 +169,9 @@ ggplotSampleNormSummary <- function(mSet,
 
 
 #' @export
-ggplotMeba <- function(mSet, cpd, draw.average=T, cols, 
-                       cf, 
-                       plot.theme, 
+ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
+                       cf,
+                       plot.theme,
                        plotlyfy=TRUE,font){
   cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
   profile <- getProfile(mSet, cpd, mode="time")
@@ -222,7 +222,7 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                           col.fac = "label", txt.fac = "label",font){
 
   sourceTable = mSet$dataSet$norm
-  
+
   if(length(styles) == 0){
     styles = c("beeswarm")
   }
@@ -235,9 +235,9 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
 
   try({
     pval <- if(mode == "nm"){
-      mSet$analSet$tt$sig.mat[which(rownames(mSet$analSet$tt$sig.mat) == curr_cpd), "p.value"]
+      mSet$analSet$tt$sig.mat[which(rownames(mSet$analSet$tt$sig.mat) == cpd), "p.value"]
     }else{
-      mSet$analSet$aov2$sig.mat[which(rownames(mSet$analSet$aov2$sig.mat) == curr_cpd), 'Interaction(adj.p)']
+      mSet$analSet$aov2$sig.mat[which(rownames(mSet$analSet$aov2$sig.mat) == cpd), 'Interaction(adj.p)']
     }
     stars <- p2stars(pval)
   })
@@ -390,9 +390,9 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
   }
 }
 
-ggPlotAOV <- function(mSet, cf, n=20, 
+ggPlotAOV <- function(mSet, cf, n=20,
                      plot.theme, plotlyfy=TRUE,font){
-  
+
   profile <- as.data.table(mSet$analSet$aov$p.log[mSet$analSet$aov$inx.imp],
                            keep.rownames = T)
   colnames(profile) <- c("cpd", "-logp")
@@ -400,7 +400,7 @@ ggPlotAOV <- function(mSet, cf, n=20,
   profile$Peak <- c(1:nrow(profile))
   # ---------------------------
   p <- ggplot2::ggplot(data=profile) +
-    ggplot2::geom_point(ggplot2::aes(x=Peak, y=`-logp`, 
+    ggplot2::geom_point(ggplot2::aes(x=Peak, y=`-logp`,
                                      text=cpd, color=`-logp`, key=cpd)) +
     plot.theme(base_size = 15) +
     theme(legend.position="none",
@@ -418,7 +418,7 @@ ggPlotAOV <- function(mSet, cf, n=20,
   }
 }
 
-ggPlotTT <- function(mSet, cf, n=20, 
+ggPlotTT <- function(mSet, cf, n=20,
                      plot.theme, plotlyfy=TRUE,font){
   profile <- as.data.table(mSet$analSet$tt$p.log[mSet$analSet$tt$inx.imp],keep.rownames = T)
   colnames(profile) <- c("cpd", "-logp")
@@ -444,8 +444,8 @@ ggPlotTT <- function(mSet, cf, n=20,
   }
 }
 
-ggPlotFC <- function(mSet, cf, n=20, 
-                     plot.theme, 
+ggPlotFC <- function(mSet, cf, n=20,
+                     plot.theme,
                      plotlyfy=TRUE,font){
   profile <- as.data.table(mSet$analSet$fc$fc.log[mSet$analSet$fc$inx.imp],keep.rownames = T)
   profile
@@ -471,8 +471,8 @@ ggPlotFC <- function(mSet, cf, n=20,
   }
 }
 
-ggPlotVolc <- function(mSet, cf, 
-                       n=20, plot.theme, 
+ggPlotVolc <- function(mSet, cf,
+                       n=20, plot.theme,
                        plotlyfy=TRUE,font ){
   vcn<-mSet$analSet$volcano;
   dt <- as.data.table(vcn$sig.mat[,c(2,4)],keep.rownames = T)
@@ -787,7 +787,7 @@ ggPlotROC <- function(data,
 
 ggPlotBar <- function(data,
                       attempts=50,
-                      cf, 
+                      cf,
                       topn=50,
                       plot.theme,
                       ml_name,
@@ -929,7 +929,7 @@ plotPCA.3d <- function(mSet,
     plots <- plotly::plot_ly(showlegend = F)
 
     show.orbs <- c()
-    
+
     for(class in levels(classes)){
 
       samps <- rownames(mSet$dataSet$norm)[which(classes == class)]
@@ -961,13 +961,13 @@ plotPCA.3d <- function(mSet,
         )
         worked = T
       })
-      
+
       show.orbs <- c(show.orbs, worked)
-      
+
     }
-    
+
     print(show.orbs)
-    
+
     adj_plot <<- plotly_build(plots)
     rgbcols <- toRGB(cols[show.orbs])
     c = 1
@@ -1018,8 +1018,8 @@ plotPCA.3d <- function(mSet,
   subplot(plots_facet,shareX = F, shareY = F)
 }
 
-plotPCA.2d <- function(mSet, shape.fac = "label", cols, 
-                       pcx, pcy, mode="pca", plot.theme, 
+plotPCA.2d <- function(mSet, shape.fac = "label", cols,
+                       pcx, pcy, mode="pca", plot.theme,
                        plotlyfy="T",font){
 
   classes <- switch(mode,
@@ -1265,9 +1265,6 @@ ggPlotVenn <- function(mSet,
   names(flattened) <- gsub(x = names(flattened), pattern = "(.*\\.)(.*$)", replacement = "\\2")
   flattened <- lapply(flattened, function(x) x[!is.na(x)])
 
-  # TODO: this is sloppy... IDK
-  local$vectors$venn_lists <<- flattened
-
   # how many circles need to be plotted? (# of included analysis)
   circles = length(flattened)
 
@@ -1357,9 +1354,9 @@ ggPlotVenn <- function(mSet,
     scale_x_continuous(expand = c(.1, .1)) +
     scale_y_continuous(expand = c(.1, .1))
   if(plotlyfy){
-    ggplotly(p)
+    list(plot = ggplotly(p), info = flattened)
   }else{
-    p
+    list(plot = p, info = flattened)
   }
 }
 
@@ -1367,7 +1364,7 @@ ggPlotScree <- function(mSet, plot.theme, cf, font, pcs=20){
   df <- data.table(
     pc = 1:length(names(mSet$analSet$pca$variance)),
     var = round(mSet$analSet$pca$variance*100,digits = 1))
-  p <- ggplot2::ggplot(data=df[1:20,]) + ggplot2::geom_line(mapping = aes(x=pc, y=var, colour=var), cex=3) + 
+  p <- ggplot2::ggplot(data=df[1:20,]) + ggplot2::geom_line(mapping = aes(x=pc, y=var, colour=var), cex=3) +
     plot.theme(base_size = 10) +
     ggplot2::scale_colour_gradientn(colours = cf(20)) +
     theme(legend.position="none",
@@ -1376,6 +1373,6 @@ ggPlotScree <- function(mSet, plot.theme, cf, font, pcs=20){
           legend.title.align = 0.5,
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = font$family))
-  # - - - - - 
+  # - - - - -
   p
 }

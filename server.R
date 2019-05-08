@@ -1,16 +1,16 @@
 # for future reference: https://www.r-bloggers.com/deploying-desktop-apps-with-r/ :-)
 
 shinyServer(function(input, output, session) {
-  
+
   debug_mSet <- NULL
   mSet <- NULL
   bgcol <- "black"
   font.css <- ""
   bar.css <- ""
   opts <- list()
-  
+
   logged <- reactiveValues(status=FALSE,text="please log in! ( •́ .̫  •̀ )")
-  
+
   local = list(
     curr_mz = "nothing selected",
     patdb = "",
@@ -24,28 +24,28 @@ shinyServer(function(input, output, session) {
     paths = list(opt.loc = "",
                  patdb = "")
     )
-  
+
   output$login_status <- renderText({
     logged$text
   })
-  
+
   # init all observers
   for(fp in list.files("./backend/scripts/joanna/reactive", full.names = T)){
     #print(paste("Loading:", fp))
     source(fp, local = T)
   }
-  
+
   # ================================== LOGIN =====================================
-  
+
   # default
 
   userdb = normalizePath("./users.db")
-  
+
   # if logged in, check if exists
   observeEvent(input$login,{
     print(input$username)
     print(input$password)
-    
+
     if(input$username != "" & input$password != ""){
       # get user role
       role = get_user_role(input$username, input$password)
@@ -53,32 +53,33 @@ shinyServer(function(input, output, session) {
       if(is.null(role)){
         logged$text <<- "wrong username/password (｡•́︿•̀｡)"
       }else{
-        
+
         runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
-        
+
         work_dir <- switch(runmode,
                            docker = "/userfiles/saves",
                            local = "~/MetaboShiny/saves")
-        
+
         dbdir <- switch(runmode,
                            docker = "/userfiles/databases",
                            local = "~/MetaboShiny/databases")
-        
+
         # check if user folder exists, otherwise make it
         userfolder = file.path(work_dir, input$username)
-        
+
         if(!dir.exists(userfolder)){
           logged$text <<- "creating new user..."
           dir.create(userfolder)
         }
-        
+
         logged$text <<- "logging in..."
-        
+
         username = input$username
-        
+
         # check if opts file exists, otherwise make it with the proper files
         local$paths$opt.loc <<- file.path(userfolder, "options.txt")
         local$paths$work_dir <<- userfolder
+        local$paths$db_dir <<- dbdir
         
         if(!file.exists(local$paths$opt.loc)){
           contents = gsubfn::fn$paste('db_dir = $dbdir
@@ -104,72 +105,72 @@ gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
 gspec = RdBu')
           writeLines(contents, local$paths$opt.loc)
         }
-        
+
         withProgress({
           # read settings
-          
+
           opts <- getOptions(local$paths$opt.loc)
-          
+
           print(opts)
-          
+
           logged$text <<- "loaded options!"
-          
+
           logged$text <<- "starting MetaboShiny..."
-          
+
           # generate CSS for the interface based on user settings for colours, fonts etc.
           bar.css <<- nav.bar.css(opts$col1, opts$col2, opts$col3, opts$col4)
           font.css <<- app.font.css(opts$font1, opts$font2, opts$font3, opts$font4,
                                    opts$size1, opts$size2, opts$size3, opts$size4)
-          
+
           # google fonts
-          
+
           # name = the name of the font in Google's Library (https://fonts.google.com)
           # family = how you want to refer to the font inside R
           # regular.wt = the weight of font used in axis, labels etc.
           # bolt.wt = the weight of font used in the title
-          
+
           # === GOOGLE FONT SUPPORT FOR GGPLOT2 ===
-          
+
           # Download a webfont
           lapply(c(opts[grepl(pattern = "font", names(opts))]), function(font){
             try({
-              sysfonts::font_add_google(name = font, 
-                                        family = font, 
-                                        regular.wt = 400, 
+              sysfonts::font_add_google(name = font,
+                                        family = font,
+                                        regular.wt = 400,
                                         bold.wt = 700)
             })
           })
           # Perhaps the only tricky bit is remembering to run the following function to enable webfonts
           showtext::showtext_auto(enable = T)
-          
+
           # ======================================
-          
+
           # set taskbar image as set in options
           taskbar_image <- opts$task_img
-          
+
           # parse color opts
           local$aes$mycols <<- get.col.map(local$paths$opt.loc) # colours for discrete sets, like group A vs group B etc.
           local$aes$theme <<- opts$gtheme # gradient function for heatmaps, volcano plot etc.
           local$aes$spectrum <<- opts$gspec # gradient function for heatmaps, volcano plot etc.
           local$vectors$proj_names <<- unique(tools::file_path_sans_ext(list.files(opts$work_dir, pattern=".csv|.db"))) # the names listed in the 'choose project' tab of opts.
-          
+
           print(local)
-          
+
           # load existing file
           bgcol <<- opts$col1
 
-          # - - load custom dbs - - 
-          
+          # - - load custom dbs - -
+
           # load in custom databases
-          has.customs <- dir.exists(file.path(opts$db_dir, "custom"))
-          
+          has.customs <- dir.exists(file.path(local$paths$db_dir, "custom"))
+
           if(has.customs){
-            
-            customs = list.files(path = file.path(opts$db_dir, "custom"),
+
+            customs = list.files(path = file.path(local$paths$db_dir, "custom"),
                                  pattern = "\\.RData")
-            
+
             dbnames = unique(tools::file_path_sans_ext(customs))
-            
+
             for(db in dbnames){
               # add name to global
               dblist <- global$vectors$db_list
@@ -178,49 +179,49 @@ gspec = RdBu')
                 dblist <- c(dblist, db, "custom")
                 global$vectors$db_list <- dblist
               }
-              metadata.path <- file.path(opts$db_dir, "custom", paste0(db, ".RData"))
+              metadata.path <- file.path(local$paths$db_dir, "custom", paste0(db, ".RData"))
               load(metadata.path)
-              
+
               # add description to global
               global$constants$db.build.info[[db]] <- meta.dbpage
-              
+
               # add image to global
               maxi = length(global$constants$images)
               global$constants$images[[maxi + 1]] <- meta.img
             }
           }
-          
+
           # init stuff that depends on opts file
-          
+
           local$proj_name <<- opts$proj_name
           local$paths$patdb <<- file.path(opts$work_dir, paste0(opts$proj_name, ".db"))
           local$paths$csv_loc <<- file.path(opts$work_dir, paste0(opts$proj_name, ".csv"))
           local$texts <<- list(
-            list(name='curr_exp_dir',text=opts$work_dir),
-            list(name='curr_db_dir',text=opts$db_dir),
+            list(name='curr_exp_dir',text=local$paths$work_dir),
+            list(name='curr_db_dir',text=local$paths$db_dir),
             list(name='ppm',text=opts$ppm),
             list(name='proj_name',text=opts$proj_name)
           )
-          
-          updateSelectizeInput(session, 
-                               "proj_name", 
+
+          updateSelectizeInput(session,
+                               "proj_name",
                                 choices = local$vectors$proj_names,
                                selected = opts$proj_name)
           # create default text objects in UI
           lapply(local$texts, FUN=function(default){
             output[[default$name]] = renderText(default$text)
           })
-          
+
           local$aes$font <<- list(family = opts$font4,
                                    ax.num.size = 11,
                                    ax.txt.size = 15,
                                    ann.size = 20,
-                                   title.size = 25) 
-                  
+                                   title.size = 25)
+
           # other default stuff that needs opts
-          
+
           library(showtext)
-          
+
           # import google fonts
           for(font in unlist(opts[grep(names(opts), pattern = "font")])){
             if(font %in% sysfonts::font.families()){
@@ -229,9 +230,9 @@ gspec = RdBu')
               sysfonts::font_add_google(font,db_cache = T)
             }
           }
-          
+
           # other stuff
-          
+
           # create color pickers based on amount of colours allowed in global
           output$colorPickers <- renderUI({
             lapply(c(1:global$constants$max.cols), function(i) {
@@ -241,27 +242,27 @@ gspec = RdBu')
                                         allowTransparent = F)
             })
           })
-          
+
           # create color1, color2 etc variables to use in plotting functions
           # and update when colours picked change
           observe({
             values <- unlist(lapply(c(1:global$constants$max.cols), function(i) {
               input[[paste("col", i, sep="_")]]
             }))
-            
+
             if(!any(is.null(values))){
               if(local$paths$opt.loc != ""){
                 set.col.map(optionfile = local$paths$opt.loc, values)
               }
             }
           })
-          
+
           updateSelectInput(session, "ggplot_theme", selected = opts$gtheme)
           updateSelectInput(session, "color_ramp", selected = opts$gspec)
-          
+
           opts <<- opts
           # logged in!
-          
+
           logged$status <<- TRUE
 
         })
@@ -270,21 +271,21 @@ gspec = RdBu')
       logged$text <- "try again (｡•́︿•̀｡)"
     }
   })
-  
-  
+
+
   # ================================= DEFAULTS ===================================
-  
+
   source('./backend/scripts/joanna/shiny_general.R')
-  
+
   # set progress bar style to 'old' (otherwise it's not movable with CSS)
   shinyOptions(progress.style="old")
-  
+
   options(digits=22,
           spinner.size = 0.5,
           spinner.type = 6,
           spinner.color = "black",
           spinner.color.background = "white")
-  
+
   # loading screen
   loadModal <- function(failed = FALSE) {
     modalDialog(
@@ -294,23 +295,23 @@ gspec = RdBu')
       )
     )
   }
-  
+
   showModal(loadModal())
-  
+
   # send specific functions/packages to other threads
   parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
     "mape",
     "flattenlist"))
-  
+
   parallel::clusterEvalQ(session_cl, library(data.table))
-  
+
   # create default text objects in UI
   lapply(global$constants$default.text, FUN=function(default){
     output[[default$name]] = renderText(default$text)
   })
-  
+
   showtext::showtext_auto() ## Automatically use showtext to render text for future devices
-  
+
   # default match table fill
   output$match_tab <-DT::renderDataTable({
     if(is.null(local$tables$last_matches)){
@@ -321,7 +322,7 @@ gspec = RdBu')
                                    pageLength = 5))
     }
   })
-  
+
   # create image objects in UI
   lapply(global$constants$images, FUN=function(image){
     output[[image$name]] <- renderImage({
@@ -332,33 +333,34 @@ gspec = RdBu')
            height = image$dimensions[2])
     }, deleteFile = FALSE)
   })
-  
+
   shown_matches <- reactiveValues(table = data.table())
+
+  output$match_tab <- DT::renderDataTable({
+    remove_cols = global$vectors$remove_match_cols
+    remove_idx <- which(colnames(local$tables$last_matches) %in% remove_cols)
+    # don't show some columns but keep them in the original table, so they can be used
+    # for showing molecule descriptions, structure
+    DT::datatable(shown_matches$table,
+                  selection = 'single',
+                  autoHideNavigation = T,
+                  options = list(lengthMenu = c(5, 10, 15),
+                                 pageLength = 5,
+                                 columnDefs = list(list(visible=FALSE, targets=remove_idx)))
+    )
+
+  })
   
-  # output$match_tab <- DT::renderDataTable({
-  #   remove_cols = global$vectors$remove_match_cols
-  #   remove_idx <- which(colnames(local$tables$last_matches) %in% remove_cols)
-  #   # don't show some columns but keep them in the original table, so they can be used
-  #   # for showing molecule descriptions, structure
-  #   DT::datatable(shown_matches$table,
-  #                 selection = 'single',
-  #                 autoHideNavigation = T,
-  #                 options = list(lengthMenu = c(5, 10, 15),
-  #                                pageLength = 5,
-  #                                columnDefs = list(list(visible=FALSE, targets=remove_idx)))
-  #   )
-  #   
-  # })
   # ===== UI SWITCHER ====
-  
+
   # create interface mode storage object.
   interface <- reactiveValues()
-  
+
   # this toggles when 'interface' values change (for example from 'bivar' to 'multivar' etc.)
   observe({
-    
+
     # hide all tabs by default, easier to hide them and then make visible selectively
-    
+
     hide.tabs <- list(
       list("statistics", "inf"),
       list("dimred", "pca"),
@@ -395,14 +397,14 @@ gspec = RdBu')
       show.tabs <- hide.tabs[1]
       #show.tabs <- c("inf") # 'info' tab that loads when no data is loaded currently
     }
-    
+
     # hide all the tabs to begin with
     for(tab in hide.tabs){
-      hideTab(inputId = unlist(tab)[1], 
-              unlist(tab)[2], 
+      hideTab(inputId = unlist(tab)[1],
+              unlist(tab)[2],
               session = session)
     }
-    
+
     i=1
     # show the relevant tabs
     for(tab in show.tabs){
@@ -410,14 +412,14 @@ gspec = RdBu')
       #showTab(inputId = "statistics", tab, select = ifelse(i==1, TRUE, FALSE), session = session)
       i = i + 1
     }
-    
+
   })
-  
+
   # -----------------
   observeEvent(input$undo_match_filt, {
     shown_matches$table <- local$tables$last_matches
   })
-  
+
   # change ppm accuracy, ONLY USEFUL if loading in from CSV
   # TODO: make it possible to change this and re-make user database (mzranges table specifically)
   observeEvent(input$set_ppm, {
@@ -427,7 +429,7 @@ gspec = RdBu')
     # change in options file
     setOption(key="ppm", value=ppm)
   })
-  
+
   # triggers when probnorm or compnorm is selected
   # let user pick a reference condition
   ref.selector <- reactive({
@@ -445,7 +447,7 @@ gspec = RdBu')
       )
     }
   })
-  
+
   # triggers when check_csv is clicked - get factors usable for normalization
   observeEvent(input$check_csv, {
     req(local$paths$csv_loc)
@@ -457,12 +459,12 @@ gspec = RdBu')
                                       choices = get_ref_cpds() # please add options for different times later, not difficult
            ))
   })
-  
+
   # render the created UI
   output$ref_select <- renderUI({ref.selector()})
-  
+
   # triggered when user enters the statistics tab
-  
+
   observeEvent(input$dimred, {
     # check if an mset is present, otherwise abort
     if(!is.null(mSet)){
@@ -473,7 +475,7 @@ gspec = RdBu')
       datamanager$reload <- input$dimred
     }
   })
-  
+
   observeEvent(input$permz, {
     # check if an mset is present, otherwise abort
     if(!is.null(mSet)){
@@ -484,20 +486,20 @@ gspec = RdBu')
       datamanager$reload <- input$permz
     }
   })
-  
+
   observeEvent(input$overview, {
     # check if an mset is present, otherwise abort
     if(!is.null(mSet)){
-      
+
       # depending on the present tab, perform analyses accordingly
       if(input$overview %not in% names(mSet$analSet) | input$overview == "venn"){
         statsmanager$calculate <- input$overview
       }
-      print(input$overview)
+
       datamanager$reload <- input$overview
     }
   })
-  
+
   observe({
     if(!is.null(input$ml_method)){
       mdl = caret::getModelInfo()[[input$ml_method]]
@@ -521,10 +523,10 @@ gspec = RdBu')
             )
           })
         )
-      }) 
+      })
     }
   })
-  
+
   observe({
     if(!is.null(mSet)){
       if("analSet" %in% names(mSet)){
@@ -542,36 +544,36 @@ gspec = RdBu')
       }
     }
   })
-  
+
   observeEvent(input$show_which_ml,{
     if(!is.null(mSet)){
       split.name = strsplit(input$show_which_ml, split = " - ")[[1]]
       mSet$analSet$ml$last$method <<- split.name[[1]]
       mSet$analSet$ml$last$name <<- split.name[[2]]
-      datamanager$reload <- "ml"      
+      datamanager$reload <- "ml"
     }
   },ignoreNULL = T, ignoreInit = T)
-  
+
   observeEvent(input$select_db_all, {
-    
+
     dbs <- global$vectors$db_list[-which(global$vectors$db_list == "custom")]
-    
+
     currently.on <- sapply(dbs, function(db){
       input[[paste0("search_", db)]]
     })
-    
+
     if(any(currently.on)){
       set.to = F
     }else{
       set.to = T
     }
-    
+
     for(db in dbs){
       updateCheckboxInput(session, paste0("search_", db), value = set.to)
     }
-    
+
   })
-  
+
   # render the database download area
   output$db_build_ui <- renderUI({
     dbs_per_line = 4
@@ -623,9 +625,9 @@ gspec = RdBu')
     # return
     database_layout
   })
-  
+
   db_button_prefixes = c("search", "add", "enrich")
-  
+
   # generate all the fadebuttons for the database selection
   lapply(db_button_prefixes, function(prefix){
     output[[paste0("db_", prefix, "_select")]] <- renderUI({
@@ -637,7 +639,7 @@ gspec = RdBu')
       )
     })
   })
-  
+
   # check if these buttons are selected or not
   lapply(db_button_prefixes, function(prefix){
     observe({
@@ -659,7 +661,7 @@ gspec = RdBu')
       local$vectors[[paste0("db_", prefix, "_list")]] <<- db_path_list[!is.na(db_path_list)]
     })
   })
-  
+
   # render icon for search bar
   output$find_mol_icon <- renderImage({
     # When input$n is 3, filename is ./images/image3.jpeg
@@ -669,8 +671,8 @@ gspec = RdBu')
          width=70,
          height=70)
   }, deleteFile = FALSE)
-  
-  
+
+
   observeEvent(input$save_mset, {
     # save mset
     withProgress({
@@ -678,7 +680,7 @@ gspec = RdBu')
       save(mSet, file = fn)
     })
   })
-  
+
   observeEvent(input$load_mset, {
     # load mset
     withProgress({
@@ -688,20 +690,20 @@ gspec = RdBu')
     print("loading...")
     datamanager$reload <- "general"
   })
-  
+
   observeEvent(input$debug, {
     input <<- isolate(as.list(input))
   })
-  
+
   observeEvent(input$ml_train_ss, {
     keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]
     subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
-    global$vectors$ml_train <<- c(input$subset_var, 
+    global$vectors$ml_train <<- c(input$subset_var,
                                   input$subset_group)
     print(global$vectors$ml_train)
     output$ml_train_ss <- renderText(subset.name)
   })
-  
+
   observeEvent(input$ml_test_ss, {
     keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]
     subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
@@ -709,7 +711,7 @@ gspec = RdBu')
     print(global$vectors$ml_test)
     output$ml_test_ss <- renderText(subset.name)
   })
-  
+
   # check if a dataset is already loaded in
   # change mode according to how many levels the experimental variable has
   # change interface based on that
@@ -723,7 +725,7 @@ gspec = RdBu')
       heatbutton$status <- "asmb"
     }
   })
-  
+
   onStop(function() {
     print("closing metaboShiny ~ヾ(＾∇＾)")
     mSet <<- NULL
@@ -735,7 +737,7 @@ gspec = RdBu')
     rmv <- list.files(".", pattern = ".csv|.log", full.names = T)
     if(all(file.remove(rmv))) NULL
   })
-  
+
   output$db_example <- DT::renderDataTable({
     DT::datatable(data = data.table::data.table(
       compoundname = c("1-Methylhistidine", "1,3-Diaminopropane", "2-Ketobutyric acid"),
@@ -751,10 +753,10 @@ gspec = RdBu')
                    paging = FALSE,
                    info = FALSE))
   })
-  
+
   # observeEvent
   observeEvent(input$make_custom_db, {
-    
+
     # get window
     showModal(modalDialog(
       fluidRow(align="center",
@@ -783,13 +785,13 @@ gspec = RdBu')
       footer = NULL
     )
     )
-    
+
   })
-  
+
   observeEvent(input$build_custom_db, {
-    
+
     csv_path <- parseFilePaths(global$paths$volumes, input$custom_db)$datapath
-    
+
     # build base db
     db.build.custom(
       db.name = input$my_db_name,
@@ -798,14 +800,14 @@ gspec = RdBu')
       db.icon = global$paths$custom.db.path,
       csv = csv_path
     )
-    
+
     # build extended db
     build.extended.db(tolower(input$my_db_short),
-                      outfolder = file.path(opts$db_dir, "custom"),
+                      outfolder = file.path(local$paths$db_dir, "custom"),
                       adduct.table = adducts,cl = 0)
-    
+
   })
-  
+
   removeModal()
-  
+
 })

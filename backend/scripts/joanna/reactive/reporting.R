@@ -2,14 +2,14 @@ dataModal <- function(failed = FALSE) {
   modalDialog(
     fluidRow(align="center",
              textInput("report_plot_title", "Title", value = switch(input$statistics,
-                                                                    tt = paste0("T-test", " - ", curr_cpd, " m/z"),
-                                                                    fc = paste0("Fold-change",  " - ", curr_cpd, " m/z"),
-                                                                    anova = paste0("ANOVA",  " - ", curr_cpd, " m/z"),
+                                                                    tt = paste0("T-test", " - ", local$curr_mz, " m/z"),
+                                                                    fc = paste0("Fold-change",  " - ", local$curr_mz, " m/z"),
+                                                                    anova = paste0("ANOVA",  " - ", local$curr_mz, " m/z"),
                                                                     pca = "PCA",
                                                                     plsda = "PLS-DA",
                                                                     volc = "Volcano",
-                                                                    meba = paste0("MEBA",  " - ", curr_cpd, " m/z"),
-                                                                    asca = paste0("ASCA",  " - ", curr_cpd, " m/z"),
+                                                                    meba = paste0("MEBA",  " - ", local$curr_mz, " m/z"),
+                                                                    asca = paste0("ASCA",  " - ", local$curr_mz, " m/z"),
                                                                     ml = "Machine learning")),
              textAreaInput("report_plot_notes", "Notes", value = "", height = "100px")
     ),
@@ -18,7 +18,7 @@ dataModal <- function(failed = FALSE) {
                modalButton("Cancel"),
                actionButton("report_plot", "Add plot to report")
       )
-      
+
     )
   )
 }
@@ -32,12 +32,12 @@ observeEvent(input$show_window, {
 reportAppend = function(reportPlot, plotTitle, plotNotes){
   # if no report folder, create
   dir.create(file.path(options$work_dir, "report"))
-  dir.create(file.path(options$work_dir, "report", 
+  dir.create(file.path(options$work_dir, "report",
                        "figures"))
-  
+
   # Report file name (Rmd)
   reportName <- file.path(options$work_dir, "report", paste("Report_", gsub("[^[:alnum:]]", "_", options$proj_name), ".Rmd", sep = ""))
-  
+
   # If report file doesn't exist yet
   if (!file.exists(reportName)) {
     reportTmp <- file(reportName, open = "w")
@@ -53,27 +53,27 @@ reportAppend = function(reportPlot, plotTitle, plotNotes){
       file = reportTmp)
     close(reportTmp)
   }
-  
+
   # append plot to file
   reportTmp <- file(reportName, open = "a")
   # unique file name to store figure for report
   tmpFigureName <- paste(tempfile(pattern = "plot", tmpdir = file.path(options$work_dir, "report", "figures")), ".png", sep = "")
   # save plo† as PDF
-  # ggsave(tmpFigureName, plot = global$last_plot)
+  # ggsave(tmpFigureName, plot = local$last_plot)
   ggsave(tmpFigureName, plot = reportPlot)
   dev.off()
-  
-  # htmlwidgets::saveWidget(global$last_plot, tmpFigureName)
+
+  # htmlwidgets::saveWidget(local$last_plot, tmpFigureName)
   # Add code to Rmd file
   cat(paste(
     paste("#", plotTitle, sep = " "),
-    
+
     # Input HTML in HTML (plotly interactive)
     # paste("<iframe width=\"600\" height=\"600\" src=\"", tmpFigureName, "\"></iframe>", sep = ""),
-    
+
     # input figures in HTML
     paste("<img src = \"", tmpFigureName, "\">", sep = ""),
-    
+
     # inputs PDF in HTML (zoom and scroll possible)
     # "---", "\n", "```{r, out.width = \"85%\"}", "\n", paste("knitr::include_graphics(\"", tmpFigureName, "\")", sep = ""), "```", "\n",
     plotNotes,
@@ -81,13 +81,13 @@ reportAppend = function(reportPlot, plotTitle, plotNotes){
     sep = "\n"),
     file = reportTmp)
   close(reportTmp)
-  
+
   # create HTML
   currentWD = getwd()
   setwd(file.path(options$work_dir, "report"))
   rmarkdown::render(reportName)
   setwd(currentWD)
-  
+
   # reset title, caption, and notes
   updateTextInput(session, "plotTitle", label = "Title", value = "")
   updateTextAreaInput(session, "plotNotes", label = "Notes", value = "")
@@ -95,7 +95,7 @@ reportAppend = function(reportPlot, plotTitle, plotNotes){
 # observe report button presses, need one for each button*
 
 observeEvent(input$report_plot, {
-  reportAppend(global$last_plot, input$report_plot_title, input$report_plot_notes)
+  reportAppend(local$last_plot, input$report_plot_title, input$report_plot_notes)
 })
 
 # For report tab where user can choose plots to appear in report

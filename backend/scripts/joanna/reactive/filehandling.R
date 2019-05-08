@@ -110,12 +110,12 @@ observeEvent(input$set_proj_name, {
   proj_name <<- input$proj_name
   if(proj_name == "") return(NULL) # if empty, ignore
   # change path of current db in global
-  global$paths$patdb <<- file.path(getOptions()$work_dir, paste0(proj_name,".db", sep=""))
+  local$paths$patdb <<- file.path(getOptions()$work_dir, paste0(proj_name,".db", sep=""))
   # change project name in user options file
   setOption(key="proj_name", value=proj_name)
   # print the changed name in the UI
   output$proj_name <<- renderText(proj_name)
   # change path CSV should be / is saved to in session
-  global$paths$csv_loc <<- file.path(getOptions()$work_dir, paste0(getOptions()$proj_name,".csv"))
+  local$paths$csv_loc <<- file.path(getOptions()$work_dir, paste0(getOptions()$proj_name,".csv"))
 
 })

@@ -11,12 +11,12 @@ output$currUI <- renderUI({
              shinyWidgets::circleButton("login", icon = icon("arrow-right")),
              br(),br(),
              div(style="width:300px;",verbatimTextOutput("login_status", placeholder = FALSE)))
-    
+
   }else{
     print("B")
     tagList(tags$style(type="text/css", bar.css),
             navbarPage(inverse=TRUE,
-                       title=div(div(h1("MetaboShiny"),class="outlined", tags$style(type="text/css", font.css)), 
+                       title=div(div(h1("MetaboShiny"),class="outlined", tags$style(type="text/css", font.css)),
                                  class="sparkley"), # make it use the sparkle.js for unnecessary sparkle effects ;)
                        id="nav_general",
                        # this tab shows the available databases, if they are installed, and buttons to install them. generated as output$db_build_ui in 'server'
@@ -485,7 +485,7 @@ output$currUI <- renderUI({
                                                                                                                                                                        col = "BW", type = "YN", value = F)
                                                                                                                                   ),
                                                                                                                                   fluidRow(align="center", helpText("Calculated adducts..")),
-                                                                                                                                  
+
                                                                                                                                   fluidRow(div(DT::dataTableOutput('magicball_add_tab'),style='font-size:60%'),
                                                                                                                                            align="center")
                                                                                                                          ),
@@ -509,7 +509,7 @@ output$currUI <- renderUI({
                                                                                                        hr(),
                                                                                                        fluidRow(
                                                                                                          tags$button(
-                                                                                                           id = "search_cpd",
+                                                                                                           id = "search_mz",
                                                                                                            class = "btn btn-default action-button",
                                                                                                            img(src = "detective.png",
                                                                                                                height = "50px")
@@ -618,10 +618,10 @@ output$currUI <- renderUI({
                                                                                                                                                                             div(DT::dataTableOutput('pm_tab', width="100%"),style='font-size:80%')
                                                                                                                                                                    )
                                                                                                                                                        )
-                                                                                                                                                       
+
                                                                                                                                               )
                                                                                                                                   )))
-                                                                                                       
+
                                                                                               ),
                                                                                               # reverse searching
                                                                                               tabPanel(title="molecule > mz",
@@ -634,13 +634,13 @@ output$currUI <- renderUI({
                                                                                                                             textOutput("browse_definition")),
                                                                                                                   div(DT::dataTableOutput('browse_tab'),style='font-size:80%'),
                                                                                                                   hr(),
-                                                                                                                  actionButton("revsearch_cpd", "Find hits", icon=icon("search"))
+                                                                                                                  actionButton("revsearch_mz", "Find hits", icon=icon("search"))
                                                                                                          ),
                                                                                                          tabPanel(NULL, icon = icon("search-location"),
                                                                                                                   div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
                                                                                                          )
                                                                                                        )
-                                                                                                       
+
                                                                                               ))
                                                                          ),
                                                                          tabPanel(NULL, icon=icon("exchange")
@@ -665,7 +665,7 @@ output$currUI <- renderUI({
                                                                                   ,selectizeInput("subset_group", label="Group(s) in subset:", choices = c(), multiple=TRUE)
                                                                                   ,shinyWidgets::circleButton("change_subset", icon = icon("hand-pointer-o"), size = "sm")
                                                                                   ,shinyWidgets::circleButton("reset_subset", icon = icon("undo"), size = "sm")
-                                                                                  
+
                                                                          ),
                                                                          # this tab is used to select user plot theme and user colours (discrete and continuous)
                                                                          tabPanel(NULL, icon=icon("paint-brush"),
@@ -740,7 +740,7 @@ output$currUI <- renderUI({
                                                                          ))
                                                 )
                                 )),
-                       
+
                        # report tab
                        tabPanel("",
                                 icon = icon("file-invoice", class = "outlined"),
@@ -754,7 +754,7 @@ output$currUI <- renderUI({
                                   )#close column
                                 )#close fluidrow
                        ),#close tabpanel
-                       
+
                        # this tab is used to change general settings.
                        tabPanel("",  icon = icon("cog",class = "outlined"), value="options",
                                 navbarPage(inverse=TRUE,"Settings", id="tab_settings",
@@ -762,7 +762,7 @@ output$currUI <- renderUI({
                                                     #textInput(inputId="proj_name", label="Project name", value = ''),
                                                     selectizeInput(inputId="proj_name",
                                                                    label="Project name",
-                                                                   choices=global$vectors$project_names, # existing projects in user folder (generated in 'global')
+                                                                   choices=local$vectors$project_names, # existing projects in user folder (generated in 'global')
                                                                    selected = opts$proj_name,
                                                                    options=list(create = TRUE)), # let users add new names
                                                     actionButton("set_proj_name", label="Apply"),
