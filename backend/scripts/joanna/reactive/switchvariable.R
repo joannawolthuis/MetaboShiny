@@ -42,5 +42,4 @@ observeEvent(input$change_cls, {
 
   updateNavbarPage(session, "statistics", selected = "inf")
 
-
 })
