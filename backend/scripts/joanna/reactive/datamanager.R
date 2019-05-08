@@ -243,8 +243,7 @@ observe({
                                 pcy = input$pca_y,
                                 pcz = input$pca_z, mode = mode,
                                 shape.fac = input$second_var,
-                                font = local$aes$font
-                                )
+                                font = local$aes$font)
                    })
                  }
                }else{

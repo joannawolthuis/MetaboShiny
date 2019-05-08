@@ -203,7 +203,7 @@ output$currUI <- renderUI({
                                                                                          navbarPage(inverse=F, icon("cube"), id = "dimred",
                                                                                                     # loading this tab performs PCA. summary and loading tables, alongside a 2d/3d PCA plot, are available here.
                                                                                                     tabPanel("pca", value = "pca", #icon=icon("cube"),
-                                                                                                             fluidRow(align="center",column(12,plotly::plotlyOutput("plot_pca",height = "600px", width="600px") %>% shinycssloaders::withSpinner())),
+                                                                                                             fluidRow(align="center",column(12,plotly::plotlyOutput("plot_pca",height = "600px", width="600px"))),#%>% shinycssloaders::withSpinner())),
                                                                                                              fluidRow(align="center",column(12,
                                                                                                                                             switchButton("pca_2d3d", label = "", col = "BW", type = "2d3d"))),
                                                                                                              hr(),

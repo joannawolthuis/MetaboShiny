@@ -862,6 +862,12 @@ plotPCA.3d <- function(mSet,
                        shape.fac="label",
                        pcx, pcy, pcz,
                        mode="pca",font){
+  
+  print(pcx)
+  print(pcy)
+  print(pcz)
+  print(mode)
+  
   switch(mode,
          pca = {
            df <- mSet$analSet$pca$x
@@ -895,8 +901,6 @@ plotPCA.3d <- function(mSet,
   if(mode == "ipca"){
     fac.lvls <- length(levels(mSet$dataSet$exp.fac))
     classes = mSet$dataSet$exp.fac
-    #df_split_idx <- split(1:nrow(df), f = sapply(strsplit(rownames(df), split = "_T"), function(x) x[[2]]))
-    #df_list <- lapply(df_split_idx, function(idx_list) as.data.frame(df[idx_list,]))
   }else{
     fac.lvls <- length(levels(mSet$dataSet$cls))
     classes = mSet$dataSet$cls
@@ -951,6 +955,11 @@ plotPCA.3d <- function(mSet,
                                      mean(yc),
                                      mean(zc)),
                             level = 0.95)
+        worked = T
+      })
+      
+      if(worked){
+        print("adding orb to plots...")
         mesh <- c(list(x = o$vb[1, o$ib]/o$vb[4, o$ib],
                        y = o$vb[2, o$ib]/o$vb[4, o$ib],
                        z = o$vb[3, o$ib]/o$vb[4, o$ib]))
@@ -963,16 +972,15 @@ plotPCA.3d <- function(mSet,
           opacity=0.1,
           hoverinfo="none"
         )
-        worked = T
-      })
+      }
 
       show.orbs <- c(show.orbs, worked)
-
     }
-
+    
     adj_plot <<- plotly_build(plots)
     rgbcols <- toRGB(cols[show.orbs])
     c = 1
+    
     for(i in seq_along(adj_plot$x$data)){
       item = adj_plot$x$data[[i]]
       if(item$type == "mesh3d"){
@@ -984,6 +992,7 @@ plotPCA.3d <- function(mSet,
     t <- list(
       family = font$family
     )
+    
     # --- return ---
     pca_plot <<- adj_plot %>% add_trace(
       hoverinfo = 'text',
@@ -1002,7 +1011,7 @@ plotPCA.3d <- function(mSet,
                   'square',
                   'x',
                   'o')
-    ) %>%  layout(font=t,
+    ) %>%  layout(font = t,
                   scene = list(
                     aspectmode="cube",
                     xaxis = list(
