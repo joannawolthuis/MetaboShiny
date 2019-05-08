@@ -415,6 +415,8 @@ observeEvent(input$initialize, {
     mSet <<- mSet
     
     statsmanager$calculate <- "pca"
+    statsmanager$reload <- "pca"
+    
     datamanager$reload <- "general"
     
   })

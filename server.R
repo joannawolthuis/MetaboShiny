@@ -455,7 +455,7 @@ gspec = RdBu')
   output$ref_select <- renderUI({ref.selector()})
 
   # triggered when user enters the statistics tab
-
+  
   observeEvent(input$dimred, {
     # check if an mset is present, otherwise abort
     if(!is.null(mSet)){
@@ -680,8 +680,9 @@ gspec = RdBu')
         load(fn)
         mSet <<- mSet
       }
+      datamanager$reload <- "general"
     })
-    datamanager$reload <- "general"
+    # reload current plot
     updateNavbarPage(session, "statistics", selected = "inf")
   })
 

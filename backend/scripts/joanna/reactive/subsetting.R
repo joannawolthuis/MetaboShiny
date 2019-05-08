@@ -112,21 +112,14 @@ observeEvent(input$reset_subset, {
 
   output$curr_name <- renderText({mSet$dataSet$cls.name})
 
-  if(mSet$dataSet$cls.num <= 1){
-    interface$mode <- NULL }
-  else if(mSet$dataSet$cls.num == 2){
-    interface$mode <- "bivar"}
-  else{
-    interface$mode <- "multivar"}
-
-  for(tabgroup in c("dimred", "permz", "overview")){
-    if(tabgroup %in% names(input)){
-      statsmanager$calculate <- input$permz
-      datamanager$reload <- input$permz
-    }
-  }
-
-  datamanager$reload <- "general"
+  # reload current plot
+  # for(tabgroup in c("dimred", "permz", "overview")){
+  #   if(tabgroup %in% names(input)){
+  #     statsmanager$calculate <- input[[tabgroup]]
+  #     datamanager$reload <- input[[tabgroup]]
+  #   }
+  # }
+  datamanager$reload <<- "general"
 
   updateNavbarPage(session, "statistics", selected = "inf")
 

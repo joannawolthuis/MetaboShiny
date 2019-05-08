@@ -13,12 +13,13 @@ dbSendQuery(conn = db,
 
 # placeholder users
 users = data.table(
-  username = c("joby", paste0("advomics", c(1:30))),
-  password = c("lol", rep("kirakira", 30)),
-  role = c("admin", rep("noob", 30))
+  username = c("jobylocal", "jobydocker", paste0("advomics", c(1:30))),
+  password = c("lol", "lol", rep("kirakira", 30)),
+  role = c("admin", "admin", rep("noob", 30))
 )
 
 # insert some initial data to work with
 DBI::dbWriteTable(db, "users", users, append=T)
 
 DBI::dbDisconnect(db)
+

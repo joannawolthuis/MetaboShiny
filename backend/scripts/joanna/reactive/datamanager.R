@@ -7,6 +7,9 @@ observe({
     NULL # if not reloading anything, nevermind
   }else{
     if(!is.null(mSet)){
+      
+      print(datamanager$reload)
+      
       switch(datamanager$reload,
              general = {
                # change interface
@@ -60,6 +63,10 @@ observe({
                  interface$mode <- "bivar"}
                else{
                  interface$mode <- "multivar"}
+               
+               statsmanager$calculate <- "pca"
+               datamanager$reload <- "pca"
+               
              },
              venn = {
                if("storage" %in% names(mSet)){
