@@ -94,8 +94,6 @@ observe({
                  used.values <- "p.value"
                  decreasing <- F
                  
-                 print(tbl)
-                 
                }else{
                  if(input$heatmode){
                    tbl <- as.data.frame(mSet$analSet$asca$sig.list$Model.ab)

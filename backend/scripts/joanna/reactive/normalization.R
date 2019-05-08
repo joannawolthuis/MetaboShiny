@@ -382,9 +382,6 @@ observeEvent(input$initialize, {
     # set name of variable of interest
     mSet$dataSet$cls.name <- condition
 
-    # tell datamanager that an mset is present
-    datamanager$reload <- "general"
-
     shiny::setProgress(session=session, value= .6)
 
     # generate summary plots and render them in UI
@@ -393,6 +390,7 @@ observeEvent(input$initialize, {
                                       colmap = local$aes$mycols,
                                       plot.theme = global$functions$plot.themes[[local$aes$theme]],
                                       font = local$aes$font)
+    
     output$var1 <- renderPlot(varNormPlots$tl)
     output$var2 <- renderPlot(varNormPlots$bl)
     output$var3 <- renderPlot(varNormPlots$tr)
@@ -411,9 +409,13 @@ observeEvent(input$initialize, {
     # save the used adducts to mSet
     shiny::setProgress(session=session, value= .9)
 
+    mSet$storage <- list()
+    
     # return?
     mSet <<- mSet
     
-    datamanager$reload <- "pca"
+    statsmanager$calculate <- "pca"
+    datamanager$reload <- "general"
+    
   })
 })

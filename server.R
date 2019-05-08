@@ -15,6 +15,7 @@ shinyServer(function(input, output, session) {
     patdb = "",
     csv_loc = "",
     proj_name ="",
+    last_mset="",
     aes = list(font = list(),
                mycols = c(),
                spectrum = "rb",
@@ -681,6 +682,7 @@ gspec = RdBu')
       }
     })
     datamanager$reload <- "general"
+    updateNavbarPage(session, "statistics", selected = "inf")
   })
 
   observeEvent(input$debug, {

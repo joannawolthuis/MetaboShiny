@@ -2,10 +2,6 @@
 observeEvent(input$change_cls, {
 
   # check if previous analysis storage already exists, if not, make it
-  if(!("storage" %in% names(mSet))){
-    mSet$storage <<- list()
-  }
-
   mset_name = mSet$dataSet$cls.name
 
   # save previous analyses (should be usable in venn diagram later)
@@ -36,10 +32,31 @@ observeEvent(input$change_cls, {
     mSet$analSet <<- NULL
   }
 
-  datamanager$reload <- "general"
+  #datamanager$reload <- "general"
 
   output$curr_name <- renderText({mSet$dataSet$cls.name})
 
+  output$curr_name <- renderText({mSet$dataSet$cls.name})
+  
+  if(mSet$dataSet$cls.num <= 1){
+    interface$mode <- NULL }
+  else if(mSet$dataSet$cls.num == 2){
+    interface$mode <- "bivar"}
+  else{
+    interface$mode <- "multivar"}
+  
+  if(!("pca" %in% names(mSet$analSet))){
+    print('reloading pca')
+    statsmanager$calculate <- "pca"
+  }
+  
+  if(input$permz %not in% names(mSet$analSet)){
+    statsmanager$calculate <- input$permz
+  }
+  datamanager$reload <- input$permz
+  
+  datamanager$reload <- "general"
+  
   updateNavbarPage(session, "statistics", selected = "inf")
 
 })

@@ -8,7 +8,7 @@ observeEvent(input$change_subset, {
                                      analysis = mSet$analSet)
 
   # make new subset
-  mset_name <- get_mset_name(mainvar = gsub(mSet$dataSet$cls.name, 
+  mset_name <- get_mset_name(mainvar = gsub(mSet$dataSet$cls.name,
                                             pattern = ":.*", replacement = ""),
                              subsetvar = input$subset_var,
                              subsetgroups = input$subset_group)
@@ -36,7 +36,7 @@ observeEvent(input$change_subset, {
       mSet$dataSet$exp.fac <<- mSet$dataSet$exp.fac[keep.log.norm]
     }
   }
-  local$constants$last_mset <<- mset_name
+  local$last_mset <<- mset_name
   mSet$analSet <<- NULL
 
   covars <- colnames(mSet$dataSet$covars)
@@ -97,7 +97,7 @@ observeEvent(input$reset_subset, {
     mSet$analSet <- NULL
   }
 
-  local$constants$last_mset <<- mset_name
+  local$last_mset <<- mset_name
 
   covars <- colnames(mSet$dataSet$covars)
   subsettable.covars <- covars[which(sapply(covars, function(x){
@@ -120,10 +120,14 @@ observeEvent(input$reset_subset, {
     interface$mode <- "multivar"}
 
   if(!("pca" %in% names(mSet$analSet))){
+    print("reloading pca...")
     statsmanager$calculate <- "pca"
   }
 
-  datamanager$reload <- "pca"
+  datamanager$reload <- "general"
+
+  updateNavbarPage(session, "statistics", selected = "inf")
+
 })
 
 observeEvent(input$subset_var, {

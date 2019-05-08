@@ -205,7 +205,7 @@ output$currUI <- renderUI({
                                                                                                     tabPanel("pca", value = "pca", #icon=icon("cube"),
                                                                                                              fluidRow(align="center",column(12,plotly::plotlyOutput("plot_pca",height = "600px", width="600px"))),#%>% shinycssloaders::withSpinner())),
                                                                                                              fluidRow(align="center",column(12,
-                                                                                                                                            switchButton("pca_2d3d", label = "", col = "BW", type = "2d3d"))),
+                                                                                                                                            switchButton("pca_2d3d", label = "", col = "BW", type = "2d3d", value=T))),
                                                                                                              hr(),
                                                                                                              fluidRow(column(3,
                                                                                                                              selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:20),selected = "PC1",width="100%"),
