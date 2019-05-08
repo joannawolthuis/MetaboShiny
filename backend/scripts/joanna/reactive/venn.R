@@ -56,7 +56,8 @@ observeEvent(input$venn_build, {
     NULL
   }else{
     
-    p <- ggPlotVenn(mSet = mSet,venn_yes = venn_yes,
+    p <- ggPlotVenn(mSet = mSet,
+                    venn_yes = isolate({as.list(venn_yes)}),
                     top = input$venn_tophits,
                     cols = local$aes$mycols,
                     cf=global$functions$color.functions[[local$aes$spectrum]],

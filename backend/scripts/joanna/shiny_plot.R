@@ -1139,38 +1139,31 @@ ggPlotVenn <- function(mSet,
                        cf,
                        plotlyfy=TRUE,font){
 
-  debug_input <<- venn_yes$now
-  
   experiments <- str_match(unlist(venn_yes$now), pattern = "\\(.*\\)")[,1]
 
-  print(experiments)
-  
   experiments <- unique(gsub(experiments, pattern = "\\(\\s*(.+)\\s*\\)", replacement="\\1"))
 
-  print(experiments)
-  
   table_list <- lapply(experiments, function(experiment){
 
     analysis = mSet$storage[[experiment]]$analysis
 
     rgx_exp <- gsub(experiment, pattern = "\\(", replacement = "\\\\(")
     rgx_exp <- gsub(rgx_exp, pattern = "\\)", replacement = "\\\\)")
-
+    rgx_exp <- gsub(rgx_exp, pattern = "\\-", replacement = "\\\\-")
+    rgx_exp <- gsub(rgx_exp, pattern = "\\+", replacement = "\\\\+")
+    
     categories = grep(unlist(venn_yes$now),
                       pattern = rgx_exp, value = T)
 
-    categories = gsub(categories, pattern = "\\(\\s*(.+)\\s*\\)", replacement = "")
+    categories = gsub(categories, pattern = " \\(\\s*(.+)\\s*\\)", replacement = "")
 
-    print(categories)
-    
+
     # go through the to include analyses
 
     tables <- lapply(categories, function(name){
 
       base_name <- gsub(name, pattern = " -.*$| ", replacement="")
 
-      print(base.name)
-      
       # fetch involved mz values
       tbls <- switch(base_name,
                      aov = {
