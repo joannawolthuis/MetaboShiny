@@ -7,7 +7,7 @@ lapply(global$vectors$db_list, FUN=function(db){
   # creates listener for if the 'check db' button is pressed
   observeEvent(input[[paste0("check_", db)]],{
     # see which db files are present in folder
-    db_folder_files <- list.files(getOptions()$db_dir)
+    db_folder_files <- list.files(getOptions(local$paths$opt.loc)$db_dir)
     is.present <- paste0(db, ".base.db") %in% db_folder_files
     check_pic <- if(is.present) "yes.png" else "no.png"
     # generate checkmark image objects
@@ -57,14 +57,14 @@ lapply(global$vectors$db_list, FUN=function(db){
 
       # build base db (differs per db, parsers for downloaded data)
       build.base.db(db,
-                    outfolder = getOptions()$db_dir,
+                    outfolder = getOptions(local$paths$opt.loc)$db_dir,
                     cl = session_cl)
       shiny::setProgress(session = session, 0.5)
 
       if(!grepl(db, pattern = "maconda|noise")){
         # extend base db (identical per db, makes adduct and isotope variants of downloaded compounds)
         build.extended.db(db,
-                          outfolder = getOptions()$db_dir,
+                          outfolder = getOptions(local$paths$opt.loc)$db_dir,
                           adduct.table = adducts,
                           cl = F,#session_cl,
                           fetch.limit = 500) #TODO: figure out the optimal fetch limit...

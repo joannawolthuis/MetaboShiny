@@ -6,13 +6,25 @@ shinyServer(function(input, output, session) {
   bgcol <- "black"
   font.css <- ""
   bar.css <- ""
+  opts <- list()
   
-  local = reactiveValues(
-    vars = list(
-      logged_in = FALSE,
-      aes = list(),
-      vec = list()
-    ))
+  logged <- reactiveValues(status=FALSE,text="please log in! ( •́ .̫  •̀ )")
+  
+  local = list(
+    patdb = "",
+    csv_loc = "",
+    proj_name ="",
+    aes = list(font = list(),
+               mycols = c(),
+               spectrum = "rb",
+               theme = "min"),
+    vectors = list(proj_names = c()),
+    paths = list(opt.loc = "")
+    )
+  
+  output$login_status <- renderText({
+    logged$text
+  })
   
   # init all observers
   for(fp in list.files("./backend/scripts/joanna/reactive", full.names = T)){
@@ -23,8 +35,7 @@ shinyServer(function(input, output, session) {
   # ================================== LOGIN =====================================
   
   # default
-  output$login_status <- renderText("please log in! ( •́ .̫  •̀)")
-  
+
   userdb = normalizePath("./users.db")
   
   # if logged in, check if exists
@@ -34,7 +45,7 @@ shinyServer(function(input, output, session) {
       role = get_user_role(input$username, input$password)
       
       if(is.null(role)){
-        output$login_status <- renderText("wrong username/password (｡•́︿•̀｡)")
+        logged$text <<- "wrong username/password (｡•́︿•̀｡)"
       }else{
         
         runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
@@ -43,7 +54,7 @@ shinyServer(function(input, output, session) {
                            docker = "/userfiles/saves",
                            local = "~/MetaboShiny/saves")
         
-        db_dir <- switch(runmode,
+        dbdir <- switch(runmode,
                            docker = "/userfiles/databases",
                            local = "~/MetaboShiny/databases")
         
@@ -51,19 +62,21 @@ shinyServer(function(input, output, session) {
         userfolder = file.path(work_dir, input$username)
         
         if(!dir.exists(userfolder)){
-          output$login_status <- renderText("creating new user..,)")
+          logged$text <<- "creating new user..."
           dir.create(userfolder)
         }
         
-        output$login_status <- renderText("logging in...")
+        logged$text <<- "logging in..."
         
         username = input$username
         
-        # check if options file exists, otherwise make it with the proper files
-        opt.loc <- file.path(userfolder, "options.txt")
-        if(!file.exists(opt.loc)){
-          contents = gsubfn::fn$paste('db_dir = /userfiles/databases
-work_dir = /userfiles/saves/$username
+        # check if opts file exists, otherwise make it with the proper files
+        local$paths$opt.loc <<- file.path(userfolder, "options.txt")
+        local$paths$work_dir <<- userfolder
+        
+        if(!file.exists(local$paths$opt.loc)){
+          contents = gsubfn::fn$paste('db_dir = $dbdir
+work_dir = $userfolder
 proj_name = MY_METSHI
 ppm = 2
 packages_installed = Y
@@ -83,20 +96,24 @@ taskbar_image = gemmy_rainbow.png
 gtheme = classic
 gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
 gspec = RdBu')
-          writeLines(contents, opt.loc)
+          writeLines(contents, local$paths$opt.loc)
         }
         
         withProgress({
           # read settings
-          options <- getOptions(opt.loc)
           
-          output$login_status <- renderText("loaded options!")
-          output$login_status <- renderText("starting MetaboShiny...")
+          opts <- getOptions(local$paths$opt.loc)
+          
+          print(opts)
+          
+          logged$text <<- "loaded options!"
+          
+          logged$text <<- "starting MetaboShiny..."
           
           # generate CSS for the interface based on user settings for colours, fonts etc.
-          bar.css <<- nav.bar.css(options$col1, options$col2, options$col3, options$col4)
-          font.css <<- app.font.css(options$font1, options$font2, options$font3, options$font4,
-                                   options$size1, options$size2, options$size3, options$size4)
+          bar.css <<- nav.bar.css(opts$col1, opts$col2, opts$col3, opts$col4)
+          font.css <<- app.font.css(opts$font1, opts$font2, opts$font3, opts$font4,
+                                   opts$size1, opts$size2, opts$size3, opts$size4)
           
           # google fonts
           
@@ -108,7 +125,7 @@ gspec = RdBu')
           # === GOOGLE FONT SUPPORT FOR GGPLOT2 ===
           
           # Download a webfont
-          lapply(c(options[grepl(pattern = "font", names(options))]), function(font){
+          lapply(c(opts[grepl(pattern = "font", names(opts))]), function(font){
             try({
               sysfonts::font_add_google(name = font, 
                                         family = font, 
@@ -122,29 +139,30 @@ gspec = RdBu')
           # ======================================
           
           # set default plot theme to minimal
-          local$aes$plot.theme <- ggplot2::theme_minimal
+          local$aes$plot.theme <<- ggplot2::theme_minimal
           
           # set taskbar image as set in options
-          taskbar_image <- options$task_img
+          taskbar_image <- opts$task_img
           
-          # parse color options
-          local$aes$mycols <- get.col.map(opt.loc) # colours for discrete sets, like group A vs group B etc.
-          local$aes$spectrum <- options$gspec # gradient function for heatmaps, volcano plot etc.
-          local$vec$project_names <- unique(tools::file_path_sans_ext(list.files(options$work_dir, pattern=".csv|.db"))) # the names listed in the 'choose project' tab of options.
+          # parse color opts
+          local$aes$mycols <<- get.col.map(local$paths$opt.loc) # colours for discrete sets, like group A vs group B etc.
+          local$aes$theme <<- opts$gtheme # gradient function for heatmaps, volcano plot etc.
+          local$aes$spectrum <<- opts$gspec # gradient function for heatmaps, volcano plot etc.
+          local$vectors$proj_names <<- unique(tools::file_path_sans_ext(list.files(opts$work_dir, pattern=".csv|.db"))) # the names listed in the 'choose project' tab of opts.
+          
+          print(local)
           
           # load existing file
-          bgcol <<- options$col1
+          bgcol <<- opts$col1
 
           # - - load custom dbs - - 
           
           # load in custom databases
-          has.customs <- dir.exists(file.path(options$db_dir, "custom"))
+          has.customs <- dir.exists(file.path(opts$db_dir, "custom"))
           
           if(has.customs){
             
-            print("loading custom dbs...")
-            
-            customs = list.files(path = file.path(options$db_dir, "custom"),
+            customs = list.files(path = file.path(opts$db_dir, "custom"),
                                  pattern = "\\.RData")
             
             dbnames = unique(tools::file_path_sans_ext(customs))
@@ -157,7 +175,7 @@ gspec = RdBu')
                 dblist <- c(dblist, db, "custom")
                 global$vectors$db_list <- dblist
               }
-              metadata.path <- file.path(getOptions()$db_dir, "custom", paste0(db, ".RData"))
+              metadata.path <- file.path(opts$db_dir, "custom", paste0(db, ".RData"))
               load(metadata.path)
               
               # add description to global
@@ -169,13 +187,84 @@ gspec = RdBu')
             }
           }
           
+          # init stuff that depends on opts file
+          
+          local$proj_name <<- opts$proj_name
+          local$paths$patdb <<- file.path(opts$work_dir, paste0(opts$proj_name, ".db"))
+          local$paths$csv_loc <<- file.path(opts$work_dir, paste0(opts$proj_name, ".csv"))
+          local$texts <<- list(
+            list(name='curr_exp_dir',text=opts$work_dir),
+            list(name='curr_db_dir',text=opts$db_dir),
+            list(name='ppm',text=opts$ppm),
+            list(name='proj_name',text=opts$proj_name)
+          )
+          
+          updateSelectizeInput(session, 
+                               "proj_name", 
+                                choices = local$vectors$proj_names,
+                               selected = opts$proj_name)
+          # create default text objects in UI
+          lapply(local$texts, FUN=function(default){
+            output[[default$name]] = renderText(default$text)
+          })
+          
+          local$aes$font <<- list(family = opts$font4,
+                                   ax.num.size = 11,
+                                   ax.txt.size = 15,
+                                   ann.size = 20,
+                                   title.size = 25) 
+                  
+          # other default stuff that needs opts
+          
+          library(showtext)
+          
+          # import google fonts
+          for(font in unlist(opts[grep(names(opts), pattern = "font")])){
+            if(font %in% sysfonts::font.families()){
+              NULL
+            }else{
+              sysfonts::font_add_google(font,db_cache = T)
+            }
+          }
+          
+          # other stuff
+          
+          # create color pickers based on amount of colours allowed in global
+          output$colorPickers <- renderUI({
+            lapply(c(1:global$constants$max.cols), function(i) {
+              colourpicker::colourInput(inputId = paste("col", i, sep="_"),
+                                        label = paste("Choose colour", i),
+                                        value = local$aes$mycols[i],
+                                        allowTransparent = F)
+            })
+          })
+          
+          # create color1, color2 etc variables to use in plotting functions
+          # and update when colours picked change
+          observe({
+            values <- unlist(lapply(c(1:global$constants$max.cols), function(i) {
+              input[[paste("col", i, sep="_")]]
+            }))
+            
+            if(!any(is.null(values))){
+              if(local$paths$opt.loc != ""){
+                set.col.map(local$paths$opt.loc, values)
+              }
+            }
+          })
+          
+          updateSelectInput(session, "ggplot_theme", selected = opts$gtheme)
+          updateSelectInput(session, "color_ramp", selected = opts$gspec)
+          
+          opts <<- opts
           # logged in!
           
-          local$vars$logged_in <- TRUE
+          logged$status <<- TRUE
+
         })
       }
     }else{
-      output$login_status <- renderText("try again (｡•́︿•̀｡)")
+      logged$text <- "try again (｡•́︿•̀｡)"
     }
   })
   
@@ -217,22 +306,11 @@ gspec = RdBu')
     output[[default$name]] = renderText(default$text)
   })
   
-  library(showtext)
-  
-  # import google fonts
-  for(font in unlist(options[grep(names(options), pattern = "font")])){
-    if(font %in% sysfonts::font.families()){
-      NULL
-    }else{
-      sysfonts::font_add_google(font,db_cache = T)
-    }
-  }
-  
   showtext::showtext_auto() ## Automatically use showtext to render text for future devices
   
   # default match table fill
   output$match_tab <-DT::renderDataTable({
-    if(is.null(global$tables$last_matches)){
+    if(is.null(local$tables$last_matches)){
       DT::datatable(data.table("no m/z chosen" = "Please choose m/z value from results ٩(｡•́‿•̀｡)۶	"),
                     selection = 'single',
                     autoHideNavigation = T,
@@ -252,44 +330,22 @@ gspec = RdBu')
     }, deleteFile = FALSE)
   })
   
-  # create color pickers based on amount of colours allowed in global
-  output$colorPickers <- renderUI({
-    lapply(c(1:global$constants$max.cols), function(i) {
-      colourpicker::colourInput(inputId = paste("col", i, sep="_"),
-                                label = paste("Choose colour", i),
-                                value = global$vectors$mycols[i],
-                                allowTransparent = F)
-    })
-  })
+  shown_matches <- reactiveValues(table = data.table())
   
-  # create color1, color2 etc variables to use in plotting functions
-  # and update when colours picked change
-  observe({
-    values <- unlist(lapply(c(1:global$constants$max.cols), function(i) {
-      input[[paste("col", i, sep="_")]]
-    }))
-    if(!any(is.null(values))){
-      set.col.map(file.path(optfolder, 'user_options.txt'), values)
-      global$vectors$mycols <<- get.col.map(file.path(optfolder, paste0('user_options_', runmode, ".txt")))
-    }
-  })
-  
-  shown_matches <- reactiveValues(table = global$tables$last_matches)
-  
-  output$match_tab <- DT::renderDataTable({
-    remove_cols = global$vectors$remove_match_cols
-    remove_idx <- which(colnames(global$tables$last_matches) %in% remove_cols)
-    # don't show some columns but keep them in the original table, so they can be used
-    # for showing molecule descriptions, structure
-    DT::datatable(shown_matches$table,
-                  selection = 'single',
-                  autoHideNavigation = T,
-                  options = list(lengthMenu = c(5, 10, 15),
-                                 pageLength = 5,
-                                 columnDefs = list(list(visible=FALSE, targets=remove_idx)))
-    )
-    
-  })
+  # output$match_tab <- DT::renderDataTable({
+  #   remove_cols = global$vectors$remove_match_cols
+  #   remove_idx <- which(colnames(local$tables$last_matches) %in% remove_cols)
+  #   # don't show some columns but keep them in the original table, so they can be used
+  #   # for showing molecule descriptions, structure
+  #   DT::datatable(shown_matches$table,
+  #                 selection = 'single',
+  #                 autoHideNavigation = T,
+  #                 options = list(lengthMenu = c(5, 10, 15),
+  #                                pageLength = 5,
+  #                                columnDefs = list(list(visible=FALSE, targets=remove_idx)))
+  #   )
+  #   
+  # })
   # ===== UI SWITCHER ====
   
   # create interface mode storage object.
@@ -389,7 +445,7 @@ gspec = RdBu')
   
   # triggers when check_csv is clicked - get factors usable for normalization
   observeEvent(input$check_csv, {
-    req(global$paths$csv_loc)
+    req(local$paths$csv_loc)
     switch(input$norm_type,
            ProbNorm=updateSelectInput(session, "ref_var",
                                       choices = get_ref_vars(fac = "label") # please add options for different times later, not difficult
@@ -591,7 +647,7 @@ gspec = RdBu')
                                  NA
                                }else{
                                  if(!button_id){
-                                   c(file.path(getOptions()$db_dir, paste0(db, ".base.db"))) # add path to list of dbpaths
+                                   c(file.path(opts$db_dir, paste0(db, ".base.db"))) # add path to list of dbpaths
                                  }
                                  else{NA}
                                }
@@ -616,7 +672,7 @@ gspec = RdBu')
   observeEvent(input$save_mset, {
     # save mset
     withProgress({
-      fn <- paste0(tools::file_path_sans_ext(global$paths$patdb), ".metshi")
+      fn <- paste0(tools::file_path_sans_ext(local$paths$patdb), ".metshi")
       save(mSet, file = fn)
     })
   })
@@ -624,7 +680,7 @@ gspec = RdBu')
   observeEvent(input$load_mset, {
     # load mset
     withProgress({
-      fn <- paste0(tools::file_path_sans_ext(global$paths$patdb), ".metshi")
+      fn <- paste0(tools::file_path_sans_ext(local$paths$patdb), ".metshi")
       load(fn)
     },env = session)
     print("loading...")
@@ -633,7 +689,6 @@ gspec = RdBu')
   
   observeEvent(input$debug, {
     input <<- isolate(as.list(input))
-    dput(isolate(as.list(input)))
   })
   
   observeEvent(input$ml_train_ss, {
@@ -743,7 +798,7 @@ gspec = RdBu')
     
     # build extended db
     build.extended.db(tolower(input$my_db_short),
-                      outfolder = file.path(getOptions()$db_dir, "custom"),
+                      outfolder = file.path(opts$db_dir, "custom"),
                       adduct.table = adducts,cl = 0)
     
   })

@@ -1,8 +1,9 @@
 # triggers when user wants to create database from .db and excel or 2 csv files and excel
 observeEvent(input$create_db,{
 
+  print(local)
   # update the path to patient db
-  global$paths$patdb <<- file.path(getOptions()$work_dir, paste0(getOptions()$proj_name, ".db"))
+  local$paths$patdb <<- file.path(local$paths$work_dir, paste0(local$proj_name, ".db"))
 
   withProgress({
 
@@ -12,19 +13,21 @@ observeEvent(input$create_db,{
     
     updateSelectizeInput(session = session,
                          inputId = "proj_name",
-                         choices = c(global$vectors$project_names, proj_name))
+                         choices = c(local$vectors$project_names, proj_name))
     
     updateSelectizeInput(session = session,
                          inputId = "proj_name",
                          selected = proj_name)
     
-    global$paths$patdb <<- file.path(getOptions()$work_dir, paste0(proj_name,".db", sep=""))
+    local$paths$patdb <<- file.path(local$paths$work_dir, paste0(proj_name,".db", sep=""))
     # change project name in user options file
-    setOption(key="proj_name", value=proj_name)
+    setOption(local$paths$opt.loc, key="proj_name", value=proj_name)
     # print the changed name in the UI
     output$proj_name <<- renderText(proj_name)
     # change path CSV should be / is saved to in session
-    global$paths$csv_loc <<- file.path(getOptions()$work_dir, paste0(getOptions()$proj_name,".csv"))
+    local$paths$csv_loc <<- file.path(local$paths$work_dir, paste0(local$proj_name,".csv"))
+    
+    print(local$paths$patdb)
     
     switch(input$new_proj,
            # if loading in a .db file... (FAST, MOSTLY FOR ADMINS USING HPC)
@@ -34,8 +37,10 @@ observeEvent(input$create_db,{
              db_path <- parseFilePaths(global$paths$volumes, input$database)$datapath
              excel_path <- parseFilePaths(global$paths$volumes, input$excel)$datapath
 
+             print(db_path)
+             print(local$paths$patdb)
              # copy the user selected db to the processing folder under proj_name renaming
-             file.copy(db_path, global$paths$patdb, overwrite = T)
+             file.copy(db_path, local$paths$patdb, overwrite = T)
 
              shiny::setProgress(session=session, value= .30)
 
@@ -43,9 +48,9 @@ observeEvent(input$create_db,{
              metadata_path <- parseFilePaths(global$paths$volumes, input$metadata)$datapath
 
              if(grepl(metadata_path, pattern = "csv")){
-               exp_vars <<- load.metadata.csv(metadata_path, global$paths$patdb)
+               exp_vars <<- load.metadata.csv(metadata_path, local$paths$patdb)
              }else{
-               exp_vars <<- load.metadata.excel(metadata_path, global$paths$patdb)
+               exp_vars <<- load.metadata.excel(metadata_path, local$paths$patdb)
              }
 
              shiny::setProgress(session=session, value= .60)
@@ -55,7 +60,7 @@ observeEvent(input$create_db,{
            `From CSV` = {
 
              # build patient db from csv files with a given ppm error margin
-             build.pat.db(global$paths$patdb,
+             build.pat.db(local$paths$patdb,
                           ppm = input$ppm,
                           pospath = parseFilePaths(global$paths$volumes, input$outlist_pos)$datapath,
                           negpath = parseFilePaths(global$paths$volumes, input$outlist_neg)$datapath,
@@ -67,9 +72,9 @@ observeEvent(input$create_db,{
              metadata_path <- parseFilePaths(global$paths$volumes, input$metadata)$datapath
 
              if(grepl(metadata_path, pattern = "csv")){
-               exp_vars <<- load.metadata.csv(metadata_path, global$paths$patdb)
+               exp_vars <<- load.metadata.csv(metadata_path, local$paths$patdb)
              }else{
-               exp_vars <<- load.metadata.excel(metadata_path, global$paths$patdb)
+               exp_vars <<- load.metadata.excel(metadata_path, local$paths$patdb)
              }
           }
     )
@@ -80,7 +85,7 @@ observeEvent(input$create_db,{
 # TODO: is deprecated, fix!!
 observeEvent(input$import_db, {
 
-  global$paths$patdb <<- input$pat_db$datapath
+  local$paths$patdb <<- input$pat_db$datapath
   output$db_upload_check <- renderImage({
     # When input$n is 3, filename is ./images/image3.jpeg
     filename <- normalizePath('www/yes.png')
@@ -93,7 +98,7 @@ observeEvent(input$import_db, {
 # imports existing csv file
 observeEvent(input$import_csv, {
   # change path to current csv file to user given path
-  global$paths$csv_loc <<- input$pat_csv$datapath
+  local$paths$csv_loc <<- input$pat_csv$datapath
 
   # show checkmark underneath select csv button
   output$csv_upload_check <- renderImage({
@@ -114,7 +119,7 @@ observeEvent(input$create_csv, {
     shiny::setProgress(session = session, value= 1/4)
 
     # create csv table from patient database and user chosen settings in that pane
-    tbl <- get.csv(global$paths$patdb,
+    tbl <- get.csv(local$paths$patdb,
                    group_adducts = F, # if(length(global$vectors$db_add_list) == 0) F else T, # group by addicts?
                    groupfac = "mz" #input$group_by, # group by mz or formula
                    #which_dbs = global$vectors$db_add_list, # used databases
@@ -133,10 +138,10 @@ observeEvent(input$create_csv, {
     shiny::setProgress(session=session, value= 2/4)
 
     # change location of csv in global
-    global$paths$csv_loc <<- file.path(getOptions()$work_dir, paste0(getOptions()$proj_name,".csv"))
+    local$paths$csv_loc <<- file.path(local$paths$work_dir, paste0(local$proj_name,".csv"))
 
     # write csv file to new location
-    fwrite(tbl, global$paths$csv_loc, sep="\t")
+    fwrite(tbl, local$paths$csv_loc, sep="\t")
 
     # find the experimental variables by checking which column names wont convert to numeric
     as.numi <- as.numeric(colnames(tbl)[1:100])
@@ -175,7 +180,7 @@ observeEvent(input$check_csv, {
 
   # read in csv
   # TODO: only read in the first x -rows- to save time??
-  csv <- fread(global$paths$csv_loc,
+  csv <- fread(local$paths$csv_loc,
                header = T)
 
   # find experimental variables by checking which wont convert to numeric

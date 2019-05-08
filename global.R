@@ -60,7 +60,7 @@ getOptions <- function(file.loc){
 #' @param file.loc Location of user options file. Usually .txt but any format is fine.
 #' @param key Name of the new option / to change option
 #' @param value Value of the option to change or add
-setOption <- function(file.loc=opt.loc, key, value){
+setOption <- function(file.loc, key, value){
   opt_conn <- file(file.loc)
   # -------------------------
   options <- getOptions(file.loc)
@@ -119,7 +119,7 @@ caret.mdls <- caret::getModelInfo()
                                   images = list(list(name = 'load_icon', path = 'www/cute.png', dimensions = c(100, 100)),
                                                 list(name = 'cute_package', path = 'www/cat.png', dimensions = c(80, 80)),
                                                 list(name = 'internal_logo', path = 'www/umcinternal.png', dimensions = c(120, 120)),
-                                                list(name = 'login_header', path = 'www/login_icon.png', dimensions = c(200, 200)),
+                                                list(name = 'login_header', path = 'www/login_icon.png', dimensions = c(300,200)),
                                                 list(name = 'noise_logo', path = 'www/umcnoise.png', dimensions = c(120, 120)),
                                                 list(name = 'hmdb_logo', path = 'www/hmdblogo.png', dimensions = c(150, 100)),
                                                 list(name = 'metacyc_logo', path = 'www/metacyc.png', dimensions = c(300, 80)),
@@ -151,20 +151,11 @@ caret.mdls <- caret::getModelInfo()
                                                 list(name = 'sidebar_icon', path = 'www/detective.png', dimensions = c(60, 60))
 
                                   ), # all image paths, if you add an image you can add it here
-                                  default.text = list(list(name='curr_exp_dir',text=options$work_dir),
-                                                      list(name='curr_db_dir',text=options$db_dir),
-                                                      list(name='curr_definition', text="No m/z selected"),
-                                                      list(name='ppm',text=options$ppm),
-                                                      list(name='proj_name',text=options$proj_name),
+                                  default.text = list(list(name='curr_definition', text="No m/z selected"),
                                                       list(name="curr_cpd", text="..."),# default text options at startup
                                                       list(name="ml_train_ss", text="all"),
                                                       list(name="ml_test_ss", text="all")
                                   ),
-                                  font.aes = list(font = options$font4,
-                                                  ax.num.size = 11,
-                                                  ax.txt.size = 15,
-                                                  ann.size = 20,
-                                                  title.size = 25),
                                   db.build.info = list(
                                     hmdb = list(title = "HMDB",
                                                 description = "Metabolites commonly found in human biological samples.",
@@ -274,10 +265,7 @@ caret.mdls <- caret::getModelInfo()
                      append(base.opts, brew.opts)
                    }),
                  # set default paths
-                 paths = list(# path to .db file selected as default data source in the csv making pane
-                   patdb = file.path(options$work_dir, paste0(options$proj_name, ".db")),
-                   # path to .csv file selected as default source in the normalization pane
-                   csv_loc = file.path(options$work_dir, paste0(options$proj_name, ".csv")),
+                 paths = list(
                    # available paths when selecting a new file or folder
                    volumes =  c('MetaboShiny' = getwd(),
                                 'Home'=home,
@@ -421,7 +409,9 @@ sardine <- function(content) div(style="display: inline-block;vertical-align:top
 # interleave for sorting later ...
 add_idx <- order(c(seq_along(global$vectors$pos_adducts$Name), seq_along(global$vectors$neg_adducts$Name)))
 sort_order <<- unlist(c(global$vectors$pos_adducts$Name, global$vectors$neg_adducts$Name))[add_idx]
-
+debug_mSet <- NULL
+debug_local <- NULL
+debug_input <- NULL
 
 print("loaded scripts!")
 

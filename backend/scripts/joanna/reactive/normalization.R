@@ -6,7 +6,7 @@ observeEvent(input$initialize, {
     shiny::setProgress(session=session, value= .1)
     
     # read in original CSV file
-    csv_orig <- fread(global$paths$csv_loc, 
+    csv_orig <- fread(local$paths$csv_loc, 
                       data.table = TRUE,
                       header = T)
     
@@ -129,7 +129,7 @@ observeEvent(input$initialize, {
     remove <- which(!(exp_var_names %in% keep_cols))
     
     # define location to write processed csv to
-    csv_loc_final <- gsub(pattern = "\\.csv", replacement = "_no_out.csv", x = global$paths$csv_loc)
+    csv_loc_final <- gsub(pattern = "\\.csv", replacement = "_no_out.csv", x = local$paths$csv_loc)
     
     # remove file if it already exists
     if(file.exists(csv_loc_final)) file.remove(csv_loc_final)
@@ -389,13 +389,19 @@ observeEvent(input$initialize, {
     
     # generate summary plots and render them in UI
     
-    varNormPlots <- ggplotNormSummary(mSet)
+    varNormPlots <- ggplotNormSummary(mSet,
+                                      colmap = local$aes$mycols, 
+                                      plot.theme = global$functions$plot.themes[[local$aes$theme]],
+                                      font = local$aes$font)
     output$var1 <- renderPlot(varNormPlots$tl)
     output$var2 <- renderPlot(varNormPlots$bl)
     output$var3 <- renderPlot(varNormPlots$tr)
     output$var4 <- renderPlot(varNormPlots$br)
     
-    sampNormPlots <-  ggplotSampleNormSummary(mSet)
+    sampNormPlots <-  ggplotSampleNormSummary(mSet,
+                                              #colmap = local$aes$mycols, 
+                                              plot.theme = global$functions$plot.themes[[local$aes$theme]],
+                                              font = local$aes$font)
     output$samp1 <- renderPlot(sampNormPlots$tl)
     output$samp2 <- renderPlot(sampNormPlots$bl)
     output$samp3 <- renderPlot(sampNormPlots$tr)
@@ -403,7 +409,7 @@ observeEvent(input$initialize, {
     shiny::setProgress(session=session, value= .8)
     
     # perform PCA since it's ALWAYS the first tab
-    mSet <- PCA.Anal(mSet) # perform PCA analysis
+    #mSet <- PCA.Anal(mSet) # perform PCA analysis
     
     # save the used adducts to mSet
     shiny::setProgress(session=session, value= .9)

@@ -23,4 +23,3 @@
 # global$vectors[[paste0("mummi_", mode)]]
 # global$vectors$calc_adducts
 # global$vectors$add_list
-
