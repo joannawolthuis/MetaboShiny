@@ -1139,8 +1139,11 @@ ggPlotVenn <- function(mSet,
                        cf,
                        plotlyfy=TRUE,font){
 
+  dput(venn_yes)
+  
   experiments <- str_match(unlist(venn_yes$now), pattern = "\\(.*\\)")[,1]
 
+  
   experiments <- unique(gsub(experiments, pattern = "\\(\\s*(.+)\\s*\\)", replacement="\\1"))
 
   table_list <- lapply(experiments, function(experiment){
@@ -1153,10 +1156,9 @@ ggPlotVenn <- function(mSet,
     rgx_exp <- gsub(rgx_exp, pattern = "\\+", replacement = "\\\\+")
     
     categories = grep(unlist(venn_yes$now),
-                      pattern = rgx_exp, value = T)
+                      pattern = paste0("\\(",rgx_exp, "\\)"), value = T)
 
     categories = gsub(categories, pattern = " \\(\\s*(.+)\\s*\\)", replacement = "")
-
 
     # go through the to include analyses
 
