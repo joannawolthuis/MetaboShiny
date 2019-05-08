@@ -2,7 +2,6 @@
 
 shinyServer(function(input, output, session) {
 
-  debug_mSet <- NULL
   mSet <- NULL
   bgcol <- "black"
   font.css <- ""
@@ -490,12 +489,10 @@ gspec = RdBu')
   observeEvent(input$overview, {
     # check if an mset is present, otherwise abort
     if(!is.null(mSet)){
-
       # depending on the present tab, perform analyses accordingly
       if(input$overview %not in% names(mSet$analSet) | input$overview == "venn"){
         statsmanager$calculate <- input$overview
       }
-
       datamanager$reload <- input$overview
     }
   })
@@ -686,7 +683,8 @@ gspec = RdBu')
     withProgress({
       fn <- paste0(tools::file_path_sans_ext(local$paths$patdb), ".metshi")
       load(fn)
-    },env = session)
+      mSet <<- mSet
+    })
     print("loading...")
     datamanager$reload <- "general"
   })

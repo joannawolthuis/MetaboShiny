@@ -471,9 +471,13 @@ ggPlotFC <- function(mSet, cf, n=20,
   }
 }
 
-ggPlotVolc <- function(mSet, cf,
-                       n=20, plot.theme,
-                       plotlyfy=TRUE,font ){
+ggPlotVolc <- function(mSet, 
+                       cf,
+                       n=20, 
+                       plot.theme,
+                       plotlyfy=TRUE,
+                       font ){
+  
   vcn<-mSet$analSet$volcano;
   dt <- as.data.table(vcn$sig.mat[,c(2,4)],keep.rownames = T)
   colnames(dt) <- c("cpd", "log2FC", "-log10P")
@@ -1137,8 +1141,6 @@ ggPlotVenn <- function(mSet,
                        cf,
                        plotlyfy=TRUE,font){
 
-  #venn_yes <<- isolate({venn_yes})
-
   experiments <- str_match(unlist(venn_yes$now), pattern = "\\(.*\\)")[,1]
 
   experiments <- unique(gsub(experiments, pattern = "\\(\\s*(.+)\\s*\\)", replacement="\\1"))
@@ -1146,7 +1148,6 @@ ggPlotVenn <- function(mSet,
   table_list <- lapply(experiments, function(experiment){
 
     analysis = mSet$storage[[experiment]]$analysis
-    #data = mSet$storage[[experiment]]$dataset
 
     rgx_exp <- gsub(experiment, pattern = "\\(", replacement = "\\\\(")
     rgx_exp <- gsub(rgx_exp, pattern = "\\)", replacement = "\\\\)")
@@ -1157,6 +1158,7 @@ ggPlotVenn <- function(mSet,
     categories = gsub(categories, pattern = "\\(\\s*(.+)\\s*\\)", replacement = "")
 
     # go through the to include analyses
+    
     tables <- lapply(categories, function(name){
 
       base_name <- gsub(name, pattern = " -.*$| ", replacement="")
@@ -1328,7 +1330,7 @@ ggPlotVenn <- function(mSet,
     # - - -
     numbers$y <- as.numeric(c(newy))
   }
-
+  
   # generate plot with ggplot
   p <- ggplot(datapoly,
               aes(x = x,
@@ -1336,7 +1338,8 @@ ggPlotVenn <- function(mSet,
     geom_text(mapping = aes(x=x-.02, y=y, label=value), data = numbers, size = 6, hjust = 0) +
     theme_void() +
     theme(legend.position="none",
-          text=element_text(size=),
+          text=element_text(size=font$ax.num.size,
+                            family = font$family),
           panel.grid = element_blank()) +
     scale_fill_gradientn(colours =
                            cf(circles)) +

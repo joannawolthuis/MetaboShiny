@@ -8,7 +8,8 @@ observeEvent(input$change_subset, {
                                      analysis = mSet$analSet)
 
   # make new subset
-  mset_name <- get_mset_name(mainvar = gsub(mSet$dataSet$cls.name, pattern = ":.*", replacement = ""),
+  mset_name <- get_mset_name(mainvar = gsub(mSet$dataSet$cls.name, 
+                                            pattern = ":.*", replacement = ""),
                              subsetvar = input$subset_var,
                              subsetgroups = input$subset_group)
 

@@ -147,10 +147,12 @@ observe({
                }
              },
              volc = {
+               print("reloading volcano plot..")
                # render volcano plot with user defined colours
                output$volc_plot <- plotly::renderPlotly({
                  # --- ggplot ---
-                 ggPlotVolc(global$functions$color.functions[[local$aes$spectrum]],
+                 ggPlotVolc(mSet,
+                            cf = global$functions$color.functions[[local$aes$spectrum]],
                             20,
                             plot.theme = global$functions$plot.themes[[local$aes$theme]],
                             plotlyfy=TRUE,font = local$aes$font)

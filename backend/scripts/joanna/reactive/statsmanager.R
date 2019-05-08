@@ -11,6 +11,7 @@ observe({
     
     if(!is.null(mSet)){
     
+      debug_mSet <<- mSet
     switch(statsmanager$calculate, 
            venn = {
              # save previous mset 
@@ -43,8 +44,6 @@ observe({
              mSet$analSet$heatmap <<- NULL
              
              if(!is.null(input$heatmode)){
-               
-               print("calc...")
 
                # change top hits used in heatmap depending on time series / bivariate / multivariate mode
                # reordering of hits according to most significant at the top
@@ -88,11 +87,14 @@ observe({
                    
                  }
                }else if(interface$mode == "multivar"){
+                 
                  print("multivar mode")
                  
+                 print(names(debug_mSet$analSet$aov))
                  tbl <- as.data.frame(mSet$analSet$aov$sig.mat)
                  used.values <- "p.value"
                  decreasing <- F
+                 
                }else{
                  if(input$heatmode){
                    tbl <- as.data.frame(mSet$analSet$asca$sig.list$Model.ab)
@@ -104,6 +106,8 @@ observe({
                  decreasing = T
                }
                
+               if(!exists("tbl")) return(NULL)
+               if(is.null(tbl)) return(NULL)
                if(nrow(tbl) == 0 ) return(NULL)
                
                # check top x used (slider bar in UI), if more than total matches use total matches
@@ -212,7 +216,10 @@ observe({
            },
            volc = {
              withProgress({
-               mSet <<- Volcano.Anal(mSet,FALSE, 2.0, 0, 0.75,F, 0.1, TRUE, "raw") # TODO: make thresholds user-defined
+               mSet <<- Volcano.Anal(mSet,
+                                     FALSE, 2.0, 0, 
+                                     0.75,F, 0.1, 
+                                     TRUE, "raw") # TODO: make thresholds user-defined
              })
            })
       }
