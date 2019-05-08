@@ -61,9 +61,11 @@ lapply(unique(res.update.tables), FUN=function(table){
       # make miniplot for sidebar with current compound
       output$curr_plot <- plotly::renderPlotly({
         # --- ggplot ---
-        ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions()$gspec]],
+        ggplotSummary(mSet, curr_cpd, shape.fac = input$shape_var, cols = local$aes$mycols, cf=global$functions$color.functions[[local$aes$spectrum]],
                       styles = input$ggplot_sum_style,
-                      add_stats = input$ggplot_sum_stats, col.fac = input$col_var,txt.fac = input$txt_var)
+                      add_stats = input$ggplot_sum_stats, col.fac = input$col_var,txt.fac = input$txt_var,
+                      plot.theme = global$functions$plot.themes[[local$aes$theme]],
+                      font = local$aes$font)
       })
       
       outplot_name <- paste0(table, "_specific_plot")
@@ -72,26 +74,40 @@ lapply(unique(res.update.tables), FUN=function(table){
       output[[outplot_name]] <- plotly::renderPlotly({
         # --- ggplot ---
         if(table == 'meba'){ # meba needs a split by time
-          ggplotMeba(curr_cpd, draw.average = T, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions()$gspec]])
+          ggplotMeba(mSet, curr_cpd, 
+                     draw.average = T, 
+                     cols = local$aes$mycols,
+                     cf=global$functions$color.functions[[local$aes$spectrum]],
+                     plot.theme = global$functions$plot.themes[[local$aes$theme]],
+                     font = local$aes$font
+                     )
         }else if(table == 'asca'){ # asca needs a split by time
-          ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions()$gspec]], mode = "ts",
+          ggplotSummary(mSet, curr_cpd, shape.fac = input$shape_var, cols = local$aes$mycols, cf=global$functions$color.functions[[local$aes$spectrum]], mode = "ts",
                         styles = input$ggplot_sum_style,
-                        add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var)
+                        add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var,
+                        plot.theme = global$functions$plot.themes[[local$aes$theme]],
+                        font = local$aes$font)
         }else{ # regular boxplot
           if(!is.null(input$timecourse_trigger)){
             if(input$timecourse_trigger){
-              ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions()$gspec]], mode = "ts",
+              ggplotSummary(mSet, curr_cpd, shape.fac = input$shape_var, cols = local$aes$mycols, cf=global$functions$color.functions[[local$aes$spectrum]], mode = "ts",
                             styles = input$ggplot_sum_style,
-                            add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var)
+                            add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var,
+                            plot.theme = global$functions$plot.themes[[local$aes$theme]],
+                            font = local$aes$font)
             }else{
-              ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions()$gspec]],
+              ggplotSummary(mSet, curr_cpd, shape.fac = input$shape_var, cols = local$aes$mycols, cf=global$functions$color.functions[[local$aes$spectrum]],
                             styles = input$ggplot_sum_style,
-                            add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var)
+                            add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var,
+                            plot.theme = global$functions$plot.themes[[local$aes$theme]],
+                            font = local$aes$font)
             }
           }else{
-            ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols, cf=global$functions$color.functions[[getOptions()$gspec]],
+            ggplotSummary(mSet, curr_cpd, shape.fac = input$shape_var, cols = local$aes$mycols, cf=global$functions$color.functions[[local$aes$spectrum]],
                           styles = input$ggplot_sum_style,
-                          add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var)
+                          add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var,
+                          plot.theme = global$functions$plot.themes[[local$aes$theme]],
+                          font = local$aes$font)
           }
           
         }

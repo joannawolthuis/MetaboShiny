@@ -6,7 +6,7 @@ observe({
     output[[paste0(mode, "_add_tab")]] <- DT::renderDataTable({
       DT::datatable(global$vectors$pos_adducts,
                     selection = list(mode = 'multiple', 
-                                     selected = global$vectors[[paste0(mode, "_selected_add")]], target="row"),
+                                     selected = local$vectors[[paste0(mode, "_selected_add")]], target="row"),
                     options = list(pageLength = 5, dom = 'tp'), 
                     rownames = F)
     })
@@ -19,19 +19,19 @@ observe({
     print(curr_cpd)
     print("changing table...")
     
-    if(file.exists(global$paths$patdb)){
-      conn <- RSQLite::dbConnect(RSQLite::SQLite(), global$paths$patdb)
+    if(file.exists(local$paths$patdb)){
+      conn <- RSQLite::dbConnect(RSQLite::SQLite(), local$paths$patdb)
       scanmode <- DBI::dbGetQuery(conn, paste0("SELECT DISTINCT foundinmode FROM mzvals WHERE mzmed LIKE '", curr_cpd, "%'"))[,1]
       DBI::dbDisconnect(conn)
       
       print(scanmode)
       
-      global$vectors$calc_adducts <<- adducts[Ion_mode == scanmode]$Name
+      local$vectors$calc_adducts <<- adducts[Ion_mode == scanmode]$Name
       
       output$magicball_add_tab <- DT::renderDataTable({
-        DT::datatable(data.table(Adduct = global$vectors$calc_adducts),
+        DT::datatable(data.table(Adduct = local$vectors$calc_adducts),
                       selection = list(mode = 'multiple', 
-                                       selected = global$vectors[[paste0(scanmode, "_selected_add")]], target="row"),
+                                       selected = local$vectors[[paste0(scanmode, "_selected_add")]], target="row"),
                       options = list(pageLength = 5, dom = 'tp'), 
                       rownames = F)
       })
@@ -42,20 +42,20 @@ observe({
 
 # toggles when 'select all adducts' is pressed (filled circle)
 observeEvent(input$sel_all_adducts, {
-  global$vectors$neg_selected_adducts <<- c(1:nrow(global$vectors$pos_adducts))
-  global$vectors$pos_selected_adducts <<- c(1:nrow(global$vectors$neg_adducts))
+  local$vectors$neg_selected_adducts <<- c(1:nrow(local$vectors$pos_adducts))
+  local$vectors$pos_selected_adducts <<- c(1:nrow(local$vectors$neg_adducts))
 })
 
 # triggers when 'select no adducts' is selected
 observeEvent(input$sel_no_adducts, {
-  global$vectors$neg_selected_adducts <<- c(0)
-  global$vectors$pos_selected_adducts <<- c(0)
+  local$vectors$neg_selected_adducts <<- c(0)
+  local$vectors$pos_selected_adducts <<- c(0)
 })
 
 # triggers when common adducts are to be selected
 observeEvent(input$sel_comm_adducts, {
-  global$vectors$neg_selected_adducts <<- c(1:3, nrow(global$vectors$pos_adducts))
-  global$vectors$pos_selected_adducts <<- c(1, 2, 14:15, nrow(global$vectors$neg_adducts))
+  local$vectors$neg_selected_adducts <<- c(1:3, nrow(local$vectors$pos_adducts))
+  local$vectors$pos_selected_adducts <<- c(1, 2, 14:15, nrow(local$vectors$neg_adducts))
 })
 
 # adduct table editing from settings tab

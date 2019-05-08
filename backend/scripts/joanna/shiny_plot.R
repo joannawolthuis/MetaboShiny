@@ -171,12 +171,12 @@ ggplotSampleNormSummary <- function(mSet,
 
 
 #' @export
-ggplotMeba <- function(cpd, draw.average=T, cols=local$aes$mycols, 
-                       cf = global$functions$color.functions[[local$aes$spectrum]], 
-                       plot.theme = global$functions$plot.themes[[local$aes$theme]], 
-                       plotlyfy=TRUE,font = local$aes$font){
+ggplotMeba <- function(mSet, cpd, draw.average=T, cols, 
+                       cf, 
+                       plot.theme, 
+                       plotlyfy=TRUE,font){
   cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
-  profile <- getProfile(cpd, mode="time")
+  profile <- getProfile(mSet, cpd, mode="time")
   p <- if(draw.average){
     ggplot2::ggplot(data=profile) +
       ggplot2::geom_line(size=0.3, ggplot2::aes(x=Time, y=Abundance, group=Sample, color=Group, text=Sample), alpha=0.4) +
@@ -217,18 +217,20 @@ blackwhite.colors <- function(n){
 }
 
 #' @export
-ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols = c("black", "pink"), sourceTable = mSet$dataSet$norm,
-                          cf = rainbow, plot.theme = global$functions$plot.themes[[local$aes$theme]],
+ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pink"),
+                          cf = rainbow, plot.theme,
                           mode = "nm", plotlyfy = TRUE,
                           styles=c("box", "beeswarm"), add_stats = "mean",
-                          col.fac = "label", txt.fac = "label",font = local$aes$font){
+                          col.fac = "label", txt.fac = "label",font){
 
+  sourceTable = mSet$dataSet$norm
+  
   if(length(styles) == 0){
     styles = c("beeswarm")
   }
   # - - -
 
-  profile <- getProfile(cpd, mode=if(mode == "nm") "stat" else "time", sourceTable = sourceTable)
+  profile <- getProfile(mSet,cpd, mode=if(mode == "nm") "stat" else "time")
   df_line <- data.table(x = c(1,2),
                         y = rep(min(profile$Abundance - 0.1),2))
   stars = ""
@@ -390,8 +392,8 @@ ggplotSummary <- function(cpd = curr_cpd, shape.fac = "label", cols = c("black",
   }
 }
 
-ggPlotTT <- function(cf=global$functions$color.functions[[local$aes$spectrum]], n, 
-                     plot.theme = global$functions$plot.themes[[local$aes$theme]], plotlyfy=TRUE,font = local$aes$font){
+ggPlotTT <- function(mSet, cf, n, 
+                     plot.theme, plotlyfy=TRUE,font){
   profile <- as.data.table(mSet$analSet$tt$p.log[mSet$analSet$tt$inx.imp],keep.rownames = T)
   colnames(profile) <- c("cpd", "p")
   profile$Peak <- c(1:nrow(profile))
@@ -414,8 +416,8 @@ ggPlotTT <- function(cf=global$functions$color.functions[[local$aes$spectrum]], 
   }
 }
 
-ggPlotFC <- function(cf=global$functions$color.functions[[local$aes$spectrum]], n, 
-                     plot.theme = global$functions$plot.themes[[local$aes$theme]], plotlyfy=TRUE,font = local$aes$font){
+ggPlotFC <- function(mSet, cf, n, 
+                     plot.theme, plotlyfy=TRUE,font){
   profile <- as.data.table(mSet$analSet$fc$fc.log[mSet$analSet$fc$inx.imp],keep.rownames = T)
   profile
   colnames(profile) <- c("cpd", "log2fc")
@@ -440,9 +442,9 @@ ggPlotFC <- function(cf=global$functions$color.functions[[local$aes$spectrum]], 
   }
 }
 
-ggPlotVolc <- function(cf=global$functions$color.functions[[local$aes$spectrum]], 
-                       n=256, plot.theme = global$functions$plot.themes[[local$aes$theme]], 
-                       plotlyfy=TRUE,font = local$aes$font){
+ggPlotVolc <- function(mSet, cf, 
+                       n=256, plot.theme, 
+                       plotlyfy=TRUE,font ){
   vcn<-mSet$analSet$volcano;
   dt <- as.data.table(vcn$sig.mat[,c(2,4)],keep.rownames = T)
   colnames(dt) <- c("cpd", "log2FC", "-log10P")
@@ -469,12 +471,13 @@ ggPlotVolc <- function(cf=global$functions$color.functions[[local$aes$spectrum]]
   }
 }
 
-ggPlotPCApairs <- function(cols = c("black", "pink"),
+ggPlotPCApairs <- function(mSet,
+                           cols = c("black", "pink"),
                            pc.num,
                            type = "pca",
                            cf = rainbow,
-                           plot.theme = global$functions$plot.themes[[local$aes$theme]],
-                           plotlyfy=TRUE,font = local$aes$font){
+                           plot.theme,
+                           plotlyfy=TRUE,font){
 
   cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
 
@@ -538,11 +541,12 @@ ggPlotPCApairs <- function(cols = c("black", "pink"),
   }
 }
 
-ggPlotClass <- function(pls.type = "plsda",
-                        cf = global$functions$color.functions[[local$aes$spectrum]],
+ggPlotClass <- function(mSet,
+                        pls.type = "plsda",
+                        cf,
                         pcs = 3,
-                        plot.theme = global$functions$plot.themes[[local$aes$theme]],
-                        plotlyfy=TRUE,font = local$aes$font){
+                        plot.theme,
+                        plotlyfy=TRUE,font){
   res <- mSet$analSet$plsda$fit.info
   colnames(res) <- 1:ncol(res)
   # best.num <- mSet$analSet$plsda$best.num
@@ -569,11 +573,12 @@ ggPlotClass <- function(pls.type = "plsda",
   }
 }
 
-ggPlotPerm <- function(pls.type = "plsda",
-                       cf = global$functions$color.functions[[local$aes$spectrum]],
+ggPlotPerm <- function(mSet,
+                       pls.type = "plsda",
+                       cf,
                        pcs = 3,
-                       plot.theme = global$functions$plot.themes[[local$aes$theme]],
-                       plotlyfy=TRUE,font = local$aes$font){
+                       plot.theme,
+                       plotlyfy=TRUE,font){
   bw.vec <- mSet$analSet$plsda$permut
   len <- length(bw.vec)
   df <- melt(bw.vec)
@@ -614,8 +619,8 @@ ggPlotPerm <- function(pls.type = "plsda",
 
 plot.many <- function(res.obj = models,
                       which_alpha = 1,
-                      plot.theme = global$functions$plot.themes[[local$aes$theme]],
-                      plotlyfy=TRUE,font = local$aes$font){
+                      plot.theme,
+                      plotlyfy=TRUE,font){
 
   predictions <- if(length(res.obj) > 1) do.call("cbind", lapply(res.obj, function(x) x$prediction)) else data.frame(res.obj[[1]]$prediction)
 
@@ -685,9 +690,9 @@ plot.many <- function(res.obj = models,
 
 ggPlotROC <- function(data,
                       attempts = 50,
-                      cf = global$functions$color.functions[[local$aes$spectrum]],
-                      plot.theme = global$functions$plot.themes[[local$aes$theme]],
-                      plotlyfy=TRUE,font = local$aes$font){
+                      cf,
+                      plot.theme,
+                      plotlyfy=TRUE,font){
 
   # - - - - - - - - - - - -
 
@@ -753,12 +758,12 @@ ggPlotROC <- function(data,
 
 ggPlotBar <- function(data,
                       attempts=50,
-                      cf = global$functions$color.functions[[local$aes$spectrum]], 
+                      cf, 
                       topn=50,
-                      plot.theme = global$functions$plot.themes[[local$aes$theme]],
+                      plot.theme,
                       ml_name,
                       ml_type,
-                      plotlyfy=TRUE,font = local$aes$font){
+                      plotlyfy=TRUE,font){
 
   if(ml_name != ""){
     lname = ml_name
@@ -809,8 +814,8 @@ ggPlotBar <- function(data,
       plotlyfy=F
     }
 
-  global$tables$ml_bar <<- p$data
-  global$tables$ml_bar$mz <<- gsub(global$tables$ml_bar$mz, pattern = "`", replacement="")
+  local$tables$ml_bar <<- p$data
+  local$tables$ml_bar$mz <<- gsub(local$tables$ml_bar$mz, pattern = "`", replacement="")
 
   if(plotlyfy){
     ggplotly(p, tooltip="label")
@@ -820,10 +825,10 @@ ggPlotBar <- function(data,
 }
 
 plotPCA.3d <- function(mSet,
-                       cols = local$aes$mycols,
+                       cols ,
                        shape.fac="label",
                        pcx, pcy, pcz,
-                       mode="pca",font = local$aes$font){
+                       mode="pca",font){
   switch(mode,
          pca = {
            df <- mSet$analSet$pca$x
@@ -984,9 +989,9 @@ plotPCA.3d <- function(mSet,
   subplot(plots_facet,shareX = F, shareY = F)
 }
 
-plotPCA.2d <- function(mSet, shape.fac = "label", cols = local$aes$mycols, 
-                       pcx, pcy, mode="pca", plot.theme = global$functions$plot.themes[[local$aes$theme]], 
-                       plotlyfy="T",font = local$aes$font){
+plotPCA.2d <- function(mSet, shape.fac = "label", cols, 
+                       pcx, pcy, mode="pca", plot.theme, 
+                       plotlyfy="T",font){
 
   classes <- switch(mode,
                     ipca = mSet$dataSet$exp.fac,
@@ -1099,9 +1104,9 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols = local$aes$mycols,
 ggPlotVenn <- function(mSet,
                        venn_yes,
                        top = 100,
-                       cols = local$aes$mycols,
-                       cf = global$functions$color.functions[[local$aes$spectrum]],
-                       plotlyfy=TRUE,font = local$aes$font){
+                       cols,
+                       cf,
+                       plotlyfy=TRUE,font){
 
   #venn_yes <<- isolate({venn_yes})
 

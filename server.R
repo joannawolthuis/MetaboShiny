@@ -40,10 +40,13 @@ shinyServer(function(input, output, session) {
   
   # if logged in, check if exists
   observeEvent(input$login,{
+    print(input$username)
+    print(input$password)
+    
     if(input$username != "" & input$password != ""){
       # get user role
       role = get_user_role(input$username, input$password)
-      
+      print(role)
       if(is.null(role)){
         logged$text <<- "wrong username/password (｡•́︿•̀｡)"
       }else{
@@ -474,12 +477,11 @@ gspec = RdBu')
   observeEvent(input$permz, {
     # check if an mset is present, otherwise abort
     if(!is.null(mSet)){
-      
       # depending on the present tab, perform analyses accordingly
       if(input$permz %not in% names(mSet$analSet)){
         statsmanager$calculate <- input$permz
       }
-      datamanager$reload <- input$perm
+      datamanager$reload <- input$permz
     }
   })
   
@@ -724,6 +726,7 @@ gspec = RdBu')
   
   onStop(function() {
     print("closing metaboShiny ~ヾ(＾∇＾)")
+    mSet <<- NULL
     # if(exists("mSet")){
     #   mSet$storage[[mSet$dataSet$cls.name]] <<- list()
     #   mSet$storage[[mSet$dataSet$cls.name]]$analysis <<- mSet$analSet

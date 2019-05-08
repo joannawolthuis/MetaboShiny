@@ -124,6 +124,8 @@ observe({
                  }
                }
                
+               print(present)
+               
                if(present){
                  # render results table for UI
                  output$aov_tab <- DT::renderDataTable({
@@ -141,7 +143,10 @@ observe({
                # render volcano plot with user defined colours
                output$volc_plot <- plotly::renderPlotly({
                  # --- ggplot ---
-                 ggPlotVolc(global$functions$color.functions[[getOptions()$gspec]], 20)
+                 ggPlotVolc(global$functions$color.functions[[local$aes$spectrum]],
+                            20,
+                            plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                            plotlyfy=TRUE,font = local$aes$font)
                })
                # render results table
                output$volc_tab <-DT::renderDataTable({
@@ -211,19 +216,24 @@ observe({
                  if(input$pca_2d3d){ # check if switch button is in 2d or 3d mode
                    # render 2d plot
                    output$plot_pca <- plotly::renderPlotly({
-                     plotPCA.2d(mSet, global$vectors$mycols,
+                     plotPCA.2d(mSet, local$aes$mycols,
                                 pcx = input$pca_x,
                                 pcy = input$pca_y, mode = mode,
-                                shape.fac = input$second_var)
+                                shape.fac = input$second_var,
+                                plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                                plotlyfy=TRUE,font = local$aes$font
+                               )
                    })
                  }else{
                    # render 3d plot
                    output$plot_pca <- plotly::renderPlotly({
-                     plotPCA.3d(mSet, global$vectors$mycols,
+                     plotPCA.3d(mSet, local$aes$mycols,
                                 pcx = input$pca_x,
                                 pcy = input$pca_y,
                                 pcz = input$pca_z, mode = mode,
-                                shape.fac = input$second_var)
+                                shape.fac = input$second_var,
+                                font = local$aes$font
+                                )
                    })
                  }
                }else{
@@ -236,11 +246,15 @@ observe({
                  
                  # render cross validation plot
                  output$plsda_cv_plot <- renderPlot({
-                   ggPlotClass(cf = global$functions$color.functions[[getOptions()$gspec]], plotlyfy = F)
+                   ggPlotClass(cf = global$functions$color.functions[[local$aes$spectrum]], plotlyfy = F,
+                               plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                               plotlyfy=TRUE,font = local$aes$font)
                  })
                  # render permutation plot
                  output$plsda_perm_plot <- renderPlot({
-                   ggPlotPerm(cf = global$functions$color.functions[[getOptions()$gspec]], plotlyfy = F)
+                   ggPlotPerm(cf = global$functions$color.functions[[local$aes$spectrum]], plotlyfy = F,
+                              plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                              plotlyfy=TRUE,font = local$aes$font)
                  })
                  # render table with variance per PC
                  output$plsda_tab <- DT::renderDataTable({
@@ -297,7 +311,9 @@ observe({
                  output$ml_roc <- plotly::renderPlotly({
                    plotly::ggplotly(ggPlotROC(roc_data,
                                               input$ml_attempts,
-                                              global$functions$color.functions[[getOptions()$gspec]]))
+                                              global$functions$color.functions[[local$aes$spectrum]],
+                                              plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                                              plotlyfy=TRUE,font = local$aes$font))
                  })
                  
                  bar_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar
@@ -306,10 +322,12 @@ observe({
                    
                    plotly::ggplotly(ggPlotBar(bar_data,
                                               input$ml_attempts,
-                                              global$functions$color.functions[[getOptions()$gspec]],
+                                              global$functions$color.functions[[local$aes$spectrum]],
                                               input$ml_top_x,
                                               ml_name = mSet$analSet$ml$last$name,
-                                              ml_type = mSet$analSet$ml$last$method))
+                                              ml_type = mSet$analSet$ml$last$method,
+                                              plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                                              plotlyfy=TRUE,font = local$aes$font))
                  })
                }else{NULL}
              },
@@ -359,7 +377,9 @@ observe({
                # render manhattan-like plot for UI
                output$tt_overview_plot <- plotly::renderPlotly({
                  # --- ggplot ---
-                 ggPlotTT(global$functions$color.functions[[getOptions()$gspec]], 20)
+                 ggPlotTT(global$functions$color.functions[[local$aes$spectrum]], 20,
+                          plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                          plotlyfy=TRUE,font = local$aes$font)
                })
              },
              fc = {
@@ -379,7 +399,9 @@ observe({
                # render manhattan-like plot for UI
                output$fc_overview_plot <- plotly::renderPlotly({
                  # --- ggplot ---
-                 ggPlotFC(global$functions$color.functions[[getOptions()$gspec]], 20)
+                 ggPlotFC(global$functions$color.functions[[local$aes$spectrum]], 20,
+                          plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                          plotlyfy=TRUE,font = local$aes$font)
                })
              },
              heatmap = {
@@ -397,7 +419,7 @@ observe({
                                             Rowv = T,
                                             branches_lwd = 0.3,
                                             margins = c(60, 0, NA, 50),
-                                            col = global$functions$color.functions[[getOptions()$gspec]],
+                                            col = global$functions$color.functions[[local$aes$spectrum]],
                                             col_side_colors = mSet$analSet$heatmap$translator[,!1],
                                             col_side_palette = mSet$analSet$heatmap$colors,
                                             subplot_widths = c(.9,.1),
@@ -417,7 +439,7 @@ observe({
                                             Rowv = T,
                                             branches_lwd = 0.3,
                                             margins = c(60, 0, NA, 50),
-                                            colors = global$functions$color.functions[[getOptions()$gspec]](256),
+                                            colors = global$functions$color.functions[[local$aes$spectrum]](256),
                                             col_side_colors = mSet$analSet$heatmap$translator[,!1],
                                             col_side_palette = mSet$analSet$heatmap$colors,
                                             subplot_widths = c(.9,.1),
@@ -434,13 +456,13 @@ observe({
                      
                    })
                    # save the order of mzs for later clicking functionality
-                   global$vectors$heatmap <<- hmap$x$layout$yaxis3$ticktext
+                   local$vectors$heatmap <<- hmap$x$layout$yaxis3$ticktext
                    # return
                    hmap
                  }else{
                    data = data.frame(text = "No significant hits available!\nPlease try alternative source statistics below.")
                    p <- ggplot(data) + geom_text(aes(label = text), x = 0.5, y = 0.5, size = 10) +
-                     theme(text = element_text(family = global$constants$font.aes$font)) + theme_bw()
+                     theme(text = element_text(family = local$aes$font$family)) + theme_bw()
                    plotly::ggplotly(p)
                  }
                })

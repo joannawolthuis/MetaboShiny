@@ -6,21 +6,21 @@ observeEvent(plotly::event_data("plotly_click"),{
   if(input$tab_iden_4 == "pie_add"){
 
     i = d$pointNumber + 1
-    show.adduct = global$vectors$pie_add[i]
+    show.adduct = local$vectors$pie_add[i]
 
-    if(nrow(global$tables$last_matches)>0){
-      keep.rows <- which(global$tables$last_matches$adduct == show.adduct)
-      shown_matches$table <- global$tables$last_matches[keep.rows,]
+    if(nrow(local$tables$last_matches)>0){
+      keep.rows <- which(local$tables$last_matches$adduct == show.adduct)
+      shown_matches$table <- local$tables$last_matches[keep.rows,]
     }
     return(NULL)
   }
 
   if(input$tab_iden_4 == "pie_db"){
     i = d$pointNumber + 1
-    show.db = global$vectors$pie_db[i]
-    if(nrow(global$tables$last_matches)>0){
-      keep.rows <- which(global$tables$last_matches$source == show.db)
-      shown_matches$table <- global$tables$last_matches[keep.rows,]
+    show.db = local$vectors$pie_db[i]
+    if(nrow(local$tables$last_matches)>0){
+      keep.rows <- which(local$tables$last_matches$source == show.db)
+      shown_matches$table <- local$tables$last_matches[keep.rows,]
     }
     return(NULL)
   }
@@ -51,9 +51,11 @@ observeEvent(plotly::event_data("plotly_click"),{
     # - return -
     output[[paste0(curr_tab, "_specific_plot")]] <- plotly::renderPlotly({
       # --- ggplot ---
-      ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols,cf=global$functions$color.functions[[getOptions()$gspec]],
+      ggplotSummary(mSet, curr_cpd, shape.fac = input$shape_var, cols = local$aes$mycols,cf=global$functions$color.functions[[local$aes$spectrum]],
                     styles = input$ggplot_sum_style, add_stats = input$ggplot_sum_stats,
-                    col.fac = input$col_var, txt.fac = input$txt_var)
+                    col.fac = input$col_var, txt.fac = input$txt_var,
+                    plot.theme = global$functions$plot.themes[[local$aes$theme]],
+                    font = local$aes$font)
     })
   }else if(req(curr_tab) == "pca"){ # deprecated - used to hide and show certain groups
     if(!"z" %in% names(d)){
@@ -84,32 +86,33 @@ observeEvent(plotly::event_data("plotly_click"),{
             imp <- as.data.table(caret::varImp(model)$importance, keep.rownames = T)
             colnames(imp) <- c("mz", "importance")
             imp <- imp[importance > 0,]
-            global$tables$ml_roc <<- data.frame(importance = imp$importance, 
+            local$tables$ml_roc <<- data.frame(importance = imp$importance, 
                                                 row.names = gsub(imp$mz, 
                                                                  pattern = "`|`", 
                                                                  replacement=""))
-            DT::datatable(global$tables$ml_roc,
+            DT::datatable(local$tables$ml_roc,
                           selection = 'single',
                           autoHideNavigation = T,
                           options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
           })
         }
       }, bar = { # for bar plot just grab the # bar clicked
-        curr_cpd <<- as.character(global$tables$ml_bar[d$x,"mz"][[1]])
+        curr_cpd <<- as.character(local$tables$ml_bar[d$x,"mz"][[1]])
       })}else if(grepl(pattern = "heatmap", x = curr_tab)){ # heatmap requires the table used to make it saved to global (hmap_mzs)
-        req(global$vectors$heatmap)
-        if(d$y > length(global$vectors$heatmap)) return(NULL)
-        curr_cpd <<- global$vectors$heatmap[d$y]
+        req(local$vectors$heatmap)
+        if(d$y > length(local$vectors$heatmap)) return(NULL)
+        curr_cpd <<- local$vectors$heatmap[d$y]
       }
 
   # render curent miniplot based on current compound
   output$curr_plot <- plotly::renderPlotly({
     # --- ggplot ---
-    ggplotSummary(curr_cpd, shape.fac = input$shape_var, cols = global$vectors$mycols,
-                  cf=global$functions$color.functions[[getOptions()$gspec]],
+    ggplotSummary(mSet, curr_cpd, shape.fac = input$shape_var, cols = local$aes$mycols,
+                  cf=global$functions$color.functions[[local$aes$spectrum]],
                   styles = input$ggplot_sum_style,
                   add_stats = input$ggplot_sum_stats,
-                  col.fac = input$col_var, txt.fac = input$txt_var)
+                  col.fac = input$col_var, txt.fac = input$txt_var,plot.theme = global$functions$plot.themes[[local$aes$theme]],
+                  font = local$aes$font)
   })
 
   # change current compound in text

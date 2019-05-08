@@ -911,7 +911,7 @@ get_user_role <- function(username, password){
   role = RSQLite::dbGetQuery(conn, gsubfn::fn$paste(
     "SELECT role FROM users WHERE username = '$username' AND password = '$password'"))
   if(nrow(role) == 0){
-    NULL
+    return(NULL)
   }else{
     return(role[1,1])
   }

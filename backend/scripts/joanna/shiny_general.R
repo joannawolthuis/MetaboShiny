@@ -16,7 +16,8 @@ get_ref_cpds <- function(){
   c(keep.colnames)
 }
 
-getProfile <- function(varName, title=varName, sourceTable = mSet$dataSet$norm, mode="stat"){
+getProfile <- function(mSet, varName, title=varName, mode="stat"){
+  sourceTable = mSet$dataSet$norm
   # ---------------
   varInx <- colnames(sourceTable) == varName;
   var <- as.data.table(sourceTable,

@@ -144,7 +144,7 @@ observe({
                # create name - to - color mapping vector for the plotting functions
                color.mapper <- {
                  classes <- hmap.lvls
-                 cols <- sapply(1:length(classes), function(i) global$vectors$mycols[i]) # use user-defined colours
+                 cols <- sapply(1:length(classes), function(i) local$aes$mycols[i]) # use user-defined colours
                  names(cols) <- classes
                  # - - -
                  cols
@@ -190,7 +190,6 @@ observe({
              
              if(redo){ # if done, don't redo
                withProgress({
-                 #mSet <<- ANOVA.Anal(mSet, thresh=0.05,nonpar = F) # TODO: make threshold user-defined
                  if(!is.null(input$timecourse_trigger)){
                    mSet <<- if(input$timecourse_trigger){
                      ANOVA2.Anal(mSet, 0.05, "fdr", "time", 3, 1)
