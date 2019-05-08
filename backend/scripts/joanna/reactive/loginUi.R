@@ -1,6 +1,5 @@
 output$currUI <- renderUI({
   if(!logged$status){
-    print("A")
     fluidRow(align="center",
              br(),br(),br(),br(),br(),
              imageOutput("login_header",inline = T),
@@ -13,7 +12,6 @@ output$currUI <- renderUI({
              div(style="width:300px;",verbatimTextOutput("login_status", placeholder = FALSE)))
 
   }else{
-    print("B")
     tagList(tags$style(type="text/css", bar.css),
             navbarPage(inverse=TRUE,
                        title=div(div(h1("MetaboShiny"),class="outlined", tags$style(type="text/css", font.css)),

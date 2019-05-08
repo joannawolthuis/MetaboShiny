@@ -390,8 +390,6 @@ get_all_matches <- function(#exp.condition=NA,
   for(i in seq_along(which_dbs)){
     chosen.db <- which_dbs[i]
 
-    print(paste("Looking for matches in", chosen.db))
-
     if(is.na(chosen.db)) next
     # --------------------------
     dbshort <- paste0("db", i)
@@ -497,7 +495,7 @@ multimatch <- function(cpd, dbs, searchid="mz",
   patdb <- normalizePath(patdb)
   db_dir <- normalizePath(db_dir)
   dbs <- lapply(dbs, normalizePath)
-  
+
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
   DBI::dbExecute(conn, "DROP TABLE IF EXISTS unfiltered")
   DBI::dbExecute(conn, "DROP TABLE IF EXISTS isotopes")
@@ -639,8 +637,6 @@ cat("
 
     temp_res <- pbapply::pblapply(settings, function(def.ele){
 
-      print(def.ele)
-
       add.only.ele <- setdiff(add.ele,
                               def.ele)
 
@@ -662,8 +658,6 @@ cat("
       candidates <- candidates[!is.na(candidates)]
 
       keep.candidates <- grep(x = candidates, pattern = filter, value=T)
-
-      print(keep.candidates)
 
       res = lapply(keep.candidates, function(formula, row){
 
@@ -902,11 +896,8 @@ info_from_cids <- function(cids,
 
   chunk.row.list <<- chunk.row.list
   res <- chunk.row.list[sapply(chunk.row.list, function(x){
-    print(x)
     if(!is.na(nrow(x)) | is.null(nrow(x))) TRUE else FALSE
   })]
-
-  print(head(res))
 
   res
 

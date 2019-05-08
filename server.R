@@ -30,7 +30,6 @@ shinyServer(function(input, output, session) {
 
   # init all observers
   for(fp in list.files("./backend/scripts/joanna/reactive", full.names = T)){
-    #print(paste("Loading:", fp))
     source(fp, local = T)
   }
 
@@ -42,13 +41,9 @@ shinyServer(function(input, output, session) {
 
   # if logged in, check if exists
   observeEvent(input$login,{
-    print(input$username)
-    print(input$password)
-
     if(input$username != "" & input$password != ""){
       # get user role
       role = get_user_role(input$username, input$password)
-      print(role)
       if(is.null(role)){
         logged$text <<- "wrong username/password (｡•́︿•̀｡)"
       }else{
@@ -79,7 +74,7 @@ shinyServer(function(input, output, session) {
         local$paths$opt.loc <<- file.path(userfolder, "options.txt")
         local$paths$work_dir <<- userfolder
         local$paths$db_dir <<- dbdir
-        
+
         if(!file.exists(local$paths$opt.loc)){
           contents = gsubfn::fn$paste('db_dir = $dbdir
 work_dir = $userfolder
@@ -109,8 +104,6 @@ gspec = RdBu')
           # read settings
 
           opts <- getOptions(local$paths$opt.loc)
-
-          print(opts)
 
           logged$text <<- "loaded options!"
 
@@ -152,8 +145,6 @@ gspec = RdBu')
           local$aes$theme <<- opts$gtheme # gradient function for heatmaps, volcano plot etc.
           local$aes$spectrum <<- opts$gspec # gradient function for heatmaps, volcano plot etc.
           local$vectors$proj_names <<- unique(tools::file_path_sans_ext(list.files(opts$work_dir, pattern=".csv|.db"))) # the names listed in the 'choose project' tab of opts.
-
-          print(local)
 
           # load existing file
           bgcol <<- opts$col1
@@ -349,7 +340,7 @@ gspec = RdBu')
     )
 
   })
-  
+
   # ===== UI SWITCHER ====
 
   # create interface mode storage object.
@@ -674,7 +665,9 @@ gspec = RdBu')
     # save mset
     withProgress({
       fn <- paste0(tools::file_path_sans_ext(local$paths$patdb), ".metshi")
-      save(mSet, file = fn)
+      if(exists("mSet")){
+        save(mSet, file = fn)
+      }
     })
   })
 
@@ -682,10 +675,11 @@ gspec = RdBu')
     # load mset
     withProgress({
       fn <- paste0(tools::file_path_sans_ext(local$paths$patdb), ".metshi")
-      load(fn)
-      mSet <<- mSet
+      if(file.exists(fn)){
+        load(fn)
+        mSet <<- mSet
+      }
     })
-    print("loading...")
     datamanager$reload <- "general"
   })
 
@@ -698,7 +692,6 @@ gspec = RdBu')
     subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
     global$vectors$ml_train <<- c(input$subset_var,
                                   input$subset_group)
-    print(global$vectors$ml_train)
     output$ml_train_ss <- renderText(subset.name)
   })
 
@@ -706,7 +699,6 @@ gspec = RdBu')
     keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]
     subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
     global$vectors$ml_test <<- c(input$subset_var, input$subset_group)
-    print(global$vectors$ml_test)
     output$ml_test_ss <- renderText(subset.name)
   })
 

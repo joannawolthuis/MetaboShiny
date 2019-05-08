@@ -9,15 +9,12 @@ observe({
     if(!is.null(mSet)){
       switch(datamanager$reload,
              general = {
-               print("Reloading general features...")
                # change interface
                if(mSet$dataSet$cls.num <= 1){
-                 print("null...")
                  interface$mode <- NULL }
                else if(mSet$dataSet$cls.num == 2){
                  interface$mode <- "bivar"}
                else{
-                 print("multivariate mode...")
                  interface$mode <- "multivar"}
                # reload sidebar
                output$curr_name <- renderText({mSet$dataSet$cls.name})
@@ -45,7 +42,6 @@ observe({
                      updateCheckboxInput(session, "tt_nonpar", value = F)
                    }
                  }else{
-                   print("no tt done yet...")
                    updateCheckboxInput(session, "tt_nonpar", value = F)
                  }
                }
@@ -147,7 +143,6 @@ observe({
                }
              },
              volc = {
-               print("reloading volcano plot..")
                # render volcano plot with user defined colours
                output$volc_plot <- plotly::renderPlotly({
                  # --- ggplot ---

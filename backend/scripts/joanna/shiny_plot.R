@@ -471,13 +471,13 @@ ggPlotFC <- function(mSet, cf, n=20,
   }
 }
 
-ggPlotVolc <- function(mSet, 
+ggPlotVolc <- function(mSet,
                        cf,
-                       n=20, 
+                       n=20,
                        plot.theme,
                        plotlyfy=TRUE,
                        font ){
-  
+
   vcn<-mSet$analSet$volcano;
   dt <- as.data.table(vcn$sig.mat[,c(2,4)],keep.rownames = T)
   colnames(dt) <- c("cpd", "log2FC", "-log10P")
@@ -970,8 +970,6 @@ plotPCA.3d <- function(mSet,
 
     }
 
-    print(show.orbs)
-
     adj_plot <<- plotly_build(plots)
     rgbcols <- toRGB(cols[show.orbs])
     c = 1
@@ -1141,10 +1139,16 @@ ggPlotVenn <- function(mSet,
                        cf,
                        plotlyfy=TRUE,font){
 
+  debug_input <<- venn_yes$now
+  
   experiments <- str_match(unlist(venn_yes$now), pattern = "\\(.*\\)")[,1]
 
+  print(experiments)
+  
   experiments <- unique(gsub(experiments, pattern = "\\(\\s*(.+)\\s*\\)", replacement="\\1"))
 
+  print(experiments)
+  
   table_list <- lapply(experiments, function(experiment){
 
     analysis = mSet$storage[[experiment]]$analysis
@@ -1157,12 +1161,16 @@ ggPlotVenn <- function(mSet,
 
     categories = gsub(categories, pattern = "\\(\\s*(.+)\\s*\\)", replacement = "")
 
-    # go through the to include analyses
+    print(categories)
     
+    # go through the to include analyses
+
     tables <- lapply(categories, function(name){
 
       base_name <- gsub(name, pattern = " -.*$| ", replacement="")
 
+      print(base.name)
+      
       # fetch involved mz values
       tbls <- switch(base_name,
                      aov = {
@@ -1245,12 +1253,14 @@ ggPlotVenn <- function(mSet,
           tbl[1:top]
         }
       })
-
       names(tbls_top) <- paste0(experiment, ": ", names(tbls_top))
       tbls_top
     })
 
     # unnest the nested lists
+
+    debug_input <<- tables
+
     flattened <- flattenlist(tables)
 
     # remove NAs
@@ -1330,7 +1340,7 @@ ggPlotVenn <- function(mSet,
     # - - -
     numbers$y <- as.numeric(c(newy))
   }
-  
+
   # generate plot with ggplot
   p <- ggplot(datapoly,
               aes(x = x,

@@ -15,7 +15,6 @@ observe({
   # - - - -
   if(!is.list(input$custom_db)) return() # if nothing is chosen, do nothing
   db_path <- parseFilePaths(global$paths$volumes, input$custom_db)$datapath
-  print(db_path)
   preview <- data.table::fread(db_path, header = T, nrows = 3)
 
   output$db_example <- DT::renderDataTable({

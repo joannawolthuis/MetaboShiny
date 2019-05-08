@@ -13,7 +13,6 @@ build.base.db <- function(dbname=NA,
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), db)
   RSQLite::dbExecute(conn, statement = "create table base(compoundname text, description text, baseformula text, identifier text, charge text, structure text)")
   # --- create base ---
-  print(dbname)
   db.formatted <- switch(tolower(dbname),
                          maconda = function(dbname, ...){ #ok
                            file.url = "https://www.maconda.bham.ac.uk/downloads/MaConDa__v1_0__csv.zip"
@@ -132,7 +131,6 @@ build.base.db <- function(dbname=NA,
                                pbapply::setpb(pb, idx)
                              }
 
-                             print(currNode)
 
                              # - - - - -
                              idx <<- idx + 1
@@ -162,7 +160,6 @@ build.base.db <- function(dbname=NA,
 
                          },
                          hmdb = function(dbname){ #ok
-                           print("Downloading XML database...")
                            file.url <- "http://www.hmdb.ca/system/downloads/current/hmdb_metabolites.zip"
                            # ----
                            base.loc <- file.path(getOptions()$db_dir, "hmdb_source")
@@ -172,8 +169,6 @@ build.base.db <- function(dbname=NA,
                            utils::unzip(zip.file, exdir = base.loc)
 
                            # --- go through xml ---
-
-                           print("Parsing XML...")
 
                            require(XML)
 
@@ -338,7 +333,6 @@ build.base.db <- function(dbname=NA,
 
                            charges = pbapply::pbsapply(db.formatted$structure, cl=session_cl, FUN=function(smile){
                              m <- rcdk::parse.smiles(smile)
-                             #print(m)
                              ## perform operations on this molecule
                              try({
                                charge = rcdk::get.total.formal.charge(m[[1]])
@@ -491,7 +485,6 @@ build.base.db <- function(dbname=NA,
                            #metacyc.raw = fread(source.file, sep = "\t", quote = '\"', header = T, fill=T)
                            charges = pbapply::pbsapply(metacyc.raw$SMILES, cl=session_cl, FUN=function(smile){
                              m <- rcdk::parse.smiles(smile)
-                             #print(m)
                              ## perform operations on this molecule
                              try({
                                charge = rcdk::get.total.formal.charge(m[[1]])
@@ -636,8 +629,6 @@ build.base.db <- function(dbname=NA,
                            metabs <- pbapply::pblapply(metabs, cl = F, FUN=function(id){
                              met_info = NA
 
-                             print(id)
-
                              try({
                                url <- paste0("https://www.ebi.ac.uk/metabolights/webservice/beta/compound/", id)
                                tries = 4
@@ -650,8 +641,6 @@ build.base.db <- function(dbname=NA,
                              Sys.sleep(time = .1)
                              met_info
                            })
-
-                           print(length(metabs))
 
                            db_rows <- pbapply::pblapply(metabs[!is.na(metabs)], cl = 0, FUN=function(met_info){
                              formula <- NA
@@ -673,7 +662,6 @@ build.base.db <- function(dbname=NA,
                                  worked = TRUE
                                })
                                if(!worked){
-                                 print("no smiles..")
                                  smi <- toupper(webchem::cs_inchi_smiles(inchi = met_info$inchi,verbose = TRUE))
                                  iatom <- rcdk::parse.smiles(smi)[[1]]
                                  charge <- rcdk::get.total.charge(iatom)
@@ -704,7 +692,6 @@ build.base.db <- function(dbname=NA,
                            file.url <- "https://dimedb.ibers.aber.ac.uk/help/downloads/"
                            file.urls <- paste0(file.url, files)
                            # ----
-                           print("Downloading files...")
                            base.loc <- file.path(getOptions()$db_dir, "dimedb_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc)
                            pbapply::pbsapply(file.urls, function(url){
@@ -803,7 +790,6 @@ build.base.db <- function(dbname=NA,
 
                            db.3$description = apply(db.3[,c("roleLabel", "chemical_compoundDescription")], 1, FUN=function(x){
                              x <- unlist(x)
-                             #print(x)
                              paste(x[!is.na(x)], collapse=", ")
                            })
 
@@ -837,7 +823,6 @@ build.base.db <- function(dbname=NA,
                              tbl = NA
                              try({
                                url = gsubfn::fn$paste("http://vmh.uni.lu/_api/metabolites/?page=$i")
-                               print(url)
                                r <- httr::GET(url, httr::accept(".json"))
                                lst <- jsonlite::fromJSON(httr::content(r, "text"))
                                tbl <- lst[[4]]
@@ -954,7 +939,6 @@ build.base.db <- function(dbname=NA,
                            })
                            #cl = makeCluster(3, "FORK")
                            responses = pbapply::pblapply(ids, cl=0, function(id){
-                             print(id)
                              response <- XML::readHTMLTable(paste0(url,id))
                              # - - - return - - -
                              response
@@ -1213,8 +1197,6 @@ build.base.db <- function(dbname=NA,
 
                            all.ids = paste0("SN", str_pad(1:n, 8, pad = "0"))
 
-                           print("Downloading molfiles...")
-
                            pbapply::pbsapply(all.ids, cl = F, function(id, file.url, base.loc){
                              mol.file <- file.path(base.loc, paste0(id, ".mol"))
                              utils::download.file(file.url, mol.file, mode = "w",quiet = T)
@@ -1251,7 +1233,6 @@ build.base.db <- function(dbname=NA,
 
   RSQLite::dbDisconnect(conn)
 
-  print("did base db!")
 }
 
 #' @export
@@ -1274,7 +1255,6 @@ build.extended.db <- function(dbname,
   full.conn <- RSQLite::dbConnect(RSQLite::SQLite(), full.db)
 
   # --- add base db to the new one ---
-  print("Attaching base...")
   RSQLite::dbExecute(full.conn, gsubfn::fn$paste("ATTACH '$base.db' AS tmp"))
 
   sql.make.meta <- strwrap("CREATE TABLE IF NOT EXISTS extended(
@@ -1302,7 +1282,6 @@ build.extended.db <- function(dbname,
   formula.count <- nrow(results)
 
   if(formula.count == 0){
-    print("Everything already in current database, aborting! ")
     return(NULL)
   }
 
@@ -1328,8 +1307,6 @@ build.extended.db <- function(dbname,
     do.calc <- function(x){
       row <- adduct.table[x,]
       name <- row$Name
-
-      #print(paste("--- CURRENT ADDUCT:", name, "---"))
 
       adduct <- row$Formula_add
       deduct <- row$Formula_ded
@@ -1439,7 +1416,6 @@ build.extended.db <- function(dbname,
   }, full.db = full.db)
 
   # --- indexy ---
-  print("Indexing extended table...")
 
   if(first.db){
     RSQLite::dbExecute(full.conn, "create index e_idx1 on extended(baseformula, basecharge)")
@@ -1451,10 +1427,8 @@ build.extended.db <- function(dbname,
   # --- cleanup ---
   RSQLite::dbExecute(full.conn, "VACUUM")
   # ==========================
-  print("Disconnecting...")
   RSQLite::dbDisconnect(base.conn)
   RSQLite::dbDisconnect(full.conn)
-  print("Done! :-)")
 }
 
 #' @export
@@ -1488,10 +1462,8 @@ build.pat.db <- function(db.name,
   qc.i = 1
 
   for(qc in which.qc){
-    print(qc.i)
     new.qc.name <- paste0("QC", qc.i)
     new.qc.name <- gsub(colnames(poslist)[qc], pattern = "(^QC[\\d|\\d\\d])", replacement = new.qc.name,perl = T)
-    print(new.qc.name)
     colnames(poslist)[qc] <- new.qc.name
     colnames(neglist)[qc] <- new.qc.name
     # - - -
@@ -1522,7 +1494,6 @@ build.pat.db <- function(db.name,
     batch_info = data.table::data.table(sample = sapply(samp_split, function(x) x[1]),
                                         batch = sapply(samp_split, function(x) x[2]),
                                         injection = sapply(samp_split, function(x) x[3]))
-    print(batch_info)
     colnames(poslist) = gsub(colnames(poslist), pattern = "(\\*.*$)", replacement = "")
     colnames(neglist) = gsub(colnames(poslist), pattern = "(\\*.*$)", replacement = "")
   } else{
@@ -1624,7 +1595,7 @@ build.pat.db <- function(db.name,
 
   # ----------------
   RSQLite::dbDisconnect(conn)
-  print("Made!")}
+  }
 
 
 #' @export
@@ -1634,8 +1605,6 @@ load.metadata.csv <- function(path.to.csv,
   #path.to.csv = "~/Downloads/maria_meta.csv"
   #path.to.patdb = "~/Downloads/maria_3ppm.db"
 
-  print(path.to.patdb)
-  print(path.to.csv)
 
   # --- connect to sqlite db ---
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), path.to.patdb)
@@ -1671,7 +1640,6 @@ load.metadata.excel <- function(path.to.xlsx,
     colnames(tab) <- tolower(gsub(x=colnames(tab), pattern = "\\.$|\\.\\.$", replacement = ""))
     colnames(tab) <- gsub(x=colnames(tab), pattern = "\\.|\\.\\.", replacement = "_")
     colnames(tab)[grep(x=colnames(tab), pattern= "*date*")] <- "sampling_date"
-    print(colnames(tab))
     # -----------------------------------------------------------------------------------------
     data.table::as.data.table(tab, keep.rownames=F)
   })
@@ -1794,11 +1762,9 @@ db.build.custom <- function(db.name = "MyDb",
 
   db <- file.path(outfolder, paste0(db.short, ".base.db"))
   if(file.exists(db)) file.remove(db)
-  print(db)
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), db)
   RSQLite::dbExecute(conn, statement = "create table base(compoundname text, description text, baseformula text, identifier text, charge text, structure text)")
 
-  print(db.formatted)
   # create folder for db
   RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
   RSQLite::dbDisconnect(conn)

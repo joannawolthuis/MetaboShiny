@@ -9,7 +9,8 @@ MetaboShiny to even start.
 #' @param package package name to install, either CRAN or bioconductor
 install.if.not <- function(package){
   if(package %in% rownames(installed.packages())){
-    print(paste("Already installed base package", package))
+    NULL
+    #print(paste("Already installed base package", package))
   }else{
     if(package %in% c("MetaboAnalystR", "BatchCorrMetabolomics")){
       # Step 1: Install devtools
@@ -51,8 +52,6 @@ if("BiocManager" %in% missing.packages){
   install.packages('BiocManager')
 }
 
-print(missing.packages)
-
 if(length(missing.packages)>0){
   BiocManager::install(missing.packages)
 }
@@ -77,7 +76,7 @@ library(httr)
 
 runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
 
-options('unzip.unzip' = getOption("unzip"), 
+options('unzip.unzip' = getOption("unzip"),
         'download.file.extra' = switch(runmode, docker="--insecure",local=""),  # bad but only way to have internet in docker...
         'download.file.method' = 'curl')
 
@@ -86,7 +85,7 @@ switch(runmode,
          wdir <<- dirname(rstudioapi::getSourceEditorContext()$path) # TODO: make this not break when not running from rstudio
          setwd(wdir)
          shiny::runApp(".")
-       }, 
+       },
        docker = {
          shiny::runApp(".",
                        port = 8080,
@@ -94,4 +93,3 @@ switch(runmode,
                        launch.browser = FALSE)
        })
 # go run it! :-)
-

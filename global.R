@@ -71,7 +71,6 @@ setOption <- function(file.loc, key, value){
     line <- paste(names(options)[i], options[i], sep=" = ")
     line
   })
-  #print(new_options)
   writeLines(opt_conn, text = unlist(new_options))
 
 
@@ -412,5 +411,3 @@ sort_order <<- unlist(c(global$vectors$pos_adducts$Name, global$vectors$neg_addu
 debug_mSet <- NULL
 debug_local <- NULL
 debug_input <- NULL
-
-print("loaded scripts!")

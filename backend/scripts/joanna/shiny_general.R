@@ -121,7 +121,7 @@ subset.mSet <- function(mSetObj, used.variable, keep.groups, new.name){
       mSetObj$dataSet$time.fac <<- mSetObj$dataSet$time.fac[keep.log.norm]
       mSetObj$dataSet$exp.fac <<- mSetObj$dataSet$exp.fac[keep.log.norm]
     }
-    print(paste0("Samples left: ", length(keep.samples)))
+    #print(paste0("Samples left: ", length(keep.samples)))
   }
   mSetObj
 }

@@ -1,7 +1,6 @@
 # triggers when user wants to create database from .db and excel or 2 csv files and excel
 observeEvent(input$create_db,{
 
-  print(local)
   # update the path to patient db
   local$paths$patdb <<- file.path(local$paths$work_dir, paste0(local$proj_name, ".db"))
 
@@ -27,8 +26,6 @@ observeEvent(input$create_db,{
     # change path CSV should be / is saved to in session
     local$paths$csv_loc <<- file.path(local$paths$work_dir, paste0(local$proj_name,".csv"))
 
-    print(local$paths$patdb)
-
     switch(input$new_proj,
            # if loading in a .db file... (FAST, MOSTLY FOR ADMINS USING HPC)
            `From DB` = {
@@ -37,8 +34,6 @@ observeEvent(input$create_db,{
              db_path <- parseFilePaths(global$paths$volumes, input$database)$datapath
              excel_path <- parseFilePaths(global$paths$volumes, input$excel)$datapath
 
-             print(db_path)
-             print(local$paths$patdb)
              # copy the user selected db to the processing folder under proj_name renaming
              file.copy(db_path, local$paths$patdb, overwrite = T)
 

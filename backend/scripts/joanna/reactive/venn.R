@@ -13,8 +13,8 @@ observeEvent(input$venn_add, {
   rows <- input$venn_unselected_rows_selected
   # get members and send to members list
   added = venn_no$now[rows,]
-  venn_yes$now <- data.frame(c(unlist(venn_yes$now), added))
-  venn_no$now <- data.frame(venn_no$now[-rows,])
+  venn_yes$now <<- data.frame(c(unlist(venn_yes$now), added))
+  venn_no$now <<- data.frame(venn_no$now[-rows,])
 })
 
 observeEvent(input$venn_remove, {
@@ -22,8 +22,8 @@ observeEvent(input$venn_remove, {
   rows <- input$venn_selected_rows_selected
   # get members and send to non members list
   removed = venn_yes$now[rows,]
-  venn_no$now <- data.frame(c(unlist(venn_no$now), removed))
-  venn_yes$now <- data.frame(venn_yes$now[-rows,])
+  venn_no$now <<- data.frame(c(unlist(venn_no$now), removed))
+  venn_yes$now <<- data.frame(venn_yes$now[-rows,])
 })
 
 
@@ -55,20 +55,19 @@ observeEvent(input$venn_build, {
     print("can only take more than zero and less than five")
     NULL
   }else{
-    p <- ggPlotVenn(mSet,
-                    venn_yes,
+    
+    p <- ggPlotVenn(mSet = mSet,venn_yes = venn_yes,
                     top = input$venn_tophits,
                     cols = local$aes$mycols,
                     cf=global$functions$color.functions[[local$aes$spectrum]],
+                    font=local$aes$font,
                     plotlyfy=F)
 
     local$vectors$venn_lists <<- p$info
     
     # render plot in UI
     output$venn_plot <- renderPlot({
-
       p$plot
-
     })
     # update the selectize input that the user can use to find which hits are intersecting
     # TODO: ideally, this happens on click but its hard...

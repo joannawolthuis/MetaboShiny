@@ -20,9 +20,6 @@ observe({
       conn <- RSQLite::dbConnect(RSQLite::SQLite(), local$paths$patdb)
       scanmode <- DBI::dbGetQuery(conn, paste0("SELECT DISTINCT foundinmode FROM mzvals WHERE mzmed LIKE '", local$curr_mz, "%'"))[,1]
       DBI::dbDisconnect(conn)
-
-      print(scanmode)
-
       local$vectors$calc_adducts <<- adducts[Ion_mode == scanmode]$Name
 
       output$magicball_add_tab <- DT::renderDataTable({
