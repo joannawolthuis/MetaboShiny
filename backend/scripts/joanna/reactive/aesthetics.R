@@ -4,7 +4,7 @@ observeEvent(input$color_ramp,{
   output$ramp_plot <- plotly::renderPlotly({
 
     # change the current spectrum in global
-    global$functions$color.functions[[getOptions(local$paths$opt.loc)$gspec]] <<- global$functions$color.functions[[input$color_ramp]]
+    local$aes$spectrum <<- input$color_ramp
     # change the current spectrum in user options file
     setOption(local$paths$opt.loc, key="gspec", value=input$color_ramp)
 
@@ -20,7 +20,7 @@ observeEvent(input$color_ramp,{
 
     # re-render preview plot with the new options (general heatmap using R standard volcano dataset)
     plotly::plot_ly(z = volcano,
-                    colors = global$functions$color.functions[[getOptions(local$paths$opt.loc)$gspec]](100),
+                    colors = global$functions$color.functions[[local$aes$spectrum]](100),
                     type = "heatmap",
                     showscale=FALSE)  %>%
       layout(xaxis = ax, yaxis = ax)
@@ -32,12 +32,13 @@ observeEvent(input$ggplot_theme,{
 
   # change default plot theme in user settings
   setOption(local$paths$opt.loc, key="gtheme", value=input$ggplot_theme)
-
+  local$aes$theme <<- input$ggplot_theme
+  
   # change preview plot (uses mtcars default R dataset)
   output$ggplot_theme_example <- renderPlot({
     p <- ggplot(mtcars) + geom_boxplot(aes(x = wt, y = mpg,
                                            colour = factor(gear)))
-    p + global$functions$plot.themes[[getOptions(local$paths$opt.loc)$gtheme]]()
+    p + global$functions$plot.themes[[local$aes$theme]]()
   })
 })
 

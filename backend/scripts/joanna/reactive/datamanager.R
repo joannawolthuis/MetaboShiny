@@ -124,8 +124,6 @@ observe({
                  }
                }
                
-               print(present)
-               
                if(present){
                  # render results table for UI
                  output$aov_tab <- DT::renderDataTable({
@@ -136,6 +134,15 @@ observe({
                    selection = 'single',
                    autoHideNavigation = T,
                    options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+                 })
+                 
+                 # render manhattan-like plot for UI
+                 output$aov_overview_plot <- plotly::renderPlotly({
+                   # --- ggplot ---
+                   ggPlotAOV(mSet,
+                             cf = global$functions$color.functions[[local$aes$spectrum]], 20,
+                             plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                             plotlyfy=TRUE,font = local$aes$font)
                  })
                }
              },
@@ -202,6 +209,12 @@ observe({
                                  autoHideNavigation = T,
                                  options = list(lengthMenu = c(5, 10, 15), pageLength = 10))
                  })
+                 output$pca_scree <- renderPlot({
+                   ggPlotScree(mSet, 
+                               cf = global$functions$color.functions[[local$aes$spectrum]],
+                               plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                               font = local$aes$font)
+                 })
                  # chekc which mode we're in
                  mode <- if("timecourse_trigger" %in% names(req(input))){
                    if(input$timecourse_trigger){ # if time series mode
@@ -221,7 +234,8 @@ observe({
                                 pcy = input$pca_y, mode = mode,
                                 shape.fac = input$second_var,
                                 plot.theme = global$functions$plot.themes[[local$aes$theme]], 
-                                plotlyfy=TRUE,font = local$aes$font
+                                plotlyfy=TRUE,
+                                font = local$aes$font
                                )
                    })
                  }else{
@@ -237,7 +251,7 @@ observe({
                    })
                  }
                }else{
-                 print("???")
+                 NULL
                } # do nothing
              },
              plsda = {
@@ -246,15 +260,15 @@ observe({
                  
                  # render cross validation plot
                  output$plsda_cv_plot <- renderPlot({
-                   ggPlotClass(cf = global$functions$color.functions[[local$aes$spectrum]], plotlyfy = F,
+                   ggPlotClass(mSet, cf = global$functions$color.functions[[local$aes$spectrum]], plotlyfy = F,
                                plot.theme = global$functions$plot.themes[[local$aes$theme]], 
-                               plotlyfy=TRUE,font = local$aes$font)
+                               font = local$aes$font)
                  })
                  # render permutation plot
                  output$plsda_perm_plot <- renderPlot({
-                   ggPlotPerm(cf = global$functions$color.functions[[local$aes$spectrum]], plotlyfy = F,
+                   ggPlotPerm(mSet,cf = global$functions$color.functions[[local$aes$spectrum]], plotlyfy = F,
                               plot.theme = global$functions$plot.themes[[local$aes$theme]], 
-                              plotlyfy=TRUE,font = local$aes$font)
+                              font = local$aes$font)
                  })
                  # render table with variance per PC
                  output$plsda_tab <- DT::renderDataTable({
@@ -286,19 +300,22 @@ observe({
                  if(input$plsda_2d3d){
                    # 2d
                    output$plot_plsda <- plotly::renderPlotly({
-                     plotPCA.2d(mSet, global$vectors$mycols,
+                     plotPCA.2d(mSet, local$aes$mycols,
                                 pcx = input$plsda_x,
                                 pcy = input$plsda_y, mode = "plsda",
-                                shape.fac = input$second_var)
+                                shape.fac = input$second_var,
+                                plot.theme = global$functions$plot.themes[[local$aes$theme]], 
+                                font = local$aes$font)
                    })
                  }else{
                    # 3d
                    output$plot_plsda <- plotly::renderPlotly({
-                     plotPCA.3d(mSet, global$vectors$mycols,
+                     plotPCA.3d(mSet, local$aes$mycols,
                                 pcx = input$plsda_x,
                                 pcy = input$plsda_y,
                                 pcz = input$plsda_z, mode = "plsda",
-                                shape.fac = input$second_var)
+                                shape.fac = input$second_var,
+                                font = local$aes$font)
                    })
                  }
                }else{NULL}
@@ -377,7 +394,8 @@ observe({
                # render manhattan-like plot for UI
                output$tt_overview_plot <- plotly::renderPlotly({
                  # --- ggplot ---
-                 ggPlotTT(global$functions$color.functions[[local$aes$spectrum]], 20,
+                 ggPlotTT(mSet,
+                          global$functions$color.functions[[local$aes$spectrum]], 20,
                           plot.theme = global$functions$plot.themes[[local$aes$theme]], 
                           plotlyfy=TRUE,font = local$aes$font)
                })
@@ -399,7 +417,8 @@ observe({
                # render manhattan-like plot for UI
                output$fc_overview_plot <- plotly::renderPlotly({
                  # --- ggplot ---
-                 ggPlotFC(global$functions$color.functions[[local$aes$spectrum]], 20,
+                 ggPlotFC(mSet,
+                          global$functions$color.functions[[local$aes$spectrum]], 20,
                           plot.theme = global$functions$plot.themes[[local$aes$theme]], 
                           plotlyfy=TRUE,font = local$aes$font)
                })

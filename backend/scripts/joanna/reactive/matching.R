@@ -1,28 +1,28 @@
 # triggers on clicking the 'search' button in sidebar
 observeEvent(input$search_cpd, {
 
-  if(length(global$vectors$db_search_list) > 0){ # go through selected databases
+  if(length(local$vectors$db_search_list) > 0){ # go through selected databases
     
-    global$tables$last_matches <<- unique(multimatch(curr_cpd, 
-                                                     global$vectors$db_search_list,
+    local$tables$last_matches <<- unique(multimatch(local$curr_mz, 
+                                                     local$vectors$db_search_list,
                                                      inshiny = F,
                                                      search_pubchem = input$magicball_pubchem_cids,
                                                      pubchem_detailed = input$magicball_pubchem_details,
-                                                     calc_adducts = global$vectors$add_list)) # match with all
+                                                     calc_adducts = local$vectors$add_list)) # match with all
     # - - -
-    adduct_dist <- melt(table(global$tables$last_matches$adduct))
-    db_dist <- melt(table(global$tables$last_matches$source))
+    adduct_dist <- melt(table(local$tables$last_matches$adduct))
+    db_dist <- melt(table(local$tables$last_matches$source))
     
-    if(nrow(global$tables$last_matches) > 0){
+    if(nrow(local$tables$last_matches) > 0){
       # render word cloud
       
       try({
         
         # remove unwanted words (defined in global) from description
-        filtered_descriptions <- sapply(1:length(global$tables$last_matches$description), 
+        filtered_descriptions <- sapply(1:length(local$tables$last_matches$description), 
                                         function(i){
                                           # get description
-                                          desc <- global$tables$last_matches$description[[i]]
+                                          desc <- local$tables$last_matches$description[[i]]
                                           # return
                                           desc
                                         })
@@ -58,11 +58,11 @@ observeEvent(input$search_cpd, {
         
         v <- sort(rowSums(m), decreasing = TRUE)
         
-        global$tables$word_freq <<- data.frame(name = names(v), value = v)
+        local$tables$word_freq <<- data.frame(name = names(v), value = v)
         
         # - - return - - 
         
-        res = head(global$tables$word_freq, 30)
+        res = head(local$tables$word_freq, 30)
         
         wordcloud_plot <- wordcloud2::wordcloud2(data = data.frame(word = res$name,
                                                                    freq = res$value), 
@@ -75,7 +75,7 @@ observeEvent(input$search_cpd, {
                                                  shape = 'heart')
         output$wordcloud_desc  <- wordcloud2::renderWordcloud2(wordcloud_plot)
         
-        global$vectors$pie_add <<- adduct_dist$Var1
+        local$vectors$pie_add <<- adduct_dist$Var1
         
         output$match_pie_add <- plotly::renderPlotly({
           plot_ly(adduct_dist, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
@@ -92,7 +92,7 @@ observeEvent(input$search_cpd, {
                    yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
         })
         
-        global$vectors$pie_db <<- db_dist$Var1
+        local$vectors$pie_db <<- db_dist$Var1
         
         output$match_pie_db <- plotly::renderPlotly({
           plot_ly(db_dist, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
@@ -112,8 +112,8 @@ observeEvent(input$search_cpd, {
     }
     
     shown_matches$table <- 
-    if(nrow(global$tables$last_matches)>0){
-      global$tables$last_matches 
+    if(nrow(local$tables$last_matches)>0){
+      local$tables$last_matches 
     }else{
       data.table('name' = "Didn't find anything ( •́ .̫ •̀ )")
     }
@@ -124,11 +124,11 @@ observeEvent(input$search_cpd, {
 observeEvent(input$score_iso, {
   
   # check if the matches table even exists
-  if(!data.table::is.data.table(global$tables$last_matches)) return(NULL)
+  if(!data.table::is.data.table(local$tables$last_matches)) return(NULL)
   
   # check if a previous scoring was already done (remove that column if so, new score is generated in a bit)
-  if("score" %in% colnames(global$tables$last_matches)){
-    global$tables$last_matches <<- global$tables$last_matches[,-"score"]
+  if("score" %in% colnames(local$tables$last_matches)){
+    local$tables$last_matches <<- local$tables$last_matches[,-"score"]
   }
   
   intprec = as.numeric(input$int_prec)/100.00
@@ -136,13 +136,13 @@ observeEvent(input$score_iso, {
   # get table including isotope scores
   # as input, takes user method for doing this scoring
   withProgress({
-    score_table <- score.isos(global$paths$patdb, method=input$iso_score_method, inshiny=T, intprec = intprec)
+    score_table <- score.isos(local$paths$patdb, method=input$iso_score_method, inshiny=T, intprec = intprec)
     })
   
   # update the match table available to the rest of metaboshiny
-  global$tables$last_matches <<- global$tables$last_matches[score_table, on = c("baseformula", "adduct")]
+  local$tables$last_matches <<- local$tables$last_matches[score_table, on = c("baseformula", "adduct")]
   
-  shown_matches$table <<- global$tables$last_matches
+  shown_matches$table <<- local$tables$last_matches
  
 })
 

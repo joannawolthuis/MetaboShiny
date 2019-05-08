@@ -89,7 +89,7 @@ set.col.map <- function(optionfile, colmap){
   joined <- paste0(
     colmap, collapse="&")
   # - - - -
-  setOption(key="gcols", value=joined)
+  setOption(optionfile, key="gcols", value=joined)
 }
 
 # - - - mset actions - - -

@@ -389,7 +389,9 @@ observeEvent(input$initialize, {
     
     # generate summary plots and render them in UI
     
-    varNormPlots <- ggplotNormSummary(mSet,
+    print(local)
+    
+    varNormPlots <- ggplotNormSummary(mSet = mSet,
                                       colmap = local$aes$mycols, 
                                       plot.theme = global$functions$plot.themes[[local$aes$theme]],
                                       font = local$aes$font)

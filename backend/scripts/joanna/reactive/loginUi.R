@@ -218,7 +218,7 @@ output$currUI <- renderUI({
                                                                                                                                          tabPanel(title="Table",
                                                                                                                                                   div(DT::dataTableOutput('pca_tab',width="100%"),style='font-size:80%')),
                                                                                                                                          tabPanel(title="Scree",
-                                                                                                                                                  plotOutput("pca_scree")
+                                                                                                                                                  plotOutput("pca_scree", width = "100%", height="250px")
                                                                                                                                          ),
                                                                                                                                          tabPanel(title="Loadings",
                                                                                                                                                   div(DT::dataTableOutput('pca_load_tab',width="100%"),style='font-size:80%'))
@@ -524,7 +524,7 @@ output$currUI <- renderUI({
                                                                                                            sardine(div(icon("paw","fa-xs fa-rotate-90"),
                                                                                                                        style="position:relative;
                                                                                                          top:10px;")),
-                                                                                                           sardine(h2(textOutput("curr_cpd"),style="padding:10px;")),
+                                                                                                           sardine(h2(textOutput("curr_mz"),style="padding:10px;")),
                                                                                                            sardine(div(icon("paw","fa-xs fa-rotate-90"),
                                                                                                                        style="position:relative;
                                                                                                          top:10px;")),
@@ -847,7 +847,7 @@ output$currUI <- renderUI({
                        ),
                        # prompt user on opening the quit tab.
                        # TODO: add 'save project?' dialog
-                       tabPanel(title = "", value="stop", icon = icon("times-circle",class = "outlined")),
+                       #tabPanel(title = "", value="stop", icon = icon("times-circle",class = "outlined")),
                        div(class="spinnylocation1",
                            div(class="plus", img(class="imagetop", src=opts$taskbar_image, width="100px", height="100px")),
                            div(class="minus", img(class="imagebottom", src=opts$taskbar_image, width="100px", height="100px"))

@@ -2,6 +2,7 @@
 
 shinyServer(function(input, output, session) {
   
+  debug_mSet <- NULL
   mSet <- NULL
   bgcol <- "black"
   font.css <- ""
@@ -11,6 +12,7 @@ shinyServer(function(input, output, session) {
   logged <- reactiveValues(status=FALSE,text="please log in! ( •́ .̫  •̀ )")
   
   local = list(
+    curr_mz = "nothing selected",
     patdb = "",
     csv_loc = "",
     proj_name ="",
@@ -19,7 +21,8 @@ shinyServer(function(input, output, session) {
                spectrum = "rb",
                theme = "min"),
     vectors = list(proj_names = c()),
-    paths = list(opt.loc = "")
+    paths = list(opt.loc = "",
+                 patdb = "")
     )
   
   output$login_status <- renderText({
@@ -141,9 +144,6 @@ gspec = RdBu')
           
           # ======================================
           
-          # set default plot theme to minimal
-          local$aes$plot.theme <<- ggplot2::theme_minimal
-          
           # set taskbar image as set in options
           taskbar_image <- opts$task_img
           
@@ -251,7 +251,7 @@ gspec = RdBu')
             
             if(!any(is.null(values))){
               if(local$paths$opt.loc != ""){
-                set.col.map(local$paths$opt.loc, values)
+                set.col.map(optionfile = local$paths$opt.loc, values)
               }
             }
           })
@@ -415,7 +415,7 @@ gspec = RdBu')
   
   # -----------------
   observeEvent(input$undo_match_filt, {
-    shown_matches$table <- global$tables$last_matches
+    shown_matches$table <- local$tables$last_matches
   })
   
   # change ppm accuracy, ONLY USEFUL if loading in from CSV
@@ -656,7 +656,7 @@ gspec = RdBu')
                              }
       )
       # save the selected database paths to global
-      global$vectors[[paste0("db_", prefix, "_list")]] <<- db_path_list[!is.na(db_path_list)]
+      local$vectors[[paste0("db_", prefix, "_list")]] <<- db_path_list[!is.na(db_path_list)]
     })
   })
   

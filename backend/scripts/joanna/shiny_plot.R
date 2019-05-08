@@ -9,8 +9,6 @@ ggplotNormSummary <- function(mSet,
                               plot.theme,
                               font){
   
- 
-  
   # load in original data (pre-normalization, post-filter)
   orig_data <- as.data.frame(mSet$dataSet$prenorm)
   # load in normalized data
@@ -392,14 +390,18 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
   }
 }
 
-ggPlotTT <- function(mSet, cf, n, 
+ggPlotAOV <- function(mSet, cf, n=20, 
                      plot.theme, plotlyfy=TRUE,font){
-  profile <- as.data.table(mSet$analSet$tt$p.log[mSet$analSet$tt$inx.imp],keep.rownames = T)
-  colnames(profile) <- c("cpd", "p")
+  
+  profile <- as.data.table(mSet$analSet$aov$p.log[mSet$analSet$aov$inx.imp],
+                           keep.rownames = T)
+  colnames(profile) <- c("cpd", "-logp")
+  profile[,2] <- round(profile[,2], digits = 2)
   profile$Peak <- c(1:nrow(profile))
   # ---------------------------
   p <- ggplot2::ggplot(data=profile) +
-    ggplot2::geom_point(ggplot2::aes(x=Peak, y=p,text=cpd, color=p, key=cpd)) +
+    ggplot2::geom_point(ggplot2::aes(x=Peak, y=`-logp`, 
+                                     text=cpd, color=`-logp`, key=cpd)) +
     plot.theme(base_size = 15) +
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
@@ -416,8 +418,35 @@ ggPlotTT <- function(mSet, cf, n,
   }
 }
 
-ggPlotFC <- function(mSet, cf, n, 
+ggPlotTT <- function(mSet, cf, n=20, 
                      plot.theme, plotlyfy=TRUE,font){
+  profile <- as.data.table(mSet$analSet$tt$p.log[mSet$analSet$tt$inx.imp],keep.rownames = T)
+  colnames(profile) <- c("cpd", "-logp")
+  profile[,2] <- round(profile[,2], digits = 2)
+  profile$Peak <- c(1:nrow(profile))
+  # ---------------------------
+  p <- ggplot2::ggplot(data=profile) +
+    ggplot2::geom_point(ggplot2::aes(x=Peak, y=`-logp`,
+                                     text=cpd, color=`-logp`, key=cpd)) +
+    plot.theme(base_size = 15) +
+    theme(legend.position="none",
+          axis.text=element_text(size=font$ax.num.size),
+          axis.title=element_text(size=font$ax.txt.size),
+          legend.title.align = 0.5,
+          axis.line = element_line(colour = 'black', size = .5),
+          text = element_text(family = font$family))+
+    ggplot2::scale_colour_gradientn(colours = cf(n)) +
+    ggplot2::scale_y_log10()
+  if(plotlyfy){
+    ggplotly(p, tooltip="cpd")
+  }else{
+    p
+  }
+}
+
+ggPlotFC <- function(mSet, cf, n=20, 
+                     plot.theme, 
+                     plotlyfy=TRUE,font){
   profile <- as.data.table(mSet$analSet$fc$fc.log[mSet$analSet$fc$inx.imp],keep.rownames = T)
   profile
   colnames(profile) <- c("cpd", "log2fc")
@@ -443,7 +472,7 @@ ggPlotFC <- function(mSet, cf, n,
 }
 
 ggPlotVolc <- function(mSet, cf, 
-                       n=256, plot.theme, 
+                       n=20, plot.theme, 
                        plotlyfy=TRUE,font ){
   vcn<-mSet$analSet$volcano;
   dt <- as.data.table(vcn$sig.mat[,c(2,4)],keep.rownames = T)
@@ -1332,4 +1361,21 @@ ggPlotVenn <- function(mSet,
   }else{
     p
   }
+}
+
+ggPlotScree <- function(mSet, plot.theme, cf, font, pcs=20){
+  df <- data.table(
+    pc = 1:length(names(mSet$analSet$pca$variance)),
+    var = round(mSet$analSet$pca$variance*100,digits = 1))
+  p <- ggplot2::ggplot(data=df[1:20,]) + ggplot2::geom_line(mapping = aes(x=pc, y=var, colour=var), cex=3) + 
+    plot.theme(base_size = 10) +
+    ggplot2::scale_colour_gradientn(colours = cf(20)) +
+    theme(legend.position="none",
+          axis.text=element_text(size=font$ax.num.size),
+          axis.title=element_text(size=font$ax.txt.size),
+          legend.title.align = 0.5,
+          axis.line = element_line(colour = 'black', size = .5),
+          text = element_text(family = font$family))
+  # - - - - - 
+  p
 }

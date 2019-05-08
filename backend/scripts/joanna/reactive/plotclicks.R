@@ -47,11 +47,11 @@ observeEvent(plotly::event_data("plotly_click"),{
                   volc = rownames(mSet$analSet$volcano$sig.mat)
     )
     if(d$key %not in% mzs) return(NULL)
-    curr_cpd <<- d$key
+    local$curr_mz <<- d$key
     # - return -
     output[[paste0(curr_tab, "_specific_plot")]] <- plotly::renderPlotly({
       # --- ggplot ---
-      ggplotSummary(mSet, curr_cpd, shape.fac = input$shape_var, cols = local$aes$mycols,cf=global$functions$color.functions[[local$aes$spectrum]],
+      ggplotSummary(mSet, local$curr_mz, shape.fac = input$shape_var, cols = local$aes$mycols,cf=global$functions$color.functions[[local$aes$spectrum]],
                     styles = input$ggplot_sum_style, add_stats = input$ggplot_sum_stats,
                     col.fac = input$col_var, txt.fac = input$txt_var,
                     plot.theme = global$functions$plot.themes[[local$aes$theme]],
@@ -97,17 +97,17 @@ observeEvent(plotly::event_data("plotly_click"),{
           })
         }
       }, bar = { # for bar plot just grab the # bar clicked
-        curr_cpd <<- as.character(local$tables$ml_bar[d$x,"mz"][[1]])
+        local$curr_mz <<- as.character(local$tables$ml_bar[d$x,"mz"][[1]])
       })}else if(grepl(pattern = "heatmap", x = curr_tab)){ # heatmap requires the table used to make it saved to global (hmap_mzs)
         req(local$vectors$heatmap)
         if(d$y > length(local$vectors$heatmap)) return(NULL)
-        curr_cpd <<- local$vectors$heatmap[d$y]
+        local$curr_mz <<- local$vectors$heatmap[d$y]
       }
 
   # render curent miniplot based on current compound
   output$curr_plot <- plotly::renderPlotly({
     # --- ggplot ---
-    ggplotSummary(mSet, curr_cpd, shape.fac = input$shape_var, cols = local$aes$mycols,
+    ggplotSummary(mSet, local$curr_mz, shape.fac = input$shape_var, cols = local$aes$mycols,
                   cf=global$functions$color.functions[[local$aes$spectrum]],
                   styles = input$ggplot_sum_style,
                   add_stats = input$ggplot_sum_stats,
@@ -116,5 +116,5 @@ observeEvent(plotly::event_data("plotly_click"),{
   })
 
   # change current compound in text
-  output$curr_cpd <- renderText(curr_cpd)
+  output$curr_mz <- renderText(local$curr_mz)
 })

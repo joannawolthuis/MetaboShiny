@@ -14,11 +14,7 @@ observe({
 })
 
 observe({
-  
-  if(exists("curr_cpd")){
-    print(curr_cpd)
-    print("changing table...")
-    
+  if(local$paths$patdb != ""){
     if(file.exists(local$paths$patdb)){
       conn <- RSQLite::dbConnect(RSQLite::SQLite(), local$paths$patdb)
       scanmode <- DBI::dbGetQuery(conn, paste0("SELECT DISTINCT foundinmode FROM mzvals WHERE mzmed LIKE '", curr_cpd, "%'"))[,1]
@@ -37,7 +33,6 @@ observe({
       })
     }
   }
-  
 })
 
 # toggles when 'select all adducts' is pressed (filled circle)
