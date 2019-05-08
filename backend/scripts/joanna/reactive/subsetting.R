@@ -119,9 +119,11 @@ observeEvent(input$reset_subset, {
   else{
     interface$mode <- "multivar"}
 
-  if(!("pca" %in% names(mSet$analSet))){
-    print("reloading pca...")
-    statsmanager$calculate <- "pca"
+  for(tabgroup in c("dimred", "permz", "overview")){
+    if(tabgroup %in% names(input)){
+      statsmanager$calculate <- input$permz
+      datamanager$reload <- input$permz
+    }
   }
 
   datamanager$reload <- "general"

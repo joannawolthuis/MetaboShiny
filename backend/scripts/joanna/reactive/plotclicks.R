@@ -57,21 +57,22 @@ observeEvent(plotly::event_data("plotly_click"),{
     })
   }else if(req(curr_tab) == "pca"){ # deprecated - used to hide and show certain groups
     if(!"z" %in% names(d)){
-      which_group = 1
-      which_group <- d$curveNumber + 1
-      traceLoc <- length(unique(mSet$dataSet$cls)) + 1
-      scatter <- pca_plot$x$attrs[[traceLoc]]
-      idx <- scatter$color == which_group
-      if(pca_plot$x$data[[which_group]]$visible == "legendonly"){
-        pca_plot$x$data[[which_group]]$visible = TRUE
-        scatter$visible[idx] <- T
-      }else{ # hide
-        pca_plot$x$data[[which_group]]$visible = "legendonly"
-        scatter$visible[idx] <- F
-      }
-      pca_plot$x$attrs[[traceLoc]] <- scatter
-      pca_plot <<- pca_plot
-      output$plot_pca <- plotly::renderPlotly({pca_plot})
+      NULL
+      # which_group = 1
+      # which_group <- d$curveNumber + 1
+      # traceLoc <- length(unique(mSet$dataSet$cls)) + 1
+      # scatter <- pca_plot$x$attrs[[traceLoc]]
+      # idx <- scatter$color == which_group
+      # if(pca_plot$x$data[[which_group]]$visible == "legendonly"){
+      #   pca_plot$x$data[[which_group]]$visible = TRUE
+      #   scatter$visible[idx] <- T
+      # }else{ # hide
+      #   pca_plot$x$data[[which_group]]$visible = "legendonly"
+      #   scatter$visible[idx] <- F
+      # }
+      # pca_plot$x$attrs[[traceLoc]] <- scatter
+      # pca_plot <<- pca_plot
+      # output$plot_pca <- plotly::renderPlotly({pca_plot})
     }}else if(req(curr_tab) == "ml"){ # makes ROC curves and boxplots clickable
       switch(input$ml_results, roc = { # if roc, check the curve numbers of the roc plot
         attempt = d$curveNumber - 1

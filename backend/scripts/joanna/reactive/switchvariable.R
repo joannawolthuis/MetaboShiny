@@ -50,10 +50,13 @@ observeEvent(input$change_cls, {
     statsmanager$calculate <- "pca"
   }
   
-  if(input$permz %not in% names(mSet$analSet)){
-    statsmanager$calculate <- input$permz
+  # reload current plot
+  for(tabgroup in c("dimred", "permz", "overview")){
+    if(tabgroup %in% names(input)){
+      statsmanager$calculate <- input$permz
+      datamanager$reload <- input$permz
+    }
   }
-  datamanager$reload <- input$permz
   
   datamanager$reload <- "general"
   

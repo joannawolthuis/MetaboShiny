@@ -174,7 +174,6 @@ observe({
              },
              tt = {
                withProgress({
-                 msg.vec <<- c()
                  mSet <<- Ttests.Anal(mSet,
                                       nonpar = input$tt_nonpar,
                                       threshp = 0.05, # TODO: make the threshold user defined...

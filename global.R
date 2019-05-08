@@ -411,3 +411,4 @@ sort_order <<- unlist(c(global$vectors$pos_adducts$Name, global$vectors$neg_addu
 debug_mSet <- NULL
 debug_local <- NULL
 debug_input <- NULL
+msg.vec <- c()
