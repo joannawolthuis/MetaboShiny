@@ -47,6 +47,6 @@ RUN R -e "BiocManager::install(c('TSPred', 'VennDiagram', 'rcdk', 'SPARQL', 'web
 RUN R -e "BiocManager::install(c('tm', 'RISmed', 'qdap', 'extrafont', 'gmp', 'shadowtext', 'xcms', 'CAMERA', 'fgsea', 'MSnbase', 'Rmisc', 'ggbeeswarm'))"
 
 # Make the ShinyApp available at port 8080
-EXPOSE 8080
+EXPOSE 80
 
 CMD /start.sh
