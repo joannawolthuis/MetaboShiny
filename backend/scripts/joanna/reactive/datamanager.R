@@ -63,10 +63,7 @@ observe({
                  interface$mode <- "bivar"}
                else{
                  interface$mode <- "multivar"}
-               
-               statsmanager$calculate <- "pca"
-               datamanager$reload <- "pca"
-               
+             
              },
              venn = {
                if("storage" %in% names(mSet)){

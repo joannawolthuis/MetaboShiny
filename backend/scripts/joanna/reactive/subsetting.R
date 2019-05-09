@@ -112,15 +112,19 @@ observeEvent(input$reset_subset, {
 
   output$curr_name <- renderText({mSet$dataSet$cls.name})
 
-  # reload current plot
-  # for(tabgroup in c("dimred", "permz", "overview")){
-  #   if(tabgroup %in% names(input)){
-  #     statsmanager$calculate <- input[[tabgroup]]
-  #     datamanager$reload <- input[[tabgroup]]
-  #   }
-  # }
-  datamanager$reload <<- "general"
-
+  invalidateLater(100, session)
+  
+  datamanager$reload <- "general"
+  
+  for(tabgroup in c("dimred", "overview", "permz")){
+    if(tabgroup %in% names(input)){
+      invalidateLater(100, session)
+      print(input[[tabgroup]])
+      statsmanager$calculate <<- input[[tabgroup]]
+      datamanager$reload <<- input[[tabgroup ]] 
+    }
+  }
+  
   updateNavbarPage(session, "statistics", selected = "inf")
 
 })
