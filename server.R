@@ -107,7 +107,6 @@ gspec = RdBu')
           opts <- getOptions(local$paths$opt.loc)
 
           logged$text <<- "loaded options!"
-
           logged$text <<- "starting MetaboShiny..."
 
           # generate CSS for the interface based on user settings for colours, fonts etc.
@@ -256,6 +255,10 @@ gspec = RdBu')
 
           logged$status <<- TRUE
 
+          require(shinyjs)
+          titlejs=paste0("document.title ='-`* MetaboShiny *`-'")
+          runjs(titlejs)
+          
         })
       }
     }else{
