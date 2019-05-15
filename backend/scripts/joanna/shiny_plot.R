@@ -1148,8 +1148,6 @@ ggPlotVenn <- function(mSet,
                        cf,
                        plotlyfy=TRUE,font){
 
-  dput(venn_yes)
-
   experiments <- str_match(unlist(venn_yes$now), pattern = "\\(.*\\)")[,1]
 
 

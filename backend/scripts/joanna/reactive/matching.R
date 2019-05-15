@@ -141,38 +141,24 @@ observeEvent(input$search_pubmed, {
       wcdata <- res
       colnames(wcdata) <- c("word", "freq")
       
-      if(input$wc_cloudbar_pm){
-        output$wordcloudOutput_pm <- renderUI({
-          list(
-            wordcloud2::wordcloud2Output("wordcloud_desc_pm") %>% shinycssloaders::withSpinner(),
-            tags$script(HTML(
-              "$(document).on('click', '#canvas', function() {",
-              'word = document.getElementById("wcSpan").innerHTML;',
-              "Shiny.onInputChange('selected_word_pubmed', word);",
-              "});"
-            ))
-          )
-        })
-        output$wordcloud_desc_pm  <- wordcloud2::renderWordcloud2({
-          wordcloud2::wordcloud2(wcdata,
-                                 size = 0.7,
-                                 shuffle = FALSE,
-                                 fontFamily = getOptions(lcl$paths$opt.loc)$font4,
-                                 ellipticity = 1,
-                                 minRotation = -pi/8,
-                                 maxRotation = pi/8,
-                                 shape = 'heart')
-        })
-      }else{
-        
-        output$wordcloudOutput_pm <- renderUI({plotlyOutput("wordcloud_desc_pm")})
-        
-        output$wordcloud_desc_pm <- ggPlotWordBar(wcdata = wcdata,
-                                               cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                               plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                               plotlyfy = TRUE,
-                                               font = lcl$aes$font)
-      }
+      output$wordcloud_desc_pm  <- wordcloud2::renderWordcloud2({
+        wordcloud2::wordcloud2(wcdata,
+                               size = 0.7,
+                               shuffle = FALSE,
+                               fontFamily = getOptions(lcl$paths$opt.loc)$font4,
+                               ellipticity = 1,
+                               minRotation = -pi/8,
+                               maxRotation = pi/8,
+                               shape = 'heart')
+      })
+      
+      output$wordbar_desc_pm <- plotly::renderPlotly({
+        ggPlotWordBar(wcdata = wcdata,
+                      cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                      plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                      plotlyfy = TRUE,
+                      font = lcl$aes$font)})
+      
       setProgress(0.8)
     }else{
       tbl <- data.table("no papers found" = "Please try another term!	(｡•́︿•̀｡)")

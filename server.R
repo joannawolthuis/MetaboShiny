@@ -243,6 +243,7 @@ gspec = RdBu')
             if(!any(is.null(values))){
               if(lcl$paths$opt.loc != ""){
                 set.col.map(optionfile = lcl$paths$opt.loc, values)
+                lcl$aes$mycols <- values
               }
             }
           })
@@ -548,7 +549,7 @@ gspec = RdBu')
 
   observeEvent(input$select_db_all, {
 
-    dbs <- gbl$vectors$db_list[-which(gbl$vectors$db_list == "custom")]
+    dbs <- gbl$vectors$db_list[-which(gbl$vectors$db_list %in% c("custom", "magicball"))]
 
     currently.on <- sapply(dbs, function(db){
       input[[paste0("search_", db)]]

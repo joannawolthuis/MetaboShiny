@@ -359,7 +359,13 @@ caret.mdls <- caret::getModelInfo()
       "what", "when", "which", "while", "with", "within", "without",
       "would", LETTERS, letters, "acid", "cell", "cells", "human", "humans",
       "practically", "containing", "belongs", "class", "chemspider", "considered",
-      "primarily"),
+      "primarily", "pathway", "novo", "tgi", "tgii", "acids", "molecule", "enzyme",
+      "available", "description", "neutral", "logp", "dgi", "located", "relatively",
+      "family", "least", "common", "four", "species", "skeleton", "total", "contain", "arising",
+      "substituents", "bond", "oxo", "alpha", "formal", "brbr", "effects", "nomenclature", "metacyccp",
+      "additional", "range", "events", "principle", "involved", "product", "catalyzed", 
+      "qqq", "qtof", "nmr", "eib", "cid", "exp", "fragv", "lcesiqft", "mhho", "major", 
+      "constit", "lpls", "formed", "lpes", "main", "subclass"),
     qdapDictionaries::Top200Words,
     gbl$vectors$db_list))
 

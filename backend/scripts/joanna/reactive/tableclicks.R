@@ -149,7 +149,7 @@ observeEvent(input$match_tab_rows_selected,{
   curr_row <<- input$match_tab_rows_selected # get current row
   if (is.null(curr_row)) return()
   try({
-    curr_name <<- lcl$tables$last_matches[curr_row,'name'][[1]]
+    curr_name <<- shown_matches$table[curr_row,'name'][[1]]
     updateTextInput(session, "pm_query", value = curr_name)
     # write to clipboard
     #if(input$auto_copy){
@@ -157,11 +157,11 @@ observeEvent(input$match_tab_rows_selected,{
     #  print('copied to clipboard ( ˘ ³˘)♥')
     #}
     # -----------------------------
-    curr_def <<- lcl$tables$last_matches[curr_row,'description'] # get current definition (hidden in table display but not deleted)
+    curr_def <<- shown_matches$table[curr_row,'description'] # get current definition (hidden in table display but not deleted)
     output$curr_definition <- renderText(curr_def$description) # render definition
-    curr_struct <<- lcl$tables$last_matches[curr_row,'structure'][[1]] # get current structure
+    curr_struct <<- shown_matches$table[curr_row,'structure'][[1]] # get current structure
     output$curr_struct <- renderPlot({plot.mol(curr_struct,style = "cow")}) # plot molecular structure
-    curr_formula <<- lcl$tables$last_matches[curr_row,'baseformula'][[1]] # get current formula
+    curr_formula <<- shown_matches$table[curr_row,'baseformula'][[1]] # get current formula
     output$curr_formula <- renderText({curr_formula}) # render text of current formula
   })
 })
