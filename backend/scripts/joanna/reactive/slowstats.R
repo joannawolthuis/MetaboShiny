@@ -134,15 +134,15 @@ observeEvent(input$do_ml, {
     # how many models will be built? user input
     goes = as.numeric(input$ml_attempts)
 
-    if(is.null(local$vectors$ml_train)){
-      local$vectors$ml_train <<- c("all", "all")
+    if(is.null(lcl$vectors$ml_train)){
+      lcl$vectors$ml_train <<- c("all", "all")
     }
-    if(is.null(local$vectors$ml_test)){
-      local$vectors$ml_test <<- c("all", "all")
+    if(is.null(lcl$vectors$ml_test)){
+      lcl$vectors$ml_test <<- c("all", "all")
     }
 
-    if(all(local$vectors$ml_test == local$vectors$ml_train)){
-      if(unique(local$vectors$ml_test) == "all"){
+    if(all(lcl$vectors$ml_test == lcl$vectors$ml_train)){
+      if(unique(lcl$vectors$ml_test) == "all"){
         print("nothing selected... continuing in normal non-subset mode")
       }else{
         print("no can do, need to test on something else than train!!!")
@@ -293,8 +293,8 @@ observeEvent(input$do_ml, {
               labels = testing$label)
       })
     },
-    train_vec = local$vectors$ml_train,
-    test_vec = local$vectors$ml_test,
+    train_vec = lcl$vectors$ml_train,
+    test_vec = lcl$vectors$ml_test,
     configCols = configCols
     ) # for session_cl
     # check if a storage list for machine learning results already exists
@@ -359,7 +359,7 @@ observeEvent(input$do_mummi, {
   if(!continue) NULL
 
   # seperate in pos and neg peaks..
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), local$paths$patdb)
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb)
   pospeaks <- DBI::dbGetQuery(conn, "SELECT DISTINCT mzmed FROM mzvals WHERE foundinmode = 'positive'")
   negpeaks <- DBI::dbGetQuery(conn, "SELECT DISTINCT mzmed FROM mzvals WHERE foundinmode = 'negative'")
   peak_tbl_pos <- peak_tbl[`m.z` %in% unlist(pospeaks)]
@@ -376,7 +376,7 @@ observeEvent(input$do_mummi, {
     mummi<-SanityCheckMummichogData(mummi)
     mummi<-PerformMummichog(mummi, input$mummi_org, "fisher", "gamma")
 
-    local$vectors[[paste0("mummi_", substr(mode, 1, 3))]] <<- list(sig = mummi$mummi.resmat,
+    lcl$vectors[[paste0("mummi_", substr(mode, 1, 3))]] <<- list(sig = mummi$mummi.resmat,
                                                                     pw2cpd = {
                                                                       lst = mummi$pathways$cpds
                                                                       names(lst) <- mummi$pathways$name
@@ -384,7 +384,7 @@ observeEvent(input$do_mummi, {
                                                                       lst
                                                                     },
                                                                     cpd2mz = mummi$cpd2mz_dict)
-    local$tables$mummichog <<- mummi$mummi.resmat
+    lcl$tables$mummichog <<- mummi$mummi.resmat
     output[[paste0("mummi_", substr(mode, 1, 3), "_tab")]] <- DT::renderDataTable({
       DT::datatable(mummi$mummi.resmat,selection = "single")
     })

@@ -91,7 +91,7 @@ sourceDir("backend/scripts/joanna")
 caret.mdls <- caret::getModelInfo()
 # === THE BELOW LIST CONTAINS ALL GLOBAL VARIABLES THAT METABOSHINY CALLS UPON LATER ===
 
-  global <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people importing their data through csv
+  gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people importing their data through csv
                                   # get all caret models that can do classification and have some kind of importance metric
                                   ml.models = names(caret.mdls)[sapply(1:length(caret.mdls), function(i){
                                     curr.mdl = caret.mdls[[i]]
@@ -113,7 +113,7 @@ caret.mdls <- caret::getModelInfo()
                                   #                     "BatchCorrMetabolomics", "R.utils", "rgl", "glmnet", "TSPred",
                                   #                     "VennDiagram", "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR",
                                   #                     "openxlsx", "doParallel", "missForest", "InterpretMSSpectrum",
-                                  #                     "tm", "RISmed", "qdap", "extrafont", "sysfonts", "gmp", "shadowtext", "rlist")
+                                  #                     "tm", "RISmed", "qdap", "extrafont", "sysfonts", "gmp", "shadowtext", "rlist", "rcorpora")
                                   #), # these packages are listed in the first tab and should include all necessary packages
                                   images = list(list(name = 'load_icon', path = 'www/cute.png', dimensions = c(100, 100)),
                                                 list(name = 'cute_package', path = 'www/cat.png', dimensions = c(80, 80)),
@@ -318,7 +318,7 @@ caret.mdls <- caret::getModelInfo()
                  )
                  )
 
-  global$vectors$wordcloud$skip <- unique(c( # manual curation(
+  gbl$vectors$wordcloud$skip <- unique(c( # manual curation(
     "on", "in", "and", "at",
     "an", "by", "is", "it", "that",
     "as", "be", "like", "can", "a", "of",
@@ -357,9 +357,11 @@ caret.mdls <- caret::getModelInfo()
       "these", "they", "this", "those", "through", "thus", "to", "upon",
       "use", "used", "using", "various", "very", "was", "we", "were",
       "what", "when", "which", "while", "with", "within", "without",
-      "would", LETTERS, letters, "acid", "cell", "cells", "human", "humans"),
+      "would", LETTERS, letters, "acid", "cell", "cells", "human", "humans",
+      "practically", "containing", "belongs", "class", "chemspider", "considered",
+      "primarily"),
     qdapDictionaries::Top200Words,
-    global$vectors$db_list))
+    gbl$vectors$db_list))
 
 
 
@@ -406,9 +408,9 @@ source("./Rsource/SwitchButton.R")
 sardine <- function(content) div(style="display: inline-block;vertical-align:top;", content)
 
 # interleave for sorting later ...
-add_idx <- order(c(seq_along(global$vectors$pos_adducts$Name), seq_along(global$vectors$neg_adducts$Name)))
-sort_order <<- unlist(c(global$vectors$pos_adducts$Name, global$vectors$neg_adducts$Name))[add_idx]
+add_idx <- order(c(seq_along(gbl$vectors$pos_adducts$Name), seq_along(gbl$vectors$neg_adducts$Name)))
+sort_order <<- unlist(c(gbl$vectors$pos_adducts$Name, gbl$vectors$neg_adducts$Name))[add_idx]
 debug_mSet <- NULL
-debug_local <- NULL
+debug_lcl <- NULL
 debug_input <- NULL
 msg.vec <- c()

@@ -229,6 +229,17 @@
   font-size: 20px;
 }
 
+/* Cloud / Bar */
+
+.ClBr .onoffswitch-inner:before {
+  content: "cloud";
+  font-size: 15px;
+}
+
+.ClBr .onoffswitch-inner:after {
+  content: "bar";
+  font-size: 18px;
+}
 /* -------------------- EXPERIMENTATION -------------------- */
 
 

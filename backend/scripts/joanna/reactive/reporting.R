@@ -2,14 +2,14 @@ dataModal <- function(failed = FALSE) {
   modalDialog(
     fluidRow(align="center",
              textInput("report_plot_title", "Title", value = switch(input$statistics,
-                                                                    tt = paste0("T-test", " - ", local$curr_mz, " m/z"),
-                                                                    fc = paste0("Fold-change",  " - ", local$curr_mz, " m/z"),
-                                                                    anova = paste0("ANOVA",  " - ", local$curr_mz, " m/z"),
+                                                                    tt = paste0("T-test", " - ", lcl$curr_mz, " m/z"),
+                                                                    fc = paste0("Fold-change",  " - ", lcl$curr_mz, " m/z"),
+                                                                    anova = paste0("ANOVA",  " - ", lcl$curr_mz, " m/z"),
                                                                     pca = "PCA",
                                                                     plsda = "PLS-DA",
                                                                     volc = "Volcano",
-                                                                    meba = paste0("MEBA",  " - ", local$curr_mz, " m/z"),
-                                                                    asca = paste0("ASCA",  " - ", local$curr_mz, " m/z"),
+                                                                    meba = paste0("MEBA",  " - ", lcl$curr_mz, " m/z"),
+                                                                    asca = paste0("ASCA",  " - ", lcl$curr_mz, " m/z"),
                                                                     ml = "Machine learning")),
              textAreaInput("report_plot_notes", "Notes", value = "", height = "100px")
     ),
@@ -59,11 +59,11 @@ reportAppend = function(reportPlot, plotTitle, plotNotes){
   # unique file name to store figure for report
   tmpFigureName <- paste(tempfile(pattern = "plot", tmpdir = file.path(options$work_dir, "report", "figures")), ".png", sep = "")
   # save plo† as PDF
-  # ggsave(tmpFigureName, plot = local$last_plot)
+  # ggsave(tmpFigureName, plot = lcl$last_plot)
   ggsave(tmpFigureName, plot = reportPlot)
   dev.off()
 
-  # htmlwidgets::saveWidget(local$last_plot, tmpFigureName)
+  # htmlwidgets::saveWidget(lcl$last_plot, tmpFigureName)
   # Add code to Rmd file
   cat(paste(
     paste("#", plotTitle, sep = " "),
@@ -95,7 +95,7 @@ reportAppend = function(reportPlot, plotTitle, plotNotes){
 # observe report button presses, need one for each button*
 
 observeEvent(input$report_plot, {
-  reportAppend(local$last_plot, input$report_plot_title, input$report_plot_notes)
+  reportAppend(lcl$last_plot, input$report_plot_title, input$report_plot_notes)
 })
 
 # For report tab where user can choose plots to appear in report

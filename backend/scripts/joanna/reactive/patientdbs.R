@@ -2,7 +2,7 @@
 observeEvent(input$create_db,{
 
   # update the path to patient db
-  local$paths$patdb <<- file.path(local$paths$work_dir, paste0(local$proj_name, ".db"))
+  lcl$paths$patdb <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name, ".db"))
 
   withProgress({
 
@@ -12,40 +12,40 @@ observeEvent(input$create_db,{
 
     updateSelectizeInput(session = session,
                          inputId = "proj_name",
-                         choices = c(local$vectors$project_names, proj_name))
+                         choices = c(lcl$vectors$project_names, proj_name))
 
     updateSelectizeInput(session = session,
                          inputId = "proj_name",
                          selected = proj_name)
 
-    local$paths$patdb <<- file.path(local$paths$work_dir, paste0(proj_name,".db", sep=""))
+    lcl$paths$patdb <<- file.path(lcl$paths$work_dir, paste0(proj_name,".db", sep=""))
     # change project name in user options file
-    setOption(local$paths$opt.loc, key="proj_name", value=proj_name)
+    setOption(lcl$paths$opt.loc, key="proj_name", value=proj_name)
     # print the changed name in the UI
     output$proj_name <<- renderText(proj_name)
     # change path CSV should be / is saved to in session
-    local$paths$csv_loc <<- file.path(local$paths$work_dir, paste0(local$proj_name,".csv"))
+    lcl$paths$csv_loc <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name,".csv"))
 
     switch(input$new_proj,
            # if loading in a .db file... (FAST, MOSTLY FOR ADMINS USING HPC)
            `From DB` = {
 
              # get the db and excel path from the UI elemnts
-             db_path <- parseFilePaths(global$paths$volumes, input$database)$datapath
-             excel_path <- parseFilePaths(global$paths$volumes, input$excel)$datapath
+             db_path <- parseFilePaths(gbl$paths$volumes, input$database)$datapath
+             excel_path <- parseFilePaths(gbl$paths$volumes, input$excel)$datapath
 
              # copy the user selected db to the processing folder under proj_name renaming
-             file.copy(db_path, local$paths$patdb, overwrite = T)
+             file.copy(db_path, lcl$paths$patdb, overwrite = T)
 
              shiny::setProgress(session=session, value= .30)
 
              # add metadata file to .db file generated in previous step
-             metadata_path <- parseFilePaths(global$paths$volumes, input$metadata)$datapath
+             metadata_path <- parseFilePaths(gbl$paths$volumes, input$metadata)$datapath
 
              if(grepl(metadata_path, pattern = "csv")){
-               exp_vars <<- load.metadata.csv(metadata_path, local$paths$patdb)
+               exp_vars <<- load.metadata.csv(metadata_path, lcl$paths$patdb)
              }else{
-               exp_vars <<- load.metadata.excel(metadata_path, local$paths$patdb)
+               exp_vars <<- load.metadata.excel(metadata_path, lcl$paths$patdb)
              }
 
              shiny::setProgress(session=session, value= .60)
@@ -55,21 +55,21 @@ observeEvent(input$create_db,{
            `From CSV` = {
 
              # build patient db from csv files with a given ppm error margin
-             build.pat.db(local$paths$patdb,
+             build.pat.db(lcl$paths$patdb,
                           ppm = input$ppm,
-                          pospath = parseFilePaths(global$paths$volumes, input$outlist_pos)$datapath,
-                          negpath = parseFilePaths(global$paths$volumes, input$outlist_neg)$datapath,
+                          pospath = parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath,
+                          negpath = parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath,
                           overwrite = T)
 
              shiny::setProgress(session=session, value= .95,message = "Adding metadata to database...")
 
              # add excel file to .db file generated in previous step
-             metadata_path <- parseFilePaths(global$paths$volumes, input$metadata)$datapath
+             metadata_path <- parseFilePaths(gbl$paths$volumes, input$metadata)$datapath
 
              if(grepl(metadata_path, pattern = "csv")){
-               exp_vars <<- load.metadata.csv(metadata_path, local$paths$patdb)
+               exp_vars <<- load.metadata.csv(metadata_path, lcl$paths$patdb)
              }else{
-               exp_vars <<- load.metadata.excel(metadata_path, local$paths$patdb)
+               exp_vars <<- load.metadata.excel(metadata_path, lcl$paths$patdb)
              }
           }
     )
@@ -80,7 +80,7 @@ observeEvent(input$create_db,{
 # TODO: is deprecated, fix!!
 observeEvent(input$import_db, {
 
-  local$paths$patdb <<- input$pat_db$datapath
+  lcl$paths$patdb <<- input$pat_db$datapath
   output$db_upload_check <- renderImage({
     # When input$n is 3, filename is ./images/image3.jpeg
     filename <- normalizePath('www/yes.png')
@@ -93,7 +93,7 @@ observeEvent(input$import_db, {
 # imports existing csv file
 observeEvent(input$import_csv, {
   # change path to current csv file to user given path
-  local$paths$csv_loc <<- input$pat_csv$datapath
+  lcl$paths$csv_loc <<- input$pat_csv$datapath
 
   # show checkmark underneath select csv button
   output$csv_upload_check <- renderImage({
@@ -114,10 +114,10 @@ observeEvent(input$create_csv, {
     shiny::setProgress(session = session, value= 1/4)
 
     # create csv table from patient database and user chosen settings in that pane
-    tbl <- get.csv(local$paths$patdb,
-                   group_adducts = F, # if(length(local$vectors$db_add_list) == 0) F else T, # group by addicts?
+    tbl <- get.csv(lcl$paths$patdb,
+                   group_adducts = F, # if(length(lcl$vectors$db_add_list) == 0) F else T, # group by addicts?
                    groupfac = "mz" #input$group_by, # group by mz or formula
-                   #which_dbs = local$vectors$db_add_list, # used databases
+                   #which_dbs = lcl$vectors$db_add_list, # used databases
                    #which_adducts = selected_adduct_list # used adducts
     )
 
@@ -133,10 +133,10 @@ observeEvent(input$create_csv, {
     shiny::setProgress(session=session, value= 2/4)
 
     # change location of csv in global
-    local$paths$csv_loc <<- file.path(local$paths$work_dir, paste0(local$proj_name,".csv"))
+    lcl$paths$csv_loc <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name,".csv"))
 
     # write csv file to new location
-    fwrite(tbl, local$paths$csv_loc, sep="\t")
+    fwrite(tbl, lcl$paths$csv_loc, sep="\t")
 
     # find the experimental variables by checking which column names wont convert to numeric
     as.numi <- as.numeric(colnames(tbl)[1:100])
@@ -175,7 +175,7 @@ observeEvent(input$check_csv, {
 
   # read in csv
   # TODO: only read in the first x -rows- to save time??
-  csv <- fread(local$paths$csv_loc,
+  csv <- fread(lcl$paths$csv_loc,
                header = T)
 
   # find experimental variables by checking which wont convert to numeric

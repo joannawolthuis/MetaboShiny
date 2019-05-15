@@ -115,7 +115,7 @@ observeEvent(input$timecourse_trigger, {
 
   }
 
-  local$last_mset <<- mset_name
+  lcl$last_mset <<- mset_name
 
   statsmanager$calculate <- input$statistics
   datamanager$reload <- input$statistics

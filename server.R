@@ -10,7 +10,7 @@ shinyServer(function(input, output, session) {
 
   logged <- reactiveValues(status=FALSE,text="please log in! ( •́ .̫  •̀ )")
 
-  local = list(
+  lcl = list(
     curr_mz = "nothing selected",
     patdb = "",
     csv_loc = "",
@@ -72,11 +72,11 @@ shinyServer(function(input, output, session) {
         username = input$username
 
         # check if opts file exists, otherwise make it with the proper files
-        local$paths$opt.loc <<- file.path(userfolder, "options.txt")
-        local$paths$work_dir <<- userfolder
-        local$paths$db_dir <<- dbdir
+        lcl$paths$opt.loc <<- file.path(userfolder, "options.txt")
+        lcl$paths$work_dir <<- userfolder
+        lcl$paths$db_dir <<- dbdir
 
-        if(!file.exists(local$paths$opt.loc)){
+        if(!file.exists(lcl$paths$opt.loc)){
           contents = gsubfn::fn$paste('db_dir = $dbdir
 work_dir = $userfolder
 proj_name = MY_METSHI
@@ -98,13 +98,13 @@ taskbar_image = gemmy_rainbow.png
 gtheme = classic
 gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
 gspec = RdBu')
-          writeLines(contents, local$paths$opt.loc)
+          writeLines(contents, lcl$paths$opt.loc)
         }
 
         withProgress({
           # read settings
 
-          opts <- getOptions(local$paths$opt.loc)
+          opts <- getOptions(lcl$paths$opt.loc)
 
           logged$text <<- "loaded options!"
           logged$text <<- "starting MetaboShiny..."
@@ -141,10 +141,10 @@ gspec = RdBu')
           taskbar_image <- opts$task_img
 
           # parse color opts
-          local$aes$mycols <<- get.col.map(local$paths$opt.loc) # colours for discrete sets, like group A vs group B etc.
-          local$aes$theme <<- opts$gtheme # gradient function for heatmaps, volcano plot etc.
-          local$aes$spectrum <<- opts$gspec # gradient function for heatmaps, volcano plot etc.
-          local$vectors$proj_names <<- unique(tools::file_path_sans_ext(list.files(opts$work_dir, pattern=".csv|.db"))) # the names listed in the 'choose project' tab of opts.
+          lcl$aes$mycols <<- get.col.map(lcl$paths$opt.loc) # colours for discrete sets, like group A vs group B etc.
+          lcl$aes$theme <<- opts$gtheme # gradient function for heatmaps, volcano plot etc.
+          lcl$aes$spectrum <<- opts$gspec # gradient function for heatmaps, volcano plot etc.
+          lcl$vectors$proj_names <<- unique(tools::file_path_sans_ext(list.files(opts$work_dir, pattern=".csv|.db"))) # the names listed in the 'choose project' tab of opts.
 
           # load existing file
           bgcol <<- opts$col1
@@ -152,57 +152,57 @@ gspec = RdBu')
           # - - load custom dbs - -
 
           # load in custom databases
-          has.customs <- dir.exists(file.path(local$paths$db_dir, "custom"))
+          has.customs <- dir.exists(file.path(lcl$paths$db_dir, "custom"))
 
           if(has.customs){
 
-            customs = list.files(path = file.path(local$paths$db_dir, "custom"),
+            customs = list.files(path = file.path(lcl$paths$db_dir, "custom"),
                                  pattern = "\\.RData")
 
             dbnames = unique(tools::file_path_sans_ext(customs))
 
             for(db in dbnames){
               # add name to global
-              dblist <- global$vectors$db_list
+              dblist <- gbl$vectors$db_list
               dblist <- dblist[-which(dblist == "custom")]
               if(!(db %in% dblist)){
                 dblist <- c(dblist, db, "custom")
-                global$vectors$db_list <- dblist
+                gbl$vectors$db_list <- dblist
               }
-              metadata.path <- file.path(local$paths$db_dir, "custom", paste0(db, ".RData"))
+              metadata.path <- file.path(lcl$paths$db_dir, "custom", paste0(db, ".RData"))
               load(metadata.path)
 
               # add description to global
-              global$constants$db.build.info[[db]] <- meta.dbpage
+              gbl$constants$db.build.info[[db]] <- meta.dbpage
 
               # add image to global
-              maxi = length(global$constants$images)
-              global$constants$images[[maxi + 1]] <- meta.img
+              maxi = length(gbl$constants$images)
+              gbl$constants$images[[maxi + 1]] <- meta.img
             }
           }
 
           # init stuff that depends on opts file
 
-          local$proj_name <<- opts$proj_name
-          local$paths$patdb <<- file.path(opts$work_dir, paste0(opts$proj_name, ".db"))
-          local$paths$csv_loc <<- file.path(opts$work_dir, paste0(opts$proj_name, ".csv"))
-          local$texts <<- list(
-            list(name='curr_exp_dir',text=local$paths$work_dir),
-            list(name='curr_db_dir',text=local$paths$db_dir),
+          lcl$proj_name <<- opts$proj_name
+          lcl$paths$patdb <<- file.path(opts$work_dir, paste0(opts$proj_name, ".db"))
+          lcl$paths$csv_loc <<- file.path(opts$work_dir, paste0(opts$proj_name, ".csv"))
+          lcl$texts <<- list(
+            list(name='curr_exp_dir',text=lcl$paths$work_dir),
+            list(name='curr_db_dir',text=lcl$paths$db_dir),
             list(name='ppm',text=opts$ppm),
             list(name='proj_name',text=opts$proj_name)
           )
 
           updateSelectizeInput(session,
                                "proj_name",
-                                choices = local$vectors$proj_names,
+                                choices = lcl$vectors$proj_names,
                                selected = opts$proj_name)
           # create default text objects in UI
-          lapply(local$texts, FUN=function(default){
+          lapply(lcl$texts, FUN=function(default){
             output[[default$name]] = renderText(default$text)
           })
 
-          local$aes$font <<- list(family = opts$font4,
+          lcl$aes$font <<- list(family = opts$font4,
                                    ax.num.size = 11,
                                    ax.txt.size = 15,
                                    ann.size = 20,
@@ -225,10 +225,10 @@ gspec = RdBu')
 
           # create color pickers based on amount of colours allowed in global
           output$colorPickers <- renderUI({
-            lapply(c(1:global$constants$max.cols), function(i) {
+            lapply(c(1:gbl$constants$max.cols), function(i) {
               colourpicker::colourInput(inputId = paste("col", i, sep="_"),
                                         label = paste("Choose colour", i),
-                                        value = local$aes$mycols[i],
+                                        value = lcl$aes$mycols[i],
                                         allowTransparent = F)
             })
           })
@@ -236,13 +236,13 @@ gspec = RdBu')
           # create color1, color2 etc variables to use in plotting functions
           # and update when colours picked change
           observe({
-            values <- unlist(lapply(c(1:global$constants$max.cols), function(i) {
+            values <- unlist(lapply(c(1:gbl$constants$max.cols), function(i) {
               input[[paste("col", i, sep="_")]]
             }))
 
             if(!any(is.null(values))){
-              if(local$paths$opt.loc != ""){
-                set.col.map(optionfile = local$paths$opt.loc, values)
+              if(lcl$paths$opt.loc != ""){
+                set.col.map(optionfile = lcl$paths$opt.loc, values)
               }
             }
           })
@@ -258,7 +258,7 @@ gspec = RdBu')
           require(shinyjs)
           titlejs=paste0("document.title ='-`* MetaboShiny *`-'")
           runjs(titlejs)
-          
+
         })
       }
     }else{
@@ -300,7 +300,7 @@ gspec = RdBu')
   parallel::clusterEvalQ(session_cl, library(data.table))
 
   # create default text objects in UI
-  lapply(global$constants$default.text, FUN=function(default){
+  lapply(gbl$constants$default.text, FUN=function(default){
     output[[default$name]] = renderText(default$text)
   })
 
@@ -308,7 +308,7 @@ gspec = RdBu')
 
   # default match table fill
   output$match_tab <-DT::renderDataTable({
-    if(is.null(local$tables$last_matches)){
+    if(is.null(lcl$tables$last_matches)){
       DT::datatable(data.table("no m/z chosen" = "Please choose m/z value from results ٩(｡•́‿•̀｡)۶	"),
                     selection = 'single',
                     autoHideNavigation = T,
@@ -318,7 +318,7 @@ gspec = RdBu')
   })
 
   # create image objects in UI
-  lapply(global$constants$images, FUN=function(image){
+  lapply(gbl$constants$images, FUN=function(image){
     output[[image$name]] <- renderImage({
       filename <- normalizePath(image$path)
       # Return a list containing the filename and alt text
@@ -331,8 +331,8 @@ gspec = RdBu')
   shown_matches <- reactiveValues(table = data.table())
 
   output$match_tab <- DT::renderDataTable({
-    remove_cols = global$vectors$remove_match_cols
-    remove_idx <- which(colnames(local$tables$last_matches) %in% remove_cols)
+    remove_cols = gbl$vectors$remove_match_cols
+    remove_idx <- which(colnames(lcl$tables$last_matches) %in% remove_cols)
     # don't show some columns but keep them in the original table, so they can be used
     # for showing molecule descriptions, structure
     DT::datatable(shown_matches$table,
@@ -411,7 +411,7 @@ gspec = RdBu')
 
   # -----------------
   observeEvent(input$undo_match_filt, {
-    shown_matches$table <- local$tables$last_matches
+    shown_matches$table <- lcl$tables$last_matches
   })
 
   # change ppm accuracy, ONLY USEFUL if loading in from CSV
@@ -444,7 +444,7 @@ gspec = RdBu')
 
   # triggers when check_csv is clicked - get factors usable for normalization
   observeEvent(input$check_csv, {
-    req(local$paths$csv_loc)
+    req(lcl$paths$csv_loc)
     switch(input$norm_type,
            ProbNorm=updateSelectInput(session, "ref_var",
                                       choices = get_ref_vars(fac = "label") # please add options for different times later, not difficult
@@ -458,7 +458,7 @@ gspec = RdBu')
   output$ref_select <- renderUI({ref.selector()})
 
   # triggered when user enters the statistics tab
-  
+
   observeEvent(input$dimred, {
     # check if an mset is present, otherwise abort
     if(!is.null(mSet)){
@@ -548,7 +548,7 @@ gspec = RdBu')
 
   observeEvent(input$select_db_all, {
 
-    dbs <- global$vectors$db_list[-which(global$vectors$db_list == "custom")]
+    dbs <- gbl$vectors$db_list[-which(gbl$vectors$db_list == "custom")]
 
     currently.on <- sapply(dbs, function(db){
       input[[paste0("search_", db)]]
@@ -570,25 +570,25 @@ gspec = RdBu')
   output$db_build_ui <- renderUI({
     dbs_per_line = 4
     max_col_width = 12
-    rows = ceiling(length(global$vectors$db_list) / dbs_per_line)
+    rows = ceiling(length(gbl$vectors$db_list) / dbs_per_line)
     database_layout = lapply(1:rows, function(i){
       min_i = (dbs_per_line * i) - (dbs_per_line - 1)
       max_i = (dbs_per_line * i)
-      if(max_i > length(global$vectors$db_list)) max_i <- length(global$vectors$db_list)
+      if(max_i > length(gbl$vectors$db_list)) max_i <- length(gbl$vectors$db_list)
       # create 3 fluidrows followed by a break
       list(
         # row 1: name
-        fluidRow(lapply(global$vectors$db_list[min_i:max_i], function(db){
-          column(width=3,align="center", h2(global$constants$db.build.info[[db]]$title))
+        fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
+          column(width=3,align="center", h2(gbl$constants$db.build.info[[db]]$title))
         })),
         # row 2: description
-        fluidRow(lapply(global$vectors$db_list[min_i:max_i], function(db){
-          column(width=3,align="center", helpText(global$constants$db.build.info[[db]]$description))
+        fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
+          column(width=3,align="center", helpText(gbl$constants$db.build.info[[db]]$description))
         })),
         # row 3: image
-        fluidRow(lapply(global$vectors$db_list[min_i:max_i], function(db){
+        fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
           if(db != "custom"){
-            column(width=3,align="center", imageOutput(global$constants$db.build.info[[db]]$image_id, inline=T))
+            column(width=3,align="center", imageOutput(gbl$constants$db.build.info[[db]]$image_id, inline=T))
           }else{
             column(width=3,align="center", shinyWidgets::circleButton("make_custom_db",
                                                                       size = "lg",
@@ -599,7 +599,7 @@ gspec = RdBu')
           }
         })),
         # row 4: button
-        fluidRow(lapply(global$vectors$db_list[min_i:max_i], function(db){
+        fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
           column(width=3,align="center",
                  if(!(db %in% c("magicball", "custom"))){
                    list(actionButton(paste0("check_", db), "Check", icon = icon("check")),
@@ -624,9 +624,9 @@ gspec = RdBu')
   lapply(db_button_prefixes, function(prefix){
     output[[paste0("db_", prefix, "_select")]] <- renderUI({
       fluidRow(
-        lapply(global$vectors$db_list[-which(global$vectors$db_list == "custom")], function(db){
-          which_idx = grep(sapply(global$constants$images, function(x) x$name), pattern = db) # find the matching image (NAME MUST HAVE DB NAME IN IT COMPLETELY)
-          sardine(fadeImageButton(inputId = paste0(prefix, "_", db), img.path = basename(global$constants$images[[which_idx]]$path))) # generate fitting html
+        lapply(gbl$vectors$db_list[-which(gbl$vectors$db_list == "custom")], function(db){
+          which_idx = grep(sapply(gbl$constants$images, function(x) x$name), pattern = db) # find the matching image (NAME MUST HAVE DB NAME IN IT COMPLETELY)
+          sardine(fadeImageButton(inputId = paste0(prefix, "_", db), img.path = basename(gbl$constants$images[[which_idx]]$path))) # generate fitting html
         })
       )
     })
@@ -636,21 +636,21 @@ gspec = RdBu')
   lapply(db_button_prefixes, function(prefix){
     observe({
       # ---------------------------------
-      db_path_list <- lapply(global$vectors$db_list[-which(global$vectors$db_list == "custom")], # go through the dbs defined in db_lists
+      db_path_list <- lapply(gbl$vectors$db_list[-which(gbl$vectors$db_list == "custom")], # go through the dbs defined in db_lists
                              FUN = function(db){
                                button_id = input[[paste0(prefix, "_", db)]]
                                if(is.null(button_id)){
                                  NA
                                }else{
                                  if(!button_id){
-                                   c(file.path(opts$db_dir, paste0(db, ".base.db"))) # add path to list of dbpaths
+                                   c(file.path(lcl$paths$db_dir, paste0(db, ".base.db"))) # add path to list of dbpaths
                                  }
                                  else{NA}
                                }
                              }
       )
       # save the selected database paths to global
-      local$vectors[[paste0("db_", prefix, "_list")]] <<- db_path_list[!is.na(db_path_list)]
+      lcl$vectors[[paste0("db_", prefix, "_list")]] <<- db_path_list[!is.na(db_path_list)]
     })
   })
 
@@ -668,7 +668,7 @@ gspec = RdBu')
   observeEvent(input$save_mset, {
     # save mset
     withProgress({
-      fn <- paste0(tools::file_path_sans_ext(local$paths$patdb), ".metshi")
+      fn <- paste0(tools::file_path_sans_ext(lcl$paths$patdb), ".metshi")
       if(exists("mSet")){
         save(mSet, file = fn)
       }
@@ -678,7 +678,7 @@ gspec = RdBu')
   observeEvent(input$load_mset, {
     # load mset
     withProgress({
-      fn <- paste0(tools::file_path_sans_ext(local$paths$patdb), ".metshi")
+      fn <- paste0(tools::file_path_sans_ext(lcl$paths$patdb), ".metshi")
       if(file.exists(fn)){
         load(fn)
         mSet <<- mSet
@@ -690,13 +690,14 @@ gspec = RdBu')
   })
 
   observeEvent(input$debug, {
-    input <<- isolate(as.list(input))
+    debug_input <<- isolate(reactiveValuesToList(input))
+    debug_lcl <<- lcl
   })
 
   observeEvent(input$ml_train_ss, {
     keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]
     subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
-    global$vectors$ml_train <<- c(input$subset_var,
+    gbl$vectors$ml_train <<- c(input$subset_var,
                                   input$subset_group)
     output$ml_train_ss <- renderText(subset.name)
   })
@@ -704,7 +705,7 @@ gspec = RdBu')
   observeEvent(input$ml_test_ss, {
     keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]
     subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
-    global$vectors$ml_test <<- c(input$subset_var, input$subset_group)
+    gbl$vectors$ml_test <<- c(input$subset_var, input$subset_group)
     output$ml_test_ss <- renderText(subset.name)
   })
 
@@ -786,24 +787,24 @@ gspec = RdBu')
 
   observeEvent(input$build_custom_db, {
 
-    csv_path <- parseFilePaths(global$paths$volumes, input$custom_db)$datapath
+    csv_path <- parseFilePaths(gbl$paths$volumes, input$custom_db)$datapath
 
     # build base db
     db.build.custom(
       db.name = input$my_db_name,
       db.short = input$my_db_short,
       db.description = input$my_db_description,
-      db.icon = global$paths$custom.db.path,
+      db.icon = gbl$paths$custom.db.path,
       csv = csv_path
     )
 
     # build extended db
     build.extended.db(tolower(input$my_db_short),
-                      outfolder = file.path(local$paths$db_dir, "custom"),
+                      outfolder = file.path(lcl$paths$db_dir, "custom"),
                       adduct.table = adducts,cl = 0)
 
   })
-
+  
   removeModal()
 
 })

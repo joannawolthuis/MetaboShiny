@@ -847,8 +847,8 @@ ggPlotBar <- function(data,
       plotlyfy=F
     }
 
-  local$tables$ml_bar <<- p$data
-  local$tables$ml_bar$mz <<- gsub(local$tables$ml_bar$mz, pattern = "`", replacement="")
+  lcl$tables$ml_bar <<- p$data
+  lcl$tables$ml_bar$mz <<- gsub(lcl$tables$ml_bar$mz, pattern = "`", replacement="")
 
   if(plotlyfy){
     ggplotly(p, tooltip="label")
@@ -862,12 +862,12 @@ plotPCA.3d <- function(mSet,
                        shape.fac="label",
                        pcx, pcy, pcz,
                        mode="pca",font){
-  
+
   print(pcx)
   print(pcy)
   print(pcz)
   print(mode)
-  
+
   switch(mode,
          pca = {
            df <- mSet$analSet$pca$x
@@ -957,7 +957,7 @@ plotPCA.3d <- function(mSet,
                             level = 0.95)
         worked = T
       })
-      
+
       if(worked){
         print("adding orb to plots...")
         mesh <- c(list(x = o$vb[1, o$ib]/o$vb[4, o$ib],
@@ -976,11 +976,11 @@ plotPCA.3d <- function(mSet,
 
       show.orbs <- c(show.orbs, worked)
     }
-    
+
     adj_plot <<- plotly_build(plots)
     rgbcols <- toRGB(cols[show.orbs])
     c = 1
-    
+
     for(i in seq_along(adj_plot$x$data)){
       item = adj_plot$x$data[[i]]
       if(item$type == "mesh3d"){
@@ -992,7 +992,7 @@ plotPCA.3d <- function(mSet,
     t <- list(
       family = font$family
     )
-    
+
     # --- return ---
     pca_plot <<- adj_plot %>% add_trace(
       hoverinfo = 'text',
@@ -1149,10 +1149,10 @@ ggPlotVenn <- function(mSet,
                        plotlyfy=TRUE,font){
 
   dput(venn_yes)
-  
+
   experiments <- str_match(unlist(venn_yes$now), pattern = "\\(.*\\)")[,1]
 
-  
+
   experiments <- unique(gsub(experiments, pattern = "\\(\\s*(.+)\\s*\\)", replacement="\\1"))
 
   table_list <- lapply(experiments, function(experiment){
@@ -1163,7 +1163,7 @@ ggPlotVenn <- function(mSet,
     rgx_exp <- gsub(rgx_exp, pattern = "\\)", replacement = "\\\\)")
     rgx_exp <- gsub(rgx_exp, pattern = "\\-", replacement = "\\\\-")
     rgx_exp <- gsub(rgx_exp, pattern = "\\+", replacement = "\\\\+")
-    
+
     categories = grep(unlist(venn_yes$now),
                       pattern = paste0("\\(",rgx_exp, "\\)"), value = T)
 
@@ -1393,3 +1393,29 @@ ggPlotScree <- function(mSet, plot.theme, cf, font, pcs=20){
   # - - - - -
   p
 }
+
+ggPlotWordBar <- function(wcdata, plot.theme, cf, font, plotlyfy=T){
+  g <- ggplot(wcdata, aes(y = freq, x = reorder(word, 
+                                                freq, 
+                                                sum)))
+  g <- g + geom_bar(aes(fill = freq),
+                    stat = "identity") +
+    coord_flip() +
+    scale_fill_gradientn(colors=cf(256)) +
+    plot.theme() +
+    theme(legend.position="none",
+          axis.text=element_text(size=font$ax.num.size),
+          axis.title=element_text(size=font$ax.txt.size),
+          legend.title.align = 0.5,
+          axis.line = element_line(colour = 'black', size = .5),
+          axis.text.x=element_blank(),
+          axis.ticks.x=element_blank(),
+          text = element_text(family = font$family)) +
+    labs(x="Word",y="Frequency")
+  if(plotlyfy){
+    ggplotly(g,tooltip = "freq")
+  }else{
+    g
+  }
+}
+

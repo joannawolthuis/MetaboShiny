@@ -36,7 +36,7 @@ observeEvent(input$change_subset, {
       mSet$dataSet$exp.fac <<- mSet$dataSet$exp.fac[keep.log.norm]
     }
   }
-  local$last_mset <<- mset_name
+  lcl$last_mset <<- mset_name
   mSet$analSet <<- NULL
 
   covars <- colnames(mSet$dataSet$covars)
@@ -97,7 +97,7 @@ observeEvent(input$reset_subset, {
     mSet$analSet <- NULL
   }
 
-  local$last_mset <<- mset_name
+  lcl$last_mset <<- mset_name
 
   covars <- colnames(mSet$dataSet$covars)
   subsettable.covars <- covars[which(sapply(covars, function(x){
@@ -113,18 +113,18 @@ observeEvent(input$reset_subset, {
   output$curr_name <- renderText({mSet$dataSet$cls.name})
 
   invalidateLater(100, session)
-  
+
   datamanager$reload <- "general"
-  
+
   for(tabgroup in c("dimred", "overview", "permz")){
     if(tabgroup %in% names(input)){
       invalidateLater(100, session)
       print(input[[tabgroup]])
       statsmanager$calculate <<- input[[tabgroup]]
-      datamanager$reload <<- input[[tabgroup ]] 
+      datamanager$reload <<- input[[tabgroup ]]
     }
   }
-  
+
   updateNavbarPage(session, "statistics", selected = "inf")
 
 })

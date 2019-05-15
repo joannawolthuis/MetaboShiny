@@ -132,7 +132,7 @@ abstracts2wordcloud <-function(abstracts, top=20){
   abstractsOnly<-paste(abstractsOnly, sep="", collapse="")
   abstractsOnly<-as.vector(abstractsOnly)
   abstractsOnly<-qdap::strip(abstractsOnly)
-  stsp<-qdap::rm_stopwords(abstractsOnly, stopwords = global$vectors$wordcloud$skip)
+  stsp<-qdap::rm_stopwords(abstractsOnly, stopwords = gbl$vectors$wordcloud$skip)
   ord<-as.data.frame(table(stsp))
   ord<-ord[order(ord$Freq, decreasing=TRUE),]
   head(ord, top)

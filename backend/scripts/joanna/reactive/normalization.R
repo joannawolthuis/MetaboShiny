@@ -6,7 +6,7 @@ observeEvent(input$initialize, {
     shiny::setProgress(session=session, value= .1)
 
     # read in original CSV file
-    csv_orig <- fread(local$paths$csv_loc,
+    csv_orig <- fread(lcl$paths$csv_loc,
                       data.table = TRUE,
                       header = T)
 
@@ -69,7 +69,6 @@ observeEvent(input$initialize, {
                  "label" = first_part[,..condition][[1]], # set label as the initial variable of interest
                  csv_orig[,-..exp.vars,with=FALSE])
 
-
     if(all(grepl(pattern = "_T\\d", x = first_part$sample))){
       keep.all.samples <- TRUE
       print("Potential for time series - disallowing outlier removal")
@@ -129,7 +128,7 @@ observeEvent(input$initialize, {
     remove <- which(!(exp_var_names %in% keep_cols))
 
     # define location to write processed csv to
-    csv_loc_final <- gsub(pattern = "\\.csv", replacement = "_no_out.csv", x = local$paths$csv_loc)
+    csv_loc_final <- gsub(pattern = "\\.csv", replacement = "_no_out.csv", x = lcl$paths$csv_loc)
 
     # remove file if it already exists
     if(file.exists(csv_loc_final)) file.remove(csv_loc_final)
@@ -385,21 +384,21 @@ observeEvent(input$initialize, {
     shiny::setProgress(session=session, value= .6)
 
     # generate summary plots and render them in UI
-        
+
     varNormPlots <- ggplotNormSummary(mSet = mSet,
-                                      colmap = local$aes$mycols,
-                                      plot.theme = global$functions$plot.themes[[local$aes$theme]],
-                                      font = local$aes$font)
-    
+                                      colmap = lcl$aes$mycols,
+                                      plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                                      font = lcl$aes$font)
+
     output$var1 <- renderPlot(varNormPlots$tl)
     output$var2 <- renderPlot(varNormPlots$bl)
     output$var3 <- renderPlot(varNormPlots$tr)
     output$var4 <- renderPlot(varNormPlots$br)
 
     sampNormPlots <-  ggplotSampleNormSummary(mSet,
-                                              #colmap = local$aes$mycols,
-                                              plot.theme = global$functions$plot.themes[[local$aes$theme]],
-                                              font = local$aes$font)
+                                              #colmap = lcl$aes$mycols,
+                                              plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                                              font = lcl$aes$font)
     output$samp1 <- renderPlot(sampNormPlots$tl)
     output$samp2 <- renderPlot(sampNormPlots$bl)
     output$samp3 <- renderPlot(sampNormPlots$tr)
@@ -410,14 +409,13 @@ observeEvent(input$initialize, {
     shiny::setProgress(session=session, value= .9)
 
     mSet$storage <- list()
-    
+
     # return?
     mSet <<- mSet
-    
+
     statsmanager$calculate <- "pca"
     statsmanager$reload <- "pca"
-    
     datamanager$reload <- "general"
-    
+
   })
 })

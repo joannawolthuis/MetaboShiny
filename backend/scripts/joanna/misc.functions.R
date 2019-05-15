@@ -465,14 +465,14 @@ find.formulas <- function(mzvals, cl=FALSE, ppm=3, charge=1, element.counts = li
 }
 
 get.package.table <- function(){
-  status <- sapply(global$constants$packages, FUN=function(package){
+  status <- sapply(gbl$constants$packages, FUN=function(package){
     if(package %in% rownames(installed.packages())) "Yes" else "No"
   })
-  version <- sapply(global$constants$packages, FUN=function(package){
+  version <- sapply(gbl$constants$packages, FUN=function(package){
     if(package %in% rownames(installed.packages())){packageDescription(package)$Version} else ""
   })
   result <-data.table(
-    Package = global$constants$packages,
+    Package = gbl$constants$packages,
     Installed = status,
     Version = version
   )

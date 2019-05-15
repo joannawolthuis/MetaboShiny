@@ -7,9 +7,9 @@ observe({
     NULL # if not reloading anything, nevermind
   }else{
     if(!is.null(mSet)){
-      
+
       print(datamanager$reload)
-      
+
       switch(datamanager$reload,
              general = {
                # change interface
@@ -23,11 +23,11 @@ observe({
                output$curr_name <- renderText({mSet$dataSet$cls.name})
                # reload pca, plsda, ml(make datamanager do that)
                # update select input bars with current variable and covariables defined in excel
-               updateSelectInput(session, "stats_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
-               updateSelectInput(session, "shape_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
-               updateSelectInput(session, "col_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
-               updateSelectInput(session, "txt_var", selected = "sample", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
-               updateSelectInput(session, "subset_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < global$constants$max.cols))]))
+               updateSelectInput(session, "stats_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
+               updateSelectInput(session, "shape_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
+               updateSelectInput(session, "col_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
+               updateSelectInput(session, "txt_var", selected = "sample", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
+               updateSelectInput(session, "subset_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
                output$curr_name <- renderText({mSet$dataSet$cls.name})
                # if _T in sample names, data is time series. This makes the time series swap button visible.
                if(all(grepl(pattern = "_T\\d", x = rownames(mSet$dataSet$norm)))){
@@ -63,7 +63,7 @@ observe({
                  interface$mode <- "bivar"}
                else{
                  interface$mode <- "multivar"}
-             
+
              },
              venn = {
                if("storage" %in% names(mSet)){
@@ -140,9 +140,9 @@ observe({
                  output$aov_overview_plot <- plotly::renderPlotly({
                    # --- ggplot ---
                    ggPlotAOV(mSet,
-                             cf = global$functions$color.functions[[local$aes$spectrum]], 20,
-                             plot.theme = global$functions$plot.themes[[local$aes$theme]],
-                             plotlyfy=TRUE,font = local$aes$font)
+                             cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 20,
+                             plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                             plotlyfy=TRUE,font = lcl$aes$font)
                  })
                }
              },
@@ -151,10 +151,10 @@ observe({
                output$volc_plot <- plotly::renderPlotly({
                  # --- ggplot ---
                  ggPlotVolc(mSet,
-                            cf = global$functions$color.functions[[local$aes$spectrum]],
+                            cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
                             20,
-                            plot.theme = global$functions$plot.themes[[local$aes$theme]],
-                            plotlyfy=TRUE,font = local$aes$font)
+                            plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                            plotlyfy=TRUE,font = lcl$aes$font)
                })
                # render results table
                output$volc_tab <-DT::renderDataTable({
@@ -181,7 +181,7 @@ observe({
                  #               )
                  #   ) +
                  #     geom_point(shape = 21, size = 5, stroke = 5) +
-                 #     scale_colour_manual(values=local$aes$$mycols) +
+                 #     scale_colour_manual(values=lcl$aes$$mycols) +
                  #     theme_void() +
                  #     theme(legend.position="none")
                  #   # --- return ---
@@ -212,9 +212,9 @@ observe({
                  })
                  output$pca_scree <- renderPlot({
                    ggPlotScree(mSet,
-                               cf = global$functions$color.functions[[local$aes$spectrum]],
-                               plot.theme = global$functions$plot.themes[[local$aes$theme]],
-                               font = local$aes$font)
+                               cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                               plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                               font = lcl$aes$font)
                  })
                  # chekc which mode we're in
                  mode <- if("timecourse_trigger" %in% names(req(input))){
@@ -230,24 +230,24 @@ observe({
                  if(input$pca_2d3d){ # check if switch button is in 2d or 3d mode
                    # render 2d plot
                    output$plot_pca <- plotly::renderPlotly({
-                     plotPCA.2d(mSet, local$aes$mycols,
+                     plotPCA.2d(mSet, lcl$aes$mycols,
                                 pcx = input$pca_x,
                                 pcy = input$pca_y, mode = mode,
                                 shape.fac = input$second_var,
-                                plot.theme = global$functions$plot.themes[[local$aes$theme]],
+                                plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                 plotlyfy=TRUE,
-                                font = local$aes$font
+                                font = lcl$aes$font
                                )
                    })
                  }else{
                    # render 3d plot
                    output$plot_pca <- plotly::renderPlotly({
-                     plotPCA.3d(mSet, local$aes$mycols,
+                     plotPCA.3d(mSet, lcl$aes$mycols,
                                 pcx = input$pca_x,
                                 pcy = input$pca_y,
                                 pcz = input$pca_z, mode = mode,
                                 shape.fac = input$second_var,
-                                font = local$aes$font)
+                                font = lcl$aes$font)
                    })
                  }
                }else{
@@ -260,15 +260,15 @@ observe({
 
                  # render cross validation plot
                  output$plsda_cv_plot <- renderPlot({
-                   ggPlotClass(mSet, cf = global$functions$color.functions[[local$aes$spectrum]], plotlyfy = F,
-                               plot.theme = global$functions$plot.themes[[local$aes$theme]],
-                               font = local$aes$font)
+                   ggPlotClass(mSet, cf = gbl$functions$color.functions[[lcl$aes$spectrum]], plotlyfy = F,
+                               plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                               font = lcl$aes$font)
                  })
                  # render permutation plot
                  output$plsda_perm_plot <- renderPlot({
-                   ggPlotPerm(mSet,cf = global$functions$color.functions[[local$aes$spectrum]], plotlyfy = F,
-                              plot.theme = global$functions$plot.themes[[local$aes$theme]],
-                              font = local$aes$font)
+                   ggPlotPerm(mSet,cf = gbl$functions$color.functions[[lcl$aes$spectrum]], plotlyfy = F,
+                              plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                              font = lcl$aes$font)
                  })
                  # render table with variance per PC
                  output$plsda_tab <- DT::renderDataTable({
@@ -300,22 +300,22 @@ observe({
                  if(input$plsda_2d3d){
                    # 2d
                    output$plot_plsda <- plotly::renderPlotly({
-                     plotPCA.2d(mSet, local$aes$mycols,
+                     plotPCA.2d(mSet, lcl$aes$mycols,
                                 pcx = input$plsda_x,
                                 pcy = input$plsda_y, mode = "plsda",
                                 shape.fac = input$second_var,
-                                plot.theme = global$functions$plot.themes[[local$aes$theme]],
-                                font = local$aes$font)
+                                plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                                font = lcl$aes$font)
                    })
                  }else{
                    # 3d
                    output$plot_plsda <- plotly::renderPlotly({
-                     plotPCA.3d(mSet, local$aes$mycols,
+                     plotPCA.3d(mSet, lcl$aes$mycols,
                                 pcx = input$plsda_x,
                                 pcy = input$plsda_y,
                                 pcz = input$plsda_z, mode = "plsda",
                                 shape.fac = input$second_var,
-                                font = local$aes$font)
+                                font = lcl$aes$font)
                    })
                  }
                }else{NULL}
@@ -328,9 +328,9 @@ observe({
                  output$ml_roc <- plotly::renderPlotly({
                    plotly::ggplotly(ggPlotROC(roc_data,
                                               input$ml_attempts,
-                                              global$functions$color.functions[[local$aes$spectrum]],
-                                              plot.theme = global$functions$plot.themes[[local$aes$theme]],
-                                              plotlyfy=TRUE,font = local$aes$font))
+                                              gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                              plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                                              plotlyfy=TRUE,font = lcl$aes$font))
                  })
 
                  bar_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar
@@ -339,12 +339,12 @@ observe({
 
                    plotly::ggplotly(ggPlotBar(bar_data,
                                               input$ml_attempts,
-                                              global$functions$color.functions[[local$aes$spectrum]],
+                                              gbl$functions$color.functions[[lcl$aes$spectrum]],
                                               input$ml_top_x,
                                               ml_name = mSet$analSet$ml$last$name,
                                               ml_type = mSet$analSet$ml$last$method,
-                                              plot.theme = global$functions$plot.themes[[local$aes$theme]],
-                                              plotlyfy=TRUE,font = local$aes$font))
+                                              plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                                              plotlyfy=TRUE,font = lcl$aes$font))
                  })
                }else{NULL}
              },
@@ -395,9 +395,9 @@ observe({
                output$tt_overview_plot <- plotly::renderPlotly({
                  # --- ggplot ---
                  ggPlotTT(mSet,
-                          global$functions$color.functions[[local$aes$spectrum]], 20,
-                          plot.theme = global$functions$plot.themes[[local$aes$theme]],
-                          plotlyfy=TRUE,font = local$aes$font)
+                          gbl$functions$color.functions[[lcl$aes$spectrum]], 20,
+                          plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                          plotlyfy=TRUE,font = lcl$aes$font)
                })
              },
              fc = {
@@ -418,9 +418,9 @@ observe({
                output$fc_overview_plot <- plotly::renderPlotly({
                  # --- ggplot ---
                  ggPlotFC(mSet,
-                          global$functions$color.functions[[local$aes$spectrum]], 20,
-                          plot.theme = global$functions$plot.themes[[local$aes$theme]],
-                          plotlyfy=TRUE,font = local$aes$font)
+                          gbl$functions$color.functions[[lcl$aes$spectrum]], 20,
+                          plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                          plotlyfy=TRUE,font = lcl$aes$font)
                })
              },
              heatmap = {
@@ -438,7 +438,7 @@ observe({
                                             Rowv = T,
                                             branches_lwd = 0.3,
                                             margins = c(60, 0, NA, 50),
-                                            col = global$functions$color.functions[[local$aes$spectrum]],
+                                            col = gbl$functions$color.functions[[lcl$aes$spectrum]],
                                             col_side_colors = mSet$analSet$heatmap$translator[,!1],
                                             col_side_palette = mSet$analSet$heatmap$colors,
                                             subplot_widths = c(.9,.1),
@@ -458,7 +458,7 @@ observe({
                                             Rowv = T,
                                             branches_lwd = 0.3,
                                             margins = c(60, 0, NA, 50),
-                                            colors = global$functions$color.functions[[local$aes$spectrum]](256),
+                                            colors = gbl$functions$color.functions[[lcl$aes$spectrum]](256),
                                             col_side_colors = mSet$analSet$heatmap$translator[,!1],
                                             col_side_palette = mSet$analSet$heatmap$colors,
                                             subplot_widths = c(.9,.1),
@@ -475,15 +475,68 @@ observe({
 
                    })
                    # save the order of mzs for later clicking functionality
-                   local$vectors$heatmap <<- hmap$x$layout$yaxis3$ticktext
+                   lcl$vectors$heatmap <<- hmap$x$layout$yaxis3$ticktext
                    # return
                    hmap
                  }else{
                    data = data.frame(text = "No significant hits available!\nPlease try alternative source statistics below.")
                    p <- ggplot(data) + geom_text(aes(label = text), x = 0.5, y = 0.5, size = 10) +
-                     theme(text = element_text(family = local$aes$font$family)) + theme_bw()
+                     theme(text = element_text(family = lcl$aes$font$family)) + theme_bw()
                    plotly::ggplotly(p)
                  }
+               })
+             }, matchplots = {
+               
+               wcdata <- data.frame(word = head(lcl$tables$word_freq, input$wc_topn)$name,
+                                    freq = head(lcl$tables$word_freq, input$wc_topn)$value)
+               
+               output$wordcloud_desc <- wordcloud2::renderWordcloud2({
+                   wordcloud2::wordcloud2(wcdata,
+                                          size = 0.7,
+                                          shuffle = FALSE,
+                                          fontFamily = getOptions(lcl$paths$opt.loc)$font4,
+                                          ellipticity = 1,
+                                          minRotation = -pi/8,
+                                          maxRotation = pi/8,
+                                          shape = 'heart')
+                 })
+               
+              output$wordbar_desc <- renderPlotly({ggPlotWordBar(wcdata = wcdata,
+                                                                 cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                                                 plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                                                                 plotlyfy = TRUE, 
+                                                                 font = lcl$aes$font)})
+                 
+               
+               output$match_pie_add <- plotly::renderPlotly({
+                 
+                 plot_ly(lcl$vectors$pie_add, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
+                         textposition = 'inside',
+                         textinfo = 'label+percent',
+                         insidetextfont = list(color = '#FFFFFF'),
+                         hoverinfo = 'text',
+                         text = ~paste0(Var1, ": ", value, ' matches'),
+                         marker = list(colors = colors,
+                                       line = list(color = '#FFFFFF', width = 1)),
+                         #The 'pull' attribute can also be used to create space between the sectors
+                         showlegend = FALSE) %>%
+                   layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+               })
+               
+               output$match_pie_db <- plotly::renderPlotly({
+                 plot_ly(lcl$vectors$pie_db, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
+                         textposition = 'inside',
+                         textinfo = 'label+percent',
+                         insidetextfont = list(color = '#FFFFFF'),
+                         hoverinfo = 'text',
+                         text = ~paste0(Var1, ": ", value, ' matches'),
+                         marker = list(colors = colors,
+                                       line = list(color = '#FFFFFF', width = 1)),
+                         #The 'pull' attribute can also be used to create space between the sectors
+                         showlegend = FALSE) %>%
+                   layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
                })
              })
     }

@@ -52,3 +52,6 @@ observeEvent(input$heatmap_topn, {
   }
 },ignoreInit = TRUE, ignoreNULL = T)
 
+observeEvent(input$wc_topn, {
+  datamanager$reload <- "matchplots"
+},ignoreInit = TRUE, ignoreNULL = T)

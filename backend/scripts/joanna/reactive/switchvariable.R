@@ -7,7 +7,7 @@ observeEvent(input$change_cls, {
   # save previous analyses (should be usable in venn diagram later)
   mSet$storage[[mset_name]] <<- list(analysis = mSet$analSet)
 
-  local$constants$last_mset <<- mset_name
+  lcl$constants$last_mset <<- mset_name
 
   # change current variable of interest to user pick from covars table
   mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,input$stats_var, with=F][[1]])
@@ -37,20 +37,20 @@ observeEvent(input$change_cls, {
   output$curr_name <- renderText({mSet$dataSet$cls.name})
 
   output$curr_name <- renderText({mSet$dataSet$cls.name})
-  
+
   invalidateLater(100, session)
-  
+
   datamanager$reload <- "general"
-  
+
   for(tabgroup in c("dimred", "overview", "permz")){
     if(tabgroup %in% names(input)){
       invalidateLater(100, session)
       print(input[[tabgroup]])
       statsmanager$calculate <<- input[[tabgroup]]
-      datamanager$reload <<- input[[tabgroup ]] 
+      datamanager$reload <<- input[[tabgroup ]]
     }
   }
-  
+
   updateNavbarPage(session, "statistics", selected = "inf")
 
 })
