@@ -1,6 +1,7 @@
 #' @export
 build.base.db <- function(dbname=NA,
-                          outfolder=getOptions(lcl$paths$opt.loc)$db_dir,
+                          outfolder,
+                          optfile,
                           cl=FALSE){
 
   # --- check if user chose something ---
@@ -17,7 +18,7 @@ build.base.db <- function(dbname=NA,
                          maconda = function(dbname, ...){ #ok
                            file.url = "https://www.maconda.bham.ac.uk/downloads/MaConDa__v1_0__csv.zip"
 
-                           base.loc <- file.path(getOptions(lcl$paths$opt.loc)$db_dir, "maconda_source")
+                           base.loc <- file.path(getOptions(optfile)$db_dir, "maconda_source")
 
                            if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                            zip.file <- file.path(base.loc, "maconda.zip")
@@ -95,7 +96,7 @@ build.base.db <- function(dbname=NA,
                          },
                          hsdb = function(dbname, ...){
                            file.url = "ftp://ftp.nlm.nih.gov/nlmdata/.hsdblease/hsdb.xml.20190328.zip"
-                           base.loc <- file.path(getOptions(lcl$paths$opt.loc)$db_dir, "hsdb_source")
+                           base.loc <- file.path(getOptions(optfile)$db_dir, "hsdb_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                            zip.file <- file.path(base.loc, "HSDB.zip")
                            utils::download.file(file.url, zip.file,mode = "w")
@@ -162,7 +163,7 @@ build.base.db <- function(dbname=NA,
                          hmdb = function(dbname){ #ok
                            file.url <- "http://www.hmdb.ca/system/downloads/current/hmdb_metabolites.zip"
                            # ----
-                           base.loc <- file.path(getOptions(lcl$paths$opt.loc)$db_dir, "hmdb_source")
+                           base.loc <- file.path(getOptions(optfile)$db_dir, "hmdb_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                            zip.file <- file.path(base.loc, "HMDB.zip")
                            utils::download.file(file.url, zip.file,mode = "w")
@@ -244,7 +245,7 @@ build.base.db <- function(dbname=NA,
                            db.formatted
                          },
                          wikipathways = function(dbname){ #ok
-                           chebi.loc <- file.path(getOptions(lcl$paths$opt.loc)$db_dir, "chebi.base.db")
+                           chebi.loc <- file.path(getOptions(optfile)$db_dir, "chebi.base.db")
                            # ---------------------------------------------------
                            chebi <- SPARQL::SPARQL(url="http://sparql.wikipathways.org/",
                                                    query='prefix wp:      <http://vocabularies.wikipathways.org/wp#>
@@ -315,7 +316,7 @@ build.base.db <- function(dbname=NA,
 
                            file.url = "http://exposome.fiehnlab.ucdavis.edu/blood_exposome_database_v1_08_2018.xlsx"
 
-                           base.loc <- file.path(getOptions(lcl$paths$opt.loc)$db_dir, "bloodexposome_source")
+                           base.loc <- file.path(getOptions(optfile)$db_dir, "bloodexposome_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc)
                            excel.file <- file.path(base.loc, "exposome.xlsx")
                            utils::download.file(file.url, excel.file)
@@ -362,7 +363,7 @@ build.base.db <- function(dbname=NA,
                            # ---------------
                            file.url <- "http://smpdb.ca/downloads/smpdb_metabolites.csv.zip"
                            # ----
-                           base.loc <- file.path(getOptions(lcl$paths$opt.loc)$db_dir, "smpdb_source")
+                           base.loc <- file.path(getOptions(optfile)$db_dir, "smpdb_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc)
                            zip.file <- file.path(base.loc, "SMPDB.zip")
                            utils::download.file(file.url, zip.file)
@@ -473,7 +474,7 @@ build.base.db <- function(dbname=NA,
                            # May need to remake smartTable if anything on the website changes unfortunately
                            # TODO: download file directly from link, will need a javascript. Maybe Rselenium??
 
-                           base.loc <- file.path(getOptions(lcl$paths$opt.loc)$db_dir, "metacyc_source")
+                           base.loc <- file.path(getOptions(optfile)$db_dir, "metacyc_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc)
 
                            source.file = file.path(base.loc, "All_compounds_of_MetaCyc.txt")
@@ -558,7 +559,7 @@ build.base.db <- function(dbname=NA,
                            file.url = "http://www.lipidmaps.org/resources/downloads/LMSDFDownload3Jan19.zip"
 
                            # ----
-                           base.loc <- file.path(getOptions(lcl$paths$opt.loc)$db_dir, "lipidmaps_source")
+                           base.loc <- file.path(getOptions(optfile)$db_dir, "lipidmaps_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc)
                            zip.file <- file.path(base.loc, "lipidmaps.zip")
                            utils::download.file(file.url, zip.file)
@@ -692,7 +693,7 @@ build.base.db <- function(dbname=NA,
                            file.url <- "https://dimedb.ibers.aber.ac.uk/help/downloads/"
                            file.urls <- paste0(file.url, files)
                            # ----
-                           base.loc <- file.path(getOptions(lcl$paths$opt.loc)$db_dir, "dimedb_source")
+                           base.loc <- file.path(getOptions(optfile)$db_dir, "dimedb_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc)
                            pbapply::pbsapply(file.urls, function(url){
                              zip.file <- file.path(base.loc, basename(url))
@@ -952,8 +953,8 @@ build.base.db <- function(dbname=NA,
                            file.url <- "http://spectra.psc.riken.jp/menta.cgi/static/respect/respect.zip"
 
                            # ----
-                           #base.loc <- getOptions(lcl$paths$opt.loc)$db_dir
-                           base.loc <- file.path(getOptions(lcl$paths$opt.loc)$db_dir, "respect_source")
+                           #base.loc <- getOptions(optfile)$db_dir
+                           base.loc <- file.path(getOptions(optfile)$db_dir, "respect_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                            zip.file <- file.path(base.loc, "respect.zip")
                            utils::download.file(file.url, zip.file,mode = "w")
@@ -999,7 +1000,7 @@ build.base.db <- function(dbname=NA,
 
                            file.url <- "http://exposome-explorer.iarc.fr/system/downloads/current/biomarkers.csv.zip"
 
-                           base.loc <- file.path(getOptions(lcl$paths$opt.loc)$db_dir, "exex_source")
+                           base.loc <- file.path(getOptions(optfile)$db_dir, "exex_source")
 
                            if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                            zip.file <- file.path(base.loc, "expoexpo_comp.zip")
@@ -1085,7 +1086,7 @@ build.base.db <- function(dbname=NA,
 
                            file.url <- "http://www.foodb.ca/system/foodb_2017_06_29_csv.tar.gz"
 
-                           base.loc <- file.path(getOptions(lcl$paths$opt.loc)$db_dir, "foodb_source")
+                           base.loc <- file.path(getOptions(optfile)$db_dir, "foodb_source")
 
                            if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                            zip.file <- file.path(base.loc, "foodb.zip")
@@ -1120,7 +1121,7 @@ build.base.db <- function(dbname=NA,
                          },
                          massbank = function(dbname, ...){
                            file.url <- "https://github.com/MassBank/MassBank-data/archive/master.zip"
-                           base.loc <- file.path(getOptions(lcl$paths$opt.loc)$db_dir, "massbank_source")
+                           base.loc <- file.path(getOptions(optfile)$db_dir, "massbank_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
                            zip.file <- file.path(base.loc, "massbank.zip")
                            utils::download.file(file.url, zip.file,mode = "w", method='libcurl')
@@ -1176,7 +1177,7 @@ build.base.db <- function(dbname=NA,
 
                          }, supernatural = function(dbname, ...){
 
-                           base.loc <- file.path(getOptions(lcl$paths$opt.loc)$db_dir, "supernatural_source")
+                           base.loc <- file.path(getOptions(optfile)$db_dir, "supernatural_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc,recursive = T)
 
                            library(XML)
@@ -1420,6 +1421,7 @@ build.extended.db <- function(dbname,
   if(first.db){
     RSQLite::dbExecute(full.conn, "create index e_idx1 on extended(baseformula, basecharge)")
     RSQLite::dbExecute(full.conn, "create index e_idx2 on extended(fullmz, foundinmode)")
+    RSQLite::dbExecute(full.conn, "create index e_idx3 on extended(baseformula, adduct)") # new one for isotope backtracking??
   }else{
     RSQLite::dbExecute(full.conn, "ANALYZE extended")
   }

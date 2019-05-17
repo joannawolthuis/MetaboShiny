@@ -58,6 +58,7 @@ lapply(gbl$vectors$db_list, FUN=function(db){
       # build base db (differs per db, parsers for downloaded data)
       build.base.db(db,
                     outfolder = getOptions(lcl$paths$opt.loc)$db_dir,
+                    optfile = lcl$paths$opt.loc,
                     cl = session_cl)
       shiny::setProgress(session = session, 0.5)
 

@@ -871,7 +871,9 @@ output$currUI <- renderUI({
                            div(class="minus", img(class="imagebottom", src=opts$taskbar_image, width="100px", height="100px"))
                        ),
                        div(class="line")
-                       ,footer=fluidRow(div(
+                       ,footer=fluidRow(
+                         br(),br(),br(),
+                         div(
                          #actionButton("show_window", label="", icon = icon("map-marked")),
                          actionButton("load_mset", label="load", icon = icon("folder-open"),style=gsubfn::fn$paste("background-color:$bgcol; border-color:$bgcol;")),
                          actionButton("save_mset", label="save", icon = icon("save"),style=gsubfn::fn$paste("background-color:$bgcol; border-color:$bgcol;")),

@@ -26,8 +26,8 @@ get_matches <- function(cpd = NA,
                         base.db,
                         search_formula = F,
                         searchid = "mz",
-                        inshiny=TRUE,
-                        append=FALSE,
+                        inshiny = TRUE,
+                        append = FALSE,
                         patdb,db_dir){
 
   # 0. Attach db
@@ -57,18 +57,24 @@ get_matches <- function(cpd = NA,
 
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
 
-    RSQLite::dbExecute(conn, gsubfn::fn$paste("ATTACH '$base.db' AS base"))
+    query = gsubfn::fn$paste("ATTACH '$base.db' AS base")
+    RSQLite::dbExecute(conn, query)
 
+    print(query)
+    
     ext.db <- file.path(db_dir, 'extended.db')
 
-    RSQLite::dbExecute(conn, gsubfn::fn$paste("ATTACH '$ext.db' AS full"))
+    query = gsubfn::fn$paste("ATTACH '$ext.db' AS full")
+    
+    RSQLite::dbExecute(conn, query)
 
+    print(query)
+    
     func <- function(){
       if(!DBI::dbExistsTable(conn, "unfiltered") | !append)
       {
         RSQLite::dbExecute(conn, 'DROP TABLE IF EXISTS unfiltered')
-        # create
-        RSQLite::dbExecute(conn, gsubfn::fn$paste(strwrap(
+        query <- gsubfn::fn$paste(strwrap(
           "CREATE TABLE unfiltered AS
           SELECT DISTINCT cpd.baseformula as baseformula,
           cpd.fullformula,
@@ -81,10 +87,14 @@ get_matches <- function(cpd = NA,
           JOIN full.extended cpd indexed by e_idx2
           ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
           AND mz.foundinmode = cpd.foundinmode
-          WHERE $cpd BETWEEN rng.mzmin AND rng.mzmax",width=10000, simplify=TRUE)))
+          WHERE $cpd BETWEEN rng.mzmin AND rng.mzmax",width=10000, simplify=TRUE)) 
+        # create
+        print(query)
+        
+        RSQLite::dbExecute(conn, query)
       } else{
         # append
-        RSQLite::dbExecute(conn, gsubfn::fn$paste(strwrap(
+        query <- gsubfn::fn$paste(strwrap(
           "INSERT INTO unfiltered
           SELECT DISTINCT cpd.baseformula as baseformula,
           cpd.fullformula,
@@ -97,58 +107,44 @@ get_matches <- function(cpd = NA,
           JOIN full.extended cpd indexed by e_idx2
           ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
           AND mz.foundinmode = cpd.foundinmode
-          WHERE $cpd BETWEEN rng.mzmin AND rng.mzmax",width=10000, simplify=TRUE)))
+          WHERE $cpd BETWEEN rng.mzmin AND rng.mzmax",width=10000, simplify=TRUE))
+        print(query)
+        
+        RSQLite::dbExecute(conn, query)
       }
 
-      # 1. Find matches in range (reasonably fast <3)
-      if(inshiny) shiny::setProgress(value = 0.4)
-
-      # if(!DBI::dbExistsTable(conn, "isotopes") | !append){
-      #   RSQLite::dbExecute(conn, 'DROP TABLE IF EXISTS isotopes')
-      #   # create
-      #   RSQLite::dbExecute(conn,
-      #                      "CREATE TABLE isotopes AS
-      #                      SELECT DISTINCT cpd.*
-      #                      FROM full.extended cpd
-      #                      JOIN unfiltered u
-      #                      ON u.baseformula = cpd.baseformula
-      #                      AND u.adduct = cpd.adduct")
-      # }else{
-      #   # append
-      #   RSQLite::dbExecute(conn,
-      #                      "INSERT INTO isotopes
-      #                      SELECT cpd.*
-      #                      FROM db.extended cpd
-      #                      JOIN unfiltered u
-      #                      ON u.baseformula = cpd.baseformula
-      #                      AND u.adduct = cpd.adduct")
-      # }
-      #
-      # if(!DBI::dbExistsTable(conn, "adducts") | !append){
-      #   RSQLite::dbExecute(conn, 'DROP TABLE IF EXISTS adducts')
-      #   # - - - - - - - - -
-      #   RSQLite::dbExecute(conn,
-      #                      "CREATE TABLE adducts AS
-      #                      SELECT DISTINCT cpd.*
-      #                      FROM db.extended cpd
-      #                      JOIN unfiltered u
-      #                      ON u.baseformula = cpd.baseformula")
-      # }else{
-      #   # append
-      #   RSQLite::dbExecute(conn,
-      #                      "INSERT INTO adducts
-      #                      SELECT cpd.*
-      #                      FROM db.extended cpd
-      #                      JOIN unfiltered u
-      #                      ON u.baseformula = cpd.baseformula")
-      # }
+      if(!DBI::dbExistsTable(conn, "isotopes") | !append){
+        
+        RSQLite::dbExecute(conn, 'DROP TABLE IF EXISTS isotopes')
+        # create
+        query = strwrap("CREATE TABLE isotopes AS
+                           SELECT DISTINCT cpd.*
+                           FROM full.extended cpd indexed by e_idx3
+                           JOIN unfiltered u
+                           ON u.baseformula = cpd.baseformula
+                           AND u.adduct = cpd.adduct",width=10000, simplify=TRUE)
+        print(query)
+        RSQLite::dbExecute(conn,
+                           query)
+      }else{
+        # append
+        query = strwrap("INSERT INTO isotopes
+                         SELECT cpd.*
+                         FROM full.extended cpd indexed by e_idx3
+                         JOIN unfiltered u
+                         ON u.baseformula = cpd.baseformula
+                         AND u.adduct = cpd.adduct",width=10000, simplify=TRUE)
+        print(query)
+        RSQLite::dbExecute(conn,
+                           query)
+      }
     }
 
-    if(inshiny) withProgress({func()}) else func()
+    func()
 
     # - - - save adducts too - - -
 
-    results <- DBI::dbGetQuery(conn, "SELECT
+    results <- DBI::dbGetQuery(conn, strwrap("SELECT
                                      b.compoundname as name,
                                      b.baseformula,
                                      u.adduct,
@@ -160,21 +156,12 @@ get_matches <- function(cpd = NA,
                                      FROM unfiltered u
                                      JOIN base.base b indexed by b_idx1
                                      ON u.baseformula = b.baseformula
-                                     AND u.charge = b.charge")
+                                     AND u.charge = b.charge",width=10000, simplify=TRUE))
 
     results$perciso <- round(results$perciso, 2)
     results$dppm <- signif(results$dppm, 2)
 
-    #colnames(results)[which(colnames(results) == "dppm")] <- "Δppm"
     colnames(results)[which(colnames(results) == "perciso")] <- "%iso"
-
-    round_df <- function(df, digits) {
-      nums <- vapply(df, is.numeric, FUN.VALUE = logical(1))
-
-      df[,nums] <- round(df[,nums], digits = digits)
-
-      (df)
-    }
 
     DBI::dbDisconnect(conn)
 
@@ -195,7 +182,7 @@ get.ppm <- function(patdb){
   ppm
 }
 
-score.isos <- function(patdb, method="mscore", inshiny=TRUE, intprec){
+score.isos <- function(mSet, patdb, method="mscore", inshiny=TRUE, intprec){
 
   func <- function(){
 

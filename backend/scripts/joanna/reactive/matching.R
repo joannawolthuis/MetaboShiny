@@ -5,7 +5,7 @@ observeEvent(input$search_mz, {
 
     lcl$tables$last_matches <<- unique(multimatch(lcl$curr_mz,
                                                     lcl$vectors$db_search_list,
-                                                    inshiny = F,
+                                                    inshiny = T,
                                                     search_pubchem = input$magicball_pubchem_cids,
                                                     pubchem_detailed = input$magicball_pubchem_details,
                                                     calc_adducts = lcl$vectors$add_list,
@@ -97,7 +97,7 @@ observeEvent(input$score_iso, {
   # get table including isotope scores
   # as input, takes user method for doing this scoring
   withProgress({
-    score_table <- score.isos(lcl$paths$patdb, method=input$iso_score_method, inshiny=T, intprec = intprec)
+    score_table <- score.isos(mSet = mSet, lcl$paths$patdb, method=input$iso_score_method, inshiny=T, intprec = intprec)
     })
 
   # update the match table available to the rest of metaboshiny
