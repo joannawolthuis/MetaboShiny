@@ -109,10 +109,12 @@ gspec = RdBu')
           logged$text <<- "loaded options!"
           logged$text <<- "starting MetaboShiny..."
 
+          online = internetWorks()
+          
           # generate CSS for the interface based on user settings for colours, fonts etc.
           bar.css <<- nav.bar.css(opts$col1, opts$col2, opts$col3, opts$col4)
           font.css <<- app.font.css(opts$font1, opts$font2, opts$font3, opts$font4,
-                                   opts$size1, opts$size2, opts$size3, opts$size4)
+                                   opts$size1, opts$size2, opts$size3, opts$size4, online=online)
 
           # google fonts
 
@@ -124,14 +126,17 @@ gspec = RdBu')
           # === GOOGLE FONT SUPPORT FOR GGPLOT2 ===
 
           # Download a webfont
-          lapply(c(opts[grepl(pattern = "font", names(opts))]), function(font){
-            try({
-              sysfonts::font_add_google(name = font,
-                                        family = font,
-                                        regular.wt = 400,
-                                        bold.wt = 700)
+          if(online){
+            lapply(c(opts[grepl(pattern = "font", names(opts))]), function(font){
+              try({
+                sysfonts::font_add_google(name = font,
+                                          family = font,
+                                          regular.wt = 400,
+                                          bold.wt = 700)
+              })
             })
-          })
+          }
+          
           # Perhaps the only tricky bit is remembering to run the following function to enable webfonts
           showtext::showtext_auto(enable = T)
 
@@ -727,6 +732,8 @@ gspec = RdBu')
   onStop(function() {
     print("closing metaboShiny ~ヾ(＾∇＾)")
     mSet <<- NULL
+    debug_mSet <<- mSet
+    debug_lcl <<- lcl
     # if(exists("mSet")){
     #   mSet$storage[[mSet$dataSet$cls.name]] <<- list()
     #   mSet$storage[[mSet$dataSet$cls.name]]$analysis <<- mSet$analSet

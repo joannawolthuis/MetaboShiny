@@ -77,7 +77,9 @@ library(httr)
 runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
 
 options('unzip.unzip' = getOption("unzip"),
-        'download.file.extra' = switch(runmode, docker="--insecure",local=""),  # bad but only way to have internet in docker...
+        'download.file.extra' = switch(runmode, 
+                                       docker="--insecure",
+                                       local=""),  # bad but only way to have internet in docker...
         'download.file.method' = 'curl',
         width = 1200, height=800)
 

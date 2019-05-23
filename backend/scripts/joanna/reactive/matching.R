@@ -43,17 +43,18 @@ observeEvent(input$search_mz, {
         # Remove numbers
         docs <- tm::tm_map(docs, tm::removeNumbers)
 
+        # # stem words
+        # docs <- tm::tm_map(docs, tm::stemDocument)
+        
         # Remove english common stopwords
-        docs <- tm::tm_map(docs, tm::removeWords, tm::stopwords("english"))
-        # Remove your own stop word
-        # ADD stopwords as a character vector
-        docs <- tm::tm_map(docs, tm::removeWords, gbl$vectors$wordcloud$skip)
+        docs <- tm::tm_map(docs, 
+                           tm::removeWords, 
+                           gbl$vectors$wordcloud$skip)
 
         # Remove whitespace
         docs <- tm::tm_map(docs, tm::stripWhitespace)
 
         # # Text stemming
-        # docs <- tm_map(docs, stemDocument)
 
         doc_mat <- tm::TermDocumentMatrix(docs)
 
@@ -63,6 +64,7 @@ observeEvent(input$search_mz, {
 
         lcl$tables$word_freq <<- data.frame(name = names(v), value = v)
 
+        #currview <- head(lcl$tables$word_freq, 100)
         # - - return - -
 
         lcl$vectors$pie_add <<- adduct_dist
@@ -85,11 +87,11 @@ observeEvent(input$search_mz, {
 observeEvent(input$score_iso, {
 
   # check if the matches table even exists
-  if(!data.table::is.data.table(lcl$tables$last_matches)) return(NULL)
+  if(!data.table::is.data.table(shown_matches$table)) return(NULL)
 
   # check if a previous scoring was already done (remove that column if so, new score is generated in a bit)
-  if("score" %in% colnames(lcl$tables$last_matches)){
-    lcl$tables$last_matches <<- lcl$tables$last_matches[,-"score"]
+  if("score" %in% colnames(shown_matches$table)){
+    shown_matches$table <<- shown_matches$table[,-"score"]
   }
 
   intprec = as.numeric(input$int_prec)/100.00
@@ -97,20 +99,19 @@ observeEvent(input$score_iso, {
   # get table including isotope scores
   # as input, takes user method for doing this scoring
   withProgress({
-    score_table <- score.isos(mSet = mSet, lcl$paths$patdb, method=input$iso_score_method, inshiny=T, intprec = intprec)
+    score_table <- score.isos(table = shown_matches$table, mSet = mSet, lcl$paths$patdb, method=input$iso_score_method, inshiny=T, intprec = intprec)
     })
 
   # update the match table available to the rest of metaboshiny
-  lcl$tables$last_matches <<- lcl$tables$last_matches[score_table, on = c("baseformula", "adduct")]
-
-  shown_matches$table <<- lcl$tables$last_matches
-
+  shown_matches$table <<- shown_matches$table[score_table, on = c("baseformula", "adduct")]
 })
 
 observeEvent(input$search_pubmed, {
 
   withProgress({
 
+    #input <- list(pm_query = "glucose", pm_year = c(2010, 2019), pm_max = 300)
+    
     abstr <- RISmed::EUtilsSummary(
       as.character(input$pm_query),
       type="esearch",
@@ -126,7 +127,8 @@ observeEvent(input$search_pubmed, {
 
     if(length(fetch@PMID) > 0){
       res <- abstracts2wordcloud(abstracts = fetch,
-                                 top = input$wc_topn_pm)
+                                 top = input$wc_topn_pm, 
+                                 queryword = input$pm_query)
 
       setProgress(0.4)
 

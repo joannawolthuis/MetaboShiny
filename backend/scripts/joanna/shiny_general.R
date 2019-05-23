@@ -126,15 +126,18 @@ subset.mSet <- function(mSetObj, used.variable, keep.groups, new.name){
   mSetObj
 }
 
-abstracts2wordcloud <-function(abstracts, top=20){
-  abstracts1<-data.frame('Abstract'=RISmed::AbstractText(abstracts))#, 'Year'=YearPubmed(fetch))
-  abstractsOnly<-as.character(abstracts1$Abstract)
-  abstractsOnly<-paste(abstractsOnly, sep="", collapse="")
-  abstractsOnly<-as.vector(abstractsOnly)
-  abstractsOnly<-qdap::strip(abstractsOnly)
-  stsp<-qdap::rm_stopwords(abstractsOnly, stopwords = gbl$vectors$wordcloud$skip)
-  ord<-as.data.frame(table(stsp))
-  ord<-ord[order(ord$Freq, decreasing=TRUE),]
+abstracts2wordcloud <-function(abstracts, queryword,  top=20){
+  abstracts1 <- data.frame('Abstract' = RISmed::AbstractText(abstracts))#, 'Year'=YearPubmed(fetch))
+  abstractsOnly <- as.character(abstracts1$Abstract)
+  abstractsOnly <- paste(abstractsOnly, 
+                       sep="", 
+                       collapse="")
+  abstractsOnly <- as.vector(abstractsOnly)
+  abstractsOnly <- qdap::strip(abstractsOnly)
+  stsp <- qdap::rm_stopwords(abstractsOnly, 
+                           stopwords = c(gbl$vectors$wordcloud$skip, queryword))
+  ord <- as.data.frame(table(stsp))
+  ord <- ord[order(ord$Freq, decreasing=TRUE),]
   head(ord, top)
 }
 
@@ -157,4 +160,24 @@ get_mset_name <- function(mainvar, subsetvar, subsetgroups, timeseries=FALSE){
     mset_name = paste0(mainvar,if(!is.null(subsetgroups)) ":" else "",tolower(paste0(subsetgroups, collapse="+")))
   }
   mset_name
+}
+
+havingIP <- function(){
+  if(.Platform$OS.type == "windows"){
+    ipmessage = system("ipconfig", intern=T)
+  }else{
+    ipmessage = system("ifconfig", intern=T)
+  }
+  print(ipmessage)
+  validIP = "((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)[.]){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
+  any(grep(validIP, ipmessage))
+}
+
+internetWorks <- function(testsite = "http://www.google.com"){
+  works = FALSE
+  try({
+    GET(testsite)
+    works=TRUE
+  },silent = T)
+  works
 }

@@ -18,23 +18,19 @@ nav.bar.css <- function(RGB.bg = "#ffc8c2",
   }
 
 app.font.css <- function(font.h1 = "Press Start 2P",
-                     font.h2 = "Raleway bold",
-                     font.h3 = "Raleway",
-                     font.body = "Raleway serif",
-                     size.h1 = 33,
-                     size.h2 = 22,
-                     size.h3 = 15,
-                     size.body = 13){
+                        font.h2 = "Raleway bold",
+                        font.h3 = "Raleway",
+                        font.body = "Raleway serif",
+                        size.h1 = 33,
+                        size.h2 = 22,
+                        size.h3 = 15,
+                        size.body = 13,
+                        online=T){
 
   size.h1 <- paste0(size.h1, "pt")
   size.h2 <- paste0(size.h2, "pt")
   size.h3 <- paste0(size.h3, "pt")
   size.body <- paste0(size.body, "pt")
-
-    # font.h1 = "Press Start 2P"
-  # font.h2 = "Raleway bold"
-  # font.h3 = "Raleway"
-  # font.body = "Raleway serif"
 
   font.h1.w <- str_extract(font.h1, "(serif)|(bold)|(italic)")
   font.h2.w <- str_extract(font.h2, "(serif)|(bold)|(italic)")
@@ -81,8 +77,9 @@ app.font.css <- function(font.h1 = "Press Start 2P",
   font.h3.w = if(font.h3.w == "") "" else{paste0("font-weight: ", font.h3.w, ";")}
   font.body.w = if(font.body.w == "") "" else{paste0("font-weight: ", font.body.w, ";")}
 
-  base.import <- gsubfn::fn$paste("@import url('https://fonts.googleapis.com/css?family=$font.url');")
-
+  base.import <- if(online) gsubfn::fn$paste("@import url('https://fonts.googleapis.com/css?family=$font.url');") else ""
+  print(base.import)
+  
   base <- "$base.import
 
   h1 {

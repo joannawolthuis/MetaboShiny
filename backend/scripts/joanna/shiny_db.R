@@ -182,7 +182,7 @@ get.ppm <- function(patdb){
   ppm
 }
 
-score.isos <- function(mSet, patdb, method="mscore", inshiny=TRUE, intprec){
+score.isos <- function(table, mSet, patdb, method="mscore", inshiny=TRUE, intprec){
 
   func <- function(){
 
@@ -191,10 +191,21 @@ score.isos <- function(mSet, patdb, method="mscore", inshiny=TRUE, intprec){
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
 
     if(inshiny) shiny::setProgress(value = 0.2)
-
+    
+    RSQLite::dbSendQuery(conn, "DROP TABLE IF EXISTS selection")
+    RSQLite::dbWriteTable(conn, "selection", table)
+    
+    RSQLite::dbSendQuery(conn, "DROP TABLE IF EXISTS selected_isos")
+    RSQLite::dbSendQuery(conn,"CREATE TABLE selected_isos AS
+      SELECT DISTINCT iso.baseformula, iso.adduct, iso.fullformula, iso.isoprevalence, iso.fullmz
+      FROM isotopes iso
+      JOIN selection sel
+      ON iso.baseformula = sel.baseformula
+      AND iso.adduct = sel.adduct")
+    
     mzmatches <- RSQLite::dbGetQuery(conn,gsubfn::fn$paste(strwrap(
       "SELECT mz.mzmed, iso.baseformula, iso.adduct, iso.fullformula, iso.isoprevalence, iso.fullmz
-      FROM isotopes iso
+      FROM selected_isos iso
       JOIN mzranges rng
       ON iso.fullmz BETWEEN rng.mzmin AND rng.mzmax
       JOIN mzvals mz
@@ -203,8 +214,10 @@ score.isos <- function(mSet, patdb, method="mscore", inshiny=TRUE, intprec){
 
     if(inshiny) shiny::setProgress(value = 0.4)
 
-    mapper = unique(mzmatches[,2:4])
+    mapper = as.data.table(unique(mzmatches[,2:4]))
 
+    mapper = mapper[baseformula %in% table$baseformula & adduct %in% table$adduct]
+    
     mzmatches <- mzmatches[,-c(2:3)]
     mzmatches <- as.data.table(unique(mzmatches[complete.cases(mzmatches),]))
     mzmatches$mzmed <- as.factor(mzmatches$mzmed)
@@ -720,7 +733,8 @@ cat("
             if(pubchem_detailed){ # SLOW!!
               rows <- info_from_cids(cids)
             }else{
-              rows$description <- paste0("PubChem found these Compound IDs (check ChemSpider or PubChem): ", paste0(cids, collapse = ", "))
+              rows$description <- paste0("PubChem found these Compound IDs (check ChemSpider or PubChem): ", 
+                                         paste0(cids, collapse = ", "))
             }
           })
           if(inshiny) shiny::setProgress(value = i/count)

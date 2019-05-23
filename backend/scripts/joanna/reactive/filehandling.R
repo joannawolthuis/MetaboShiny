@@ -63,7 +63,8 @@ observe({
          style = "background-image:linear-gradient(0deg, transparent 50%, #aaa 50%),linear-gradient(90deg, #aaa 50%, #ccc 50%);background-size:10px 10px,10px 10px;")
   }, deleteFile = FALSE)
   # change chosen taskbar image in user option file
-  setOption(key='taskbar_image',
+  setOption(lcl$paths$opt.loc,
+            key='taskbar_image',
             value=basename(new_path))
 })
 
@@ -82,10 +83,10 @@ observe({
 
   if(is.null(given_dir)) return()
   # change db storage directory in user options file
-  setOption(key="db_dir", value=given_dir)
+  setOption(lcl$paths$opt.loc, key="db_dir", value=given_dir)
 
   # render current db location in text
-  output$curr_db_dir <- renderText({getOptions()$db_dir})
+  output$curr_db_dir <- renderText({getOptions(lcl$paths$opt.loc)$db_dir})
 })
 
 # see above, but for working directory. CSV/DB files with user data are stored here.
@@ -99,9 +100,9 @@ observe({
   given_dir <- parseDirPath(gbl$paths$volumes,
                             input$get_work_dir)
   if(is.null(given_dir)) return()
-  setOption(key="work_dir", value=given_dir)
+  setOption(lcl$paths$opt.loc,key="work_dir", value=given_dir)
 
-  output$curr_exp_dir <- renderText({getOptions()$work_dir})
+  output$curr_exp_dir <- renderText({getOptions(lcl$paths$opt.loc)$work_dir})
 })
 
 # triggers if user changes their current project name
@@ -109,12 +110,12 @@ observeEvent(input$set_proj_name, {
   proj_name <<- input$proj_name
   if(proj_name == "") return(NULL) # if empty, ignore
   # change path of current db in global
-  lcl$paths$patdb <<- file.path(getOptions()$work_dir, paste0(proj_name,".db", sep=""))
+  lcl$paths$patdb <<- file.path(getOptions(lcl$paths$opt.loc)$work_dir, paste0(proj_name,".db", sep=""))
   # change project name in user options file
-  setOption(key="proj_name", value=proj_name)
+  setOption(lcl$paths$opt.loc, key="proj_name", value=proj_name)
   # print the changed name in the UI
   output$proj_name <<- renderText(proj_name)
   # change path CSV should be / is saved to in session
-  lcl$paths$csv_loc <<- file.path(getOptions()$work_dir, paste0(getOptions()$proj_name,".csv"))
+  lcl$paths$csv_loc <<- file.path(getOptions(lcl$paths$opt.loc)$work_dir, paste0(getOptions(lcl$paths$opt.loc)$proj_name,".csv"))
 
 })
