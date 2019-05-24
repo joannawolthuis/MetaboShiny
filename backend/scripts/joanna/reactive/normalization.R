@@ -5,6 +5,8 @@ observeEvent(input$initialize, {
 
     shiny::setProgress(session=session, value= .1)
 
+    require(MetaboAnalystR)
+    
     # read in original CSV file
     csv_orig <- fread(lcl$paths$csv_loc,
                       data.table = TRUE,

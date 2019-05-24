@@ -480,7 +480,8 @@ caret.mdls <- caret::getModelInfo()
       "clinical", "higher", "control", "increased", "associated", "mode", "decreased", "studies", 
       "study", "patient", "patients", "years", "type", "gene", "compared", "including", "lower", 
       "ci", "concentration", "concentrations", "reduced", "increase", "results", "result", "levels", 
-      "It", "lt", "model", "effect", "high", "low", "expression", "test", "production", "aim"),
+      "It", "lt", "model", "effect", "high", "low", "expression", "test", "production", "aim",
+      "tested","studied","ng", "se"),
     qdapDictionaries::Top200Words,
     tm::stopwords("english"),
     gbl$vectors$db_list
