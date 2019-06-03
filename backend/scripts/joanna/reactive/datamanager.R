@@ -335,17 +335,33 @@ observe({
 
                  bar_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar
 
+                 barplot_data <- ggPlotBar(bar_data,
+                                         input$ml_attempts,
+                                         gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                         input$ml_top_x,
+                                         ml_name = mSet$analSet$ml$last$name,
+                                         ml_type = mSet$analSet$ml$last$method,
+                                         plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                                         plotlyfy=TRUE,font = lcl$aes$font)
+                 
+                 
+                 ml_barplot <- barplot_data$plot
+                 lcl$tables$ml_bar <<- ml_barplot$mzdata
+                 
                  output$ml_bar <- plotly::renderPlotly({
 
-                   plotly::ggplotly(ggPlotBar(bar_data,
-                                              input$ml_attempts,
-                                              gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                              input$ml_top_x,
-                                              ml_name = mSet$analSet$ml$last$name,
-                                              ml_type = mSet$analSet$ml$last$method,
-                                              plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                              plotlyfy=TRUE,font = lcl$aes$font))
+                   plotly::ggplotly(ml_barplot)
+                   
                  })
+                 
+                 choices = c()
+                 methods <- setdiff(names(mSet$analSet$ml), "last")
+                 for(method in methods){
+                   model.names = names(mSet$analSet$ml[[method]])
+                   choices <- c(choices, paste0(method, " - ", paste0(model.names)))
+                 }
+                 updateSelectInput(session, "show_which_ml", choices = choices, selected = paste0(mSet$analSet$ml$last$method, " - ", mSet$analSet$ml$last$name))
+                 
                }else{NULL}
              },
              asca = {

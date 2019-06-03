@@ -297,16 +297,39 @@ observeEvent(input$do_ml, {
     test_vec = lcl$vectors$ml_test,
     configCols = configCols
     ) # for session_cl
+    
     # check if a storage list for machine learning results already exists
     if(!"ml" %in% names(mSet$analSet)){
-      mSet$analSet$ml <<- list(ls=list(),
-                               rf=list()) # otherwise make it
+      mSet$analSet$ml <<- list() # otherwise make it
     }
-    # save the summary of all repeats (will be used in plots)
-    roc_data <- list(type = {unique(lapply(repeats, function(x) x$type))},
-                     models = {lapply(repeats, function(x) x$model)},
-                     predictions = {lapply(repeats, function(x) x$prediction)},
-                     labels = {lapply(repeats, function(x) x$labels)})
+    
+    # save the summary of all repeats (will be used in plots) TOO MEMORY HEAVY
+    pred <- ROCR::prediction(lapply(repeats, function(x) x$prediction), 
+                             lapply(repeats, function(x) x$labels))
+    perf <- ROCR::performance(pred, "tpr", "fpr")
+    perf_auc <- ROCR::performance(pred, "auc")
+    
+    perf.long <- data.table::rbindlist(lapply(1:length(perf@x.values), function(i){
+      xvals <- perf@x.values[[i]]
+      yvals <- perf@y.values[[i]]
+      aucs <- signif(perf_auc@y.values[[i]][[1]], digits = 2)
+      
+      res <- data.table::data.table(attempt = c(i),
+                                    FPR = xvals,
+                                    TPR = yvals,
+                                    AUC = aucs)
+      res
+    }))
+    
+    mean.auc <- mean(unlist(perf_auc@y.values))
+    
+    roc_data <- list(m_auc = mean.auc,
+                     perf = perf.long)
+    
+    # roc_data <- list(type = {unique(lapply(repeats, function(x) x$type))},
+    #                  models = {lapply(repeats, function(x) x$model)},
+    #                  predictions = {lapply(repeats, function(x) x$prediction)},
+    #                  labels = {lapply(repeats, function(x) x$labels)})
 
     bar_data <- rbindlist(lapply(1:length(repeats), function(i){
       x = repeats[[i]]

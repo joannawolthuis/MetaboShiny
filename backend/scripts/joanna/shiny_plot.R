@@ -733,26 +733,9 @@ ggPlotROC <- function(data,
   require(ggplot2)
   require(data.table)
 
-  pred <- ROCR::prediction(data$predictions, data$labels)
-  perf <- ROCR::performance(pred, "tpr", "fpr")
-  perf_auc <- ROCR::performance(pred, "auc")
-
-  # - - - old method - - -
-
-  perf.long <- rbindlist(lapply(1:length(perf@x.values), function(i){
-    xvals <- perf@x.values[[i]]
-    yvals <- perf@y.values[[i]]
-    aucs <- signif(perf_auc@y.values[[i]][[1]], digits = 2)
-
-    res <- data.table::data.table(attempt = c(i),
-                                  FPR = xvals,
-                                  TPR = yvals,
-                                  AUC = aucs)
-    res
-  }))
-
-  mean.auc <- mean(unlist(perf_auc@y.values))
-
+  mean.auc <- data$m_auc
+  perf.long <- data$perf
+  
   cols = cf(attempts)
 
   p <- ggplot(perf.long, aes(FPR,TPR)) +
@@ -796,7 +779,8 @@ ggPlotBar <- function(data,
                       plot.theme,
                       ml_name,
                       ml_type,
-                      plotlyfy=TRUE,font){
+                      plotlyfy=TRUE,
+                      font){
 
   if(ml_name != ""){
     lname = ml_name
@@ -847,13 +831,13 @@ ggPlotBar <- function(data,
       plotlyfy=F
     }
 
-  lcl$tables$ml_bar <<- p$data
-  lcl$tables$ml_bar$mz <<- gsub(lcl$tables$ml_bar$mz, pattern = "`", replacement="")
+  mzdata <- p$data
+  mzdata$mz <- gsub(mzdata$mz, pattern = "`", replacement="")
 
   if(plotlyfy){
-    ggplotly(p, tooltip="label")
+    list(mzdata = mzdata, plot = ggplotly(p, tooltip="label"))
   }else{
-    p
+    list(mzdata = mzdata, plot = p)
   }
 }
 
@@ -1150,7 +1134,6 @@ ggPlotVenn <- function(mSet,
 
   experiments <- str_match(unlist(venn_yes$now), pattern = "\\(.*\\)")[,1]
 
-
   experiments <- unique(gsub(experiments, pattern = "\\(\\s*(.+)\\s*\\)", replacement="\\1"))
 
   table_list <- lapply(experiments, function(experiment){
@@ -1208,6 +1191,11 @@ ggPlotVenn <- function(mSet,
                      fc = {
                        res = list(as.numeric(rownames(analysis$fc$sig.mat[order(abs(analysis$fc$sig.mat[,2]),
                                                                                 decreasing = F),])))
+                       names(res) = base_name
+                       res
+                     },
+                     volcano = {
+                       res = list(as.numeric(rownames(analysis$volcano$sig.mat)))
                        names(res) = base_name
                        res
                      },
@@ -1347,10 +1335,10 @@ ggPlotVenn <- function(mSet,
   p <- ggplot(datapoly,
               aes(x = x,
                   y = y)) + geom_polygon(colour="black", alpha=0.5, aes(fill=id, group=id)) +
-    geom_text(mapping = aes(x=x-.02, y=y, label=value), data = numbers, size = 6, hjust = 0) +
+    geom_text(mapping = aes(x=x-.02, y=y, label=value), data = numbers, size = 4, hjust = 0) +
     theme_void() +
     theme(legend.position="none",
-          text=element_text(size=font$ax.num.size,
+          text=element_text(#size=font$ax.num.size,
                             family = font$family),
           panel.grid = element_blank()) +
     scale_fill_gradientn(colours =
@@ -1364,7 +1352,7 @@ ggPlotVenn <- function(mSet,
                                        color = "black",
                                        bg.color = "white",
                                        data = headers,
-                                       size = 7, hjust = 0.5,
+                                       size = 5, hjust = 0.5,
                                        fontface = 2) +
     scale_x_continuous(expand = c(.1, .1)) +
     scale_y_continuous(expand = c(.1, .1))

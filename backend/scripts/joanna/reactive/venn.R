@@ -60,9 +60,9 @@ observeEvent(input$venn_build, {
                     venn_yes = isolate({as.list(venn_yes)}),
                     top = input$venn_tophits,
                     cols = lcl$aes$mycols,
-                    cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
-                    font=lcl$aes$font,
-                    plotlyfy=F)
+                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                    font = lcl$aes$font,
+                    plotlyfy = F)
 
     lcl$vectors$venn_lists <<- p$info
 

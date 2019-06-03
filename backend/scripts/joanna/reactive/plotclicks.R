@@ -75,6 +75,7 @@ observeEvent(plotly::event_data("plotly_click"),{
       # output$plot_pca <- plotly::renderPlotly({pca_plot})
     }}else if(req(curr_tab) == "ml"){ # makes ROC curves and boxplots clickable
       switch(input$ml_results, roc = { # if roc, check the curve numbers of the roc plot
+        print("roc ml")
         attempt = d$curveNumber - 1
         xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
         if(attempt > 1){
@@ -96,6 +97,7 @@ observeEvent(plotly::event_data("plotly_click"),{
           })
         }
       }, bar = { # for bar plot just grab the # bar clicked
+        print("barplot ml")
         lcl$curr_mz <<- as.character(lcl$tables$ml_bar[d$x,"mz"][[1]])
       })}else if(grepl(pattern = "heatmap", x = curr_tab)){ # heatmap requires the table used to make it saved to global (hmap_mzs)
         req(lcl$vectors$heatmap)

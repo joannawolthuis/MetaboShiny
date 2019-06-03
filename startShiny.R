@@ -95,4 +95,3 @@ switch(runmode,
                        host = "0.0.0.0",
                        launch.browser = FALSE)
        })
-# go run it! :-)

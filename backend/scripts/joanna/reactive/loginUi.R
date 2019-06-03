@@ -12,6 +12,172 @@ output$currUI <- renderUI({
              div(style="width:300px;",verbatimTextOutput("login_status", placeholder = FALSE)))
 
   }else{
+    
+    print("rendering...")
+    # read settings
+    
+    opts <- getOptions(lcl$paths$opt.loc)
+    
+    logged$text <<- "loaded options!"
+    logged$text <<- "starting MetaboShiny..."
+    
+    online = internetWorks()
+    
+    # generate CSS for the interface based on user settings for colours, fonts etc.
+    bar.css <<- nav.bar.css(opts$col1, opts$col2, opts$col3, opts$col4)
+    font.css <<- app.font.css(opts$font1, opts$font2, opts$font3, opts$font4,
+                              opts$size1, opts$size2, opts$size3, opts$size4, online=online)
+    
+    # google fonts
+    
+    # name = the name of the font in Google's Library (https://fonts.google.com)
+    # family = how you want to refer to the font inside R
+    # regular.wt = the weight of font used in axis, labels etc.
+    # bolt.wt = the weight of font used in the title
+    
+    # === GOOGLE FONT SUPPORT FOR GGPLOT2 ===
+    
+    # Download a webfont
+    if(online){
+      lapply(c(opts[grepl(pattern = "font", names(opts))]), function(font){
+        try({
+          sysfonts::font_add_google(name = font,
+                                    family = font,
+                                    regular.wt = 400,
+                                    bold.wt = 700)
+        })
+      })
+    }
+    
+    # Perhaps the only tricky bit is remembering to run the following function to enable webfonts
+    showtext::showtext_auto(enable = T)
+    
+    # ======================================
+    
+    # set taskbar image as set in options
+    taskbar_image <- opts$task_img
+    
+    # parse color opts
+    lcl$aes$mycols <<- get.col.map(lcl$paths$opt.loc) # colours for discrete sets, like group A vs group B etc.
+    lcl$aes$theme <<- opts$gtheme # gradient function for heatmaps, volcano plot etc.
+    lcl$aes$spectrum <<- opts$gspec # gradient function for heatmaps, volcano plot etc.
+    lcl$vectors$proj_names <<- unique(tools::file_path_sans_ext(list.files(opts$work_dir, pattern=".csv|.db"))) # the names listed in the 'choose project' tab of opts.
+    
+    # load existing file
+    bgcol <<- opts$col1
+    
+    # - - load custom dbs - -
+    
+    # load in custom databases
+    has.customs <- dir.exists(file.path(lcl$paths$db_dir, "custom"))
+    
+    if(has.customs){
+      
+      customs = list.files(path = file.path(lcl$paths$db_dir, "custom"),
+                           pattern = "\\.RData")
+      
+      dbnames = unique(tools::file_path_sans_ext(customs))
+      
+      for(db in dbnames){
+        # add name to global
+        dblist <- gbl$vectors$db_list
+        dblist <- dblist[-which(dblist == "custom")]
+        if(!(db %in% dblist)){
+          dblist <- c(dblist, db, "custom")
+          gbl$vectors$db_list <- dblist
+        }
+        metadata.path <- file.path(lcl$paths$db_dir, "custom", paste0(db, ".RData"))
+        load(metadata.path)
+        
+        # add description to global
+        gbl$constants$db.build.info[[db]] <- meta.dbpage
+        
+        # add image to global
+        maxi = length(gbl$constants$images)
+        gbl$constants$images[[maxi + 1]] <- meta.img
+      }
+    }
+    
+    # init stuff that depends on opts file
+    
+    lcl$proj_name <<- opts$proj_name
+    lcl$paths$patdb <<- file.path(opts$work_dir, paste0(opts$proj_name, ".db"))
+    lcl$paths$csv_loc <<- file.path(opts$work_dir, paste0(opts$proj_name, ".csv"))
+    lcl$texts <<- list(
+      list(name='curr_exp_dir',text=lcl$paths$work_dir),
+      list(name='curr_db_dir',text=lcl$paths$db_dir),
+      list(name='ppm',text=opts$ppm),
+      list(name='proj_name',text=opts$proj_name)
+    )
+    
+    updateSelectizeInput(session,
+                         "proj_name",
+                         choices = lcl$vectors$proj_names,
+                         selected = opts$proj_name)
+    # create default text objects in UI
+    lapply(lcl$texts, FUN=function(default){
+      output[[default$name]] = renderText(default$text)
+    })
+    
+    lcl$aes$font <<- list(family = opts$font4,
+                          ax.num.size = 11,
+                          ax.txt.size = 15,
+                          ann.size = 20,
+                          title.size = 25)
+    
+    # other default stuff that needs opts
+    
+    library(showtext)
+    
+    # import google fonts
+    for(font in unlist(opts[grep(names(opts), pattern = "font")])){
+      if(font %in% sysfonts::font.families()){
+        NULL
+      }else{
+        sysfonts::font_add_google(font,db_cache = T)
+      }
+    }
+    
+    # other stuff
+    
+    # create color pickers based on amount of colours allowed in global
+    output$colorPickers <- renderUI({
+      lapply(c(1:gbl$constants$max.cols), function(i) {
+        colourpicker::colourInput(inputId = paste("col", i, sep="_"),
+                                  label = paste("Choose colour", i),
+                                  value = lcl$aes$mycols[i],
+                                  allowTransparent = F)
+      })
+    })
+    
+    # create color1, color2 etc variables to use in plotting functions
+    # and update when colours picked change
+    observe({
+      values <- unlist(lapply(c(1:gbl$constants$max.cols), function(i) {
+        input[[paste("col", i, sep="_")]]
+      }))
+      
+      if(!any(is.null(values))){
+        if(lcl$paths$opt.loc != ""){
+          set.col.map(optionfile = lcl$paths$opt.loc, values)
+          lcl$aes$mycols <- values
+        }
+      }
+    })
+    
+    updateSelectInput(session, "ggplot_theme", selected = opts$gtheme)
+    updateSelectInput(session, "color_ramp", selected = opts$gspec)
+    
+    opts <<- opts
+    # logged in!
+    
+    
+    require(shinyjs)
+    titlejs=paste0("document.title ='-`* MetaboShiny *`-'")
+    runjs(titlejs)
+    
+    # - - - - -
+    
     tagList(
       tags$title('MetaboShiny'),
       tags$style(type="text/css",
@@ -396,9 +562,7 @@ output$currUI <- renderUI({
                                                                                                                                   max = 100,
                                                                                                                                   step = 1,
                                                                                                                                   value = 20,
-                                                                                                                                  post = "x"),
-                                                                                                                      # - - - - - - - - - -
-                                                                                                                      style="z-index:1002;"
+                                                                                                                                  post = "x")
                                                                                                                ),
                                                                                                                column(width=6,align="center",
                                                                                                                       selectInput("ml_method",
@@ -418,8 +582,7 @@ output$currUI <- renderUI({
                                                                                                                                                  icon = h3(paste("Go"),
                                                                                                                                                            icon("hand-pointer-o", "fa-lg")),
                                                                                                                                                  status = "default",
-                                                                                                                                                 size = "lg"),
-                                                                                                                      style="z-index:1003;"
+                                                                                                                                                 size = "lg")
                                                                                                                ),
                                                                                                                column(width=3,align="center",
                                                                                                                       fluidRow(textOutput("ml_train_ss"),
