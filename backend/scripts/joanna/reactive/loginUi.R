@@ -1,5 +1,5 @@
 output$currUI <- renderUI({
-  if(!logged$status){
+  if(logged$status == "notlogged"){
     fluidRow(align="center",
              br(),br(),br(),br(),br(),
              imageOutput("login_header",inline = T),
@@ -11,7 +11,7 @@ output$currUI <- renderUI({
              br(),br(),
              div(style="width:300px;",verbatimTextOutput("login_status", placeholder = FALSE)))
 
-  }else{
+  }else if(logged$status == "logged"){
     
     print("rendering...")
     # read settings
@@ -246,6 +246,12 @@ output$currUI <- renderUI({
                                 ),
                                 hr(),
                                 # contains button to start db creation, mode switches based on tab used entered files in
+                                # fluidRow(align = "center",
+                                #          column(9,
+                                #          sardine(helpText("I expect multiple ")), 
+                                #          sardine(selectInput("meta_dupli_col", "", choices = c(""))), 
+                                #          sardine(helpText("s per sample."))
+                                #          )),
                                 fluidRow( align="center",
                                           column(9,
                                                  textInput("proj_name_new", label = "Project name:", value = "my_metshi"),
@@ -1045,5 +1051,20 @@ output$currUI <- renderUI({
                          align="center")
             )
     )
+  }else if (logged$status == "setfolder"){
+    # prompt file location
+    
+    fluidRow(align="center",
+             br(),br(),br(),br(),br(),
+             imageOutput("login_header",inline = T),
+             helpText("Welcome to MetaboShiny! Please pick a folder to save your files and databases in with the below button."),
+             shinyDirButton("get_work_dir", "Choose a folder",
+                            title = "Browse",
+                            buttonType = "default", class = NULL),
+             verbatimTextOutput("curr_exp_dir_start"),
+             hr(),
+             shinyWidgets::circleButton("confirm_work_dir", icon = icon("check"))
+             )
+    
   }
 })

@@ -67,6 +67,11 @@ observe({
              },
              venn = {
                if("storage" %in% names(mSet)){
+                 # save previous mset
+                 mset_name = mSet$dataSet$cls.name
+                 # TODO: use this in venn diagram creation
+                 mSet$storage[[mset_name]] <<- list(analysis = mSet$analSet)
+                 # - - - - -
                  analyses = names(mSet$storage)
                  venn_no$start <- rbindlist(lapply(analyses, function(name){
                    analysis = mSet$storage[[name]]$analysis
@@ -77,7 +82,8 @@ observe({
                      extra_names <- lapply(with.subgroups, function(anal){
                        switch(anal,
                               ml = {
-                                which.mls <- intersect(c("rf", "ls"), names(analysis$ml))
+                                print("ml!!")
+                                which.mls <- setdiff(names(analysis$ml),"last")
                                 ml.names = sapply(which.mls, function(meth){
                                   if(length(analysis$ml[[meth]]) > 0){
                                     paste0(meth, " - ", names(analysis$ml[[meth]]))
@@ -89,6 +95,7 @@ observe({
                                 c ("plsda - PC1", "plsda - PC2", "plsda - PC3")
                               })
                      })
+                     print(extra_names)
                      analysis_names <- c(setdiff(analysis_names, c("ml", "plsr", "plsda")), unlist(extra_names))
                    }
                    # - - -
@@ -346,7 +353,7 @@ observe({
                  
                  
                  ml_barplot <- barplot_data$plot
-                 lcl$tables$ml_bar <<- ml_barplot$mzdata
+                 lcl$tables$ml_bar <<- barplot_data$mzdata
                  
                  output$ml_bar <- plotly::renderPlotly({
 

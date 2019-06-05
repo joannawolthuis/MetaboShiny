@@ -64,10 +64,9 @@ get.csv <-
                                 fun.aggregate = sum,
                                 value.var = "intensity",
                                 verbose = T) # what to do w/ duplicates?
-
+    
     cast.dt <<- cast.dt
 
-    #all(cast.dt[10,1:30] == cast.dt[11,1:30])
     # - - - check the first 100 rows for variables - - -
 
     as.numi <- as.numeric(colnames(cast.dt)[1:100])
@@ -76,15 +75,14 @@ get.csv <-
 
     # --- cast to right format ---
 
-    small.set <- cast.dt[,..exp.vars,]
+    small.set <- cast.dt[, ..exp.vars,]
 
     # --- name for metaboanalyst ---
 
     colnames(small.set) <- tolower(colnames(small.set))
-
     colnames(small.set)[which(colnames(small.set) == "card_id")] <- "sample"
     colnames(small.set)[grep(x=colnames(small.set), pattern="sampling_date")] <- "time"
-    small.set <- small.set[,which(unlist(lapply(small.set, function(x)!all(is.na(x))))),with=F]
+    small.set <- small.set[,which(unlist(lapply(small.set, function(x) !all(is.na(x))))),with=F]
 
     # --- rejoin w/ rest ---
 
@@ -96,7 +94,6 @@ get.csv <-
       small.set$time <- c(1)
     }
 
-    small.set$animal_internal_id[which(duplicated(small.set$animal_internal_id))]
     # check for time series
     if(any(duplicated(small.set$animal_internal_id))){
       #print("detecting duplicates, assuming time series")

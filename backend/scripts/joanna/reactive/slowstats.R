@@ -303,6 +303,8 @@ observeEvent(input$do_ml, {
       mSet$analSet$ml <<- list() # otherwise make it
     }
     
+    mz.imp <- lapply(lapply(repeats, function(x) x$model), function(x) caret::varImp(x)$importance)
+    
     # save the summary of all repeats (will be used in plots) TOO MEMORY HEAVY
     pred <- ROCR::prediction(lapply(repeats, function(x) x$prediction), 
                              lapply(repeats, function(x) x$labels))
@@ -324,7 +326,8 @@ observeEvent(input$do_ml, {
     mean.auc <- mean(unlist(perf_auc@y.values))
     
     roc_data <- list(m_auc = mean.auc,
-                     perf = perf.long)
+                     perf = perf.long,
+                     imp = mz.imp)
     
     # roc_data <- list(type = {unique(lapply(repeats, function(x) x$type))},
     #                  models = {lapply(repeats, function(x) x$model)},

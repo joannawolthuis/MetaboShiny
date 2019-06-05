@@ -1,3 +1,16 @@
+
+# observeEvent(input$metadata, {
+#   if("files" %in% names(input$metadata)){
+#     meta_path <- parseFilePaths(gbl$paths$volumes, input$metadata)$datapath
+#     type = tools::file_ext(meta_path)
+#     choices = switch(type,
+#                      csv = colnames(fread(meta_path)),
+#                      xlsx = c(colnames(openxlsx::read.xlsx(meta_path, sheet="Setup"), openxlsx::read.xlsx(meta_path,sheet="Individual Data")))
+#                      )
+#     updateSelectInput(session, inputId = "meta_dupli_col", choices = choices)
+#   }
+# })
+
 # triggers when user wants to create database from .db and excel or 2 csv files and excel
 observeEvent(input$create_db,{
 
@@ -32,11 +45,11 @@ observeEvent(input$create_db,{
 
              # get the db and excel path from the UI elemnts
              db_path <- parseFilePaths(gbl$paths$volumes, input$database)$datapath
-             excel_path <- parseFilePaths(gbl$paths$volumes, input$excel)$datapath
+             excel_path <- parseFilePaths(gbl$paths$volumes, input$metadata)$datapath
 
              # copy the user selected db to the processing folder under proj_name renaming
              file.copy(db_path, lcl$paths$patdb, overwrite = T)
-
+             
              shiny::setProgress(session=session, value= .30)
 
              # add metadata file to .db file generated in previous step
@@ -48,6 +61,14 @@ observeEvent(input$create_db,{
                exp_vars <<- load.metadata.excel(metadata_path, lcl$paths$patdb)
              }
 
+             # # need to adjust names if duplicols
+             # if(input$meta_dupli_col != ""){
+             #   conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb) # change this to proper var later
+             #   DBI::dbExecute(conn,
+             #                  gsubfn::fn$paste("")
+             #                  )
+             # }
+             
              shiny::setProgress(session=session, value= .60)
 
            },
@@ -124,7 +145,9 @@ observeEvent(input$create_csv, {
     # check if any samples are duplicated in the resulting table
     # IF SO: rename to time series data format because that is the only one that should have duplicate sample names
     if(any(duplicated(tbl$sample))){
-      tbl$sample <- paste0(tbl$sample, "_T", tbl$time)
+      tbl$sample <- paste0(tbl$sample, 
+                           "_", 
+                           as.numeric(as.factor(tbl[,input$meta_dupli_col])))
       show.times = T # make sure the 'times' column shows in the csv making result table
     }else{
       show.times = F
@@ -146,7 +169,6 @@ observeEvent(input$create_csv, {
 
     # render overview table
     output$csv_tab <-DT::renderDataTable({
-
       overview_tab <- if(show.times){
         t(data.table(keep.rownames = F,
                      Identifiers = ncol(tbl) - length(exp.vars),

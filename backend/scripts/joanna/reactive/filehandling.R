@@ -47,14 +47,13 @@ observe({
 
 # observes if a new taskbar image is chosen by user
 observe({
-  # - - - -
   if(!is.list(input$taskbar_image_path)) return() # if nothing is chosen, do nothing
   img_path <- parseFilePaths(gbl$paths$volumes, input$taskbar_image_path)$datapath
   new_path <- file.path(getwd(), "www", basename(img_path)) # set path to copy to
 
   # copy image to the www folder
   if(img_path != new_path) file.copy(img_path, new_path, overwrite = T)
-  # - - -
+
   # render taskbar image preview
   output$taskbar_image <- renderImage({
     list(src = new_path,
@@ -62,6 +61,7 @@ observe({
          height = 120,
          style = "background-image:linear-gradient(0deg, transparent 50%, #aaa 50%),linear-gradient(90deg, #aaa 50%, #ccc 50%);background-size:10px 10px,10px 10px;")
   }, deleteFile = FALSE)
+  
   # change chosen taskbar image in user option file
   setOption(lcl$paths$opt.loc,
             key='taskbar_image',
@@ -101,7 +101,7 @@ observe({
                             input$get_work_dir)
   if(is.null(given_dir)) return()
   setOption(lcl$paths$opt.loc,key="work_dir", value=given_dir)
-
+  
   output$curr_exp_dir <- renderText({getOptions(lcl$paths$opt.loc)$work_dir})
 })
 

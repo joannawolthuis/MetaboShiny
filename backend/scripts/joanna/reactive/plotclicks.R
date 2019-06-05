@@ -32,7 +32,7 @@ observeEvent(plotly::event_data("plotly_click"),{
                        input$permz
                      }, overview = {
                        input$overview
-                     })
+                     }, ml = "ml")
 
   if(req(curr_tab ) %in% c("tt", "fc", "rf", "aov", "volc")){ # these cases need the same processing and use similar scoring systems
     if('key' %not in% colnames(d)) return(NULL)
@@ -75,15 +75,13 @@ observeEvent(plotly::event_data("plotly_click"),{
       # output$plot_pca <- plotly::renderPlotly({pca_plot})
     }}else if(req(curr_tab) == "ml"){ # makes ROC curves and boxplots clickable
       switch(input$ml_results, roc = { # if roc, check the curve numbers of the roc plot
-        print("roc ml")
         attempt = d$curveNumber - 1
         xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
         if(attempt > 1){
-          ml_type <- xvals$type[[1]]
-          model <- xvals$models[[attempt]]
-
+          #ml_type <- xvals$type[[1]]
+          #model <- xvals$models[[attempt]]
           output$ml_tab <- DT::renderDataTable({
-            imp <- as.data.table(caret::varImp(model)$importance, keep.rownames = T)
+            imp <- as.data.table(xvals$imp[[attempt]], keep.rownames = T)
             colnames(imp) <- c("mz", "importance")
             imp <- imp[importance > 0,]
             lcl$tables$ml_roc <<- data.frame(importance = imp$importance,

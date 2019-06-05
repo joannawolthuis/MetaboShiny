@@ -1154,10 +1154,26 @@ ggPlotVenn <- function(mSet,
 
     tables <- lapply(categories, function(name){
 
-      base_name <- gsub(name, pattern = " -.*$| ", replacement="")
+      print(name)
+      
+      base_name <- search_name <- gsub(name, pattern = " -.*$| ", replacement="")
 
+      if(base_name %in% gbl$constants$ml.models){
+        search_name <- "ml"
+      }
+      
       # fetch involved mz values
-      tbls <- switch(base_name,
+      tbls <- switch(search_name,
+                     ml = {
+                       which.ml <- gsub(name, pattern = "^.*- | ", replacement="")
+                       mzvals = analysis$ml[[base.name]][[which.ml]]$bar[order(analysis$ml[[base.name]][[which.ml]]$bar$importance,
+                                                                               decreasing = T),]$mz
+                       mzvals <- type.convert(gsub(mzvals, pattern = "'|`", replacement=""))
+                       res <- list(mzvals)
+                       names(res) <- paste0(which.ml, " (", base_name, ")")
+                       # - - -
+                       res
+                     },
                      aov = {
                        res = list(as.numeric(rownames(analysis$aov$sig.mat[order(analysis$aov$sig.mat[,2],
                                                                                  decreasing = F),])))
@@ -1197,23 +1213,6 @@ ggPlotVenn <- function(mSet,
                      volcano = {
                        res = list(as.numeric(rownames(analysis$volcano$sig.mat)))
                        names(res) = base_name
-                       res
-                     },
-                     ls = {
-                       which.ls <- gsub(name, pattern = "^.*- | ", replacement="")
-                       res <- list(as.character(analysis$ml$ls[[which.ls]]$bar[order(analysis$ml$ls[[which.ls]]$bar$count,
-                                                                                     decreasing = T),]$mz))
-                       names(res) <- paste0(which.ls, " (LS)")
-                       # - - -
-                       res
-
-                     },
-                     rf = {
-                       which.rf <- gsub(name, pattern = "^.*- | ", replacement="")
-                       res <- list(as.character(analysis$ml$rf[[which.rf]]$bar[order(analysis$ml$rf[[which.rf]]$bar$mda,
-                                                                                     decreasing = T),]$mz))
-                       names(res) <- paste0(which.rf, " (RF)")
-                       # - - -
                        res
                      },
                      plsda = {

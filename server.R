@@ -8,7 +8,7 @@ shinyServer(function(input, output, session) {
   bar.css <- ""
   opts <- list()
 
-  logged <- reactiveValues(status = FALSE,
+  logged <- reactiveValues(status = "notlogged",
                            text = "please log in! ( •́ .̫  •̀ )")
 
   lcl = list(
@@ -35,34 +35,37 @@ shinyServer(function(input, output, session) {
         print("Single-user mode activated~")
         userfolder = "~/MetaboShiny/saves/admin"
         dbdir = "~/MetaboShiny/databases"
+        if(!dir.exists(userfolder)) dir.create(userfolder,recursive = T)
+        if(!dir.exists(dbdir)) dir.create(dbdir,recursive = T)
         lcl$paths$opt.loc <<- file.path(userfolder, "options.txt")
         lcl$paths$work_dir <<- userfolder
         lcl$paths$db_dir <<- dbdir
         if(!file.exists(lcl$paths$opt.loc)){
+          print("welp re-making options...")
           contents = gsubfn::fn$paste('db_dir = $dbdir
-                                  work_dir = $userfolder
-                                  proj_name = MY_METSHI
-                                  ppm = 2
-                                  packages_installed = Y
-                                  font1 = Pacifico
-                                  font2 = Pacifico
-                                  font3 = Open Sans
-                                  font4 = Open Sans
-                                  col1 = #000000
-                                  col2 = #DBDBDB
-                                  col3 = #FFFFFF
-                                  col4 = #FFFFFF
-                                    size1 = 40
-                                    size2 = 20
-                                    size3 = 15
-                                    size4 = 11
-                                    taskbar_image = gemmy_rainbow.png
-                                    gtheme = classic
-                                    gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
-                                    gspec = RdBu')
+work_dir = $userfolder
+proj_name = MY_METSHI
+ppm = 2
+packages_installed = Y
+font1 = Pacifico
+font2 = Pacifico
+font3 = Open Sans
+font4 = Open Sans
+col1 = #000000
+col2 = #DBDBDB
+col3 = #FFFFFF
+col4 = #FFFFFF
+size1 = 40
+size2 = 20
+size3 = 15
+size4 = 11
+taskbar_image = gemmy_rainbow.png
+gtheme = classic
+gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
+gspec = RdBu')
           writeLines(contents, lcl$paths$opt.loc)
         }
-        logged$status <- TRUE
+        logged$status <- "logged"
         print(logged$status)
       }
     }
@@ -144,7 +147,7 @@ gspec = RdBu')
           writeLines(contents, lcl$paths$opt.loc)
         }
 
-        logged$status <- TRUE
+        logged$status <- "logged"
       }
     }else{
       logged$text <- "try again (｡•́︿•̀｡)"
@@ -340,13 +343,37 @@ gspec = RdBu')
   output$ref_select <- renderUI({ref.selector()})
 
   # triggered when user enters the statistics tab
-
+  
   observeEvent(input$statistics, {
-    # check if an mset is present, otherwise abort
     if(!is.null(mSet)){
-      if(input$statistics == "ml"){
-        datamanager$reload <- "ml"
-      }
+      # check if an mset is present, otherwise abort
+      switch(input$statistics,
+             dimred = {
+               if(!is.null(input$dimred)){
+                 if(input$dimred %not in% names(mSet$analSet)){
+                   statsmanager$calculate <- input$dimred
+                 }
+                 datamanager$reload <- input$dimred
+               }
+             },permz = {
+               if(!is.null(input$permz)){
+                 if(input$permz %not in% names(mSet$analSet)){
+                   statsmanager$calculate <- input$permz
+                 }
+                 datamanager$reload <- input$permz
+               }
+             },overview = {
+               if(!is.null(input$overview)){
+                 if(input$overview %not in% names(mSet$analSet) | input$overview == "venn"){
+                   statsmanager$calculate <- input$overview
+                 }
+                 datamanager$reload <- input$overview
+               }
+             }, ml = {
+               if(!is.null(input$ml)){
+                 datamanager$reload <- "ml"
+               }
+             })
     }
   })
   
@@ -605,9 +632,9 @@ gspec = RdBu')
 
   onStop(function() {
     print("closing metaboShiny ~ヾ(＾∇＾)")
-    mSet <<- NULL
-    #debug_mSet <<- mSet
-    #debug_lcl <<- lcl
+    debug_input <<- isolate(reactiveValuesToList(input))
+    debug_lcl <<- lcl
+    debug_mSet <<- mSet
     # if(exists("mSet")){
     #   mSet$storage[[mSet$dataSet$cls.name]] <<- list()
     #   mSet$storage[[mSet$dataSet$cls.name]]$analysis <<- mSet$analSet
