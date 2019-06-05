@@ -62,10 +62,10 @@ observeEvent(input$timecourse_trigger, {
     mSet$dataSet$facB.lbl <<- "time"
 
     # change interface to timeseries mode (make 'interface' manager do it)
-    interface$mode <- "time"
+    interface$mode <<- "time"
 
     # change heatmap chooser to asca/meba because those are timeseries-specific
-    heatbutton$status <- "asmb"
+    heatbutton$status <<- "asmb"
 
     # REMOVE PREVIOUS ANALYSIS TO TRIGGER RELOAD (or the PCA won't reload)
     mSet$analSet$pca <<- NULL

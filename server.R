@@ -619,8 +619,10 @@ gspec = RdBu')
   # check if a dataset is already loaded in
   # change mode according to how many levels the experimental variable has
   # change interface based on that
+
   observe({
     if(!is.null(mSet)){
+      print(mSet$timeseries)
       if(is.null(mSet$timeseries)) mSet$timeseries <<- FALSE
       datamanager$reload <- "general"
     }else{

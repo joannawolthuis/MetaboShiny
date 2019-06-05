@@ -95,6 +95,8 @@ observe({
                  decreasing <- F
 
                }else{
+                 if(!is.null(input$heatmode)){
+                   
                  if(input$heatmode){
                    tbl <- as.data.frame(mSet$analSet$asca$sig.list$Model.ab)
                    used.values <- "Leverage"
@@ -103,7 +105,6 @@ observe({
                    used.values <- "Hotelling-T2"
                  }
                  decreasing = T
-               }
 
                if(!exists("tbl")) return(NULL)
 
@@ -170,7 +171,8 @@ observe({
                  translator = translator,
                  colors = color.mapper,
                  my_order = my_order)
-
+               }
+               }
              },
              tt = {
                withProgress({

@@ -146,8 +146,8 @@ observeEvent(input$create_csv, {
     # IF SO: rename to time series data format because that is the only one that should have duplicate sample names
     if(any(duplicated(tbl$sample))){
       tbl$sample <- paste0(tbl$sample, 
-                           "_", 
-                           as.numeric(as.factor(tbl[,input$meta_dupli_col])))
+                           "_T", 
+                           tbl$time)
       show.times = T # make sure the 'times' column shows in the csv making result table
     }else{
       show.times = F
