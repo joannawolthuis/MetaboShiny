@@ -1,6 +1,22 @@
 # set default timemode switcher button mode to hidden
 timebutton <- reactiveValues(status = "off")
 
+observe({
+  if(!is.null(mSet)){
+    print(mSet$timeseries)
+    if(is.null(mSet$timeseries)) mSet$timeseries <<- FALSE
+    datamanager$reload <- "general"
+  }else{
+    # hide time series button
+    timebutton$status <- "off"
+    heatbutton$status <- "asmb"
+  }
+})
+
+observe({
+  if(timebutton$status == "off") updateCheckboxInput(session, "timecourse_trigger", label = NULL, value = FALSE)
+})
+
 # render time series swap button
 output$timebutton <- renderUI({
   if (is.null(timebutton$status)) {
@@ -115,9 +131,11 @@ observeEvent(input$timecourse_trigger, {
 
   }
 
-  lcl$last_mset <<- mset_name
+  mSet$last_mset <<- mset_name
 
   statsmanager$calculate <- input$statistics
   datamanager$reload <- input$statistics
 
 }, ignoreInit = TRUE)
+
+

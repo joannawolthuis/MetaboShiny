@@ -36,7 +36,7 @@ observeEvent(input$change_subset, {
       mSet$dataSet$exp.fac <<- mSet$dataSet$exp.fac[keep.log.norm]
     }
   }
-  lcl$last_mset <<- mset_name
+  mSet$last_mset <<- mset_name
   mSet$analSet <<- NULL
 
   covars <- colnames(mSet$dataSet$covars)

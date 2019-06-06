@@ -97,8 +97,8 @@ observeEvent(plotly::event_data("plotly_click"),{
       }, bar = { # for bar plot just grab the # bar clicked
         print("barplot ml")
         lcl$curr_mz <<- as.character(lcl$tables$ml_bar[d$x,"mz"][[1]])
-      })}else if(grepl(pattern = "heatmap", x = curr_tab)){ # heatmap requires the table used to make it saved to global (hmap_mzs)
-        req(lcl$vectors$heatmap)
+      })}else if(req(curr_tab) == "heatmap"){#grepl(pattern = "heatmap", x = curr_tab)){ # heatmap requires the table used to make it saved to global (hmap_mzs)
+        print("heatmap clicked...")
         if(d$y > length(lcl$vectors$heatmap)) return(NULL)
         lcl$curr_mz <<- lcl$vectors$heatmap[d$y]
       }

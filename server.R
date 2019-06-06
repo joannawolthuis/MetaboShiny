@@ -588,6 +588,10 @@ gspec = RdBu')
       if(file.exists(fn)){
         load(fn)
         mSet <<- mSet
+        opts <- getOptions(lcl$paths$opt.loc)
+        lcl$proj_name <<- opts$proj_name
+        lcl$paths$patdb <<- file.path(opts$work_dir, paste0(opts$proj_name, ".db"))
+        lcl$paths$csv_loc <<- file.path(opts$work_dir, paste0(opts$proj_name, ".csv"))
       }
       datamanager$reload <- "general"
     })
@@ -620,17 +624,6 @@ gspec = RdBu')
   # change mode according to how many levels the experimental variable has
   # change interface based on that
 
-  observe({
-    if(!is.null(mSet)){
-      print(mSet$timeseries)
-      if(is.null(mSet$timeseries)) mSet$timeseries <<- FALSE
-      datamanager$reload <- "general"
-    }else{
-      # hide time series button
-      timebutton$status <- "off"
-      heatbutton$status <- "asmb"
-    }
-  })
 
   onStop(function() {
     print("closing metaboShiny ~ヾ(＾∇＾)")

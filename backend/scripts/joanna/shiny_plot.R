@@ -1029,6 +1029,8 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
               "1"#'o'
   )
 
+  print(mode)
+  
   switch(mode,
          pca={
            df <- mSet$analSet$pca$x

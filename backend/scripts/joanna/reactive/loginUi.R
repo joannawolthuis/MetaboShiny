@@ -626,7 +626,7 @@ output$currUI <- renderUI({
                                               # this is the sidebar that shows in the analysis tab. contains a lot of settings on the current variable of interest, plot themes and colours, and venn diagrams.
                                               sidebarPanel =
                                                 sidebarPanel(align="center",width = 4,
-                                                             tabsetPanel(id = "search", #type = "pills",
+                                                             tabsetPanel(id = "anal_sidebar", selected="switch/subset",#type = "pills",
                                                                          tabPanel(title="search", icon=icon("search"),
                                                                                   br(),
                                                                                   bsCollapse(bsCollapsePanel(title=h2("Settings"), style="info",

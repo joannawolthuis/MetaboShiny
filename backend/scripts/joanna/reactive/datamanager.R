@@ -35,6 +35,8 @@ observe({
                }else{
                  timebutton$status <- "off"
                }
+               
+               print(timebutton$status)
                # t-test...
 
                if(interface$mode == 'bivar'){
@@ -495,10 +497,9 @@ observe({
                                             #label_names = c("m/z", "sample", "intensity") #breaks side colours...
                        )
                      }
-
                    })
                    # save the order of mzs for later clicking functionality
-                   lcl$vectors$heatmap <<- hmap$x$layout$yaxis3$ticktext
+                   lcl$vectors$heatmap <<- hmap$x$layout[[if(mSet$timeseries) "yaxis2" else "yaxis3"]]$ticktext 
                    # return
                    hmap
                  }else{

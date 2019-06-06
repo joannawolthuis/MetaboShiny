@@ -71,6 +71,7 @@ observe({
                    }else{
 
                      if("fc" %in% names(mSet$analSet)){
+                       
                        if(input$heatsign){
                          tbl <- req(as.data.frame(mSet$analSet$fc$sig.mat))
                          tbl$abs_log2 <- abs(tbl$`log2(FC)`)
@@ -107,9 +108,6 @@ observe({
                  decreasing = T
 
                if(!exists("tbl")) return(NULL)
-
-               print(tbl)
-
                if(is.null(tbl)) return(NULL)
                if(nrow(tbl) == 0 ) return(NULL)
 
