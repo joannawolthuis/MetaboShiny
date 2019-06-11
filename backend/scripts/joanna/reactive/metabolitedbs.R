@@ -42,8 +42,6 @@ lapply(gbl$vectors$db_list, FUN=function(db){
         "multiform.joanna",
         "check.ded.joanna",
         "kegg.charge",
-        "xmlParse",
-        "getURL",
         "mape",
         "flattenlist"
       ))
@@ -56,18 +54,20 @@ lapply(gbl$vectors$db_list, FUN=function(db){
       shiny::setProgress(session = session, 0.1)
 
       # build base db (differs per db, parsers for downloaded data)
-      build.base.db(db,
-                    outfolder = getOptions(lcl$paths$opt.loc)$db_dir,
-                    optfile = lcl$paths$opt.loc,
-                    cl = session_cl)
+      # build.base.db(db,
+      #               outfolder = lcl$paths$db_dir,
+      #               optfile = lcl$paths$opt.loc,
+      #               cl = session_cl)
+      
       shiny::setProgress(session = session, 0.5)
 
-      if(!grepl(db, pattern = "maconda|noise")){
+      if(!grepl(db, pattern = "maconda")){
+        print(db)
         # extend base db (identical per db, makes adduct and isotope variants of downloaded compounds)
         build.extended.db(db,
-                          outfolder = getOptions(lcl$paths$opt.loc)$db_dir,
+                          outfolder = lcl$paths$db_dir,
                           adduct.table = adducts,
-                          cl = F,#session_cl,
+                          cl = 0,#session_cl,
                           fetch.limit = 500) #TODO: figure out the optimal fetch limit...
       }
     })

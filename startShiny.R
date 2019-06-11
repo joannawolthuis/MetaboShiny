@@ -7,21 +7,23 @@ MetaboShiny to even start.
 
 #' Function to install packages, either through regular method or through downloading from git directly
 #' @param package package name to install, either CRAN or bioconductor
-install.if.not <- function(package){
-  if(package %in% rownames(installed.packages())){
-    NULL
-    #print(paste("Already installed base package", package))
-  }else{
-    if(package %in% c("MetaboAnalystR", "BatchCorrMetabolomics")){
-      # Step 1: Install devtools
-      install.if.not("devtools")
-      # Step 2: Install MetaboAnalystR with documentation
-      gitfolder <- switch(package, MetaboAnalystR = "xia-lab/MetaboAnalystR",
-                          BatchCorrMetabolomics = "rwehrens/BatchCorrMetabolomics",
-                          showtext = "yixuan/showtext")
-      devtools::install_github(gitfolder)#, build_vignettes=TRUE)
+install.if.not <- function(packages){
+  for(package in packages){
+    if(package %in% rownames(installed.packages())){
+      NULL
+      #print(paste("Already installed base package", package))
     }else{
-      install.packages(package)
+      if(package %in% c("MetaboAnalystR", "BatchCorrMetabolomics")){
+        # Step 1: Install devtools
+        install.if.not("devtools")
+        # Step 2: Install MetaboAnalystR with documentation
+        gitfolder <- switch(package, MetaboAnalystR = "xia-lab/MetaboAnalystR",
+                            BatchCorrMetabolomics = "rwehrens/BatchCorrMetabolomics",
+                            showtext = "yixuan/showtext")
+        devtools::install_github(gitfolder)#, build_vignettes=TRUE)
+      }else{
+        BiocManager::install(package)
+      }
     }
   }
 }
@@ -44,7 +46,7 @@ needed.packages <- c("BiocManager", "shiny", "shinydashboard", "httr", "curl", "
                      "KEGGREST", "manhattanly", "rgl", "glmnet", "TSPred", "VennDiagram",
                      "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR", "openxlsx",
                      "doParallel", "missForest", "InterpretMSSpectrum", "tm", "RISmed",
-                     "qdap", "extrafont", "gmp", "shadowtext", "fgsea")
+                     "qdap", "extrafont", "gmp", "shadowtext", "fgsea", "Rmisc")
 
 missing.packages <- setdiff(needed.packages,rownames(installed.packages()))
 
@@ -53,7 +55,7 @@ if("BiocManager" %in% missing.packages){
 }
 
 if(length(missing.packages)>0){
-  BiocManager::install(missing.packages)
+  install.if.not(missing.packages)
 }
 
 # make metaboshiny_storage dir in home first..
@@ -95,5 +97,3 @@ switch(runmode,
                        host = "0.0.0.0",
                        launch.browser = FALSE)
        })
-
-

@@ -6,3 +6,4 @@
 /backend/db/*
 *.csv
 *.txt
+*.xml

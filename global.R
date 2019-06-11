@@ -1,6 +1,6 @@
 # === GENERAL OPTIONS ===
 
-options(stringsAsFactors = FALSE)
+options(stringsAsFactors = FALSE,"java.parameters" = c("-Xmx8g")) # give java enough memory for smiles parsing
 if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
 ### Anything loaded in this GLOBAL file will be avaliable for metaboShiny in general. ###
@@ -80,7 +80,8 @@ setOption <- function(file.loc, key, value){
 
 # load adduct table (if you add/remove any adducts, change them in the below file!)
 #adducts <- fread("backend/umcfiles/adducts/AdductTable2.0.csv", header = T)
-adducts <- fread("backend/umcfiles/adducts/AdductTable2.0.csv", header = T) # V2 has di/trimers
+adducts <- fread("backend/umcfiles/adducts/adduct_rule_table.csv", header = T) # V2 has di/trimers
+adduct_rules <- fread("backend/umcfiles/adducts/adduct_rule_smarts.csv", header = T) # V2 has di/trimers
 
 # set the home path
 home = normalizePath("~")
@@ -147,6 +148,7 @@ caret.mdls <- caret::getModelInfo()
                                                 list(name = 'plus', path = 'www/add.png', dimensions = c(150, 150)),
                                                 list(name= 'maconda_logo', path = 'www/maconda.png', dimensions = c(250,100)),
                                                 list(name= 'expoexplorer_logo', path = 'www/exposome_explorer.png', dimensions = c(250,100)),
+                                                list(name= 't3db_logo', path = 'www/t3db_logo.png', dimensions = c(200,80)),
                                                 list(name = 'sidebar_icon', path = 'www/detective.png', dimensions = c(60, 60))
 
                                   ), # all image paths, if you add an image you can add it here
@@ -208,6 +210,9 @@ caret.mdls <- caret::getModelInfo()
                                     expoexplorer = list(title = "Exposome-Explorer",
                                                         description = "Exposome-Explorer is the first database dedicated to biomarkers of exposure to environmental risk factors for diseases.",
                                                         image_id = "expoexplorer_logo"),
+                                    t3db = list(title = "T3DB",
+                                                description = "The Toxin and Toxin Target Database (T3DB), or, soon to be referred as, the Toxic Exposome Database, is a unique bioinformatics resource that combines detailed toxin data with comprehensive toxin target information.",
+                                                image_id = "t3db_logo"),
                                     # - - leave magicball last - -
                                     magicball = list(title = "MagicBall",
                                                      description = "Algorithm to predict molecular formula from m/z value",
@@ -304,6 +309,7 @@ caret.mdls <- caret::getModelInfo()
                      "bloodexposome",
                      "expoexplorer",
                      "lipidmaps",
+                     't3db',
                      "magicball",
                      "custom"
                    ),
