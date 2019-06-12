@@ -54,10 +54,10 @@ lapply(gbl$vectors$db_list, FUN=function(db){
       shiny::setProgress(session = session, 0.1)
 
       # build base db (differs per db, parsers for downloaded data)
-      # build.base.db(db,
-      #               outfolder = lcl$paths$db_dir,
-      #               optfile = lcl$paths$opt.loc,
-      #               cl = session_cl)
+      build.base.db(db,
+                    outfolder = lcl$paths$db_dir,
+                    optfile = lcl$paths$opt.loc,
+                    cl = session_cl)
       
       shiny::setProgress(session = session, 0.5)
 

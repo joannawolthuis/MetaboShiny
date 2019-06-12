@@ -1247,7 +1247,6 @@ build.base.db <- function(dbname=NA,
   db.formatted.bu <<- db.formatted
   checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
                                                              unique(db.formatted$baseformula)))
-  
   if(dbname != "maconda"){
     conv.table <- data.table(old = unique(db.formatted$baseformula), 
                              new = checked$new_formula,
@@ -1256,6 +1255,21 @@ build.base.db <- function(dbname=NA,
     db.formatted <- as.data.table(merge(db.formatted, conv.table, by.x = "baseformula", by.y = "old"))
     db.formatted$baseformula <- db.formatted$new
   }
+  
+  # load in all available SMILES
+  iatoms <- sapply(db.formatted$structure, function(x){
+    rcdk::parse.smiles(x,kekulise = T)
+  })
+  rJava::.jcall("java/lang/System","V","gc")
+  gc()
+  new.smiles <- sapply(1:length(iatoms), function(i){
+    mol = iatoms[[i]]
+    smi <- if(is.null(mol)) smi = "" else rcdk::get.smiles(mol)
+  })
+  db.formatted$structure <- as.character(new.smiles)
+  
+  rJava::.jcall("java/lang/System","V","gc")
+  gc()
   
   ok.form <- !db.formatted$warning
   ok.smi <- db.formatted$structure != ""
@@ -1266,35 +1280,24 @@ build.base.db <- function(dbname=NA,
   # which have structure but dont have formula?
   no.form.yes.struct <- !ok.form & ok.smi
   
-  # load in all available SMILES
-  iatoms <- sapply(db.formatted$structure[ok.smi], function(x){
-    rcdk::parse.smiles(x,kekulise = T)
-  })
-  rJava::.jcall("java/lang/System","V","gc")
-  gc()
-  new.smiles <- sapply(1:length(iatoms), function(i){
-    mol = iatoms[[i]]
-    smi = rcdk::get.smiles(mol)
-    smi
-  })
-  rJava::.jcall("java/lang/System","V","gc")
-  gc()
-  db.formatted$structure[ok.smi] <- as.character(new.smiles)
-  
   # - - generate formula from structure - - 
-  iatoms <- sapply(db.formatted$structure[no.form.yes.struct], function(x){
-    rcdk::parse.smiles(x,kekulise = T)
-  })
-  rJava::.jcall("java/lang/System","V","gc")
-  gc()
-  generated.formulae <- sapply(1:length(iatoms), function(i){
-    mol = iatoms[[i]]
-    smi = rcdk::get.mol2formula(mol)
-    smi
-  })
-  rJava::.jcall("java/lang/System","V","gc")
-  gc()
-  db.formatted$baseformula[no.form.yes.struct] <- as.character(generated.formulae)
+  if(any(no.form.yes.struct)){
+    iatoms <- sapply(db.formatted$structure[no.form.yes.struct], function(x){
+      rcdk::parse.smiles(x,kekulise = T)
+    })
+    rJava::.jcall("java/lang/System","V","gc")
+    gc()
+    generated.formulae <- sapply(1:length(iatoms), function(i){
+      mol = iatoms[[i]]
+      smi = rcdk::get.mol2formula(mol)
+      smi
+    })
+    rJava::.jcall("java/lang/System","V","gc")
+    gc()  
+    db.formatted$baseformula[no.form.yes.struct] <- as.character(generated.formulae)
+  }
+
+  db.formatted$charge <- sapply(db.formatted$charge, function(ch) if(is.na(ch)) 0 else ch)
   
   # generate fake SMILES from ones that don't have structure but do have formula and charge
   fake.smiles <- paste0("FORMONLY[", db.formatted$baseformula[yes.form.no.struct], "]",db.formatted$charge[yes.form.no.struct])
@@ -1355,10 +1358,10 @@ build.extended.db <- function(dbname,
   # create ids for the new structures...
   if(first.db){
     RSQLite::dbExecute(full.conn, gsubfn::fn$paste("PRAGMA auto_vacuum = 1"))
-    RSQLite::dbExecute(full.conn, "CREATE TABLE IF NOT EXISTS structures(id INT PRIMARY KEY, smiles TEXT)")
+    RSQLite::dbExecute(full.conn, "CREATE TABLE IF NOT EXISTS structures(id INT PRIMARY KEY, smiles TEXT, source TEXT)")
     new.structures = RSQLite::dbGetQuery(full.conn, "SELECT structure FROM tmp.base")
   }else{
-    new.structures = RSQLite::dbGetQuery(full.conn, "SELECT structure FROM tmp.base WHERE structure NOT IN(SELECT structure FROM structures)")
+    new.structures = RSQLite::dbGetQuery(full.conn, "SELECT structure FROM tmp.base WHERE structure NOT IN(SELECT smiles FROM structures)")
   }
   
   if(nrow(new.structures) == 0){
@@ -1369,9 +1372,8 @@ build.extended.db <- function(dbname,
   start.id = done.structures + 1
   
   mapper <- data.table::data.table(id = seq(start.id, start.id + nrow(new.structures) - 1, 1),
-                                       smiles = new.structures$structure)
-  
-  RSQLite::dbAppendTable(full.conn, "structures", mapper)
+                                   smiles = new.structures$structure,
+                                   source = c(dbname))
   
   # --- start pb ---
   
@@ -1578,15 +1580,15 @@ build.extended.db <- function(dbname,
         DBI::dbClearResult(res)
         
         repeat {
-          rv <- try(
-            DBI::dbWriteTable(core.conn, "extended", meta.table, append = T )
-          )
+          rv <- try({
+            DBI::dbAppendTable(core.conn, "extended", meta.table)
+          })
           if(!is(rv, "try-error")) break
         }
         DBI::dbDisconnect(core.conn)
       })
     }
-    
+  
     if(length(cl)==1){
       if(cl == FALSE){
         cl = NULL
@@ -1597,17 +1599,18 @@ build.extended.db <- function(dbname,
       sapply(1:nrow(adduct.table), FUN=function(x) do.calc(x, mapper))
     }else{
       parallel::clusterExport(cl, "full.db")
-      parallel::parSapply(cl=cl, 1:nrow(adduct.table), FUN=do.calc)
+      parallel::parSapply(cl=cl, 1:nrow(adduct.table), FUN=function(x) do.calc(x, mapper))
     }
+    
+    DBI::dbAppendTable(full.conn, "structures", partial.results)
+    
   }, full.db = full.db)
   
   # --- indexy ---
-
   #RSQLite::dbExecute(full.conn, "CREATE INDEX IF NOT EXISTS e_idx1 on extended(structure)") # slightly smaller index...
   RSQLite::dbExecute(full.conn, "CREATE INDEX IF NOT EXISTS e_idx2 on extended(fullmz, foundinmode)")
   #RSQLite::dbExecute(full.conn, "create index if not exists e_idx3 on extended(baseformula, adduct)") # new one for isotope backtracking??
-  
-  
+
   # --- cleanup ---
   #RSQLite::dbExecute(full.conn, "VACUUM")
   RSQLite::dbDisconnect(full.conn)
