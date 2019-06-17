@@ -67,8 +67,8 @@ lapply(gbl$vectors$db_list, FUN=function(db){
         build.extended.db(db,
                           outfolder = lcl$paths$db_dir,
                           adduct.table = adducts,
-                          cl = 0,#session_cl,
-                          fetch.limit = 500) #TODO: figure out the optimal fetch limit...
+                          cl = session_cl,
+                          fetch.limit = 200) #TODO: figure out the optimal fetch limit...
       }
     })
   })

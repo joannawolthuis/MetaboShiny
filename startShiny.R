@@ -28,7 +28,8 @@ install.if.not <- function(packages){
   }
 }
 
-devtools::install_github("xia-lab/MetaboAnalystR", ref = "21b6845a21e8a7a87dfdb7d3363ee39ce1397a88")#, build_vignettes=TRUE)
+devtools::install_github("xia-lab/MetaboAnalystR", 
+                         ref = "21b6845a21e8a7a87dfdb7d3363ee39ce1397a88")#, build_vignettes=TRUE)
 
 print("...")
 # Install R packages that are required

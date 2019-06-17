@@ -134,7 +134,7 @@ caret.mdls <- caret::getModelInfo()
                                                 list(name = 'massbank_logo', path = 'www/massbank_logo.jpg', dimensions = c(250, 100)),
                                                 list(name = 'metabolights_logo', path = 'www/metabolights_logo.png', dimensions = c(200, 200)),
                                                 list(name = 'vmh_logo', path = 'www/vmh.png', dimensions = c(250, 200)),
-                                                list(name = 'foodb_logo', path = 'www/foodb_logo.png', dimensions = c(200, 200)),
+                                                list(name = 'foodb_logo', path = 'www/foodb_logo.png', dimensions = c(250, 90)),
                                                 list(name = 'pos_icon', path = 'www/handpos.png', dimensions = c(120, 120)),
                                                 list(name = 'neg_icon', path = 'www/handneg.png', dimensions = c(120, 120)),
                                                 list(name = 'excel_icon', path = 'www/excel.png', dimensions = c(120, 120)),

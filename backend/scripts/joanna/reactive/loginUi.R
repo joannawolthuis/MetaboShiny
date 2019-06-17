@@ -180,11 +180,9 @@ output$currUI <- renderUI({
     
     tagList(
       tags$title('MetaboShiny'),
-      tags$style(type="text/css",
-                 bar.css),
-            navbarPage(inverse=TRUE,
-                       title=div(div(h1("MetaboShiny"), class="outlined", tags$style(type="text/css", font.css)),
-                                 class="sparkley"), # make it use the sparkle.js for unnecessary sparkle effects ;)
+      tags$style(type="text/css", bar.css),
+            navbarPage(inverse=TRUE,#tags$head(tags$script(src="sparkle.js")),
+                       title=div(h1("MetaboShiny"), class="outlined", tags$style(type="text/css", font.css)), # make it use the sparkle.js for unnecessary sparkle effects ;)
                        id="nav_general",
                        # this tab shows the available databases, if they are installed, and buttons to install them. generated as output$db_build_ui in 'server'
                        tabPanel("database", icon = icon("database",class = "outlined"), value="database",

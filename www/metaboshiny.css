@@ -319,7 +319,6 @@
 
 $buttonBackground: #2c3e50;
 $buttonColor: rgba(255,255,255,1);
-
 .sparkley {
   background: lighten( $buttonBackground , 10% );
   color: $buttonColor;
