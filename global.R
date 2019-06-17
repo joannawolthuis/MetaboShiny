@@ -80,8 +80,8 @@ setOption <- function(file.loc, key, value){
 
 # load adduct table (if you add/remove any adducts, change them in the below file!)
 #adducts <- fread("backend/umcfiles/adducts/AdductTable2.0.csv", header = T)
-adducts <- fread("backend/umcfiles/adducts/adduct_rule_table.csv", header = T) # V2 has di/trimers
-adduct_rules <- fread("backend/umcfiles/adducts/adduct_rule_smarts.csv", header = T) # V2 has di/trimers
+adducts <- fread("backend/adducts/adduct_rule_table.csv", header = T) # V2 has di/trimers
+adduct_rules <- fread("backend/adducts/adduct_rule_smarts.csv", header = T) # V2 has di/trimers
 
 # set the home path
 home = normalizePath("~")
