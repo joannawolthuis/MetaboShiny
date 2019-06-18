@@ -349,41 +349,28 @@ sdfStream.joanna <- function (input, output, append = FALSE, fct, Nlines = 10000
       indexDF <- data.frame(SDFlineStart = c(offset +
                                                1, index[-length(index)] + 1), SDFlineEnd = index)
       offset <- indexDF[length(indexDF[, 2]), 2]
-      sdfset <- read.SDFset(read.SDFstr(complete))
-      #valid <- validSDF(sdfset)
-      #sdfset <- sdfset[valid]
-      #indexDForig <- indexDF
-      #indexDF <- indexDF[valid, ]
-      if (length(indexDF[, 1]) == 1) {
-        suppressWarnings(sdfset <- c(sdfset, sdfset))
-        resultMA <- fct(sdfset, ...)
-        # resultMA <- cbind(as.data.frame(indexDF), as.data.frame(resultMA[1,
-        #                                                                  , drop = FALSE]), row.names = row.names(resultMA)[1])
-      }
-      else {
-        resultMA <- fct(sdfset, ...)
-        # resultMA <- cbind(as.data.frame(indexDF), as.data.frame(resultMA),
-        #                   row.names = row.names(resultMA))
-      }
-      #resultMA <- resultMA[names(valid), ]
-      #if (any(is.na(resultMA))) {
-      #  resultMA[, 1:2] <- indexDForig[, 1:2]
-      #}
-      #rownames(resultMA) <- paste("CMP", cmpid:(cmpid +
-      #                                            length(resultMA[, 1]) - 1), sep = "")
-      #cmpid <- cmpid + length(resultMA[, 1])
-      if (silent == FALSE) {
-        print(rownames(resultMA))
-      }
-      if (counter == 1 & append != TRUE) {
-        unlink(output)
-        write.table(resultMA, output, quote = FALSE,
-                    col.names = NA, sep = "\t")
-      }
-      else {
-        write.table(resultMA, output, quote = FALSE,
-                    append = TRUE, col.names = FALSE, sep = "\t")
-      }
+      try({
+        sdfset <- read.SDFset(read.SDFstr(complete))
+        if (length(indexDF[, 1]) == 1) {
+          suppressWarnings(sdfset <- c(sdfset, sdfset))
+          resultMA <- fct(sdfset, ...)
+          }
+        else {
+          resultMA <- fct(sdfset, ...)
+        }
+        if (silent == FALSE) {
+          print(rownames(resultMA))
+        }
+        if (counter == 1 & append != TRUE) {
+          unlink(output)
+          write.table(resultMA, output, quote = FALSE,
+                      col.names = NA, sep = "\t")
+        }
+        else {
+          write.table(resultMA, output, quote = FALSE,
+                      append = TRUE, col.names = FALSE, sep = "\t")
+        }
+      })
     }
     if (length(chunk) == 0) {
       stop <- TRUE

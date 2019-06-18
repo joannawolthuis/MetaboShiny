@@ -50,30 +50,30 @@ observeEvent(input$venn_build, {
 
   # get user input for how many top values to use for venn
   top = input$venn_tophits
-
-  if(length(venn_yes$now) > 5 | length(venn_yes) == 0){
-    print("can only take more than zero and less than five")
-    NULL
-  }else{
-
-    p <- ggPlotVenn(mSet = mSet,
-                    venn_yes = isolate({as.list(venn_yes)}),
-                    top = input$venn_tophits,
-                    cols = lcl$aes$mycols,
-                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                    font = lcl$aes$font,
-                    plotlyfy = F)
-
-    lcl$vectors$venn_lists <<- p$info
-
-    # render plot in UI
-    output$venn_plot <- renderPlot({
-      p$plot
-    })
-    # update the selectize input that the user can use to find which hits are intersecting
-    # TODO: ideally, this happens on click but its hard...
-    updateSelectizeInput(session, "intersect_venn", choices = names(lcl$vectors$venn_lists))
-  }
+  
+  if(nrow(venn_yes$now) > 5 | nrow(venn_yes$now) == 0){
+      print("can only take more than zero and less than five analyses!")
+      NULL
+    }else{
+      
+      p <- ggPlotVenn(mSet = mSet,
+                      venn_yes = isolate({as.list(venn_yes)}),
+                      top = input$venn_tophits,
+                      cols = lcl$aes$mycols,
+                      cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                      font = lcl$aes$font,
+                      plotlyfy = F)
+      
+      lcl$vectors$venn_lists <<- p$info
+      
+      # render plot in UI
+      output$venn_plot <- renderPlot({
+        p$plot
+      })
+      # update the selectize input that the user can use to find which hits are intersecting
+      # TODO: ideally, this happens on click but its hard...
+      updateSelectizeInput(session, "intersect_venn", choices = names(lcl$vectors$venn_lists))
+    }
 })
 
 # triggers when users pick which intersecting hits they want

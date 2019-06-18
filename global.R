@@ -537,6 +537,11 @@ source("./Rsource/SwitchButton.R")
 #' @return 'sardined' content that will sit close to its neighbors.
 sardine <- function(content) div(style="display: inline-block;vertical-align:top;", content)
 
+online = internetWorks()
+if(online){
+  devtools::install_github("xia-lab/MetaboAnalystR", 
+                           ref = "21b6845a21e8a7a87dfdb7d3363ee39ce1397a88")#, build_vignettes=TRUE)
+}
 # interleave for sorting later ...
 add_idx <- order(c(seq_along(gbl$vectors$pos_adducts$Name), seq_along(gbl$vectors$neg_adducts$Name)))
 sort_order <<- unlist(c(gbl$vectors$pos_adducts$Name, gbl$vectors$neg_adducts$Name))[add_idx]

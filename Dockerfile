@@ -1,6 +1,11 @@
 # Install R version 3.5
 FROM r-base:3.5.2
 
+RUN pwd
+
+# Copy files into the Docker image
+#COPY  . /
+
 # Install Ubuntu packages
 RUN apt-get update && apt-get install -y \
     sudo \
@@ -30,9 +35,6 @@ RUN apt-get update && apt-get install -y \
 
 RUN sudo R CMD javareconf
 
-# Copy files into the Docker image
-COPY / /
-
 RUN R -e "install.packages('BiocManager')"
 
 RUN R -e "BiocManager::install(c('rJava', 'shiny', 'shinydashboard', 'httr', 'curl', 'git2r', 'devtools', 'pacman', 'gsubfn', 'DT', 'R.utils'))"
@@ -49,4 +51,4 @@ RUN R -e "BiocManager::install(c('tm', 'RISmed', 'qdap', 'extrafont', 'gmp', 'sh
 # Make the ShinyApp available at port 8080
 EXPOSE 8080
 
-CMD /start.sh
+#CMD ./start.sh

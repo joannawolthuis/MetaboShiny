@@ -4,12 +4,13 @@ build.base.db <- function(dbname=NA,
                           optfile,
                           cl=FALSE){
   
+  optfolder <- 
   # --- check if user chose something ---
   if(is.na(dbname)) return("~ Please choose one of the following options: HMDB, ChEBI, PubChem, MetaCyc, internal, noise, KEGG! d(>..w.<)b ~")
   # --- make dir if not exists ---
   if(!dir.exists(outfolder)) dir.create(outfolder)
   # --- create .db file ---
-  db <- file.path(outfolder, paste0(dbname, ".base.db"))
+  db <- file.path(normalizePath(outfolder), paste0(dbname, ".base.db"))
   if(file.exists(db)) file.remove(db)
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), db)
   RSQLite::dbExecute(conn, statement = "create table base(compoundname text, description text, baseformula text, identifier text, charge text, structure text)")
@@ -652,35 +653,37 @@ build.base.db <- function(dbname=NA,
                            
                            sdf.path <- list.files(base.loc,
                                                   pattern = "sdf",
-                                                  full.names = T)
+                                                  full.names = T,
+                                                  recursive = T)
                            
                            desc <- function(sdfset){
-                             
-                             datablock = data.table::as.data.table(datablock2ma(datablocklist=datablock(sdfset)))
-                             
-                             last_cn <<- colnames(datablock)
-                             
-                             if(!("FORMULA" %in% last_cn)){
-                               mat = as.matrix(data.table::data.table(
-                                 identifier=datablock$PUBCHEM_COMPOUND_CID,
-                                 compoundname = datablock$PUBCHEM_IUPAC_NAME,
-                                 baseformula = datablock$PUBCHEM_MOLECULAR_FORMULA,
-                                 structure = datablock$PUBCHEM_OPENEYE_CAN_SMILES,
-                                 description = paste0("Alternative names: ",
-                                                      apply( datablock[ , grep(colnames(datablock), pattern="NAME"),with=F ] , 1 , paste , collapse = "-" ))
-                               ))
-                             }else{
-                               mat = as.matrix(data.table::data.table(
-                                 identifier = as.character(datablock$LM_ID),
-                                 compoundname = as.character(if("NAME" %in% colnames(datablock)) datablock$NAME else datablock$SYSTEMATIC_NAME),
-                                 baseformula = as.character(datablock$FORMULA),
-                                 structure = as.character(if("SMILES" %in% last_cn) datablock$SMILES else datablock$INCHI),
-                                 description = as.character(paste0("Main class: ", datablock$MAIN_CLASS,
-                                                                   ". Subclass: ", datablock$SUB_CLASS))
-                               ))
-                             }
-                             
-                             return(mat)
+                             mat <- NULL
+                             try({
+                               datablock = data.table::as.data.table(datablock2ma(datablocklist=datablock(sdfset)))
+                               
+                               last_cn <<- colnames(datablock)
+                               
+                               if(!("FORMULA" %in% last_cn)){
+                                 mat = as.matrix(data.table::data.table(
+                                   identifier=datablock$PUBCHEM_COMPOUND_CID,
+                                   compoundname = datablock$PUBCHEM_IUPAC_NAME,
+                                   baseformula = datablock$PUBCHEM_MOLECULAR_FORMULA,
+                                   structure = datablock$PUBCHEM_OPENEYE_CAN_SMILES,
+                                   description = paste0("Alternative names: ",
+                                                        apply( datablock[ , grep(colnames(datablock), pattern="NAME"),with=F ] , 1 , paste , collapse = "-" ))
+                                 ))
+                               }else{
+                                 mat = as.matrix(data.table::data.table(
+                                   identifier = as.character(datablock$LM_ID),
+                                   compoundname = as.character(if("NAME" %in% colnames(datablock)) datablock$NAME else datablock$SYSTEMATIC_NAME),
+                                   baseformula = as.character(datablock$FORMULA),
+                                   structure = as.character(if("SMILES" %in% last_cn) datablock$SMILES else datablock$INCHI),
+                                   description = as.character(paste0("Main class: ", datablock$MAIN_CLASS,
+                                                                     ". Subclass: ", datablock$SUB_CLASS))
+                                 ))
+                               }
+                             })
+                            return(mat)
                            }
                            
                            sdfStream.joanna(input=sdf.path, output=file.path(base.loc, "lipidmaps_parsed.csv"), append=FALSE, fct=desc, silent = T)
@@ -1294,10 +1297,12 @@ build.base.db <- function(dbname=NA,
   
   if(dbname != "maconda"){
     db.formatted.bu <<- db.formatted
+    uniques =  unique(db.formatted$baseformula)
+    uniq.nona <- uniques[!is.na(uniques)]
     checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
-                                                               unique(db.formatted$baseformula)))
+                                                               uniq.nona))
     
-    conv.table <- data.table(old = unique(db.formatted$baseformula), 
+    conv.table <- data.table(old = uniq.nona, 
                              new = checked$new_formula,
                              warning = checked$warning)
     order = match(db.formatted$baseformula, conv.table$old)
@@ -1438,7 +1443,7 @@ build.extended.db <- function(dbname,
                            FOREIGN KEY(struct_id) REFERENCES structures(id))", width=10000, simplify=TRUE)
   
   RSQLite::dbExecute(full.conn, sql.make.meta)
-  
+   
   #print("a")
   
   # create ids for the new structures...
