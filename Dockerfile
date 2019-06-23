@@ -3,9 +3,6 @@ FROM r-base:3.5.2
 
 RUN pwd
 
-# Copy files into the Docker image
-#COPY  . /
-
 # Install Ubuntu packages
 RUN apt-get update && apt-get install -y \
     sudo \
@@ -34,6 +31,9 @@ RUN apt-get update && apt-get install -y \
     libsqlite3-dev
 
 RUN sudo R CMD javareconf
+
+# Copy files into the Docker image
+COPY  . /
 
 RUN R -e "install.packages('BiocManager')"
 

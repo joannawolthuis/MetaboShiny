@@ -27,7 +27,7 @@ shinyServer(function(input, output, session) {
     )
 
   ####### !!!!!!!!!!! #########
-  metshi_mode <<- "one_user" # multi_user for server mode
+  metshi_mode <<- "one_user" #" multi_user" # for server mode
   
   observe({
     if(exists("lcl")){
@@ -62,10 +62,12 @@ size4 = 11
 taskbar_image = gemmy_rainbow.png
 gtheme = classic
 gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
-gspec = RdBu')
+gspec = RdBu
+mode = complete')
           writeLines(contents, lcl$paths$opt.loc)
         }
-        logged$status <- "logged"
+        opts = getOptions(lcl$paths$opt.loc)
+        logged$status <<- switch(opts$mode, dbonly = "db_only", complete= "logged")
         print(logged$status)
       }
     }
@@ -516,8 +518,7 @@ gspec = RdBu')
                    helpText("")
                  }
           )
-        })),
-        br(),br()
+        }))
       )
     })
     # return

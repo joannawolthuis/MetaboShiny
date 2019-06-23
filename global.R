@@ -1,6 +1,6 @@
 # === GENERAL OPTIONS ===
 
-options(stringsAsFactors = FALSE,"java.parameters" = c("-Xmx8g")) # give java enough memory for smiles parsing
+options(stringsAsFactors = FALSE,"java.parameters" = c("-Xmx16g")) # give java enough memory for smiles parsing
 if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
 ### Anything loaded in this GLOBAL file will be avaliable for metaboShiny in general. ###
@@ -45,6 +45,7 @@ getOptions <- function(file.loc){
   # --- list-ify ---
   options <- list()
   for(line in options_raw){
+    print(line)
     split  <- (strsplit(line, ' = '))[[1]]
     options[[split[[1]]]] = split[[2]]
   }

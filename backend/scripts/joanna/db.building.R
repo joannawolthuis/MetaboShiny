@@ -5,8 +5,8 @@ build.base.db <- function(dbname=NA,
                           cl=FALSE){
   
   optfolder <- 
-  # --- check if user chose something ---
-  if(is.na(dbname)) return("~ Please choose one of the following options: HMDB, ChEBI, PubChem, MetaCyc, internal, noise, KEGG! d(>..w.<)b ~")
+    # --- check if user chose something ---
+    if(is.na(dbname)) return("~ Please choose one of the following options: HMDB, ChEBI, PubChem, MetaCyc, internal, noise, KEGG! d(>..w.<)b ~")
   # --- make dir if not exists ---
   if(!dir.exists(outfolder)) dir.create(outfolder)
   # --- create .db file ---
@@ -683,7 +683,7 @@ build.base.db <- function(dbname=NA,
                                  ))
                                }
                              })
-                            return(mat)
+                             return(mat)
                            }
                            
                            sdfStream.joanna(input=sdf.path, output=file.path(base.loc, "lipidmaps_parsed.csv"), append=FALSE, fct=desc, silent = T)
@@ -714,21 +714,28 @@ build.base.db <- function(dbname=NA,
                            
                            metabs <- all_ids$identifier
                            
-                           metabs <- pbapply::pblapply(metabs, cl = F, FUN=function(id){
+                           require(RCurl)
+                           
+                           uris <- pbapply::pblapply(metabs, cl = F, FUN=function(id){
                              met_info = NA
-                             
-                             try({
-                               url <- paste0("https://www.ebi.ac.uk/metabolights/webservice/beta/compound/", id)
-                               tries = 4
-                               while(!is.list(met_info) & tries > 0){
-                                 #if(tries < 4) #print(paste0("retrying ",id))
-                                 met_info <- jsonlite::fromJSON(txt = url)
-                                 tries = tries - 1
-                               }
-                             })
-                             Sys.sleep(time = .1)
-                             met_info
+                             url <- paste0("https://www.ebi.ac.uk/metabolights/webservice/beta/compound/", id)
                            })
+                           
+                           all_info <- jsonlite::read_json("~/Downloads/mapping.json")
+                           
+                           metab_rows <- pbapply::pblapply(all_info$compoundMapping, cl = F, FUN=function(cpd){
+                             met_info <- cpd[[1]]$mafEntry
+                             data.table(compoundname = met_info$metaboliteIdentification,
+                                        description = if(!is.null(met_info$description)) met_info$description else "unknown",
+                                        baseformula = met_info$chemicalFormula,
+                                        identifier = if(!is.null(met_info$identifier)) met_info$identifier else "unknown",
+                                        structure = met_info$smiles,
+                                        charge = met_info$charge)
+                             
+                           })
+                           
+                           metab_tbl <- rbindlist(metab_rows)
+                           
                            
                            db_rows <- pbapply::pblapply(metabs[!is.na(metabs)], cl = 0, FUN=function(met_info){
                              formula <- NA
@@ -1443,7 +1450,7 @@ build.extended.db <- function(dbname,
                            FOREIGN KEY(struct_id) REFERENCES structures(id))", width=10000, simplify=TRUE)
   
   RSQLite::dbExecute(full.conn, sql.make.meta)
-   
+  
   #print("a")
   
   # create ids for the new structures...
@@ -1458,6 +1465,7 @@ build.extended.db <- function(dbname,
   #print("b")
   
   if(nrow(new.structures) == 0){
+    print("all already done")
     return(NULL)
   }
   

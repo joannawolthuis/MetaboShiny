@@ -55,3 +55,16 @@ observeEvent(input$heatmap_topn, {
 observeEvent(input$wc_topn, {
   datamanager$reload <- "matchplots"
 },ignoreInit = TRUE, ignoreNULL = T)
+
+observeEvent(input$db_only, {
+  if(input$db_only){
+    print("a")
+    setOption(lcl$paths$opt.loc, "mode", "dbonly")
+    logged$status <- "dbonly"
+  }else{
+    print("b")
+    setOption(lcl$paths$opt.loc, "mode", "complete")
+    logged$status <- "logged"
+  }
+},ignoreInit = F, ignoreNULL = T)
+
