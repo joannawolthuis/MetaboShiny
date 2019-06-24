@@ -13,25 +13,6 @@ observe({
   })
 })
 
-observe({
-
-  if(lcl$paths$patdb != ""){
-    if(file.exists(lcl$paths$patdb)){
-      conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb)
-      scanmode <- DBI::dbGetQuery(conn, paste0("SELECT DISTINCT foundinmode FROM mzvals WHERE mzmed LIKE '", lcl$curr_mz, "%'"))[,1]
-      DBI::dbDisconnect(conn)
-      lcl$vectors$calc_adducts <<- adducts[scanmode %in% Ion_mode]$Name
-      output$magicball_add_tab <- DT::renderDataTable({
-        DT::datatable(data.table(Adduct = lcl$vectors$calc_adducts),
-                      selection = list(mode = 'multiple',
-                                       selected = lcl$vectors[[paste0(scanmode, "_selected_add")]], target="row"),
-                      options = list(pageLength = 5, dom = 'tp'),
-                      rownames = F)
-      })
-    }
-  }
-})
-
 # toggles when 'select all adducts' is pressed (filled circle)
 observeEvent(input$sel_all_adducts, {
   lcl$vectors$neg_selected_adducts <<- c(1:nrow(lcl$vectors$pos_adducts))

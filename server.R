@@ -381,6 +381,25 @@ gspec = RdBu')
     }
   })
   
+  
+  observeEvent(input$tab_iden_4, {
+    if(!is.null(mSet)){
+      switch(input$tab_iden_4,
+             pie_db = {
+               statsmanager$calculate <- "match_pie"
+               datamanager$reload <- "match_pie"
+             },
+             pie_add = {
+               statsmanager$calculate <- "match_pie"
+               datamanager$reload <- "match_pie"
+             },
+             word_cloud = {
+               statsmanager$calculate <- "match_wordcloud"
+               datamanager$reload <- "match_wordcloud"
+             }) 
+    }
+  })
+  
   observeEvent(input$dimred, {
     # check if an mset is present, otherwise abort
     if(!is.null(mSet)){

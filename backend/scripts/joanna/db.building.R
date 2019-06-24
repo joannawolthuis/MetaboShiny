@@ -1653,8 +1653,8 @@ build.extended.db <- function(dbname,
       # --- adduct before multiplication ---
       adduct_before <- row$AddAt
       deduct_before <- row$RemAt
-      adduct_before <- if(adduct_before == "" | is.na(adduct_before)) FALSE else adduct_before
-      deduct_before <- if(deduct_before == "" | is.na(deduct_before)) FALSE else deduct_before
+      adduct_before <- if(is.na(adduct_before)) FALSE else adduct_before
+      deduct_before <- if(is.na(deduct_before)) FALSE else deduct_before
       
       if(adduct_before != FALSE){
         formulae.add <- mergeform.joanna(formula1 = unique_formulas$baseformula,
@@ -1709,8 +1709,8 @@ build.extended.db <- function(dbname,
       adduct_after <- row$AddEx
       deduct_after <- row$RemEx
       
-      adduct_after <- if(adduct_after == "" | is.na(adduct_after)) FALSE else adduct_after
-      deduct_after <- if(deduct_after == "" | is.na(deduct_after)) FALSE else deduct_after
+      adduct_after <- if(is.na(adduct_after)) FALSE else adduct_after
+      deduct_after <- if(is.na(deduct_after)) FALSE else deduct_after
       
       #print("l2")
       

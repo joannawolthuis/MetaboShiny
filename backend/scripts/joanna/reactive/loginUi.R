@@ -656,8 +656,7 @@ output$currUI <- renderUI({
                                                                                                                                                                  col = "BW", type = "YN", value = F)
                                                                                                                             ),
                                                                                                                             fluidRow(align="center", helpText("Calculated adducts..")),
-                                                                                                                            
-                                                                                                                            fluidRow(div(DT::dataTableOutput('magicball_add_tab'),style='font-size:60%'),
+                                                                                                                            fluidRow(div(DT::dataTableOutput('magicball_add_tab'),style='font-size:100%'),
                                                                                                                                      align="center")
                                                                                                                    ),
                                                                                                                    tabPanel(title=icon("star-half-alt"),

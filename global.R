@@ -82,6 +82,8 @@ setOption <- function(file.loc, key, value){
 adducts <- fread("backend/adducts/adduct_rule_table.csv", header = T) # V2 has di/trimers
 adduct_rules <- fread("backend/adducts/adduct_rule_smarts.csv", header = T) # V2 has di/trimers
 
+adducts[adducts==''|adducts==' ']<-NA
+
 # set the home path
 home = normalizePath("~")
 

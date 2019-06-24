@@ -1,6 +1,5 @@
 # check which adducts are currently selected by user
 observe({
-  # --------------
   wanted.adducts <- lcl$vectors$calc_adducts[input$magicball_add_tab_rows_selected]
   # ---------
   lcl$vectors$add_list <<- wanted.adducts
@@ -70,6 +69,25 @@ lapply(unique(res.update.tables), FUN=function(table){
 
       outplot_name <- paste0(table, "_specific_plot")
 
+      # - magicball plots - 
+      
+      if(lcl$paths$patdb != ""){
+        if(file.exists(lcl$paths$patdb)){
+          conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb)
+          scanmode <- DBI::dbGetQuery(conn, paste0("SELECT DISTINCT foundinmode FROM mzvals WHERE mzmed LIKE '", lcl$curr_mz, "%'"))[,1]
+          DBI::dbDisconnect(conn)
+          lcl$vectors$calc_adducts <<- adducts[scanmode %in% Ion_mode]$Name
+          output$magicball_add_tab <- DT::renderDataTable({
+            DT::datatable(data.table(Adduct = lcl$vectors$calc_adducts),
+                          selection = list(mode = 'multiple',
+                                           selected = lcl$vectors[[paste0(scanmode, "_selected_add")]], target="row"),
+                          options = list(pageLength = 5, dom = 'tp',
+                                         columnDefs = list(list(className = 'dt-center', targets = 1))),
+                          rownames = F)
+          })
+        }
+      }
+      
       # send plot to relevant spot in UI
       output[[outplot_name]] <- plotly::renderPlotly({
         # --- ggplot ---

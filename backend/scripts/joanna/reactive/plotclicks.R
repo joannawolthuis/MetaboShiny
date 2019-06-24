@@ -46,6 +46,23 @@ observeEvent(plotly::event_data("plotly_click"),{
     )
     if(d$key %not in% mzs) return(NULL)
     lcl$curr_mz <<- d$key
+    
+    # - magicball - 
+    if(lcl$paths$patdb != "" | lcl$curr_mz != ""){
+      if(file.exists(lcl$paths$patdb)){
+        conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb)
+        scanmode <- DBI::dbGetQuery(conn, paste0("SELECT DISTINCT foundinmode FROM mzvals WHERE mzmed LIKE '", lcl$curr_mz, "%'"))[,1]
+        DBI::dbDisconnect(conn)
+        lcl$vectors$calc_adducts <<- adducts[scanmode %in% Ion_mode]$Name
+        output$magicball_add_tab <- DT::renderDataTable({
+          DT::datatable(data.table(Adduct = lcl$vectors$calc_adducts),
+                        selection = list(mode = 'multiple',
+                                         selected = lcl$vectors[[paste0(scanmode, "_selected_add")]], target="row"),
+                        options = list(pageLength = 5, dom = 'tp'),
+                        rownames = F)
+        })
+      }
+    }
     # - return -
     output[[paste0(curr_tab, "_specific_plot")]] <- plotly::renderPlotly({
       # --- ggplot ---

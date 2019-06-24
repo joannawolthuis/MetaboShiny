@@ -13,68 +13,6 @@ observeEvent(input$search_mz, {
                                                     db_dir = normalizePath(lcl$paths$db_dir)
                                                     )) # match with all
 
-    adduct_dist <- melt(table(lcl$tables$last_matches$adduct))
-    db_dist <- melt(table(lcl$tables$last_matches$source))
-
-    if(nrow(lcl$tables$last_matches) > 0){
-      # render word cloud
-
-      try({
-
-        # remove unwanted words (defined in global) from description
-        filtered_descriptions <- sapply(1:length(lcl$tables$last_matches$description),
-                                        function(i){
-                                          # get description
-                                          desc <- lcl$tables$last_matches$description[[i]]
-                                          # return
-                                          desc
-                                        })
-
-        require(tm)
-
-        docs <- tm::VCorpus(tm::VectorSource(filtered_descriptions))
-
-        # Convert all text to lower case
-        docs <- tm::tm_map(docs, tm::content_transformer(tolower))
-
-        # Remove punctuations
-        docs <- tm::tm_map(docs, tm::removePunctuation)
-
-        # Remove numbers
-        docs <- tm::tm_map(docs, tm::removeNumbers)
-
-        # # stem words
-        # docs <- tm::tm_map(docs, tm::stemDocument)
-        
-        # Remove english common stopwords
-        docs <- tm::tm_map(docs, 
-                           tm::removeWords, 
-                           gbl$vectors$wordcloud$skip)
-
-        # Remove whitespace
-        docs <- tm::tm_map(docs, tm::stripWhitespace)
-
-        # # Text stemming
-
-        doc_mat <- tm::TermDocumentMatrix(docs)
-
-        m <- as.matrix(doc_mat)
-
-        v <- sort(rowSums(m), decreasing = TRUE)
-
-        lcl$tables$word_freq <<- data.frame(name = names(v), value = v)
-
-        #currview <- head(lcl$tables$word_freq, 100)
-        # - - return - -
-
-        lcl$vectors$pie_add <<- adduct_dist
-        lcl$vectors$pie_db <<- db_dist
-        
-        datamanager$reload <<- "matchplots"
-        
-      })
-    }
-
     shown_matches$table <- if(nrow(lcl$tables$last_matches) > 0){
       lcl$tables$last_matches
     }else{

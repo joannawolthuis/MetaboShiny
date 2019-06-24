@@ -509,29 +509,30 @@ observe({
                    plotly::ggplotly(p)
                  }
                })
-             }, matchplots = {
-               
+             }, 
+             match_wordcloud = {
+               if(nrow(lcl$tables$last_matches) > 0){
                wcdata <- data.frame(word = head(lcl$tables$word_freq, input$wc_topn)$name,
                                     freq = head(lcl$tables$word_freq, input$wc_topn)$value)
                
                output$wordcloud_desc <- wordcloud2::renderWordcloud2({
-                   wordcloud2::wordcloud2(wcdata,
-                                          size = 0.7,
-                                          shuffle = FALSE,
-                                          fontFamily = getOptions(lcl$paths$opt.loc)$font4,
-                                          ellipticity = 1,
-                                          minRotation = -pi/8,
-                                          maxRotation = pi/8,
-                                          shape = 'heart')
-                 })
-               
-              output$wordbar_desc <- renderPlotly({ggPlotWordBar(wcdata = wcdata,
-                                                                 cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                                                 plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                                 plotlyfy = TRUE, 
-                                                                 font = lcl$aes$font)})
-                 
-               
+                 wordcloud2::wordcloud2(wcdata,
+                                        size = 0.7,
+                                        shuffle = FALSE,
+                                        fontFamily = getOptions(lcl$paths$opt.loc)$font4,
+                                        ellipticity = 1,
+                                        minRotation = -pi/8,
+                                        maxRotation = pi/8,
+                                        shape = 'heart')
+               })
+               output$wordbar_desc <- renderPlotly({ggPlotWordBar(wcdata = wcdata,
+                                                                  cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                                                  plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                                                                  plotlyfy = TRUE, 
+                                                                  font = lcl$aes$font)})
+             }},
+             match_pie = {
+               if(nrow(lcl$tables$last_matches) > 0){
                output$match_pie_add <- plotly::renderPlotly({
                  
                  plot_ly(lcl$vectors$pie_add, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
@@ -562,7 +563,8 @@ observe({
                    layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
                           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
                })
-             })
+             }}
+             )
     }
 
     # - - - -

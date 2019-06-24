@@ -596,7 +596,7 @@ get_predicted <- function(mz,
                           elements = "CHNOPSNaClKILi",
                           search_pubchem = T,
                           pubchem_detailed = T,
-                          calc_adducts = c("M+H", "M-H"),
+                          calc_adducts ,#= c("M+H", "M-H"),
                           inshiny=F){
   
   cat("
@@ -618,8 +618,8 @@ get_predicted <- function(mz,
     
     row <- adducts[Name == add_name]
     
-    if(row$Formula_add != "FALSE"){
-      add.ele = unlist(strsplit(row$Formula_add,
+    if(!is.na(row$AddEx)){
+      add.ele = unlist(strsplit(row$AddEx,
                                 split = "\\d*"))
       add.ele <<- add.ele[add.ele != ""]
     }else{
@@ -667,11 +667,11 @@ get_predicted <- function(mz,
         theor_orig_formula = new_formula
         
         # if there's an adduct, remove it from the original formula
-        if(row$Formula_add != "FALSE"){
-          theor_orig_formula <- Rdisop::subMolecules(theor_orig_formula, row$Formula_add)$formula
+        if(!is.na(row$AddAt)){
+          theor_orig_formula <- Rdisop::subMolecules(theor_orig_formula, row$AddAt)$formula
         }
-        if(row$Formula_ded != "FALSE"){
-          theor_orig_formula <- Rdisop::addMolecules(theor_orig_formula, row$Formula_ded)$formula
+        if(!is.na(row$RemAt)){
+          theor_orig_formula <- Rdisop::addMolecules(theor_orig_formula, row$RemAt)$formula
         }
         if(!is.null(theor_orig_formula)){
           calc <- Rdisop::getMolecule(theor_orig_formula)
@@ -709,6 +709,8 @@ get_predicted <- function(mz,
     tbl <- unique(rbindlist(temp_res[!sapply(temp_res, is.null)]))
     uniques <- unique(tbl$baseformula)
     
+    print(uniques)
+    
     if(search_pubchem){
       
       i = 0
@@ -738,7 +740,6 @@ get_predicted <- function(mz,
             }
           })
           if(inshiny) shiny::setProgress(value = i/count)
-          
           rows
         })
       }
@@ -750,6 +751,8 @@ get_predicted <- function(mz,
       }else{
         f()
       }
+      
+      print(pc_rows)
       
       pc_tbl <- rbindlist(flattenlist(pc_rows), fill=T)
       
