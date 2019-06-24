@@ -21,7 +21,6 @@ output$currUI <- renderUI({
     logged$text <<- "loaded options!"
     logged$text <<- "starting MetaboShiny..."
     
-    online = internetWorks()
     
     # generate CSS for the interface based on user settings for colours, fonts etc.
     bar.css <<- nav.bar.css(opts$col1, opts$col2, opts$col3, opts$col4)
@@ -37,6 +36,8 @@ output$currUI <- renderUI({
     
     # === GOOGLE FONT SUPPORT FOR GGPLOT2 ===
     
+    online = internetWorks()
+
     # Download a webfont
     if(online){
       lapply(c(opts[grepl(pattern = "font", names(opts))]), function(font){
@@ -129,12 +130,14 @@ output$currUI <- renderUI({
     
     library(showtext)
     
+    online = internetWorks()
+    
     # import google fonts
     for(font in unlist(opts[grep(names(opts), pattern = "font")])){
       if(font %in% sysfonts::font.families()){
         NULL
       }else{
-        sysfonts::font_add_google(font,db_cache = T)
+        if(online) sysfonts::font_add_google(font,db_cache = T)
       }
     }
     

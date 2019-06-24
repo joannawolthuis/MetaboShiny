@@ -33,8 +33,10 @@ shinyServer(function(input, output, session) {
     if(exists("lcl")){
       if(metshi_mode == "one_user"){
         print("Single-user mode activated~")
+        # - - - 
         userfolder = normalizePath("~/MetaboShiny/saves/admin")
         dbdir = normalizePath("~/MetaboShiny/databases")
+        # - - - 
         if(!dir.exists(userfolder)) dir.create(userfolder,recursive = T)
         if(!dir.exists(dbdir)) dir.create(dbdir,recursive = T)
         lcl$paths$opt.loc <<- file.path(userfolder, "options.txt")
