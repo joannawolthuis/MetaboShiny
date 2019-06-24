@@ -48,6 +48,8 @@ needed.packages <- c("BiocManager", "shiny", "shinydashboard", "httr", "curl", "
                      "doParallel", "missForest", "InterpretMSSpectrum", "tm", "RISmed",
                      "qdap", "extrafont", "gmp", "shadowtext", "fgsea", "Rmisc")
 
+print(needed.packages)
+
 missing.packages <- setdiff(needed.packages,rownames(installed.packages()))
 
 if("BiocManager" %in% missing.packages){

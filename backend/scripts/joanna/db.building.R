@@ -639,6 +639,62 @@ build.base.db <- function(dbname=NA,
                            
                            db.formatted
                          },
+                         drugbank = function(dbname, ...){
+                           
+                           file.url = "https://www.drugbank.ca/releases/5-1-3/downloads/all-open-structures"
+                           
+                           # ----
+                           base.loc <- file.path(getOptions(optfile)$db_dir, "drugbank_source")
+                           if(!dir.exists(base.loc)) dir.create(base.loc)
+                           zip.file <- file.path(base.loc, "drugbank.zip")
+                           utils::download.file(file.url, zip.file,method = "curl",extra = "-Lfv")
+                           utils::unzip(normalizePath(zip.file), exdir = normalizePath(base.loc))
+                           
+                           sdf.path <- list.files(base.loc,
+                                                  pattern = "sdf",
+                                                  full.names = T,
+                                                  recursive = T)
+                           
+                           desc <- function(sdfset){
+                             mat <- NULL
+                             try({
+                               
+                               sdfy <<- sdfset
+                               
+                               datablock = data.table::as.data.table(datablock2ma(datablocklist=datablock(sdfset)))
+                               
+                               blocky <<- datablock
+                               NULL
+                               last_cn <<- colnames(datablock)
+                               
+                               if(!("FORMULA" %in% last_cn)){
+                                 mat = as.matrix(data.table::data.table(
+                                   identifier=datablock$PUBCHEM_COMPOUND_CID,
+                                   compoundname = datablock$PUBCHEM_IUPAC_NAME,
+                                   baseformula = datablock$PUBCHEM_MOLECULAR_FORMULA,
+                                   structure = datablock$PUBCHEM_OPENEYE_CAN_SMILES,
+                                   description = paste0("Alternative names: ",
+                                                        apply( datablock[ , grep(colnames(datablock), pattern="NAME"),with=F ] , 1 , paste , collapse = "-" ))
+                                 ))
+                               }else{
+                                 mat = as.matrix(data.table::data.table(
+                                   identifier = as.character(datablock$LM_ID),
+                                   compoundname = as.character(if("NAME" %in% colnames(datablock)) datablock$NAME else datablock$SYSTEMATIC_NAME),
+                                   baseformula = as.character(datablock$FORMULA),
+                                   structure = as.character(if("SMILES" %in% last_cn) datablock$SMILES else datablock$INCHI),
+                                   description = as.character(paste0("Main class: ", datablock$MAIN_CLASS,
+                                                                     ". Subclass: ", datablock$SUB_CLASS))
+                                 ))
+                               }
+                             })
+                             return(mat)
+                           }
+                           
+                           sdfStream.joanna(input=sdf.path, output=file.path(base.loc, "lipidmaps_parsed.csv"), append=FALSE, fct=desc, silent = T)
+                           
+                           db.base <- data.table::fread(file.path(base.loc, "lipidmaps_parsed.csv"), fill = T, header=T)
+                           
+                         },
                          lipidmaps = function(dbname, ...){ #ok
                            
                            file.url = "http://www.lipidmaps.org/resources/downloads/LMSDFDownload3Jan19.zip"
@@ -714,27 +770,36 @@ build.base.db <- function(dbname=NA,
                            
                            metabs <- all_ids$identifier
                            
-                           require(RCurl)
+                           jsonlite::read_json()
                            
+                           # require(RCurl)
+                           # 
                            uris <- pbapply::pblapply(metabs, cl = F, FUN=function(id){
                              met_info = NA
                              url <- paste0("https://www.ebi.ac.uk/metabolights/webservice/beta/compound/", id)
                            })
-                           
-                           all_info <- jsonlite::read_json("~/Downloads/mapping.json")
-                           
-                           metab_rows <- pbapply::pblapply(all_info$compoundMapping, cl = F, FUN=function(cpd){
-                             met_info <- cpd[[1]]$mafEntry
-                             data.table(compoundname = met_info$metaboliteIdentification,
-                                        description = if(!is.null(met_info$description)) met_info$description else "unknown",
-                                        baseformula = met_info$chemicalFormula,
-                                        identifier = if(!is.null(met_info$identifier)) met_info$identifier else "unknown",
-                                        structure = met_info$smiles,
-                                        charge = met_info$charge)
-                             
-                           })
-                           
-                           metab_tbl <- rbindlist(metab_rows)
+                           # 
+                           # all_info <- jsonlite::read_json("~/Downloads/mapping.json")
+                           # View(all_info$studyMapping$MTBLS59)
+                           # View(all_info$compoundMapping$`CSID 16569894`)
+                           # 
+                           # for(item in all_info$compoundMapping){
+                           #   for(info in item){
+                           #     print(info$study)
+                           #   }
+                           # }
+                           # 
+                           # metab_rows <- pbapply::pblapply(all_info$compoundMapping, cl = F, FUN=function(cpd){
+                           #   met_info <- cpd[[1]]$mafEntry
+                           #   data.table(compoundname = met_info$metaboliteIdentification,
+                           #              description = if(!is.null(met_info$description)) met_info$description else "unknown",
+                           #              baseformula = met_info$chemicalFormula,
+                           #              identifier = if(!is.null(met_info$identifier)) met_info$identifier else "unknown",
+                           #              structure = met_info$smiles,
+                           #              charge = met_info$charge)
+                           #   
+                           # })
+                           #metab_tbl <- rbindlist(metab_rows)
                            
                            
                            db_rows <- pbapply::pblapply(metabs[!is.na(metabs)], cl = 0, FUN=function(met_info){
