@@ -73,8 +73,6 @@ setOption <- function(file.loc, key, value){
   })
   writeLines(opt_conn, text = unlist(new_options))
 
-
-
   close(opt_conn)
 }
 
@@ -539,6 +537,7 @@ sardine <- function(content) div(style="display: inline-block;vertical-align:top
 
 online = internetWorks()
 if(online){
+  options("download.file.method" = "libcurl")
   devtools::install_github("xia-lab/MetaboAnalystR", 
                            ref = "21b6845a21e8a7a87dfdb7d3363ee39ce1397a88")#, build_vignettes=TRUE)
 }

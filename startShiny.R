@@ -50,6 +50,9 @@ needed.packages <- c("BiocManager", "shiny", "shinydashboard", "httr", "curl", "
 
 missing.packages <- setdiff(needed.packages,rownames(installed.packages()))
 
+print(missing.packages)
+NULL
+
 if("BiocManager" %in% missing.packages){
   install.packages('BiocManager')
 }
