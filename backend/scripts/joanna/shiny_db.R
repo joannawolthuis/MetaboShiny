@@ -666,13 +666,29 @@ get_predicted <- function(mz,
         # check which adducts are possible
         theor_orig_formula = new_formula
         
-        # if there's an adduct, remove it from the original formula
+        # remove last adduct
+        if(!is.na(row$AddEx)){
+          theor_orig_formula <- Rdisop::subMolecules(theor_orig_formula, row$AddEx)$formula
+        }
+        if(!is.na(row$RemEx)){
+          theor_orig_formula <- Rdisop::addMolecules(theor_orig_formula, row$RemEx)$formula
+        }
+        
+        # remove multiplic
+        if(row$xM > 1){
+          theor_orig_formula <- multiform.joanna(theor_orig_formula, 1/row$xM)
+        }
+        
+        # remove initial adduct
         if(!is.na(row$AddAt)){
           theor_orig_formula <- Rdisop::subMolecules(theor_orig_formula, row$AddAt)$formula
         }
         if(!is.na(row$RemAt)){
           theor_orig_formula <- Rdisop::addMolecules(theor_orig_formula, row$RemAt)$formula
         }
+        
+        # if there's an adduct, remove it from the original formula
+        
         if(!is.null(theor_orig_formula)){
           calc <- Rdisop::getMolecule(theor_orig_formula)
           
@@ -718,7 +734,7 @@ get_predicted <- function(mz,
       count = length(uniques)
       
       f <- function(){
-        pbapply::pblapply(uniques, function(formula){
+        pbapply::pblapply(uniques[1:10], function(formula){
           
           i <<- i + 1
           url = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/fastformula/", formula, "/cids/JSON")
@@ -754,21 +770,61 @@ get_predicted <- function(mz,
       
       print(pc_rows)
       
-      pc_tbl <- rbindlist(flattenlist(pc_rows), fill=T)
-      
-      tbl.merge <- merge(pc_tbl, tbl, by = "baseformula")
-      
-      checked <- check.chemform.joanna(chemforms = tbl.merge$baseformula, isotopes = isotopes)
-      tbl.merge$baseformula <- checked$new_formula
-      
-      tbl <- tbl.merge[, list(name = name.x, baseformula, adduct, `%iso`, structure = structure.x, description = description)]
-      
+      if(length(pc_rows) > 0){
+        pc_tbl <- rbindlist(flattenlist(pc_rows), fill=T)
+        
+        tbl.merge <- merge(pc_tbl, tbl, by = "baseformula")
+        
+        checked <- check.chemform.joanna(chemforms = tbl.merge$baseformula, isotopes = isotopes)
+        tbl.merge$baseformula <- checked$new_formula
+        
+        tbl <- tbl.merge[, list(name = name.x, baseformula, adduct, `%iso`, structure = structure.x, description = description)]
+      }        
     }else{
       tbl$description = c("Predicted possible formula for this m/z value.")
     }
     
-    unique(tbl)
+    tbl_uniq = unique(tbl)
     
+    # check SMARTS
+    valid.struct = !is.na(tbl_uniq$structure)
+    
+    mols <- lapply(1:nrow(tbl_uniq), function(i) return(NA))
+    
+    if(length(valid.struct) > 0){
+      saveme <<- tbl_uniq
+      mols[valid.struct] <- rcdk::parse.smiles(tbl_uniq$structure[valid.struct])#sapply(smiles, rcdk::parse.smiles)
+      backtrack <- data.table::data.table(structure = tbl_uniq$structure,
+                                          parse_smile = valid.struct)
+      
+      backtrack_molinfo <- lapply(1:nrow(tbl_uniq), function(i,row){
+        r = backtrack[i,]
+        if(r$parse_smile){
+          mol = mols[[i]]
+          # get molecular formula
+          mf = rcdk::get.mol2formula(mol)@string
+          # get charge
+          ch = rcdk::get.total.formal.charge(mol)
+          data.table(baseformula = mf, charge = ch)  
+        }else{
+          data.table(baseformula = tbl_uniq$baseformula[[i]], charge = 0)
+        }
+        
+      }, row = row)
+      
+    }else{
+      backtrack_molinfo <- lapply(1:nrow(tbl_uniq), function(i,row){
+        r = tbl_uniq[i,]
+        data.table(baseformula = baseformula, charge = 0)
+      }, row = row)
+    }
+    
+    #print("g")
+    
+    backtrack <- cbind(backtrack, rbindlist(backtrack_molinfo))
+    
+    # - - - 
+    tbl_fin
   })
   
   total_tbl <- rbindlist(per_adduct_results[sapply(per_adduct_results, function(x)!is.null(x))])

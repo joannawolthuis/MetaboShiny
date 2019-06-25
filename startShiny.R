@@ -52,9 +52,6 @@ print(needed.packages)
 
 missing.packages <- setdiff(needed.packages,rownames(installed.packages()))
 
-print(missing.packages)
-NULL
-
 if("BiocManager" %in% missing.packages){
   install.packages('BiocManager')
 }
@@ -67,6 +64,8 @@ if(length(missing.packages)>0){
 # docker run -p 8080:8080 -v ~/MetaboShiny/:/userfiles/:cached --rm -it metaboshiny/master /bin/bash
 # with autorun
 # docker run -p 8080:8080 -v ~/MetaboShiny/:/userfiles/:cached --rm metaboshiny/master Rscript startShiny.R
+# current instructions
+#Rshiny app to analyse untargeted metabolomics data! BASH INSTRUCTIONS: STEP 1: mydir=~"/MetaboShiny" #or another of your choice | STEP 2: mkdir $mydir | STEP 3: docker run -p 8080:8080 -v $mydir:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny /start.sh
 
 # packages needed to start up
 git.packages <<- c("MetaboAnalystR",

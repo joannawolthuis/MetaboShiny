@@ -655,7 +655,7 @@ output$currUI <- renderUI({
                                                                                                                                                                  label = "Get detailed PubChem matches? (SLOW!)",
                                                                                                                                                                  col = "BW", type = "YN", value = F)
                                                                                                                             ),
-                                                                                                                            fluidRow(align="center", helpText("Calculated adducts..")),
+                                                                                                                            fluidRow(align="center", helpText("Considered adducts:")),
                                                                                                                             fluidRow(div(DT::dataTableOutput('magicball_add_tab'),style='font-size:100%'),
                                                                                                                                      align="center")
                                                                                                                    ),

@@ -325,6 +325,18 @@ build.base.db <- function(dbname=NA,
                            db.formatted
                          },
                          wikipathways = function(dbname){ #ok
+                           
+                           # BiocManager::install("rWikiPathways")
+                           # require(rWikiPathways)
+                           # orgs = listOrganisms()
+                           # for(org in orgs){
+                           #   pws = listPathways(org)
+                           #   for(pw in pws){
+                           #     mets = getXrefList(pw, 'Ce') 
+                           #     
+                           #   }
+                           # }
+                           
                            chebi.loc <- file.path(getOptions(optfile)$db_dir, "chebi.base.db")
                            # ---------------------------------------------------
                            chebi <- SPARQL::SPARQL(url="http://sparql.wikipathways.org/",
@@ -1106,7 +1118,90 @@ build.base.db <- function(dbname=NA,
                            
                            
                            
-                         }, respect = function(dbname, ...){
+                         },phenolexplorer = function(dbname, ...){
+                           
+                           file.urls = paste0(
+                             "http://phenol-explorer.eu/system/downloads/current/",
+                             c("composition-data.xlsx.zip",
+                               "compounds.csv.zip",
+                               "compounds-structures.csv.zip",
+                               "metabolites.csv.zip",
+                               "metabolites-structures.csv.zip"))
+                           
+                           # ---
+                           base.loc <- file.path(getOptions(optfile)$db_dir, "phenolexplorer_source")
+                           if(!dir.exists(base.loc)) dir.create(base.loc)
+                           
+                           for(url in file.urls){
+                             zip.file <- file.path(base.loc, basename(url))
+                             utils::download.file(url, destfile = zip.file)
+                             utils::unzip(normalizePath(zip.file), exdir = normalizePath(base.loc))
+                           }
+                             
+                           # start from the composition table
+                           compo_tbl <- openxlsx::read.xlsx(file.path(base.loc, "composition-data.xlsx"), sheet = 1)
+                           compo_tbl$description <- paste0("Present in ", tolower(compo_tbl$food),
+                                                           "(", tolower(compo_tbl$food_group), ", ", 
+                                                           tolower(compo_tbl$food_sub_group), "). ", 
+                                                           "Belongs to the compound class of ",
+                                                           tolower(compo_tbl$compound_group),
+                                                           " (", tolower(compo_tbl$compound_sub_group), "). ",
+                                                           "PMIDS: ", compo_tbl$pubmed_ids)
+                           
+                           db.base <- unique(compo_tbl[, c("compound", "description")])
+                           
+                           merged.cpds <- merge(db.base, struct_tbl_keep, by.x = "compound", by.y = "name")
+                           
+                           # unique structure info
+                           struct_tbl <- fread(file.path(base.loc,"compounds-structures.csv"))
+                           struct_tbl_keep <- struct_tbl[, c("id", "smiles", "name")]
+                           
+                           # metabolites
+                           met_tbl <- fread(file.path(base.loc,"metabolites.csv"))
+                           met_struct <- fread(file.path(base.loc,"metabolites-structures.csv"))
+                           met_struct_keep <- met_struct[, c("id", "smiles", "name")]
+                           
+                           missing = (!(met_tbl$name %in% compo_tbl$compound))
+                           mis_mets <- met_tbl[missing,]
+                            
+                           merged.mets <- merge(mis_mets, met_struct_keep, by.x = "name", by.y = "name")
+                           merged.mets <- merged.mets[, c("name", "synonyms", "id.x", "smiles")]
+                           colnames(merged.mets) <- c("compound", "description", "id", "smiles")
+                           merged.mets$description <- paste0("Metabolite of compound in food.", merged.mets$description)
+                           
+                           merged <- unique(rbind(merged.cpds, merged.mets))
+                           
+                           # mtbls
+                           iatoms = rcdk::parse.smiles(merged$smiles)
+                           
+                           merged$charge <- pbapply::pbsapply(iatoms, function(iat){
+                             charge = 0 # set default charge to zero
+                             try({
+                               charge = rcdk::get.total.charge(iat)
+                             })
+                             charge
+                           })
+                           
+                           merged$baseformula <- pbapply::pbsapply(iatoms, function(iat){
+                             charge = 0 # set default charge to zero
+                             try({
+                               charge = rcdk::get.mol2formula(iat)@string
+                             })
+                             charge
+                           })
+                           
+                           db.formatted <- data.table::data.table(compoundname = merged$compound,
+                                                                  description = merged$description,
+                                                                  baseformula = merged$baseformula,
+                                                                  identifier= merged$id,
+                                                                  charge= merged$charge,
+                                                                  structure= merged$smiles)
+                           
+                           db.formatted <- db.formatted[ , .(description = paste(description, collapse=". ")), by = c("compoundname", "baseformula", "identifier", "charge", "structure")]
+                           
+                           db.formatted
+                         }, 
+                         respect = function(dbname, ...){
                            # - - download reSpect database, phytochemicals - -
                            
                            file.url <- "http://spectra.psc.riken.jp/menta.cgi/static/respect/respect.zip"

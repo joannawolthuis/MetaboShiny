@@ -72,6 +72,7 @@ lapply(unique(res.update.tables), FUN=function(table){
       # - magicball plots - 
       
       if(lcl$paths$patdb != ""){
+        print("loading adduct tbl..")
         if(file.exists(lcl$paths$patdb)){
           conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb)
           scanmode <- DBI::dbGetQuery(conn, paste0("SELECT DISTINCT foundinmode FROM mzvals WHERE mzmed LIKE '", lcl$curr_mz, "%'"))[,1]
@@ -82,7 +83,7 @@ lapply(unique(res.update.tables), FUN=function(table){
                           selection = list(mode = 'multiple',
                                            selected = lcl$vectors[[paste0(scanmode, "_selected_add")]], target="row"),
                           options = list(pageLength = 5, dom = 'tp',
-                                         columnDefs = list(list(className = 'dt-center', targets = 1))),
+                                         columnDefs = list(list(className = 'dt-center', targets = "_all"))),
                           rownames = F)
           })
         }

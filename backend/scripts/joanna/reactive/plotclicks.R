@@ -48,7 +48,8 @@ observeEvent(plotly::event_data("plotly_click"),{
     lcl$curr_mz <<- d$key
     
     # - magicball - 
-    if(lcl$paths$patdb != "" | lcl$curr_mz != ""){
+    if(lcl$paths$patdb != "" ){
+      print("loading adduct tbl..")
       if(file.exists(lcl$paths$patdb)){
         conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb)
         scanmode <- DBI::dbGetQuery(conn, paste0("SELECT DISTINCT foundinmode FROM mzvals WHERE mzmed LIKE '", lcl$curr_mz, "%'"))[,1]
