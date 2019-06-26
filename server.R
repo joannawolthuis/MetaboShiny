@@ -539,8 +539,8 @@ gspec = RdBu')
                    helpText("")
                  }
           )
-        }))
-      )
+        })),
+        br())
     })
     # return
     database_layout

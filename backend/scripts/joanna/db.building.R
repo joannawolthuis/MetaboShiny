@@ -653,58 +653,64 @@ build.base.db <- function(dbname=NA,
                          },
                          drugbank = function(dbname, ...){
                            
-                           file.url = "https://www.drugbank.ca/releases/5-1-3/downloads/all-open-structures"
-                           
                            # ----
+                           
                            base.loc <- file.path(getOptions(optfile)$db_dir, "drugbank_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc)
+                           
                            zip.file <- file.path(base.loc, "drugbank.zip")
-                           utils::download.file(file.url, zip.file,method = "curl",extra = "-Lfv")
+                           file.rename(file.path(base.loc, "drugbank_all_full_database.xml.zip"), zip.file)
                            utils::unzip(normalizePath(zip.file), exdir = normalizePath(base.loc))
                            
-                           sdf.path <- list.files(base.loc,
-                                                  pattern = "sdf",
-                                                  full.names = T,
-                                                  recursive = T)
+                           theurl <- getURL("https://www.drugbank.ca/stats",.opts = list(ssl.verifypeer = FALSE) )
+                           tables <- readHTMLTable(theurl,header = F)
+                           stats = as.data.table(tables[[1]])
+                           colnames(stats) <- c("Description", "Count")
+                           n = as.numeric(as.character(gsub(x = stats[Description == "Total Number of Drugs"]$Count, pattern = ",", replacement="")))
                            
-                           desc <- function(sdfset){
-                             mat <- NULL
-                             try({
-                               
-                               sdfy <<- sdfset
-                               
-                               datablock = data.table::as.data.table(datablock2ma(datablocklist=datablock(sdfset)))
-                               
-                               blocky <<- datablock
-                               NULL
-                               last_cn <<- colnames(datablock)
-                               
-                               if(!("FORMULA" %in% last_cn)){
-                                 mat = as.matrix(data.table::data.table(
-                                   identifier=datablock$PUBCHEM_COMPOUND_CID,
-                                   compoundname = datablock$PUBCHEM_IUPAC_NAME,
-                                   baseformula = datablock$PUBCHEM_MOLECULAR_FORMULA,
-                                   structure = datablock$PUBCHEM_OPENEYE_CAN_SMILES,
-                                   description = paste0("Alternative names: ",
-                                                        apply( datablock[ , grep(colnames(datablock), pattern="NAME"),with=F ] , 1 , paste , collapse = "-" ))
-                                 ))
-                               }else{
-                                 mat = as.matrix(data.table::data.table(
-                                   identifier = as.character(datablock$LM_ID),
-                                   compoundname = as.character(if("NAME" %in% colnames(datablock)) datablock$NAME else datablock$SYSTEMATIC_NAME),
-                                   baseformula = as.character(datablock$FORMULA),
-                                   structure = as.character(if("SMILES" %in% last_cn) datablock$SMILES else datablock$INCHI),
-                                   description = as.character(paste0("Main class: ", datablock$MAIN_CLASS,
-                                                                     ". Subclass: ", datablock$SUB_CLASS))
-                                 ))
-                               }
-                             })
-                             return(mat)
+                           db.formatted <- data.frame(
+                             compoundname = rep(NA, n),
+                             baseformula = rep(NA, n),
+                             identifier = rep(NA, n),
+                             structure = rep(NA, n),
+                             charge = rep(NA, n),
+                             description = rep(NA, n)
+                           )
+                           
+                           pb <- pbapply::startpb(min = 0, max = n)
+                           
+                           idx <<- 0
+                           
+                           metabolite = function(currNode){
+                             
+                             print(currNode)
+                             if(idx %% 10 == 0){
+                               pbapply::setpb(pb, idx)
+                             }
+                             
+                             idx <<- idx + 1
+                             
+                             currNode <<- currNode
+                             
+                             properties <- currNode[['calculated-properties']]
+                             
+                             db.formatted[idx, "compoundname"] <<- xmlValue(currNode[['name']])
+                             db.formatted[idx, "identifier"] <<- xmlValue(currNode[['drugbank-id']])
+                             db.formatted[idx, "baseformula"] <<- xmlValue(currNode[['chemical_formula']])
+                             db.formatted[idx, "structure"] <<- str_match(xmlValue(properties),
+                                                                          pattern = "([+|\\-]\\d*|\\d*)")[,2]
+                             db.formatted[idx, "description"] <<- xmlValue(currNode[['description']])
+                             
+                             
+                             db.formatted[idx, "charge"] <<- str_match(xmlValue(properties),
+                                                                       pattern = "formal_charge([+|\\-]\\d*|\\d*)")[,2]
                            }
                            
-                           sdfStream.joanna(input=sdf.path, output=file.path(base.loc, "lipidmaps_parsed.csv"), append=FALSE, fct=desc, silent = T)
+                           xmlEventParse(file = file.path(base.loc, "full database.xml"), branches =
+                                           list(drug = metabolite))
                            
-                           db.base <- data.table::fread(file.path(base.loc, "lipidmaps_parsed.csv"), fill = T, header=T)
+                           # - - - - - - - - - - - -
+                           db.formatted
                            
                          },
                          lipidmaps = function(dbname, ...){ #ok
