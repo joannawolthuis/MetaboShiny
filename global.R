@@ -150,6 +150,7 @@ caret.mdls <- caret::getModelInfo()
                                                 list(name= 'maconda_logo', path = 'www/maconda.png', dimensions = c(250,100)),
                                                 list(name= 'expoexplorer_logo', path = 'www/exposome_explorer.png', dimensions = c(250,100)),
                                                 list(name= 't3db_logo', path = 'www/t3db_logo.png', dimensions = c(200,80)),
+                                                list(name= 'drugbank_logo', path = 'www/drugbank_logo.png', dimensions = c(200,30)),
                                                 list(name= 'phenolexplorer_logo', path = 'www/phenolexplorer_logo.jpg', dimensions = c(200,60)),
                                                 list(name = 'sidebar_icon', path = 'www/detective.png', dimensions = c(60, 60))
 
@@ -215,6 +216,9 @@ caret.mdls <- caret::getModelInfo()
                                     t3db = list(title = "T3DB",
                                                 description = "The Toxin and Toxin Target Database (T3DB), or, soon to be referred as, the Toxic Exposome Database, is a unique bioinformatics resource that combines detailed toxin data with comprehensive toxin target information.",
                                                 image_id = "t3db_logo"),
+                                    drugbank = list(title = "DrugBank",
+                                                description = "The DrugBank database is a comprehensive, freely accessible, online database containing information on drugs and drug targets.",
+                                                image_id = "drugbank_logo"),
                                     phenolexplorer = list(title = "Phenol-Explorer",
                                                           description = "Phenol-Explorer is the first comprehensive database on polyphenol content in foods. The database contains more than 35,000 content values for 500 different polyphenols in over 400 foods.",
                                                           image_id = "phenolexplorer_logo"),
@@ -315,6 +319,7 @@ caret.mdls <- caret::getModelInfo()
                      "expoexplorer",
                      "lipidmaps",
                      't3db',
+                     'drugbank',
                      'phenolexplorer',
                      "magicball",
                      "custom"

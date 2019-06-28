@@ -659,7 +659,9 @@ build.base.db <- function(dbname=NA,
                            if(!dir.exists(base.loc)) dir.create(base.loc)
                            
                            zip.file <- file.path(base.loc, "drugbank.zip")
-                           file.rename(file.path(base.loc, "drugbank_all_full_database.xml.zip"), zip.file)
+                           if(!file.exists(zip.file)){
+                             file.rename(file.path(base.loc, "drugbank_all_full_database.xml.zip"), zip.file)
+                           }
                            utils::unzip(normalizePath(zip.file), exdir = normalizePath(base.loc))
                            
                            theurl <- getURL("https://www.drugbank.ca/stats",.opts = list(ssl.verifypeer = FALSE) )
@@ -683,7 +685,6 @@ build.base.db <- function(dbname=NA,
                            
                            metabolite = function(currNode){
                              
-                             print(currNode)
                              if(idx %% 10 == 0){
                                pbapply::setpb(pb, idx)
                              }
@@ -691,23 +692,70 @@ build.base.db <- function(dbname=NA,
                              idx <<- idx + 1
                              
                              currNode <<- currNode
-                             
+
                              properties <- currNode[['calculated-properties']]
+                             
+                             if(is.null(properties)){
+                               properties <- currNode[['experimental-properties']]
+                             }
+                             
+                             proplist <- xmlToList(properties)
+                             if(length(proplist) == 0){
+                               return(NULL)
+                             }
+                             
+                             # find formula
+                             which.form <- which(sapply(proplist, function(x){
+                               if("kind" %in% names(x)){
+                                 res = x[['kind']] == "Molecular Formula"  
+                               }else{
+                                 res = FALSE
+                               }
+                               res
+                               }))
+                             
+                             which.struc <- which(sapply(proplist, function(x){
+                               if("kind" %in% names(x)){
+                                 res = x[['kind']] == "SMILES"  
+                               }else{
+                                 res = FALSE
+                               }
+                               res
+                               }))
+                             
+                             which.charge <- which(sapply(proplist, function(x){
+                               if("kind" %in% names(x)){
+                                 res = x[['kind']] == "Physiological Charge"  
+                               }else{
+                                 res = FALSE
+                               }
+                               res
+                               }))
+                             
+                             # find structure
+                             
+                             if(length(which.form) == 0 & length(which.struc) == 0){
+                               return(NULL)
+                             }
                              
                              db.formatted[idx, "compoundname"] <<- xmlValue(currNode[['name']])
                              db.formatted[idx, "identifier"] <<- xmlValue(currNode[['drugbank-id']])
-                             db.formatted[idx, "baseformula"] <<- xmlValue(currNode[['chemical_formula']])
-                             db.formatted[idx, "structure"] <<- str_match(xmlValue(properties),
-                                                                          pattern = "([+|\\-]\\d*|\\d*)")[,2]
+                             db.formatted[idx, "baseformula"] <<- proplist[[which.form]][['value']]
+                             db.formatted[idx, "structure"] <<- if(length(which.struc) > 0){
+                               proplist[[which.struc]][['value']]
+                             }else{
+                               ""
+                             }
                              db.formatted[idx, "description"] <<- xmlValue(currNode[['description']])
-                             
-                             
-                             db.formatted[idx, "charge"] <<- str_match(xmlValue(properties),
-                                                                       pattern = "formal_charge([+|\\-]\\d*|\\d*)")[,2]
+                             db.formatted[idx, "charge"] <<- if(length(which.charge) > 0){
+                               proplist[[which.charge]][['value']]
+                               }else{
+                                 0
+                               }
                            }
                            
-                           xmlEventParse(file = file.path(base.loc, "full database.xml"), branches =
-                                           list(drug = metabolite))
+                           res = xmlEventParse(file = file.path(base.loc, "full database.xml"), branches =
+                                           list("drug" = metabolite, "drugbank-metabolite-id-value" = print))
                            
                            # - - - - - - - - - - - -
                            db.formatted
