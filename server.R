@@ -533,7 +533,7 @@ gspec = RdBu')
                  if(!(db %in% c("magicball", "custom"))){
                    list(actionButton(paste0("check_", db), "Check", icon = icon("check")),
                         actionButton(paste0("build_", db), "Build", icon = icon("wrench")),
-                        br(),
+                        br(),br(),
                         imageOutput(paste0(db, "_check"),inline = T))
                  }else{
                    helpText("")

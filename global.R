@@ -45,7 +45,6 @@ getOptions <- function(file.loc){
   # --- list-ify ---
   options <- list()
   for(line in options_raw){
-    print(line)
     split  <- (strsplit(line, ' = '))[[1]]
     options[[split[[1]]]] = split[[2]]
   }
@@ -150,7 +149,7 @@ caret.mdls <- caret::getModelInfo()
                                                 list(name= 'maconda_logo', path = 'www/maconda.png', dimensions = c(250,100)),
                                                 list(name= 'expoexplorer_logo', path = 'www/exposome_explorer.png', dimensions = c(250,100)),
                                                 list(name= 't3db_logo', path = 'www/t3db_logo.png', dimensions = c(200,80)),
-                                                list(name= 'drugbank_logo', path = 'www/drugbank_logo.png', dimensions = c(200,30)),
+                                                list(name= 'drugbank_logo', path = 'www/drugbank_logo.png', dimensions = c(200,20)),
                                                 list(name= 'phenolexplorer_logo', path = 'www/phenolexplorer_logo.jpg', dimensions = c(200,60)),
                                                 list(name = 'sidebar_icon', path = 'www/detective.png', dimensions = c(60, 60))
 
