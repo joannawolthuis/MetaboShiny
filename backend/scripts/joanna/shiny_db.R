@@ -616,6 +616,8 @@ get_predicted <- function(mz,
   
   per_adduct_results <- pbapply::pblapply(calc_adducts, function(add_name){
     
+    print(add_name)
+    
     row <- adducts[Name == add_name]
     
     if(!is.na(row$AddEx)){
@@ -637,6 +639,8 @@ get_predicted <- function(mz,
     
     temp_res <- pbapply::pblapply(settings, function(def.ele){
       
+      print(def.ele)
+      
       add.only.ele <- setdiff(add.ele,
                               def.ele)
       
@@ -648,16 +652,110 @@ get_predicted <- function(mz,
       # get which formulas are possible
       predicted = Rdisop::decomposeMass(as.numeric(mz),
                                         ppm = ppm,
-                                        elements = Rdisop::initializeElements(names = total.ele)
+                                        elements = Rdisop::initializeElements(names = total.ele),
+                                        z = row$Charge
       )
       
-      charged = which( (predicted$DBE %% 1)  == 0.5 )
-      posdbe = which( predicted$DBE > 0 )
+      # 
+      corrected = enviPat::check_chemform(isotopes = isotopes, chemforms = predicted$formula)
       
-      candidates = predicted$formula[intersect(charged, posdbe)]
-      candidates <- candidates[!is.na(candidates)]
+      deconstructed = data.table::data.table(
+        nrC = as.numeric(str_match(corrected$new_formula, pattern = "C(\\d*)")[,2]),
+        nrH = as.numeric(str_match(corrected$new_formula, pattern = "H(\\d*)")[,2]),
+        nrBr = as.numeric(str_match(corrected$new_formula, pattern = "Br(\\d*)")[,2]),
+        nrCl = as.numeric(str_match(corrected$new_formula, pattern = "Cl(\\d*)")[,2]),
+        nrF = as.numeric(str_match(corrected$new_formula, pattern = "F(\\d*)")[,2]),
+        nrN = as.numeric(str_match(corrected$new_formula, pattern = "N(\\d*)")[,2]),
+        nrO = as.numeric(str_match(corrected$new_formula, pattern = "O(\\d*)")[,2]),
+        nrP = as.numeric(str_match(corrected$new_formula, pattern = "P(\\d*)")[,2]),
+        nrS = as.numeric(str_match(corrected$new_formula, pattern = "S(\\d*)")[,2]),
+        nrSi = as.numeric(str_match(corrected$new_formula, pattern = "Si(\\d*)")[,2])  
+      )
       
-      keep.candidates <- grep(x = candidates, pattern = filter, value=T)
+      electron.per.atom <- data.table(
+        nrC = 12,
+        nrH = 1,
+        nrBr = 79,
+        nrCl = 35,
+        nrF = 19, 
+        nrN = 14,
+        nrO = 16,
+        nrP =31,
+        nrS = 32,
+        nrSi = 28
+      )
+      
+      deconstructed[is.na(deconstructed)] <- 0
+      deconstructed$nrAtoms <- rowSums(deconstructed)
+    
+      #deconstructed$nrElectrons <- pbapply::pbsapply(1:nrow(deconstructed), function(i){
+      #   row = deconstructed[i,]
+      #   total = 0
+      #   for(atom.type in colnames(row)){
+      #     if(atom.type == "nrAtoms") next
+      #     nAtom = as.numeric(row[,..atom.type])
+      #     nElec = as.numeric(electron.per.atom[1,..atom.type]) * nAtom
+      #     total = total + nElec
+      #   }
+      #   total
+      # })
+      
+      deconstructed$senior <- pbapply::pbsapply(1:nrow(deconstructed), function(i){
+        row = deconstructed[i,]
+        with(row,{
+          if((4*nrC+1*nrH+1*nrBr+1*nrCl+1*nrF+5*nrN+2*nrO+5*nrP+6*nrS+4*nrSi)>=(2*(nrAtoms-1))) TRUE else FALSE
+        })
+      })
+      
+      deconstructed$eminus <- pbapply::pbsapply(1:nrow(deconstructed), function(i){
+        row = deconstructed[i,]
+        with(row,{
+          # e- : =4*C4+D4+7*E4+7*F4+7*G4+5*H4+6*I4+5*J4+6*K4+4*L4
+          4*nrC+nrH+7*nrBr+7*nrCl+7*nrF+5*nrN+6*nrO+5*nrP+6*nrS+4*nrSi
+        })
+      })
+      
+      deconstructed$lewis <- pbapply::pbsapply(1:nrow(deconstructed), function(i){
+        row = deconstructed[i,]
+        with(row,{
+          # 4*C4+ 1*D4 +1*E4 +1*F4 +1*G4 +3*H4 +2*I4 +3*J4 +2*K4 +4*L4
+          lewis.sum = 4* nrC + 1* nrH +1* nrBr +1* nrCl +1* nrF +3* nrN +2* nrO +3* nrP +2* nrS +4* nrSi
+          if(lewis.sum %% 2 == 0 & eminus >7) TRUE else FALSE
+        })
+      })
+      
+      ch_nops_chnops_rows <- pbapply::pblapply(1:nrow(deconstructed), function(i){
+        row = deconstructed[i,]
+        res= data.table(hc = F, chnops = F, nops = F)
+        # T4, V4, X4, X4, Y4 -> H/C N/C	O/C	P/C	S/C
+        # chnops
+        #IF(AND(T4>=0.2,T4<=3,V4>=0,V4<=2,W4>=0,W4<=1.2,X4>=0,X4<=0.32,Y4>=0,Y4<=0.65),"YES","NO")
+        # nops
+        # IF(AND(V4>=0,V4<=4,W4>=0,W4<=3,X4>=0,X4<=2,Y4>=0,Y4<=3),"YES","NO"
+        try({
+        res = with(row,{
+            HC = nrH/nrC
+            NC = nrN/nrC
+            OC = nrO/nrC
+            PC = nrP/nrC
+            SC = nrS/nrC
+            hc = HC %between% c(0, 6)
+            chnops = HC %between% c(0.2, 3) & NC %between% c(0, 2) & OC %between% c(0, 1.2) & PC %between% c(0, 0.32) & SC %between% c(0,65)  
+            nops = NC %between% c(0, 4) & OC %between% c(0,3) & PC %between% c(0,2) & SC %between% c(0,3)
+            data.table(hc = hc, chnops = chnops, nops = nops)
+            })  
+        })
+        res
+      })
+      
+      checks = rbindlist(ch_nops_chnops_rows)
+      deconstructed <- cbind(deconstructed, checks)
+      
+      passes.checks <- with(deconstructed, {
+        which(senior & lewis & hc & chnops & nops)
+      })
+      
+      keep.candidates <- predicted$formula[passes.checks]
       
       res = lapply(keep.candidates, function(formula, row){
         
@@ -686,27 +784,16 @@ get_predicted <- function(mz,
         if(!is.na(row$RemAt)){
           theor_orig_formula <- Rdisop::addMolecules(theor_orig_formula, row$RemAt)$formula
         }
-        
-        # if there's an adduct, remove it from the original formula
-        
-        if(!is.null(theor_orig_formula)){
-          calc <- Rdisop::getMolecule(theor_orig_formula)
+        data.table(name = theor_orig_formula,
+                   baseformula = theor_orig_formula,
+                   adduct = row$Name,
+                   `%iso` = 100,
+                   structure = NA,
+                   identifier = "???",
+                   # description = "Predicted possible formula for this m/z value.",
+                   source = "magicball")
           
-          if(calc$DBE %% 1 != 0){
-            NULL
-          }else{
-            data.table(name = theor_orig_formula,
-                       baseformula = theor_orig_formula,
-                       adduct = row$Name,
-                       `%iso` = 100,
-                       structure = NA,
-                       identifier = "???",
-                       # description = "Predicted possible formula for this m/z value.",
-                       source = "magicball")
-          }
-        }
       }, row = row)
-      
       
       if(length(res) > 0){
         
@@ -725,17 +812,15 @@ get_predicted <- function(mz,
     tbl <- unique(rbindlist(temp_res[!sapply(temp_res, is.null)]))
     uniques <- unique(tbl$baseformula)
     
-    print(uniques)
+    if(is.null(uniques)) return(NULL)
     
     if(search_pubchem){
-      
       i = 0
-      
       count = length(uniques)
+      if(count == 0) return(NULL)
       
       f <- function(){
-        pbapply::pblapply(uniques[1:10], function(formula){
-          
+        pbapply::pblapply(uniques, function(formula){
           i <<- i + 1
           url = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/fastformula/", formula, "/cids/JSON")
           description = "No PubChem hits for this predicted formula."
@@ -749,7 +834,7 @@ get_predicted <- function(mz,
             cids <- pc_res$IdentifierList$CID
             
             if(pubchem_detailed){ # SLOW!!
-              rows <- info_from_cids(cids)
+              rows <- info_from_cids(cids, charge = if(row$Name == "[M1+.]1+") row$Charge else 0)
             }else{
               rows$description <- paste0("PubChem found these Compound IDs (check ChemSpider or PubChem): ", 
                                          paste0(cids, collapse = ", "))
@@ -768,7 +853,7 @@ get_predicted <- function(mz,
         f()
       }
       
-      print(pc_rows)
+      if(is.null(pc_rows)) return(NULL)
       
       if(length(pc_rows) > 0){
         pc_tbl <- rbindlist(flattenlist(pc_rows), fill=T)
@@ -781,53 +866,48 @@ get_predicted <- function(mz,
         tbl <- tbl.merge[, list(name = name.x, baseformula, adduct, `%iso`, structure = structure.x, description = description)]
       }        
     }else{
-      tbl$description = c("Predicted possible formula for this m/z value.")
+      tbl$description = c("Predicted possible formula for this m/z value.")  
     }
     
     tbl_uniq = unique(tbl)
     
     # check SMARTS
-    valid.struct = !is.na(tbl_uniq$structure)
+    valid.struct = which(!is.na(tbl_uniq$structure))
     
     mols <- lapply(1:nrow(tbl_uniq), function(i) return(NA))
     
     if(length(valid.struct) > 0){
       saveme <<- tbl_uniq
       mols[valid.struct] <- rcdk::parse.smiles(tbl_uniq$structure[valid.struct])#sapply(smiles, rcdk::parse.smiles)
-      backtrack <- data.table::data.table(structure = tbl_uniq$structure,
-                                          parse_smile = valid.struct)
+      backtrack <- data.table::data.table(structure = tbl_uniq$structure[valid.struct])
+
+      print(valid.struct)
       
-      backtrack_molinfo <- lapply(1:nrow(tbl_uniq), function(i,row){
-        r = backtrack[i,]
-        if(r$parse_smile){
+      backtrack_molinfo <- lapply(valid.struct, function(i,row){
           mol = mols[[i]]
           # get molecular formula
           mf = rcdk::get.mol2formula(mol)@string
           # get charge
           ch = rcdk::get.total.formal.charge(mol)
-          data.table(baseformula = mf, charge = ch)  
-        }else{
-          data.table(baseformula = tbl_uniq$baseformula[[i]], charge = 0)
-        }
-        
+          data.table(baseformula = mf, charge = ch)
       }, row = row)
-      
+      backtrack <- cbind(backtrack, rbindlist(backtrack_molinfo))
     }else{
-      backtrack_molinfo <- lapply(1:nrow(tbl_uniq), function(i,row){
+      backtrack <- rbindlist(lapply(1:nrow(tbl_uniq), function(i,row){
         r = tbl_uniq[i,]
-        data.table(baseformula = baseformula, charge = 0)
-      }, row = row)
+        data.table(baseformula = r$baseformula, 
+                   structure = c(NA),
+                   charge = 0)
+      }, row = row))
     }
     
-    #print("g")
-    
-    backtrack <- cbind(backtrack, rbindlist(backtrack_molinfo))
-    
+    tbl_fin <- merge(tbl_uniq, backtrack, by = c("baseformula", "structure"))
+    print(tbl_fin)
     # - - - 
     tbl_fin
-  })
+   })
   
-  total_tbl <- rbindlist(per_adduct_results[sapply(per_adduct_results, function(x)!is.null(x))])
+  total_tbl <- rbindlist(per_adduct_results[sapply(per_adduct_results, function(x)!is.null(x))], fill=T)
   
   # get more info
   has.struct <- which(!is.na(total_tbl$structure))
@@ -836,8 +916,7 @@ get_predicted <- function(mz,
     tpsas <- sapply(iatoms, rcdk::get.tpsa)
     total_tbl$tpsa <- c(NA)
     total_tbl$tpsa[has.struct] <- tpsas
-  }
-  else{
+  }else{
     total_tbl$tpsa <- c(NA)
   }
   
@@ -848,7 +927,7 @@ get_predicted <- function(mz,
 }
 
 info_from_cids <- function(cids,
-                           charges = c(0),
+                           charge = 0,
                            maxn = 30,
                            write2db=F){
   # structural info
@@ -857,6 +936,7 @@ info_from_cids <- function(cids,
   
   chunk.row.list <- lapply(split.cids, function(cidgroup){
     
+    dput(cidgroup)
     url_struct = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/",
                         paste0(cidgroup, collapse=","),
                         "/property/MolecularFormula,CanonicalSMILES,Charge/JSON")
@@ -866,8 +946,9 @@ info_from_cids <- function(cids,
     
     # CHECK IF ORIGINAL CHARGE IS ZERO
     
-    keep.cids <- which(struct_res$PropertyTable$Properties$Charge == 0)
+    keep.cids <- which(struct_res$PropertyTable$Properties$Charge == charge)
     
+    if(length(keep.cids)==0) return(NULL)
     cidgroup = cidgroup[keep.cids]
     
     rows <- struct_res$PropertyTable$Properties[keep.cids,]
@@ -903,6 +984,11 @@ info_from_cids <- function(cids,
       
     })
     
+    if(is.null(rows)) return(NULL)
+    if(nrow(rows) == 0) return(NULL)
+    
+    print(rows)
+    
     colnames(rows) <- c("identifier", "baseformula", "structure", "charge","name","description")
     
     url_syn = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/",
@@ -910,6 +996,8 @@ info_from_cids <- function(cids,
                      "/synonyms/JSON")
     
     syn.adj = data.table()
+    
+    print("..")
     
     try({
       synonyms <- jsonlite::fromJSON(url_syn,
@@ -941,9 +1029,12 @@ info_from_cids <- function(cids,
         
       })
       tbl.renamed <- rbindlist(rows.renamed, fill=T)
+    }else{
+      tbl.renamed <- rows
     }
     
-    tbl.fin <- tbl.renamed[,-"charge"]
+    print("got here")
+    tbl.fin <- as.data.table(tbl.renamed)[,-"charge"]
     
     tbl.fin$source <- "PubChem"
     
@@ -956,8 +1047,7 @@ info_from_cids <- function(cids,
   
   chunk.row.list <<- chunk.row.list
   res <- chunk.row.list[sapply(chunk.row.list, function(x){
-    if(!is.na(nrow(x)) | is.null(nrow(x))) TRUE else FALSE
-  })]
+    if(is.null(nrow(x))) TRUE else FALSE})]
   
   res
   
