@@ -50,7 +50,9 @@ get_matches <- function(cpd = NA,
         WHERE $searchid = '$cpd'"
         , width=10000, simplify=TRUE))
     }
+    
     res <- RSQLite::dbGetQuery(conn, query)
+    
     return(res)
     
   }else{
@@ -60,7 +62,7 @@ get_matches <- function(cpd = NA,
     query = gsubfn::fn$paste("ATTACH '$base.db' AS base")
     RSQLite::dbExecute(conn, query)
     
-    print(query)
+    #print(query)
     
     ext.db <- file.path(db_dir, 'extended.db')
     
@@ -68,7 +70,7 @@ get_matches <- function(cpd = NA,
     
     RSQLite::dbExecute(conn, query)
     
-    print(query)
+    #print(query)
     
     func <- function(){
       if(!DBI::dbExistsTable(conn, "unfiltered") | !append)
@@ -90,30 +92,31 @@ get_matches <- function(cpd = NA,
           ON cpd.struct_id = struc.id
           WHERE $cpd BETWEEN rng.mzmin AND rng.mzmax",width=10000, simplify=TRUE)) 
         # create
-        print(query)
-        
-        RSQLite::dbExecute(conn, query)
-      } else{
-        # append
-        query <- gsubfn::fn$paste(strwrap(
-          "INSERT INTO unfiltered
-          SELECT DISTINCT cpd.fullformula,
-          cpd.adduct as adduct,
-          cpd.isoprevalence as isoprevalence,
-          struc.smiles as structure,
-          (ABS($cpd - cpd.fullmz) / $cpd)/1e6 AS dppm
-          FROM mzvals mz
-          JOIN mzranges rng ON rng.ID = mz.ID
-          JOIN full.extended cpd indexed by e_idx2
-          ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
-          AND mz.foundinmode = cpd.foundinmode
-          JOIN full.structures struc
-          ON cpd.struct_id = struc.id
-          WHERE $cpd BETWEEN rng.mzmin AND rng.mzmax",width=10000, simplify=TRUE))
-        print(query)
+        #print(query)
         
         RSQLite::dbExecute(conn, query)
       }
+      # else{
+      #   # append
+      #   query <- gsubfn::fn$paste(strwrap(
+      #     "INSERT INTO unfiltered
+      #     SELECT DISTINCT cpd.fullformula,
+      #     cpd.adduct as adduct,
+      #     cpd.isoprevalence as isoprevalence,
+      #     struc.smiles as structure,
+      #     (ABS($cpd - cpd.fullmz) / $cpd)/1e6 AS dppm
+      #     FROM mzvals mz
+      #     JOIN mzranges rng ON rng.ID = mz.ID
+      #     JOIN full.extended cpd indexed by e_idx2
+      #     ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
+      #     AND mz.foundinmode = cpd.foundinmode
+      #     JOIN full.structures struc
+      #     ON cpd.struct_id = struc.id
+      #     WHERE $cpd BETWEEN rng.mzmin AND rng.mzmax",width=10000, simplify=TRUE))
+      #   print(query)
+      #   
+      #   RSQLite::dbExecute(conn, query)
+      # }
       # if(!DBI::dbExistsTable(conn, "isotopes") | !append){
       #   
       #   RSQLite::dbExecute(conn, 'DROP TABLE IF EXISTS isotopes')

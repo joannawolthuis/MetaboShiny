@@ -290,7 +290,7 @@ caret.mdls <- caret::getModelInfo()
                  tables = list(tbl = NA),
                  # default vectors to go through in metaboshiny
                  vectors = list(
-                   remove_match_cols = c("description","structure", "baseformula", "dppm", "source"),
+                   remove_match_cols = c("description","structure", "baseformula", "source"), #c("description","structure", "baseformula", "dppm", "source"),
                    # default indices of chosen adducts
                    pos_selected_add = c(2),#, nrow(adducts[Ion_mode == "positive",
                    #               c("Name")])),

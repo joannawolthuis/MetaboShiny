@@ -190,6 +190,7 @@ observe({
                })
              },
              aov = {
+               
                if(!is.null(input$timecourse_trigger)){
                  redo = switch(input$timecourse_trigger,
                                {"aov2" %not in% names(mSet$analSet)},
@@ -198,6 +199,8 @@ observe({
                  redo = "aov" %not in% names(mSet$analSet)
                }
 
+               print(redo)
+               
                if(redo){ # if done, don't redo
                  withProgress({
                    if(!is.null(input$timecourse_trigger)){
