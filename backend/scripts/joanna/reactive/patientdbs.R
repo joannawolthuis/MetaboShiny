@@ -31,13 +31,14 @@ observeEvent(input$create_db,{
                          inputId = "proj_name",
                          selected = proj_name)
 
-    lcl$paths$patdb <<- file.path(lcl$paths$work_dir, paste0(proj_name,".db", sep=""))
+    lcl$proj_name <<- proj_name
+    lcl$paths$patdb <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name, ".db"))
     # change project name in user options file
-    setOption(lcl$paths$opt.loc, key="proj_name", value=proj_name)
+    setOption(lcl$paths$opt.loc, key="proj_name", value=lcl$proj_name)
     # print the changed name in the UI
     output$proj_name <<- renderText(proj_name)
     # change path CSV should be / is saved to in session
-    lcl$paths$csv_loc <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name,".csv"))
+    #lcl$paths$csv_loc <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name,".csv"))
 
     switch(input$new_proj,
            # if loading in a .db file... (FAST, MOSTLY FOR ADMINS USING HPC)
