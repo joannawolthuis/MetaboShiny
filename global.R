@@ -151,7 +151,10 @@ caret.mdls <- caret::getModelInfo()
                                                 list(name= 't3db_logo', path = 'www/t3db_logo.png', dimensions = c(200,80)),
                                                 list(name= 'drugbank_logo', path = 'www/drugbank_logo.png', dimensions = c(200,20)),
                                                 list(name= 'phenolexplorer_logo', path = 'www/phenolexplorer_logo.jpg', dimensions = c(200,60)),
-                                                list(name = 'sidebar_icon', path = 'www/detective.png', dimensions = c(60, 60))
+                                                list(name = 'sidebar_icon', path = 'www/detective.png', dimensions = c(60, 60)),
+                                                list(name = 'merge_icon', path = 'www/merge.png', dimensions = c(150, 150)),
+                                                list(name = 'db_icon', path = 'www/database.png', dimensions = c(150, 150)),
+                                                list(name = 'laptop_icon', path = 'www/laptop.png', dimensions = c(150, 150))
 
                                   ), # all image paths, if you add an image you can add it here
                                   default.text = list(list(name='curr_definition', text="No m/z selected"),

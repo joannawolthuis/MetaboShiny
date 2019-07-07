@@ -11,6 +11,39 @@
 #   }
 # })
 
+# create checkcmarks if database is present
+lapply(c("merge", "db", "csv"), FUN=function(col){
+  # creates listener for if the 'check db' button is pressed
+  observe({
+    print("checking...")
+    # see which db files are present in folder
+    folder_files <- list.files(lcl$paths$work_dir)
+    is.present <- switch(col,
+                         merge = {
+                           if(!is.null(input$importmode)){
+                             switch(input$importmode,
+                                    db = {
+                                      is.list(input$database) & is.list(input$excel) 
+                                    },
+                                    csv = {
+                                      is.list(input$excel) & is.list(input$pos) & is.list(input$neg)
+                                    })  
+                           }else{
+                             F
+                           }
+                         },
+                         db = paste0(input$proj_name_new, ".db") %in% folder_files,
+                         csv = paste0(input$proj_name_new, ".csv") %in% folder_files)
+    check_pic <- if(is.present) "yes.png" else "no.png"
+    # generate checkmark image objects
+    output[[paste0("proj_", col, "_check")]] <- renderImage({
+      filename <- normalizePath(file.path('www', check_pic))
+      list(src = filename, width = 70,
+           height = 70)
+    }, deleteFile = FALSE)
+  })
+})
+
 # triggers when user wants to create database from .db and excel or 2 csv files and excel
 observeEvent(input$create_db,{
 

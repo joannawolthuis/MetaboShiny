@@ -86,6 +86,10 @@ mode = complete')
 
   # ================================== LOGIN =====================================
 
+  observe({
+    print(input$importmode)
+  })
+  
   # default
 
   userdb = normalizePath("./users.db")
