@@ -26,7 +26,7 @@ lapply(c("merge", "db", "csv"), FUN=function(col){
                                       is.list(input$database) & is.list(input$metadata) 
                                     },
                                     csv = {
-                                      is.list(input$metadata) & is.list(input$pos) & is.list(input$neg)
+                                      is.list(input$metadata) & is.list(input$outlist_pos) & is.list(input$outlist_neg)
                                     })  
                            }else{
                              F
@@ -52,7 +52,7 @@ observeEvent(input$create_db,{
            is.list(input$database) & is.list(input$metadata) 
          },
          csv = {
-           is.list(input$metadata) & is.list(input$pos) & is.list(input$neg)
+           is.list(input$metadata) & is.list(input$outlist_pos) & is.list(input$outlist_neg)
          })
   
   if(!files.present) return(NULL)

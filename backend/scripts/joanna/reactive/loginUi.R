@@ -100,10 +100,10 @@ output$currUI <- renderUI({
     
     # init stuff that depends on opts file
     
-    lcl$proj_name <- opts$proj_name
-    lcl$paths$patdb <- file.path(opts$work_dir, paste0(opts$proj_name, ".db"))
-    lcl$paths$csv_loc <- file.path(opts$work_dir, paste0(opts$proj_name, ".csv"))
-    lcl$texts <- list(
+    lcl$proj_name <<- opts$proj_name
+    lcl$paths$patdb <<- file.path(opts$work_dir, paste0(opts$proj_name, ".db"))
+    lcl$paths$csv_loc <<- file.path(opts$work_dir, paste0(opts$proj_name, ".csv"))
+    lcl$texts <<- list(
       list(name='curr_exp_dir',text=lcl$paths$work_dir),
       list(name='curr_db_dir',text=lcl$paths$db_dir),
       list(name='ppm',text=opts$ppm),
@@ -113,7 +113,7 @@ output$currUI <- renderUI({
     a = c("fish_no_out.csv", "fish.csv", "lungcancer_no_out.csv", "lungcancer.csv")
     #gsub(a,pattern = "(_no_out\\.csv)|(\\.csv)", replacement="")
     #dput(list.files(opts$work_dir,pattern = "\\.csv"))
-    lcl$vectors$project_names <- unique(gsub(list.files(opts$work_dir,pattern = "\\.csv"),pattern = "(_no_out\\.csv)|(\\.csv)", replacement=""))
+    lcl$vectors$project_names <<- unique(gsub(list.files(opts$work_dir,pattern = "\\.csv"),pattern = "(_no_out\\.csv)|(\\.csv)", replacement=""))
     print(lcl$vectors$proj_names)
     
     updateSelectizeInput(session,
@@ -168,7 +168,7 @@ output$currUI <- renderUI({
       if(!any(is.null(values))){
         if(lcl$paths$opt.loc != ""){
           set.col.map(optionfile = lcl$paths$opt.loc, values)
-          lcl$aes$mycols <- values
+          lcl$aes$mycols <<- values
         }
       }
     })
@@ -198,32 +198,32 @@ output$currUI <- renderUI({
                  ),
                  tabPanel("data import", icon = icon("upload", class = "outlined"),
                           fluidRow(column(12, align="center", 
-                                          textInput("proj_name_new", label = "STEP 1: What is your project name?", value = lcl$proj_name))),
+                                          textInput("proj_name_new", label = "STEP 1: What is your project name?", value = lcl$proj_name),
+                                          sliderInput("ppm", "STEP 2: What level accuracy is your mass spectrometer?",min = 0.1,max = 50,value = 5))),
                           hr(),
                           fluidRow(column(3, align="center",
                                           imageOutput("merge_icon",inline = T),
                                           radioButtons("importmode", label = "", 
                                                        choices = list("Peaks are in a .db file"="db", "Peaks are in two .csv files (pos/neg mode)"="csv"),
                                                        selected = "db"),
-                                          tags$b("STEP 2: Click buttons to load data."),
+                                          tags$b("STEP 3: Click buttons to load data."),
+                                          shinyFilesButton('metadata', 'metadata', 'Select metadata in csv/xls(x)', FALSE),
                                           conditionalPanel(condition = "input.importmode == 'db'",
-                                                           shinyFilesButton('database', 'Database', 'Select .db file', FALSE),
-                                                           shinyFilesButton('metadata', 'Metadata', 'Select metadata in csv/xls(x)', FALSE)
+                                                           shinyFilesButton('database', 'database', 'Select .db file', FALSE)
                                                            ),
                                           conditionalPanel(condition = "input.importmode == 'csv'",
                                                            shinyFilesButton('outlist_pos', '+ peaks', 'Select .csv for - mode peaks', FALSE),
-                                                           shinyFilesButton('metadata', 'Metadata', 'Select metadata in csv/xls(x)', FALSE),
                                                            shinyFilesButton('outlist_neg', '- peaks', 'Select .csv for + mode peaks', FALSE)
                                                            )
                                           )
                                    ,column(2, align="center", #ok
-                                           tags$b("STEP 3: Merge data and metadata"),br(),br(),
+                                           tags$b("STEP 4: Merge data and metadata"),br(),br(),
                                              shinyWidgets::circleButton("create_db", icon = icon("long-arrow-alt-right", class = "fa-2x"), size = "lg"))
                                    ,column(2, align="center", # issue lol
                                           imageOutput("db_icon")
                                           )
                                    ,column(2, align="center",
-                                           tags$b("STEP 4: Convert to input-ready format"),
+                                           tags$b("STEP 5: Convert to input-ready format"),
                                            br(),br(),
                                           shinyWidgets::circleButton("create_csv", icon = icon("long-arrow-alt-right", class = "fa-2x"), size = "lg"))
                                    ,column(3, align="center",
@@ -241,7 +241,7 @@ output$currUI <- renderUI({
                                    column(3, align="center",
                                           tags$i("Final table present?"),br(),br(),
                                           imageOutput("proj_csv_check", inline=T),br(),br(),
-                                          tags$b("STEP 5: If "), icon("check-circle"), tags$b(" continue to normalization"),
+                                          tags$b("STEP 6: If "), icon("check-circle"), tags$b(" continue to normalization"),
                                           offset = 2))
                           ),
                  # this tab shows the options for creating a new project, either from 2 csv files and an excel, or from a .db file and an excel.
