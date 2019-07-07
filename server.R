@@ -23,7 +23,8 @@ shinyServer(function(input, output, session) {
                theme = "min"),
     vectors = list(proj_names = c()),
     paths = list(opt.loc = "",
-                 patdb = "")
+                 patdb = "",
+                 work_dir="")
     )
 
   ####### !!!!!!!!!!! #########
@@ -34,14 +35,15 @@ shinyServer(function(input, output, session) {
       if(metshi_mode == "one_user"){
         print("Single-user mode activated~")
         # - - - 
-        userfolder = normalizePath("~/MetaboShiny/saves/admin")
-        dbdir = normalizePath("~/MetaboShiny/databases")
+        userfolder = "~/MetaboShiny/saves/admin"
+        dbdir = "~/MetaboShiny/databases"
         # - - - 
         if(!dir.exists(userfolder)) dir.create(userfolder,recursive = T)
         if(!dir.exists(dbdir)) dir.create(dbdir,recursive = T)
         lcl$paths$opt.loc <<- file.path(userfolder, "options.txt")
         lcl$paths$work_dir <<- userfolder
         lcl$paths$db_dir <<- dbdir
+
         if(!file.exists(lcl$paths$opt.loc)){
           print("welp re-making options...")
           contents = gsubfn::fn$paste('db_dir = $dbdir
@@ -86,10 +88,6 @@ mode = complete')
 
   # ================================== LOGIN =====================================
 
-  observe({
-    print(input$importmode)
-  })
-  
   # default
 
   userdb = normalizePath("./users.db")
@@ -162,6 +160,7 @@ gspec = RdBu')
     }
   })
 
+  
   # ================================= DEFAULTS ===================================
 
   source('./backend/scripts/joanna/shiny_general.R')

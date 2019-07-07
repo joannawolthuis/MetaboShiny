@@ -62,8 +62,7 @@ output$currUI <- renderUI({
     lcl$aes$mycols <<- get.col.map(lcl$paths$opt.loc) # colours for discrete sets, like group A vs group B etc.
     lcl$aes$theme <<- opts$gtheme # gradient function for heatmaps, volcano plot etc.
     lcl$aes$spectrum <<- opts$gspec # gradient function for heatmaps, volcano plot etc.
-    lcl$vectors$proj_names <<- unique(tools::file_path_sans_ext(list.files(opts$work_dir, pattern=".csv|.db"))) # the names listed in the 'choose project' tab of opts.
-    
+
     # load existing file
     bgcol <<- opts$col1
     
@@ -101,15 +100,21 @@ output$currUI <- renderUI({
     
     # init stuff that depends on opts file
     
-    lcl$proj_name <<- opts$proj_name
-    lcl$paths$patdb <<- file.path(opts$work_dir, paste0(opts$proj_name, ".db"))
-    lcl$paths$csv_loc <<- file.path(opts$work_dir, paste0(opts$proj_name, ".csv"))
-    lcl$texts <<- list(
+    lcl$proj_name <- opts$proj_name
+    lcl$paths$patdb <- file.path(opts$work_dir, paste0(opts$proj_name, ".db"))
+    lcl$paths$csv_loc <- file.path(opts$work_dir, paste0(opts$proj_name, ".csv"))
+    lcl$texts <- list(
       list(name='curr_exp_dir',text=lcl$paths$work_dir),
       list(name='curr_db_dir',text=lcl$paths$db_dir),
       list(name='ppm',text=opts$ppm),
       list(name='proj_name',text=opts$proj_name)
     )
+    
+    a = c("fish_no_out.csv", "fish.csv", "lungcancer_no_out.csv", "lungcancer.csv")
+    #gsub(a,pattern = "(_no_out\\.csv)|(\\.csv)", replacement="")
+    #dput(list.files(opts$work_dir,pattern = "\\.csv"))
+    lcl$vectors$project_names <- unique(gsub(list.files(opts$work_dir,pattern = "\\.csv"),pattern = "(_no_out\\.csv)|(\\.csv)", replacement=""))
+    print(lcl$vectors$proj_names)
     
     updateSelectizeInput(session,
                          "proj_name",
@@ -120,7 +125,7 @@ output$currUI <- renderUI({
       output[[default$name]] = renderText(default$text)
     })
     
-    lcl$aes$font <<- list(family = opts$font4,
+    lcl$aes$font <- list(family = opts$font4,
                           ax.num.size = 11,
                           ax.txt.size = 15,
                           ann.size = 20,
