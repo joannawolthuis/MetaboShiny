@@ -222,7 +222,7 @@ output$currUI <- renderUI({
                                            br(),br(),
                                           shinyWidgets::circleButton("create_csv", icon = icon("long-arrow-alt-right", class = "fa-2x"), size = "lg"))
                                    ,column(3, align="center",
-                                          imageOutput("laptop_icon"),
+                                          imageOutput("laptop_icon", inline=T),br(),br(),
                                           div(DT::dataTableOutput('csv_tab'),style='font-size:80%')
                                           )
                                    ),

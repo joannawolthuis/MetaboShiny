@@ -23,10 +23,10 @@ lapply(c("merge", "db", "csv"), FUN=function(col){
                            if(!is.null(input$importmode)){
                              switch(input$importmode,
                                     db = {
-                                      is.list(input$database) & is.list(input$excel) 
+                                      is.list(input$database) & is.list(input$metadata) 
                                     },
                                     csv = {
-                                      is.list(input$excel) & is.list(input$pos) & is.list(input$neg)
+                                      is.list(input$metadata) & is.list(input$pos) & is.list(input$neg)
                                     })  
                            }else{
                              F
@@ -47,6 +47,16 @@ lapply(c("merge", "db", "csv"), FUN=function(col){
 # triggers when user wants to create database from .db and excel or 2 csv files and excel
 observeEvent(input$create_db,{
 
+  files.present = switch(input$importmode,
+         db = {
+           is.list(input$database) & is.list(input$metadata) 
+         },
+         csv = {
+           is.list(input$metadata) & is.list(input$pos) & is.list(input$neg)
+         })
+  
+  if(!files.present) return(NULL)
+  
   # update the path to patient db
   lcl$paths$patdb <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name, ".db"))
 
@@ -73,9 +83,9 @@ observeEvent(input$create_db,{
     # change path CSV should be / is saved to in session
     #lcl$paths$csv_loc <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name,".csv"))
 
-    switch(input$new_proj,
+    switch(input$importmode,
            # if loading in a .db file... (FAST, MOSTLY FOR ADMINS USING HPC)
-           `From DB` = {
+           db = {
 
              # get the db and excel path from the UI elemnts
              db_path <- parseFilePaths(gbl$paths$volumes, input$database)$datapath
@@ -95,19 +105,11 @@ observeEvent(input$create_db,{
                exp_vars <<- load.metadata.excel(metadata_path, lcl$paths$patdb)
              }
 
-             # # need to adjust names if duplicols
-             # if(input$meta_dupli_col != ""){
-             #   conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb) # change this to proper var later
-             #   DBI::dbExecute(conn,
-             #                  gsubfn::fn$paste("")
-             #                  )
-             # }
-             
              shiny::setProgress(session=session, value= .60)
 
            },
            # if loading in .csv files...
-           `From CSV` = {
+           csv = {
 
              # build patient db from csv files with a given ppm error margin
              build.pat.db(lcl$paths$patdb,
@@ -128,7 +130,12 @@ observeEvent(input$create_db,{
              }
           }
     )
-  })
+    output$proj_db_check <- renderImage({
+      filename <- normalizePath(file.path('www', "yes.png"))
+      list(src = filename, width = 70,
+           height = 70)
+      },deleteFile = FALSE)
+    })
 })
 
 # imports existing db file
@@ -222,6 +229,11 @@ observeEvent(input$create_csv, {
                     autoHideNavigation = T,
                     options = list(lengthMenu = c(10, 30, 50), pageLength = 30,scrollX=TRUE, scrollY=TRUE))
     })
+    output$proj_csv_check <- renderImage({
+      filename <- normalizePath(file.path('www', "yes.png"))
+      list(src = filename, width = 70,
+           height = 70)
+    },deleteFile = FALSE)
   })
 })
 
