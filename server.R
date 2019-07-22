@@ -554,8 +554,10 @@ gspec = RdBu')
   # generate all the fadebuttons for the database selection
   lapply(db_button_prefixes, function(prefix){
     output[[paste0("db_", prefix, "_select")]] <- renderUI({
+      built.dbs <- c(gsub(x = list.files(lcl$paths$db_dir, pattern = "\\.base\\.db"), 
+                        pattern = "\\.base\\.db", replacement = ""), "custom")
       fluidRow(
-        lapply(gbl$vectors$db_list[-which(gbl$vectors$db_list == "custom")], function(db){
+        lapply(gbl$vectors$db_list[-which(gbl$vectors$db_list == "custom" | !(gbl$vectors$db_list %in% built.dbs))], function(db){
           which_idx = grep(sapply(gbl$constants$images, function(x) x$name), pattern = db) # find the matching image (NAME MUST HAVE DB NAME IN IT COMPLETELY)
           sardine(fadeImageButton(inputId = paste0(prefix, "_", db), img.path = basename(gbl$constants$images[[which_idx]]$path))) # generate fitting html
         })

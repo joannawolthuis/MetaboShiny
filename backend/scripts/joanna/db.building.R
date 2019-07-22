@@ -404,9 +404,9 @@ build.base.db <- function(dbname=NA,
                            
                            db.formatted
                          },
-                         bloodexposome = function(dbname){ #ok
+                         bloodexposome = function(dbname){ #currently ded, pls check later
                            
-                           file.url = "http://exposome.fiehnlab.ucdavis.edu/blood_exposome_database_v1_08_2018.xlsx"
+                           file.url = "https://exposome1.fiehnlab.ucdavis.edu/download/BloodExpsomeDatabase_version_1.0.xlsx"
                            
                            base.loc <- file.path(getOptions(optfile)$db_dir, "bloodexposome_source")
                            if(!dir.exists(base.loc)) dir.create(base.loc)
