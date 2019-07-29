@@ -3,14 +3,13 @@ build.base.db <- function(dbname=NA,
                           outfolder,
                           optfile,
                           cl=FALSE){
-  
-  optfolder <- 
     # --- check if user chose something ---
-    if(is.na(dbname)) return("~ Please choose one of the following options: HMDB, ChEBI, PubChem, MetaCyc, internal, noise, KEGG! d(>..w.<)b ~")
+  if(is.na(dbname)) return("~ Please choose one of the following options: HMDB, ChEBI, PubChem, MetaCyc, internal, noise, KEGG! d(>..w.<)b ~")
   # --- make dir if not exists ---
   if(!dir.exists(outfolder)) dir.create(outfolder)
   # --- create .db file ---
   db <- file.path(normalizePath(outfolder), paste0(dbname, ".base.db"))
+  print(db)
   if(file.exists(db)) file.remove(db)
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), db)
   RSQLite::dbExecute(conn, statement = "create table base(compoundname text, description text, baseformula text, identifier text, charge text, structure text)")
@@ -413,40 +412,14 @@ build.base.db <- function(dbname=NA,
                            excel.file <- file.path(base.loc, "exposome.xlsx")
                            utils::download.file(file.url, excel.file)
                            
-                           db.full <- openxlsx::read.xlsx(excel.file, sheet = 2, colNames=T, startRow = 3)
+                           db.full <- openxlsx::read.xlsx(excel.file, sheet = 1, colNames=T, startRow = 3)
                            
-                           db.formatted <- unique(data.table::data.table(compoundname = db.full$CompoundName,
-                                                                         description = c("No description available."),
-                                                                         baseformula = db.full$Formula,
-                                                                         identifier = db.full$PubChemCID,
-                                                                         charge = c(0),
-                                                                         structure = db.full$SMILES))
-                           
-                           # --- get charges from smiles ---
-                           
-                           charges = pbapply::pbsapply(db.formatted$structure, cl=session_cl, FUN=function(smile){
-                             m <- rcdk::parse.smiles(smile)
-                             ## perform operations on this molecule
-                             try({
-                               charge = rcdk::get.total.formal.charge(m[[1]])
-                               # --- return ---
-                               return(charge)
-                             })
-                           })
-                           
-                           charges[grep("Error", charges)] <- 0
-                           charges = as.numeric(charges)
-                           
-                           db.formatted$charge <- charges
-                           
-                           # --- check formulae ---
-                           checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
-                                                                                      db.formatted$baseformula))
-                           db.formatted$baseformula <- checked$new_formula
-                           keep <- checked[warning == FALSE, which = TRUE]
-                           db.formatted <- db.formatted[keep]
-                           
-                           # ----------------------
+                           db.formatted <- unique(data.table::data.table(compoundname = db.full$Compound.Name,
+                                                                         description = paste0("Found in ", db.full$BloodPaperCount, " papers related to blood exposome."),
+                                                                         baseformula = db.full$Molecular.Formula,
+                                                                         identifier = db.full$PubChem.CID,
+                                                                         charge = db.full$Charge,
+                                                                         structure = db.full$CanonicalSMILES))
                            
                            db.formatted
                            
@@ -512,54 +485,79 @@ build.base.db <- function(dbname=NA,
                            # --- GET COMPOUNDS ---
                            parallel::clusterExport(session_cl, c("kegg.charge", "rbindlist"))
                            
-                           kegg.cpd.list <- pbapply::pblapply(id.batches, cl=session_cl, FUN=function(batch){
+                           kegg.cpd.list <- pbapply::pblapply(id.batches, cl=0, FUN=function(batch){
                              rest.result <- KEGGREST::keggGet(batch)
                              # ---------------------------
                              base.list <- lapply(rest.result, FUN=function(cpd){
                                cpd$NAME_FILT <- gsub(cpd$NAME, pattern = ";", replacement = "")
                                data.table::data.table(compoundname = c(paste(cpd$NAME_FILT, collapse=", ")),
-                                                      description = c(if("BRITE" %in% names(cpd)) paste(cpd$BRITE, collapse=", ") else{NA}),
+                                                      description = paste0("Involved in pathways: ", 
+                                                                           paste0(cpd$PATHWAY, collapse = ", "),
+                                                                           ". More specifically: ", 
+                                                                           paste0(cpd$MODULE, collapse = ", "),
+                                                                           ". Also associated with compound classes: ",
+                                                                           paste0(
+                                                                             unique(trimws(
+                                                                                      gsub(cpd$BRITE, pattern = "\\[.*\\]|  D\\d* |\\(.*\\)|\\d*", replacement= "")
+                                                                                      )
+                                                                                    ), collapse = ", ")
+                                                                           ),
                                                       baseformula = c(cpd$FORMULA),
                                                       identifier = c(cpd$ENTRY),
-                                                      #widentifier = c(paste(cpd$DBLINKS, collapse=";")),
-                                                      charge = c(kegg.charge(cpd$ATOM)),
-                                                      structure = c(NA)
-                                                      #,pathway = if("PATHWAY" %in% names(cpd)) names(cpd$PATHWAY) else{NA}
+                                                      charge = 0,
+                                                      structure = NA
+                                                      ,pathway = if("PATHWAY" %in% names(cpd)) names(cpd$PATHWAY) else{NA}
                                )
                              })
-                             rbindlist(base.list)
+                             res = rbindlist(base.list)
+                             res
                            })
                            
-                           db.formatted <- rbindlist(kegg.cpd.list)
+                           # - - - 
+                           db.formatted <- data.table::rbindlist(kegg.cpd.list)
                            
-                           db.formatted$baseformula <- gsub(pattern = " |\\.", replacement = "", db.formatted$baseformula) # fix salt and spacing issues
+                           base.loc <- file.path(getOptions(optfile)$db_dir, "kegg_source")
+                           if(!dir.exists(base.loc)) dir.create(base.loc)
                            
-                           # checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
-                           #                                                            db.formatted$baseformula))
-                           # db.formatted$baseformula <- checked$new_formula
-                           # keep <- checked[warning == FALSE, which = TRUE]
-                           # db.formatted <- db.formatted[keep]
-                           # --- GET PATHWAYS ---
-                           # pathways <- unique(db.formatted$pathway)
-                           # pw.batches <- split(pathways, ceiling(seq_along(pathways)/10))
-                           # kegg.pw.list <- pbapply::pblapply(pw.batches, cl=session_cl, FUN=function(batch){
-                           #   rest.result <- KEGGREST::keggGet(batch)
-                           #   # ---------------------------
-                           #   base.list <- lapply(rest.result, FUN=function(pw){
-                           #     data.table::data.table(identifier = as.character(pw$ENTRY),
-                           #                            name = as.character(pw$NAME),
-                           #                            class = if("CLASS" %in% names(pw)) pw$CLASS else{NA},
-                           #                            module = if("MODULE" %in% names(pw)) pw$MODULE else{NA},
-                           #                            disease = if("DISEASE" %in% names(pw)) as.character(pw$DISEASE) else{NA})
-                           #   })
-                           #   rbindlist(base.list)
-                           # })
-                           # db.pathways <- rbindlist(kegg.pw.list)
-                           # -------------------------------------------------------
+                           kegg.mol.paths = pbapply::pblapply(id.batches, cl=0, FUN=function(batch){
+                              #mols = Rcpi::getMolFromKEGG(batch, parallel = 1)
+                              bigmol = KEGGREST::keggGet(batch, "mol")
+                              mols = strsplit(x = paste0("\n \n \n",bigmol), split = "\\$\\$\\$\\$\n")[[1]]
+                              fps = normalizePath(file.path(base.loc, paste0(str_match(mols, pattern = "<ENTRY>\ncpd:(.*)\n")[,2], ".mol")),mustWork = F)
+                              sapply(1:length(mols), function(i) writeLines(text = mols[[i]], 
+                                                                              con = fps[i]
+                                                                              )
+                                     )
+                              fps
+                           })
                            
-                           #RSQLite::dbWriteTable(conn, "pathways", db.pathways, overwrite=TRUE)
+                           fns = unlist(flattenlist(kegg.mol.paths))
+
+                           rJava::.jcall("java/lang/System","V","gc")
+                           gc()
                            
-                           db.formatted
+                           smiles.rows = pbapply::pblapply(fns, function(fn){
+                             smiles=NA
+                             try({
+                               iatom = rcdk::load.molecules(molfiles = fn)[[1]]
+                               smiles = rcdk::get.smiles(molecule = iatom)
+                               })
+                             id = gsub(basename(fn), pattern = "\\.mol", replacement="")
+                             data.table::data.table(identifier = id, smiles = smiles)
+                             })
+                 
+                           smitable <- data.table::rbindlist(smiles.rows)
+                           
+                           db.merged <- merge(db.formatted, smitable, by = "identifier")
+                           
+                           db.formatted <- data.table(compoundname = db.merged$compoundname,
+                                                      description = db.merged$description,
+                                                      baseformula = db.merged$baseformula,
+                                                      identifier = db.merged$identifier,
+                                                      charge = c(0),
+                                                      structure = db.merged$smiles
+                                                      #, pathway = pathways
+                           )
                          },
                          metacyc = function(dbname, ...){ #ok
                            # NOTE: Requires downloading this SmartTable as delimited file: https://metacyc.org/group?id=biocyc17-31223-3729417004
@@ -835,8 +833,6 @@ build.base.db <- function(dbname=NA,
                            colnames(all_ids) <- c("identifier", "inchi", "inchikey")
                            
                            metabs <- all_ids$identifier
-                           
-                           jsonlite::read_json()
                            
                            # require(RCurl)
                            # 
@@ -1527,6 +1523,7 @@ build.base.db <- function(dbname=NA,
                              new = checked$new_formula,
                              warning = checked$warning)
     order = match(db.formatted$baseformula, conv.table$old)
+    
     db.formatted <- as.data.table(merge(db.formatted, conv.table, by.x = "baseformula", by.y = "old"))
     db.formatted$baseformula <- db.formatted$new
     
@@ -1586,7 +1583,8 @@ build.base.db <- function(dbname=NA,
     fake.smiles <- paste0("FORMONLY[", db.formatted$baseformula[yes.form.no.struct], "]",db.formatted$charge[yes.form.no.struct])
     db.formatted$structure[yes.form.no.struct] <- as.character(fake.smiles)
     
-    keep = ok.smi & ok.form & !is.na(db.formatted$baseformula)
+    keep = !is.na(db.formatted$baseformula)
+    
     # # adduct rules
     # chonks <- split(which(ok.smi), ceiling(seq_along(which(ok.smi))/200))
     # rule.rows <- pbapply::pblapply(chonks, function(chunk){
@@ -1608,7 +1606,7 @@ build.base.db <- function(dbname=NA,
     
     db.formatted$charge <- sapply(db.formatted$structure, function(smi){
       if(grepl("FORMONLY", x = smi)){
-        ch = str_match(row$structure, "\\](.*$)")[[2]]
+        ch = str_match(smi, "\\](.*$)")[[2]]
       }else{
         mol = rcdk::parse.smiles(smi)[[1]]
         ch = rcdk::get.total.formal.charge(molecule = mol)
@@ -1639,8 +1637,10 @@ build.extended.db <- function(dbname,
                               outfolder = getOptions(lcl$paths$opt.loc)$db_dir,
                               adduct.table = adducts,
                               cl = FALSE,
-                              fetch.limit = -1){
+                              fetch.limit = -1,
+                              mzrange = c(60, 600)){
   
+  outfolder <- normalizePath(outfolder)
   data(isotopes, package = "enviPat")
   base.db <- file.path(outfolder, paste0(dbname, ".base.db"))
   full.db <<- file.path(outfolder, paste0("extended.db"))
@@ -1698,6 +1698,7 @@ build.extended.db <- function(dbname,
   
   chunks = split(1:nrow(mapper), ceiling(seq_along(1:nrow(mapper))/fetch.limit))
   
+  print(cl)
   pbapply::pblapply(chunks, function(selection, cl=cl, full.db){
     
     #print("e")
@@ -1711,9 +1712,7 @@ build.extended.db <- function(dbname,
     mols <- lapply(1:nrow(partial.results), function(i) return(NA))
     mols[valid.struct] <- rcdk::parse.smiles(smiles[valid.struct])#sapply(smiles, rcdk::parse.smiles)
     
-    #print("f")
-    
-    
+    #print(
     backtrack <- data.table::data.table(structure = smiles,
                                         parse_smile = valid.struct)
     
@@ -1898,92 +1897,133 @@ build.extended.db <- function(dbname,
       
       # --- get isotopes ---
       
-      #print("l")
+      testformulas <<- unique_formulas
       
-      isotables <- enviPat::isopattern(
-        isotopes,
-        unique_formulas$final,
-        threshold = 0.1,
-        plotit = FALSE,
-        charge = unique_formulas$final.charge,
-        algo = 2,
-        verbose = FALSE
-      )
+      # === RCDK METHOD ===
+      # isotables <- lapply(1:nrow(unique_formulas), 
+      #                     function(i){
+      #                       isos = NULL
+      #                       #try({
+      #                       print("- - - - - ")
+      #                         row <- unique_formulas[i,]
+      #                         print(row)
+      #                         form = rcdk::get.formula(row$final,charge = row$final.charge)
+      #                         print(form)
+      #                         if(form@mass %between% c(mzrange[1], mzrange[2])){
+      #                           isos = rcdk::get.isotopes.pattern(form) 
+      #                         }  
+      #                       #})
+      #                       # - - - 
+      #                       isos
+      #                     })
+      # 
+      # isolist <- lapply(isotables, function(isotable){
+      #   if(is.null(isotable)) return(NA)
+      #   iso.dt <- data.table::data.table(isotable, fill=TRUE)
+      #   result <- iso.dt[,1:2]
+      #   names(result) <- c("fullmz", "isoprevalence")
+      #   # --- return ---
+      #   result
+      # })
+      # 
+      # names(isolist) <- unique_formulas$final
       
-      isolist <- lapply(isotables, function(isotable){
-        if(isotable[[1]] == "error"){
-          return(NA)
-        }
-        iso.dt <- data.table::data.table(isotable, fill=TRUE)
-        result <- iso.dt[,1:2]
-        names(result) <- c("fullmz", "isoprevalence")
-        # --- return ---
-        result
-      })
+      # === ENVIPAT METHOD ===
       
-      #print("m")
+      # check mass
+      checked <- check.chemform.joanna(isotopes, unique_formulas$final)
+      checked$mz <- checked$monoisotopic_mass/abs(unique_formulas$final.charge)
+      keep <- which(checked$mz %between% mzrange)
       
-      isolist.nonas <- isolist[!is.na(isolist)]
-      isotable <- rbindlist(isolist.nonas)
-      keep.isos <- names(isolist.nonas)
-      
-      charges <- unique_formulas$final.charge[which(!is.na(isolist))]
-      
-      repeat.times <- c(unlist(lapply(isolist.nonas, FUN=function(list) nrow(list))))
-      isotable$final <- rep(keep.isos, repeat.times)
-      isotable$final.charge <- rep(charges, repeat.times)
-      
-      #print("n")
-      
-      # --- remove 'backtrack' rows that couldn't be calculated ---
-      unique_formulas <- unique_formulas[final %in% keep.isos]
-      
-      formula_plus_iso <- merge(unique_formulas, isotable, by = c("final", "final.charge"))
-      
-      backtrack.final <- merge(backtrack_filt, formula_plus_iso, 
-                               by=c("baseformula", "charge"), allow.cartesian = T)
-      
-      try({
+      if(length(keep) == 0){
+        return(NULL)
+      }else{
+        unique_formulas <- unique_formulas[keep,]
         
+       #x print(unique_formulas)
+         
+        isotables <- enviPat::isopattern(
+          isotopes,
+          unique_formulas$final,
+          threshold = 0.1,
+          plotit = FALSE,
+          charge = unique_formulas$final.charge,
+          #algo = 2,
+          verbose = FALSE,
+        )
+        isolist <- lapply(isotables, function(isotable){
+          if(isotable[[1]] == "error"){
+            return(NA)
+          }
+          iso.dt <- data.table::data.table(isotable, fill=TRUE)
+          result <- iso.dt[,1:2]
+          names(result) <- c("fullmz", "isoprevalence")
+          # --- return ---
+          result
+        })
         
-        meta.table <- data.table::data.table(structure = backtrack.final$structure,
-                                             fullformula = backtrack.final$final,
-                                             fullmz = backtrack.final$fullmz,
-                                             adduct = c(name),
-                                             isoprevalence = backtrack.final$isoprevalence,
-                                             foundinmode = c(mode),
-                                             source = c(dbname))
+        #print("m")
         
-        #print("o")
+        isolist.nonas <- isolist[!is.na(isolist)]
+        isotable <- rbindlist(isolist.nonas)
+        keep.isos <- names(isolist.nonas)
         
-        # map SMILES to smile_id
-        ids <- smimap$id[match(meta.table$structure, smimap$smiles)]
-        meta.table$struct_id <- ids
+        charges <- unique_formulas$final.charge[which(!is.na(isolist))]
         
-        meta.table <- data.table::data.table(struct_id = meta.table$struct_id,
-                                             fullformula = meta.table$fullformula,
-                                             fullmz = meta.table$fullmz,
-                                             adduct = meta.table$adduct,
-                                             isoprevalence = meta.table$isoprevalence,
-                                             foundinmode = meta.table$foundinmode,
-                                             source = meta.table$source)
-        # - - return - -
+        repeat.times <- c(unlist(lapply(isolist.nonas, FUN=function(list) nrow(list))))
+        isotable$final <- rep(keep.isos, repeat.times)
+        isotable$final.charge <- rep(charges, repeat.times)
         
-        #print("p")
+        #print("n")
         
-        core.conn <- DBI::dbConnect(RSQLite::SQLite(), dbname = full.db)
-        res <- DBI::dbSendQuery(core.conn, "PRAGMA busy_timeout=5000;")
-        DBI::dbClearResult(res)
+        # --- remove 'backtrack' rows that couldn't be calculated ---
+        unique_formulas <- unique_formulas[final %in% keep.isos]
         
-        #print("q")
-        repeat{
-          rv <- try({
-            DBI::dbAppendTable(core.conn, "extended", meta.table)
-          })
-          if(!is(rv, "try-error")) break
-          DBI::dbDisconnect(core.conn)
-        }
-      })
+        formula_plus_iso <- merge(unique_formulas, isotable, by = c("final", "final.charge"))
+        
+        backtrack.final <- merge(backtrack_filt, formula_plus_iso, 
+                                 by=c("baseformula", "charge"), allow.cartesian = T)
+        
+        try({
+          meta.table <- data.table::data.table(structure = backtrack.final$structure,
+                                               fullformula = backtrack.final$final,
+                                               fullmz = backtrack.final$fullmz,
+                                               adduct = c(name),
+                                               isoprevalence = backtrack.final$isoprevalence,
+                                               foundinmode = c(mode),
+                                               source = c(dbname))
+          
+          #print("o")
+          
+          # map SMILES to smile_id
+          ids <- smimap$id[match(meta.table$structure, smimap$smiles)]
+          meta.table$struct_id <- ids
+          
+          meta.table <- data.table::data.table(struct_id = meta.table$struct_id,
+                                               fullformula = meta.table$fullformula,
+                                               fullmz = meta.table$fullmz,
+                                               adduct = meta.table$adduct,
+                                               isoprevalence = meta.table$isoprevalence,
+                                               foundinmode = meta.table$foundinmode,
+                                               source = meta.table$source)
+          # - - return - -
+          
+          #print("p")
+          
+          core.conn <- DBI::dbConnect(RSQLite::SQLite(), dbname = full.db)
+          res <- DBI::dbSendQuery(core.conn, "PRAGMA busy_timeout=5000;")
+          DBI::dbClearResult(res)
+          
+          #print("q")
+          repeat{
+            rv <- try({
+              DBI::dbAppendTable(core.conn, "extended", meta.table)
+            })
+            if(!is(rv, "try-error")) break
+            DBI::dbDisconnect(core.conn)
+          }
+        })
+      }
     }
     
     #print("s")
@@ -1994,7 +2034,7 @@ build.extended.db <- function(dbname,
     # }
     # this stores everyone in MEMORY! use insert statements...
     #if(is.null(cl)){
-    sapply(1:nrow(adduct.table), FUN=function(x) do.calc(x, mapper))
+      sapply(1:nrow(adduct.table), FUN=function(x) do.calc(x, mapper))
     #}else{
     #  parallel::clusterExport(cl, "full.db")
     #  parallel::parSapply(cl=cl, 1:nrow(adduct.table), FUN=function(x) do.calc(x, mapper))

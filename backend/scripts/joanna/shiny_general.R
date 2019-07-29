@@ -46,7 +46,7 @@ getProfile <- function(mSet, varName, title=varName, mode="stat"){
 }
 
 kegg.charge <- function(atomlist){
-  charges  <-regmatches(
+  charges <- regmatches(
     atomlist,
     regexpr(atomlist, pattern = "#[+-]|#\\d*[+-]",perl = T)
   )

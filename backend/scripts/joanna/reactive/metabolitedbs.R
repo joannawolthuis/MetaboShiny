@@ -53,14 +53,18 @@ lapply(gbl$vectors$db_list, FUN=function(db){
       }, pkgs = pkgs)
       shiny::setProgress(session = session, 0.1)
 
+      if(input$db_build_mode %in% c("base", "both")){
+        build.base.db(db,
+                      outfolder = lcl$paths$db_dir,
+                      optfile = lcl$paths$opt.loc,
+                      cl = session_cl)
+      }
       # build base db (differs per db, parsers for downloaded data)
-      build.base.db(db,
-                    outfolder = lcl$paths$db_dir,
-                    optfile = lcl$paths$opt.loc,
-                    cl = session_cl)
       
       shiny::setProgress(session = session, 0.5)
 
+      if(input$db_build_mode %in% c("extended", "both")){
+        
       if(!grepl(db, pattern = "maconda")){
         print(db)
         # extend base db (identical per db, makes adduct and isotope variants of downloaded compounds)
@@ -68,8 +72,10 @@ lapply(gbl$vectors$db_list, FUN=function(db){
                           outfolder = lcl$paths$db_dir,
                           adduct.table = adducts,
                           cl = session_cl,
-                          fetch.limit = 200) #TODO: figure out the optimal fetch limit...
+                          fetch.limit = 200,
+                          mzrange = input$db_mz_range) #TODO: figure out the optimal fetch limit...
       }
+        } 
     })
   })
 })

@@ -48,7 +48,7 @@ needed.packages <- c("BiocManager", "shiny", "shinydashboard", "httr", "curl", "
                      "KEGGREST", "manhattanly", "rgl", "glmnet", "TSPred", "VennDiagram",
                      "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR", "openxlsx",
                      "doParallel", "missForest", "InterpretMSSpectrum", "tm", "RISmed",
-                     "qdap", "extrafont", "gmp", "shadowtext", "fgsea", "Rmisc")
+                     "qdap", "extrafont", "gmp", "shadowtext", "fgsea", "Rmisc", "BioMedR")S
 
 print(needed.packages)
 
