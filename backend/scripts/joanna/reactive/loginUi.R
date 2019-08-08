@@ -187,7 +187,7 @@ output$currUI <- renderUI({
     # - - - - -
     
     tagList(
-      tags$title('MetaboShiny'),
+      tags$head('MetaboShiny'),
       tags$style(type="text/css", bar.css),
       navbarPage(inverse=TRUE,#tags$head(tags$script(src="sparkle.js")),
                  title=div(h1("MetaboShiny"), class="outlined", tags$style(type="text/css", font.css)), # make it use the sparkle.js for unnecessary sparkle effects ;)
@@ -210,7 +210,7 @@ output$currUI <- renderUI({
                  tabPanel("data import", icon = icon("upload", class = "outlined"),
                           fluidRow(column(12, align="center", 
                                           textInput("proj_name_new", label = "STEP 1: What is your project name?", value = lcl$proj_name),
-                                          sliderInput("ppm", "STEP 2: What level accuracy is your mass spectrometer?",min = 0.1,max = 50,value = 5))),
+                                          sliderInput("ppm", "STEP 2: What level accuracy is your mass spectrometer?",min = 0.1,max = 50,value = 5,step = .1))),
                           hr(),
                           fluidRow(column(3, align="center",
                                           imageOutput("merge_icon",inline = T),
@@ -334,6 +334,22 @@ output$currUI <- renderUI({
                                                )
                                     )
                           )
+                          )),
+                 tabPanel("prematch", icon = icon("search", class = "outlined"), value = "prematch",
+                          # - - - pre-matching part - - -
+                          fluidRow(align="center", 
+                                   switchButton(inputId = "do_prematch", 
+                                                label = "Do matching beforehand?",
+                                                col = "BW", 
+                                                type = "YN")),
+                          fluidRow(align="center", 
+                                   column(2),
+                                   column(8, conditionalPanel("input.do_prematch == true", 
+                                                              h2("Included databases:"),
+                                                              uiOutput("db_prematch_select")),
+                                          shinyWidgets::circleButton(inputId = "prematch",
+                                                                              icon = icon("hand-o-right"))),
+                                   column(2)
                           )),
                  # this tab is the main analysis tab. all tabs for all analyses are listed here, but the visibility is changed depending on the current experiment
                  tabPanel("analyse",  icon = icon("bar-chart",class = "outlined"), value = "analysis",
@@ -608,6 +624,10 @@ output$currUI <- renderUI({
                                         sidebarPanel =
                                           sidebarPanel(align="center",width = 4,
                                                        tabsetPanel(id = "anal_sidebar", selected="switch/subset",#type = "pills",
+                                                                   tabPanel(title="export",icon=icon("file"),
+                                                                            radioButtons("export_format", "Which format do you want to export plots to?",
+                                                                                         choices = list(".svg", ".eps", ".png", ".jpeg", ".pdf")),
+                                                                            shinyWidgets::circleButton("export_plot", icon=icon("hand-o-up"))),
                                                                    tabPanel(title="search", icon=icon("search"),
                                                                             br(),
                                                                             bsCollapse(bsCollapsePanel(title=h2("Settings"), style="info",

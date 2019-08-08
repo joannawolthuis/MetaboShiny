@@ -13,6 +13,14 @@ observe({
   })
 })
 
+output$mzgroup_add_tab <- DT::renderDataTable({
+  DT::datatable(data.table::data.table(adduct=adducts$Name),
+                selection = list(mode = 'multiple',
+                                 target="row"),
+                options = list(pageLength = 5, dom = 'tp'),
+                rownames = F)
+})
+
 # toggles when 'select all adducts' is pressed (filled circle)
 observeEvent(input$sel_all_adducts, {
   lcl$vectors$neg_selected_adducts <<- c(1:nrow(lcl$vectors$pos_adducts))

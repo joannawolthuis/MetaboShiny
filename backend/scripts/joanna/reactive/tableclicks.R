@@ -54,6 +54,12 @@ lapply(unique(res.update.tables), FUN=function(table){
 
       # get current selected compound from the original table (needs to be available in global env)
       lcl$curr_mz <<- res_tbl[curr_row, rn]
+      
+      # show pre-matched ones
+      if(!is.null(lcl$tables$pre_matches)){
+        shown_matches$table <- lcl$tables$pre_matches[query_mz == lcl$curr_mz]
+      }
+      
       # print current compound in sidebar
       output$curr_mz <- renderText(lcl$curr_mz)
 

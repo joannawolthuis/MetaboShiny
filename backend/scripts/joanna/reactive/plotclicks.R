@@ -131,7 +131,11 @@ observeEvent(plotly::event_data("plotly_click"),{
                   col.fac = input$col_var, txt.fac = input$txt_var,plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                   font = lcl$aes$font)
   })
-
+  # check if presearch mode is on
+  if(!is.null(lcl$tables$pre_matches)){
+    shown_matches$table <- lcl$tables$pre_matches[query_mz == lcl$curr_mz]
+  }
+  
   # change current compound in text
   output$curr_mz <- renderText(lcl$curr_mz)
 })

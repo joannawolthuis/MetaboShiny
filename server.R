@@ -236,7 +236,6 @@ gspec = RdBu')
                                  pageLength = 5,
                                  columnDefs = list(list(visible=FALSE, targets=remove_idx)))
     )
-
   })
 
   # ===== UI SWITCHER ====
@@ -549,13 +548,14 @@ gspec = RdBu')
     database_layout
   })
 
-  db_button_prefixes = c("search", "add", "enrich")
+  db_button_prefixes = c("search", "add", "enrich", "prematch")
 
   # generate all the fadebuttons for the database selection
   lapply(db_button_prefixes, function(prefix){
+    print(paste0("rendering ", paste0("db_", prefix, "_select")))
     output[[paste0("db_", prefix, "_select")]] <- renderUI({
-      built.dbs <- c(gsub(x = list.files(lcl$paths$db_dir, pattern = "\\.base\\.db"), 
-                        pattern = "\\.base\\.db", replacement = ""), "custom")
+      built.dbs <- c(gsub(x = list.files(lcl$paths$db_dir, pattern = "\\.db"), 
+                        pattern = "\\.db", replacement = ""), "custom")
       fluidRow(
         lapply(gbl$vectors$db_list[-which(gbl$vectors$db_list == "custom" | !(gbl$vectors$db_list %in% built.dbs))], function(db){
           which_idx = grep(sapply(gbl$constants$images, function(x) x$name), pattern = db) # find the matching image (NAME MUST HAVE DB NAME IN IT COMPLETELY)
@@ -576,7 +576,7 @@ gspec = RdBu')
                                  NA
                                }else{
                                  if(!button_id){
-                                   c(file.path(lcl$paths$db_dir, paste0(db, ".base.db"))) # add path to list of dbpaths
+                                   c(file.path(lcl$paths$db_dir, paste0(db, ".db"))) # add path to list of dbpaths
                                  }
                                  else{NA}
                                }
@@ -647,25 +647,6 @@ gspec = RdBu')
     output$ml_test_ss <- renderText(subset.name)
   })
 
-  # check if a dataset is already loaded in
-  # change mode according to how many levels the experimental variable has
-  # change interface based on that
-
-
-  onStop(function() {
-    print("closing metaboShiny ~ヾ(＾∇＾)")
-    debug_input <<- isolate(reactiveValuesToList(input))
-    debug_lcl <<- lcl
-    debug_mSet <<- mSet
-    # if(exists("mSet")){
-    #   mSet$storage[[mSet$dataSet$cls.name]] <<- list()
-    #   mSet$storage[[mSet$dataSet$cls.name]]$analysis <<- mSet$analSet
-    # }
-    # remove metaboshiny csv files
-    rmv <- list.files(".", pattern = ".csv|.log", full.names = T)
-    if(all(file.remove(rmv))) NULL
-  })
-
   output$db_example <- DT::renderDataTable({
     DT::datatable(data = data.table::data.table(
       compoundname = c("1-Methylhistidine", "1,3-Diaminopropane", "2-Ketobutyric acid"),
@@ -713,7 +694,12 @@ gspec = RdBu')
       footer = NULL
     )
     )
-
+  })
+  
+  observeEvent(input$export_plot,{
+    export_plotly(p = plotly::last_plot(), 
+                  file=paste0(basename(tempfile()), input$export_format),
+                  port = 9091)
   })
 
   observeEvent(input$build_custom_db, {
@@ -738,4 +724,23 @@ gspec = RdBu')
   
   removeModal()
 
+  # ==== ON EXIT ====
+  
+  onStop(function() {
+    print("closing metaboShiny ~ヾ(＾∇＾)")
+    debug_input <<- isolate(reactiveValuesToList(input))
+    debug_lcl <<- lcl
+    debug_mSet <<- mSet
+    # remove metaboshiny csv files
+    switch(runmode,
+           local = {
+             stop_orca(orca_serv_id)
+           },
+           docker = {
+             print("how to stop orca server here??")
+           })
+    parallel::stopCluster(session_cl)
+    rmv <- list.files(".", pattern = ".csv|.log", full.names = T)
+    if(all(file.remove(rmv))) NULL
+  })
 })

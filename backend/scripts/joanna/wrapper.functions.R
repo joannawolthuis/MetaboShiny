@@ -18,7 +18,7 @@ get.csv <-
 
     cat(gsubfn::fn$paste("Creating csv for metabolomics analysis with max $max.cols columns."))
 
-    conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
+    conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(patdb))
 
     # - - - - - - - - - - - - - - - -
 
@@ -39,7 +39,7 @@ get.csv <-
                                           on i.filename = d.card_id
                                           join setup s on d.[Group] = s.[Group]
                                           join batchinfo b on b.sample = d.card_id
-                                          group by d.card_id, b.batch, b.injection, i.mzmed, d.sampling_date"),
+                                          group by d.card_id, i.mzmed, d.sampling_date"),
                          width=10000,
                          simplify=TRUE)
       }else{
@@ -54,6 +54,7 @@ get.csv <-
                          width=10000,
                          simplify=TRUE)
       }
+      print(query)
       z = RSQLite::dbGetQuery(conn, query)
     }
 

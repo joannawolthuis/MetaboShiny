@@ -5,8 +5,6 @@ It takes care of installing packages necessary for
 MetaboShiny to even start.
 "
 
-
-
 #' Function to install packages, either through regular method or through downloading from git directly
 #' @param package package name to install, either CRAN or bioconductor
 install.if.not <- function(packages){
@@ -15,14 +13,16 @@ install.if.not <- function(packages){
       NULL
       #print(paste("Already installed base package", package))
     }else{
-      if(package %in% c("MetaboAnalystR", "BatchCorrMetabolomics")){
+      if(package %in% c("MetaboAnalystR", "BatchCorrMetabolomics", "MetaDBparse")){
         # Step 1: Install devtools
         install.if.not("devtools")
         # Step 2: Install MetaboAnalystR with documentation
-        gitfolder <- switch(package, MetaboAnalystR = "xia-lab/MetaboAnalystR",
+        gitfolder <- switch(package, 
+                            MetaboAnalystR = "xia-lab/MetaboAnalystR",
                             BatchCorrMetabolomics = "rwehrens/BatchCorrMetabolomics",
+                            MetaDBparse = "UMCUGenetics/MetaDBparse",
                             showtext = "yixuan/showtext")
-        devtools::install_github(gitfolder)#, build_vignettes=TRUE)
+        devtools::install_github(gitfolder)
       }else{
         BiocManager::install(package)
       }
@@ -48,9 +48,8 @@ needed.packages <- c("BiocManager", "shiny", "shinydashboard", "httr", "curl", "
                      "KEGGREST", "manhattanly", "rgl", "glmnet", "TSPred", "VennDiagram",
                      "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR", "openxlsx",
                      "doParallel", "missForest", "InterpretMSSpectrum", "tm", "RISmed",
-                     "qdap", "extrafont", "gmp", "shadowtext", "fgsea", "Rmisc", "BioMedR")S
-
-print(needed.packages)
+                     "qdap", "extrafont", "gmp", "shadowtext", "fgsea", "Rmisc", 
+                     "BioMedR", "MetaDBparse")
 
 missing.packages <- setdiff(needed.packages,rownames(installed.packages()))
 
@@ -96,7 +95,7 @@ switch(runmode,
        local = {
          wdir <<- dirname(rstudioapi::getSourceEditorContext()$path) # TODO: make this not break when not running from rstudio
          setwd(wdir)
-         shiny::runApp(".")
+         shiny::runApp(".",launch.browser = T)
        },
        docker = {
          shiny::runApp(".",

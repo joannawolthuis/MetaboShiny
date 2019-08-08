@@ -1067,3 +1067,20 @@ get_user_role <- function(username, password){
   }
   RSQLite::dbDisconnect(conn)
 }
+
+getIonMode = function(mzs, patdb){
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(patdb))
+  if(length(mzs) == 1){
+    mode = RSQLite::dbGetQuery(conn, gsubfn::fn$paste("SELECT foundinmode FROM mzvals WHERE mzmed LIKE $mz"))[,1]
+  }else{
+    temp.tbl = data.table::data.table(mzmed = mzs)
+    RSQLite::dbExecute(conn, "CREATE TEMP TABLE search_query(mzmed INT)")
+    RSQLite::dbWriteTable(conn, "search_query", temp.tbl, append=T)
+    mode_tbl = RSQLite::dbGetQuery(conn, gsubfn::fn$paste("SELECT sq.mzmed, foundinmode FROM mzvals
+                                                            JOIN search_query sq
+                                                            ON mzvals.mzmed LIKE sq.mzmed"))
+    mode = mode_tbl$foundinmode[match(mzs, mode_tbl$mzmed)]
+    RSQLite::dbDisconnect(conn)
+  }
+  mode
+}

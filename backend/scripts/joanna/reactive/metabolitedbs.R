@@ -22,58 +22,63 @@ lapply(gbl$vectors$db_list, FUN=function(db){
 # these listeners trigger when build_'db' is clicked (loops through dblist in global)
 lapply(gbl$vectors$db_list, FUN=function(db){
   observeEvent(input[[paste0("build_", db)]], {
-    # ---------------------------
-    library(RCurl)
-    library(XML)
-    library(SPARQL)
-    # ---------------------------
     withProgress({
 
       # send necessary functions and libraries to parallel threads
-      parallel::clusterEvalQ(session_cl, library(enviPat))
-      parallel::clusterEvalQ(session_cl, library(KEGGREST))
-      parallel::clusterEvalQ(session_cl, library(RCurl))
-      parallel::clusterEvalQ(session_cl, library(SPARQL))
-      parallel::clusterEvalQ(session_cl, library(XML))
       parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
         "isotopes",
-        "subform.joanna",
-        "mergeform.joanna",
-        "multiform.joanna",
-        "check.ded.joanna",
         "kegg.charge",
         "mape",
         "flattenlist"
       ))
-      pkgs = c("data.table", "enviPat", "KEGGREST", "XML", "SPARQL", "RCurl")
+      pkgs = c("data.table", "enviPat", 
+               "KEGGREST", "XML", 
+               "SPARQL", "RCurl", 
+               "MetaDBparse")
       parallel::clusterCall(session_cl, function(pkgs) {
+        try({
+          detach("package:MetaDBparse", unload=T)
+        })
         for (req in pkgs) {
-          require(req, character.only = TRUE)
+          library(req, character.only = TRUE)
         }
       }, pkgs = pkgs)
+      
       shiny::setProgress(session = session, 0.1)
 
+      #detach("package:MetaDBparse", unload=T)
+      #library(MetaDBparse)
+
       if(input$db_build_mode %in% c("base", "both")){
-        build.base.db(db,
-                      outfolder = lcl$paths$db_dir,
-                      optfile = lcl$paths$opt.loc,
-                      cl = session_cl)
+        MetaDBparse::buildBaseDB(dbname = db,
+                                 outfolder = normalizePath(lcl$paths$db_dir), 
+                                 cl=session_cl,
+                                 silent = F)
       }
+      
       # build base db (differs per db, parsers for downloaded data)
       
       shiny::setProgress(session = session, 0.5)
 
       if(input$db_build_mode %in% c("extended", "both")){
-        
+
       if(!grepl(db, pattern = "maconda")){
         print(db)
-        # extend base db (identical per db, makes adduct and isotope variants of downloaded compounds)
-        build.extended.db(db,
-                          outfolder = lcl$paths$db_dir,
-                          adduct.table = adducts,
-                          cl = session_cl,
-                          fetch.limit = 200,
-                          mzrange = input$db_mz_range) #TODO: figure out the optimal fetch limit...
+        if(file.exists(file.path(lcl$paths$db_dir, paste0(db, ".db")))){
+          my_range <- input$db_mz_range
+          outfolder <- lcl$paths$db_dir
+          MetaDBparse::buildExtDB(base.dbname = db,
+                                  outfolder = outfolder,
+                                  cl = session_cl,
+                                  blocksize = 500,
+                                  mzrange = my_range,
+                                  adduct_table = adducts,
+                                  adduct_rules = adduct_rules, 
+                                  silent=F,
+                                  ext.dbname = "extended") #TODO: figure out the optimal fetch limit... seems 200 for now
+        }else{
+          print("Please build base DB first! > _<")
+        }
       }
         } 
     })

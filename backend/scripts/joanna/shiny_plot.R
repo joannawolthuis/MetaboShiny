@@ -1168,7 +1168,7 @@ ggPlotVenn <- function(mSet,
       tbls <- switch(search_name,
                      ml = {
                        which.ml <- gsub(name, pattern = "^.*- | ", replacement="")
-                       mzvals = analysis$ml[[base.name]][[which.ml]]$bar[order(analysis$ml[[base.name]][[which.ml]]$bar$importance,
+                       mzvals = analysis$ml[[base_name]][[which.ml]]$bar[order(analysis$ml[[base_name]][[which.ml]]$bar$importance,
                                                                                decreasing = T),]$mz
                        mzvals <- type.convert(gsub(mzvals, pattern = "'|`", replacement=""))
                        res <- list(mzvals)
@@ -1404,5 +1404,27 @@ ggPlotWordBar <- function(wcdata, plot.theme, cf, font, plotlyfy=T){
   }else{
     g
   }
+}
+
+start_orca = function(port=9091){
+  container_id = system(gsubfn::fn$paste("docker run -d -p $port:$port quay.io/plotly/orca"),intern = T)
+}
+
+stop_orca = function(id){
+  system(gsubfn::fn$paste("docker stop $id"))
+}
+
+export_plotly = function(p=last_plot(), file = "plot.png", 
+                         format = tools::file_ext(file),
+                         scale = NULL, width = NULL, height = NULL, port=9091) {
+  bod <- list(figure = plotly_build(p)$x[c("data", 
+                                           "layout")], format = format, width = width, 
+              height = height, scale = scale)
+  res <- httr::POST(paste0("http://127.0.0.1:", port), 
+                    body = plotly:::to_JSON(bod))
+  httr::stop_for_status(res)
+  httr::warn_for_status(res)
+  con <- httr::content(res, as = "raw")
+  writeBin(con, file)
 }
 

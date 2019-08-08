@@ -187,12 +187,13 @@ observeEvent(input$initialize, {
         auto.mtry <- floor(sqrt(ncol(mSet$dataSet$preproc)))
 
         mtry <- ifelse(auto.mtry > 100, 100, auto.mtry)
-
+        print(paste0("mtry=",mtry))
+        
         # impute missing values with random forest
         imp <- missForest::missForest(w.missing,
                                       parallelize = "variables", # parallelize over variables, 'forests' is other option
-                                      #verbose = T,
-                                      #ntree = 10,
+                                      verbose = F,
+                                      ntree = 10,
                                       mtry = mtry)
 
         mSet$dataSet$proc <- imp$ximp

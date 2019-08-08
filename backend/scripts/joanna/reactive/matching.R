@@ -1,17 +1,45 @@
+observeEvent(input$prematch,{
+  print("trigger")
+  if(length(lcl$vectors$db_prematch_list) > 0){ # go through selected databases
+    blocksize=100
+    blocks = split(colnames(mSet$dataSet$norm), ceiling(seq_along(1:ncol(mSet$dataSet$norm))/blocksize))
+    withProgress({
+      i = 0
+      match_rows = lapply(blocks, function(mzs){
+        MetaDBparse::searchMZ(mzs = mzs,
+                              ionmodes = getIonMode(mzs, lcl$paths$patdb),
+                              base.dbname = gsub(x=basename(unlist(lcl$vectors$db_prematch_list)),
+                                                 pattern="\\.db",
+                                                 replacement = "", perl=T),
+                              ppm = 3,
+                              append = F,
+                              outfolder = normalizePath(lcl$paths$db_dir))
+        i = i + 1
+        setProgress(value = i/length(blocks))
+      })
+    }, min=0, max=length(blocks))
+    lcl$tables$pre_matches <- unique(data.table::rbindlist(match_rows))
+  }
+})
+
 # triggers on clicking the 'search' button in sidebar
 observeEvent(input$search_mz, {
 
   if(length(lcl$vectors$db_search_list) > 0){ # go through selected databases
 
-    lcl$tables$last_matches <<- unique(multimatch(lcl$curr_mz,
-                                                    lcl$vectors$db_search_list,
-                                                    inshiny = T,
-                                                    search_pubchem = input$magicball_pubchem_cids,
-                                                    pubchem_detailed = input$magicball_pubchem_details,
-                                                    calc_adducts = lcl$vectors$add_list,
-                                                    patdb = normalizePath(lcl$paths$patdb),
-                                                    db_dir = normalizePath(lcl$paths$db_dir)
-                                                    )) # match with all
+    match_rows <- pbapply::pblapply(lcl$vectors$db_search_list, function(db){
+      # get ion modes
+      
+      # - - - - - - - 
+      matches = MetaDBparse::searchMZ(mzs = lcl$curr_mz, 
+                                      ionmodes = getIonMode(lcl$curr_mz, lcl$paths$patdb),
+                                      base.dbname = gsub(basename(db), pattern="\\.db", replacement=""),
+                                      ppm=3,
+                                      append = F, 
+                                      outfolder=normalizePath(lcl$paths$db_dir))
+    })
+    
+    lcl$tables$last_matches <- unique(data.table::rbindlist(match_rows))
 
     shown_matches$table <- if(nrow(lcl$tables$last_matches) > 0){
       lcl$tables$last_matches

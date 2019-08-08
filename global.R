@@ -1,6 +1,6 @@
 # === GENERAL OPTIONS ===
 
-options(stringsAsFactors = FALSE,"java.parameters" = c("-Xmx16g")) # give java enough memory for smiles parsing
+options(stringsAsFactors = FALSE,"java.parameters" = c("-Xmx32G")) # give java enough memory for smiles parsing
 if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
 ### Anything loaded in this GLOBAL file will be avaliable for metaboShiny in general. ###
@@ -78,8 +78,8 @@ setOption <- function(file.loc, key, value){
 
 # load adduct table (if you add/remove any adducts, change them in the below file!)
 #adducts <- fread("backend/umcfiles/adducts/AdductTable2.0.csv", header = T)
-adducts <- fread("backend/adducts/adduct_rule_table.csv", header = T) # V2 has di/trimers
-adduct_rules <- fread("backend/adducts/adduct_rule_smarts.csv", header = T) # V2 has di/trimers
+adducts <- data.table::fread("backend/adducts/adduct_rule_table.csv", header = T) # V2 has di/trimers
+adduct_rules <- data.table::fread("backend/adducts/adduct_rule_smarts.csv", header = T) # V2 has di/trimers
 
 adducts[adducts==''|adducts==' ']<-NA
 
@@ -149,7 +149,7 @@ caret.mdls <- caret::getModelInfo()
                                                 list(name= 'maconda_logo', path = 'www/maconda.png', dimensions = c(250,100)),
                                                 list(name= 'expoexplorer_logo', path = 'www/exposome_explorer.png', dimensions = c(250,100)),
                                                 list(name= 't3db_logo', path = 'www/t3db_logo.png', dimensions = c(200,80)),
-                                                list(name= 'drugbank_logo', path = 'www/drugbank_logo.png', dimensions = c(200,20)),
+                                                list(name= 'drugbank_logo', path = 'www/drugbank_logo_2.png', dimensions = c(230,80)),
                                                 list(name= 'phenolexplorer_logo', path = 'www/phenolexplorer_logo.jpg', dimensions = c(200,60)),
                                                 list(name = 'sidebar_icon', path = 'www/detective.png', dimensions = c(60, 60)),
                                                 list(name = 'merge_icon', path = 'www/merge.png', dimensions = c(150, 150)),
@@ -293,7 +293,7 @@ caret.mdls <- caret::getModelInfo()
                  tables = list(tbl = NA),
                  # default vectors to go through in metaboshiny
                  vectors = list(
-                   remove_match_cols = c("description","structure", "baseformula", "source"), #c("description","structure", "baseformula", "dppm", "source"),
+                   remove_match_cols = c("description","structure", "baseformula", "source", "query_mz"), #c("description","structure", "baseformula", "dppm", "source"),
                    # default indices of chosen adducts
                    pos_selected_add = c(2),#, nrow(adducts[Ion_mode == "positive",
                    #               c("Name")])),
@@ -307,7 +307,7 @@ caret.mdls <- caret::getModelInfo()
                      "chebi",
                      "kegg",
                      "metacyc",
-                     "wikipathways",
+                     #"wikipathways",
                      "smpdb",
                      "dimedb",
                      "wikidata",
@@ -316,7 +316,7 @@ caret.mdls <- caret::getModelInfo()
                      "massbank",
                      #"metabolights",
                      "foodb",
-                     "maconda",
+                     #"maconda",
                      "bloodexposome",
                      "expoexplorer",
                      "lipidmaps",
@@ -537,7 +537,7 @@ data(isotopes, package = "enviPat")
 
 # create parallel workers, leaving 1 core for general use
 # TODO: make this a user slider
-session_cl <- parallel::makeCluster(max(c(1, parallel::detectCores()-1))) # leave 1 core for general use and 1 core for shiny session
+session_cl <- parallel::makeCluster(max(c(1, parallel::detectCores()-1)),outfile="") # leave 1 core for general use and 1 core for shiny session
 
 # source the miniscript for the toggle buttons used in the interface (needs custom CSS)
 source("./Rsource/SwitchButton.R")
@@ -556,6 +556,18 @@ if(online){
   devtools::install_github("xia-lab/MetaboAnalystR", 
                            ref = "21b6845a21e8a7a87dfdb7d3363ee39ce1397a88")#, build_vignettes=TRUE)
 }
+
+runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
+
+require(plotly)
+switch(runmode,
+       local = {
+         orca_serv_id = start_orca(9091)
+       },
+       docker = {
+         plotly::orca_serve(port = 9091)
+       })
+
 # interleave for sorting later ...
 add_idx <- order(c(seq_along(gbl$vectors$pos_adducts$Name), seq_along(gbl$vectors$neg_adducts$Name)))
 sort_order <<- unlist(c(gbl$vectors$pos_adducts$Name, gbl$vectors$neg_adducts$Name))[add_idx]
