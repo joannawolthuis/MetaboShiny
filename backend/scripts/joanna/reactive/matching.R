@@ -1,46 +1,71 @@
 observeEvent(input$prematch,{
   print("trigger")
   if(length(lcl$vectors$db_prematch_list) > 0){ # go through selected databases
-    blocksize=100
+    
+    conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb) # change this to proper var later
+    RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS prematch_content")
+    RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS prematch_mapper")
+    RSQLite::dbExecute(conn, "CREATE TABLE prematch_mapper(query_mz decimal(30,13),
+                                                           structure TEXT,
+                                                           `%iso` decimal(30,13),
+                                                           adduct TEXT,
+                                                           dppm decimal(30,13))")    
+    RSQLite::dbExecute(conn, "CREATE TABLE prematch_content(name TEXT,
+                                                            baseformula TEXT,
+                                                            identifier TEXT,
+                                                            description VARCHAR(255),
+                                                            structure TEXT,
+                                                            source TEXT)")
+    RSQLite::dbExecute(conn, "CREATE INDEX map_mz ON prematch_mapper(query_mz)")
+    RSQLite::dbExecute(conn, "CREATE INDEX cont_struc ON prematch_content(structure)")
+    
+    blocksize=500
     blocks = split(colnames(mSet$dataSet$norm), ceiling(seq_along(1:ncol(mSet$dataSet$norm))/blocksize))
     withProgress({
       i = 0
-      match_rows = lapply(blocks, function(mzs){
-        MetaDBparse::searchMZ(mzs = mzs,
+      matches = pbapply::pblapply(blocks, function(mzs){
+        res = MetaDBparse::searchMZ(mzs = mzs,
                               ionmodes = getIonMode(mzs, lcl$paths$patdb),
-                              base.dbname = gsub(x=basename(unlist(lcl$vectors$db_prematch_list)),
+                              base.dbname = gsub(x=gsub(basename(unlist(lcl$vectors$db_prematch_list)), pattern="\\.db", replacement=""),
                                                  pattern="\\.db",
                                                  replacement = "", perl=T),
-                              ppm = 3,
+                              ppm = as.numeric(mSet$ppm),
                               append = F,
                               outfolder = normalizePath(lcl$paths$db_dir))
-        i = i + 1
-        setProgress(value = i/length(blocks))
+        i <<- i + 1
+        progress=i/length(blocks)
+
+        #setProgress(value = progress)
+        list(mapper = unique(res[,c("query_mz", "structure", "%iso", "adduct", "dppm")]), 
+             content = unique(res[,-c("query_mz", "%iso", "adduct", "dppm")]))
       })
     }, min=0, max=length(blocks))
-    lcl$tables$pre_matches <- unique(data.table::rbindlist(match_rows))
+    
+    RSQLite::dbWriteTable(conn, "prematch_mapper", unique(data.table::rbindlist(lapply(matches, function(x) x$mapper))), append=T)
+    RSQLite::dbWriteTable(conn, "prematch_content", unique(data.table::rbindlist(lapply(matches, function(x) x$content))), append=T)
+    
+    mSet$metshiParams$prematched<<-T
+    
+    RSQLite::dbDisconnect(conn)
   }
 })
 
 # triggers on clicking the 'search' button in sidebar
 observeEvent(input$search_mz, {
-
   if(length(lcl$vectors$db_search_list) > 0){ # go through selected databases
-
-    match_rows <- pbapply::pblapply(lcl$vectors$db_search_list, function(db){
       # get ion modes
-      
-      # - - - - - - - 
-      matches = MetaDBparse::searchMZ(mzs = lcl$curr_mz, 
-                                      ionmodes = getIonMode(lcl$curr_mz, lcl$paths$patdb),
-                                      base.dbname = gsub(basename(db), pattern="\\.db", replacement=""),
-                                      ppm=3,
-                                      append = F, 
-                                      outfolder=normalizePath(lcl$paths$db_dir))
+    withProgress({
+      lcl$tables$last_matches <<- MetaDBparse::searchMZ(mzs = lcl$curr_mz, 
+                                                        ionmodes = getIonMode(lcl$curr_mz, 
+                                                                              lcl$paths$patdb),
+                                                        base.dbname = gsub(basename(unlist(lcl$vectors$db_search_list)), 
+                                                                           pattern="\\.db", 
+                                                                           replacement=""),
+                                                        ppm=as.numeric(mSet$ppm),
+                                                        append = F, 
+                                                        outfolder=normalizePath(lcl$paths$db_dir))  
     })
     
-    lcl$tables$last_matches <- unique(data.table::rbindlist(match_rows))
-
     shown_matches$table <- if(nrow(lcl$tables$last_matches) > 0){
       lcl$tables$last_matches
     }else{

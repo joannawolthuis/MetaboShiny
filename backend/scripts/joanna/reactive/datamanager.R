@@ -7,9 +7,6 @@ observe({
     NULL # if not reloading anything, nevermind
   }else{
     if(!is.null(mSet)){
-
-      print(datamanager$reload)
-
       switch(datamanager$reload,
              general = {
                # change interface
@@ -35,9 +32,6 @@ observe({
                }else{
                  timebutton$status <- "off"
                }
-               
-               print(timebutton$status)
-               # t-test...
 
                if(interface$mode == 'bivar'){
                  if("tt" %in% names(mSet$analSet)){
@@ -84,7 +78,6 @@ observe({
                      extra_names <- lapply(with.subgroups, function(anal){
                        switch(anal,
                               ml = {
-                                print("ml!!")
                                 which.mls <- setdiff(names(analysis$ml),"last")
                                 ml.names = sapply(which.mls, function(meth){
                                   if(length(analysis$ml[[meth]]) > 0){
@@ -97,7 +90,6 @@ observe({
                                 c ("plsda - PC1", "plsda - PC2", "plsda - PC3")
                               })
                      })
-                     print(extra_names)
                      analysis_names <- c(setdiff(analysis_names, c("ml", "plsr", "plsda")), unlist(extra_names))
                    }
                    # - - -
@@ -450,11 +442,15 @@ observe({
              },
              heatmap = {
 
+               print("here(datamanager)")
+               print(input$heatmode)
+               
                breaks = seq(min(mSet$dataSet$norm), max(mSet$dataSet$norm), length = 256/2)
 
                output$heatmap <- plotly::renderPlotly({
 
                  if(!is.null(mSet$analSet$heatmap$matrix)){
+                   print("pass 2")
                    # create heatmap object
                    hmap <- suppressWarnings({
                      if(input$heatlimits){
@@ -500,7 +496,7 @@ observe({
                    })
                    # save the order of mzs for later clicking functionality
                    lcl$vectors$heatmap <<- hmap$x$layout[[if(mSet$timeseries) "yaxis2" else "yaxis3"]]$ticktext 
-                   # return
+                    # return
                    hmap
                  }else{
                    data = data.frame(text = "No significant hits available!\nPlease try alternative source statistics below.")
@@ -511,7 +507,7 @@ observe({
                })
              }, 
              match_wordcloud = {
-               if(nrow(lcl$tables$last_matches) > 0){
+               if(nrow(shown_matches$table) > 0){
                wcdata <- data.frame(word = head(lcl$tables$word_freq, input$wc_topn)$name,
                                     freq = head(lcl$tables$word_freq, input$wc_topn)$value)
                
@@ -532,7 +528,11 @@ observe({
                                                                   font = lcl$aes$font)})
              }},
              match_pie = {
-               if(nrow(lcl$tables$last_matches) > 0){
+               
+               print("Reloading pie charts...")
+               
+               if(nrow(shown_matches$table) > 0){
+                 
                output$match_pie_add <- plotly::renderPlotly({
                  
                  plot_ly(lcl$vectors$pie_add, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',

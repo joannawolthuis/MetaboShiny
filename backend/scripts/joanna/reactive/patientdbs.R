@@ -100,9 +100,9 @@ observeEvent(input$create_db,{
              metadata_path <- parseFilePaths(gbl$paths$volumes, input$metadata)$datapath
 
              if(grepl(metadata_path, pattern = "csv")){
-               exp_vars <<- load.metadata.csv(metadata_path, lcl$paths$patdb)
+               exp_vars <<- load.metadata.csv(metadata_path, lcl$paths$patdb, ppm=input$ppm)
              }else{
-               exp_vars <<- load.metadata.excel(metadata_path, lcl$paths$patdb)
+               exp_vars <<- load.metadata.excel(metadata_path, lcl$paths$patdb, ppm=input$ppm)
              }
 
              shiny::setProgress(session=session, value= .60)

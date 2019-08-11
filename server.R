@@ -17,6 +17,7 @@ shinyServer(function(input, output, session) {
     csv_loc = "",
     proj_name ="",
     last_mset="",
+    tables=list(last_matches=data.table::data.table(query_mz = "none")),
     aes = list(font = list(),
                mycols = c(),
                spectrum = "rb",
@@ -72,7 +73,6 @@ mode = complete')
         }
         opts = getOptions(lcl$paths$opt.loc)
         logged$status <<- switch(opts$mode, dbonly = "db_only", complete= "logged")
-        print(logged$status)
       }
     }
   })
@@ -226,7 +226,7 @@ gspec = RdBu')
 
   output$match_tab <- DT::renderDataTable({
     remove_cols = gbl$vectors$remove_match_cols
-    remove_idx <- which(colnames(lcl$tables$last_matches) %in% remove_cols)
+    remove_idx <- which(colnames(shown_matches$table) %in% remove_cols)
     # don't show some columns but keep them in the original table, so they can be used
     # for showing molecule descriptions, structure
     DT::datatable(shown_matches$table,
@@ -234,8 +234,10 @@ gspec = RdBu')
                   autoHideNavigation = T,
                   options = list(lengthMenu = c(5, 10, 15),
                                  pageLength = 5,
-                                 columnDefs = list(list(visible=FALSE, targets=remove_idx)))
-    )
+                                columnDefs = list(list(visible=FALSE, targets=remove_idx))
+                  )
+                  
+    ) 
   })
 
   # ===== UI SWITCHER ====
@@ -302,7 +304,12 @@ gspec = RdBu')
 
   # -----------------
   observeEvent(input$undo_match_filt, {
-    shown_matches$table <- lcl$tables$last_matches
+    if(mSet$metshiParams$prematched){
+      shown_matches$table <- get_prematches(mz = lcl$curr_mz,
+                                            patdb = lcl$paths$patdb)
+    }else{
+      shown_matches$table <- lcl$tables$last_matches  
+    }
   })
 
   # change ppm accuracy, ONLY USEFUL if loading in from CSV
@@ -370,8 +377,9 @@ gspec = RdBu')
                }
              },overview = {
                if(!is.null(input$overview)){
-                 if(input$overview %not in% names(mSet$analSet) | input$overview == "venn"){
-                   statsmanager$calculate <- input$overview
+                 if(input$overview %not in% names(mSet$analSet) | input$overview %in% c("heatmap", "venn")){
+                    print(input$overview)
+                    statsmanager$calculate <- input$overview
                  }
                  datamanager$reload <- input$overview
                }
@@ -552,7 +560,6 @@ gspec = RdBu')
 
   # generate all the fadebuttons for the database selection
   lapply(db_button_prefixes, function(prefix){
-    print(paste0("rendering ", paste0("db_", prefix, "_select")))
     output[[paste0("db_", prefix, "_select")]] <- renderUI({
       built.dbs <- c(gsub(x = list.files(lcl$paths$db_dir, pattern = "\\.db"), 
                         pattern = "\\.db", replacement = ""), "custom")

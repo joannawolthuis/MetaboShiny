@@ -22,157 +22,58 @@ browse_db <- function(chosen.db){
 }
 
 #' @export
-get_matches <- function(cpd = NA,
-                        base.db,
-                        search_formula = F,
-                        searchid = "mz",
-                        inshiny = TRUE,
-                        append = FALSE,
-                        patdb,db_dir){
-  
-  # 0. Attach db
-  
-  
-  if(!exists("searchid") && searchid != "mz"){
-    
-    conn <- RSQLite::dbConnect(RSQLite::SQLite(), base.db)
-    
-    query <- if(searchid == "pathway"){
-      cpd <- gsub(cpd, pattern = "http\\/\\/", replacement = "http:\\/\\/")
-      gsubfn::fn$paste(strwrap("SELECT DISTINCT name as Name
-                               FROM pathways
-                               WHERE identifier = '$cpd'"
-                               , width=10000, simplify=TRUE))
-    } else{
-      gsubfn::fn$paste(strwrap(
-        "SELECT DISTINCT compoundname as name, baseformula as formula, identifier, description, structure
-        FROM base
-        WHERE $searchid = '$cpd'"
-        , width=10000, simplify=TRUE))
-    }
-    
-    res <- RSQLite::dbGetQuery(conn, query)
-    
-    return(res)
-    
+get_prematches <- function(mz = NA,
+                           patdb,
+                           showdb=NULL,
+                           showadd=NULL){
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb) 
+  # " b.compoundname as name
+  # b.baseformula
+  # u.adduct
+  # u.isoprevalence as perciso
+  # u.dppm
+  # b.identifier
+  # b.description
+  # u.structure
+  # u.query_mz"
+  if(!is.null(showdb) & !is.null(showadd)){
+    result <- RSQLite::dbSendStatement(conn, "SELECT DISTINCT 
+name,baseformula,adduct,`%iso`,dppm,identifier,description,map.structure,source FROM prematch_mapper map
+                                     JOIN prematch_content con
+                                     ON map.structure = con.structure
+                                     WHERE query_mz = $mz
+                                     AND source = $showdb
+                                     AND adduct = $showadd")
+    RSQLite::dbBind(result, list(mz = mz, showdb = showdb, showadd = showadd))
+  }else if(!is.null(showadd)){
+    result <- RSQLite::dbSendStatement(conn, "SELECT DISTINCT
+name,baseformula,adduct,`%iso`,dppm,identifier,description,map.structure,source FROM prematch_mapper map
+                                       JOIN prematch_content con
+                                       ON map.structure = con.structure
+                                       WHERE query_mz = $mz
+                                       AND adduct = $showadd")
+    RSQLite::dbBind(result, list(mz = mz, showadd = showadd))
+  }else if(!is.null(showdb)){
+    result <- RSQLite::dbSendStatement(conn, "SELECT DISTINCT
+name,baseformula,adduct,`%iso`,dppm,identifier,description,map.structure,source FROM prematch_mapper map
+                                     JOIN prematch_content con
+                                     ON map.structure = con.structure
+                                     WHERE query_mz = $mz
+                                     AND source = $showdb")
+    RSQLite::dbBind(result, list(mz = mz, showdb = showdb))
   }else{
-    
-    conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
-    
-    query = gsubfn::fn$paste("ATTACH '$base.db' AS base")
-    RSQLite::dbExecute(conn, query)
-    
-    #print(query)
-    
-    ext.db <- file.path(db_dir, 'extended.db')
-    
-    query = gsubfn::fn$paste("ATTACH '$ext.db' AS full")
-    
-    RSQLite::dbExecute(conn, query)
-    
-    #print(query)
-    
-    func <- function(){
-      if(!DBI::dbExistsTable(conn, "unfiltered") | !append)
-      {
-        RSQLite::dbExecute(conn, 'DROP TABLE IF EXISTS unfiltered')
-        query <- gsubfn::fn$paste(strwrap(
-          "CREATE TABLE unfiltered AS
-          SELECT DISTINCT cpd.fullformula,
-          cpd.adduct as adduct,
-          cpd.isoprevalence as isoprevalence,
-          struc.smiles as structure,
-          (ABS($cpd - cpd.fullmz) / $cpd)/1e6 AS dppm
-          FROM mzvals mz
-          JOIN mzranges rng ON rng.ID = mz.ID
-          JOIN full.extended cpd indexed by e_idx2
-          ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
-          AND mz.foundinmode = cpd.foundinmode
-          JOIN full.structures struc
-          ON cpd.struct_id = struc.id
-          WHERE $cpd BETWEEN rng.mzmin AND rng.mzmax",width=10000, simplify=TRUE)) 
-        # create
-        #print(query)
-        
-        RSQLite::dbExecute(conn, query)
-      }
-      # else{
-      #   # append
-      #   query <- gsubfn::fn$paste(strwrap(
-      #     "INSERT INTO unfiltered
-      #     SELECT DISTINCT cpd.fullformula,
-      #     cpd.adduct as adduct,
-      #     cpd.isoprevalence as isoprevalence,
-      #     struc.smiles as structure,
-      #     (ABS($cpd - cpd.fullmz) / $cpd)/1e6 AS dppm
-      #     FROM mzvals mz
-      #     JOIN mzranges rng ON rng.ID = mz.ID
-      #     JOIN full.extended cpd indexed by e_idx2
-      #     ON cpd.fullmz BETWEEN rng.mzmin AND rng.mzmax
-      #     AND mz.foundinmode = cpd.foundinmode
-      #     JOIN full.structures struc
-      #     ON cpd.struct_id = struc.id
-      #     WHERE $cpd BETWEEN rng.mzmin AND rng.mzmax",width=10000, simplify=TRUE))
-      #   print(query)
-      #   
-      #   RSQLite::dbExecute(conn, query)
-      # }
-      # if(!DBI::dbExistsTable(conn, "isotopes") | !append){
-      #   
-      #   RSQLite::dbExecute(conn, 'DROP TABLE IF EXISTS isotopes')
-      #   # create
-      #   query = strwrap("CREATE TABLE isotopes AS
-      #                      SELECT DISTINCT cpd.*
-      #                      FROM full.extended cpd indexed by e_idx3
-      #                      JOIN unfiltered u
-      #                      ON u.baseformula = cpd.baseformula
-      #                      AND u.adduct = cpd.adduct",width=10000, simplify=TRUE)
-      #   print(query)
-      #   RSQLite::dbExecute(conn,
-      #                      query)
-      # }else{
-      #   # append
-      #   query = strwrap("INSERT INTO isotopes
-      #                    SELECT cpd.*
-      #                    FROM full.extended cpd indexed by e_idx3
-      #                    JOIN unfiltered u
-      #                    ON u.baseformula = cpd.baseformula
-      #                    AND u.adduct = cpd.adduct",width=10000, simplify=TRUE)
-      #   print(query)
-      #   RSQLite::dbExecute(conn,
-      #                      query)
-      # }
-    }
-    
-    func()
-    
-    # - - - save adducts too - - -
-    
-    results <- DBI::dbGetQuery(conn, strwrap("SELECT
-                                     b.compoundname as name,
-                                     b.baseformula,
-                                     u.adduct,
-                                     u.isoprevalence as perciso,
-                                     u.dppm,
-                                     b.identifier,
-                                     b.description,
-                                     u.structure
-                                     FROM unfiltered u
-                                     JOIN base.base b
-                                     ON u.structure = b.structure",width=10000, simplify=TRUE))
-    
-    results$perciso <- round(results$perciso, 2)
-    results$dppm <- signif(results$dppm, 2)
-    
-    colnames(results)[which(colnames(results) == "perciso")] <- "%iso"
-    
-    DBI::dbDisconnect(conn)
-    
-    # - - return - -
-    
-    results
-    
-  }}
+    result <- RSQLite::dbSendStatement(conn, "SELECT DISTINCT
+name,baseformula,adduct,`%iso`,dppm,identifier,description,map.structure,source FROM prematch_mapper map
+                                     JOIN prematch_content con
+                                     ON map.structure = con.structure
+                                     WHERE query_mz = $mz")
+    RSQLite::dbBind(result, list(mz = mz))
+  }
+  res = RSQLite::dbFetch(result)
+  RSQLite::dbClearResult(result)
+  RSQLite::dbDisconnect(conn)
+  return(res)
+}
 
 get.ppm <- function(patdb){
   # get ppm error retrospectively
@@ -1071,7 +972,7 @@ get_user_role <- function(username, password){
 getIonMode = function(mzs, patdb){
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(patdb))
   if(length(mzs) == 1){
-    mode = RSQLite::dbGetQuery(conn, gsubfn::fn$paste("SELECT foundinmode FROM mzvals WHERE mzmed LIKE $mz"))[,1]
+    mode = RSQLite::dbGetQuery(conn, gsubfn::fn$paste("SELECT foundinmode FROM mzvals WHERE mzmed LIKE $mzs"))[,1]
   }else{
     temp.tbl = data.table::data.table(mzmed = mzs)
     RSQLite::dbExecute(conn, "CREATE TEMP TABLE search_query(mzmed INT)")

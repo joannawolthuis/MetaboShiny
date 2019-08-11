@@ -43,13 +43,6 @@ build.pat.db <- function(db.name,
   mzvals <- data.table::data.table(mzmed = c(as.numeric(poslist$mzmed), as.numeric(neglist$mzmed)),
                                    foundinmode = c(rep("positive", nrow(poslist)), rep("negative", nrow(neglist))))
   
-  mzranges <- data.table::data.table(mzmin = sapply(c(as.numeric(poslist$mzmed), as.numeric(neglist$mzmed)),
-                                                    FUN=function(mz, ppm){
-                                                      mz - mz * (ppm / 1E6)}, ppm=ppm),
-                                     mzmax = sapply(c(as.numeric(poslist$mzmed), as.numeric(neglist$mzmed)),
-                                                    FUN=function(mz, ppm){
-                                                      mz + mz * (ppm / 1E6)}, ppm=ppm))
-  
   mzvals$foundinmode <- trimws(mzvals$foundinmode)
   
   # --- SAVE BATCH INFO (kinda ugly...  ; _;") ---
@@ -84,22 +77,14 @@ build.pat.db <- function(db.name,
   )
   if(inshiny) setProgress(.40)
   
-  #poslist$filename <- trimws(poslist$filename)
-  #neglist$filename <- trimws(neglist$filename)
-  
-  # COMPUTER CANT HANDLE THE RBIND, WRITE THEM SEPERATELY
-  
-  #mzintensities = rbind(poslist, neglist)
-  
-  # ------------------------
-  
+
   if(overwrite==TRUE & file.exists(db.name)) file.remove(db.name)
   
   # --- reconnect / remake ---
   
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), db.name)
   
-  # ------------------------
+  # ------------------------s
   
   if(!is.null(batch_info)){
     RSQLite::dbWriteTable(conn, "batchinfo", batch_info, overwrite=T) # insert into
@@ -135,25 +120,17 @@ build.pat.db <- function(db.name,
   
   if(inshiny) setProgress(.70)
   
+  RSQLite::dbWriteTable(conn, "params", 
+                        data.table::data.table(ppm=ppm), 
+                        overwrite=T)
+  
   # --- write vals to table ---
   RSQLite::dbWriteTable(conn, "mzvals", mzvals, append=TRUE) # insert into
   
   # --- make range table (choose if R*tree or not) ---
-  sql.make.rtree <- strwrap("CREATE VIRTUAL TABLE mzranges USING rtree(
-                            ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                            mzmin decimal(30,13),
-                            mzmax decimal(30,13));"
-                            , width=10000, simplify=TRUE)
-  sql.make.normal <- strwrap("CREATE TABLE mzranges(
-                             ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                             mzmin decimal(30,13),
-                             mzmax decimal(30,13));", width=10000, simplify=TRUE)
-  RSQLite::dbExecute(conn, if(rtree) sql.make.rtree else sql.make.normal)
-  
+ 
   if(inshiny) setProgress(.80)
   
-  # --- write ranges to table ---
-  RSQLite::dbWriteTable(conn, "mzranges", mzranges, append=TRUE) # insert into
   # --- cleanup ---
   RSQLite::dbExecute(conn, "VACUUM")
   
@@ -166,7 +143,8 @@ build.pat.db <- function(db.name,
 
 #' @export
 load.metadata.csv <- function(path.to.csv,
-                              path.to.patdb){
+                              path.to.patdb, 
+                              ppm){
   
   #path.to.csv = "~/Downloads/maria_meta.csv"
   #path.to.patdb = "~/Downloads/maria_3ppm.db"
@@ -178,6 +156,10 @@ load.metadata.csv <- function(path.to.csv,
   csv <- data.table::fread(path.to.csv)
   colnames(csv) <- tolower(colnames(csv))
   setup <- data.table(group = as.character(unique(csv[,c("group")][[1]])))
+  
+  RSQLite::dbWriteTable(conn, "params", 
+                        data.table::data.table(ppm=ppm), 
+                        overwrite=T)
   
   RSQLite::dbWriteTable(conn, "setup", setup, overwrite=TRUE) # insert into
   RSQLite::dbWriteTable(conn, "individual_data", csv, overwrite=TRUE) # insert into
@@ -194,7 +176,7 @@ load.metadata.excel <- function(path.to.xlsx,
                                   "Individual Data"
                                   #,"Pen Data",
                                   #"Admin"
-                                )){
+                                ),ppm){
   
   # --- connect to sqlite db ---
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), path.to.patdb)
@@ -280,6 +262,10 @@ load.metadata.excel <- function(path.to.xlsx,
   
   #pen.data <- data.table::as.data.table(apply(pen.data, MARGIN=2, trimws))
   #admin <- data.table::as.data.table(apply(admin, MARGIN=2, trimws))
+  
+  RSQLite::dbWriteTable(conn, "params", 
+                        data.table::data.table(ppm=ppm), 
+                        overwrite=T)
   
   # --- import to patient sql file ---
   #RSQLite::dbWriteTable(conn, "general", general, overwrite=TRUE) # insert into BUGGED FIX LATER

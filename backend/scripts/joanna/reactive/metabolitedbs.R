@@ -74,7 +74,7 @@ lapply(gbl$vectors$db_list, FUN=function(db){
                                   mzrange = my_range,
                                   adduct_table = adducts,
                                   adduct_rules = adduct_rules, 
-                                  silent=F,
+                                  silent = F,
                                   ext.dbname = "extended") #TODO: figure out the optimal fetch limit... seems 200 for now
         }else{
           print("Please build base DB first! > _<")

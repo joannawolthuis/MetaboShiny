@@ -6,23 +6,38 @@ observeEvent(plotly::event_data("plotly_click"),{
   if(input$tab_iden_4 == "pie_add"){
 
     i = d$pointNumber + 1
-    show.adduct = lcl$vectors$pie_add$Var1[i]
+    showadd = lcl$vectors$pie_add$Var1[i]
 
-    if(nrow(lcl$tables$last_matches)>0){
+    if(unique(lcl$tables$last_matches$query_mz) == lcl$curr_mz){
       keep.rows <- which(lcl$tables$last_matches$adduct == show.adduct)
-      shown_matches$table <- lcl$tables$last_matches[keep.rows,]
+      shown_matches$table <- lcl$tables$last_matches[keep.rows,]}
+    else if(mSet$metshiParams$prematched){
+      shown_matches$table <- get_prematches(mz = lcl$curr_mz,
+                                            patdb = lcl$paths$patdb,
+                                            showadd = showadd)
+    }else{
+      print("shouldnt happen lmao")
     }
-    return(NULL)
+    statsmanager$calculate <- "match_pie"
+    datamanager$reload <- "match_pie"
   }
 
   if(input$tab_iden_4 == "pie_db"){
     i = d$pointNumber + 1
-    show.db = lcl$vectors$pie_db$Var1[i]
-    if(nrow(lcl$tables$last_matches)>0){
-      keep.rows <- which(lcl$tables$last_matches$source == show.db)
-      shown_matches$table <- lcl$tables$last_matches[keep.rows,]
+    showdb = lcl$vectors$pie_db$Var1[i]
+    
+    if(unique(lcl$tables$last_matches$query_mz) == lcl$curr_mz){
+      keep.rows <- which(lcl$tables$last_matches$adduct == show.adduct)
+      shown_matches$table <- lcl$tables$last_matches[keep.rows,]}
+    else if(mSet$metshiParams$prematched){
+      shown_matches$table <- get_prematches(mz = lcl$curr_mz,
+                                             patdb = lcl$paths$patdb,
+                                             showdb = showdb)
+    }else{
+      print("shouldnt happen lmao")
     }
-    return(NULL)
+    statsmanager$calculate <- "match_pie"
+    datamanager$reload <- "match_pie"
   }
 
   curr_tab <- switch(input$statistics,
@@ -47,9 +62,9 @@ observeEvent(plotly::event_data("plotly_click"),{
     if(d$key %not in% mzs) return(NULL)
     lcl$curr_mz <<- d$key
     
+    
     # - magicball - 
     if(lcl$paths$patdb != "" ){
-      print("loading adduct tbl..")
       if(file.exists(lcl$paths$patdb)){
         conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb)
         scanmode <- DBI::dbGetQuery(conn, paste0("SELECT DISTINCT foundinmode FROM mzvals WHERE mzmed LIKE '", lcl$curr_mz, "%'"))[,1]
@@ -73,25 +88,7 @@ observeEvent(plotly::event_data("plotly_click"),{
                     plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                     font = lcl$aes$font)
     })
-  }else if(req(curr_tab) == "pca"){ # deprecated - used to hide and show certain groups
-    if(!"z" %in% names(d)){
-      NULL
-      # which_group = 1
-      # which_group <- d$curveNumber + 1
-      # traceLoc <- length(unique(mSet$dataSet$cls)) + 1
-      # scatter <- pca_plot$x$attrs[[traceLoc]]
-      # idx <- scatter$color == which_group
-      # if(pca_plot$x$data[[which_group]]$visible == "legendonly"){
-      #   pca_plot$x$data[[which_group]]$visible = TRUE
-      #   scatter$visible[idx] <- T
-      # }else{ # hide
-      #   pca_plot$x$data[[which_group]]$visible = "legendonly"
-      #   scatter$visible[idx] <- F
-      # }
-      # pca_plot$x$attrs[[traceLoc]] <- scatter
-      # pca_plot <<- pca_plot
-      # output$plot_pca <- plotly::renderPlotly({pca_plot})
-    }}else if(req(curr_tab) == "ml"){ # makes ROC curves and boxplots clickable
+  }else if(req(curr_tab) == "ml"){ # makes ROC curves and boxplots clickable
       switch(input$ml_results, roc = { # if roc, check the curve numbers of the roc plot
         attempt = d$curveNumber - 1
         xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
@@ -113,10 +110,8 @@ observeEvent(plotly::event_data("plotly_click"),{
           })
         }
       }, bar = { # for bar plot just grab the # bar clicked
-        print("barplot ml")
         lcl$curr_mz <<- as.character(lcl$tables$ml_bar[d$x,"mz"][[1]])
       })}else if(req(curr_tab) == "heatmap"){#grepl(pattern = "heatmap", x = curr_tab)){ # heatmap requires the table used to make it saved to global (hmap_mzs)
-        print("heatmap clicked...")
         if(d$y > length(lcl$vectors$heatmap)) return(NULL)
         lcl$curr_mz <<- lcl$vectors$heatmap[d$y]
       }
@@ -131,9 +126,11 @@ observeEvent(plotly::event_data("plotly_click"),{
                   col.fac = input$col_var, txt.fac = input$txt_var,plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                   font = lcl$aes$font)
   })
+  
   # check if presearch mode is on
-  if(!is.null(lcl$tables$pre_matches)){
-    shown_matches$table <- lcl$tables$pre_matches[query_mz == lcl$curr_mz]
+  if(mSet$metshiParams$prematched & input$tab_iden_4 == "table"){
+    shown_matches$table <- get_prematches(mz = lcl$curr_mz,
+                                          patdb = lcl$paths$patdb)
   }
   
   # change current compound in text

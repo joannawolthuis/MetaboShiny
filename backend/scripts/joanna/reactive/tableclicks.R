@@ -55,9 +55,25 @@ lapply(unique(res.update.tables), FUN=function(table){
       # get current selected compound from the original table (needs to be available in global env)
       lcl$curr_mz <<- res_tbl[curr_row, rn]
       
+      
       # show pre-matched ones
-      if(!is.null(lcl$tables$pre_matches)){
-        shown_matches$table <- lcl$tables$pre_matches[query_mz == lcl$curr_mz]
+      if(mSet$metshiParams$prematched){
+        shown_matches$table <- get_prematches(mz = lcl$curr_mz,
+                                              patdb = lcl$paths$patdb)
+        #reload pie chart stuff IF THAT ONE IS OPEN
+        switch(input$tab_iden_4,
+               pie_db = {
+                 statsmanager$calculate <- "match_pie"
+                 datamanager$reload <- "match_pie"
+               },
+               pie_add = {
+                 statsmanager$calculate <- "match_pie"
+                 datamanager$reload <- "match_pie"
+               },
+               word_cloud = {
+                 statsmanager$calculate <- "match_wordcloud"
+                 datamanager$reload <- "match_wordcloud"
+               })
       }
       
       # print current compound in sidebar
@@ -78,7 +94,6 @@ lapply(unique(res.update.tables), FUN=function(table){
       # - magicball plots - 
       
       if(lcl$paths$patdb != ""){
-        print("loading adduct tbl..")
         if(file.exists(lcl$paths$patdb)){
           conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb)
           scanmode <- DBI::dbGetQuery(conn, paste0("SELECT DISTINCT foundinmode FROM mzvals WHERE mzmed LIKE '", lcl$curr_mz, "%'"))[,1]
@@ -173,17 +188,15 @@ lapply(c("pos", "neg"), function(mode){
 observeEvent(input$match_tab_rows_selected,{
   curr_row <<- input$match_tab_rows_selected # get current row
   if (is.null(curr_row)) return()
+  # - - - - - - - - - - - - - - - - - - - - - -
   try({
     curr_name <<- shown_matches$table[curr_row,'name'][[1]]
-    updateTextInput(session, "pm_query", value = curr_name)
-    # write to clipboard
-    #if(input$auto_copy){
-    #  clipr::write_clip(curr_name)
-    #  print('copied to clipboard ( ˘ ³˘)♥')
-    #}
-    # -----------------------------
+    updateTextInput(session, 
+                    "pm_query",
+                    value = curr_name)
+    # - - - - - - - - - - - - - - - - - - - - - -
     curr_def <<- shown_matches$table[curr_row,'description'] # get current definition (hidden in table display but not deleted)
-    output$curr_definition <- renderText(curr_def$description) # render definition
+    output$curr_definition <- renderText(curr_def) # render definition
     curr_struct <<- shown_matches$table[curr_row,'structure'][[1]] # get current structure
     output$curr_struct <- renderPlot({plot.mol(curr_struct,style = "cow")}) # plot molecular structure
     curr_formula <<- shown_matches$table[curr_row,'baseformula'][[1]] # get current formula

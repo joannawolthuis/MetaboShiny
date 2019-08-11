@@ -39,30 +39,28 @@ output$heatbutton <- renderUI({
 observeEvent(input$heatmode, {
   statsmanager$calculate <- "heatmap"
   datamanager$reload <- "heatmap"
-},ignoreInit = TRUE, ignoreNULL = T)
+})#,ignoreInit = F, ignoreNULL = T)
 
 observeEvent(input$heatsign, {
   statsmanager$calculate <- "heatmap"
   datamanager$reload <- "heatmap"
-},ignoreInit = TRUE, ignoreNULL = T)
+})#,ignoreInit = F, ignoreNULL = T)
 
 observeEvent(input$heatmap_topn, {
   if(!is.null(mSet$analSet$heatmap)){
     datamanager$reload <- "heatmap" # just reload
   }
-},ignoreInit = TRUE, ignoreNULL = T)
+})#,ignoreInit = F, ignoreNULL = T)
 
 observeEvent(input$wc_topn, {
   datamanager$reload <- "matchplots"
-},ignoreInit = TRUE, ignoreNULL = T)
+})#,ignoreInit = TRUE, ignoreNULL = T)
 
 observeEvent(input$db_only, {
   if(input$db_only){
-    print("a")
     setOption(lcl$paths$opt.loc, "mode", "dbonly")
     logged$status <- "dbonly"
   }else{
-    print("b")
     setOption(lcl$paths$opt.loc, "mode", "complete")
     logged$status <- "logged"
   }

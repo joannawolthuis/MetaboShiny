@@ -224,14 +224,14 @@ observe({
                })
              },
              match_wordcloud = {
-               if(nrow(lcl$tables$last_matches) > 0){
+               if(nrow(shown_matches$table) > 0){
                  try({
                    
                    # remove unwanted words (defined in global) from description
-                   filtered_descriptions <- sapply(1:length(lcl$tables$last_matches$description),
+                   filtered_descriptions <- sapply(1:length(shown_matches$table$description),
                                                    function(i){
                                                      # get description
-                                                     desc <- lcl$tables$last_matches$description[[i]]
+                                                     desc <- shown_matches$table$description[[i]]
                                                      # return
                                                      desc
                                                    })
@@ -275,14 +275,11 @@ observe({
                }
              },
              match_pie = {
-               
-               if(nrow(lcl$tables$last_matches) > 0){
-               adduct_dist <- melt(table(lcl$tables$last_matches$adduct))
-               db_dist <- melt(table(lcl$tables$last_matches$source))
-               
-               lcl$vectors$pie_add <<- adduct_dist
-               lcl$vectors$pie_db <<- db_dist
-               
+               if(nrow(shown_matches$table) > 0){
+                  adduct_dist <- melt(table(shown_matches$table$adduct))
+                  db_dist <- melt(table(shown_matches$table$source))
+                  lcl$vectors$pie_add <<- adduct_dist
+                  lcl$vectors$pie_db <<- db_dist
                }
              })
     }

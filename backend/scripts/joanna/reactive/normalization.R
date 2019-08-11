@@ -413,6 +413,13 @@ observeEvent(input$initialize, {
 
     mSet$storage <- list()
 
+    # get ppm
+    conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb)
+    
+    mSet$ppm <- sprintf("%.1f",RSQLite::dbGetQuery(conn, "select ppm from params"))
+    
+    RSQLite::dbDisconnect(conn)
+    
     # return?
     mSet <<- mSet
 
