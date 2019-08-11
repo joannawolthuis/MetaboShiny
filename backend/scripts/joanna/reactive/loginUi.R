@@ -110,9 +110,6 @@ output$currUI <- renderUI({
       list(name='proj_name',text=opts$proj_name)
     )
     
-    a = c("fish_no_out.csv", "fish.csv", "lungcancer_no_out.csv", "lungcancer.csv")
-    #gsub(a,pattern = "(_no_out\\.csv)|(\\.csv)", replacement="")
-    #dput(list.files(opts$work_dir,pattern = "\\.csv"))
     lcl$vectors$project_names <<- unique(gsub(list.files(opts$work_dir,pattern = "\\.csv"),pattern = "(_no_out\\.csv)|(\\.csv)", replacement=""))
     print(lcl$vectors$proj_names)
     
@@ -120,7 +117,6 @@ output$currUI <- renderUI({
                          "proj_name",
                          choices = lcl$vectors$proj_names,
                          selected = opts$proj_name)
-    # create default text objects in UI
     lapply(lcl$texts, FUN=function(default){
       output[[default$name]] = renderText(default$text)
     })
@@ -177,19 +173,13 @@ output$currUI <- renderUI({
     updateSelectInput(session, "color_ramp", selected = opts$gspec)
     
     opts <<- opts
-    # logged in!
-    
-    
-    require(shinyjs)
-    titlejs=paste0("document.title ='-`* MetaboShiny *`-'")
-    runjs(titlejs)
-    
-    # - - - - -
-    
+
     tagList(
-      tags$head('MetaboShiny'),
       tags$style(type="text/css", bar.css),
-      navbarPage(inverse=TRUE,#tags$head(tags$script(src="sparkle.js")),
+      tags$head(HTML('<link rel="icon", href="metshiTitle.png", 
+                                 type="image/png" />')),
+      navbarPage(windowTitle='MetaboShiny',
+        inverse=TRUE,#tags$head(tags$script(src="sparkle.js")),
                  title=div(h1("MetaboShiny"), class="outlined", tags$style(type="text/css", font.css)), # make it use the sparkle.js for unnecessary sparkle effects ;)
                  id="nav_general",
                  # this tab shows the available databases, if they are installed, and buttons to install them. generated as output$db_build_ui in 'server'
@@ -341,14 +331,26 @@ output$currUI <- renderUI({
                                    switchButton(inputId = "do_prematch", 
                                                 label = "Do matching beforehand?",
                                                 col = "BW", 
-                                                type = "YN")),
+                                                type = "YN"),
+                                   tags$i("All m/z values will be searched in the databases of choice and the results will be saved to your save file for fast access."),br(),
+                                   tags$i("Search results can still be overridden by manual searching. Don't forget to save after!")),
+                          br(),
                           fluidRow(align="center", 
                                    column(2),
                                    column(8, conditionalPanel("input.do_prematch == true", 
                                                               h2("Included databases:"),
-                                                              uiOutput("db_prematch_select")),
-                                          shinyWidgets::circleButton(inputId = "prematch",
-                                                                              icon = icon("hand-o-right"))),
+                                                              uiOutput("db_prematch_select"),
+                                                              shinyWidgets::circleButton("select_db_prematch_all",
+                                                                                         icon = icon("shopping-cart"),
+                                                                                         size = "default")),
+                                          hr(),
+                                          fluidRow(column(6,h2("Find matches"),
+                                                          shinyWidgets::circleButton(inputId = "prematch",
+                                                                                     icon = icon("searchengin"))),
+                                                   column(6,h2("Clear matches"),
+                                                          shinyWidgets::circleButton(inputId = "clear_prematch",
+                                                                                     icon = icon("trash"))))
+                                          ),
                                    column(2)
                           )),
                  # this tab is the main analysis tab. all tabs for all analyses are listed here, but the visibility is changed depending on the current experiment

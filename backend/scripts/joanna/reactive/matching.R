@@ -1,5 +1,19 @@
+observeEvent(input$clear_prematch,{
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb) # change this to proper var later
+  RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS prematch_content")
+  RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS prematch_mapper")
+  RSQLite::dbExecute(conn, "VACUUM")
+  mSet$metshiParams$prematched <<- FALSE
+  RSQLite::dbDisconnect(conn)
+})
+  
 observeEvent(input$prematch,{
-  print("trigger")
+  
+  if(is.null(mSet)){
+    print("Requires mSet")
+    return(NULL)
+  }
+  
   if(length(lcl$vectors$db_prematch_list) > 0){ # go through selected databases
     
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb) # change this to proper var later
@@ -19,7 +33,7 @@ observeEvent(input$prematch,{
     RSQLite::dbExecute(conn, "CREATE INDEX map_mz ON prematch_mapper(query_mz)")
     RSQLite::dbExecute(conn, "CREATE INDEX cont_struc ON prematch_content(structure)")
     
-    blocksize=500
+    blocksize=100
     blocks = split(colnames(mSet$dataSet$norm), ceiling(seq_along(1:ncol(mSet$dataSet$norm))/blocksize))
     withProgress({
       i = 0
@@ -33,9 +47,7 @@ observeEvent(input$prematch,{
                               append = F,
                               outfolder = normalizePath(lcl$paths$db_dir))
         i <<- i + 1
-        progress=i/length(blocks)
-
-        #setProgress(value = progress)
+        setProgress(value = i)
         list(mapper = unique(res[,c("query_mz", "structure", "%iso", "adduct", "dppm")]), 
              content = unique(res[,-c("query_mz", "%iso", "adduct", "dppm")]))
       })

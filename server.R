@@ -498,11 +498,27 @@ gspec = RdBu')
     }else{
       set.to = T
     }
-
     for(db in dbs){
       updateCheckboxInput(session, paste0("search_", db), value = set.to)
     }
-
+  })
+  
+  observeEvent(input$select_db_prematch_all, {
+    
+    dbs <- gbl$vectors$db_list[-which(gbl$vectors$db_list %in% c("custom", "magicball"))]
+    
+    currently.on <- sapply(dbs, function(db){
+      input[[paste0("prematch_", db)]]
+    })
+    
+    if(any(currently.on)){
+      set.to = F
+    }else{
+      set.to = T
+    }
+    for(db in dbs){
+      updateCheckboxInput(session, paste0("prematch_", db), value = set.to)
+    }
   })
 
   # render the database download area
