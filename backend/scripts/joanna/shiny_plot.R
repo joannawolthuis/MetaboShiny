@@ -1438,3 +1438,18 @@ export_plotly = function(p=last_plot(), file = "plot.png",
   writeBin(con, file)
 }
 
+export_plotly_2 <- function (p, file = "plot.png", format = tools::file_ext(file), 
+                             scale = NULL, width = 300, height = 300,port) 
+{
+  b <- plotly::plotly_build(p)
+  bod = plotly:::to_JSON(b$x[c("data", "layout")])
+  
+  # - - - -
+  
+  res <- httr::POST(paste0("http://127.0.0.1:", port), 
+                    body = plotly:::to_JSON(bod))
+  httr::stop_for_status(res)
+  httr::warn_for_status(res)
+  con <- httr::content(res, as = "raw")
+  writeBin(con, file)
+}

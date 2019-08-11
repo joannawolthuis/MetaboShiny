@@ -46,16 +46,10 @@ observe({
                # reordering of hits according to most significant at the top
                if(interface$mode == "bivar"){
 
-                 print("a")
-                 
                  if(!is.null(input$heatmode)){
 
-                   print("b")
-                   
                    if(input$heatmode){
 
-                     print("c")
-                     
                      if("tt" %in% names(mSet$analSet)){
                        if(input$heatsign){
                          tbl <- req(as.data.frame(mSet$analSet$tt$sig.mat))
@@ -95,8 +89,6 @@ observe({
                  }
                }else if(interface$mode == "multivar"){
 
-                 print("multivar mode")
-
                  tbl <- as.data.frame(mSet$analSet$aov$sig.mat)
                  used.values <- "p.value"
                  decreasing <- F
@@ -115,14 +107,10 @@ observe({
                  }
                  }
 
-               print("d")
-                 
                if(!exists("tbl")) return(NULL)
                if(is.null(tbl)) return(NULL)
                if(nrow(tbl) == 0 ) return(NULL)
 
-               print("e")
-                 
                # check top x used (slider bar in UI), if more than total matches use total matches
                topn = if(length(tbl[[used.values]]) < input$heatmap_topn) length(tbl[[used.values]]) else input$heatmap_topn
                mzorder <- order(tbl[[used.values]], decreasing = decreasing)
@@ -209,8 +197,6 @@ observe({
                  redo = "aov" %not in% names(mSet$analSet)
                }
 
-               print(redo)
-               
                if(redo){ # if done, don't redo
                  withProgress({
                    if(!is.null(input$timecourse_trigger)){

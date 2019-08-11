@@ -442,15 +442,11 @@ observe({
              },
              heatmap = {
 
-               print("here(datamanager)")
-               print(input$heatmode)
-               
                breaks = seq(min(mSet$dataSet$norm), max(mSet$dataSet$norm), length = 256/2)
 
                output$heatmap <- plotly::renderPlotly({
 
                  if(!is.null(mSet$analSet$heatmap$matrix)){
-                   print("pass 2")
                    # create heatmap object
                    hmap <- suppressWarnings({
                      if(input$heatlimits){
@@ -528,9 +524,7 @@ observe({
                                                                   font = lcl$aes$font)})
              }},
              match_pie = {
-               
-               print("Reloading pie charts...")
-               
+              
                if(nrow(shown_matches$table) > 0){
                  
                output$match_pie_add <- plotly::renderPlotly({
