@@ -39,7 +39,7 @@ ggplotNormSummary <- function(mSet,
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
-          legend.title.align = 0.5,
+          plot.title = element_text(hjust = 0.5),
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = font$family))
 
@@ -51,7 +51,7 @@ ggplotNormSummary <- function(mSet,
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
-          legend.title.align = 0.5,
+          plot.title = element_text(hjust = 0.5),
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = font$family))
 
@@ -64,7 +64,7 @@ ggplotNormSummary <- function(mSet,
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
-          legend.title.align = 0.5,
+          plot.title = element_text(hjust = 0.5),
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = font$family))
 
@@ -76,7 +76,7 @@ ggplotNormSummary <- function(mSet,
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
-          legend.title.align = 0.5,
+          plot.title = element_text(hjust = 0.5),
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = font$family))
 
@@ -127,7 +127,7 @@ ggplotSampleNormSummary <- function(mSet,
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
-          legend.title.align = 0.5,
+          plot.title = element_text(hjust = 0.5),
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = font$family))
 
@@ -139,7 +139,7 @@ ggplotSampleNormSummary <- function(mSet,
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
-          legend.title.align = 0.5,
+          plot.title = element_text(hjust = 0.5),
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = font$family))
 
@@ -148,7 +148,7 @@ ggplotSampleNormSummary <- function(mSet,
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
-          legend.title.align = 0.5,
+          plot.title = element_text(hjust = 0.5),
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = font$family))
 
@@ -160,7 +160,7 @@ ggplotSampleNormSummary <- function(mSet,
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
-          legend.title.align = 0.5,
+          plot.title = element_text(hjust = 0.5),
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = font$family))
 
@@ -185,10 +185,10 @@ ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
       theme(legend.position="none",
             axis.text=element_text(size=font$ax.num.size),
             axis.title=element_text(size=font$ax.txt.size),
-            legend.title.align = 0.5,
+            plot.title = element_text(hjust = 0.5),
             axis.line = element_line(colour = 'black', size = .5),
             text = element_text(family = font$family)) +
-      ggtitle(cpd)
+      ggtitle(paste(cpd, "m/z"))
   } else{
     ggplot2::ggplot(data=profile) +
       ggplot2::geom_line(size=0.7, ggplot2::aes(x=Time, y=Abundance, group=Sample, color=Group, text=Sample)) +
@@ -198,10 +198,10 @@ ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
       theme(legend.position="none",
             axis.text=element_text(size=font$ax.num.size),
             axis.title=element_text(size=font$ax.txt.size),
-            legend.title.align = 0.5,
+            plot.title = element_text(hjust = 0.5),
             axis.line = element_line(colour = 'black', size = .5),
             text = element_text(family = font$family)) +
-      ggtitle(cpd)
+      ggtitle(paste(cpd, "m/z"))
   }
   if(plotlyfy){
     ggplotly(p, tooltip="Sample", originalData=T)
@@ -228,7 +228,7 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
   }
   # - - -
 
-  profile <- getProfile(mSet,cpd, mode=if(mode == "nm") "stat" else "time")
+  profile <- getProfile(mSet, cpd, mode=if(mode == "nm") "stat" else "time")
   df_line <- data.table(x = c(1,2),
                         y = rep(min(profile$Abundance - 0.1),2))
   stars = ""
@@ -324,16 +324,16 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
       }
 
     p <- p + theme(legend.position="none",
+                   plot.title = element_text(hjust = 0.5),
                    axis.text=element_text(size=font$ax.num.size),
                    axis.title=element_text(size=font$ax.txt.size),
-                   legend.title.align = 0.5,
                    axis.line = element_line(colour = 'black', size = .5),
                    text = element_text(family = font$family))+
       ggplot2::annotate("text",
                         x = switch(mode, nm = 1.5,
                                    ts = max(as.numeric(profile$Time))/2 + .5),
                         y = min(profile$Abundance - 0.3),
-                        label = stars, size = 8, col = "black") + ggtitle(cpd)
+                        label = stars, size = 8, col = "black") + ggtitle(paste(cpd, "m/z"))
 
     if(!("box" %in% styles)){
       p <- switch(add_stats,
@@ -406,7 +406,7 @@ ggPlotAOV <- function(mSet, cf, n=20,
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
-          legend.title.align = 0.5,
+          plot.title = element_text(hjust = 0.5),
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = font$family))+
     ggplot2::scale_colour_gradientn(colours = cf(n)) +
@@ -438,7 +438,7 @@ ggPlotTT <- function(mSet, cf, n=20,
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
-          legend.title.align = 0.5,
+          plot.title = element_text(hjust = 0.5),
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = font$family))+
     ggplot2::scale_colour_gradientn(colours = cf(n)) +
@@ -466,7 +466,7 @@ ggPlotFC <- function(mSet, cf, n=20,
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
-          legend.title.align = 0.5,
+          plot.title = element_text(hjust = 0.5),
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = font$family))+
     ggplot2::scale_colour_gradientn(colours = cf(n))
@@ -499,7 +499,7 @@ ggPlotVolc <- function(mSet,
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
-          legend.title.align = 0.5,
+          plot.title = element_text(hjust = 0.5),
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = font$family))+
     ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE)
@@ -601,7 +601,7 @@ ggPlotClass <- function(mSet,
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
-          legend.title.align = 0.5,
+          plot.title = element_text(hjust = 0.5),
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = font$family))+
     facet_grid(~Component) +
@@ -636,7 +636,7 @@ ggPlotPerm <- function(mSet,
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
-          legend.title.align = 0.5,
+          plot.title = element_text(hjust = 0.5),
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = font$family))+
     labs(x="Accuracy", y = "Permutations") +
@@ -765,7 +765,7 @@ ggPlotROC <- function(data,
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
-          legend.title.align = 0.5,
+          plot.title = element_text(hjust = 0.5),
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = font$family))+
     #scale_y_continuous(limits=c(0,1)) +
@@ -816,7 +816,7 @@ ggPlotBar <- function(data,
        theme(legend.position="none",
              axis.text=element_text(size=font$ax.num.size),
              axis.title=element_text(size=font$ax.txt.size),
-             legend.title.align = 0.5,
+             plot.title = element_text(hjust = 0.5),
              axis.line = element_line(colour = 'black', size = .5),
              axis.text.x=element_blank(),
              axis.ticks.x=element_blank(),
@@ -1116,7 +1116,7 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
-          legend.title.align = 0.5,
+          plot.title = element_text(hjust = 0.5),
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = font$family))+
     scale_x_continuous(name=gsubfn::fn$paste("$pcx ($x.var%)")) +
@@ -1381,7 +1381,7 @@ ggPlotScree <- function(mSet, plot.theme, cf, font, pcs=20){
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
-          legend.title.align = 0.5,
+          plot.title = element_text(hjust = 0.5),
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = font$family))
   # - - - - -
@@ -1400,7 +1400,7 @@ ggPlotWordBar <- function(wcdata, plot.theme, cf, font, plotlyfy=T){
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
-          legend.title.align = 0.5,
+          plot.title = element_text(hjust = 0.5),
           axis.line = element_line(colour = 'black', size = .5),
           axis.text.x=element_blank(),
           axis.ticks.x=element_blank(),
@@ -1425,8 +1425,11 @@ export_plotly = function(p=last_plot(), file = "plot.png",
                          format = tools::file_ext(file),
                          scale = NULL, width = NULL, height = NULL, port=9091) {
   bod <- list(figure = plotly_build(p)$x[c("data", 
-                                           "layout")], format = format, width = width, 
-              height = height, scale = scale)
+                                           "layout")], 
+              format = format,
+              width = width, 
+              height = height,
+              scale = scale)
   res <- httr::POST(paste0("http://127.0.0.1:", port), 
                     body = plotly:::to_JSON(bod))
   httr::stop_for_status(res)

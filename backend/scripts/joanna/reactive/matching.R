@@ -10,7 +10,7 @@ observeEvent(input$clear_prematch,{
 observeEvent(input$prematch,{
   
   if(is.null(mSet)){
-    print("Requires mSet")
+    print("Requires mSet!")
     return(NULL)
   }
   
