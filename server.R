@@ -722,9 +722,9 @@ gspec = RdBu')
   observeEvent(input$export_plot,{
     switch(runmode,
            docker = plotly::orca(p = plotly::last_plot(), 
-                                file=paste0(basename(tempfile()), input$export_format)),
+                                file=file.path(lcl$paths$work_dir,paste0(basename(tempfile()), input$export_format))),
            local = export_plotly(p = plotly::last_plot(), 
-                                  file=paste0(basename(tempfile()), input$export_format),
+                                  file=file.path(lcl$paths$work_dir,paste0(basename(tempfile()), input$export_format)),
                                   port = 9091))
   })
 
