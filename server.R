@@ -103,13 +103,9 @@ mode = complete')
 
         runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
 
-        work_dir <- switch(runmode,
-                           docker = "/userfiles/saves",
-                           local = normalizePath("~/MetaboShiny/saves"))
+        work_dir <- normalizePath("~/MetaboShiny/saves")
 
-        dbdir <- switch(runmode,
-                           docker = "/userfiles/databases",
-                           local = normalizePath("~/MetaboShiny/databases"))
+        dbdir <- local = normalizePath("~/MetaboShiny/databases")
 
         # check if user folder exists, otherwise make it
         userfolder = file.path(work_dir, input$username)

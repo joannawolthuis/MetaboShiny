@@ -9,7 +9,7 @@ observeEvent(plotly::event_data("plotly_click"),{
     showadd = lcl$vectors$pie_add$Var1[i]
 
     if(unique(lcl$tables$last_matches$query_mz) == lcl$curr_mz){
-      keep.rows <- which(lcl$tables$last_matches$adduct == show.adduct)
+      keep.rows <- which(lcl$tables$last_matches$adduct == showadd)
       shown_matches$table <- lcl$tables$last_matches[keep.rows,]}
     else if(mSet$metshiParams$prematched){
       shown_matches$table <- get_prematches(mz = lcl$curr_mz,
