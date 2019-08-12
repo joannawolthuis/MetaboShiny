@@ -47,7 +47,6 @@ get_prematches <- function(who = NA,
     result <- RSQLite::dbSendStatement(conn, gsubfn::fn$paste("$firstpart WHERE $what = '$who'
                                                               AND source = $showdb"))
   }else{
-    print(what)
     result <- RSQLite::dbSendStatement(conn, gsubfn::fn$paste(strwrap("$firstpart WHERE $what = '$who'", width=10000, simplify=TRUE)))
   }
   res = RSQLite::dbFetch(result)
@@ -490,8 +489,6 @@ get_predicted <- function(mz,
   
   per_adduct_results <- pbapply::pblapply(calc_adducts, function(add_name){
     
-    print(add_name)
-    
     row <- adducts[Name == add_name]
     
     if(!is.na(row$AddEx)){
@@ -512,8 +509,6 @@ get_predicted <- function(mz,
     filter="."
     
     temp_res <- pbapply::pblapply(settings, function(def.ele){
-      
-      print(def.ele)
       
       add.only.ele <- setdiff(add.ele,
                               def.ele)
@@ -754,9 +749,6 @@ get_predicted <- function(mz,
       saveme <<- tbl_uniq
       mols[valid.struct] <- rcdk::parse.smiles(tbl_uniq$structure[valid.struct])#sapply(smiles, rcdk::parse.smiles)
       backtrack <- data.table::data.table(structure = tbl_uniq$structure[valid.struct])
-
-      print(valid.struct)
-      
       backtrack_molinfo <- lapply(valid.struct, function(i,row){
           mol = mols[[i]]
           # get molecular formula
@@ -776,7 +768,6 @@ get_predicted <- function(mz,
     }
     
     tbl_fin <- merge(tbl_uniq, backtrack, by = c("baseformula", "structure"))
-    print(tbl_fin)
     # - - - 
     tbl_fin
    })
@@ -861,8 +852,6 @@ info_from_cids <- function(cids,
     if(is.null(rows)) return(NULL)
     if(nrow(rows) == 0) return(NULL)
     
-    print(rows)
-    
     colnames(rows) <- c("identifier", "baseformula", "structure", "charge","name","description")
     
     url_syn = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/",
@@ -870,8 +859,6 @@ info_from_cids <- function(cids,
                      "/synonyms/JSON")
     
     syn.adj = data.table()
-    
-    print("..")
     
     try({
       synonyms <- jsonlite::fromJSON(url_syn,
@@ -907,7 +894,6 @@ info_from_cids <- function(cids,
       tbl.renamed <- rows
     }
     
-    print("got here")
     tbl.fin <- as.data.table(tbl.renamed)[,-"charge"]
     
     tbl.fin$source <- "PubChem"

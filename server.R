@@ -239,7 +239,7 @@ gspec = RdBu')
   
   output$hits_tab <- DT::renderDataTable({
     print(shown_matches$reverse)
-    DT::datatable(shown_matches$reverse[,c("query_mz", "adduct", "%iso")],
+    DT::datatable(shown_matches$reverse,
                   selection = 'single',
                   autoHideNavigation = T,
                   options = list(lengthMenu = c(5, 10, 20), pageLength = 5))

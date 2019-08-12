@@ -64,7 +64,7 @@ observeEvent(input$prematch,{
 
 # triggers on clicking the 'search' button in sidebar
 observeEvent(input$search_mz, {
-  if(length(lcl$vectors$db_search_list) > 0){ # go through selected databases
+  if(length(lcl$vectors$db_search_list) > 0 & lcl$curr_mz != "nothing selected"){ # go through selected databases
       # get ion modes
     withProgress({
       lcl$tables$last_matches <<- MetaDBparse::searchMZ(mzs = lcl$curr_mz, 

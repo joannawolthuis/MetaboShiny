@@ -205,25 +205,30 @@ observeEvent(input$match_tab_rows_selected,{
   })
 })
 
+
 observeEvent(input$browse_tab_rows_selected,{
   curr_row <- input$browse_tab_rows_selected
+  if (is.null(curr_row)) return()
+  # -----------------------------
+  curr_def <- lcl$tables$browse_table[curr_row, description]
+  output$browse_definition <- renderText(curr_def)
+  
   search_cmd <- lcl$tables$browse_table[curr_row,c('structure')][[1]]
   
   if(!mSet$metshiParams$prematched){
     print("Please perform pre-matching first to enable this feature!")
     return(NULL)
   }else{
-    lcl$tables$hits_table <<- get_prematches(who = search_cmd,
-                                             what = "map.structure", #map.mz as alternative
-                                             patdb = lcl$paths$patdb)
+    lcl$tables$hits_table <<- unique(get_prematches(who = search_cmd,
+                                                    what = "map.structure", #map.mz as alternative
+                                                    patdb = lcl$paths$patdb)[,c("query_mz", "adduct", "%iso")])
     shown_matches$reverse <- if(nrow(lcl$tables$hits_table) > 0){
       lcl$tables$hits_table
     }else{
       data.table('name' = "Didn't find anything ( •́ .̫ •̀ )")
     }
   }
-  })
-
+})
 
 # triggers on clicking a row in the reverse hit results table
 observeEvent(input$hits_tab_rows_selected,{
@@ -231,29 +236,51 @@ observeEvent(input$hits_tab_rows_selected,{
   if (is.null(curr_row)) return()
   # - - - - - - - - - - - - - - - - - - - - - -
   try({
-    curr_mz <<- shown_matches$reverse[curr_row,'mz'][[1]]
-    lcl$curr_mz <<- curr_mz
+    lcl$curr_mz <<- shown_matches$reverse[curr_row,'query_mz'][[1]]
+    output$curr_mz <- renderText(lcl$curr_mz)
     
+    curr_row <- input$browse_tab_rows_selected
+    search_cmd <- lcl$tables$browse_table[curr_row,c('structure')][[1]]
     
+    if(!mSet$metshiParams$prematched){
+      print("Please perform pre-matching first to enable this feature!")
+      return(NULL)
+    }else{
+      lcl$tables$hits_table <<- unique(get_prematches(who = search_cmd,
+                                                      what = "map.structure", #map.mz as alternative
+                                                      patdb = lcl$paths$patdb)[,c("query_mz", "adduct", "%iso")])
+      shown_matches$reverse <- if(nrow(lcl$tables$hits_table) > 0){
+        lcl$tables$hits_table
+      }else{
+        data.table('name' = "Didn't find anything ( •́ .̫ •̀ )")
+      }
+    }
     # show pre-matched ones
-    if(mSet$metshiParams$prematched){
-      shown_matches$forward <- get_prematches(who = lcl$curr_mz,
+    shown_matches$forward <- get_prematches(who = lcl$curr_mz,
                                             what = "query_mz",
                                             patdb = lcl$paths$patdb)
-      #reload pie chart stuff IF THAT ONE IS OPEN
-      switch(input$tab_iden_4,
-             pie_db = {
-               statsmanager$calculate <- "match_pie"
-               datamanager$reload <- "match_pie"
-             },
-             pie_add = {
-               statsmanager$calculate <- "match_pie"
-               datamanager$reload <- "match_pie"
-             },
-             word_cloud = {
-               statsmanager$calculate <- "match_wordcloud"
-               datamanager$reload <- "match_wordcloud"
-             })
-    }
+    #reload pie chart stuff IF THAT ONE IS OPEN
+    switch(input$tab_iden_4,
+           pie_db = {
+             statsmanager$calculate <- "match_pie"
+             datamanager$reload <- "match_pie"
+           },
+           pie_add = {
+             statsmanager$calculate <- "match_pie"
+             datamanager$reload <- "match_pie"
+           },
+           word_cloud = {
+             statsmanager$calculate <- "match_wordcloud"
+             datamanager$reload <- "match_wordcloud"
+           })
+    
+    output$curr_plot <- plotly::renderPlotly({
+      # --- ggplot ---
+      ggplotSummary(mSet, lcl$curr_mz, shape.fac = input$shape_var, cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
+                    styles = input$ggplot_sum_style,
+                    add_stats = input$ggplot_sum_stats, col.fac = input$col_var,txt.fac = input$txt_var,
+                    plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                    font = lcl$aes$font)
     })
+  })
 })
