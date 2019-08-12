@@ -1,9 +1,10 @@
 # triggers on clicking the 'browse database' function
 observeEvent(input$browse_db,{
   # get all compounds in the selected databases
-  cpd_list <- lapply(gbl$vectors$db_search_list, FUN=function(match.table){
-    browse_db(match.table)
+  cpd_list <- lapply(lcl$vectors$db_search_list, FUN=function(match.table){
+    MetaDBparse::browseBase(match.table)
   })
+  
   # join the individual result tables together
   lcl$tables$browse_table <<- unique(as.data.table(rbindlist(cpd_list)))
   # render table for UI

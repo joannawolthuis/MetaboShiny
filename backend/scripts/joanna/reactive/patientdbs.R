@@ -15,7 +15,6 @@
 lapply(c("merge", "db", "csv"), FUN=function(col){
   # creates listener for if the 'check db' button is pressed
   observe({
-    print("checking...")
     # see which db files are present in folder
     folder_files <- list.files(lcl$paths$work_dir)
     is.present <- switch(col,

@@ -195,7 +195,7 @@ observeEvent(input$match_tab_rows_selected,{
                     "pm_query",
                     value = curr_name)
     # - - - - - - - - - - - - - - - - - - - - - -
-    curr_def <<- shown_matches$table[curr_row,'description'] # get current definition (hidden in table display but not deleted)
+    curr_def <<- shown_matches$table[curr_row,'description'][[1]] # get current definition (hidden in table display but not deleted)
     output$curr_definition <- renderText(curr_def) # render definition
     curr_struct <<- shown_matches$table[curr_row,'structure'][[1]] # get current structure
     output$curr_struct <- renderPlot({plot.mol(curr_struct,style = "cow")}) # plot molecular structure

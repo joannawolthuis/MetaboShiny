@@ -820,7 +820,7 @@ output$currUI <- renderUI({
                                                                                         # reverse searching
                                                                                         tabPanel(title="molecule > mz",
                                                                                                  br(),
-                                                                                                 actionButton("browse_db", "Browse compounds", icon=icon("eye")),
+                                                                                                 actionButton("browse_db", "Press this button to browse compounds of the selected databases.", icon=icon("eye")),
                                                                                                  hr(),
                                                                                                  tabsetPanel(
                                                                                                    tabPanel(NULL, icon = icon("database"),
@@ -828,7 +828,7 @@ output$currUI <- renderUI({
                                                                                                                       textOutput("browse_definition")),
                                                                                                             div(DT::dataTableOutput('browse_tab'),style='font-size:80%'),
                                                                                                             hr(),
-                                                                                                            actionButton("revsearch_mz", "Find hits", icon=icon("search"))
+                                                                                                            actionButton("revsearch_mz", "Find hits for selected compound", icon=icon("search"))
                                                                                                    ),
                                                                                                    tabPanel(NULL, icon = icon("search-location"),
                                                                                                             div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
