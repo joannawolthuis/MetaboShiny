@@ -2,7 +2,11 @@
 observeEvent(input$browse_db,{
   # get all compounds in the selected databases
   cpd_list <- lapply(lcl$vectors$db_search_list, FUN=function(match.table){
-    MetaDBparse::showAllBase(match.table)
+    res = MetaDBparse::showAllBase(outfolder = lcl$paths$db_dir,
+                                   base.dbname = gsub(basename(match.table), 
+                                                      pattern = "\\.db",
+                                                      replacement=""))
+    res
   })
   
   # join the individual result tables together
@@ -28,20 +32,21 @@ observeEvent(input$browse_db,{
 # triggers on reverse searching TODO: fix this, it's broken
 observeEvent(input$revsearch_mz, {
   curr_row <- input$browse_tab_rows_selected
-  # curr_row <- grep(lcl$tables$browse_table$description, pattern="Creatine riboside")
-  # -------------------
-  search_cmd <- lcl$tables$browse_table[curr_row,c('formula', 'charge')]
-  # -------------------
-  cpd_list <- lapply(lcl$vectors$db_search_list, FUN=function(match.table){
-    get_mzs(search_cmd$formula, search_cmd$charge, match.table, patdb=lcl$paths$patdb)})
-  # ------------------
-  lcl$tables$hits_table <<- unique(as.data.table(rbindlist(cpd_list)))
-  output$hits_tab <-DT::renderDataTable({
-    DT::datatable(lcl$tables$hits_tab,
-                  selection = 'single',
-                  autoHideNavigation = T,
-                  options = list(lengthMenu = c(5, 10, 20), pageLength = 5))
-  })
+  search_cmd <- lcl$tables$browse_table[curr_row,c('structure')][[1]]
+
+  if(!mSet$metshiParams$prematched){
+    print("Please perform pre-matching first to enable this feature!")
+    return(NULL)
+  }else{
+    lcl$tables$hits_table <<- get_prematches(who = search_cmd,
+                             what = "map.structure", #map.mz as alternative
+                             patdb = lcl$paths$patdb)
+    shown_matches$reverse <- if(nrow(lcl$tables$hits_table) > 0){
+      lcl$tables$hits_table
+    }else{
+      data.table('name' = "Didn't find anything ( •́ .̫ •̀ )")
+    }
+  }
 })
 
 observeEvent(input$browse_tab_rows_selected,{
@@ -54,7 +59,7 @@ observeEvent(input$browse_tab_rows_selected,{
 
 observeEvent(input$hits_tab_rows_selected,{
   curr_row <- input$hits_tab_rows_selected
-  curr_mz <- lcl$tables$hits_table[curr_row, mzmed]
+  curr_mz <- lcl$tables$hits_table[curr_row, "query_mz"]
   if (is.null(curr_row)) return()
   # -----------------------------
   #TODO: this should be a function and not re-written

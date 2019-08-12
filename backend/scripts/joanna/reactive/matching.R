@@ -13,7 +13,6 @@ observeEvent(input$prematch,{
     print("Requires mSet!")
     return(NULL)
   }
-  
   if(length(lcl$vectors$db_prematch_list) > 0){ # go through selected databases
     
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb) # change this to proper var later
@@ -31,6 +30,7 @@ observeEvent(input$prematch,{
                                                             structure TEXT,
                                                             source TEXT)")
     RSQLite::dbExecute(conn, "CREATE INDEX map_mz ON prematch_mapper(query_mz)")
+    RSQLite::dbExecute(conn, "CREATE INDEX map_struc ON prematch_mapper(structure)")
     RSQLite::dbExecute(conn, "CREATE INDEX cont_struc ON prematch_content(structure)")
     
     blocksize=100
@@ -78,7 +78,7 @@ observeEvent(input$search_mz, {
                                                         outfolder=normalizePath(lcl$paths$db_dir))  
     })
     
-    shown_matches$table <- if(nrow(lcl$tables$last_matches) > 0){
+    shown_matches$forward <- if(nrow(lcl$tables$last_matches) > 0){
       lcl$tables$last_matches
     }else{
       data.table('name' = "Didn't find anything ( •́ .̫ •̀ )")
@@ -90,11 +90,11 @@ observeEvent(input$search_mz, {
 observeEvent(input$score_iso, {
 
   # check if the matches table even exists
-  if(!data.table::is.data.table(shown_matches$table)) return(NULL)
+  if(!data.table::is.data.table(shown_matches$forward)) return(NULL)
 
   # check if a previous scoring was already done (remove that column if so, new score is generated in a bit)
-  if("score" %in% colnames(shown_matches$table)){
-    shown_matches$table <<- shown_matches$table[,-"score"]
+  if("score" %in% colnames(shown_matches$forward)){
+    shown_matches$forward <<- shown_matches$forward[,-"score"]
   }
 
   intprec = as.numeric(input$int_prec)/100.00
@@ -102,11 +102,11 @@ observeEvent(input$score_iso, {
   # get table including isotope scores
   # as input, takes user method for doing this scoring
   withProgress({
-    score_table <- score.isos(table = shown_matches$table, mSet = mSet, lcl$paths$patdb, method=input$iso_score_method, inshiny=T, intprec = intprec)
+    score_table <- score.isos(table = shown_matches$forward, mSet = mSet, lcl$paths$patdb, method=input$iso_score_method, inshiny=T, intprec = intprec)
     })
 
   # update the match table available to the rest of metaboshiny
-  shown_matches$table <<- shown_matches$table[score_table, on = c("baseformula", "adduct")]
+  shown_matches$forward <<- shown_matches$forward[score_table, on = c("baseformula", "adduct")]
 })
 
 observeEvent(input$search_pubmed, {

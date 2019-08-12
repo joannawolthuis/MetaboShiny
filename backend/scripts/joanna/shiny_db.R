@@ -22,52 +22,33 @@ browse_db <- function(chosen.db){
 }
 
 #' @export
-get_prematches <- function(mz = NA,
+get_prematches <- function(who = NA,
+                           what = "mz",
                            patdb,
                            showdb=NULL,
                            showadd=NULL){
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb) 
-  # " b.compoundname as name
-  # b.baseformula
-  # u.adduct
-  # u.isoprevalence as perciso
-  # u.dppm
-  # b.identifier
-  # b.description
-  # u.structure
-  # u.query_mz"
+
+  firstpart = "SELECT DISTINCT
+               query_mz,name,baseformula,adduct,`%iso`,dppm,
+               identifier,description,map.structure,source 
+               FROM prematch_mapper map
+               JOIN prematch_content con
+               ON map.structure = con.structure"
+  
   if(!is.null(showdb) & !is.null(showadd)){
-    result <- RSQLite::dbSendStatement(conn, "SELECT DISTINCT 
-name,baseformula,adduct,`%iso`,dppm,identifier,description,map.structure,source FROM prematch_mapper map
-                                     JOIN prematch_content con
-                                     ON map.structure = con.structure
-                                     WHERE query_mz = $mz
-                                     AND source = $showdb
-                                     AND adduct = $showadd")
-    RSQLite::dbBind(result, list(mz = mz, showdb = showdb, showadd = showadd))
-  }else if(!is.null(showadd)){
-    result <- RSQLite::dbSendStatement(conn, "SELECT DISTINCT
-name,baseformula,adduct,`%iso`,dppm,identifier,description,map.structure,source FROM prematch_mapper map
-                                       JOIN prematch_content con
-                                       ON map.structure = con.structure
-                                       WHERE query_mz = $mz
-                                       AND adduct = $showadd")
-    RSQLite::dbBind(result, list(mz = mz, showadd = showadd))
+    result <- RSQLite::dbSendStatement(conn, gsubfn::fn$paste("$firstpart WHERE $what = '$who'
+                                                              AND adduct = $showadd
+                                                              AND source = $showdb"))
+    }else if(!is.null(showadd)){
+    result <- RSQLite::dbSendStatement(conn, gsubfn::fn$paste("$firstpart WHERE $what = '$who'
+                                                              AND adduct = $showadd"))
   }else if(!is.null(showdb)){
-    result <- RSQLite::dbSendStatement(conn, "SELECT DISTINCT
-name,baseformula,adduct,`%iso`,dppm,identifier,description,map.structure,source FROM prematch_mapper map
-                                     JOIN prematch_content con
-                                     ON map.structure = con.structure
-                                     WHERE query_mz = $mz
-                                     AND source = $showdb")
-    RSQLite::dbBind(result, list(mz = mz, showdb = showdb))
+    result <- RSQLite::dbSendStatement(conn, gsubfn::fn$paste("$firstpart WHERE $what = '$who'
+                                                              AND source = $showdb"))
   }else{
-    result <- RSQLite::dbSendStatement(conn, "SELECT DISTINCT
-name,baseformula,adduct,`%iso`,dppm,identifier,description,map.structure,source FROM prematch_mapper map
-                                     JOIN prematch_content con
-                                     ON map.structure = con.structure
-                                     WHERE query_mz = $mz")
-    RSQLite::dbBind(result, list(mz = mz))
+    print(what)
+    result <- RSQLite::dbSendStatement(conn, gsubfn::fn$paste(strwrap("$firstpart WHERE $what = '$who'", width=10000, simplify=TRUE)))
   }
   res = RSQLite::dbFetch(result)
   RSQLite::dbClearResult(result)

@@ -218,14 +218,15 @@ gspec = RdBu')
     }, deleteFile = FALSE)
   })
 
-  shown_matches <- reactiveValues(table = data.table())
+  shown_matches <- reactiveValues(forward = data.table(),
+                                  reverse = data.table())
 
   output$match_tab <- DT::renderDataTable({
     remove_cols = gbl$vectors$remove_match_cols
-    remove_idx <- which(colnames(shown_matches$table) %in% remove_cols)
+    remove_idx <- which(colnames(shown_matches$forward) %in% remove_cols)
     # don't show some columns but keep them in the original table, so they can be used
     # for showing molecule descriptions, structure
-    DT::datatable(shown_matches$table,
+    DT::datatable(shown_matches$forward,
                   selection = 'single',
                   autoHideNavigation = T,
                   options = list(lengthMenu = c(5, 10, 15),
@@ -234,6 +235,14 @@ gspec = RdBu')
                   )
                   
     ) 
+  })
+  
+  output$hits_tab <- DT::renderDataTable({
+    print(shown_matches$reverse)
+    DT::datatable(shown_matches$reverse[,c("query_mz", "adduct", "%iso")],
+                  selection = 'single',
+                  autoHideNavigation = T,
+                  options = list(lengthMenu = c(5, 10, 20), pageLength = 5))
   })
 
   # ===== UI SWITCHER ====
@@ -301,10 +310,11 @@ gspec = RdBu')
   # -----------------
   observeEvent(input$undo_match_filt, {
     if(mSet$metshiParams$prematched){
-      shown_matches$table <- get_prematches(mz = lcl$curr_mz,
-                                            patdb = lcl$paths$patdb)
+      shown_matches$forward <- get_prematches(who = lcl$curr_mz,
+                                              what = "query_mz",
+                                              patdb = lcl$paths$patdb)
     }else{
-      shown_matches$table <- lcl$tables$last_matches  
+      shown_matches$forward <- lcl$tables$last_matches  
     }
   })
 

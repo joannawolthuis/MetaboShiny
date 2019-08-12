@@ -58,8 +58,9 @@ lapply(unique(res.update.tables), FUN=function(table){
       
       # show pre-matched ones
       if(mSet$metshiParams$prematched){
-        shown_matches$table <- get_prematches(mz = lcl$curr_mz,
-                                              patdb = lcl$paths$patdb)
+        shown_matches$forward <- get_prematches(who = lcl$curr_mz,
+                                                 what = "query_mz",
+                                                 patdb = lcl$paths$patdb)
         #reload pie chart stuff IF THAT ONE IS OPEN
         switch(input$tab_iden_4,
                pie_db = {
@@ -190,16 +191,69 @@ observeEvent(input$match_tab_rows_selected,{
   if (is.null(curr_row)) return()
   # - - - - - - - - - - - - - - - - - - - - - -
   try({
-    curr_name <<- shown_matches$table[curr_row,'name'][[1]]
+    curr_name <<- shown_matches$forward[curr_row,'name'][[1]]
     updateTextInput(session, 
                     "pm_query",
                     value = curr_name)
     # - - - - - - - - - - - - - - - - - - - - - -
-    curr_def <<- shown_matches$table[curr_row,'description'][[1]] # get current definition (hidden in table display but not deleted)
+    curr_def <<- shown_matches$forward[curr_row,'description'][[1]] # get current definition (hidden in table display but not deleted)
     output$curr_definition <- renderText(curr_def) # render definition
-    curr_struct <<- shown_matches$table[curr_row,'structure'][[1]] # get current structure
+    curr_struct <<- shown_matches$forward[curr_row,'structure'][[1]] # get current structure
     output$curr_struct <- renderPlot({plot.mol(curr_struct,style = "cow")}) # plot molecular structure
-    curr_formula <<- shown_matches$table[curr_row,'baseformula'][[1]] # get current formula
+    curr_formula <<- shown_matches$forward[curr_row,'baseformula'][[1]] # get current formula
     output$curr_formula <- renderText({curr_formula}) # render text of current formula
   })
+})
+
+observeEvent(input$browse_tab_rows_selected,{
+  curr_row <- input$browse_tab_rows_selected
+  search_cmd <- lcl$tables$browse_table[curr_row,c('structure')][[1]]
+  
+  if(!mSet$metshiParams$prematched){
+    print("Please perform pre-matching first to enable this feature!")
+    return(NULL)
+  }else{
+    lcl$tables$hits_table <<- get_prematches(who = search_cmd,
+                                             what = "map.structure", #map.mz as alternative
+                                             patdb = lcl$paths$patdb)
+    shown_matches$reverse <- if(nrow(lcl$tables$hits_table) > 0){
+      lcl$tables$hits_table
+    }else{
+      data.table('name' = "Didn't find anything ( •́ .̫ •̀ )")
+    }
+  }
+  })
+
+
+# triggers on clicking a row in the reverse hit results table
+observeEvent(input$hits_tab_rows_selected,{
+  curr_row <<- input$hits_tab_rows_selected # get current row
+  if (is.null(curr_row)) return()
+  # - - - - - - - - - - - - - - - - - - - - - -
+  try({
+    curr_mz <<- shown_matches$reverse[curr_row,'mz'][[1]]
+    lcl$curr_mz <<- curr_mz
+    
+    
+    # show pre-matched ones
+    if(mSet$metshiParams$prematched){
+      shown_matches$forward <- get_prematches(who = lcl$curr_mz,
+                                            what = "query_mz",
+                                            patdb = lcl$paths$patdb)
+      #reload pie chart stuff IF THAT ONE IS OPEN
+      switch(input$tab_iden_4,
+             pie_db = {
+               statsmanager$calculate <- "match_pie"
+               datamanager$reload <- "match_pie"
+             },
+             pie_add = {
+               statsmanager$calculate <- "match_pie"
+               datamanager$reload <- "match_pie"
+             },
+             word_cloud = {
+               statsmanager$calculate <- "match_wordcloud"
+               datamanager$reload <- "match_wordcloud"
+             })
+    }
+    })
 })
