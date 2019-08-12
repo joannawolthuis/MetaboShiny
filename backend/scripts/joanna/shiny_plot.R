@@ -392,17 +392,22 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
 
 ggPlotAOV <- function(mSet, cf, n=20,
                      plot.theme, plotlyfy=TRUE,font){
-
   profile <- as.data.table(mSet$analSet$aov$p.log[mSet$analSet$aov$inx.imp],
                            keep.rownames = T)
   colnames(profile) <- c("cpd", "-logp")
   profile[,2] <- round(profile[,2], digits = 2)
   profile$Peak <- c(1:nrow(profile))
+  colnames(profile)[1:2] <- c("m/z", "-log(p)")
+  scaleFUN <- function(x) sprintf("%.0f", x)
+  
+  xaxis = seq(0,600, 50)
   # ---------------------------
   p <- ggplot2::ggplot(data=profile) +
-    ggplot2::geom_point(ggplot2::aes(x=Peak, y=`-logp`,
-                                     text=cpd, color=`-logp`, key=cpd)) +
+    ggplot2::geom_point(ggplot2::aes(x=`m/z`, y=`-log(p)`,
+                                     text=`m/z`, color=`-log(p)`, 
+                                     key=`m/z`)) +
     plot.theme(base_size = 15) +
+    scale_x_discrete(breaks = xaxis, labels=as.character(xaxis)) + 
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
@@ -410,14 +415,14 @@ ggPlotAOV <- function(mSet, cf, n=20,
           axis.line = element_line(colour = 'black', size = .5),
           text = element_text(family = font$family))+
     ggplot2::scale_colour_gradientn(colours = cf(n)) +
-    ggplot2::scale_y_log10()
+    #ggplot2::scale_y_log10()+
+    scale_y_continuous(labels=scaleFUN)
   if(plotlyfy){
-    ggplotly(p, tooltip="cpd")
+    ggplotly(p, tooltip="m/z")
   }else{
     p
   }
 }
-
 ggPlotTT <- function(mSet, cf, n=20,
                      plot.theme, plotlyfy=TRUE,font){
   profile <- as.data.table(mSet$analSet$tt$p.log[mSet$analSet$tt$inx.imp],keep.rownames = T)

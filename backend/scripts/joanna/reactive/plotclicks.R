@@ -54,9 +54,7 @@ observeEvent(plotly::event_data("plotly_click"),{
     mzs <- switch(curr_tab,
                   tt = names(mSet$analSet$tt$p.value),
                   fc = names(mSet$analSet$fc$fc.log),
-                  aov = switch(input$timecourse_trigger,
-                               rownames(mSet$analSet$aov2$sig.mat),
-                               names(mSet$analSet$aov$p.value)),
+                  aov = if(mSet$timeseries)rownames(mSet$analSet$aov2$sig.mat) else names(mSet$analSet$aov$p.value),
                   volc = rownames(mSet$analSet$volcano$sig.mat)
     )
     if(d$key %not in% mzs) return(NULL)
