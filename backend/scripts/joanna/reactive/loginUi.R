@@ -680,45 +680,46 @@ output$currUI <- renderUI({
                                                                                                                             shinyWidgets::circleButton("score_iso", icon = icon("award"), size = "sm") # icon("fingerprint"), size = "sm")
                                                                                                                    )
                                                                                                        ))),
+                                                                            tags$i("Click the detective to search the selected databases for this m/z value."),br(),
+                                                                            fluidRow(
+                                                                              tags$button(
+                                                                                id = "search_mz",
+                                                                                class = "btn btn-default action-button",
+                                                                                img(src = "detective.png",
+                                                                                    height = "50px")
+                                                                              ),
+                                                                              div(
+                                                                                sardine(div(icon("paw","fa-xs fa-rotate-90"),
+                                                                                            style="position:relative;
+                                                                                            top:10px;")),
+                                                                                sardine(div(icon("paw","fa-xs fa-rotate-90"),
+                                                                                            style="position:relative;
+                                                                                            top:25px;")),
+                                                                                sardine(div(icon("paw","fa-xs fa-rotate-90"),
+                                                                                            style="position:relative;
+                                                                                            top:10px;")),
+                                                                                sardine(h2(textOutput("curr_mz"),style="padding:10px;")),
+                                                                                sardine(div(icon("paw","fa-xs fa-rotate-90"),
+                                                                                            style="position:relative;
+                                                                                            top:10px;")),
+                                                                                sardine(div(icon("paw","fa-xs fa-rotate-90"),
+                                                                                            style="position:relative;
+                                                                                            top:25px;")),
+                                                                                sardine(div(icon("paw","fa-xs fa-rotate-90"),
+                                                                                            style="position:relative;
+                                                                                            top:10px;")),
+                                                                                style="background-color:white;
+                                                                                height:55px;
+                                                                                width:115%;
+                                                                                position:relative;
+                                                                                right:30px;
+                                                                                border-top: 1px solid #DFDCDC;
+                                                                                border-bottom: 1px solid #DFDCDC;")
+                                                                                ),
                                                                             tabsetPanel(id="tab_iden_2",
                                                                                         # forward searching
                                                                                         tabPanel(title="mz > molecule",
                                                                                                  hr(),
-                                                                                                 fluidRow(
-                                                                                                   tags$button(
-                                                                                                     id = "search_mz",
-                                                                                                     class = "btn btn-default action-button",
-                                                                                                     img(src = "detective.png",
-                                                                                                         height = "50px")
-                                                                                                   ),
-                                                                                                   div(
-                                                                                                     sardine(div(icon("paw","fa-xs fa-rotate-90"),
-                                                                                                                 style="position:relative;
-                                                                                                         top:10px;")),
-                                                                                                     sardine(div(icon("paw","fa-xs fa-rotate-90"),
-                                                                                                                 style="position:relative;
-                                                                                                         top:25px;")),
-                                                                                                     sardine(div(icon("paw","fa-xs fa-rotate-90"),
-                                                                                                                 style="position:relative;
-                                                                                                         top:10px;")),
-                                                                                                     sardine(h2(textOutput("curr_mz"),style="padding:10px;")),
-                                                                                                     sardine(div(icon("paw","fa-xs fa-rotate-90"),
-                                                                                                                 style="position:relative;
-                                                                                                         top:10px;")),
-                                                                                                     sardine(div(icon("paw","fa-xs fa-rotate-90"),
-                                                                                                                 style="position:relative;
-                                                                                                         top:25px;")),
-                                                                                                     sardine(div(icon("paw","fa-xs fa-rotate-90"),
-                                                                                                                 style="position:relative;
-                                                                                                         top:10px;")),
-                                                                                                     style="background-color:white;
-                                                                                             height:55px;
-                                                                                             width:115%;
-                                                                                             position:relative;
-                                                                                             right:30px;
-                                                                                             border-top: 1px solid #DFDCDC;
-                                                                                             border-bottom: 1px solid #DFDCDC;")
-                                                                                                 ),
                                                                                                  bsCollapse(bsCollapsePanel(title=h2("Compound info"), style="warning",
                                                                                                                             tabsetPanel(id="tab_iden_3",
                                                                                                                                         tabPanel(title=icon("atlas"),
@@ -820,15 +821,17 @@ output$currUI <- renderUI({
                                                                                         # reverse searching
                                                                                         tabPanel(title="molecule > mz",
                                                                                                  br(),
-                                                                                                 actionButton("browse_db", "Press this button to browse compounds of the selected databases.", icon=icon("eye")),
-                                                                                                 hr(),
+                                                                                                 tags$i("Press the below button to browse compounds of the selected databases."),br(),
+                                                                                                 actionButton("browse_db", "Browse", icon=icon("eye")),
+                                                                                                 br(),
                                                                                                  tabsetPanel(
                                                                                                    tabPanel(NULL, icon = icon("database"),
                                                                                                             wellPanel(id = "def",style = "overflow-y:scroll; max-height: 200px",
                                                                                                                       textOutput("browse_definition")),
                                                                                                             div(DT::dataTableOutput('browse_tab'),style='font-size:80%'),
-                                                                                                            hr(),
-                                                                                                            actionButton("revsearch_mz", "Find hits for selected compound", icon=icon("search"))
+                                                                                                            br(),
+                                                                                                            tags$i("Find m/z values matching adducts or isotopes of this compound."),br(),
+                                                                                                            actionButton("revsearch_mz", "Search", icon=icon("search"))
                                                                                                    ),
                                                                                                    tabPanel(NULL, icon = icon("search-location"),
                                                                                                             div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
