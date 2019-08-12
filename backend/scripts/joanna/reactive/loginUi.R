@@ -183,7 +183,9 @@ output$currUI <- renderUI({
       # - - - - - - - - -
       navbarPage(windowTitle='MetaboShiny',
         inverse=TRUE,
-                 title=div(h1("MetaboShiny"), class="outlined", tags$style(type="text/css", font.css)), # make it use the sparkle.js for unnecessary sparkle effects ;)
+                 # use this for title
+                 # https://codepen.io/maxspeicher/pen/zrVKLE
+                 title=div(h1("MetaboShiny"), class="outlined", tags$style(type="text/css", font.css), id="sparkley"), # make it use the sparkle.js for unnecessary sparkle effects ;)
                  id="nav_general",
                  # this tab shows the available databases, if they are installed, and buttons to install them. generated as output$db_build_ui in 'server'
                  tabPanel("database", icon = icon("database",class = "outlined"), value="database",

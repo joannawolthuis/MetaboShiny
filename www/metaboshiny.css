@@ -317,29 +317,6 @@
 @-webkit-keyframes spin { 100% { -webkit-transform: rotate(360deg); } }
 @keyframes spin { 100% { -webkit-transform: rotate(360deg); transform:rotate(360deg); } }
 
-$buttonBackground: #2c3e50;
-$buttonColor: rgba(255,255,255,1);
-.sparkley {
-  background: lighten( $buttonBackground , 10% );
-  color: $buttonColor;
-  border: none;
-
-  padding: 16px 36px;
-  font-weight: normal;
-  
-  border-radius: 3px;
-  transition: all 0.25s ease;
-  
-  box-shadow: 0 38px 32px -23px black;
-  margin: 0 1em 1em;
-  
-  &:hover {
-    background: $buttonBackground;
-    color: transparentize( $buttonColor,0.8 );
-    
-  }
-}
-
 .rightAlign{float:right;}
 
 #curly-brace
@@ -412,4 +389,51 @@ $buttonColor: rgba(255,255,255,1);
 
 #search_mz{
   text-align: center;
+}
+
+/* sparkle stuff */
+
+@-moz-keyframes my-sparkle {
+  0%   {
+    opacity: 0;
+    -moz-transform: rotate(0deg) scale(0);
+  }
+  50%  {
+    opacity: 1;
+    -moz-transform: rotate(360deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    -moz-transform: rotate(720deg) scale(0);
+  }
+}
+
+@-webkit-keyframes my-sparkle {
+  0%   {
+    opacity: 0;
+    -webkit-transform: rotate(0deg) scale(0);
+  }
+  50%  {
+    opacity: 1;
+    -webkit-transform: rotate(360deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    -webkit-transform: rotate(720deg) scale(0);
+  }
+}
+
+@keyframes my-sparkle {
+  0%   {
+    opacity: 0;
+    transform: rotate(0deg) scale(0);
+  }
+  50%  {
+    opacity: 1;
+    transform: rotate(360deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(720deg) scale(0);
+  }
 }
