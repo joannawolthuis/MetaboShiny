@@ -10,16 +10,16 @@ observeEvent(plotly::event_data("plotly_click"),{
 
     if(unique(lcl$tables$last_matches$query_mz) == lcl$curr_mz){
       keep.rows <- which(lcl$tables$last_matches$adduct == showadd)
-      shown_matches$table <- lcl$tables$last_matches[keep.rows,]}
-    else if(mSet$metshiParams$prematched){
-      shown_matches$table <- get_prematches(mz = lcl$curr_mz,
-                                            patdb = lcl$paths$patdb,
-                                            showadd = showadd)
-    }else{
+      shown_matches$forward <<- lcl$tables$last_matches[keep.rows,]
+      }else if(mSet$metshiParams$prematched){
+      shown_matches$forward <<- get_prematches(who = lcl$curr_mz,
+                                              what = "query_mz",
+                                              patdb = lcl$paths$patdb,
+                                              showadd = as.character(showadd))}else{
       print("shouldnt happen lmao")
     }
-    statsmanager$calculate <- "match_pie"
-    datamanager$reload <- "match_pie"
+    statsmanager$calculate <<- "match_pie"
+    datamanager$reload <<- "match_pie"
   }
 
   if(input$tab_iden_4 == "pie_db"){
@@ -27,12 +27,13 @@ observeEvent(plotly::event_data("plotly_click"),{
     showdb = lcl$vectors$pie_db$Var1[i]
     
     if(unique(lcl$tables$last_matches$query_mz) == lcl$curr_mz){
-      keep.rows <- which(lcl$tables$last_matches$adduct == show.adduct)
-      shown_matches$table <- lcl$tables$last_matches[keep.rows,]}
-    else if(mSet$metshiParams$prematched){
-      shown_matches$table <- get_prematches(mz = lcl$curr_mz,
-                                             patdb = lcl$paths$patdb,
-                                             showdb = showdb)
+      keep.rows <- which(lcl$tables$last_matches$adduct == showdb)
+      shown_matches$forward <<- lcl$tables$last_matches[keep.rows,]
+    }else if(mSet$metshiParams$prematched){
+      shown_matches$forward <<- get_prematches(who = lcl$curr_mz,
+                                              what = "query_mz",
+                                              patdb = lcl$paths$patdb,
+                                              showdb = as.character(showdb))
     }else{
       print("shouldnt happen lmao")
     }
@@ -59,7 +60,6 @@ observeEvent(plotly::event_data("plotly_click"),{
     )
     if(d$key %not in% mzs) return(NULL)
     lcl$curr_mz <<- d$key
-    
     
     # - magicball - 
     if(lcl$paths$patdb != "" ){
@@ -127,8 +127,9 @@ observeEvent(plotly::event_data("plotly_click"),{
   
   # check if presearch mode is on
   if(mSet$metshiParams$prematched & input$tab_iden_4 == "table"){
-    shown_matches$table <- get_prematches(mz = lcl$curr_mz,
-                                          patdb = lcl$paths$patdb)
+    shown_matches$forward <<- get_prematches(who = lcl$curr_mz,
+                                            what = "query_mz",
+                                            patdb = lcl$paths$patdb)
   }
   
   # change current compound in text

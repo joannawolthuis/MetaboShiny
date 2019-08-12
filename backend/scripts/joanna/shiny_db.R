@@ -38,14 +38,14 @@ get_prematches <- function(who = NA,
   
   if(!is.null(showdb) & !is.null(showadd)){
     result <- RSQLite::dbSendStatement(conn, gsubfn::fn$paste("$firstpart WHERE $what = '$who'
-                                                              AND adduct = $showadd
-                                                              AND source = $showdb"))
+                                                              AND adduct = '$showadd'
+                                                              AND source = '$showdb'"))
     }else if(!is.null(showadd)){
     result <- RSQLite::dbSendStatement(conn, gsubfn::fn$paste("$firstpart WHERE $what = '$who'
-                                                              AND adduct = $showadd"))
+                                                              AND adduct = '$showadd'"))
   }else if(!is.null(showdb)){
     result <- RSQLite::dbSendStatement(conn, gsubfn::fn$paste("$firstpart WHERE $what = '$who'
-                                                              AND source = $showdb"))
+                                                              AND source = '$showdb'"))
   }else{
     result <- RSQLite::dbSendStatement(conn, gsubfn::fn$paste(strwrap("$firstpart WHERE $what = '$who'", width=10000, simplify=TRUE)))
   }

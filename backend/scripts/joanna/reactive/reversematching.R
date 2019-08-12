@@ -40,7 +40,7 @@ observeEvent(input$revsearch_mz, {
   }else{
     lcl$tables$hits_table <<- unique(get_prematches(who = search_cmd,
                               what = "map.structure", #map.mz as alternative
-                              patdb = lcl$paths$patdb)[,c("query_mz", "adduct", "%iso")])
+                              patdb = lcl$paths$patdb)[,c("query_mz", "adduct", "%iso", "dppm")])
     shown_matches$reverse <- if(nrow(lcl$tables$hits_table) > 0){
       lcl$tables$hits_table
     }else{

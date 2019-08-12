@@ -503,7 +503,7 @@ observe({
                })
              }, 
              match_wordcloud = {
-               if(nrow(shown_matches$table) > 0){
+               if(nrow(shown_matches$forward) > 0){
                wcdata <- data.frame(word = head(lcl$tables$word_freq, input$wc_topn)$name,
                                     freq = head(lcl$tables$word_freq, input$wc_topn)$value)
                
@@ -525,11 +525,12 @@ observe({
              }},
              match_pie = {
               
-               if(nrow(shown_matches$table) > 0){
+               if(nrow(shown_matches$forward) > 0){
                  
                output$match_pie_add <- plotly::renderPlotly({
                  
-                 plot_ly(lcl$vectors$pie_add, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
+                 plot_ly(lcl$vectors$pie_add, labels = ~Var1, 
+                         values = ~value, size=~value*10, type = 'pie',
                          textposition = 'inside',
                          textinfo = 'label+percent',
                          insidetextfont = list(color = '#FFFFFF'),

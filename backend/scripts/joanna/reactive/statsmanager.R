@@ -111,7 +111,7 @@ observe({
                if(is.null(tbl)) return(NULL)
                if(nrow(tbl) == 0 ) return(NULL)
 
-               # check top x used (slider bar in UI), if more than total matches use total matches
+               #check top x used (slider bar in UI), if more than total matches use total matches
                topn = if(length(tbl[[used.values]]) < input$heatmap_topn) length(tbl[[used.values]]) else input$heatmap_topn
                mzorder <- order(tbl[[used.values]], decreasing = decreasing)
                mzsel <- rownames(tbl)[mzorder]#[1:topn]
@@ -220,14 +220,16 @@ observe({
                })
              },
              match_wordcloud = {
-               if(nrow(shown_matches$table) > 0){
-                 try({
+               
+               if(nrow(shown_matches$forward) > 0){
+                
+                  try({
                    
                    # remove unwanted words (defined in global) from description
-                   filtered_descriptions <- sapply(1:length(shown_matches$table$description),
+                   filtered_descriptions <- sapply(1:length(shown_matches$forward$description),
                                                    function(i){
                                                      # get description
-                                                     desc <- shown_matches$table$description[[i]]
+                                                     desc <- shown_matches$forward$description[[i]]
                                                      # return
                                                      desc
                                                    })
@@ -271,9 +273,9 @@ observe({
                }
              },
              match_pie = {
-               if(nrow(shown_matches$table) > 0){
-                  adduct_dist <- melt(table(shown_matches$table$adduct))
-                  db_dist <- melt(table(shown_matches$table$source))
+               if(nrow(shown_matches$forward) > 0){
+                  adduct_dist <- melt(table(shown_matches$forward$adduct))
+                  db_dist <- melt(table(shown_matches$forward$source))
                   lcl$vectors$pie_add <<- adduct_dist
                   lcl$vectors$pie_db <<- db_dist
                }

@@ -55,7 +55,6 @@ lapply(unique(res.update.tables), FUN=function(table){
       # get current selected compound from the original table (needs to be available in global env)
       lcl$curr_mz <<- res_tbl[curr_row, rn]
       
-      
       # show pre-matched ones
       if(mSet$metshiParams$prematched){
         shown_matches$forward <- get_prematches(who = lcl$curr_mz,
@@ -221,7 +220,7 @@ observeEvent(input$browse_tab_rows_selected,{
   }else{
     lcl$tables$hits_table <<- unique(get_prematches(who = search_cmd,
                                                     what = "map.structure", #map.mz as alternative
-                                                    patdb = lcl$paths$patdb)[,c("query_mz", "adduct", "%iso")])
+                                                    patdb = lcl$paths$patdb)[,c("query_mz", "adduct", "%iso", "dppm")])
     shown_matches$reverse <- if(nrow(lcl$tables$hits_table) > 0){
       lcl$tables$hits_table
     }else{
@@ -239,22 +238,6 @@ observeEvent(input$hits_tab_rows_selected,{
     lcl$curr_mz <<- shown_matches$reverse[curr_row,'query_mz'][[1]]
     output$curr_mz <- renderText(lcl$curr_mz)
     
-    curr_row <- input$browse_tab_rows_selected
-    search_cmd <- lcl$tables$browse_table[curr_row,c('structure')][[1]]
-    
-    if(!mSet$metshiParams$prematched){
-      print("Please perform pre-matching first to enable this feature!")
-      return(NULL)
-    }else{
-      lcl$tables$hits_table <<- unique(get_prematches(who = search_cmd,
-                                                      what = "map.structure", #map.mz as alternative
-                                                      patdb = lcl$paths$patdb)[,c("query_mz", "adduct", "%iso")])
-      shown_matches$reverse <- if(nrow(lcl$tables$hits_table) > 0){
-        lcl$tables$hits_table
-      }else{
-        data.table('name' = "Didn't find anything ( •́ .̫ •̀ )")
-      }
-    }
     # show pre-matched ones
     shown_matches$forward <- get_prematches(who = lcl$curr_mz,
                                             what = "query_mz",

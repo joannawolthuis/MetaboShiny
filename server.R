@@ -238,7 +238,6 @@ gspec = RdBu')
   })
   
   output$hits_tab <- DT::renderDataTable({
-    print(shown_matches$reverse)
     DT::datatable(shown_matches$reverse,
                   selection = 'single',
                   autoHideNavigation = T,
