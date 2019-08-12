@@ -2,14 +2,14 @@
 observeEvent(input$browse_db,{
   # get all compounds in the selected databases
   cpd_list <- lapply(lcl$vectors$db_search_list, FUN=function(match.table){
-    MetaDBparse::browseBase(match.table)
+    MetaDBparse::showAllBase(match.table)
   })
   
   # join the individual result tables together
   lcl$tables$browse_table <<- unique(as.data.table(rbindlist(cpd_list)))
   # render table for UI
   output$browse_tab <-DT::renderDataTable({
-    remove_cols = c("description", "structure", "formula", "dppm", "charge")
+    remove_cols = c("description", "structure", "formula", "charge")
     remove_idx <- which(colnames(lcl$tables$browse_table) %in% remove_cols)
     # don't show some columns but keep them in the original table, so they can be used
     # for showing molecule descriptions, structure
@@ -18,7 +18,8 @@ observeEvent(input$browse_db,{
                   autoHideNavigation = T,
                   options = list(lengthMenu = c(5, 10, 15),
                                  pageLength = 5,
-                                 columnDefs = list(list(visible=FALSE, targets=remove_idx)))
+                                 columnDefs = list(list(visible=FALSE, 
+                                                        targets=remove_idx)))
     )
   })
 

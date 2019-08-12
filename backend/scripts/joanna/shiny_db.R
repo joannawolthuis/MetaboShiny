@@ -75,17 +75,6 @@ name,baseformula,adduct,`%iso`,dppm,identifier,description,map.structure,source 
   return(res)
 }
 
-get.ppm <- function(patdb){
-  # get ppm error retrospectively
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
-  A = DBI::dbGetQuery(conn, "SELECT * FROM mzvals WHERE ID = 1")
-  B = DBI::dbGetQuery(conn, "SELECT * FROM mzranges WHERE ID = 1")
-  DBI::dbDisconnect(conn)
-  ppm = round((abs(A$mzmed - B$mzmin) / A$mzmed) * 1e6, digits = 0)
-  # - - -
-  ppm
-}
-
 score.isos <- function(table, mSet, patdb, method="mscore", inshiny=TRUE, intprec){
   
   func <- function(){

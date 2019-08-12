@@ -759,7 +759,7 @@ gspec = RdBu')
              stop_orca(orca_serv_id)
            },
            docker = {
-             print("how to stop orca server here??")
+             NULL
            })
     parallel::stopCluster(session_cl)
     rmv <- list.files(".", pattern = ".csv|.log", full.names = T)
