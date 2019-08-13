@@ -78,6 +78,10 @@ observeEvent(input$search_mz, {
                                                         outfolder=normalizePath(lcl$paths$db_dir))  
     })
     
+    if(any(grepl(pattern = "iso", colnames(lcl$tables$last_matches)))){
+      lcl$tables$last_matches$isocat <<- sapply(lcl$tables$last_matches$`%iso`, function(perc) if(perc == 100) "main" else "minor")
+    }
+    
     shown_matches$forward <- if(nrow(lcl$tables$last_matches) > 0){
       lcl$tables$last_matches
     }else{

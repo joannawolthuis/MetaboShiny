@@ -757,6 +757,11 @@ output$currUI <- renderUI({
                                                                                                                                                           plotly::plotlyOutput("match_pie_add") %>% shinycssloaders::withSpinner()
                                                                                                                                                  )
                                                                                                                                         ),
+                                                                                                                                        tabPanel(title=icon("percentage"), value = "pie_iso",
+                                                                                                                                                 fluidRow(align = "center",
+                                                                                                                                                          plotly::plotlyOutput("match_pie_iso") %>% shinycssloaders::withSpinner()
+                                                                                                                                                 )
+                                                                                                                                        ),
                                                                                                                                         tabPanel(title=icon("cloud"), value = "word_cloud",
                                                                                                                                                  fluidRow(align = "center",
                                                                                                                                                           conditionalPanel("input.wc_cloudbar == true",

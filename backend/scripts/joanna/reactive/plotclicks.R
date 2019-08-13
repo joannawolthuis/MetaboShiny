@@ -2,43 +2,31 @@
 observeEvent(plotly::event_data("plotly_click"),{
 
   d <- plotly::event_data("plotly_click") # get click details (which point, additional included info, etc..)
-
-  if(input$tab_iden_4 == "pie_add"){
-
-    i = d$pointNumber + 1
-    showadd = lcl$vectors$pie_add$Var1[i]
-
-    if(unique(lcl$tables$last_matches$query_mz) == lcl$curr_mz){
-      keep.rows <- which(lcl$tables$last_matches$adduct == showadd)
-      shown_matches$forward <<- lcl$tables$last_matches[keep.rows,]
+  
+  for(pietype in c("add", "iso", "db")){
+    if(input$tab_iden_4 == paste0("pie_",pietype)){
+      i = d$pointNumber + 1
+      showsubset = as.character(lcl$vectors[[paste0("pie_",pietype)]]$Var1[i])
+      print(showsubset)
+      if(unique(lcl$tables$last_matches$query_mz) == lcl$curr_mz){
+        keep.rows <- which(lcl$tables$last_matches[[switch(pietype, 
+                                                           adduct = "add", 
+                                                           iso = "isocat", 
+                                                           db = "source")]] == showsubset)
+        shown_matches$forward <<- lcl$tables$last_matches[keep.rows,]
       }else if(mSet$metshiParams$prematched){
-      shown_matches$forward <<- get_prematches(who = lcl$curr_mz,
-                                              what = "query_mz",
-                                              patdb = lcl$paths$patdb,
-                                              showadd = as.character(showadd))}else{
-      print("shouldnt happen lmao")
+        shown_matches$forward <<- get_prematches(who = lcl$curr_mz,
+                                                 what = "query_mz",
+                                                 patdb = lcl$paths$patdb,
+                                                 showadd = if(pietype=="add") showsubset else NULL,
+                                                 showdb = if(pietype=="db") showsubset else NULL,
+                                                 showiso = if(pietype=="iso") showsubset else NULL)
+        }else{
+          print("shouldnt happen lmao")
+          }
+      statsmanager$calculate <<- "match_pie"
+      datamanager$reload <<- "match_pie"
     }
-    statsmanager$calculate <<- "match_pie"
-    datamanager$reload <<- "match_pie"
-  }
-
-  if(input$tab_iden_4 == "pie_db"){
-    i = d$pointNumber + 1
-    showdb = lcl$vectors$pie_db$Var1[i]
-    
-    if(unique(lcl$tables$last_matches$query_mz) == lcl$curr_mz){
-      keep.rows <- which(lcl$tables$last_matches$adduct == showdb)
-      shown_matches$forward <<- lcl$tables$last_matches[keep.rows,]
-    }else if(mSet$metshiParams$prematched){
-      shown_matches$forward <<- get_prematches(who = lcl$curr_mz,
-                                              what = "query_mz",
-                                              patdb = lcl$paths$patdb,
-                                              showdb = as.character(showdb))
-    }else{
-      print("shouldnt happen lmao")
-    }
-    statsmanager$calculate <- "match_pie"
-    datamanager$reload <- "match_pie"
   }
 
   curr_tab <- switch(input$statistics,
@@ -113,7 +101,5 @@ observeEvent(plotly::event_data("plotly_click"),{
         if(d$y > length(lcl$vectors$heatmap)) return(NULL)
         lcl$curr_mz <<- lcl$vectors$heatmap[d$y]
       }
-
-  datamanager$reload <- "mz"
-  
+  datamanager$reload <- "mz_forward"
 })

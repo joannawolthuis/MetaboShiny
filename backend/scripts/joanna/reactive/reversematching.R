@@ -25,27 +25,13 @@ observeEvent(input$browse_db,{
                                  columnDefs = list(list(visible=FALSE, 
                                                         targets=remove_idx))))
   })
-
 })
 
 # triggers on reverse searching TODO: fix this, it's broken
 observeEvent(input$revsearch_mz, {
   curr_row <- input$browse_tab_rows_selected
-  search_cmd <- lcl$tables$browse_table[curr_row,c('structure')][[1]]
-
-  if(!mSet$metshiParams$prematched){
-    print("Please perform pre-matching first to enable this feature!")
-    return(NULL)
-  }else{
-    lcl$tables$hits_table <<- unique(get_prematches(who = search_cmd,
-                              what = "map.structure", #map.mz as alternative
-                              patdb = lcl$paths$patdb)[,c("query_mz", "adduct", "%iso", "dppm")])
-    shown_matches$reverse <- if(nrow(lcl$tables$hits_table) > 0){
-      lcl$tables$hits_table
-    }else{
-      data.table('name' = "Didn't find anything ( •́ .̫ •̀ )")
-    }
-  }
+  lcl$curr_struct <- lcl$tables$browse_table[curr_row,c('structure')][[1]]
+  datamanager$reload <- "mz_reverse"
 })
 
 

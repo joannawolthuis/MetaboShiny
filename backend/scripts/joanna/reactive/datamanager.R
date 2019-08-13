@@ -8,20 +8,35 @@ observe({
   }else{
     if(!is.null(mSet)){
       switch(datamanager$reload,
-             mz = {
+             mz_reverse = {
+               print("reverse hits...")
+               if(!mSet$metshiParams$prematched){
+                 print("Please perform pre-matching first to enable this feature!")
+                 return(NULL)
+               }else{
+                 lcl$tables$hits_table <<- unique(get_prematches(who = lcl$curr_struct,
+                                                                 what = "map.structure", #map.mz as alternative
+                                                                 patdb = lcl$paths$patdb)[,c("query_mz", "adduct", "%iso", "dppm")])
+                 
+                 shown_matches$reverse <- if(nrow(lcl$tables$hits_table) > 0){
+                   lcl$tables$hits_table
+                 }else{
+                   data.table('name' = "Didn't find anything ( •́ .̫ •̀ )")
+                 }
+               }
+             },
+             mz_forward = {
                # show pre-matched ones
                if(mSet$metshiParams$prematched){
+                 
                  shown_matches$forward <- get_prematches(who = lcl$curr_mz,
                                                          what = "query_mz",
-                                                         patdb = lcl$paths$patdb)
-                 #reload pie chart stuff IF THAT ONE IS OPEN
+                                                         patdb = lcl$paths$patdb) 
                }
-               switch(input$tab_iden_4,
-                      pie_db = {
-                        statsmanager$calculate <- "match_pie"
-                        datamanager$reload <- "match_pie"
-                      },
-                      pie_add = {
+               
+               subtab = if(grepl(pattern="pie", input$tab_iden_4)) "pie" else input$tab_iden_4
+               switch(subtab,
+                      pie = {
                         statsmanager$calculate <- "match_pie"
                         datamanager$reload <- "match_pie"
                       },
@@ -579,37 +594,25 @@ observe({
               
                if(nrow(shown_matches$forward) > 0){
                  
-               output$match_pie_add <- plotly::renderPlotly({
-                 
-                 plot_ly(lcl$vectors$pie_add, labels = ~Var1, 
-                         values = ~value, size=~value*10, type = 'pie',
-                         textposition = 'inside',
-                         textinfo = 'label+percent',
-                         insidetextfont = list(color = '#FFFFFF'),
-                         hoverinfo = 'text',
-                         text = ~paste0(Var1, ": ", value, ' matches'),
-                         marker = list(colors = colors,
-                                       line = list(color = '#FFFFFF', width = 1)),
-                         #The 'pull' attribute can also be used to create space between the sectors
-                         showlegend = FALSE) %>%
-                   layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-                          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
-               })
-               
-               output$match_pie_db <- plotly::renderPlotly({
-                 plot_ly(lcl$vectors$pie_db, labels = ~Var1, values = ~value, size=~value*10, type = 'pie',
-                         textposition = 'inside',
-                         textinfo = 'label+percent',
-                         insidetextfont = list(color = '#FFFFFF'),
-                         hoverinfo = 'text',
-                         text = ~paste0(Var1, ": ", value, ' matches'),
-                         marker = list(colors = colors,
-                                       line = list(color = '#FFFFFF', width = 1)),
-                         #The 'pull' attribute can also be used to create space between the sectors
-                         showlegend = FALSE) %>%
-                   layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-                          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
-               })
+                piecharts = c("add", "db", "iso")
+                
+                lapply(piecharts, function(which_pie){
+                  output[[paste0("match_pie_", which_pie)]] <- plotly::renderPlotly({
+                    plot_ly(lcl$vectors[[paste0("pie_",which_pie)]], labels = ~Var1, 
+                            values = ~value, size=~value*10, type = 'pie',
+                            textposition = 'inside',
+                            textinfo = 'label+percent',
+                            insidetextfont = list(color = '#FFFFFF'),
+                            hoverinfo = 'text',
+                            text = ~paste0(Var1, ": ", value, ' matches'),
+                            marker = list(colors = colors,
+                                          line = list(color = '#FFFFFF', width = 1)),
+                            #The 'pull' attribute can also be used to create space between the sectors
+                            showlegend = FALSE) %>%
+                      layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                             yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+                  })
+                })
              }}
              )
     }

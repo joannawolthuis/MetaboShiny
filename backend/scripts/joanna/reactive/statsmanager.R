@@ -276,8 +276,11 @@ observe({
                if(nrow(shown_matches$forward) > 0){
                   adduct_dist <- melt(table(shown_matches$forward$adduct))
                   db_dist <- melt(table(shown_matches$forward$source))
+                  iso_dist <- melt(table(shown_matches$forward$isocat))
+                  
                   lcl$vectors$pie_add <<- adduct_dist
                   lcl$vectors$pie_db <<- db_dist
+                  lcl$vectors$pie_iso <<- iso_dist
                }
              })
     }

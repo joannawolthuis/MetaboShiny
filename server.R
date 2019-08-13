@@ -13,8 +13,7 @@ shinyServer(function(input, output, session) {
 
   lcl = list(
     curr_mz = "nothing selected",
-    patdb = "",
-    csv_loc = "",
+    curr_struct = "",
     proj_name ="",
     last_mset="",
     tables=list(last_matches=data.table::data.table(query_mz = "none")),
@@ -224,6 +223,7 @@ gspec = RdBu')
   output$match_tab <- DT::renderDataTable({
     remove_cols = gbl$vectors$remove_match_cols
     remove_idx <- which(colnames(shown_matches$forward) %in% remove_cols)
+    
     # don't show some columns but keep them in the original table, so they can be used
     # for showing molecule descriptions, structure
     DT::datatable(shown_matches$forward,
@@ -231,7 +231,7 @@ gspec = RdBu')
                   autoHideNavigation = T,
                   options = list(lengthMenu = c(5, 10, 15),
                                  pageLength = 5,
-                                columnDefs = list(list(visible=FALSE, targets=remove_idx))
+                                columnDefs = list(list(visible=FALSE, targets=c(remove_idx,which(colnames(shown_matches$forward)=="isocat"))))
                   )
                   
     ) 

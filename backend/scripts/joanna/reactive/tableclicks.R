@@ -69,7 +69,8 @@ lapply(unique(res.update.tables), FUN=function(table){
                      font = lcl$aes$font
                      )
         }else if(table == 'asca'){ # asca needs a split by time
-          ggplotSummary(mSet, lcl$curr_mz, shape.fac = input$shape_var, cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]], mode = "ts",
+          ggplotSummary(mSet, lcl$curr_mz, shape.fac = input$shape_var, 
+                        cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]], mode = "ts",
                         styles = input$ggplot_sum_style,
                         add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var,
                         plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
@@ -96,10 +97,9 @@ lapply(unique(res.update.tables), FUN=function(table){
                           plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                           font = lcl$aes$font)
           }
-
         }
       })
-      datamanager$reload <- "mz"
+      datamanager$reload <- "mz_forward"
     }
   })
 })
@@ -158,32 +158,14 @@ observeEvent(input$browse_tab_rows_selected,{
   # -----------------------------
   curr_def <- lcl$tables$browse_table[curr_row, description]
   output$browse_definition <- renderText(curr_def)
-  
-  search_cmd <- lcl$tables$browse_table[curr_row,c('structure')][[1]]
-  
-  if(!mSet$metshiParams$prematched){
-    print("Please perform pre-matching first to enable this feature!")
-    return(NULL)
-  }else{
-    lcl$tables$hits_table <<- unique(get_prematches(who = search_cmd,
-                                                    what = "map.structure", #map.mz as alternative
-                                                    patdb = lcl$paths$patdb)[,c("query_mz", "adduct", "%iso", "dppm")])
-    shown_matches$reverse <- if(nrow(lcl$tables$hits_table) > 0){
-      lcl$tables$hits_table
-    }else{
-      data.table('name' = "Didn't find anything ( •́ .̫ •̀ )")
-    }
-  }
+  lcl$curr_struct <<- lcl$tables$browse_table[curr_row,c('structure')][[1]]
+  datamanager$reload <- "mz_reverse"
 })
 
 # triggers on clicking a row in the reverse hit results table
 observeEvent(input$hits_tab_rows_selected,{
   curr_row <<- input$hits_tab_rows_selected # get current row
   if (is.null(curr_row)) return()
-  # - - - - - - - - - - - - - - - - - - - - - -
-  try({
-    lcl$curr_mz <<- shown_matches$reverse[curr_row,'query_mz'][[1]]
-    datamanager$reload <- "mz"
-    
-  })
+  lcl$curr_mz <<- shown_matches$reverse[curr_row,'query_mz'][[1]]
+  datamanager$reload <- "mz_forward"
 })

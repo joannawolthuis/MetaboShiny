@@ -26,7 +26,8 @@ get_prematches <- function(who = NA,
                            what = "mz",
                            patdb,
                            showdb=NULL,
-                           showadd=NULL){
+                           showadd=NULL,
+                           showiso=NULL){
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb) 
 
   firstpart = "SELECT DISTINCT
@@ -36,21 +37,21 @@ get_prematches <- function(who = NA,
                JOIN prematch_content con
                ON map.structure = con.structure"
   
-  if(!is.null(showdb) & !is.null(showadd)){
-    result <- RSQLite::dbSendStatement(conn, gsubfn::fn$paste("$firstpart WHERE $what = '$who'
-                                                              AND adduct = '$showadd'
-                                                              AND source = '$showdb'"))
-    }else if(!is.null(showadd)){
-    result <- RSQLite::dbSendStatement(conn, gsubfn::fn$paste("$firstpart WHERE $what = '$who'
-                                                              AND adduct = '$showadd'"))
-  }else if(!is.null(showdb)){
-    result <- RSQLite::dbSendStatement(conn, gsubfn::fn$paste("$firstpart WHERE $what = '$who'
-                                                              AND source = '$showdb'"))
-  }else{
-    result <- RSQLite::dbSendStatement(conn, gsubfn::fn$paste(strwrap("$firstpart WHERE $what = '$who'", width=10000, simplify=TRUE)))
+  dbfrag = if(!is.null(showdb)) gsubfn::fn$paste("AND source = '$showdb'") else ""
+  addfrag = if(!is.null(showadd)) gsubfn::fn$paste("AND adduct = '$showadd'") else ""
+  isofrag = if(!is.null(showiso)) switch(showiso, 
+                                         main = "AND `%iso` > 99.9999", 
+                                         minor = "AND `%iso` < 99.9999") else ""
+  
+  query = gsubfn::fn$paste("$firstpart WHERE $what = '$who' $dbfrag $addfrag $isofrag")
+
+  
+  res = RSQLite::dbGetQuery(conn, query)
+ 
+  if(any(grepl(pattern = "iso", colnames(res)))){
+    res$isocat <- sapply(res$`%iso`, function(perc) if(perc == 100) "main" else "minor")
   }
-  res = RSQLite::dbFetch(result)
-  RSQLite::dbClearResult(result)
+  
   RSQLite::dbDisconnect(conn)
   return(res)
 }
@@ -60,7 +61,6 @@ score.isos <- function(table, mSet, patdb, method="mscore", inshiny=TRUE, intpre
   func <- function(){
     
     ppm <- get.ppm(patdb=patdb)
-    
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
     
     if(inshiny) shiny::setProgress(value = 0.2)
