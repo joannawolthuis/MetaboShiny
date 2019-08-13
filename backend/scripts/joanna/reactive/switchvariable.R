@@ -36,18 +36,14 @@ observeEvent(input$change_cls, {
 
   output$curr_name <- renderText({mSet$dataSet$cls.name})
 
-  output$curr_name <- renderText({mSet$dataSet$cls.name})
-
-  invalidateLater(100, session)
-
   datamanager$reload <- "general"
 
   for(tabgroup in c("dimred", "overview", "permz")){
     if(tabgroup %in% names(input)){
-      invalidateLater(100, session)
-      print(input[[tabgroup]])
-      statsmanager$calculate <<- input[[tabgroup]]
-      datamanager$reload <<- input[[tabgroup ]]
+      if(!is.null(input[[tabgroup]])){
+        statsmanager$calculate <- input[[tabgroup]]
+        datamanager$reload <- input[[tabgroup ]]  
+      }
     }
   }
 

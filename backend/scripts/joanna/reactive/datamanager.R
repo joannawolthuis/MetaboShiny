@@ -8,6 +8,55 @@ observe({
   }else{
     if(!is.null(mSet)){
       switch(datamanager$reload,
+             mz = {
+               # show pre-matched ones
+               if(mSet$metshiParams$prematched){
+                 shown_matches$forward <- get_prematches(who = lcl$curr_mz,
+                                                         what = "query_mz",
+                                                         patdb = lcl$paths$patdb)
+                 #reload pie chart stuff IF THAT ONE IS OPEN
+               }
+               switch(input$tab_iden_4,
+                      pie_db = {
+                        statsmanager$calculate <- "match_pie"
+                        datamanager$reload <- "match_pie"
+                      },
+                      pie_add = {
+                        statsmanager$calculate <- "match_pie"
+                        datamanager$reload <- "match_pie"
+                      },
+                      word_cloud = {
+                        statsmanager$calculate <- "match_wordcloud"
+                        datamanager$reload <- "match_wordcloud"
+                      })
+               # - - - -
+               if(lcl$paths$patdb != ""){
+                 if(file.exists(lcl$paths$patdb)){
+                   scanmode <- getIonMode(lcl$curr_mz, lcl$paths$patdb)
+                   lcl$vectors$calc_adducts <<- adducts[scanmode %in% Ion_mode]$Name
+                   output$magicball_add_tab <- DT::renderDataTable({
+                     DT::datatable(data.table(Adduct = lcl$vectors$calc_adducts),
+                                   selection = list(mode = 'multiple',
+                                                    selected = lcl$vectors[[paste0(scanmode, "_selected_add")]], target="row"),
+                                   options = list(pageLength = 5, dom = 'tp',
+                                                  columnDefs = list(list(className = 'dt-center', targets = "_all"))),
+                                   rownames = F)
+                   })
+                 }
+               }
+               # print current compound in sidebar
+               output$curr_mz <- renderText(lcl$curr_mz)
+               
+               # make miniplot for sidebar with current compound
+               output$curr_plot <- plotly::renderPlotly({
+                 # --- ggplot ---
+                 ggplotSummary(mSet, lcl$curr_mz, shape.fac = input$shape_var, cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
+                               styles = input$ggplot_sum_style,
+                               add_stats = input$ggplot_sum_stats, col.fac = input$col_var,txt.fac = input$txt_var,
+                               plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                               font = lcl$aes$font)
+               })
+             },
              general = {
                # change interface
                if(mSet$dataSet$cls.num <= 1){

@@ -114,24 +114,6 @@ observeEvent(plotly::event_data("plotly_click"),{
         lcl$curr_mz <<- lcl$vectors$heatmap[d$y]
       }
 
-  # render curent miniplot based on current compound
-  output$curr_plot <- plotly::renderPlotly({
-    # --- ggplot ---
-    ggplotSummary(mSet, lcl$curr_mz, shape.fac = input$shape_var, cols = lcl$aes$mycols,
-                  cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
-                  styles = input$ggplot_sum_style,
-                  add_stats = input$ggplot_sum_stats,
-                  col.fac = input$col_var, txt.fac = input$txt_var,plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                  font = lcl$aes$font)
-  })
+  datamanager$reload <- "mz"
   
-  # check if presearch mode is on
-  if(mSet$metshiParams$prematched & input$tab_iden_4 == "table"){
-    shown_matches$forward <<- get_prematches(who = lcl$curr_mz,
-                                            what = "query_mz",
-                                            patdb = lcl$paths$patdb)
-  }
-  
-  # change current compound in text
-  output$curr_mz <- renderText(lcl$curr_mz)
 })

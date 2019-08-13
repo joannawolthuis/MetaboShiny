@@ -55,61 +55,8 @@ lapply(unique(res.update.tables), FUN=function(table){
       # get current selected compound from the original table (needs to be available in global env)
       lcl$curr_mz <<- res_tbl[curr_row, rn]
       
-      # show pre-matched ones
-      if(mSet$metshiParams$prematched){
-        shown_matches$forward <- get_prematches(who = lcl$curr_mz,
-                                                 what = "query_mz",
-                                                 patdb = lcl$paths$patdb)
-        #reload pie chart stuff IF THAT ONE IS OPEN
-        switch(input$tab_iden_4,
-               pie_db = {
-                 statsmanager$calculate <- "match_pie"
-                 datamanager$reload <- "match_pie"
-               },
-               pie_add = {
-                 statsmanager$calculate <- "match_pie"
-                 datamanager$reload <- "match_pie"
-               },
-               word_cloud = {
-                 statsmanager$calculate <- "match_wordcloud"
-                 datamanager$reload <- "match_wordcloud"
-               })
-      }
-      
-      # print current compound in sidebar
-      output$curr_mz <- renderText(lcl$curr_mz)
-
-      # make miniplot for sidebar with current compound
-      output$curr_plot <- plotly::renderPlotly({
-        # --- ggplot ---
-        ggplotSummary(mSet, lcl$curr_mz, shape.fac = input$shape_var, cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
-                      styles = input$ggplot_sum_style,
-                      add_stats = input$ggplot_sum_stats, col.fac = input$col_var,txt.fac = input$txt_var,
-                      plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                      font = lcl$aes$font)
-      })
-
       outplot_name <- paste0(table, "_specific_plot")
 
-      # - magicball plots - 
-      
-      if(lcl$paths$patdb != ""){
-        if(file.exists(lcl$paths$patdb)){
-          conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb)
-          scanmode <- DBI::dbGetQuery(conn, paste0("SELECT DISTINCT foundinmode FROM mzvals WHERE mzmed LIKE '", lcl$curr_mz, "%'"))[,1]
-          DBI::dbDisconnect(conn)
-          lcl$vectors$calc_adducts <<- adducts[scanmode %in% Ion_mode]$Name
-          output$magicball_add_tab <- DT::renderDataTable({
-            DT::datatable(data.table(Adduct = lcl$vectors$calc_adducts),
-                          selection = list(mode = 'multiple',
-                                           selected = lcl$vectors[[paste0(scanmode, "_selected_add")]], target="row"),
-                          options = list(pageLength = 5, dom = 'tp',
-                                         columnDefs = list(list(className = 'dt-center', targets = "_all"))),
-                          rownames = F)
-          })
-        }
-      }
-      
       # send plot to relevant spot in UI
       output[[outplot_name]] <- plotly::renderPlotly({
         # --- ggplot ---
@@ -152,6 +99,9 @@ lapply(unique(res.update.tables), FUN=function(table){
 
         }
       })
+      
+      datamanager$reload <- "mz"
+      
     }
 
   })
@@ -236,34 +186,7 @@ observeEvent(input$hits_tab_rows_selected,{
   # - - - - - - - - - - - - - - - - - - - - - -
   try({
     lcl$curr_mz <<- shown_matches$reverse[curr_row,'query_mz'][[1]]
-    output$curr_mz <- renderText(lcl$curr_mz)
+    datamanager$reload <- "mz"
     
-    # show pre-matched ones
-    shown_matches$forward <- get_prematches(who = lcl$curr_mz,
-                                            what = "query_mz",
-                                            patdb = lcl$paths$patdb)
-    #reload pie chart stuff IF THAT ONE IS OPEN
-    switch(input$tab_iden_4,
-           pie_db = {
-             statsmanager$calculate <- "match_pie"
-             datamanager$reload <- "match_pie"
-           },
-           pie_add = {
-             statsmanager$calculate <- "match_pie"
-             datamanager$reload <- "match_pie"
-           },
-           word_cloud = {
-             statsmanager$calculate <- "match_wordcloud"
-             datamanager$reload <- "match_wordcloud"
-           })
-    
-    output$curr_plot <- plotly::renderPlotly({
-      # --- ggplot ---
-      ggplotSummary(mSet, lcl$curr_mz, shape.fac = input$shape_var, cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
-                    styles = input$ggplot_sum_style,
-                    add_stats = input$ggplot_sum_stats, col.fac = input$col_var,txt.fac = input$txt_var,
-                    plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                    font = lcl$aes$font)
-    })
   })
 })
