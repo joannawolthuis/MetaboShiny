@@ -99,11 +99,8 @@ lapply(unique(res.update.tables), FUN=function(table){
 
         }
       })
-      
       datamanager$reload <- "mz"
-      
     }
-
   })
 })
 

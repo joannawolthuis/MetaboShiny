@@ -52,8 +52,10 @@ observeEvent(input$venn_build, {
   top = input$venn_tophits
   
   if(nrow(venn_yes$now) > 5 | nrow(venn_yes$now) == 0){
+    
       print("can only take more than zero and less than five analyses!")
       NULL
+      
     }else{
       
       p <- ggPlotVenn(mSet = mSet,

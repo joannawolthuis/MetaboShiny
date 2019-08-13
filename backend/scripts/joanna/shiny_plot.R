@@ -1242,12 +1242,26 @@ ggPlotVenn <- function(mSet,
                        # - - -
                        res
                      },
+                     pca = {
+                       which.pca <- gsub(name, pattern = "^.*- | ", replacement="")
+                       
+                       compounds_pc <- as.data.table(analysis$pca$rotation,keep.rownames = T)
+                       ordered_pc <- setorderv(compounds_pc, which.pca, -1)
+                       res <- list(ordered_pc$rn)
+                       names(res) <- paste0(which.pca, " (PCA)")
+                       # - - -
+                       res
+                     },
                      volc = {
                        res <- list(rownames(analysis$volcano$sig.mat))
                        names(res) = base_name
                        res
-                     })
-
+                     },
+                     {print("not currently supported")
+                       return(NULL)})
+     
+      if(is.null(tbls)) return(NULL)
+      
       # user specified top hits only
       tbls_top <- lapply(tbls, function(tbl){
         if(length(tbl) < top){

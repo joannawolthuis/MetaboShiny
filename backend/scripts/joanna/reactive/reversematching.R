@@ -23,8 +23,7 @@ observeEvent(input$browse_db,{
                   options = list(lengthMenu = c(5, 10, 15),
                                  pageLength = 5,
                                  columnDefs = list(list(visible=FALSE, 
-                                                        targets=remove_idx)))
-    )
+                                                        targets=remove_idx))))
   })
 
 })

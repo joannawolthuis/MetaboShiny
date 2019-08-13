@@ -122,7 +122,7 @@ observe({
                    analysis = mSet$storage[[name]]$analysis
                    analysis_names = names(analysis)
                    # - - -
-                   with.subgroups <- intersect(analysis_names, c("ml", "plsr"))
+                   with.subgroups <- intersect(analysis_names, c("ml", "plsr", "pca"))
                    if(length(with.subgroups) > 0){
                      extra_names <- lapply(with.subgroups, function(anal){
                        switch(anal,
@@ -137,9 +137,12 @@ observe({
                               },
                               plsr = {
                                 c ("plsda - PC1", "plsda - PC2", "plsda - PC3")
+                              },
+                              pca = {
+                                c ("pca - PC1", "pca - PC2", "pca - PC3")
                               })
                      })
-                     analysis_names <- c(setdiff(analysis_names, c("ml", "plsr", "plsda")), unlist(extra_names))
+                     analysis_names <- c(setdiff(analysis_names, c("ml", "plsr", "plsda", "pca")), unlist(extra_names))
                    }
                    # - - -
                    data.frame(
