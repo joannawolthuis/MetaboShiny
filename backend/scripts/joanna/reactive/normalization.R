@@ -191,9 +191,9 @@ observeEvent(input$initialize, {
         
         # impute missing values with random forest
         imp <- missForest::missForest(w.missing,
-                                      parallelize = "variables", # parallelize over variables, 'forests' is other option
+                                      parallelize = input$rf_norm_parallelize, # parallelize over variables, 'forests' is other option
                                       verbose = F,
-                                      ntree = 10,
+                                      ntree = input$rf_norm_ntree,
                                       mtry = mtry)
 
         mSet$dataSet$proc <- imp$ximp
@@ -238,7 +238,8 @@ observeEvent(input$initialize, {
       norm_type = input$norm_type,
       trans_type = input$trans_type,
       scale_type = input$scale_type,
-      ref_var = input$ref_var
+      ref_var = input$ref_var,
+      prematched = F
     )
 
     dput(mSet$metshiParams)

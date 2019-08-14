@@ -299,6 +299,15 @@ output$currUI <- renderUI({
                                                                                                                       "Leave them out"="exclude",
                                                                                                                       "Leave them alone"="none"),
                                                       selected = "knn"),
+                                          conditionalPanel("input.miss_type == 'rf'",
+                                                           sliderInput("rf_norm_ntree", label = "Trees built per variable", value = 10, min = 1, max = 50, step=1),
+                                                           #numericInput("rf_norm_mtry", label = "Trees built per variable", value = 10, min = 1, max = 50)
+                                                           radioButtons("rf_norm_parallel", label = "Parallelize?", choices = list("no", 
+                                                                                                                                   "forests", 
+                                                                                                                                   "variables"),
+                                                                        selected = "variables")
+                                                           ),
+                                          # - - - - - -
                                           switchButton(inputId = "remove_outliers",
                                                        label = "Exclude outliers?",
                                                        value = FALSE, col = "BW", type = "YN"),
