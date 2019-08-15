@@ -1,6 +1,6 @@
 # === GENERAL OPTIONS ===
 
-options(stringsAsFactors = FALSE)
+options(stringsAsFactors = FALSE,"java.parameters" = c("-Xmx8G")) # give java enough memory for smiles parsing
 if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
 ### Anything loaded in this GLOBAL file will be avaliable for metaboShiny in general. ###
@@ -73,20 +73,22 @@ setOption <- function(file.loc, key, value){
   })
   writeLines(opt_conn, text = unlist(new_options))
 
-
-
   close(opt_conn)
 }
 
 # load adduct table (if you add/remove any adducts, change them in the below file!)
 #adducts <- fread("backend/umcfiles/adducts/AdductTable2.0.csv", header = T)
-adducts <- fread("backend/umcfiles/adducts/AdductTable2.0.csv", header = T) # V2 has di/trimers
+adducts <- data.table::fread("backend/adducts/adduct_rule_table.csv", header = T) # V2 has di/trimers
+adduct_rules <- data.table::fread("backend/adducts/adduct_rule_smarts.csv", header = T) # V2 has di/trimers
+adducts[adducts==''|adducts==' ']<-NA
 
 # set the home path
 home = normalizePath("~")
 
 # source all used functions (see shiny_plot.R, shiny_general.R, shiny_db.R etc.)
-sourceDir("backend/scripts/joanna")
+for(fp in list.files("./backend/scripts/general", full.names = T)){
+  source(fp, local = T)
+}
 
 caret.mdls <- caret::getModelInfo()
 # === THE BELOW LIST CONTAINS ALL GLOBAL VARIABLES THAT METABOSHINY CALLS UPON LATER ===
@@ -133,7 +135,7 @@ caret.mdls <- caret::getModelInfo()
                                                 list(name = 'massbank_logo', path = 'www/massbank_logo.jpg', dimensions = c(250, 100)),
                                                 list(name = 'metabolights_logo', path = 'www/metabolights_logo.png', dimensions = c(200, 200)),
                                                 list(name = 'vmh_logo', path = 'www/vmh.png', dimensions = c(250, 200)),
-                                                list(name = 'foodb_logo', path = 'www/foodb_logo.png', dimensions = c(200, 200)),
+                                                list(name = 'foodb_logo', path = 'www/foodb_logo.png', dimensions = c(250, 90)),
                                                 list(name = 'pos_icon', path = 'www/handpos.png', dimensions = c(120, 120)),
                                                 list(name = 'neg_icon', path = 'www/handneg.png', dimensions = c(120, 120)),
                                                 list(name = 'excel_icon', path = 'www/excel.png', dimensions = c(120, 120)),
@@ -147,7 +149,13 @@ caret.mdls <- caret::getModelInfo()
                                                 list(name = 'plus', path = 'www/add.png', dimensions = c(150, 150)),
                                                 list(name= 'maconda_logo', path = 'www/maconda.png', dimensions = c(250,100)),
                                                 list(name= 'expoexplorer_logo', path = 'www/exposome_explorer.png', dimensions = c(250,100)),
-                                                list(name = 'sidebar_icon', path = 'www/detective.png', dimensions = c(60, 60))
+                                                list(name= 't3db_logo', path = 'www/t3db_logo.png', dimensions = c(200,80)),
+                                                list(name= 'drugbank_logo', path = 'www/drugbank_logo_2.png', dimensions = c(230,80)),
+                                                list(name= 'phenolexplorer_logo', path = 'www/phenolexplorer_logo.jpg', dimensions = c(200,60)),
+                                                list(name = 'sidebar_icon', path = 'www/detective.png', dimensions = c(60, 60)),
+                                                list(name = 'merge_icon', path = 'www/merge.png', dimensions = c(150, 150)),
+                                                list(name = 'db_icon', path = 'www/database.png', dimensions = c(150, 150)),
+                                                list(name = 'laptop_icon', path = 'www/laptop.png', dimensions = c(150, 150))
 
                                   ), # all image paths, if you add an image you can add it here
                                   default.text = list(list(name='curr_definition', text="No m/z selected"),
@@ -208,6 +216,15 @@ caret.mdls <- caret::getModelInfo()
                                     expoexplorer = list(title = "Exposome-Explorer",
                                                         description = "Exposome-Explorer is the first database dedicated to biomarkers of exposure to environmental risk factors for diseases.",
                                                         image_id = "expoexplorer_logo"),
+                                    t3db = list(title = "T3DB",
+                                                description = "The Toxin and Toxin Target Database (T3DB), or, soon to be referred as, the Toxic Exposome Database, is a unique bioinformatics resource that combines detailed toxin data with comprehensive toxin target information.",
+                                                image_id = "t3db_logo"),
+                                    drugbank = list(title = "DrugBank",
+                                                description = "The DrugBank database is a comprehensive, freely accessible, online database containing information on drugs and drug targets.",
+                                                image_id = "drugbank_logo"),
+                                    phenolexplorer = list(title = "Phenol-Explorer",
+                                                          description = "Phenol-Explorer is the first comprehensive database on polyphenol content in foods. The database contains more than 35,000 content values for 500 different polyphenols in over 400 foods.",
+                                                          image_id = "phenolexplorer_logo"),
                                     # - - leave magicball last - -
                                     magicball = list(title = "MagicBall",
                                                      description = "Algorithm to predict molecular formula from m/z value",
@@ -269,41 +286,39 @@ caret.mdls <- caret::getModelInfo()
                    volumes =  c('MetaboShiny' = getwd(),
                                 'Home'=home,
                                 '~' = normalizePath("~"),
+                                'Documents'=file.path(home, "Documents"),
                                 'Downloads'=file.path(home, "Downloads"),
                                 'R Installation'=R.home(),
                                 'Desktop'=file.path(home, "Desktop"))
                  ),
-                 # empty list to store result tables in at the statistics pane
-                 tables = list(tbl = NA),
                  # default vectors to go through in metaboshiny
                  vectors = list(
-                   remove_match_cols = c("description","structure", "baseformula", "dppm", "source"),
+                   remove_match_cols = c("description","structure", "baseformula", "source", "query_mz", "identifier"), #c("description","structure", "baseformula", "dppm", "source"),
                    # default indices of chosen adducts
-                   pos_selected_add = c(2),#, nrow(adducts[Ion_mode == "positive",
-                   #               c("Name")])),
-                   neg_selected_add = c(2),# 14, 15, nrow(adducts[Ion_mode == "negative",
-                   #                        c("Name")])),
+                   pos_selected_add = c(2),
+                   neg_selected_add = c(2),
                    # list of available databases!!
                    db_list = c( # this determines the show order of dbs in the app
-                     #"internal",
-                     #"noise",
                      "hmdb",
                      "chebi",
                      "kegg",
                      "metacyc",
-                     "wikipathways",
+                     #"wikipathways",
                      "smpdb",
                      "dimedb",
                      "wikidata",
                      "vmh",
                      "respect",
                      "massbank",
-                     "metabolights",
+                     #"metabolights",
                      "foodb",
-                     "maconda",
+                     #"maconda",
                      "bloodexposome",
                      "expoexplorer",
                      "lipidmaps",
+                     't3db',
+                     'drugbank',
+                     'phenolexplorer',
                      "magicball",
                      "custom"
                    ),
@@ -359,11 +374,133 @@ caret.mdls <- caret::getModelInfo()
       "what", "when", "which", "while", "with", "within", "without",
       "would", LETTERS, letters, "acid", "cell", "cells", "human", "humans",
       "practically", "containing", "belongs", "class", "chemspider", "considered",
-      "primarily"),
+      "primarily", "pathway", "novo", "tgi", "tgii", "acids", "molecule", "enzyme",
+      "available", "description", "neutral", "logp", "dgi", "located", "relatively",
+      "family", "least", "common", "four", "species", "skeleton", "total", "contain", "arising",
+      "substituents", "bond", "oxo", "alpha", "formal", "brbr", "effects", "nomenclature", "metacyccp",
+      "additional", "range", "events", "principle", "involved", "product", "catalyzed", 
+      "qqq", "qtof", "nmr", "eib", "cid", "exp", "fragv", "lcesiqft", "mhho", "major", 
+      "constit", "lpls", "formed", "lpes", "main", "subclass",
+      "analysis", "approach", "area", "assessment", "assume", "authority", 
+      "available", "benefit", "concept", "consistent", "constitutional", 
+      "context", "contract", "create", "data", "definition", "derived", 
+      "distribution", "economic", "environment", "established", "estimate", 
+      "evidence", "export", "factors", "financial", "formula", "function", 
+      "identified", "income", "indicate", "individual", "interpretation", 
+      "involved", "issues", "labour", "legal", "legislation", "major", 
+      "method", "occur", "percent", "period", "policy", "principle", 
+      "procedure", "process", "required", "research", "response", "role", 
+      "section", "sector", "significant", "similar", "source", "specific", 
+      "structure", "theory", "variables", "achieve", "acquisition", 
+      "administration", "affect", "appropriate", "aspects", "assistance", 
+      "categories", "chapter", "commission", "community", "complex", 
+      "computer", "conclusion", "conduct", "consequences", "construction", 
+      "consumer", "credit", "cultural", "design", "distinction", "elements", 
+      "equation", "evaluation", "features", "final", "focus", "impact", 
+      "injury", "institute", "investment", "items", "journal", "maintenance", 
+      "normal", "obtained", "participation", "perceived", "positive", 
+      "potential", "previous", "primary", "purchase", "range", "region", 
+      "regulations", "relevant", "resident", "resources", "restricted", 
+      "security", "sought", "select", "site", "strategies", "survey", 
+      "text", "traditional", "transfer", "alternative", "circumstances", 
+      "comments", "compensation", "components", "consent", "considerable", 
+      "constant", "constraints", "contribution", "convention", "coordination", 
+      "core", "corporate", "corresponding", "criteria", "deduction", 
+      "demonstrate", "document", "dominant", "emphasis", "ensure", 
+      "excluded", "framework", "funds", "illustrated", "immigration", 
+      "implies", "initial", "instance", "interaction", "justification", 
+      "layer", "link", "location", "maximum\t", "minorities", "negative", 
+      "outcomes", "partnership", "philosophy", "physical", "proportion", 
+      "published", "reaction", "registered", "reliance", "removed", 
+      "scheme", "sequence", "sex", "shift", "specified", "sufficient", 
+      "task", "technical", "techniques", "technology", "validity", 
+      "volume", "access", "adequate", "annual", "apparent", "approximated", 
+      "attitudes", "attributed", "civil", "code", "commitment", "communication", 
+      "concentration", "conference", "contrast", "cycle", "debate", 
+      "despite", "dimensions", "domestic", "emerged", "error", "ethnic", 
+      "goals", "granted", "hence", "hypothesis", "implementation", 
+      "implications", "imposed", "integration", "internal", "investigation", 
+      "job", "label", "mechanism", "obvious", "occupational", "option", 
+      "output", "overall", "parallel", "parameters", "phase", "predicted", 
+      "principal", "prior", "professional", "project", "promote", "regime", 
+      "resolution", "retained", "series", "statistics", "status", "stress", 
+      "subsequent", "sum", "summary", "undertaken", "academic", "adjustment", 
+      "alter", "amendment", "aware", "capacity", "challenge", "clause", 
+      "compounds", "conflict", "consultation", "contact", "decline", 
+      "discretion", "draft", "enable", "energy", "enforcement", "entities", 
+      "equivalent", "evolution", "expansion", "exposure", "external", 
+      "facilitate", "fundamental", "generated", "generation", "image", 
+      "liberal", "licence", "logic", "marginal", "medical", "mental", 
+      "modified", "monitoring", "network", "notion", "objective", "orientation", 
+      "perspective", "precise", "prime", "psychology", "pursue", "ratio", 
+      "rejected", "revenue", "stability", "styles", "substitution", 
+      "sustainable", "symbolic", "target", "transition", "trend", "version", 
+      "welfare", "whereas", "abstract", "accurate", "acknowledged", 
+      "aggregate", "allocation", "assigned", "attached", "author", 
+      "bond", "brief", "capable", "cited", "cooperative", "discrimination", 
+      "display", "diversity", "domain", "edition", "enhanced", "estate", 
+      "exceed", "expert", "explicit", "federal", "fees", "flexibility", 
+      "furthermore", "gender", "ignored", "incentive", "incidence", 
+      "incorporated", "index", "inhibition", "initiatives", "input", 
+      "instructions", "intelligence", "interval", "lecture", "migration", 
+      "minimum", "ministry", "motivation", "neutral", "nevertheless", 
+      "overseas", "preceding", "presumption", "rational", "recovery", 
+      "revealed", "scope", "subsidiary", "tapes", "trace", "transformation", 
+      "transport", "underlying", "utility", "adaptation", "adults", 
+      "advocate", "aid", "channel", "chemical", "classical", "comprehensive", 
+      "comprise", "confirmed", "contrary", "converted", "couple", "decades", 
+      "definite", "deny", "differentiation", "disposal", "dynamic", 
+      "eliminate", "empirical", "equipment", "extract", "file", "finite", 
+      "foundation", "global", "grade", "guarantee", "hierarchical", 
+      "identical", "ideology", "inferred", "innovation", "insert", 
+      "intervention", "isolated", "media", "mode", "paradigm", "phenomenon", 
+      "priority", "prohibited", "publication", "quotation", "release", 
+      "reverse", "simulation", "solely", "somewhat", "submitted", "successive", 
+      "survive", "thesis", "topic", "transmission", "ultimately", "unique", 
+      "visible", "voluntary", "abandon", "accompanied", "accumulation", 
+      "ambiguous", "appendix", "appreciation", "arbitrary", "automatically", 
+      "bias", "chart", "clarity", "conformity", "commodity", "complement", 
+      "contemporary", "contradiction", "crucial", "currency", "denote", 
+      "detected", "deviation", "displacement", "dramatic", "eventually", 
+      "exhibit", "exploitation", "fluctuations", "guidelines", "highlighted", 
+      "implicit", "induced", "inevitably", "infrastructure", "inspection", 
+      "intensity", "manipulation", "minimised", "nuclear", "offset", 
+      "paragraph", "plus", "practitioners", "predominantly", "prospect", 
+      "radical", "random", "reinforced", "restore", "revision", "schedule", 
+      "tension", "termination", "theme", "thereby", "uniform", "vehicle", 
+      "via", "virtually", "widespread", "visual", "accommodation", 
+      "analogous", "anticipated", "assurance", "attained", "behalf", 
+      "bulk", "ceases", "coherence", "coincide", "commenced", "incompatible", 
+      "concurrent", "confined", "controversy", "conversely", "device", 
+      "devoted", "diminished", "distorted", "distortion", "duration", 
+      "erosion", "ethical", "format", "founded", "inherent", "insights", 
+      "integral", "intermediate", "manual", "mature", "mediation", 
+      "medium", "military", "minimal", "mutual", "norms", "overlap", 
+      "passive", "portion", "preliminary", "protocol", "qualitative", 
+      "refine", "relaxed", "restraints", "revolution", "rigid", "route", 
+      "scenario", "sphere", "subordinate", "supplementary", "suspended", 
+      "team", "temporary", "trigger", "unified", "violation", "vision", 
+      "adjacent", "albeit", "assembly", "collapse", "colleagues", "compiled", 
+      "conceived", "convinced", "depression", "encountered", "enormous", 
+      "forthcoming", "inclination", "integrity", "intrinsic", "invoked", 
+      "levy", "likewise", "nonetheless", "notwithstanding", "odd", 
+      "ongoing", "panel", "persistent", "posed", "reluctant", "socalled", "straightforward", "undergo", "whereby",
+      "makes", "organic", "moiety", "based", "pca", "ring", "acidic", "lmpk", "phosphate", 
+      "disease", "atom", "cyclic", "body", "action", "enzymes", "enzyme", "methoxy", 
+      "exists", "solid", "products", "amino", "derivatives", "backbone", "units", "slightly",
+      "member", "moderately", "orange", "aromatic", "fused", "pos", "neg", "methyl", "protein",
+      "linked", "agents", "include", "classification", "replaced", "pka", "outside", "derivative",
+      "weakly", "lcesiq", "hydroxyl", "structures", "structure", "esa", "respectively", "consists",
+      "metabolic", "atoms", "dimethyl", "ether", "multiple", "examples", "example", "dm", "level", 
+      "clinical", "higher", "control", "increased", "associated", "mode", "decreased", "studies", 
+      "study", "patient", "patients", "years", "type", "gene", "compared", "including", "lower", 
+      "ci", "concentration", "concentrations", "reduced", "increase", "results", "result", "levels", 
+      "It", "lt", "model", "effect", "high", "low", "expression", "test", "production", "aim",
+      "tested","studied","ng", "se"),
     qdapDictionaries::Top200Words,
-    gbl$vectors$db_list))
-
-
+    tm::stopwords("english"),
+    gbl$vectors$db_list
+    ))
 
 # split <- strsplit(str, split = ",")[[1]]
 # split_words <- gsub(x = split, pattern = " ", replacement = "")
@@ -387,30 +524,41 @@ get_os <- function(){
   }
   tolower(os)
 }
-# === LOAD LIBRARIES ===
-
-# load isotopes of all atoms, necessary for the build.extended.db function.
-data(isotopes, package = "enviPat")
 
 # create parallel workers, leaving 1 core for general use
 # TODO: make this a user slider
-session_cl <- parallel::makeCluster(max(c(1, parallel::detectCores()-1))) # leave 1 core for general use and 1 core for shiny session
+session_cl <- parallel::makeCluster(max(c(1, parallel::detectCores()-1)))#,outfile="") # leave 1 core for general use and 1 core for shiny session
 
 # source the miniscript for the toggle buttons used in the interface (needs custom CSS)
 source("./Rsource/SwitchButton.R")
 
 #' Squishes HTML elements close together.
-#'
-#' \code{sardine} used on consequtive html objects will make them sit next to each other neatly.
-#'
-#' @param content TagList or shiny function that generates HTML (such as an image..)
-#' @return 'sardined' content that will sit close to its neighbors.
 sardine <- function(content) div(style="display: inline-block;vertical-align:top;", content)
+
+online = internetWorks()
+if(online){
+  options("download.file.method" = "libcurl")
+  devtools::install_github("xia-lab/MetaboAnalystR", 
+                           ref = "21b6845a21e8a7a87dfdb7d3363ee39ce1397a88")#, build_vignettes=TRUE)
+  devtools::install_github("UMCUGenetics/MetaDBparse") 
+}
+
+runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
+
+switch(runmode,
+       local = {
+         orca_serv_id = start_orca(9091)
+       },
+       docker = {
+         plotly::orca_serve(port = 9091)
+       })
 
 # interleave for sorting later ...
 add_idx <- order(c(seq_along(gbl$vectors$pos_adducts$Name), seq_along(gbl$vectors$neg_adducts$Name)))
 sort_order <<- unlist(c(gbl$vectors$pos_adducts$Name, gbl$vectors$neg_adducts$Name))[add_idx]
+
 debug_mSet <- NULL
 debug_lcl <- NULL
 debug_input <- NULL
+
 msg.vec <- c()

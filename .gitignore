@@ -1,8 +1,9 @@
 .Rproj.user
 .Rhistory
 *.RData
-/backend/appdata/*
 .Ruserdata
-/backend/db/*
-*.csv
 *.txt
+*.xml
+*.svg
+*.eps
+*.csv

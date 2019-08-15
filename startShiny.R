@@ -7,21 +7,25 @@ MetaboShiny to even start.
 
 #' Function to install packages, either through regular method or through downloading from git directly
 #' @param package package name to install, either CRAN or bioconductor
-install.if.not <- function(package){
-  if(package %in% rownames(installed.packages())){
-    NULL
-    #print(paste("Already installed base package", package))
-  }else{
-    if(package %in% c("MetaboAnalystR", "BatchCorrMetabolomics")){
-      # Step 1: Install devtools
-      install.if.not("devtools")
-      # Step 2: Install MetaboAnalystR with documentation
-      gitfolder <- switch(package, MetaboAnalystR = "xia-lab/MetaboAnalystR",
-                          BatchCorrMetabolomics = "rwehrens/BatchCorrMetabolomics",
-                          showtext = "yixuan/showtext")
-      devtools::install_github(gitfolder)#, build_vignettes=TRUE)
+install.if.not <- function(packages){
+  for(package in packages){
+    if(package %in% rownames(installed.packages())){
+      NULL
+      #print(paste("Already installed base package", package))
     }else{
-      install.packages(package)
+      if(package %in% c("MetaboAnalystR", "BatchCorrMetabolomics", "MetaDBparse")){
+        # Step 1: Install devtools
+        install.if.not("devtools")
+        # Step 2: Install MetaboAnalystR with documentation
+        gitfolder <- switch(package, 
+                            MetaboAnalystR = "xia-lab/MetaboAnalystR",
+                            BatchCorrMetabolomics = "rwehrens/BatchCorrMetabolomics",
+                            MetaDBparse = "UMCUGenetics/MetaDBparse",
+                            showtext = "yixuan/showtext")
+        devtools::install_github(gitfolder)
+      }else{
+        BiocManager::install(package)
+      }
     }
   }
 }
@@ -44,7 +48,8 @@ needed.packages <- c("BiocManager", "shiny", "shinydashboard", "httr", "curl", "
                      "KEGGREST", "manhattanly", "rgl", "glmnet", "TSPred", "VennDiagram",
                      "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR", "openxlsx",
                      "doParallel", "missForest", "InterpretMSSpectrum", "tm", "RISmed",
-                     "qdap", "extrafont", "gmp", "shadowtext", "fgsea")
+                     "qdap", "extrafont", "gmp", "shadowtext", "fgsea", "Rmisc", 
+                     "BioMedR", "MetaDBparse")
 
 missing.packages <- setdiff(needed.packages,rownames(installed.packages()))
 
@@ -53,13 +58,17 @@ if("BiocManager" %in% missing.packages){
 }
 
 if(length(missing.packages)>0){
-  BiocManager::install(missing.packages)
+  install.if.not(missing.packages)
 }
 
 # make metaboshiny_storage dir in home first..
 # docker run -p 8080:8080 -v ~/MetaboShiny/:/userfiles/:cached --rm -it metaboshiny/master /bin/bash
 # with autorun
 # docker run -p 8080:8080 -v ~/MetaboShiny/:/userfiles/:cached --rm metaboshiny/master Rscript startShiny.R
+# docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny /bin/bash
+# docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny Rscript startShiny.R
+# current instructions
+#Rshiny app to analyse untargeted metabolomics data! BASH INSTRUCTIONS: STEP 1: mydir=~"/MetaboShiny" #or another of your choice | STEP 2: mkdir $mydir | STEP 3: docker run -p 8080:8080 -v $mydir:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny /start.sh
 
 # packages needed to start up
 git.packages <<- c("MetaboAnalystR",
@@ -77,7 +86,9 @@ library(httr)
 runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
 
 options('unzip.unzip' = getOption("unzip"),
-        'download.file.extra' = switch(runmode, docker="--insecure",local=""),  # bad but only way to have internet in docker...
+        'download.file.extra' = switch(runmode, 
+                                       docker="--insecure",
+                                       local=""),  # bad but only way to have internet in docker...
         'download.file.method' = 'curl',
         width = 1200, height=800)
 
@@ -85,12 +96,11 @@ switch(runmode,
        local = {
          wdir <<- dirname(rstudioapi::getSourceEditorContext()$path) # TODO: make this not break when not running from rstudio
          setwd(wdir)
-         shiny::runApp(".")
+         shiny::runApp(".",launch.browser = T)
        },
        docker = {
          shiny::runApp(".",
-                       port = 80,
+                       port = 8080,
                        host = "0.0.0.0",
-                       launch.browser = FALSE)
+                       launch.browser = F) # not possible from within docker for now...
        })
-# go run it! :-)
