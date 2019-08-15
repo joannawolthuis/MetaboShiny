@@ -2,12 +2,29 @@
 
 shinyServer(function(input, output, session) {
 
+  # loading screen
+  loadModal <- function(failed = FALSE) {
+    modalDialog(
+      fluidRow(align="center",
+               br(),br(),
+               h3("Starting MetaboShiny..."),
+               br(),br(),
+               helpText("ଘ(੭ˊᵕˋ)੭* ੈ✩‧₊˚"), 
+               br(),br(),
+               img(class="rotategem", src="gemmy_rainbow.png", width="70px", height="70px"),
+               br(),br(),br()
+      )
+    )
+  }
+  
+  showModal(loadModal())
+  
+  # - - - - - - - - - -
+  
   mSet <- NULL
-  bgcol <- "black"
-  font.css <- ""
-  bar.css <- ""
   opts <- list()
-
+  showtext::showtext_auto(enable = T)
+  
   logged <- reactiveValues(status = "notlogged",
                            text = "please log in! ( •́ .̫  •̀ )")
 
@@ -45,7 +62,6 @@ shinyServer(function(input, output, session) {
         lcl$paths$db_dir <<- dbdir
 
         if(!file.exists(lcl$paths$opt.loc)){
-          print("welp re-making options...")
           contents = gsubfn::fn$paste('db_dir = $dbdir
 work_dir = $userfolder
 proj_name = MY_METSHI
@@ -81,84 +97,83 @@ mode = complete')
   })
 
   # init all observers
-  for(fp in list.files("./backend/scripts/joanna/reactive", full.names = T)){
+  for(fp in list.files("./backend/scripts/reactive", full.names = T)){
     source(fp, local = T)
   }
 
   # ================================== LOGIN =====================================
 
-  # default
-
   userdb = normalizePath("./users.db")
 
   # if logged in, check if exists
-  observeEvent(input$login,{
-    if(input$username != "" & input$password != ""){
-      # get user role
-      role = get_user_role(input$username, input$password)
-      if(is.null(role)){
-        logged$text <<- "wrong username/password (｡•́︿•̀｡)"
-      }else{
-
-        runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
-
-        work_dir <- normalizePath("~/MetaboShiny/saves")
-
-        dbdir <- local = normalizePath("~/MetaboShiny/databases")
-
-        # check if user folder exists, otherwise make it
-        userfolder = file.path(work_dir, input$username)
-
-        if(!dir.exists(userfolder)){
-          logged$text <<- "creating new user..."
-          dir.create(userfolder)
+  if(metshi_mode != "one_user"){
+    observeEvent(input$login,{
+      if(input$username != "" & input$password != ""){
+        # get user role
+        role = get_user_role(input$username, input$password)
+        if(is.null(role)){
+          logged$text <<- "wrong username/password (｡•́︿•̀｡)"
+        }else{
+          
+          runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
+          
+          work_dir <- normalizePath("~/MetaboShiny/saves")
+          
+          dbdir <- local = normalizePath("~/MetaboShiny/databases")
+          
+          # check if user folder exists, otherwise make it
+          userfolder = file.path(work_dir, input$username)
+          
+          if(!dir.exists(userfolder)){
+            logged$text <<- "creating new user..."
+            dir.create(userfolder)
+          }
+          
+          logged$text <<- "logging in..."
+          
+          username = input$username
+          
+          # check if opts file exists, otherwise make it with the proper files
+          lcl$paths$opt.loc <<- file.path(userfolder, "options.txt")
+          lcl$paths$work_dir <<- userfolder
+          lcl$paths$db_dir <<- dbdir
+          
+          if(!file.exists(lcl$paths$opt.loc)){
+            contents = gsubfn::fn$paste('db_dir = $dbdir
+                                        work_dir = $userfolder
+                                        proj_name = MY_METSHI
+                                        ppm = 2
+                                        packages_installed = Y
+                                        font1 = Pacifico
+                                        font2 = Pacifico
+                                        font3 = Open Sans
+                                        font4 = Open Sans
+                                        col1 = #000000
+                                        col2 = #DBDBDB
+                                        col3 = #FFFFFF
+                                        col4 = #FFFFFF
+                                        size1 = 40
+                                        size2 = 20
+                                        size3 = 15
+                                        size4 = 11
+                                        taskbar_image = gemmy_rainbow.png
+                                        gtheme = classic
+                                        gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
+                                        gspec = RdBu')
+            writeLines(contents, lcl$paths$opt.loc)
+          }
+          
+          logged$status <- "logged"
         }
-
-        logged$text <<- "logging in..."
-
-        username = input$username
-
-        # check if opts file exists, otherwise make it with the proper files
-        lcl$paths$opt.loc <<- file.path(userfolder, "options.txt")
-        lcl$paths$work_dir <<- userfolder
-        lcl$paths$db_dir <<- dbdir
-
-        if(!file.exists(lcl$paths$opt.loc)){
-          contents = gsubfn::fn$paste('db_dir = $dbdir
-work_dir = $userfolder
-proj_name = MY_METSHI
-ppm = 2
-packages_installed = Y
-font1 = Pacifico
-font2 = Pacifico
-font3 = Open Sans
-font4 = Open Sans
-col1 = #000000
-col2 = #DBDBDB
-col3 = #FFFFFF
-col4 = #FFFFFF
-size1 = 40
-size2 = 20
-size3 = 15
-size4 = 11
-taskbar_image = gemmy_rainbow.png
-gtheme = classic
-gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
-gspec = RdBu')
-          writeLines(contents, lcl$paths$opt.loc)
+        }else{
+          logged$text <- "try again (｡•́︿•̀｡)"
         }
-
-        logged$status <- "logged"
-      }
-    }else{
-      logged$text <- "try again (｡•́︿•̀｡)"
-    }
-  })
+      })
+  }
 
   
   # ================================= DEFAULTS ===================================
 
-  source('./backend/scripts/joanna/shiny_general.R')
 
   # set progress bar style to 'old' (otherwise it's not movable with CSS)
   shinyOptions(progress.style="old")
@@ -169,17 +184,6 @@ gspec = RdBu')
           spinner.color = "black",
           spinner.color.background = "white")
 
-  # loading screen
-  loadModal <- function(failed = FALSE) {
-    modalDialog(
-      fluidRow(align="center",
-               helpText("Initializing MetaboShiny"),
-               shinycssloaders::withSpinner(helpText(NULL))
-      )
-    )
-  }
-
-  showModal(loadModal())
 
   # send specific functions/packages to other threads
   parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
@@ -315,16 +319,6 @@ gspec = RdBu')
     }else{
       shown_matches$forward <- lcl$tables$last_matches  
     }
-  })
-
-  # change ppm accuracy, ONLY USEFUL if loading in from CSV
-  # TODO: make it possible to change this and re-make user database (mzranges table specifically)
-  observeEvent(input$set_ppm, {
-    ppm <<- input$ppm
-    # show ppm amount in UI
-    output$ppm <- renderText(ppm)
-    # change in options file
-    setOption(key="ppm", value=ppm)
   })
 
   # triggers when probnorm or compnorm is selected
@@ -752,9 +746,6 @@ gspec = RdBu')
                       adduct.table = adducts,cl = 0)
 
   })
-  
-  removeModal()
-
   # ==== ON EXIT ====
   
   onStop(function() {

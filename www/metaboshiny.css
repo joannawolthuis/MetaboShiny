@@ -34,7 +34,7 @@
 /* rainbow gradient line */
 
 .line {
-  height: 10px;
+  height: 7px;
   width: calc(100% - 190px);
   position: absolute;
   top: 52px;
@@ -258,12 +258,26 @@
   opacity: 0.25;
 }
 
+
+/* SPINNING INTRO THINGY */
+.rotategem
+{
+  animation:spin 1s infinite ease-in-out;
+  -webkit-animation:spin 1s infinite ease-in-out;
+  -moz-animation:spin 1s infinite ease-in-out;
+  -webkit-filter: drop-shadow(2px 1px 0 black)
+                  drop-shadow(-1px -1px 0 black);
+  filter: drop-shadow(2px 1px 0 black) 
+          drop-shadow(-1px -1px 0 black);
+}
+
+
 /* FANCY ICON */
 .spinnylocation1
 {
   position: absolute;
   top: -30px;
-  right: 0px;
+  right: 0;
   animation-fill-mode: forwards;
   z-index:99998 !important;
 }
@@ -276,9 +290,9 @@
   /*filter: invert(100%);*/
   margin-top: 20px;
   margin-left: 15px;
-    -webkit-filter: drop-shadow(1px 1px 0 black)
+  -webkit-filter: drop-shadow(2px 1px 0 black)
                   drop-shadow(-1px -1px 0 black);
-  filter: drop-shadow(1px 1px 0 black) 
+  filter: drop-shadow(2px 1px 0 black) 
           drop-shadow(-1px -1px 0 black);
 }
 
@@ -289,11 +303,12 @@
   animation:spin 30s linear infinite;
   margin-top: -60px;
   margin-left: 15px;
-    -webkit-filter: drop-shadow(1px 1px 0 black)
+  -webkit-filter: drop-shadow(2px 1px 0 black)
                   drop-shadow(-1px -1px 0 black);
-  filter: drop-shadow(1px 1px 0 black) 
+  filter: drop-shadow(2px 1px 0 black) 
           drop-shadow(-1px -1px 0 black);
 }
+
 
 .plus
 {
@@ -358,7 +373,7 @@
   border-top: 5px solid;
   border-top-right-radius: 20px;
   margin-left: 30%;
-  margin-top: 15.5px;    
+  margin-top: 15px;    
 }
 
 #right:before
@@ -366,7 +381,7 @@
   border-top: 5px solid;
   border-top-left-radius: 20px;
   margin-left: -10%;
-  margin-top: 15.5px;
+  margin-top: 15px;
 }
 
 #right:after

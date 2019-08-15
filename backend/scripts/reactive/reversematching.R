@@ -21,10 +21,10 @@ observeEvent(input$browse_db,{
                   selection = 'single',
                   autoHideNavigation = T,
                   options = list(lengthMenu = c(5, 10, 15),
-                                 pageLength = 5,
+                                 pageLength = 15,
                                  columnDefs = list(list(visible=FALSE, 
                                                         targets=remove_idx))))
-  })
+  }, server=T)
 })
 
 # triggers on reverse searching TODO: fix this, it's broken

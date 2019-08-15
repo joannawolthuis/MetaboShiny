@@ -1,6 +1,6 @@
 # === GENERAL OPTIONS ===
 
-options(stringsAsFactors = FALSE,"java.parameters" = c("-Xmx32G")) # give java enough memory for smiles parsing
+options(stringsAsFactors = FALSE,"java.parameters" = c("-Xmx8G")) # give java enough memory for smiles parsing
 if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
 ### Anything loaded in this GLOBAL file will be avaliable for metaboShiny in general. ###
@@ -80,14 +80,15 @@ setOption <- function(file.loc, key, value){
 #adducts <- fread("backend/umcfiles/adducts/AdductTable2.0.csv", header = T)
 adducts <- data.table::fread("backend/adducts/adduct_rule_table.csv", header = T) # V2 has di/trimers
 adduct_rules <- data.table::fread("backend/adducts/adduct_rule_smarts.csv", header = T) # V2 has di/trimers
-
 adducts[adducts==''|adducts==' ']<-NA
 
 # set the home path
 home = normalizePath("~")
 
 # source all used functions (see shiny_plot.R, shiny_general.R, shiny_db.R etc.)
-sourceDir("backend/scripts/joanna")
+for(fp in list.files("./backend/scripts/general", full.names = T)){
+  source(fp, local = T)
+}
 
 caret.mdls <- caret::getModelInfo()
 # === THE BELOW LIST CONTAINS ALL GLOBAL VARIABLES THAT METABOSHINY CALLS UPON LATER ===
@@ -285,24 +286,19 @@ caret.mdls <- caret::getModelInfo()
                    volumes =  c('MetaboShiny' = getwd(),
                                 'Home'=home,
                                 '~' = normalizePath("~"),
+                                'Documents'=file.path(home, "Documents"),
                                 'Downloads'=file.path(home, "Downloads"),
                                 'R Installation'=R.home(),
                                 'Desktop'=file.path(home, "Desktop"))
                  ),
-                 # empty list to store result tables in at the statistics pane
-                 tables = list(tbl = NA),
                  # default vectors to go through in metaboshiny
                  vectors = list(
                    remove_match_cols = c("description","structure", "baseformula", "source", "query_mz", "identifier"), #c("description","structure", "baseformula", "dppm", "source"),
                    # default indices of chosen adducts
-                   pos_selected_add = c(2),#, nrow(adducts[Ion_mode == "positive",
-                   #               c("Name")])),
-                   neg_selected_add = c(2),# 14, 15, nrow(adducts[Ion_mode == "negative",
-                   #                        c("Name")])),
+                   pos_selected_add = c(2),
+                   neg_selected_add = c(2),
                    # list of available databases!!
                    db_list = c( # this determines the show order of dbs in the app
-                     #"internal",
-                     #"noise",
                      "hmdb",
                      "chebi",
                      "kegg",
@@ -506,8 +502,6 @@ caret.mdls <- caret::getModelInfo()
     gbl$vectors$db_list
     ))
 
-
-
 # split <- strsplit(str, split = ",")[[1]]
 # split_words <- gsub(x = split, pattern = " ", replacement = "")
 #' Gets the current used operating system. Important for parallel/multithreaded functions if using makeCluster("FORK")
@@ -530,10 +524,6 @@ get_os <- function(){
   }
   tolower(os)
 }
-# === LOAD LIBRARIES ===
-
-# load isotopes of all atoms, necessary for the build.extended.db function.
-data(isotopes, package = "enviPat")
 
 # create parallel workers, leaving 1 core for general use
 # TODO: make this a user slider
@@ -543,11 +533,6 @@ session_cl <- parallel::makeCluster(max(c(1, parallel::detectCores()-1)))#,outfi
 source("./Rsource/SwitchButton.R")
 
 #' Squishes HTML elements close together.
-#'
-#' \code{sardine} used on consequtive html objects will make them sit next to each other neatly.
-#'
-#' @param content TagList or shiny function that generates HTML (such as an image..)
-#' @return 'sardined' content that will sit close to its neighbors.
 sardine <- function(content) div(style="display: inline-block;vertical-align:top;", content)
 
 online = internetWorks()
@@ -555,11 +540,11 @@ if(online){
   options("download.file.method" = "libcurl")
   devtools::install_github("xia-lab/MetaboAnalystR", 
                            ref = "21b6845a21e8a7a87dfdb7d3363ee39ce1397a88")#, build_vignettes=TRUE)
+  devtools::install_github("UMCUGenetics/MetaDBparse") 
 }
 
 runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
 
-require(plotly)
 switch(runmode,
        local = {
          orca_serv_id = start_orca(9091)
@@ -571,7 +556,9 @@ switch(runmode,
 # interleave for sorting later ...
 add_idx <- order(c(seq_along(gbl$vectors$pos_adducts$Name), seq_along(gbl$vectors$neg_adducts$Name)))
 sort_order <<- unlist(c(gbl$vectors$pos_adducts$Name, gbl$vectors$neg_adducts$Name))[add_idx]
+
 debug_mSet <- NULL
 debug_lcl <- NULL
 debug_input <- NULL
+
 msg.vec <- c()

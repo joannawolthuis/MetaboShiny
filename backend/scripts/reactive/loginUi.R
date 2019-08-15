@@ -18,21 +18,12 @@ output$currUI <- renderUI({
     
     opts <- getOptions(lcl$paths$opt.loc)
     
-    logged$text <<- "loaded options!"
-    logged$text <<- "starting MetaboShiny..."
-    
     
     # generate CSS for the interface based on user settings for colours, fonts etc.
     bar.css <<- nav.bar.css(opts$col1, opts$col2, opts$col3, opts$col4)
     font.css <<- app.font.css(opts$font1, opts$font2, opts$font3, opts$font4,
                               opts$size1, opts$size2, opts$size3, opts$size4, online=online)
     
-    # google fonts
-    
-    # name = the name of the font in Google's Library (https://fonts.google.com)
-    # family = how you want to refer to the font inside R
-    # regular.wt = the weight of font used in axis, labels etc.
-    # bolt.wt = the weight of font used in the title
     
     # === GOOGLE FONT SUPPORT FOR GGPLOT2 ===
     
@@ -49,11 +40,6 @@ output$currUI <- renderUI({
         })
       })
     }
-    
-    # Perhaps the only tricky bit is remembering to run the following function to enable webfonts
-    showtext::showtext_auto(enable = T)
-    
-    # ======================================
     
     # set taskbar image as set in options
     taskbar_image <- opts$task_img
@@ -111,8 +97,7 @@ output$currUI <- renderUI({
     )
     
     lcl$vectors$project_names <<- unique(gsub(list.files(opts$work_dir,pattern = "\\.csv"),pattern = "(_no_out\\.csv)|(\\.csv)", replacement=""))
-    print(lcl$vectors$proj_names)
-    
+
     updateSelectizeInput(session,
                          "proj_name",
                          choices = lcl$vectors$proj_names,
@@ -132,17 +117,6 @@ output$currUI <- renderUI({
     library(showtext)
     
     online = internetWorks()
-    
-    # import google fonts
-    for(font in unlist(opts[grep(names(opts), pattern = "font")])){
-      if(font %in% sysfonts::font.families()){
-        NULL
-      }else{
-        if(online) sysfonts::font_add_google(font,db_cache = T)
-      }
-    }
-    
-    # other stuff
     
     # create color pickers based on amount of colours allowed in global
     output$colorPickers <- renderUI({
@@ -172,12 +146,8 @@ output$currUI <- renderUI({
     updateSelectInput(session, "ggplot_theme", selected = opts$gtheme)
     updateSelectInput(session, "color_ramp", selected = opts$gspec)
     
-    opts <<- opts
-
-    tagList(
+    html = tagList(
       tags$style(type="text/css", bar.css),
-      # tags$head(HTML('<link rel="icon", href="title1.png", 
-      #                            type="image/png" />')),
       tags$script(src="spinnytitle.js"), 
       tags$script(src="sparkle.js"),
       # - - - - - - - - -
@@ -1066,306 +1036,7 @@ output$currUI <- renderUI({
                    align="center")
       )
     )
-  }else if (logged$status == "setfolder"){
-    # prompt file location
-    
-    fluidRow(align="center",
-             br(),br(),br(),br(),br(),
-             imageOutput("login_header",inline = T),
-             helpText("Welcome to MetaboShiny! Please pick a folder to save your files and databases in with the below button."),
-             shinyDirButton("get_work_dir", "Choose a folder",
-                            title = "Browse",
-                            buttonType = "default", class = NULL),
-             verbatimTextOutput("curr_exp_dir_start"),
-             hr(),
-             shinyWidgets::circleButton("confirm_work_dir", icon = icon("check"))
-    )
-    
-  }else if(logged$status == "db_only"){
-    print("db only mode")
-    
-    print("rendering...")
-    # read settings
-    
-    opts <- getOptions(lcl$paths$opt.loc)
-    
-    logged$text <<- "loaded options!"
-    logged$text <<- "starting MetaboShiny..."
-    
-    online = internetWorks()
-    
-    # generate CSS for the interface based on user settings for colours, fonts etc.
-    bar.css <<- nav.bar.css(opts$col1, opts$col2, opts$col3, opts$col4)
-    font.css <<- app.font.css(opts$font1, opts$font2, opts$font3, opts$font4,
-                              opts$size1, opts$size2, opts$size3, opts$size4, online=online)
-    
-    # google fonts
-    
-    # name = the name of the font in Google's Library (https://fonts.google.com)
-    # family = how you want to refer to the font inside R
-    # regular.wt = the weight of font used in axis, labels etc.
-    # bolt.wt = the weight of font used in the title
-    
-    # === GOOGLE FONT SUPPORT FOR GGPLOT2 ===
-    
-    # Download a webfont
-    if(online){
-      lapply(c(opts[grepl(pattern = "font", names(opts))]), function(font){
-        try({
-          sysfonts::font_add_google(name = font,
-                                    family = font,
-                                    regular.wt = 400,
-                                    bold.wt = 700)
-        })
-      })
-    }
-    
-    # Perhaps the only tricky bit is remembering to run the following function to enable webfonts
-    showtext::showtext_auto(enable = T)
-    
-    # ======================================
-    
-    # set taskbar image as set in options
-    taskbar_image <- opts$task_img
-    
-    tagList(
-      tags$title('MetaboShiny'),
-      tags$style(type="text/css", bar.css),
-      navbarPage(inverse=TRUE,#tags$head(tags$script(src="sparkle.js")),
-                 title=div(h1("MetaboShiny"), class="outlined", tags$style(type="text/css", font.css)), # make it use the sparkle.js for unnecessary sparkle effects ;)
-                 id="nav_general",
-                 # this tab shows the available databases, if they are installed, and buttons to install them. generated as output$db_build_ui in 'server'
-                 tabPanel("database", icon = icon("database",class = "outlined"), value="database",
-                          bsCollapse(bsCollapsePanel(title=h2("Settings"), style="info",
-                                                     sliderInput(inputId = "mz_range", label = "What mass range can your machine detect?",
-                                                                 min = 0, max = 3000, value = c(60, 600),
-                                                                 step = 1,post = "m/z",dragRange = TRUE),
-                                                     tags$i("Warning: increasing the upper m/z boundary may drastically increase database build times 
-                                                            - calculating isotopes is more time-consuming for larger molecules!"),
-                                                     radioButtons("db_build_mode", label = "Build base database, extended (isotopes+adducts) or both?",
-                                                                  choices = c("base","extended","both"),selected = "extended")),
-                                                     tags$i("For example: if you only defined a new adduct, pick 'extended' as the source database doesn't change.")
-                                     ),
-                          uiOutput("db_build_ui") #%>% shinycssloaders::withSpinner() # see server, is autogenerated now
-                 ),
-                 tabPanel("search", icon = icon("search",class = "outlined"), value="search",
-                          fluidRow(align="center",
-                                   div(
-                                     sardine(div(icon("paw","fa-xs fa-rotate-90"),
-                                                 style="position:relative;
-                                                                                                         top:10px;")),
-                                     sardine(div(icon("paw","fa-xs fa-rotate-90"),
-                                                 style="position:relative;
-                                                                                                         top:25px;")),
-                                     sardine(div(icon("paw","fa-xs fa-rotate-90"),
-                                                 style="position:relative;
-                                                                                                         top:10px;")),
-                                     sardine(div(textInput("search_mz",value = "m/z here",label = NULL),style="font-size:40px;")),
-                                     sardine(div(icon("paw","fa-xs fa-rotate-90"),
-                                                 style="position:relative;
-                                                                                                         top:10px;")),
-                                     sardine(div(icon("paw","fa-xs fa-rotate-90"),
-                                                 style="position:relative;
-                                                                                                         top:25px;")),
-                                     sardine(div(icon("paw","fa-xs fa-rotate-90"),
-                                                 style="position:relative;
-                                                                                                         top:10px;"))),
-                                   shinyWidgets::circleButton("search_mz", icon = icon("search"), size = "lg"),
-                                   sidebarLayout(position="left",
-                                                 sidebarPanel = sidebarPanel(align="center",
-                                                                             tabsetPanel(
-                                                                               tabPanel(title = "settings", icon = icon("cog"),
-                                                                                        shinyWidgets::knobInput(
-                                                                                          inputId = "ppm",
-                                                                                          label = "ppm accuracy:",
-                                                                                          value = 5,
-                                                                                          min = 1,
-                                                                                          displayPrevious = TRUE, 
-                                                                                          lineCap = "round",
-                                                                                          fgColor = opts$col1,
-                                                                                          inputColor = opts$col1
-                                                                                        )),
-                                                                               tabPanel(title = "databases", icon=icon("help"),
-                                                                                        uiOutput("db_search_select"),
-                                                                                        div(id = "curly-brace", 
-                                                                                            div(id = "left", class = "brace"),
-                                                                                            div(id = "right", class = "brace")),
-                                                                                        shinyWidgets::circleButton("select_db_all",
-                                                                                                                   icon = icon("shopping-cart"),
-                                                                                                                   size = "default"))                
-                                                 )),
-                                                 # this tab shows a summary of the created/loaded in csv file.
-                                                 mainPanel = mainPanel(align="center",
-                                                                       tabsetPanel(id="tab_iden_4",selected = "start",
-                                                                                   # forward searching
-                                                                                   tabPanel(title=icon("table"), value="start",
-                                                                                            fluidRow(column(6, wellPanel(id = "def",style = "overflow-y:scroll; max-height: 200px",
-                                                                                                                         textOutput("curr_definition"))),
-                                                                                                     column(6, textOutput("curr_formula"),
-                                                                                                            plotOutput("curr_struct", height="300px"))),
-                                                                                            hr(),
-                                                                                            div(DT::dataTableOutput('match_tab', width="100%"),style='font-size:80%'),
-                                                                                            helpText("Undo filtering"),
-                                                                                            fluidRow(
-                                                                                              shinyWidgets::circleButton("undo_match_filt", icon = icon("undo-alt"), size = "sm") # icon("fingerprint"), size = "sm")
-                                                                                            )
-                                                                                   ),
-                                                                                   tabPanel(title=icon("plus"), value = "pie_add",
-                                                                                            fluidRow(align = "center",
-                                                                                                     plotly::plotlyOutput("match_pie_add"),
-                                                                                                     plotly::plotlyOutput("match_pie_db"),
-                                                                                                     conditionalPanel("input.wc_cloudbar == true",
-                                                                                                                      tagList(
-                                                                                                                        wordcloud2::wordcloud2Output("wordcloud_desc"),
-                                                                                                                        tags$script(HTML(
-                                                                                                                          "$(document).on('click', '#canvas', function() {",
-                                                                                                                          'word = document.getElementById("wcSpan").innerHTML;',
-                                                                                                                          "Shiny.onInputChange('selected_word_desc', word);",
-                                                                                                                          "});"
-                                                                                                                        ))
-                                                                                                                      )),
-                                                                                                     conditionalPanel("input.wc_cloudbar == false",
-                                                                                                                      plotlyOutput("wordbar_desc")
-                                                                                                     ),
-                                                                                                     sliderInput("wc_topn", "Top words shown:", min = 1, max = 100,step = 1,value = 30, width="60%"),
-                                                                                                     switchButton("wc_cloudbar", label = "", col = "BW", type = "CLBR",value = T)
-                                                                                            )),
-                                                                                   tabPanel(title=icon("searchengin"),
-                                                                                            textInput('pm_query', "Search for:"),
-                                                                                            sliderInput('pm_year', "Paper publication range:",
-                                                                                                        min = 1900, max = as.numeric(format(Sys.Date(), '%Y')),
-                                                                                                        value = c(2000,as.numeric(format(Sys.Date(), '%Y'))),
-                                                                                                        step = 1,sep = ""
-                                                                                            ),
-                                                                                            sliderInput("pm_max",
-                                                                                                        "Stop after ... papers:",
-                                                                                                        min = 1,
-                                                                                                        max = 1000,
-                                                                                                        value = 500),
-                                                                                            shinyWidgets::circleButton("search_pubmed", icon = icon("search"), size = "sm"),
-                                                                                            tabsetPanel(selected = 1,
-                                                                                                        tabPanel(title = icon("cloud"),
-                                                                                                                 conditionalPanel("input.wc_cloudbar_pm == true",
-                                                                                                                                  tagList(
-                                                                                                                                    wordcloud2::wordcloud2Output("wordcloud_desc_pm"),
-                                                                                                                                    tags$script(HTML(
-                                                                                                                                      "$(document).on('click', '#canvas', function() {",
-                                                                                                                                      'word = document.getElementById("wcSpan").innerHTML;',
-                                                                                                                                      "Shiny.onInputChange('selected_word_desc_pm', word);",
-                                                                                                                                      "});"
-                                                                                                                                    ))
-                                                                                                                                  )),
-                                                                                                                 conditionalPanel("input.wc_cloudbar_pm == false",
-                                                                                                                                  plotlyOutput("wordbar_desc_pm")
-                                                                                                                 ),
-                                                                                                                 sliderInput("wc_topn_pm", "Top words shown:", min = 1, 
-                                                                                                                             max = 100, step = 1,value = 30, width = "60%"),
-                                                                                                                 switchButton("wc_cloudbar_pm", label = "", col = "BW", type = "CLBR",value = F)
-                                                                                                        ),
-                                                                                                        tabPanel(title = icon("table"),
-                                                                                                                 div(DT::dataTableOutput('pm_tab', width="100%"),
-                                                                                                                     style='font-size:80%')
-                                                                                                        )
-                                                                                            )
-                                                                                            
-                                                                                   )
-                                                                       )
-                                                 )
-                                   )
-                 )),
-      tabPanel("settings",  icon = icon("cog",class = "outlined"), value="options",
-               navbarPage(inverse=TRUE,"Settings", id="tab_settings",
-                          tabPanel("Mode", icon=icon("box-open"),
-                                   switchButton(inputId = "db_only", label = "Run in database-only mode?",
-                                                value = switch(opts$mode, dbonly=T, complete=F), 
-                                                col = "BW", type = "YN")
-                          ),
-                          tabPanel("Project", icon=icon("gift"),
-                                   #textInput(inputId="proj_name", label="Project name", value = ''),
-                                   selectizeInput(inputId="proj_name",
-                                                  label="Project name",
-                                                  choices=lcl$vectors$project_names, # existing projects in user folder (generated in 'global')
-                                                  selected = opts$proj_name,
-                                                  options=list(create = TRUE)), # let users add new names
-                                   actionButton("set_proj_name", label="Apply"),
-                                   helpText("This name will be used in all save files."),
-                                   textOutput("proj_name")
-                          ),
-                          # user directory picking
-                          tabPanel("Storage", icon=icon("folder-open-o"),
-                                   shinyDirButton("get_db_dir", "Choose a database directory" ,
-                                                  title = "Browse",
-                                                  buttonType = "default", class = NULL),
-                                   helpText("Your databases will be stored here. 500GB recommended for all (without pubchem ±3GB)"),
-                                   textOutput("curr_db_dir"),
-                                   hr(),
-                                   shinyDirButton("get_work_dir", "Choose a working directory" ,
-                                                  title = "Browse",
-                                                  buttonType = "default", class = NULL),
-                                   helpText("Your results will be stored here for later access."),
-                                   textOutput("curr_exp_dir")
-                          ),
-                          # change list of adducts used, or add your own
-                          # TODO: fix, i think this is currently non-functional
-                          tabPanel("Adducts", icon=icon("plus-square"),
-                                   h3("Current adduct table:"),
-                                   rhandsontable::rHandsontableOutput("adduct_tab", width=800, height=600),
-                                   shinySaveButton("save_adducts",
-                                                   "Save changed table",
-                                                   "Save file as ...",
-                                                   filetype=list(RData="RData", csv="csv")
-                                   ),
-                                   hr(),
-                                   fileInput("add_tab", "Import adduct table",
-                                             multiple = F,
-                                             accept = c(".RData", ".csv")),
-                                   sardine(actionButton("import_adducts", "Import", icon = icon("hand-peace-o"))),
-                                   sardine(imageOutput("adduct_upload_check",inline = T))
-                          ),
-                          # change toolbar colour, text font and size
-                          tabPanel("Aesthetic", icon=icon("child"),
-                                   h3("Change app settings"),
-                                   hr(),
-                                   h2("Navigation bar colours"),
-                                   colourpicker::colourInput(inputId = "bar.col.1",
-                                                             label = paste("Active background"),
-                                                             value = opts$col1,
-                                                             allowTransparent = FALSE),
-                                   colourpicker::colourInput(inputId = "bar.col.2",
-                                                             label = paste("Inactive background"),
-                                                             value = opts$col2,
-                                                             allowTransparent = FALSE),
-                                   colourpicker::colourInput(inputId = "bar.col.3",
-                                                             label = paste("Active tab"),
-                                                             value = opts$col3,
-                                                             allowTransparent = FALSE),
-                                   colourpicker::colourInput(inputId = "bar.col.4",
-                                                             label = paste("Inactive tab"),
-                                                             value = opts$col4,
-                                                             allowTransparent = FALSE),
-                                   br(),
-                                   h2("Fonts (Google fonts)"),
-                                   textInput(inputId="font.1", label="h1", value = opts$font1),
-                                   textInput(inputId="font.2", label="h2", value = opts$font2),
-                                   textInput(inputId="font.3", label="h3", value = opts$font3),
-                                   textInput(inputId="font.4", label="body", value = opts$font4),
-                                   br(), # TODO: font size modifier slider
-                                   h2("Font size"),
-                                   sliderInput("size.1", label="h1", value=as.numeric(opts$size1),min = 5, max=50),
-                                   sliderInput("size.2", label="h2", value=as.numeric(opts$size2),min = 5, max=50),
-                                   sliderInput("size.3", label="h3", value=as.numeric(opts$size3),min = 5, max=50),
-                                   sliderInput("size.4", label="body", value=as.numeric(opts$size4),min = 5, max=50),
-                                   br(),
-                                   h3("Taskbar image"),
-                                   div(imageOutput("taskbar_image",inline = T)),
-                                   shinyFilesButton('taskbar_image_path',
-                                                    'Select image',
-                                                    'Please select an image file',
-                                                    FALSE),
-                                   hr(),
-                                   actionButton("change_css", "Save settings (restart to apply)") # need to reload CSS to enable new settings
-                          )
-               )
-      )))
+    removeModal()
+    return(html)
   }
 })
