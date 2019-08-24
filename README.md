@@ -16,6 +16,6 @@ docker pull jcwolthuis/metaboshiny
 # STEP 3: run the following on command line/terminal
 docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny Rscript startShiny.R
 
-# STEP 4: navigate to http://localhost:8080
+# STEP 4: navigate to http://localhost:8080 OR if on windows http://192.168.99.100:8080/
 
 # STEP 5: you're in!
