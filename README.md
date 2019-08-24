@@ -7,6 +7,8 @@ http://biorxiv.org/cgi/content/short/734236v1
 Please report any issues and feedback on the Issues page here, along with suggestions! =)
 
 # STEP 0: install docker
+If you are on Windows and not running 10 pro or enterprise (likely) please try the following tutorial:
+https://docs.docker.com/toolbox/toolbox_install_windows/
 
 # STEP 1: pull from docker
 docker pull jcwolthuis/metaboshiny
