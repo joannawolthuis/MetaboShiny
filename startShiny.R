@@ -5,26 +5,29 @@ It takes care of installing packages necessary for
 MetaboShiny to even start.
 "
 
+ options("download.file.method" = "libcurl")
+
+
 #' Function to install packages, either through regular method or through downloading from git directly
 #' @param package package name to install, either CRAN or bioconductor
 install.if.not <- function(packages){
   for(package in packages){
     if(package %in% rownames(installed.packages())){
-      NULL
-      #print(paste("Already installed base package", package))
+      print(paste("Already installed base package", package))
     }else{
       if(package %in% c("MetaboAnalystR", "BatchCorrMetabolomics", "MetaDBparse")){
         # Step 1: Install devtools
         install.if.not("devtools")
+        print(package)
         # Step 2: Install MetaboAnalystR with documentation
         gitfolder <- switch(package, 
-                            MetaboAnalystR = "xia-lab/MetaboAnalystR",
+                            MetaboAnalystR="xia-lab/MetaboAnalystR",
                             BatchCorrMetabolomics = "rwehrens/BatchCorrMetabolomics",
                             MetaDBparse = "UMCUGenetics/MetaDBparse",
                             showtext = "yixuan/showtext")
-        devtools::install_github(gitfolder)
+        devtools::install_github(gitfolder, ref = if(package == "MetaboAnalystR") "21b6845a21e8a7a87dfdb7d3363ee39ce1397a88" else "master",build_vignettes = F)
       }else{
-        BiocManager::install(package)
+        BiocManager::install(package,update = F)
       }
     }
   }
@@ -32,7 +35,8 @@ install.if.not <- function(packages){
 
 # Install R packages that are required
 # TODO: add further package if you need!
-needed.packages <- c("BiocManager", "shiny", "shinydashboard", "httr", "curl", "git2r", "devtools",
+needed.packages <- c("BiocManager", "xcms", "MSnbase", "CAMERA", 
+                     "shiny", "shinydashboard", "httr", "curl", "git2r", "devtools",
                      "pacman", "gsubfn", "DT", "R.utils", "data.table", "shinyFiles",
                      "shinyBS", "rhandsontable", "XML", "colorRamps", "enviPat", "shinyalert",
                      "shinyWidgets", "colourpicker", "here", "ECharts2Shiny", "shinyjqui",
@@ -49,7 +53,7 @@ needed.packages <- c("BiocManager", "shiny", "shinydashboard", "httr", "curl", "
                      "rcdk", "SPARQL", "webchem", "WikidataQueryServiceR", "openxlsx",
                      "doParallel", "missForest", "InterpretMSSpectrum", "tm", "RISmed",
                      "qdap", "extrafont", "gmp", "shadowtext", "fgsea", "Rmisc", 
-                     "BioMedR", "MetaDBparse")
+                     "BioMedR", "MetaDBparse", "shinyBS","BatchCorrMetabolomics", "MetaboAnalystR")
 
 missing.packages <- setdiff(needed.packages,rownames(installed.packages()))
 
@@ -70,14 +74,6 @@ if(length(missing.packages)>0){
 # current instructions
 #Rshiny app to analyse untargeted metabolomics data! BASH INSTRUCTIONS: STEP 1: mydir=~"/MetaboShiny" #or another of your choice | STEP 2: mkdir $mydir | STEP 3: docker run -p 8080:8080 -v $mydir:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny /start.sh
 
-# packages needed to start up
-git.packages <<- c("MetaboAnalystR",
-                   "BatchCorrMetabolomics")
-
-# install the base packages needed to start up
-for(package in git.packages){
-  install.if.not(package)
-}
 
 library(httr)
 

@@ -535,14 +535,6 @@ source("./Rsource/SwitchButton.R")
 #' Squishes HTML elements close together.
 sardine <- function(content) div(style="display: inline-block;vertical-align:top;", content)
 
-online = internetWorks()
-if(online){
-  options("download.file.method" = "libcurl")
-  devtools::install_github("xia-lab/MetaboAnalystR", 
-                           ref = "21b6845a21e8a7a87dfdb7d3363ee39ce1397a88")#, build_vignettes=TRUE)
-  devtools::install_github("UMCUGenetics/MetaDBparse") 
-}
-
 runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
 
 switch(runmode,
