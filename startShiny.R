@@ -5,7 +5,7 @@ It takes care of installing packages necessary for
 MetaboShiny to even start.
 "
 
- options("download.file.method" = "libcurl")
+options("download.file.method" = "libcurl")
 
 
 #' Function to install packages, either through regular method or through downloading from git directly
@@ -25,7 +25,7 @@ install.if.not <- function(packages){
                             BatchCorrMetabolomics = "rwehrens/BatchCorrMetabolomics",
                             MetaDBparse = "UMCUGenetics/MetaDBparse",
                             showtext = "yixuan/showtext")
-        devtools::install_github(gitfolder, ref = if(package == "MetaboAnalystR") "21b6845a21e8a7a87dfdb7d3363ee39ce1397a88" else "master",build_vignettes = F)
+        devtools::install_github(gitfolder)
       }else{
         BiocManager::install(package,update = F)
       }

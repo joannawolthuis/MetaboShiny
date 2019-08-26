@@ -244,7 +244,7 @@ observeEvent(input$initialize, {
 
     dput(mSet$metshiParams)
 
-    mSet<-PreparePrenormData(mSet)
+    mSet <- PreparePrenormData(mSet)
 
     # normalize dataset with user settings(result: mSet$dataSet$norm)
     mSet <- Normalization(mSet,
