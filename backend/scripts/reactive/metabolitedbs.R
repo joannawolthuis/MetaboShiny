@@ -31,10 +31,12 @@ lapply(gbl$vectors$db_list, FUN=function(db){
         "mape",
         "flattenlist"
       ))
+      
       pkgs = c("data.table", "enviPat", 
                "KEGGREST", "XML", 
                "SPARQL", "RCurl", 
                "MetaDBparse")
+      
       parallel::clusterCall(session_cl, function(pkgs) {
         try({
           detach("package:MetaDBparse", unload=T)
@@ -46,13 +48,10 @@ lapply(gbl$vectors$db_list, FUN=function(db){
       
       shiny::setProgress(session = session, 0.1)
 
-      #detach("package:MetaDBparse", unload=T)
-      #library(MetaDBparse)
-
       if(input$db_build_mode %in% c("base", "both")){
         MetaDBparse::buildBaseDB(dbname = db,
                                  outfolder = normalizePath(lcl$paths$db_dir), 
-                                 cl=session_cl,
+                                 cl=0,#session_cl, #TODO: FIX ERROR WHERE MULTICORE PROCESSING DOESNT WORK
                                  silent = F)
       }
       

@@ -7,9 +7,8 @@ MetaboShiny to even start.
 
 options("download.file.method" = "libcurl")
 
-
 #' Function to install packages, either through regular method or through downloading from git directly
-#' @param package package name to install, either CRAN or bioconductor
+#' @param package package name tPv*o install, either CRAN or bioconductor
 install.if.not <- function(packages){
   for(package in packages){
     if(package %in% rownames(installed.packages())){
