@@ -8,7 +8,6 @@ observeEvent(input$clear_prematch,{
 })
   
 observeEvent(input$prematch,{
-  
   if(is.null(mSet)){
     print("Requires mSet!")
     return(NULL)
@@ -113,12 +112,8 @@ observeEvent(input$score_iso, {
   shown_matches$forward <<- shown_matches$forward[score_table, on = c("baseformula", "adduct")]
 })
 
-observeEvent(input$search_pubmed, {
-
+observeEvent(input$search_pubmed,{
   withProgress({
-
-    #input <- list(pm_query = "glucose", pm_year = c(2010, 2019), pm_max = 300)
-    
     abstr <- RISmed::EUtilsSummary(
       as.character(input$pm_query),
       type="esearch",
