@@ -18,6 +18,17 @@ library(colorRamps)
 library(enviPat)
 library(stringr)
 
+internetWorks <- function(testsite = "http://www.google.com"){
+  works = FALSE
+  try({
+    GET(testsite)
+    works=TRUE
+  },silent = T)
+  works
+}
+
+online=internetWorks()
+
 #' Sources all R scripts in a given directory.
 #'
 #' \code{sourceDir} searches the given directory for .R files and sources them into the current session.
@@ -536,6 +547,8 @@ source("./Rsource/SwitchButton.R")
 sardine <- function(content) div(style="display: inline-block;vertical-align:top;", content)
 
 runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
+require(enviPat)
+data(isotopes)
 
 switch(runmode,
        local = {
