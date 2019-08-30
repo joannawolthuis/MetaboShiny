@@ -5,7 +5,14 @@ We are currently on BioRXiv and the paper itself is somewhat of a guide to how t
 http://biorxiv.org/cgi/content/short/734236v1
 
 Please report any issues and feedback on the Issues page here, along with suggestions! =)
+## R PATH ##
+# STEP 0: pull the repository through the terminal
+# STEP 1: install an R version that at least is R 3.5
+# STEP 3: run either start.sh or startShiny.R (the latter with "Rscript startShiny.R" from the command line
+# STEP 4: wait for all the packages to install 
+# STEP 5: browser should open automatically for you and you're in!
 
+## DOCKER PATH ##
 # STEP 0: install docker
 If you are on Windows and not running 10 pro or enterprise (likely) please try the following tutorial:
 https://docs.docker.com/toolbox/toolbox_install_windows/
