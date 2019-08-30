@@ -941,3 +941,22 @@ getIonMode = function(mzs, patdb){
   }
   mode
 }
+
+filterPatDB <- function(patdb){
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(patdb))
+  # which samples to remove?
+  cat("Removing samples without metadata from new DB file...\n")
+  to_remove <- RSQLite::dbGetQuery(conn, "SELECT DISTINCT filename FROM mzintensities WHERE filename
+                                          NOT IN (SELECT DISTINCT card_id FROM individual_data)")[,1]
+  
+  pbapply::pblapply(to_remove, function(sample){
+    RSQLite::dbExecute(conn, gsubfn::fn$paste("DELETE FROM mzintensities WHERE filename='$sample'"))
+  })
+  
+  # drop mz values that are not in mzintensities anymore
+  cat("Removing mz values without samples from new DB file...\n")
+  RSQLite::dbExecute(conn, "DELETE FROM mzvals WHERE mzmed
+                     NOT IN (SELECT DISTINCT mzmed FROM mzintensities)")
+  RSQLite::dbExecute(conn, "VACUUM")
+  RSQLite::dbDisconnect(conn)
+}

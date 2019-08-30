@@ -39,7 +39,7 @@ lapply(c("merge", "db", "csv"), FUN=function(col){
       filename <- normalizePath(file.path('www', check_pic))
       list(src = filename, width = 70,
            height = 70)
-    }, deleteFile = FALSE)
+    }, deleteFile = FALSE)# <- this is important or the checkmark file is deleted, haha
   })
 })
 
@@ -129,6 +129,7 @@ observeEvent(input$create_db,{
              }
           }
     )
+    
     output$proj_db_check <- renderImage({
       filename <- normalizePath(file.path('www', "yes.png"))
       list(src = filename, width = 70,
