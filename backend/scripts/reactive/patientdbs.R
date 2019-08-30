@@ -1,16 +1,3 @@
-
-# observeEvent(input$metadata, {
-#   if("files" %in% names(input$metadata)){
-#     meta_path <- parseFilePaths(gbl$paths$volumes, input$metadata)$datapath
-#     type = tools::file_ext(meta_path)
-#     choices = switch(type,
-#                      csv = colnames(fread(meta_path)),
-#                      xlsx = c(colnames(openxlsx::read.xlsx(meta_path, sheet="Setup"), openxlsx::read.xlsx(meta_path,sheet="Individual Data")))
-#                      )
-#     updateSelectInput(session, inputId = "meta_dupli_col", choices = choices)
-#   }
-# })
-
 # create checkcmarks if database is present
 lapply(c("merge", "db", "csv"), FUN=function(col){
   # creates listener for if the 'check db' button is pressed
@@ -170,59 +157,136 @@ observeEvent(input$import_csv, {
 # is triggered when the create csv button is clicked
 observeEvent(input$create_csv, {
 
-  withProgress({
-
-    shiny::setProgress(session = session, value= 1/4)
-
-    # create csv table from patient database and user chosen settings in that pane
-    tbl <- get.csv(lcl$paths$patdb,
-                   group_adducts = F, # if(length(lcl$vectors$db_add_list) == 0) F else T, # group by addicts?
-                   groupfac = "mz" #input$group_by, # group by mz or formula
-                   #which_dbs = lcl$vectors$db_add_list, # used databases
-                   #which_adducts = selected_adduct_list # used adducts
-    )
-
-    # check if any samples are duplicated in the resulting table
-    # IF SO: rename to time series data format because that is the only one that should have duplicate sample names
-    if(any(duplicated(tbl$sample))){
-      tbl$sample <- paste0(tbl$sample, 
-                           "_T", 
-                           tbl$time)
-      show.times = T # make sure the 'times' column shows in the csv making result table
+    conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(lcl$paths$patdb))
+    
+    cat("Checking for mismatches between peak tables and metadata... \n")
+    
+    fn_meta <- RSQLite::dbGetQuery(conn, "SELECT DISTINCT card_id FROM individual_data")[,1]
+    fn_int <- RSQLite::dbGetQuery(conn, "SELECT DISTINCT filename FROM mzintensities")[,1]
+    
+    cat(paste0("-- in peaklist, not in metadata: --- \n", 
+               paste0(setdiff(fn_int,
+                              fn_meta), 
+                      collapse=", "), 
+               "\n"))
+    cat(paste0("-- in metadata, not in peaklist: --- \n", 
+               paste0(setdiff(fn_meta,
+                              fn_int), 
+                      collapse=", "), 
+               "\n\n"))
+    
+    if(DBI::dbExistsTable(conn, "batchinfo")){
+      query <- strwrap(gsubfn::fn$paste("select distinct d.card_id as sample, d.sampling_date as time, d.*, b.batch, b.injection
+                                        from mzintensities i
+                                        join individual_data d
+                                        on i.filename = d.card_id
+                                        join setup s on d.[Group] = s.[Group]
+                                        join batchinfo b on b.sample = d.card_id"),
+                       width=10000,
+                       simplify=TRUE)
     }else{
-      show.times = F
+      query <- strwrap(gsubfn::fn$paste("select distinct d.card_id as sample, d.sampling_date as time, d.*, s.*
+                                        from mzintensities i
+                                        join individual_data d
+                                        on i.filename = d.card_id
+                                        join setup s on d.[Group] = s.[Group]"),
+                       width=10000,
+                       simplify=TRUE)
     }
-
-    shiny::setProgress(session=session, value= 2/4)
-
-    # change location of csv in global
-    lcl$paths$csv_loc <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name,".csv"))
-
-    # write csv file to new location
-    fwrite(tbl, lcl$paths$csv_loc, sep="\t")
-
-    # find the experimental variables by checking which column names wont convert to numeric
-    as.numi <- as.numeric(colnames(tbl)[1:100])
-    exp.vars <- which(is.na(as.numi))
-
-    shiny::setProgress(session=session, value= 3/4)
+    
+    RSQLite::dbExecute(conn, "PRAGMA journal_mode=WAL;")
+    RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS filenames ON mzintensities(filename)")
+    
+    all_mz = RSQLite::dbGetQuery(conn, "select distinct i.mzmed
+                                        from mzintensities i
+                                        join individual_data d
+                                        on i.filename = d.card_id")[,1]
+    
+    RSQLite::dbDisconnect(conn)
+    
+    lcl$paths$csv_peaks <<- gsub(lcl$paths$patdb, 
+                          pattern = "\\.db", 
+                          replacement = "\\_PEAKS.csv")
+    lcl$paths$csv_meta <<- gsub(lcl$paths$patdb, 
+                              pattern = "\\.db", 
+                              replacement = "\\_META.csv")
+    
+    withProgress(min = 0, max = 1, {
+      # write rows to csv
+      lapply(fn_meta, 
+             #cl = session_cl, 
+             function(filename){
+               # connect
+               conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(lcl$paths$patdb))
+               
+               # adjust query
+               query_add = gsubfn::fn$paste(" WHERE i.filename = '$filename'")
+               
+               # get results for sample
+               z.meta = as.data.table(RSQLite::dbGetQuery(conn, paste0(query, query_add)))
+               
+               if(nrow(z.meta)==0) return(NA)
+               
+               z.meta = z.meta[,-c("card_id", "sampling_date")]
+               colnames(z.meta) <- tolower(colnames(z.meta))
+               z.int = as.data.table(RSQLite::dbGetQuery(conn, 
+                                        paste0("SELECT DISTINCT
+                                                i.mzmed as identifier,
+                                                i.intensity
+                                                FROM mzintensities i", query_add)))
+               
+               if(nrow(z.int)==0) return(NA)
+               
+               missing_mz <- setdiff(all_mz, z.int$identifier)
+               
+               # cast to wide
+               cast.dt <- dcast.data.table(z.int,
+                                           formula = ... ~ identifier,
+                                           fun.aggregate = sum,
+                                           value.var = "intensity")
+               
+               complete = as.numeric(cast.dt[1,-1])
+               names(complete) = colnames(cast.dt)[-1]
+               
+               missing = rep(NA, length(missing_mz))
+               names(missing) <- missing_mz
+               
+               complete.row = c(complete[-1], missing)
+               reordered <- order(as.numeric(names(complete.row)))
+               complete.row <- complete.row[reordered]
+               complete.row.dt <- as.data.table(t(as.data.table(complete.row)))
+               colnames(complete.row.dt) <- names(complete.row)
+               
+               RSQLite::dbDisconnect(conn)
+               
+               z.meta$sample <- gsub(z.meta$sample, pattern=" |\\(|\\)|\\+", replacement="")
+               
+               # write
+               fwrite(c(sample = z.meta$sample, 
+                        label = z.meta$group, 
+                        complete.row.dt), 
+                      file = lcl$paths$csv_peaks,
+                      append = T)
+               fwrite(z.meta, 
+                      file = lcl$paths$csv_meta,
+                      append = T)
+               
+               incProgress(amount = 1/length(fn_meta))
+             })      
+    })
+    
+    # - - measure file size - -
+    
+    disk_size = file.info(lcl$paths$csv_peaks)$size + file.info(lcl$paths$csv_meta)$size
+    size <- utils:::format.object_size(disk_size, "Mb")
+    cat(paste("... Resulting file is approximately"),size,"...")
 
     # render overview table
     output$csv_tab <-DT::renderDataTable({
-      overview_tab <- if(show.times){
-        t(data.table(keep.rownames = F,
-                     Identifiers = ncol(tbl) - length(exp.vars),
-                     Samples = nrow(tbl),
-                     Times = length(unique(tbl$time))
-        ))
-      }else{
-        t(data.table(keep.rownames = F,
-                     Identifiers = ncol(tbl) - length(exp.vars),
-                     Samples = nrow(tbl)
-        ))
-      }
-
-      # --- render ---
+      overview_tab <- t(data.table(keep.rownames = F,
+                                   Identifiers = length(all_mz),
+                                   Samples = length(fn_meta)))
+      colnames(overview_tab) <- "#"
       DT::datatable(overview_tab,
                     selection = 'single',
                     autoHideNavigation = T,
@@ -233,36 +297,35 @@ observeEvent(input$create_csv, {
       list(src = filename, width = 70,
            height = 70)
     },deleteFile = FALSE)
-  })
 })
 
 # triggers when 'get options' is clicked in the normalization pane
 observeEvent(input$check_csv, {
   # ----------------------
 
-  # read in csv
-  # TODO: only read in the first x -rows- to save time??
-  csv <- fread(lcl$paths$csv_loc,
-               header = T)
-
-  # find experimental variables by checking which wont convert to numeric
-  as.numi <- as.numeric(colnames(csv)[1:100])
-  exp.vars <- which(is.na(as.numi))
-
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(lcl$paths$patdb))
+  
+  metadata <- data.table::as.data.table(RSQLite::dbGetQuery(conn, "SELECT * FROM individual_data"))
+  
+  exp.vars = colnames(metadata)
+  
   # get the names of those experimental variables
-  opts <<- colnames(csv[,..exp.vars])
+  opts <<- colnames(metadata)
 
+  bvars <- if(RSQLite::dbExistsTable(conn, "batchinfo")){
+    c("batch", "injection")
+  }else{
+    c()
+  }
+  
   # get columns that can be used for batch correction (need to be non-unique)
-  batch <<- which(sapply(exp.vars, function(x) length(unique(csv[,..x][[1]])) < nrow(csv)))
-
-  # get sample columns
-  numi <<- which(sapply(exp.vars, function(x) is.numeric(csv[,..x][[1]])))
+  batch <<- which(sapply(exp.vars, function(x) length(unique(metadata[,..x][[1]])) < nrow(metadata)))
 
   # update the possible options in the UI
   updateSelectInput(session, "samp_var",
-                    choices = opts[numi])
+                    choices = opts)
   updateSelectizeInput(session, "batch_var",
-                       choices = opts[batch],
+                       choices = c(bvars, opts[batch]),
                        options = list(maxItems = 3L - (length(input$batch_var)))
   )
 })
