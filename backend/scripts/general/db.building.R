@@ -7,10 +7,12 @@ build.pat.db <- function(db.name,
                          make.full = TRUE,
                          ppm=2,
                          inshiny=F){
+
+  # pospath="/Users/jwolthuis/Documents/Documents/xls/example_pos.csv"
+  # negpath="/Users/jwolthuis/Documents/Documents/xls/example_neg.csv"
   
-  # ------------------------
   ppm = as.numeric(ppm)
-  # ------------------------
+
   
   poslist <- fread(pospath,header = T)
   neglist <- fread(negpath,header = T) 
@@ -21,6 +23,10 @@ build.pat.db <- function(db.name,
   
   poslist <- poslist[,..keepcols]
   neglist <- neglist[,..keepcols]
+  
+  # replace commas with dots
+  poslist <- as.data.table(sapply(poslist, gsub, pattern = ",", replacement= "."))
+  neglist <- as.data.table(sapply(neglist, gsub, pattern = ",", replacement= "."))
   
   # - - - fix QCs - - -
   
@@ -143,8 +149,7 @@ build.pat.db <- function(db.name,
 
 #' @export
 load.metadata.csv <- function(path.to.csv,
-                              path.to.patdb, 
-                              ppm){
+                              path.to.patdb){
   
   #path.to.csv = "~/Downloads/maria_meta.csv"
   #path.to.patdb = "~/Downloads/maria_3ppm.db"
@@ -153,16 +158,17 @@ load.metadata.csv <- function(path.to.csv,
   # --- connect to sqlite db ---
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), path.to.patdb)
   
-  csv <- data.table::fread(path.to.csv)
-  colnames(csv) <- tolower(colnames(csv))
-  setup <- data.table(group = as.character(unique(csv[,c("group")][[1]])))
+  tab <- data.table::fread(path.to.csv)
+  colnames(tab) <- tolower(colnames(tab))
   
-  RSQLite::dbWriteTable(conn, "params", 
-                        data.table::data.table(ppm=ppm), 
-                        overwrite=T)
+  colnames(tab) <- tolower(gsub(x=colnames(tab), pattern = "\\.$|\\.\\.$", replacement = ""))
+  colnames(tab) <- gsub(x=colnames(tab), pattern = "\\.|\\.\\.| ", replacement = "_")
+  colnames(tab)[grep(x=colnames(tab), pattern= "*date*")] <- "sampling_date"
+  
+  setup <- data.table(group = as.character(unique(tab[,c("group")][[1]])))
   
   RSQLite::dbWriteTable(conn, "setup", setup, overwrite=TRUE) # insert into
-  RSQLite::dbWriteTable(conn, "individual_data", csv, overwrite=TRUE) # insert into
+  RSQLite::dbWriteTable(conn, "individual_data", tab, overwrite=TRUE) # insert into
   
   RSQLite::dbDisconnect(conn)
 }

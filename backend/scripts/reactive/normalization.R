@@ -7,21 +7,46 @@ observeEvent(input$initialize, {
     
     require(MetaboAnalystR)
     
+    # read in original CSV file
+    csv_orig <- fread(lcl$paths$csv_loc,
+                      data.table = TRUE,
+                      header = T)
+    
     # create empty mSet with 'stat' as default mode
     mSet <- InitDataObjects("pktable",
                             "stat",
                             FALSE)
-    
     # set default time series mode'
     mSet$timeseries <- FALSE
+    
+    # convert all 0's to NA so metaboanalystR will recognize them
+    csv_orig[,(1:ncol(csv_orig)) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)})]
+    
+    # remove whitespace
+    csv_orig$sample <- gsub(csv_orig$sample, pattern=" |\\(|\\)|\\+", replacement="")
+    
+    # find experimental variables by converting to numeric
+    as.numi <- as.numeric(colnames(csv_orig)[1:100])
+    exp.vars <- which(is.na(as.numi))
     
     # load batch variable chosen by user
     batches <- input$batch_var
     
-    # read in original CSV file
-    metadata <- fread(lcl$paths$csv_meta,
-                      data.table = TRUE,
-                      header = T)
+    # locate qc containing rows in csv
+    qc.rows <- which(grepl("QC", csv_orig$sample))
+    
+    # for the non-qc samples, check experimental variables. Which have at least 2 different factors, but as little as possible?
+    unique.levels <- apply(csv_orig[!qc.rows,..exp.vars, with=F], MARGIN=2, function(col){
+      lvls <- levels(as.factor(col))
+      # - - - - - -
+      length(lvls)
+    })
+    
+    # use this as the default selected experimental variable (user can change later)
+    which.default <- unique.levels[which(unique.levels == min(unique.levels[which(unique.levels> 1)]))][1]
+    condition = names(which.default)
+    
+    # =================================|
     
     # if nothing is selected for batch, give empty
     if(is.null(batches)) batches <- ""
@@ -35,39 +60,94 @@ observeEvent(input$initialize, {
       batches = c(batches, "injection")
     }
     
-    if(all(grepl(pattern = "_T\\d", x = metadata$sample))){
+    # get the part of csv with only the experimental variables
+    first_part <- csv_orig[,..exp.vars, with=FALSE]
+    
+    # set NULL or missing levels to "unknown"
+    first_part[first_part == "" | is.null(first_part)] <- "unknown"
+    
+    # re-make csv with the corrected data
+    csv <- cbind(first_part[,-c("label")], # if 'label' is in excel file remove it, it will clash with the metaboanalystR 'label'
+                 "label" = first_part[,..condition][[1]], # set label as the initial variable of interest
+                 csv_orig[,-..exp.vars,with=FALSE])
+    
+    if(all(grepl(pattern = "_T\\d", x = first_part$sample))){
       keep.all.samples <- TRUE
       print("Potential for time series - disallowing outlier removal")
     }else{
       keep.all.samples <- FALSE
     }
     
-    # # remove outliers by making a boxplot and going from there
-    # if(input$remove_outliers & !keep.all.samples){ # TODO: use subsetting to do this
-    #   sums <- rowSums(csv[,-exp.vars,with=FALSE],na.rm = TRUE)
-    #   names(sums) <- csv$sample
-    #   outliers = c(car::Boxplot(as.data.frame(sums)))
-    #   csv <- csv[!(sample %in% outliers),]
-    # }
-    # 
-    # # if QC present, only keep QCs that share batches with the other samples (may occur when subsetting data/only loading part of the samples)
-    if(any(grepl("QC", metadata$sample))){ # TODO: use subsetting to do this
-      samps <- which(!grepl(metadata$sample, pattern = "QC"))
-      batchnum <- unique(metadata[samps, "batch"][[1]])
-      keep_samps_post_qc <- metadata[which(metadata$batch %in% batchnum),"sample"][[1]]
-      metadata <- metadata[which(metadata$batch %in% batchnum),]
+    # remove outliers by making a boxplot and going from there
+    if(input$remove_outliers & !keep.all.samples){
+      sums <- rowSums(csv[,-exp.vars,with=FALSE],na.rm = TRUE)
+      names(sums) <- csv$sample
+      outliers = c(car::Boxplot(as.data.frame(sums)))
+      csv <- csv[!(sample %in% outliers),]
     }
     
+    # remove peaks that are missing in all
+    csv <- csv[,which(unlist(lapply(csv, function(x)!all(is.na(x))))),with=F]
+    
+    # remove samples with really low numbers of peaks
+    complete.perc <- rowMeans(!is.na(csv))
+    keep_samps <- csv$sample[which(complete.perc > .2)]
+    csv <- csv[sample %in% keep_samps,]
+    
+    # also remove them in the table with covariates
+    covar_table <- first_part[sample %in% keep_samps,]
+    
+    # if the experimental condition is batch, make sure QC samples are not removed at the end for analysis
+    # TODO: this is broken with the new system, move this to the variable switching segment of code
+    batchview = if(condition == "batch") TRUE else FALSE
+    
+    # if QC present, only keep QCs that share batches with the other samples (may occur when subsetting data/only loading part of the samples)
+    if(any(grepl("QC", csv$sample))){
+      samps <- which(!grepl(csv$sample, pattern = "QC"))
+      batchnum <- unique(csv[samps, "batch"][[1]])
+      keep_samps_post_qc <- covar_table[which(covar_table$batch %in% batchnum),"sample"][[1]]
+      covar_table <- covar_table[which(covar_table$batch %in% batchnum),]
+      csv <- csv[which(csv$sample %in% keep_samps_post_qc),-"batch"]
+    }
+    
+    # rename time column or metaboanalyst won't recognize it
+    colnames(csv)[which( colnames(csv) == "time")] <- "Time"
+    
+    # deduplicate columns
+    # TODO: remove the source of the duplicated columns ealier, might already be fixed
+    remove = which( duplicated( t(csv[,..exp.vars] )))
+    colnms <- colnames(csv)[remove]
+    remove.filt <- setdiff(colnms,c("sample","label"))
+    csv <- csv[ , -remove.filt, with = FALSE ]
+    
+    # find experimental variables
+    as.numi <- as.numeric(colnames(csv)[1:100])
+    exp.vars <- which(is.na(as.numi))
+    
+    # remove all except sample and time in saved csv
+    exp_var_names <- colnames(csv)[exp.vars]
+    keep_cols <-  c("sample", "label")
+    remove <- which(!(exp_var_names %in% keep_cols))
+    
+    # define location to write processed csv to
+    csv_loc_final <- gsub(pattern = "\\.csv", replacement = "_no_out.csv", x = lcl$paths$csv_loc)
+    
+    # remove file if it already exists
+    if(file.exists(csv_loc_final)) file.remove(csv_loc_final)
+    
+    # write new csv to new location
+    fwrite(csv[,-remove,with=F], file = csv_loc_final)
+    
     # rename row names of covariant table to the sample names
-    rownames(metadata) <- metadata$sample
+    rownames(covar_table) <- covar_table$sample
     
     # load new csv into empty mSet!
     mSet <- Read.TextData(mSet,
-                          filePath = lcl$paths$csv_peaks,
+                          filePath = csv_loc_final,
                           "rowu")  # rows contain samples
     
     # add covars to the mSet for later switching and machine learning
-    mSet$dataSet$covars <- metadata
+    mSet$dataSet$covars <- covar_table
     
     # sanity check data
     mSet <- SanityCheckData(mSet)

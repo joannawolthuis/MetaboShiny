@@ -640,8 +640,7 @@ mode = complete')
         opts <- getOptions(lcl$paths$opt.loc)
         lcl$proj_name <<- opts$proj_name
         lcl$paths$patdb <<- file.path(opts$work_dir, paste0(opts$proj_name, ".db"))
-        lcl$paths$csv_meta <<- file.path(opts$work_dir, paste0(opts$proj_name, "_META.csv"))
-        lcl$paths$csv_peaks <<- file.path(opts$work_dir, paste0(opts$proj_name, "_PEAKS.csv"))
+        lcl$paths$csv_loc <<- file.path(opts$work_dir, paste0(opts$proj_name, ".csv"))
       }
       datamanager$reload <- "general"
     })

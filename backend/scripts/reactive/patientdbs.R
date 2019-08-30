@@ -204,12 +204,10 @@ observeEvent(input$create_csv, {
     
     RSQLite::dbDisconnect(conn)
     
-    lcl$paths$csv_peaks <<- gsub(lcl$paths$patdb, 
+    lcl$paths$csv_loc <<- gsub(lcl$paths$patdb, 
                           pattern = "\\.db", 
-                          replacement = "\\_PEAKS.csv")
-    lcl$paths$csv_meta <<- gsub(lcl$paths$patdb, 
-                              pattern = "\\.db", 
-                              replacement = "\\_META.csv")
+                          replacement = ".csv")
+    
     
     withProgress(min = 0, max = 1, {
       # write rows to csv
@@ -262,13 +260,8 @@ observeEvent(input$create_csv, {
                z.meta$sample <- gsub(z.meta$sample, pattern=" |\\(|\\)|\\+", replacement="")
                
                # write
-               fwrite(c(sample = z.meta$sample, 
-                        label = z.meta$group, 
-                        complete.row.dt), 
-                      file = lcl$paths$csv_peaks,
-                      append = T)
-               fwrite(z.meta, 
-                      file = lcl$paths$csv_meta,
+               fwrite(c(z.meta, complete.row), 
+                      file = lcl$paths$csv_loc,
                       append = T)
                
                incProgress(amount = 1/length(fn_meta))
@@ -277,7 +270,7 @@ observeEvent(input$create_csv, {
     
     # - - measure file size - -
     
-    disk_size = file.info(lcl$paths$csv_peaks)$size + file.info(lcl$paths$csv_meta)$size
+    disk_size = file.info(lcl$paths$csv_loc)$size
     size <- utils:::format.object_size(disk_size, "Mb")
     cat(paste("... Resulting file is approximately"),size,"...")
 
