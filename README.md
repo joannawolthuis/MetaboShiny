@@ -1,6 +1,7 @@
 # MetaboShiny
 Welcome to the info page on MetaboShiny! I am still working on a proper readme, please have patience with me :-)
 We are currently on BioRXiv and the paper itself is somewhat of a guide to how to use the software.
+For example input files (positive and negative peaklists + metadata) please see the 'examples' folder.
 
 http://biorxiv.org/cgi/content/short/734236v1
 
