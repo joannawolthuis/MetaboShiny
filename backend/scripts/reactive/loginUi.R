@@ -574,6 +574,7 @@ output$currUI <- renderUI({
                                                                                                                                            size = "lg")
                                                                                                          ),
                                                                                                          column(width=3,align="center",
+                                                                                                                selectizeInput("ml_exclude_covars", label = "Don't use this metadata:", choices=c(), multiple=TRUE),
                                                                                                                 fluidRow(textOutput("ml_train_ss"),
                                                                                                                          actionButton("ml_train_ss", label = "train on:", icon = icon("arrow-up"))),
                                                                                                                 fluidRow(textOutput("ml_test_ss"),

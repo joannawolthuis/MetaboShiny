@@ -64,7 +64,7 @@ observeEvent(input$initialize, {
     first_part <- csv_orig[,..exp.vars, with=FALSE]
     
     # set NULL or missing levels to "unknown"
-    first_part[first_part == "" | is.null(first_part)] <- "unknown"
+    first_part[first_part == "" | is.null(first_part)] <- "Unknown"
     
     # re-make csv with the corrected data
     csv <- cbind(first_part[,-c("label")], # if 'label' is in excel file remove it, it will clash with the metaboanalystR 'label'
@@ -112,14 +112,7 @@ observeEvent(input$initialize, {
     
     # rename time column or metaboanalyst won't recognize it
     colnames(csv)[which( colnames(csv) == "time")] <- "Time"
-    
-    # deduplicate columns
-    # TODO: remove the source of the duplicated columns ealier, might already be fixed
-    remove = which( duplicated( t(csv[,..exp.vars] )))
-    colnms <- colnames(csv)[remove]
-    remove.filt <- setdiff(colnms,c("sample","label"))
-    csv <- csv[ , -remove.filt, with = FALSE ]
-    
+
     # find experimental variables
     as.numi <- as.numeric(colnames(csv)[1:100])
     exp.vars <- which(is.na(as.numi))
@@ -266,6 +259,8 @@ observeEvent(input$initialize, {
     
     # lowercase all the covars table column names
     colnames(mSet$dataSet$covars) <- tolower(colnames(mSet$dataSet$covars))
+    
+    # === check if it does wrong here... ===
     
     if(batch_corr){
       

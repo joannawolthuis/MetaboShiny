@@ -48,7 +48,13 @@ observe({
                if(lcl$paths$patdb != ""){
                  if(file.exists(lcl$paths$patdb)){
                    scanmode <- getIonMode(lcl$curr_mz, lcl$paths$patdb)
-                   lcl$vectors$calc_adducts <<- adducts[scanmode %in% Ion_mode]$Name
+                   
+                   if(length(scanmode)==1){
+                     lcl$vectors$calc_adducts <<- adducts[scanmode %in% Ion_mode]$Name
+                   }else{
+                     lcl$vectors$calc_adducts <<- adducts$Name
+                   }
+                   
                    output$magicball_add_tab <- DT::renderDataTable({
                      DT::datatable(data.table(Adduct = lcl$vectors$calc_adducts),
                                    selection = list(mode = 'multiple',
@@ -89,6 +95,9 @@ observe({
                updateSelectInput(session, "col_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
                updateSelectInput(session, "txt_var", selected = "sample", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
                updateSelectInput(session, "subset_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
+               updateSelectInput(session, "ml_exclude_covars", 
+                                 choices = c(colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "animal_internal_id"))]))
+               
                output$curr_name <- renderText({mSet$dataSet$cls.name})
                # if _T in sample names, data is time series. This makes the time series swap button visible.
                if(all(grepl(pattern = "_T\\d", x = rownames(mSet$dataSet$norm)))){

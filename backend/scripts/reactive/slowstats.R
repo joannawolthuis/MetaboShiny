@@ -81,13 +81,21 @@ observeEvent(input$do_ml, {
       config <- config[,apply(!is.na(config), 2, any), with=FALSE]
     }
 
+    predictor = config$label
+    predict_idx <- which(colnames(config)== "label")
+    exact_matches <- which(unlist(lapply(config, function(col) all(col == predictor))))
+    remove = setdiff(exact_matches, predict_idx)
+    
+    covariates = config[,-..remove]
+    
     # remove ones w/ every row being different(may be used to identify...)
-    covariates <- lapply(1:ncol(config), function(i) as.factor(config[,..i][[1]]))
-    names(covariates) <- colnames(config)
+    # covariates <- lapply(1:ncol(config), function(i) as.factor(config[,..i][[1]]))
+    # names(covariates) <- colnames(config)
 
-    # remove ones with na present
-    has.na <- sapply(covariates, function(x) any(is.na(x)))
-    has.all.unique <- sapply(covariates, function(x) length(unique(x)) == length(x))
+    # # remove ones with na present
+    has.na <- sapply(covariates, function(x) any(is.na(x) | tolower(x) == "unknown"))
+
+    # has.all.unique <- sapply(covariates, function(x) length(unique(x)) == length(x))
 
     # rename the variable of interest to 0-1-2 etc.
     char.lbl <- as.character(covariates$label)
@@ -98,32 +106,37 @@ observeEvent(input$do_ml, {
     remapped.lbl <- uniques_new_name[char.lbl]
 
     # find which variables are covariant with label, they will be removed
-    covariant.with.label <- sapply(covariates, function(x){
-      char.x <- as.character(x)
-      uniques <- unique(char.x)
-      uniques_new_name <- c(1:length(uniques))
-      names(uniques_new_name) = uniques
-      remapped.x = uniques_new_name[char.x]
-      res = if(length(remapped.x) == length(remapped.lbl)){
-        all(remapped.x == remapped.lbl)
-      }else{ FALSE }
-      res
-    })
+    # covariant.with.label <- sapply(covariates, function(x){
+    #   char.x <- as.character(x)
+    #   uniques <- unique(char.x)
+    #   uniques_new_name <- c(1:length(uniques))
+    #   names(uniques_new_name) = uniques
+    #   remapped.x = uniques_new_name[char.x]
+    #   res = if(length(remapped.x) == length(remapped.lbl)){
+    #     all(remapped.x == remapped.lbl)
+    #   }else{ FALSE }
+    #   res
+    # })
 
     # now filter out unique, covariate and with missing columns from $covars
-    keep_configs <- which(!(names(config) %in% names(config)[unique(c(which(has.na), which(has.all.unique), which(covariant.with.label)))]))
-    keep_configs <- c(keep_configs, which(names(config) == "label"))
-    #keep_configs <- which(names(config) == "label")
-
+    #keep_configs <- which(!(names(config) %in% names(config)[unique(c(which(has.na), which(has.all.unique), which(covariant.with.label)))]))
+    
+    keep_configs <- which(!(names(covariates) %in% names(covariates)[unique(c(which(has.na)))]))
+    
+        #keep_configs <- which(names(config) == "label")
+    remove_configs <- unique(c(input$ml_exclude_covars, "sample",  "animal_internal_id", colnames(covariates)[caret::nearZeroVar(covariates)]))
+    
+    keep_configs <- which(!(names(covariates) %in% remove_configs))
+    
     print("Removing covariates and unique columns. Keeping non-mz variables:")
-    print(names(config)[keep_configs])
+    print(names(covariates)[keep_configs])
 
-    config <- config[,..keep_configs,with=F]
+    covariates <- covariates[,..keep_configs,with=F]
 
     # - - - - - - - - - - - - - - - - - - - - - - -
 
     # join halves together, user variables and metabolite data
-    curr <- cbind(config, curr)
+    curr <- cbind(covariates, curr)
     curr <- as.data.table(curr)
 
     # remove cols with all NA
@@ -155,23 +168,74 @@ observeEvent(input$do_ml, {
     mzCols <- which(gsub(x = colnames(curr), pattern = "_T\\d", replacement="") %in% colnames(mSet$dataSet$norm))
 
     # make the covars factors and the metabolites numeric.
+    nums <- which(unlist(lapply(curr, is.numeric))) 
+    configCols <- setdiff(configCols, nums)
+    
     curr[,(configCols):= lapply(.SD, function(x) as.factor(x)), .SDcols = configCols]
+    
     curr[,(mzCols):= lapply(.SD, function(x) as.numeric(x)), .SDcols = mzCols]
 
+    # = tuning = 
+    require(caret)
+    
+    # all methods
+    caret.mdls <- getModelInfo()
+    caret.methods <- names(caret.mdls)
+    tune.opts <- lapply(caret.methods, function(mdl) caret.mdls[[mdl]]$parameters)
+    names(tune.opts) <- caret.methods
+    
+    meth.info <- caret::getModelInfo()[[input$ml_method]]
+    params = meth.info$parameters
+    
+    #grid.def <- meth.info$grid(training, trainY, len = 1)
+    
+    tuneGrid = expand.grid(
+      {
+        lst = lapply(1:nrow(params), function(i){
+          info = params[i,]
+          inp.val = input[[paste0("ml_", info$parameter)]]
+          # - - check for ranges - -
+          if(grepl(inp.val, pattern=":")){
+            split = strsplit(inp.val,split = ":")[[1]]
+            inp.val <- seq(as.numeric(split[1]),
+                           as.numeric(split[2]),
+                           as.numeric(split[3]))
+          }else if(grepl(inp.val, pattern = ",")){
+            split = strsplit(inp.val,split = ",")[[1]]
+            inp.val <- split
+          }
+          # - - - - - - - - - - - - -
+          switch(as.character(info$class),
+                 numeric = as.numeric(inp.val),
+                 character = as.character(inp.val))
+        })
+        names(lst) = params$parameter
+        if(any(sapply(lst,function(x)all(is.na(x))))){
+          cat("Missing param, auto-tuning...")
+          lst <- list()
+        }
+        #lst <- lst[sapply(lst,function(x)all(!is.na(x)))]
+        lst
+      })
     # ============ LOOP HERE ============
 
     # get results for the amount of attempts chosen
     repeats <- pbapply::pblapply(1:goes,
-                                 cl=0,
-                                 #cl=session_cl,
+                                 cl=0,#session_cl,
                                  function(i,
                                           train_vec = train_vec,
                                           test_vec = test_vec,
-                                          configCols = configCols){
-      shiny::isolate({
+                                          configCols = configCols,
+                                          ml_method = ml_method,
+                                          ml_perf_metr = ml_perf_metr,
+                                          ml_folds = ml_folds,
+                                          ml_preproc = ml_preproc,
+                                          tuneGrid = tuneGrid,
+                                          ml_train_perc = ml_train_perc){
+      #shiny::isolate({
 
         # get user training percentage
-        ml_train_perc <- input$ml_train_perc/100
+        ml_train_perc <- ml_train_perc/100
 
         if(unique(train_vec)[1] == "all" & unique(test_vec)[1] == "all"){ # BOTH ARE NOT DEFINED
           test_idx = caret::createDataPartition(y = curr$label, p = ml_train_perc, list = FALSE) # partition data in a balanced way (uses labels)
@@ -204,26 +268,19 @@ observeEvent(input$do_ml, {
 
         # remove predictive column from training set
         #remove.cols <- c("label") #TODO: make group column removed at start
-        training <- curr[inTrain,]#-"label"]
-        testing <- curr[inTest,]#-"label"]
+        training <- curr[inTrain,]
+        testing <- curr[inTest,]
 
-        rmv.configCols.tr <- which(sapply(configCols, function(i, training) ifelse(length(levels(as.factor(training[,..i][[1]]))) == 1, TRUE, FALSE), training = training))
-        training[, (rmv.configCols.tr) := NULL]
-
-        rmv.configCols.te <- which(sapply(configCols, function(i, testing) ifelse(length(levels(as.factor(testing[,..i][[1]]))) == 1, TRUE, FALSE), testing = testing))
-        testing[, (rmv.configCols.te) := NULL]
+        #rmv.configCols.tr <- which(sapply(configCols, function(i, training) ifelse(length(levels(as.factor(training[,..i][[1]]))) == 1, TRUE, FALSE), training = training))
+        #training[, (rmv.configCols.tr) := NULL]
+        #rmv.configCols.te <- which(sapply(configCols, function(i, testing) ifelse(length(levels(as.factor(testing[,..i][[1]]))) == 1, TRUE, FALSE), testing = testing))
+        #testing[, (rmv.configCols.te) := NULL]
 
         # ======= WIP =======
 
         require(caret)
-
-        # all methods
-        caret.mdls <- getModelInfo()
-        caret.methods <- names(caret.mdls)
-        tune.opts <- lapply(caret.methods, function(mdl) caret.mdls[[mdl]]$parameters)
-        names(tune.opts) <- caret.methods
-
-        if(input$ml_folds == "LOOCV"){
+        
+        if(ml_folds == "LOOCV"){
           trainCtrl <- trainControl(verboseIter = T,
                                     allowParallel = F,
                                     method="LOOCV") # need something here...
@@ -231,71 +288,41 @@ observeEvent(input$do_ml, {
         }else{
           trainCtrl <- trainControl(verboseIter = T,
                                     allowParallel = F,
-                                    method=as.character(input$ml_perf_metr),
-                                    number=as.numeric(input$ml_folds),
+                                    method=as.character(ml_perf_metr),
+                                    number=as.numeric(ml_folds),
                                     repeats=3) # need something here...
         }
-
-        meth.info <- caret::getModelInfo()[[input$ml_method]]
-        params = meth.info$parameters
-
-        #grid.def <- meth.info$grid(training, trainY, len = 1)
-
-        tuneGrid = expand.grid(
-          {
-            lst = lapply(1:nrow(params), function(i){
-              info = params[i,]
-              inp.val = input[[paste0("ml_", info$parameter)]]
-              # - - check for ranges - -
-              if(grepl(inp.val, pattern=":")){
-                split = strsplit(inp.val,split = ":")[[1]]
-                inp.val <- seq(as.numeric(split[1]),
-                               as.numeric(split[2]),
-                               as.numeric(split[3]))
-              }else if(grepl(inp.val, pattern = ",")){
-                split = strsplit(inp.val,split = ",")[[1]]
-                inp.val <- split
-              }
-              # - - - - - - - - - - - - -
-              switch(as.character(info$class),
-                     numeric = as.numeric(inp.val),
-                     character = as.character(inp.val))
-            })
-            names(lst) = params$parameter
-            if(any(sapply(lst,function(x)all(is.na(x))))){
-              cat("Missing param, auto-tuning...")
-              lst <- list()
-              }
-            #lst <- lst[sapply(lst,function(x)all(!is.na(x)))]
-            lst
-          })
 
         fit <- train(
           label ~ .,
           data = training,
-          method = input$ml_method,
+          method = ml_method,
           ## Center and scale the predictors for the training
           ## set and all future samples.
-          preProc = input$ml_preproc,
+          preProc = ml_preproc,
           tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
           trControl = trainCtrl
         )
 
         result.predicted.prob <- predict(fit, testing, type="prob") # Prediction
 
-        data = list(predictions = result.predicted.prob$`Population`, labels = testing$label)
-
         # train and cross validate model
         # return list with mode, prediction on test data etc.s
-         list(type = input$ml_method,
+         list(type = ml_method,
               model = fit,
               prediction = result.predicted.prob[,2],
               labels = testing$label)
-      })
+      #})
     },
     train_vec = lcl$vectors$ml_train,
     test_vec = lcl$vectors$ml_test,
-    configCols = configCols
+    configCols = configCols,
+    ml_method = input$ml_method,
+    ml_perf_metr = input$ml_perf_metr,
+    ml_folds = input$ml_folds,
+    ml_preproc = input$ml_preproc,
+    tuneGrid = tuneGrid,
+    ml_train_perc <- input$ml_train_perc
     ) # for session_cl
     
     # check if a storage list for machine learning results already exists

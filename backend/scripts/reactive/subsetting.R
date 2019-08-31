@@ -49,18 +49,12 @@ observeEvent(input$change_subset, {
   }))]
   updateSelectInput(session, "subset_var", choices = subsettable.covars)
   output$curr_name <- renderText({mSet$dataSet$cls.name})
-  if(mSet$dataSet$cls.num <= 1){
-    interface$mode <- NULL }
-  else if(mSet$dataSet$cls.num == 2){
-    interface$mode <- "bivar"}
-  else{
-    interface$mode <- "multivar"}
 
-  if(!("pca" %in% names(mSet$analSet))){
-    statsmanager$calculate <- "pca"
-  }
-
-  datamanager$reload <- "pca"
+  invalidateLater(100, session)
+  
+  datamanager$reload <- "general"
+  updateNavbarPage(session, "statistics", selected = "inf")
+  
   })
 
 observeEvent(input$reset_subset, {
@@ -115,15 +109,6 @@ observeEvent(input$reset_subset, {
   invalidateLater(100, session)
 
   datamanager$reload <- "general"
-
-  for(tabgroup in c("dimred", "overview", "permz")){
-    if(tabgroup %in% names(input)){
-      invalidateLater(100, session)
-      print(input[[tabgroup]])
-      statsmanager$calculate <<- input[[tabgroup]]
-      datamanager$reload <<- input[[tabgroup ]]
-    }
-  }
 
   updateNavbarPage(session, "statistics", selected = "inf")
 

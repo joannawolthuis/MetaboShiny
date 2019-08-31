@@ -34,18 +34,18 @@ observeEvent(input$change_cls, {
 
   #datamanager$reload <- "general"
 
-  output$curr_name <- renderText({mSet$dataSet$cls.name})
-
+  invalidateLater(100, session)
+  
   datamanager$reload <- "general"
 
-  for(tabgroup in c("dimred", "overview", "permz")){
-    if(tabgroup %in% names(input)){
-      if(!is.null(input[[tabgroup]])){
-        statsmanager$calculate <- input[[tabgroup]]
-        datamanager$reload <- input[[tabgroup ]]  
-      }
-    }
-  }
+#   for(tabgroup in c("dimred", "overview", "permz")){
+#     if(tabgroup %in% names(input)){
+#       if(!is.null(input[[tabgroup]])){
+#         statsmanager$calculate <- input[[tabgroup]]
+#         datamanager$reload <- input[[tabgroup ]]  
+#       }
+#     }
+#   }
 
   updateNavbarPage(session, "statistics", selected = "inf")
 
