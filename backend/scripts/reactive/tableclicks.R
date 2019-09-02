@@ -99,7 +99,6 @@ lapply(unique(res.update.tables), FUN=function(table){
           }
         }
       })
-      #datamanager$reload <- "mz_forward"
     }
   })
 })
@@ -156,10 +155,9 @@ observeEvent(input$browse_tab_rows_selected,{
   curr_row <- input$browse_tab_rows_selected
   if (is.null(curr_row)) return()
   # -----------------------------
-  curr_def <- lcl$tables$browse_table[curr_row, description]
+  curr_def <- browse_content$table[curr_row, description]
   output$browse_definition <- renderText(curr_def)
-  my_selection$structure <<- lcl$tables$browse_table[curr_row,c('structure')][[1]]
-  #datamanager$reload <- "mz_reverse"
+  my_selection$structure <<- browse_content$table[curr_row,c('structure')][[1]]
 })
 
 # triggers on clicking a row in the reverse hit results table
@@ -167,5 +165,4 @@ observeEvent(input$hits_tab_rows_selected,{
   curr_row <<- input$hits_tab_rows_selected # get current row
   if (is.null(curr_row)) return()
   my_selection$mz <<- shown_matches$reverse[curr_row,'query_mz'][[1]]
-  #datamanager$reload <- "mz_forward"
 })

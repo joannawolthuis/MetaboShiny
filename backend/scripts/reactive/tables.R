@@ -26,17 +26,13 @@ output$hits_tab <- DT::renderDataTable({
 })
 
 output$browse_tab <-DT::renderDataTable({
-  remove_cols = c("description", "structure", "formula", "charge")
-  remove_idx <- which(colnames(lcl$tables$browse_table) %in% remove_cols)
-  # don't show some columns but keep them in the original table, so they can be used
-  # for showing molecule descriptions, structure
-  DT::datatable(lcl$tables$browse_table,
+  DT::datatable(browse_content$table,
                 selection = 'single',
                 autoHideNavigation = T,
                 options = list(lengthMenu = c(5, 10, 15),
                                pageLength = 15,
                                columnDefs = list(list(visible=FALSE, 
-                                                      targets=remove_idx))))
+                                                      targets=which(colnames(browse_content$table) %in% c("description", "structure", "formula", "charge"))))))
 }, server=T)
 
 # generate positive and negative adduct picker tabs (for csv creation)

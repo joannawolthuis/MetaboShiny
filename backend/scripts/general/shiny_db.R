@@ -37,10 +37,6 @@ get_prematches <- function(who = NA,
                JOIN prematch_content con
                ON map.structure = con.structure"
   
-  print(showdb)
-  print(showadd)
-  print(showiso)
-  
   dbfrag = if(length(showdb)>0) gsubfn::fn$paste("AND source = '$showdb'") else ""
   addfrag = if(length(showadd)>0) gsubfn::fn$paste("AND adduct = '$showadd'") else ""
   isofrag = if(length(showiso)>0) switch(showiso, 
@@ -49,8 +45,6 @@ get_prematches <- function(who = NA,
   
   query = gsubfn::fn$paste("$firstpart WHERE $what = '$who' $dbfrag $addfrag $isofrag")
 
-  print(query)
-  
   res = RSQLite::dbGetQuery(conn, query)
  
   if(any(grepl(pattern = "iso", colnames(res)))){

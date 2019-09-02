@@ -10,15 +10,14 @@ observeEvent(input$browse_db,{
   })
   
   # join the individual result tables together
-  lcl$tables$browse_table <<- unique(as.data.table(rbindlist(cpd_list)))
+  browse_content$table <<- unique(as.data.table(rbindlist(cpd_list)))
   # render table for UI
 })
 
 # triggers on reverse searching TODO: fix this, it's broken
 observeEvent(input$revsearch_mz, {
   curr_row <- input$browse_tab_rows_selected
-  lcl$curr_struct <- lcl$tables$browse_table[curr_row,c('structure')][[1]]
-  datamanager$reload <- "mz_reverse"
+  my_selection$structure <- browse_content$table[curr_row,c('structure')][[1]]
 })
 
 

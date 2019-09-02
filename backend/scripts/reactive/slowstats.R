@@ -23,7 +23,6 @@ observeEvent(input$do_plsda, {
   datamanager$reload <- "plsda"
 })
 
-
 # triggers if 'go' is pressed in the machine learning tab
 observeEvent(input$do_ml, {
   withProgress({
@@ -383,8 +382,8 @@ observeEvent(input$do_ml, {
   })
 })
 
-# mummichog
-
+# mummichog 
+#TODO: re-enable, currently ouchy broken...
 observeEvent(input$do_mummi, {
 
   peak_tbl <- if(mSet$dataSet$cls.num == 2){

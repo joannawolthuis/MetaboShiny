@@ -8,31 +8,6 @@ observe({
   }else{
     if(!is.null(mSet)){
       switch(datamanager$reload,
-             mz_reverse = {
-               print("reverse hits...")
-               if(!mSet$metshiParams$prematched){
-                 print("Please perform pre-matching first to enable this feature!")
-                 return(NULL)
-               }else{
-                 lcl$tables$hits_table <<- unique(get_prematches(who = my_selection$structure,
-                                                                 what = "map.structure", #map.mz as alternative
-                                                                 patdb = lcl$paths$patdb)[,c("query_mz", "adduct", "%iso", "dppm")])
-                 
-                 shown_matches$reverse <- if(nrow(lcl$tables$hits_table) > 0){
-                   lcl$tables$hits_table
-                 }else{
-                   data.table('name' = "Didn't find anything ( •́ .̫ •̀ )")
-                 }
-               }
-             },
-             mz_forward = {
-               # show pre-matched ones
-               if(mSet$metshiParams$prematched){
-                 shown_matches$forward <- get_prematches(who = my_selection$mz,
-                                                         what = "query_mz",
-                                                         patdb = lcl$paths$patdb) 
-               }
-             },
              general = {
                # change interface
                if(mSet$dataSet$cls.num <= 1){

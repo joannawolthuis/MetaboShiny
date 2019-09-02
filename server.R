@@ -47,6 +47,8 @@ shinyServer(function(input, output, session) {
   shown_matches <- reactiveValues(forward = data.table(),
                                   reverse = data.table())
   
+  browse_content <- reactiveValues(table = data.table())
+  
   result_filters <- reactiveValues(add = c(), 
                                    db = c(), 
                                    iso = c())
@@ -236,9 +238,8 @@ mode = complete')
       pieinfo$iso <<- melt(table(shown_matches$forward$isocat))
       }
    })
-  
+
   observe({
-    print("observer active")
     # - - filters - -
     if(my_selection$mz != ""){
       if(unique(lcl$tables$last_matches$query_mz) == my_selection$mz){
@@ -247,13 +248,25 @@ mode = complete')
                                                    & `%iso` == result_filters$iso])
         shown_matches$forward <<- lcl$tables$last_matches[keep.rows,]
       }else if(mSet$metshiParams$prematched){
-        print("searching...")
         shown_matches$forward <<- get_prematches(who = my_selection$mz,
                                                 what = "query_mz",
                                                 patdb = lcl$paths$patdb,
                                                 showadd = result_filters$add,#if(pietype=="add") showsubset else NULL,
                                                 showdb = result_filters$db,#if(pietype=="db") showsubset else NULL,
                                                 showiso = result_filters$iso)#if(pietype=="iso") showsubset else NULL)
+      } 
+    }
+  })
+  
+  observe({
+    if(my_selection$structure != ""){
+      if(!mSet$metshiParams$prematched){
+        print("Please perform pre-matching first to enable this feature!")
+        return(NULL)
+      }else{
+        shown_matches$reverse <<- unique(get_prematches(who = my_selection$structure,
+                                                       what = "map.structure", #map.mz as alternative
+                                                       patdb = lcl$paths$patdb)[,c("query_mz", "adduct", "%iso", "dppm")])
       } 
     }
   })
@@ -347,20 +360,20 @@ mode = complete')
   
   # make miniplot for sidebar with current compound
   output$curr_plot <- plotly::renderPlotly({
-    # --- ggplot ---
-    ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, 
-                  cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
-                  styles = input$ggplot_sum_style,
-                  add_stats = input$ggplot_sum_stats, 
-                  col.fac = input$col_var,
-                  txt.fac = input$txt_var,
-                  plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                  font = lcl$aes$font)
+    if(my_selection$mz != ""){
+      ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, 
+                    cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
+                    styles = input$ggplot_sum_style,
+                    add_stats = input$ggplot_sum_stats, 
+                    col.fac = input$col_var,
+                    txt.fac = input$txt_var,
+                    plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                    font = lcl$aes$font)
+    }
   })
   
   # -----------------
   observeEvent(input$undo_match_filt, {
-    print("undoing...")
     result_filters$add <- c()
     result_filters$db <- c()
     result_filters$iso <- c()
@@ -370,7 +383,10 @@ mode = complete')
     if(my_selection$mz != ""){
       scanmode$positive <- F
       scanmode$negative <- F
-      scanmode[[getIonMode(my_selection$mz, lcl$paths$patdb)]] <- TRUE
+      ion_mode <- getIonMode(my_selection$mz, lcl$paths$patdb)
+      for(mode in ion_mode){
+        scanmode[[mode]] <<- TRUE
+      }
     }
   })
 
