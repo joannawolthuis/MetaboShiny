@@ -14,7 +14,7 @@ observe({
                  print("Please perform pre-matching first to enable this feature!")
                  return(NULL)
                }else{
-                 lcl$tables$hits_table <<- unique(get_prematches(who = lcl$curr_struct,
+                 lcl$tables$hits_table <<- unique(get_prematches(who = my_selection$structure,
                                                                  what = "map.structure", #map.mz as alternative
                                                                  patdb = lcl$paths$patdb)[,c("query_mz", "adduct", "%iso", "dppm")])
                  
@@ -28,55 +28,10 @@ observe({
              mz_forward = {
                # show pre-matched ones
                if(mSet$metshiParams$prematched){
-                 
-                 shown_matches$forward <- get_prematches(who = lcl$curr_mz,
+                 shown_matches$forward <- get_prematches(who = my_selection$mz,
                                                          what = "query_mz",
                                                          patdb = lcl$paths$patdb) 
                }
-               
-               subtab = if(grepl(pattern="pie", input$tab_iden_4)) "pie" else input$tab_iden_4
-               switch(subtab,
-                      pie = {
-                        statsmanager$calculate <- "match_pie"
-                        datamanager$reload <- "match_pie"
-                      },
-                      word_cloud = {
-                        statsmanager$calculate <- "match_wordcloud"
-                        datamanager$reload <- "match_wordcloud"
-                      })
-               # - - - -
-               if(lcl$paths$patdb != ""){
-                 if(file.exists(lcl$paths$patdb)){
-                   scanmode <- getIonMode(lcl$curr_mz, lcl$paths$patdb)
-                   
-                   if(length(scanmode)==1){
-                     lcl$vectors$calc_adducts <<- adducts[scanmode %in% Ion_mode]$Name
-                   }else{
-                     lcl$vectors$calc_adducts <<- adducts$Name
-                   }
-                   
-                   output$magicball_add_tab <- DT::renderDataTable({
-                     DT::datatable(data.table(Adduct = lcl$vectors$calc_adducts),
-                                   selection = list(mode = 'multiple',
-                                                    selected = lcl$vectors[[paste0(scanmode, "_selected_add")]], target="row"),
-                                   options = list(pageLength = 5, dom = 'tp',
-                                                  columnDefs = list(list(className = 'dt-center', targets = "_all"))),
-                                   rownames = F)
-                   })
-                 }
-               }
-               # print current compound in sidebar
-               output$curr_mz <- renderText(lcl$curr_mz)
-               
-               # make miniplot for sidebar with current compound
-               output$curr_plot <- plotly::renderPlotly({
-                 # --- ggplot ---
-                 ggplotSummary(mSet, lcl$curr_mz, shape.fac = input$shape_var, cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
-                               styles = input$ggplot_sum_style,
-                               add_stats = input$ggplot_sum_stats, col.fac = input$col_var,txt.fac = input$txt_var,
-                               plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                               font = lcl$aes$font)
-               })
              },
              general = {
                # change interface
@@ -598,30 +553,6 @@ observe({
                                                                   plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                                                   plotlyfy = TRUE, 
                                                                   font = lcl$aes$font)})
-             }},
-             match_pie = {
-              
-               if(nrow(shown_matches$forward) > 0){
-                 
-                piecharts = c("add", "db", "iso")
-                
-                lapply(piecharts, function(which_pie){
-                  output[[paste0("match_pie_", which_pie)]] <- plotly::renderPlotly({
-                    plot_ly(lcl$vectors[[paste0("pie_",which_pie)]], labels = ~Var1, 
-                            values = ~value, size=~value*10, type = 'pie',
-                            textposition = 'inside',
-                            textinfo = 'label+percent',
-                            insidetextfont = list(color = '#FFFFFF'),
-                            hoverinfo = 'text',
-                            text = ~paste0(Var1, ": ", value, ' matches'),
-                            marker = list(colors = colors,
-                                          line = list(color = '#FFFFFF', width = 1)),
-                            #The 'pull' attribute can also be used to create space between the sectors
-                            showlegend = FALSE) %>%
-                      layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-                             yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
-                  })
-                })
              }}
              )
     }

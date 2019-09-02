@@ -29,8 +29,6 @@ shinyServer(function(input, output, session) {
                            text = "please log in! ( •́ .̫  •̀ )")
 
   lcl = list(
-    curr_mz = "nothing selected",
-    curr_struct = "",
     proj_name ="",
     last_mset="",
     tables=list(last_matches=data.table::data.table(query_mz = "none")),
@@ -44,6 +42,26 @@ shinyServer(function(input, output, session) {
                  work_dir="")
     )
 
+  # == REACTIVE VALUES ==
+  
+  shown_matches <- reactiveValues(forward = data.table(),
+                                  reverse = data.table())
+  
+  result_filters <- reactiveValues(add = c(), 
+                                   db = c(), 
+                                   iso = c())
+  
+  my_selection = reactiveValues(mz = "",
+                                structure = "",
+                                description = "")
+  
+  scanmode = reactiveValues(positive = FALSE,
+                            negative = FALSE)
+  
+  pieinfo = reactiveValues(add = c(),
+                           db = c(),
+                           iso = c())
+  
   ####### !!!!!!!!!!! #########
   metshi_mode <<- "one_user" #" multi_user" # for server mode
   
@@ -199,16 +217,6 @@ mode = complete')
 
   showtext::showtext_auto() ## Automatically use showtext to render text for future devices
 
-  # default match table fill
-  output$match_tab <-DT::renderDataTable({
-    if(is.null(lcl$tables$last_matches)){
-      DT::datatable(data.table("no m/z chosen" = "Please choose m/z value from results ٩(｡•́‿•̀｡)۶	"),
-                    selection = 'single',
-                    autoHideNavigation = T,
-                    options = list(lengthMenu = c(5, 10, 15),
-                                   pageLength = 5))
-    }
-  })
 
   # create image objects in UI
   lapply(gbl$constants$images, FUN=function(image){
@@ -220,34 +228,58 @@ mode = complete')
            height = image$dimensions[2])
     }, deleteFile = FALSE)
   })
-
-  shown_matches <- reactiveValues(forward = data.table(),
-                                  reverse = data.table())
-
-  output$match_tab <- DT::renderDataTable({
-    remove_cols = gbl$vectors$remove_match_cols
-    remove_idx <- which(colnames(shown_matches$forward) %in% remove_cols)
-    
-    # don't show some columns but keep them in the original table, so they can be used
-    # for showing molecule descriptions, structure
-    DT::datatable(shown_matches$forward,
-                  selection = 'single',
-                  autoHideNavigation = T,
-                  options = list(lengthMenu = c(5, 10, 15),
-                                 pageLength = 5,
-                                columnDefs = list(list(visible=FALSE, targets=c(remove_idx,which(colnames(shown_matches$forward)=="isocat"))))
-                  )
-                  
-    ) 
+  
+  observe({
+    if(nrow(shown_matches$forward)>0){
+      pieinfo$add <<- melt(table(shown_matches$forward$adduct))
+      pieinfo$db <<- melt(table(shown_matches$forward$source))
+      pieinfo$iso <<- melt(table(shown_matches$forward$isocat))
+      }
+   })
+  
+  observe({
+    print("observer active")
+    # - - filters - -
+    if(my_selection$mz != ""){
+      if(unique(lcl$tables$last_matches$query_mz) == my_selection$mz){
+        keep.rows <- which(lcl$tables$last_matches[add == result_filters$add
+                                                   & source == result_filters$db
+                                                   & `%iso` == result_filters$iso])
+        shown_matches$forward <<- lcl$tables$last_matches[keep.rows,]
+      }else if(mSet$metshiParams$prematched){
+        print("searching...")
+        shown_matches$forward <<- get_prematches(who = my_selection$mz,
+                                                what = "query_mz",
+                                                patdb = lcl$paths$patdb,
+                                                showadd = result_filters$add,#if(pietype=="add") showsubset else NULL,
+                                                showdb = result_filters$db,#if(pietype=="db") showsubset else NULL,
+                                                showiso = result_filters$iso)#if(pietype=="iso") showsubset else NULL)
+      } 
+    }
   })
   
-  output$hits_tab <- DT::renderDataTable({
-    DT::datatable(shown_matches$reverse,
-                  selection = 'single',
-                  autoHideNavigation = T,
-                  options = list(lengthMenu = c(5, 10, 20), pageLength = 5))
+  # pie charts
+  lapply(c("add", "db", "iso"), function(which_pie){
+    output[[paste0("match_pie_", which_pie)]] <- plotly::renderPlotly({
+      pievec = pieinfo[[which_pie]]
+      if(length(pievec)>0){
+        plot_ly(pievec, labels = ~Var1, 
+                values = ~value, size=~value*10, type = 'pie',
+                textposition = 'inside',
+                textinfo = 'label+percent',
+                insidetextfont = list(color = '#FFFFFF'),
+                hoverinfo = 'text',
+                text = ~paste0(Var1, ": ", value, ' matches'),
+                marker = list(colors = colors,
+                              line = list(color = '#FFFFFF', width = 1)),
+                #The 'pull' attribute can also be used to create space between the sectors
+                showlegend = FALSE) %>%
+          layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                 yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))  
+      }
+    })
   })
-
+  
   # ===== UI SWITCHER ====
 
   # create interface mode storage object.
@@ -309,15 +341,36 @@ mode = complete')
     }
 
   })
-
+  
+  # print current compound in sidebar
+  output$curr_mz <- renderText(my_selection$mz)
+  
+  # make miniplot for sidebar with current compound
+  output$curr_plot <- plotly::renderPlotly({
+    # --- ggplot ---
+    ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, 
+                  cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
+                  styles = input$ggplot_sum_style,
+                  add_stats = input$ggplot_sum_stats, 
+                  col.fac = input$col_var,
+                  txt.fac = input$txt_var,
+                  plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                  font = lcl$aes$font)
+  })
+  
   # -----------------
   observeEvent(input$undo_match_filt, {
-    if(mSet$metshiParams$prematched){
-      shown_matches$forward <- get_prematches(who = lcl$curr_mz,
-                                              what = "query_mz",
-                                              patdb = lcl$paths$patdb)
-    }else{
-      shown_matches$forward <- lcl$tables$last_matches  
+    print("undoing...")
+    result_filters$add <- c()
+    result_filters$db <- c()
+    result_filters$iso <- c()
+  })
+  
+  observe({
+    if(my_selection$mz != ""){
+      scanmode$positive <- F
+      scanmode$negative <- F
+      scanmode[[getIonMode(my_selection$mz, lcl$paths$patdb)]] <- TRUE
     }
   })
 
@@ -390,22 +443,18 @@ mode = complete')
     }
   })
   
-  
   observeEvent(input$tab_iden_4, {
     if(!is.null(mSet)){
-      switch(input$tab_iden_4,
-             pie_db = {
-               statsmanager$calculate <- "match_pie"
-               datamanager$reload <- "match_pie"
-             },
-             pie_add = {
+      subtab = if(grepl(pattern="pie", input$tab_iden_4)) "pie" else input$tab_iden_4
+      switch(subtab,
+             pie = {
                statsmanager$calculate <- "match_pie"
                datamanager$reload <- "match_pie"
              },
              word_cloud = {
                statsmanager$calculate <- "match_wordcloud"
                datamanager$reload <- "match_wordcloud"
-             }) 
+             })
     }
   })
   

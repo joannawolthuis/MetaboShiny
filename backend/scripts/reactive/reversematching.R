@@ -12,19 +12,6 @@ observeEvent(input$browse_db,{
   # join the individual result tables together
   lcl$tables$browse_table <<- unique(as.data.table(rbindlist(cpd_list)))
   # render table for UI
-  output$browse_tab <-DT::renderDataTable({
-    remove_cols = c("description", "structure", "formula", "charge")
-    remove_idx <- which(colnames(lcl$tables$browse_table) %in% remove_cols)
-    # don't show some columns but keep them in the original table, so they can be used
-    # for showing molecule descriptions, structure
-    DT::datatable(lcl$tables$browse_table,
-                  selection = 'single',
-                  autoHideNavigation = T,
-                  options = list(lengthMenu = c(5, 10, 15),
-                                 pageLength = 15,
-                                 columnDefs = list(list(visible=FALSE, 
-                                                        targets=remove_idx))))
-  }, server=T)
 })
 
 # triggers on reverse searching TODO: fix this, it's broken

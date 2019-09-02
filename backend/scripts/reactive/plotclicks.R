@@ -6,26 +6,8 @@ observeEvent(plotly::event_data("plotly_click"),{
   for(pietype in c("add", "iso", "db")){
     if(input$tab_iden_4 == paste0("pie_",pietype)){
       i = d$pointNumber + 1
-      showsubset = as.character(lcl$vectors[[paste0("pie_",pietype)]]$Var1[i])
-      print(showsubset)
-      if(unique(lcl$tables$last_matches$query_mz) == lcl$curr_mz){
-        keep.rows <- which(lcl$tables$last_matches[[switch(pietype, 
-                                                           adduct = "add", 
-                                                           iso = "isocat", 
-                                                           db = "source")]] == showsubset)
-        shown_matches$forward <<- lcl$tables$last_matches[keep.rows,]
-      }else if(mSet$metshiParams$prematched){
-        shown_matches$forward <<- get_prematches(who = lcl$curr_mz,
-                                                 what = "query_mz",
-                                                 patdb = lcl$paths$patdb,
-                                                 showadd = if(pietype=="add") showsubset else NULL,
-                                                 showdb = if(pietype=="db") showsubset else NULL,
-                                                 showiso = if(pietype=="iso") showsubset else NULL)
-        }else{
-          print("shouldnt happen lmao")
-          }
-      statsmanager$calculate <<- "match_pie"
-      datamanager$reload <<- "match_pie"
+      showsubset = as.character(pieinfo[[pietype]]$Var1[i])
+      result_filters[[pietype]] <<- showsubset
     }
   }
 
@@ -47,13 +29,13 @@ observeEvent(plotly::event_data("plotly_click"),{
                   volc = rownames(mSet$analSet$volcano$sig.mat)
     )
     if(d$key %not in% mzs) return(NULL)
-    lcl$curr_mz <<- d$key
+    my_selection$mz <<- d$key
     
     # - magicball - 
     if(lcl$paths$patdb != "" ){
       if(file.exists(lcl$paths$patdb)){
         conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb)
-        scanmode <- DBI::dbGetQuery(conn, paste0("SELECT DISTINCT foundinmode FROM mzvals WHERE mzmed LIKE '", lcl$curr_mz, "%'"))[,1]
+        scanmode <- DBI::dbGetQuery(conn, paste0("SELECT DISTINCT foundinmode FROM mzvals WHERE mzmed LIKE '", my_selection$mz, "%'"))[,1]
         DBI::dbDisconnect(conn)
         lcl$vectors$calc_adducts <<- adducts[scanmode %in% Ion_mode]$Name
         output$magicball_add_tab <- DT::renderDataTable({
@@ -68,7 +50,7 @@ observeEvent(plotly::event_data("plotly_click"),{
     # - return -
     output[[paste0(curr_tab, "_specific_plot")]] <- plotly::renderPlotly({
       # --- ggplot ---
-      ggplotSummary(mSet, lcl$curr_mz, shape.fac = input$shape_var, cols = lcl$aes$mycols,cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
+      ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, cols = lcl$aes$mycols,cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
                     styles = input$ggplot_sum_style, add_stats = input$ggplot_sum_stats,
                     col.fac = input$col_var, txt.fac = input$txt_var,
                     plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
@@ -96,10 +78,10 @@ observeEvent(plotly::event_data("plotly_click"),{
           })
         }
       }, bar = { # for bar plot just grab the # bar clicked
-        lcl$curr_mz <<- as.character(lcl$tables$ml_bar[d$x,"mz"][[1]])
+        my_selection$mz <<- as.character(lcl$tables$ml_bar[d$x,"mz"][[1]])
       })}else if(req(curr_tab) == "heatmap"){#grepl(pattern = "heatmap", x = curr_tab)){ # heatmap requires the table used to make it saved to global (hmap_mzs)
         if(d$y > length(lcl$vectors$heatmap)) return(NULL)
-        lcl$curr_mz <<- lcl$vectors$heatmap[d$y]
+        my_selection$mz <<- lcl$vectors$heatmap[d$y]
       }
-  datamanager$reload <- "mz_forward"
+  #datamanager$reload <- "mz_forward"
 })

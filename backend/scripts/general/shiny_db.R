@@ -25,9 +25,9 @@ browse_db <- function(chosen.db){
 get_prematches <- function(who = NA,
                            what = "mz",
                            patdb,
-                           showdb=NULL,
-                           showadd=NULL,
-                           showiso=NULL){
+                           showdb=c(),
+                           showadd=c(),
+                           showiso=c()){
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb) 
 
   firstpart = "SELECT DISTINCT
@@ -37,14 +37,19 @@ get_prematches <- function(who = NA,
                JOIN prematch_content con
                ON map.structure = con.structure"
   
-  dbfrag = if(!is.null(showdb)) gsubfn::fn$paste("AND source = '$showdb'") else ""
-  addfrag = if(!is.null(showadd)) gsubfn::fn$paste("AND adduct = '$showadd'") else ""
-  isofrag = if(!is.null(showiso)) switch(showiso, 
+  print(showdb)
+  print(showadd)
+  print(showiso)
+  
+  dbfrag = if(length(showdb)>0) gsubfn::fn$paste("AND source = '$showdb'") else ""
+  addfrag = if(length(showadd)>0) gsubfn::fn$paste("AND adduct = '$showadd'") else ""
+  isofrag = if(length(showiso)>0) switch(showiso, 
                                          main = "AND `%iso` > 99.9999", 
                                          minor = "AND `%iso` < 99.9999") else ""
   
   query = gsubfn::fn$paste("$firstpart WHERE $what = '$who' $dbfrag $addfrag $isofrag")
 
+  print(query)
   
   res = RSQLite::dbGetQuery(conn, query)
  
