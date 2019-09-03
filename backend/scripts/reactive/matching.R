@@ -17,20 +17,20 @@ observeEvent(input$prematch,{
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb) # change this to proper var later
     RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS prematch_content")
     RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS prematch_mapper")
-    RSQLite::dbExecute(conn, "CREATE TABLE prematch_mapper(query_mz decimal(30,13),
+    RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTS prematch_mapper(query_mz decimal(30,13),
                                                            structure TEXT,
                                                            `%iso` decimal(30,13),
                                                            adduct TEXT,
                                                            dppm decimal(30,13))")    
-    RSQLite::dbExecute(conn, "CREATE TABLE prematch_content(name TEXT,
+    RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTSprematch_content(name TEXT,
                                                             baseformula TEXT,
                                                             identifier TEXT,
                                                             description VARCHAR(255),
                                                             structure TEXT,
                                                             source TEXT)")
-    RSQLite::dbExecute(conn, "CREATE INDEX map_mz ON prematch_mapper(query_mz)")
-    RSQLite::dbExecute(conn, "CREATE INDEX map_struc ON prematch_mapper(structure)")
-    RSQLite::dbExecute(conn, "CREATE INDEX cont_struc ON prematch_content(structure)")
+    RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS map_mz ON prematch_mapper(query_mz)")
+    RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS map_struc ON prematch_mapper(structure)")
+    RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTScont_struc ON prematch_content(structure)")
     
     blocksize=100
     blocks = split(colnames(mSet$dataSet$norm), ceiling(seq_along(1:ncol(mSet$dataSet$norm))/blocksize))
@@ -63,29 +63,44 @@ observeEvent(input$prematch,{
 
 # triggers on clicking the 'search' button in sidebar
 observeEvent(input$search_mz, {
-  if(length(lcl$vectors$db_search_list) > 0 & lcl$curr_mz != "nothing selected"){ # go through selected databases
+  if(length(lcl$vectors$db_search_list) > 0 & my_selection$mz != ""){ # go through selected databases
       # get ion modes
     withProgress({
-      lcl$tables$last_matches <<- MetaDBparse::searchMZ(mzs = lcl$curr_mz, 
-                                                        ionmodes = getIonMode(lcl$curr_mz, 
-                                                                              lcl$paths$patdb),
-                                                        base.dbname = gsub(basename(unlist(lcl$vectors$db_search_list)), 
-                                                                           pattern="\\.db", 
-                                                                           replacement=""),
-                                                        ppm=as.numeric(mSet$ppm),
-                                                        append = F, 
-                                                        outfolder=normalizePath(lcl$paths$db_dir))  
+      conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb) # change this to proper var later
+      RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTS prematch_mapper(query_mz decimal(30,13),
+                                                           structure TEXT,
+                                                           `%iso` decimal(30,13),
+                                                           adduct TEXT,
+                                                           dppm decimal(30,13))")    
+      RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTSprematch_content(name TEXT,
+                                                            baseformula TEXT,
+                                                            identifier TEXT,
+                                                            description VARCHAR(255),
+                                                            structure TEXT,
+                                                            source TEXT)")
+      RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS map_mz ON prematch_mapper(query_mz)")
+      RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS map_struc ON prematch_mapper(structure)")
+      RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS cont_struc ON prematch_content(structure)")
+      
+      res <- MetaDBparse::searchMZ(mzs = my_selection$mz, 
+                                   ionmodes = getIonMode(my_selection$mz, 
+                                                         lcl$paths$patdb),
+                                   base.dbname = gsub(basename(unlist(lcl$vectors$db_search_list)), 
+                                                      pattern="\\.db", 
+                                                      replacement=""),
+                                   ppm=as.numeric(mSet$ppm),
+                                   append = F, 
+                                   outfolder=normalizePath(lcl$paths$db_dir))
+      
+      mapper = unique(res[,c("query_mz", "structure", "%iso", "adduct", "dppm")]) 
+      content = unique(res[,-c("query_mz", "%iso", "adduct", "dppm")])
+      
+      RSQLite::dbWriteTable(conn, "prematch_mapper", unique(data.table::rbindlist(lapply(matches, function(x) x$mapper))), append=T)
+      RSQLite::dbWriteTable(conn, "prematch_content", unique(data.table::rbindlist(lapply(matches, function(x) x$content))), append=T)
     })
     
-    if(any(grepl(pattern = "iso", colnames(lcl$tables$last_matches)))){
-      lcl$tables$last_matches$isocat <<- sapply(lcl$tables$last_matches$`%iso`, function(perc) if(perc == 100) "main" else "minor")
-    }
+    search$go <<- TRUE
     
-    shown_matches$forward <- if(nrow(lcl$tables$last_matches) > 0){
-      lcl$tables$last_matches
-    }else{
-      data.table('name' = "Didn't find anything ( •́ .̫ •̀ )")
-    }
   }
 })
 
@@ -93,11 +108,11 @@ observeEvent(input$search_mz, {
 observeEvent(input$score_iso, {
 
   # check if the matches table even exists
-  if(!data.table::is.data.table(shown_matches$forward)) return(NULL)
+  if(!data.table::is.data.table(shown_matches$forward$unique)) return(NULL)
 
   # check if a previous scoring was already done (remove that column if so, new score is generated in a bit)
   if("score" %in% colnames(shown_matches$forward)){
-    shown_matches$forward <<- shown_matches$forward[,-"score"]
+    shown_matches$forward$unique <<- shown_matches$forward$unique[,-"score"]
   }
 
   intprec = as.numeric(input$int_prec)/100.00
@@ -105,11 +120,11 @@ observeEvent(input$score_iso, {
   # get table including isotope scores
   # as input, takes user method for doing this scoring
   withProgress({
-    score_table <- score.isos(table = shown_matches$forward, mSet = mSet, lcl$paths$patdb, method=input$iso_score_method, inshiny=T, intprec = intprec)
+    score_table <- score.isos(table = shown_matches$forward$unique, mSet = mSet, lcl$paths$patdb, method=input$iso_score_method, inshiny=T, intprec = intprec)
     })
 
   # update the match table available to the rest of metaboshiny
-  shown_matches$forward <<- shown_matches$forward[score_table, on = c("baseformula", "adduct")]
+  shown_matches$forward$unique <<- shown_matches$forward$unique[score_table, on = c("baseformula", "adduct")]
 })
 
 observeEvent(input$search_pubmed,{

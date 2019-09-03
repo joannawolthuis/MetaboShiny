@@ -44,7 +44,8 @@ shinyServer(function(input, output, session) {
 
   # == REACTIVE VALUES ==
   
-  shown_matches <- reactiveValues(forward = data.table(),
+  shown_matches <- reactiveValues(forward = list(full=data.table(),
+                                                 unique=data.table()),
                                   reverse = data.table())
   
   browse_content <- reactiveValues(table = data.table())
@@ -55,7 +56,7 @@ shinyServer(function(input, output, session) {
   
   my_selection = reactiveValues(mz = "",
                                 structure = "",
-                                description = "")
+                                name = "")
   
   scanmode = reactiveValues(positive = FALSE,
                             negative = FALSE)
@@ -63,6 +64,8 @@ shinyServer(function(input, output, session) {
   pieinfo = reactiveValues(add = c(),
                            db = c(),
                            iso = c())
+  
+  search = reactiveValues(go = F)
   
   ####### !!!!!!!!!!! #########
   metshi_mode <<- "one_user" #" multi_user" # for server mode
@@ -232,29 +235,71 @@ mode = complete')
   })
   
   observe({
-    if(nrow(shown_matches$forward)>0){
-      pieinfo$add <<- melt(table(shown_matches$forward$adduct))
-      pieinfo$db <<- melt(table(shown_matches$forward$source))
-      pieinfo$iso <<- melt(table(shown_matches$forward$isocat))
+    if(nrow(shown_matches$forward$unique)>0){
+      pieinfo$add <<- melt(table(shown_matches$forward$unique$adduct))
+      pieinfo$db <<- melt(table(shown_matches$forward$unique$source))
+      pieinfo$iso <<- melt(table(shown_matches$forward$unique$isocat))
       }
    })
 
   observe({
     # - - filters - -
-    if(my_selection$mz != ""){
-      if(unique(lcl$tables$last_matches$query_mz) == my_selection$mz){
-        keep.rows <- which(lcl$tables$last_matches[add == result_filters$add
-                                                   & source == result_filters$db
-                                                   & `%iso` == result_filters$iso])
-        shown_matches$forward <<- lcl$tables$last_matches[keep.rows,]
-      }else if(mSet$metshiParams$prematched){
-        shown_matches$forward <<- get_prematches(who = my_selection$mz,
-                                                what = "query_mz",
-                                                patdb = lcl$paths$patdb,
-                                                showadd = result_filters$add,#if(pietype=="add") showsubset else NULL,
-                                                showdb = result_filters$db,#if(pietype=="db") showsubset else NULL,
-                                                showiso = result_filters$iso)#if(pietype=="iso") showsubset else NULL)
-      } 
+    if(my_selection$mz != "" | search$go){
+      if(mSet$metshiParams$prematched){
+        matches = as.data.table(get_prematches(who = my_selection$mz,
+                                               what = "query_mz",
+                                               patdb = lcl$paths$patdb,
+                                               showadd = result_filters$add,
+                                               showdb = result_filters$db,
+                                               showiso = result_filters$iso))
+        shown_matches$forward$full <<- matches[,c("name", "source", "description"),with=F]
+        shown_matches$forward$unique <<- as.data.table(unique(as.data.table(matches)[,-c("source", "description"),with=F]))
+      }
+    }
+  })
+  
+  observe({
+    if(my_selection$name != ""){
+
+      subsec = as.data.table(shown_matches$forward$full)[name == my_selection$name]
+      
+      # render descriptions seperately
+      output$desc_ui <- renderUI({lapply(1:nrow(subsec), function(i){
+        row = subsec[i,]
+        # icon(s) in one row
+        dbs = strsplit(row$source, split=",")[[1]]
+        img = sapply(dbs, function(db){
+          id = gbl$constants$db.build.info[[db]]$image_id
+          address = unlist(sapply(gbl$constants$images, function(item) if(item$name == id) item$path else NULL))
+        })
+        
+        # text cloud underneath https://codepen.io/rikschennink/pen/mjywQb
+        desc = row$description
+        lapply(1:length(img), function(i){
+          # ICONS IN A ROW
+          name = names(img)[i]
+          address = img[i]
+          output[[paste0("desc_icon_", name)]] <- renderImage({
+            # When input$n is 3, filename is ./images/image3.jpeg
+            list(src = address,
+                 #width=30,
+                 height=30)
+          }, deleteFile = FALSE)
+        })
+        
+        desc_id = paste0("curr_desc_", dbs, collapse="_")
+        output[[desc_id]] <- renderText({trimws(desc)})
+        
+        # ui
+        list(fluidRow(align="center", 
+                      lapply(dbs, function(db){
+                        sardine(imageOutput(paste0("desc_icon_",db),inline = T))}),
+                      br(),
+                      textOutput(desc_id)),
+             hr()
+        )
+      })
+      }) 
     }
   })
   
@@ -613,8 +658,7 @@ mode = complete')
                                                                       size = "lg",
                                                                       icon = icon("plus",class = "fa-lg"),
                                                                       style = "stretch",
-                                                                      color = "default")
-            )
+                                                                      color = "default"))
           }
         })),
         # row 4: button
@@ -818,6 +862,8 @@ mode = complete')
     debug_input <<- isolate(reactiveValuesToList(input))
     debug_lcl <<- lcl
     debug_mSet <<- mSet
+    debug_matches <<- shown_matches
+    debug_selection <<- my_selection
     # remove metaboshiny csv files
     switch(runmode,
            local = {

@@ -471,5 +471,7 @@ joanna_debugger <- function(){
   lcl <<- debug_lcl
   mSet <<- debug_mSet
   input <<- debug_input
+  shown_matches <<- isolate({reactiveValuesToList(debug_matches)})
+  debug_selection <<- isolate({reactiveValuesToList(debug_selection)})
 }
   

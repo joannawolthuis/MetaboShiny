@@ -3,17 +3,17 @@ print("sourcing tables.R")
 output$match_tab <- DT::renderDataTable({
   # don't show some columns but keep them in the original table, so they can be used
   # for showing molecule descriptions, structure
-  DT::datatable(shown_matches$forward,
+  DT::datatable(shown_matches$forward$unique,
                 selection = 'single',
                 autoHideNavigation = T,
                 #filter = "top",
                 options = list(lengthMenu = c(5, 10, 15),
                                pageLength = 5,
-                               searchCols = lcl$default_search_columns,
+                               #searchCols = lcl$default_search_columns,
                                #search = list(regex = FALSE, caseInsensitive = FALSE, search = lcl$default_search),
                                columnDefs = list(list(visible=FALSE, 
-                                                      targets=c(which(colnames(shown_matches$forward) %in% gbl$vectors$remove_match_cols),
-                                                                which(colnames(shown_matches$forward)=="isocat"))))
+                                                      targets=c(which(colnames(shown_matches$forward$unique) %in% gbl$vectors$hide_match_cols),
+                                                                which(colnames(shown_matches$forward$unique)=="isocat"))))
                 )
   )
 })

@@ -18,7 +18,6 @@ output$currUI <- renderUI({
     
     opts <- getOptions(lcl$paths$opt.loc)
     
-    
     # generate CSS for the interface based on user settings for colours, fonts etc.
     bar.css <<- nav.bar.css(opts$col1, opts$col2, opts$col3, opts$col4)
     font.css <<- app.font.css(opts$font1, opts$font2, opts$font3, opts$font4,
@@ -704,7 +703,9 @@ output$currUI <- renderUI({
                                                                                                                             tabsetPanel(id="tab_iden_3",
                                                                                                                                         tabPanel(title=icon("atlas"),
                                                                                                                                                  wellPanel(id = "def",style = "overflow-y:scroll; max-height: 200px",
-                                                                                                                                                           textOutput("curr_definition"))
+                                                                                                                                                           uiOutput("desc_ui")
+                                                                                                                                                           #textOutput("curr_definition")
+                                                                                                                                                           )
                                                                                                                                         ),
                                                                                                                                         tabPanel(title=icon("atom"),
                                                                                                                                                  textOutput("curr_formula"),

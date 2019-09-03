@@ -23,16 +23,18 @@ browse_db <- function(chosen.db){
 
 #' @export
 get_prematches <- function(who = NA,
-                           what = "mz",
+                           what = "query_mz",
                            patdb,
                            showdb=c(),
                            showadd=c(),
                            showiso=c()){
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb) 
 
+  print(who)
+  
   firstpart = "SELECT DISTINCT
-               query_mz,name,baseformula,adduct,`%iso`,dppm,
-               identifier,description,map.structure,source 
+               lower(name) as name,baseformula,adduct,`%iso`,dppm,
+               description,map.structure as structure,GROUP_CONCAT(source) as source
                FROM prematch_mapper map
                JOIN prematch_content con
                ON map.structure = con.structure"
@@ -45,6 +47,8 @@ get_prematches <- function(who = NA,
   
   query = gsubfn::fn$paste("$firstpart WHERE $what = '$who' $dbfrag $addfrag $isofrag")
 
+  query = paste0(query, " GROUP BY name, baseformula, adduct, `%iso`, dppm, map.structure, description")
+  
   res = RSQLite::dbGetQuery(conn, query)
  
   if(any(grepl(pattern = "iso", colnames(res)))){
@@ -244,220 +248,6 @@ get_mzs <- function(baseformula, charge, chosen.db, patdb){
   results <- RSQLite::dbGetQuery(conn,query.three)
   # --------
   results
-}
-
-#' @export
-get_all_matches <- function(#exp.condition=NA,
-  pat.conn=NA,
-  which_dbs=NA,
-  which_adducts=c("M+H", "M-H", "M"),
-  group_by="baseformula"
-  #,var_table="setup"
-  #,batches = NULL
-){
-  # --- connect to db ---
-  join.query <- c()
-  
-  # --- GET POOL OF ALL DBS ---
-  for(i in seq_along(which_dbs)){
-    chosen.db <- which_dbs[i]
-    
-    if(is.na(chosen.db)) next
-    # --------------------------
-    dbshort <- paste0("db", i)
-    
-    try({
-      RSQLite::dbExecute(pat.conn, gsubfn::fn$paste("DETACH $dbshort"))
-    })
-    
-    RSQLite::dbExecute(pat.conn, gsubfn::fn$paste("ATTACH '$chosen.db' AS $dbshort"))
-    # --- extended ---
-    dbext <- paste0(dbshort, ".extended")
-    extpfx <- paste0("dbext", i)
-    mzquery <- paste0(extpfx, ".fullmz")
-    modequery <- paste0(extpfx, ".foundinmode")
-    extchargequery <- paste0(extpfx, ".basecharge")
-    extformquery <- paste0(extpfx, ".baseformula")
-    # --- base ---
-    dbbase <- paste0(dbshort, ".base")
-    basepfx <- paste0("dbbase", i)
-    basechargequery <- paste0(basepfx, ".charge")
-    baseformquery <- paste0(basepfx, ".baseformula")
-    # --- VERY OPTIONAL ---
-    pathway = if(group_by == "pathway") ",pathway" else{""}
-    # ------------------------
-    join.query <- c(join.query,
-                    gsubfn::fn$paste(strwrap("SELECT mz.mzmed as mz,
-                                             compoundname,
-                                             identifier,
-                                             $baseformquery,
-                                             adduct,
-                                             isoprevalence,
-                                             basecharge
-                                             $pathway
-                                             FROM mzvals mz
-                                             JOIN mzranges rng ON rng.ID = mz.ID
-                                             JOIN $dbext $extpfx indexed by e_idx2
-                                             ON $mzquery BETWEEN rng.mzmin AND rng.mzmax
-                                             AND mz.foundinmode = $modequery
-                                             JOIN $dbbase $basepfx ON $extchargequery = $basechargequery
-                                             AND $extformquery = $baseformquery",
-                                             width=10000, simplify=TRUE)
-                    )
-    )
-  }
-  union <- paste(join.query, collapse = " UNION ")
-  # ------------
-  RSQLite::dbExecute(pat.conn, gsubfn::fn$paste("DROP TABLE IF EXISTS isotopes"))
-  RSQLite::dbExecute(pat.conn, gsubfn::fn$paste("DROP TABLE IF EXISTS results"))
-  
-  query.one <- gsubfn::fn$paste(strwrap(
-    "CREATE TEMP TABLE isotopes AS
-    $union",width=10000, simplify=TRUE))
-  
-  RSQLite::dbExecute(pat.conn, query.one)
-  adductfilter <- paste0("WHERE adduct = '", paste(which_adducts, collapse= "' OR adduct = '"), "'")
-  idquery <- paste0("iso.", group_by)
-  
-  query.two <- gsubfn::fn$paste(strwrap(
-    "CREATE temp TABLE results AS
-    SELECT DISTINCT iso.mz as mz, $idquery as identifier, iso.adduct as adduct
-    FROM isotopes iso
-    $adductfilter
-    GROUP BY mz"
-    #HAVING COUNT(iso.isoprevalence > 99.99999999999) > 0"
-    , width=10000, simplify=TRUE))
-  
-  RSQLite::dbExecute(pat.conn, query.two)
-  
-  summary = if(group_by == "pathway") "sum(abs(i.intensity)) as intensity" else{"sum(i.intensity) as intensity"}
-  
-  # --- batch ---
-  
-  query.collect <-  strwrap(gsubfn::fn$paste("select distinct i.filename,
-                                             d.*,
-                                             s.*,
-                                             b.batch, b.injection,
-                                             r.identifier as identifier,
-                                             $summary
-                                             from mzintensities i
-                                             join individual_data d
-                                             on i.filename = d.card_id
-                                             join setup s on d.[Group] = s.[Group]
-                                             join results r
-                                             on r.mz = i.mzmed
-                                             join batchinfo b
-                                             on b.sample = d.card_id
-                                             group by d.card_id,
-                                             d.sampling_date,
-                                             r.identifier"),
-                            width=10000,
-                            simplify=TRUE)
-  
-  res <- RSQLite::dbGetQuery(pat.conn, query.collect)
-  # ---------------------------
-  res
-}
-
-multimatch <- function(cpd, dbs, searchid="mz",
-                       inshiny=T, calc_adducts = c("M+H", "M-H"),
-                       search_pubchem=F, pubchem_detailed=F, patdb, db_dir){
-  
-  
-  patdb <- normalizePath(patdb)
-  db_dir <- normalizePath(db_dir)
-  dbs <- lapply(dbs, normalizePath)
-  
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
-  DBI::dbExecute(conn, "DROP TABLE IF EXISTS unfiltered")
-  DBI::dbExecute(conn, "DROP TABLE IF EXISTS isotopes")
-  DBI::dbExecute(conn, "DROP TABLE IF EXISTS adducts")
-  
-  DBI::dbDisconnect(conn)
-  
-  if(exists("match_table")){
-    match_table <<- match_table[,-"score"]
-  }
-  
-  i <<- 1
-  
-  # check which dbs are even available
-  
-  avail.dbs <- list.files(db_dir, pattern = "\\.base\\.db",full.names = T)
-  
-  # fix magicball name
-  
-  which.magic <- which(grepl(dbs, pattern = "magicball"))
-  if(length(which.magic) == 1){
-    dbs[[which.magic]] <- "magicball"
-  }
-  
-  # - - - - - - -
-  
-  keep.dbs <- c(intersect(unlist(dbs), c(avail.dbs, "magicball")))
-  
-  # - - - - - - -
-  
-  count = length(keep.dbs)
-  
-  f <- function(){
-    lapply(keep.dbs, FUN=function(match.table){
-      
-      if(inshiny) shiny::setProgress(i/count)
-      
-      dbname <- gsub(basename(match.table), pattern = "\\.base\\.db", replacement = "")
-      
-      if(dbname == "magicball"){
-        # get ppm from db...
-        
-        res <- get_predicted(cpd,
-                             ppm = get.ppm(patdb=patdb),
-                             search_pubchem = search_pubchem,
-                             pubchem_detailed = pubchem_detailed,
-                             calc_adducts = calc_adducts, inshiny=inshiny)
-        
-      }else{
-        res <- get_matches(cpd,
-                           normalizePath(match.table),
-                           searchid=searchid,
-                           inshiny=inshiny,
-                           append = if(i == 1) F else T,
-                           patdb = patdb,
-                           db_dir=db_dir)
-      }
-      
-      i <<- i + 1
-      
-      if(nrow(res) > 0){
-        res = cbind(res, source = c(dbname))
-      }
-      
-      res
-    })
-  }
-  
-  match_list <- if(inshiny){
-    shiny::withProgress({
-      f()
-    })
-  }else{
-    f()
-  }
-  
-  if(is.null(unlist(match_list))) return(data.table())
-  
-  match_table <- (as.data.table(rbindlist(match_list, fill=T))[name != ""])
-  # --- sort ---
-  match_table <- match_table[order(match(match_table$adduct, sort_order))]
-  # --- merge description and identifier ---
-  merged_cols <- paste(match_table$source, paste0("(",match_table$identifier,")."), match_table$description)
-  match_table$description <- merged_cols
-  # ----------------------------------------
-  if("isopercentage" %in% colnames(match_table)){
-    match_table$isopercentage <- round(match_table$IsoPerc, digits = 2)
-  }
-  # --- return ---
-  match_table[,-c("identifier")]
 }
 
 get_predicted <- function(mz,

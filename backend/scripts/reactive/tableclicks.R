@@ -136,16 +136,12 @@ observeEvent(input$match_tab_rows_selected,{
   if (is.null(curr_row)) return()
   # - - - - - - - - - - - - - - - - - - - - - -
   try({
-    curr_name <<- shown_matches$forward[curr_row,'name'][[1]]
+    my_selection$name <<- shown_matches$forward$unique[curr_row,'name'][[1]] # get current structure
     updateTextInput(session, 
                     "pm_query",
-                    value = curr_name)
-    # - - - - - - - - - - - - - - - - - - - - - -
-    curr_def <<- shown_matches$forward[curr_row,'description'][[1]] # get current definition (hidden in table display but not deleted)
-    output$curr_definition <- renderText(curr_def) # render definition
-    curr_struct <<- shown_matches$forward[curr_row,'structure'][[1]] # get current structure
-    output$curr_struct <- renderPlot({plot.mol(curr_struct,style = "cow")}) # plot molecular structure
-    curr_formula <<- shown_matches$forward[curr_row,'baseformula'][[1]] # get current formula
+                    value = my_selection$name)
+    #output$curr_struct <- renderPlot({plot.mol(curr_struct,style = "cow")}) # plot molecular structure
+    curr_formula <<- shown_matches$forward$unique[curr_row,'baseformula'][[1]] # get current formula
     output$curr_formula <- renderText({curr_formula}) # render text of current formula
   })
 })
