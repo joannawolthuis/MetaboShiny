@@ -29,14 +29,12 @@ get_prematches <- function(who = NA,
                            showadd=c(),
                            showiso=c()){
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb) 
-
-  print(who)
   
   firstpart = "SELECT DISTINCT
                lower(name) as name,baseformula,adduct,`%iso`,dppm,
                description,map.structure as structure,GROUP_CONCAT(source) as source
-               FROM prematch_mapper map
-               JOIN prematch_content con
+               FROM match_mapper map
+               JOIN match_content con
                ON map.structure = con.structure"
   
   dbfrag = if(length(showdb)>0) gsubfn::fn$paste("AND source = '$showdb'") else ""

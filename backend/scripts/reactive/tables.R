@@ -1,5 +1,3 @@
-print("sourcing tables.R")
-
 output$match_tab <- DT::renderDataTable({
   # don't show some columns but keep them in the original table, so they can be used
   # for showing molecule descriptions, structure

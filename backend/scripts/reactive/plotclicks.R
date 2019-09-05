@@ -8,6 +8,7 @@ observeEvent(plotly::event_data("plotly_click"),{
       i = d$pointNumber + 1
       showsubset = as.character(pieinfo[[pietype]]$Var1[i])
       result_filters[[pietype]] <<- showsubset
+      search$go <<- T
     }
   }
 

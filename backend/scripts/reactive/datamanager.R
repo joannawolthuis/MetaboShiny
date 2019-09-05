@@ -62,7 +62,12 @@ observe({
                  interface$mode <- "bivar"}
                else{
                  interface$mode <- "multivar"}
-
+               
+                 if(mSet$metshiParams$prematched){
+                   search_button$on <<- FALSE
+                 }else{
+                   search_button$on <<- TRUE
+                 }
              },
              venn = {
                if("storage" %in% names(mSet)){

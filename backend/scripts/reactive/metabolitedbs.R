@@ -58,7 +58,6 @@ lapply(gbl$vectors$db_list, FUN=function(db){
       if(input$db_build_mode %in% c("extended", "both")){
 
       if(!grepl(db, pattern = "maconda")){
-        print(db)
         if(file.exists(file.path(lcl$paths$db_dir, paste0(db, ".db")))){
           my_range <- input$db_mz_range
           outfolder <- lcl$paths$db_dir

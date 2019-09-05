@@ -403,8 +403,7 @@ plot.mol = function(smi,
   # A temp file to save the output. It will be deleted after renderImage
   # sends it, because deleteFile=TRUE.
   a <- tempfile(fileext='.png')
-  b <- tempfile(fileext='.png')
-
+ 
   # Generate a png
   #png(a, width=500, height=500,bg=NA)
 

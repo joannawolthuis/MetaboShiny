@@ -137,10 +137,20 @@ observeEvent(input$match_tab_rows_selected,{
   # - - - - - - - - - - - - - - - - - - - - - -
   try({
     my_selection$name <<- shown_matches$forward$unique[curr_row,'name'][[1]] # get current structure
-    updateTextInput(session, 
+    updateTextInput(session,
                     "pm_query",
                     value = my_selection$name)
-    #output$curr_struct <- renderPlot({plot.mol(curr_struct,style = "cow")}) # plot molecular structure
+    curr_struct <<- shown_matches$forward$unique[curr_row,'structure'][[1]] # get current formula
+    
+    sesshInfo <<- reactiveValuesToList(session$clientData)
+    width = sesshInfo$output_empty_width
+    if(width > 300) width = 300
+    
+    output$curr_struct <- renderPlot({plot.mol(curr_struct,
+                                               style = "cow")},
+                                     width=width, 
+                                     height=width) # plot molecular structure WITH CHEMMINER
+    
     curr_formula <<- shown_matches$forward$unique[curr_row,'baseformula'][[1]] # get current formula
     output$curr_formula <- renderText({curr_formula}) # render text of current formula
   })
@@ -153,7 +163,7 @@ observeEvent(input$browse_tab_rows_selected,{
   # -----------------------------
   curr_def <- browse_content$table[curr_row, description]
   output$browse_definition <- renderText(curr_def)
-  my_selection$structure <<- browse_content$table[curr_row,c('structure')][[1]]
+  my_selection$revstruct <<- browse_content$table[curr_row,c('structure')][[1]]
 })
 
 # triggers on clicking a row in the reverse hit results table

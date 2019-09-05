@@ -129,6 +129,7 @@ caret.mdls <- caret::getModelInfo()
                                   #                     "tm", "RISmed", "qdap", "extrafont", "sysfonts", "gmp", "shadowtext", "rlist", "rcorpora")
                                   #), # these packages are listed in the first tab and should include all necessary packages
                                   images = list(list(name = 'load_icon', path = 'www/cute.png', dimensions = c(100, 100)),
+                                                list(name = 'empty', path = 'www/empty.png', dimensions = c("100%", 1)),
                                                 list(name = 'cute_package', path = 'www/cat.png', dimensions = c(80, 80)),
                                                 list(name = 'internal_logo', path = 'www/umcinternal.png', dimensions = c(120, 120)),
                                                 list(name = 'login_header', path = 'www/login_icon.png', dimensions = c(300,200)),

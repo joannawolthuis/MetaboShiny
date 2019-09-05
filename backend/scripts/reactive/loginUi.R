@@ -659,14 +659,9 @@ output$currUI <- renderUI({
                                                                                                                             shinyWidgets::circleButton("score_iso", icon = icon("award"), size = "sm") # icon("fingerprint"), size = "sm")
                                                                                                                    )
                                                                                                        ))),
-                                                                            tags$i("Click the detective to search the selected databases for this m/z value."),br(),
+                                                                            br(),
                                                                             fluidRow(
-                                                                              tags$button(
-                                                                                id = "search_mz",
-                                                                                class = "btn btn-default action-button",
-                                                                                img(src = "detective.png",
-                                                                                    height = "50px")
-                                                                              ),
+                                                                              uiOutput("manual_search"),
                                                                               div(
                                                                                 sardine(div(icon("paw","fa-xs fa-rotate-90"),
                                                                                             style="position:relative;
@@ -709,14 +704,16 @@ output$currUI <- renderUI({
                                                                                                                                         ),
                                                                                                                                         tabPanel(title=icon("atom"),
                                                                                                                                                  textOutput("curr_formula"),
-                                                                                                                                                 plotOutput("curr_struct", height="300px")
+                                                                                                                                                 fluidRow(align="center",
+                                                                                                                                                          plotOutput("curr_struct",inline=T))
                                                                                                                                         )
                                                                                                                             ))),
                                                                                                  bsCollapse(bsCollapsePanel(title=h2("Search results"), style="error",
                                                                                                                             tabsetPanel(id="tab_iden_4",selected = "start",
                                                                                                                                         # forward searching
                                                                                                                                         tabPanel(title=icon("table"), value="start",
-                                                                                                                                                 div(DT::dataTableOutput('match_tab', width="100%"),style='font-size:80%'),
+                                                                                                                                                 imageOutput("empty",width="100%",height="1px"),# for finding the width of the molecule rendering;
+                                                                                                                                                 div(DT::dataTableOutput('match_tab'),style='font-size:80%'),
                                                                                                                                                  hr(),
                                                                                                                                                  fluidRow(
                                                                                                                                                    switchButton(inputId = "auto_copy",

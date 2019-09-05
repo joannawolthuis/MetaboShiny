@@ -55,7 +55,7 @@ shinyServer(function(input, output, session) {
                                    iso = c())
   
   my_selection = reactiveValues(mz = "",
-                                structure = "",
+                                revstruct = "",
                                 name = "")
   
   scanmode = reactiveValues(positive = FALSE,
@@ -64,6 +64,8 @@ shinyServer(function(input, output, session) {
   pieinfo = reactiveValues(add = c(),
                            db = c(),
                            iso = c())
+  
+  search_button = reactiveValues(on=TRUE)
   
   search = reactiveValues(go = F)
   
@@ -194,6 +196,19 @@ mode = complete')
       })
   }
 
+  output$manual_search <- renderUI({
+    if(search_button$on){
+      tags$button(
+        id = "search_mz",
+        class = "btn btn-default action-button",
+        img(src = "detective.png",
+            height = "50px")
+      )
+    }else{
+      fluidRow(align="center", icon("paw","fa-s fa-rotate-90"), br(),
+               tags$i("pre-matched"))
+    }
+  })
   
   # ================================= DEFAULTS ===================================
 
@@ -237,15 +252,14 @@ mode = complete')
   observe({
     if(nrow(shown_matches$forward$unique)>0){
       pieinfo$add <<- melt(table(shown_matches$forward$unique$adduct))
-      pieinfo$db <<- melt(table(shown_matches$forward$unique$source))
+      pieinfo$db <<- melt(table(shown_matches$forward$full$source))
       pieinfo$iso <<- melt(table(shown_matches$forward$unique$isocat))
       }
    })
 
   observe({
     # - - filters - -
-    if(my_selection$mz != "" | search$go){
-      if(mSet$metshiParams$prematched){
+    if(search$go){
         matches = as.data.table(get_prematches(who = my_selection$mz,
                                                what = "query_mz",
                                                patdb = lcl$paths$patdb,
@@ -254,6 +268,14 @@ mode = complete')
                                                showiso = result_filters$iso))
         shown_matches$forward$full <<- matches[,c("name", "source", "description"),with=F]
         shown_matches$forward$unique <<- as.data.table(unique(as.data.table(matches)[,-c("source", "description"),with=F]))
+    search$go <<- FALSE #reset self
+    }
+  })
+  
+  observe({
+    if(my_selection$mz != ""){
+      if(mSet$metshiParams$prematched){
+        search$go <<- TRUE
       }
     }
   })
@@ -304,12 +326,12 @@ mode = complete')
   })
   
   observe({
-    if(my_selection$structure != ""){
+    if(my_selection$revstruct != ""){
       if(!mSet$metshiParams$prematched){
         print("Please perform pre-matching first to enable this feature!")
         return(NULL)
       }else{
-        shown_matches$reverse <<- unique(get_prematches(who = my_selection$structure,
+        shown_matches$reverse <<- unique(get_prematches(who = my_selection$revstruct,
                                                        what = "map.structure", #map.mz as alternative
                                                        patdb = lcl$paths$patdb)[,c("query_mz", "adduct", "%iso", "dppm")])
       } 
@@ -419,15 +441,16 @@ mode = complete')
   
   # -----------------
   observeEvent(input$undo_match_filt, {
-    result_filters$add <- c()
-    result_filters$db <- c()
-    result_filters$iso <- c()
+    result_filters$add <<- c()
+    result_filters$db <<- c()
+    result_filters$iso <<- c()
+    search$go <<- T
   })
   
   observe({
     if(my_selection$mz != ""){
-      scanmode$positive <- F
-      scanmode$negative <- F
+      scanmode$positive <<- F
+      scanmode$negative <<- F
       ion_mode <- getIonMode(my_selection$mz, lcl$paths$patdb)
       for(mode in ion_mode){
         scanmode[[mode]] <<- TRUE
@@ -491,7 +514,6 @@ mode = complete')
              },overview = {
                if(!is.null(input$overview)){
                  if(input$overview %not in% names(mSet$analSet) | input$overview %in% c("heatmap", "venn")){
-                    print(input$overview)
                     statsmanager$calculate <- input$overview
                  }
                  datamanager$reload <- input$overview
@@ -717,16 +739,6 @@ mode = complete')
       lcl$vectors[[paste0("db_", prefix, "_list")]] <<- db_path_list[!is.na(db_path_list)]
     })
   })
-
-  # render icon for search bar
-  output$find_mol_icon <- renderImage({
-    # When input$n is 3, filename is ./images/image3.jpeg
-    filename <- normalizePath(file.path('www/search.png'))
-    # Return a list containing the filename and alt text
-    list(src = filename,
-         width=70,
-         height=70)
-  }, deleteFile = FALSE)
 
 
   observeEvent(input$save_mset, {

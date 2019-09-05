@@ -1,9 +1,10 @@
 observeEvent(input$clear_prematch,{
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb) # change this to proper var later
-  RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS prematch_content")
-  RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS prematch_mapper")
+  RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_content")
+  RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_mapper")
   RSQLite::dbExecute(conn, "VACUUM")
   mSet$metshiParams$prematched <<- FALSE
+  search_button$go <<- TRUE
   RSQLite::dbDisconnect(conn)
 })
   
@@ -15,22 +16,22 @@ observeEvent(input$prematch,{
   if(length(lcl$vectors$db_prematch_list) > 0){ # go through selected databases
     
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb) # change this to proper var later
-    RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS prematch_content")
-    RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS prematch_mapper")
-    RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTS prematch_mapper(query_mz decimal(30,13),
+    RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_content")
+    RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_mapper")
+    RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTS match_mapper(query_mz decimal(30,13),
                                                            structure TEXT,
                                                            `%iso` decimal(30,13),
                                                            adduct TEXT,
                                                            dppm decimal(30,13))")    
-    RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTSprematch_content(name TEXT,
+    RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTS match_content(name TEXT,
                                                             baseformula TEXT,
                                                             identifier TEXT,
                                                             description VARCHAR(255),
                                                             structure TEXT,
                                                             source TEXT)")
-    RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS map_mz ON prematch_mapper(query_mz)")
-    RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS map_struc ON prematch_mapper(structure)")
-    RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTScont_struc ON prematch_content(structure)")
+    RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS map_mz ON match_mapper(query_mz)")
+    RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS map_struc ON match_mapper(structure)")
+    RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS cont_struc ON match_content(structure)")
     
     blocksize=100
     blocks = split(colnames(mSet$dataSet$norm), ceiling(seq_along(1:ncol(mSet$dataSet$norm))/blocksize))
@@ -52,10 +53,11 @@ observeEvent(input$prematch,{
       })
     }, min=0, max=length(blocks))
     
-    RSQLite::dbWriteTable(conn, "prematch_mapper", unique(data.table::rbindlist(lapply(matches, function(x) x$mapper))), append=T)
-    RSQLite::dbWriteTable(conn, "prematch_content", unique(data.table::rbindlist(lapply(matches, function(x) x$content))), append=T)
+    RSQLite::dbWriteTable(conn, "match_mapper", unique(data.table::rbindlist(lapply(matches, function(x) x$mapper))), append=T)
+    RSQLite::dbWriteTable(conn, "match_content", unique(data.table::rbindlist(lapply(matches, function(x) x$content))), append=T)
     
     mSet$metshiParams$prematched<<-T
+    search_button$on <<- FALSE
     
     RSQLite::dbDisconnect(conn)
   }
@@ -67,20 +69,22 @@ observeEvent(input$search_mz, {
       # get ion modes
     withProgress({
       conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb) # change this to proper var later
-      RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTS prematch_mapper(query_mz decimal(30,13),
+      RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_mapper") 
+      RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_content")   
+      RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTS match_mapper(query_mz decimal(30,13),
                                                            structure TEXT,
                                                            `%iso` decimal(30,13),
                                                            adduct TEXT,
                                                            dppm decimal(30,13))")    
-      RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTSprematch_content(name TEXT,
+      RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTS match_content(name TEXT,
                                                             baseformula TEXT,
                                                             identifier TEXT,
                                                             description VARCHAR(255),
                                                             structure TEXT,
                                                             source TEXT)")
-      RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS map_mz ON prematch_mapper(query_mz)")
-      RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS map_struc ON prematch_mapper(structure)")
-      RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS cont_struc ON prematch_content(structure)")
+      RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS map_mz ON match_mapper(query_mz)")
+      RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS map_struc ON match_mapper(structure)")
+      RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS cont_struc ON match_content(structure)")
       
       res <- MetaDBparse::searchMZ(mzs = my_selection$mz, 
                                    ionmodes = getIonMode(my_selection$mz, 
@@ -91,15 +95,14 @@ observeEvent(input$search_mz, {
                                    ppm=as.numeric(mSet$ppm),
                                    append = F, 
                                    outfolder=normalizePath(lcl$paths$db_dir))
-      
-      mapper = unique(res[,c("query_mz", "structure", "%iso", "adduct", "dppm")]) 
-      content = unique(res[,-c("query_mz", "%iso", "adduct", "dppm")])
-      
-      RSQLite::dbWriteTable(conn, "prematch_mapper", unique(data.table::rbindlist(lapply(matches, function(x) x$mapper))), append=T)
-      RSQLite::dbWriteTable(conn, "prematch_content", unique(data.table::rbindlist(lapply(matches, function(x) x$content))), append=T)
+      if(nrow(res)>0){
+        mapper = unique(res[,c("query_mz", "structure", "%iso", "adduct", "dppm")]) 
+        content = unique(res[,-c("query_mz", "%iso", "adduct", "dppm")])
+        RSQLite::dbWriteTable(conn, "match_mapper", mapper, append=T)
+        RSQLite::dbWriteTable(conn, "match_content", content, append=T)
+        search$go <<- TRUE
+      }
     })
-    
-    search$go <<- TRUE
     
   }
 })
