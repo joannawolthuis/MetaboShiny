@@ -1,7 +1,7 @@
 # for future reference: https://www.r-bloggers.com/deploying-desktop-apps-with-r/ :-)
 
 shinyServer(function(input, output, session) {
-
+  
   # loading screen
   loadModal <- function(failed = FALSE) {
     modalDialog(
@@ -27,7 +27,7 @@ shinyServer(function(input, output, session) {
   
   logged <- reactiveValues(status = "notlogged",
                            text = "please log in! ( •́ .̫  •̀ )")
-
+  
   lcl = list(
     proj_name ="",
     last_mset="",
@@ -40,8 +40,8 @@ shinyServer(function(input, output, session) {
     paths = list(opt.loc = "",
                  patdb = "",
                  work_dir="")
-    )
-
+  )
+  
   # == REACTIVE VALUES ==
   
   shown_matches <- reactiveValues(forward = list(full=data.table(),
@@ -85,7 +85,7 @@ shinyServer(function(input, output, session) {
         lcl$paths$opt.loc <<- file.path(userfolder, "options.txt")
         lcl$paths$work_dir <<- userfolder
         lcl$paths$db_dir <<- dbdir
-
+        
         if(!file.exists(lcl$paths$opt.loc)){
           contents = gsubfn::fn$paste('db_dir = $dbdir
 work_dir = $userfolder
@@ -120,16 +120,16 @@ mode = complete')
   output$login_status <- renderText({
     logged$text
   })
-
+  
   # init all observers
   for(fp in list.files("./backend/scripts/reactive", full.names = T)){
     source(fp, local = T)
   }
-
+  
   # ================================== LOGIN =====================================
-
+  
   userdb = normalizePath("./users.db")
-
+  
   # if logged in, check if exists
   if(metshi_mode != "one_user"){
     observeEvent(input$login,{
@@ -190,12 +190,12 @@ mode = complete')
           
           logged$status <- "logged"
         }
-        }else{
-          logged$text <- "try again (｡•́︿•̀｡)"
-        }
-      })
+      }else{
+        logged$text <- "try again (｡•́︿•̀｡)"
+      }
+    })
   }
-
+  
   output$manual_search <- renderUI({
     if(search_button$on){
       tags$button(
@@ -211,33 +211,33 @@ mode = complete')
   })
   
   # ================================= DEFAULTS ===================================
-
-
+  
+  
   # set progress bar style to 'old' (otherwise it's not movable with CSS)
   shinyOptions(progress.style="old")
-
+  
   options(digits=22,
           spinner.size = 0.5,
           spinner.type = 6,
           spinner.color = "black",
           spinner.color.background = "white")
-
-
+  
+  
   # send specific functions/packages to other threads
   parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
     "mape",
     "flattenlist"))
-
+  
   parallel::clusterEvalQ(session_cl, library(data.table))
-
+  
   # create default text objects in UI
   lapply(gbl$constants$default.text, FUN=function(default){
     output[[default$name]] = renderText(default$text)
   })
-
+  
   showtext::showtext_auto() ## Automatically use showtext to render text for future devices
-
-
+  
+  
   # create image objects in UI
   lapply(gbl$constants$images, FUN=function(image){
     output[[image$name]] <- renderImage({
@@ -254,21 +254,41 @@ mode = complete')
       pieinfo$add <<- melt(table(shown_matches$forward$unique$adduct))
       pieinfo$db <<- melt(table(shown_matches$forward$full$source))
       pieinfo$iso <<- melt(table(shown_matches$forward$unique$isocat))
-      }
-   })
-
+    }
+  })
+  
   observe({
     # - - filters - -
     if(search$go){
-        matches = as.data.table(get_prematches(who = my_selection$mz,
-                                               what = "query_mz",
-                                               patdb = lcl$paths$patdb,
-                                               showadd = result_filters$add,
-                                               showdb = result_filters$db,
-                                               showiso = result_filters$iso))
-        shown_matches$forward$full <<- matches[,c("name", "source", "description"),with=F]
-        shown_matches$forward$unique <<- as.data.table(unique(as.data.table(matches)[,-c("source", "description"),with=F]))
-    search$go <<- FALSE #reset self
+      matches = as.data.table(get_prematches(who = my_selection$mz,
+                                             what = "query_mz",
+                                             patdb = lcl$paths$patdb,
+                                             showadd = result_filters$add,
+                                             showdb = result_filters$db,
+                                             showiso = result_filters$iso))
+      shown_matches$forward$full <<- matches[,c("name", "source", "description"),with=F]
+      
+      uniques = as.data.table(unique(as.data.table(matches)[,-c("source", "description"),with=F]))
+      grouped_uniques = uniques[, .(structure = list(structure)), by = setdiff(names(uniques), "structure")]
+      structs <- lapply(1:nrow(grouped_uniques), function(i){
+        row = grouped_uniques[i,]
+        opts = row$structure[[1]]
+        if(length(opts)>1){
+          # check for square brackets
+          if(any(grepl(pattern = "\\[", x = opts))){
+            opts[!grepl(pattern="\\[",x = opts)]
+          }else{
+            # just grab the first
+            opts[1]
+          }
+        }else{
+          opts
+        }
+      })
+      grouped_uniques$structure <- structs
+      shown_matches$forward$unique <<- grouped_uniques
+      my_selection$name <<- ""
+      search$go <<- FALSE #reset self
     }
   })
   
@@ -276,13 +296,14 @@ mode = complete')
     if(my_selection$mz != ""){
       if(mSet$metshiParams$prematched){
         search$go <<- TRUE
+        my_selection$name <<- ""
       }
     }
   })
   
   observe({
     if(my_selection$name != ""){
-
+      
       subsec = as.data.table(shown_matches$forward$full)[name == my_selection$name]
       
       # render descriptions seperately
@@ -332,8 +353,8 @@ mode = complete')
         return(NULL)
       }else{
         shown_matches$reverse <<- unique(get_prematches(who = my_selection$revstruct,
-                                                       what = "map.structure", #map.mz as alternative
-                                                       patdb = lcl$paths$patdb)[,c("query_mz", "adduct", "%iso", "dppm")])
+                                                        what = "map.structure", #map.mz as alternative
+                                                        patdb = lcl$paths$patdb)[,c("query_mz", "adduct", "%iso", "dppm")])
       } 
     }
   })
@@ -361,10 +382,10 @@ mode = complete')
   })
   
   # ===== UI SWITCHER ====
-
+  
   # create interface mode storage object.
   interface <- reactiveValues()
-
+  
   # this toggles when 'interface' values change (for example from 'bivar' to 'multivar' etc.)
   observe({
     # hide all tabs by default, easier to hide them and then make visible selectively
@@ -404,14 +425,14 @@ mode = complete')
       show.tabs <- hide.tabs[1]
       #show.tabs <- c("inf") # 'info' tab that loads when no data is loaded currently
     }
-
+    
     # hide all the tabs to begin with
     for(tab in hide.tabs){
       hideTab(inputId = unlist(tab)[1],
               unlist(tab)[2],
               session = session)
     }
-
+    
     i=1
     # show the relevant tabs
     for(tab in show.tabs){
@@ -419,7 +440,7 @@ mode = complete')
       #showTab(inputId = "statistics", tab, select = ifelse(i==1, TRUE, FALSE), session = session)
       i = i + 1
     }
-
+    
   })
   
   # print current compound in sidebar
@@ -457,7 +478,7 @@ mode = complete')
       }
     }
   })
-
+  
   # triggers when probnorm or compnorm is selected
   # let user pick a reference condition
   ref.selector <- reactive({
@@ -475,7 +496,7 @@ mode = complete')
       )
     }
   })
-
+  
   # triggers when check_csv is clicked - get factors usable for normalization
   observeEvent(input$check_csv, {
     req(lcl$paths$csv_loc)
@@ -487,10 +508,10 @@ mode = complete')
                                       choices = get_ref_cpds() # please add options for different times later, not difficult
            ))
   })
-
+  
   # render the created UI
   output$ref_select <- renderUI({ref.selector()})
-
+  
   # triggered when user enters the statistics tab
   
   observeEvent(input$statistics, {
@@ -514,7 +535,7 @@ mode = complete')
              },overview = {
                if(!is.null(input$overview)){
                  if(input$overview %not in% names(mSet$analSet) | input$overview %in% c("heatmap", "venn")){
-                    statsmanager$calculate <- input$overview
+                   statsmanager$calculate <- input$overview
                  }
                  datamanager$reload <- input$overview
                }
@@ -551,7 +572,7 @@ mode = complete')
       datamanager$reload <- input$dimred
     }
   })
-
+  
   observeEvent(input$permz, {
     # check if an mset is present, otherwise abort
     if(!is.null(mSet)){
@@ -562,7 +583,7 @@ mode = complete')
       datamanager$reload <- input$permz
     }
   })
-
+  
   observeEvent(input$overview, {
     # check if an mset is present, otherwise abort
     if(!is.null(mSet)){
@@ -573,7 +594,7 @@ mode = complete')
       datamanager$reload <- input$overview
     }
   })
-
+  
   observeEvent(input$ml_top_x, {
     if(!is.null(mSet)){
       datamanager$reload <- "ml"
@@ -606,7 +627,7 @@ mode = complete')
       })
     }
   })
-
+  
   observeEvent(input$show_which_ml,{
     if(!is.null(mSet)){
       split.name = strsplit(input$show_which_ml, split = " - ")[[1]]
@@ -615,15 +636,15 @@ mode = complete')
       datamanager$reload <- "ml"
     }
   },ignoreNULL = T, ignoreInit = T)
-
+  
   observeEvent(input$select_db_all, {
-
+    
     dbs <- gbl$vectors$db_list[-which(gbl$vectors$db_list %in% c("custom", "magicball"))]
-
+    
     currently.on <- sapply(dbs, function(db){
       input[[paste0("search_", db)]]
     })
-
+    
     if(any(currently.on)){
       set.to = F
     }else{
@@ -651,7 +672,7 @@ mode = complete')
       updateCheckboxInput(session, paste0("prematch_", db), value = set.to)
     }
   })
-
+  
   # render the database download area
   output$db_build_ui <- renderUI({
     dbs_per_line = 4
@@ -701,14 +722,14 @@ mode = complete')
     # return
     database_layout
   })
-
+  
   db_button_prefixes = c("search", "add", "enrich", "prematch")
-
+  
   # generate all the fadebuttons for the database selection
   lapply(db_button_prefixes, function(prefix){
     output[[paste0("db_", prefix, "_select")]] <- renderUI({
       built.dbs <- c(gsub(x = list.files(lcl$paths$db_dir, pattern = "\\.db"), 
-                        pattern = "\\.db", replacement = ""), "custom")
+                          pattern = "\\.db", replacement = ""), "custom")
       fluidRow(
         lapply(gbl$vectors$db_list[-which(gbl$vectors$db_list == "custom" | !(gbl$vectors$db_list %in% built.dbs))], function(db){
           which_idx = grep(sapply(gbl$constants$images, function(x) x$name), pattern = db) # find the matching image (NAME MUST HAVE DB NAME IN IT COMPLETELY)
@@ -717,7 +738,7 @@ mode = complete')
       )
     })
   })
-
+  
   # check if these buttons are selected or not
   lapply(db_button_prefixes, function(prefix){
     observe({
@@ -739,8 +760,8 @@ mode = complete')
       lcl$vectors[[paste0("db_", prefix, "_list")]] <<- db_path_list[!is.na(db_path_list)]
     })
   })
-
-
+  
+  
   observeEvent(input$save_mset, {
     # save mset
     withProgress({
@@ -750,7 +771,7 @@ mode = complete')
       }
     })
   })
-
+  
   observeEvent(input$load_mset, {
     # load mset
     withProgress({
@@ -768,28 +789,28 @@ mode = complete')
     # reload current plot
     updateNavbarPage(session, "statistics", selected = "inf")
   })
-
+  
   observeEvent(input$debug, {
     debug_input <<- isolate(reactiveValuesToList(input))
     debug_lcl <<- lcl
     debug_mSet <<- mSet
   })
-
+  
   observeEvent(input$ml_train_ss, {
     keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]
     subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
     gbl$vectors$ml_train <<- c(input$subset_var,
-                                  input$subset_group)
+                               input$subset_group)
     output$ml_train_ss <- renderText(subset.name)
   })
-
+  
   observeEvent(input$ml_test_ss, {
     keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]
     subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
     gbl$vectors$ml_test <<- c(input$subset_var, input$subset_group)
     output$ml_test_ss <- renderText(subset.name)
   })
-
+  
   output$db_example <- DT::renderDataTable({
     DT::datatable(data = data.table::data.table(
       compoundname = c("1-Methylhistidine", "1,3-Diaminopropane", "2-Ketobutyric acid"),
@@ -805,10 +826,10 @@ mode = complete')
                    paging = FALSE,
                    info = FALSE))
   })
-
+  
   # observeEvent
   observeEvent(input$make_custom_db, {
-
+    
     # get window
     showModal(modalDialog(
       fluidRow(align="center",
@@ -842,16 +863,16 @@ mode = complete')
   observeEvent(input$export_plot,{
     switch(runmode,
            docker = plotly::orca(p = plotly::last_plot(), 
-                                file=file.path(lcl$paths$work_dir,paste0(lcl$proj_name, "_", basename(tempfile()), input$export_format))),
+                                 file=file.path(lcl$paths$work_dir,paste0(lcl$proj_name, "_", basename(tempfile()), input$export_format))),
            local = export_plotly(p = plotly::last_plot(), 
-                                  file=file.path(lcl$paths$work_dir,paste0(lcl$proj_name, "_", basename(tempfile()), input$export_format)),
-                                  port = 9091))
+                                 file=file.path(lcl$paths$work_dir,paste0(lcl$proj_name, "_", basename(tempfile()), input$export_format)),
+                                 port = 9091))
   })
-
+  
   observeEvent(input$build_custom_db, {
-
+    
     csv_path <- parseFilePaths(gbl$paths$volumes, input$custom_db)$datapath
-
+    
     # build base db
     db.build.custom(
       db.name = input$my_db_name,
@@ -860,12 +881,12 @@ mode = complete')
       db.icon = gbl$paths$custom.db.path,
       csv = csv_path
     )
-
+    
     # build extended db
     build.extended.db(tolower(input$my_db_short),
                       outfolder = file.path(lcl$paths$db_dir, "custom"),
                       adduct.table = adducts,cl = 0)
-
+    
   })
   # ==== ON EXIT ====
   

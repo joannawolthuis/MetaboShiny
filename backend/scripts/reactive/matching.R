@@ -95,6 +95,7 @@ observeEvent(input$search_mz, {
                                    ppm=as.numeric(mSet$ppm),
                                    append = F, 
                                    outfolder=normalizePath(lcl$paths$db_dir))
+      
       if(nrow(res)>0){
         mapper = unique(res[,c("query_mz", "structure", "%iso", "adduct", "dppm")]) 
         content = unique(res[,-c("query_mz", "%iso", "adduct", "dppm")])

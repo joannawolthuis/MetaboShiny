@@ -471,6 +471,6 @@ joanna_debugger <- function(){
   mSet <<- debug_mSet
   input <<- debug_input
   shown_matches <<- isolate({reactiveValuesToList(debug_matches)})
-  debug_selection <<- isolate({reactiveValuesToList(debug_selection)})
+  my_selection <<- isolate({reactiveValuesToList(debug_selection)})
 }
   
