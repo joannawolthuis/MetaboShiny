@@ -110,9 +110,9 @@ observeEvent(input$create_db,{
              metadata_path <- parseFilePaths(gbl$paths$volumes, input$metadata)$datapath
 
              if(grepl(metadata_path, pattern = "csv")){
-               exp_vars <<- load.metadata.csv(metadata_path, lcl$paths$patdb)
+               load.metadata.csv(metadata_path, lcl$paths$patdb)
              }else{
-               exp_vars <<- load.metadata.excel(metadata_path, lcl$paths$patdb)
+               load.metadata.excel(metadata_path, lcl$paths$patdb)
              }
           }
     )
@@ -208,14 +208,15 @@ observeEvent(input$create_csv, {
     lcl$paths$csv_loc <<- gsub(lcl$paths$patdb, 
                           pattern = "\\.db", 
                           replacement = ".csv")
-    
+    if(file.exists(lcl$paths$csv_loc)) file.remove(lcl$paths$csv_loc)
     
     withProgress(min = 0, max = 1, {
       # write rows to csv
       lapply(fn_meta, 
              #cl = session_cl, 
              function(filename){
-               # connect
+               
+                # connect
                conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(lcl$paths$patdb))
                
                # adjust query
@@ -260,6 +261,8 @@ observeEvent(input$create_csv, {
                
                z.meta$sample <- gsub(z.meta$sample, pattern=" |\\(|\\)|\\+", replacement="")
                
+               print(z.meta[1,])
+               print(complete.row[1:10])
                # write
                fwrite(c(z.meta, complete.row), 
                       file = lcl$paths$csv_loc,
