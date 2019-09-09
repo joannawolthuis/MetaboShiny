@@ -266,6 +266,7 @@ mode = complete')
                                              showadd = result_filters$add,
                                              showdb = result_filters$db,
                                              showiso = result_filters$iso))
+      
       shown_matches$forward$full <<- matches[,c("name", "source", "description"),with=F]
       
       uniques = as.data.table(unique(as.data.table(matches)[,-c("source", "description"),with=F]))
