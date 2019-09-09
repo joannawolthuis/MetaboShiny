@@ -187,8 +187,8 @@ output$currUI <- renderUI({
                                                            shinyFilesButton('database', 'database', 'Select .db file', FALSE)
                                                            ),
                                           conditionalPanel(condition = "input.importmode == 'csv'",
-                                                           shinyFilesButton('outlist_pos', '+ peaks', 'Select .csv for - mode peaks', FALSE),
-                                                           shinyFilesButton('outlist_neg', '- peaks', 'Select .csv for + mode peaks', FALSE)
+                                                           shinyFilesButton('outlist_pos', '+ peaks', 'Select .csv for + mode peaks', FALSE),
+                                                           shinyFilesButton('outlist_neg', '- peaks', 'Select .csv for - mode peaks', FALSE)
                                                            )
                                           )
                                    ,column(2, align="center", #ok
