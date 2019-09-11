@@ -10,9 +10,7 @@ Please report any issues and feedback on the Issues page here, along with sugges
 # STEP 1
 pull the repository through the terminal or through download
 # STEP 2: requirements (these may require admin rights)
-install an R version that at least is R 3.5
-install Java 
-install JDK (may require creating an Oracle account)
+install an R version that at least is R 3.5, install Java and JDK (may require creating an Oracle account)
 # STEP 3
 run either start.sh or startShiny.R (the latter with "Rscript startShiny.R" from the command line)
 # STEP 4
