@@ -7,9 +7,9 @@ http://biorxiv.org/cgi/content/short/734236v1
 
 Please report any issues and feedback on the Issues page here, along with suggestions! =)
 ## R PATH ##
-# STEP 0
+# STEP 1
 pull the repository through the terminal or through download
-# STEP 1: requirements (these may require admin rights)
+# STEP 2: requirements (these may require admin rights)
 install an R version that at least is R 3.5
 install Java 
 install JDK (may require creating an Oracle account)
@@ -21,11 +21,11 @@ wait for all the packages to install
 browser should open automatically for you and you're in!
 
 ## DOCKER PATH ##
-# STEP 0
+# STEP 1
 Install docker
 If you are on Windows and not running 10 pro or enterprise (likely) please try the following tutorial:
 https://docs.docker.com/toolbox/toolbox_install_windows/
-# STEP 1:
+# STEP 2:
 pull from docker
 docker pull jcwolthuis/metaboshiny
 # STEP 3:
