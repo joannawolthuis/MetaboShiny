@@ -1432,14 +1432,6 @@ ggPlotWordBar <- function(wcdata, plot.theme, cf, font, plotlyfy=T){
   }
 }
 
-start_orca = function(port=9091){
-  container_id = system(gsubfn::fn$paste("docker run -d -p $port:$port quay.io/plotly/orca"),intern = T)
-}
-
-stop_orca = function(id){
-  system(gsubfn::fn$paste("docker stop $id"))
-}
-
 export_plotly = function(p=last_plot(), file = "plot.png", 
                          format = tools::file_ext(file),
                          scale = NULL, width = NULL, height = NULL, port=9091) {

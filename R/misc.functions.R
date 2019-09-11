@@ -473,4 +473,192 @@ joanna_debugger <- function(){
   shown_matches <<- isolate({reactiveValuesToList(debug_matches)})
   my_selection <<- isolate({reactiveValuesToList(debug_selection)})
 }
+
+internetWorks <- function(testsite = "http://www.google.com"){
+  works = FALSE
+  try({
+    GET(testsite)
+    works=TRUE
+  },silent = T)
+  works
+}  
+
+#' Load user options saved in file.
+#'
+#' \code{getOptions} returns all current user options defined in the given options file.
+#'
+#' @param file.loc Path to user options file to read in.
+#' @return R list with keys as option types and values as option values.
+getOptions <- function(file.loc){
+  opt_conn <- file(file.loc)
+  # ----------------
+  options_raw <<- readLines(opt_conn)
+  close(opt_conn)
+  # --- list-ify ---
+  options <- list()
+  for(line in options_raw){
+    split  <- (strsplit(line, ' = '))[[1]]
+    options[[split[[1]]]] = split[[2]]
+  }
+  # --- return ---
+  options
+}
+
+
+#' Changes an option in the given MetaboShiny user options file.
+#'
+#' \code{setOption} changes an option in the options file. Can also be used to add new options to the file.
+#'
+#' @param file.loc Location of user options file. Usually .txt but any format is fine.
+#' @param key Name of the new option / to change option
+#' @param value Value of the option to change or add
+setOption <- function(file.loc, key, value){
+  opt_conn <- file(file.loc)
+  # -------------------------
+  options <- getOptions(file.loc)
+  # --- add new or change ---
+  options[[key]] = value
+  # --- list-ify ---
+  new_options <- lapply(seq_along(options), FUN=function(i){
+    line <- paste(names(options)[i], options[i], sep=" = ")
+    line
+  })
+  writeLines(opt_conn, text = unlist(new_options))
   
+  close(opt_conn)
+}
+
+#' Gets the current used operating system. Important for parallel/multithreaded functions if using makeCluster("FORK")
+#' \code{get_os} finds the name of the OS the user is running this function on.
+#'
+#' @return osx, windows/win or linux
+get_os <- function(){
+  sysinf <- Sys.info()
+  if (!is.null(sysinf)){
+    os <- sysinf['sysname']
+    if (os == 'Darwin')
+      os <- "osx"
+  } else { ## mystery machine
+    os <- .Platform$OS.type
+    if (grepl("^darwin", R.version$os))
+      os <- "osx"
+    if (grepl("linux-gnu", R.version$os))
+      os <- "linux"
+  }
+  tolower(os)
+}
+
+# Customised TRUE-FALSE switch button for Rshiny
+# Only sing CSS3 code (No javascript)
+#
+# Sébastien Rochette
+# http://statnmap.com/en/
+# April 2016
+#
+# CSS3 code was found on https://proto.io/freebies/onoff/
+# For CSS3 customisation, refer to this website.
+
+#' A function to change the Original checkbox of rshiny
+#' into a nice true/false or on/off switch button
+#' No javascript involved. Only CSS code.
+#' 
+#' To be used with CSS script 'button.css' stored in a 'www' folder in your Shiny app folder
+#' 
+#' @param inputId The input slot that will be used to access the value.
+#' @param label Display label for the control, or NULL for no label.
+#' @param value Initial value (TRUE or FALSE).
+#' @param col Color set of the switch button. Choose between "GB" (Grey-Blue) and "RG" (Red-Green)
+#' @param type Text type of the button. Choose between "TF" (TRUE - FALSE), "OO" (ON - OFF) or leave empty for no text.
+
+switchButton <- function(inputId, label, value=FALSE, col = "GB", type="TF") {
+  
+  # # color class
+  # if (col != "RG" & col != "GB" & col != "BW") {
+  #   stop("Please choose a color between \"RG\" (Red-Green) 
+  #        and \"GB\" (Grey-Blue) and Black-white(added).")
+  # }
+  # if (!type %in% c("OO", "TF", "YN", "TTFC", "2d3d")){
+  #   warning("No known text type (\"OO\", \"TF\" or \"YN\") have been specified, 
+  #           button will be empty of text") 
+  # }
+  if(col == "RG"){colclass <- "RedGreen"}
+  if(col == "GB"){colclass <- "GreyBlue"}
+  if(col == "BW"){colclass <- "BlackWhite"}
+  if(type == "OO"){colclass <- paste(colclass,"OnOff")}
+  if(type == "TF"){colclass <- paste(colclass,"TrueFalse")}
+  if(type == "YN"){colclass <- paste(colclass,"YesNo")}
+  if(type == "TTFC"){colclass <- paste(colclass,"TtFc")}
+  if(type == "ASMB"){colclass <- paste(colclass,"AsMb")}
+  if(type == "CLBR"){colclass <- paste(colclass,"ClBr")}
+  
+  if(type == "2d3d"){
+    colclass <- paste(colclass,"twodthreed")
+  }
+  
+  # No javascript button - total CSS3
+  # As there is no javascript, the "checked" value implies to
+  # duplicate code for giving the possibility to choose default value
+  
+  if(value){
+    tagList(
+      tags$div(class = "form-group shiny-input-container",
+               tags$div(class = colclass,
+                        tags$label(label, class = "control-label"),
+                        tags$div(
+                          class = "onoffswitch",
+                          tags$input(type = "checkbox", name = "onoffswitch", class = "onoffswitch-checkbox",
+                                     id = inputId, checked = ""
+                          ),
+                          tags$label(class = "onoffswitch-label", `for` = inputId,
+                                     tags$span(class = "onoffswitch-inner"),
+                                     tags$span(class = "onoffswitch-switch")
+                          )
+                        )
+               )
+      )
+    )
+  } else {
+    tagList(
+      tags$div(class = "form-group shiny-input-container",
+               tags$div(class = colclass,
+                        tags$label(label, class = "control-label"),
+                        tags$div(class = "onoffswitch",
+                                 tags$input(type = "checkbox", name = "onoffswitch", class = "onoffswitch-checkbox",
+                                            id = inputId
+                                 ),
+                                 tags$label(class = "onoffswitch-label", `for` = inputId,
+                                            tags$span(class = "onoffswitch-inner"),
+                                            tags$span(class = "onoffswitch-switch")
+                                 )
+                        )
+               )
+      )
+    ) 
+  }
+}
+
+#' Squishes HTML elements close together.
+sardine <- function(content) div(style="display: inline-block;vertical-align:top;", content)
+
+# loading screen
+loadModal <- function(failed = FALSE) {
+  modalDialog(
+    fluidRow(align="center",
+             br(),br(),
+             h3("Starting MetaboShiny..."),
+             br(),br(),
+             helpText("ଘ(੭ˊᵕˋ)੭* ੈ✩‧₊˚"), 
+             br(),br(),
+             img(class="rotategem", src="gemmy_rainbow.png", width="70px", height="70px"),
+             br(),br(),br()
+    )
+  )
+}
+
+start_orca = function(port=9091){
+  system(gsubfn::fn$paste("docker run -d -p $port:$port quay.io/plotly/orca"),intern = T)
+}
+
+stop_orca = function(id){
+  system(gsubfn::fn$paste("docker stop $id"))
+}

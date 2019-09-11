@@ -1,21 +1,34 @@
 # for future reference: https://www.r-bloggers.com/deploying-desktop-apps-with-r/ :-)
 
-shinyServer(function(input, output, session) {
+function(input, output, session) {
   
-  # loading screen
-  loadModal <- function(failed = FALSE) {
-    modalDialog(
-      fluidRow(align="center",
-               br(),br(),
-               h3("Starting MetaboShiny..."),
-               br(),br(),
-               helpText("ଘ(੭ˊᵕˋ)੭* ੈ✩‧₊˚"), 
-               br(),br(),
-               img(class="rotategem", src="gemmy_rainbow.png", width="70px", height="70px"),
-               br(),br(),br()
-      )
-    )
-  }
+  print("...server...")
+  #detach("package:MetaboShiny", unload=T)
+  # used to be in startshiny.R
+  options("download.file.method" = "libcurl")
+  # make metaboshiny_storage dir in home first..
+  # docker run -p 8080:8080 -v ~/MetaboShiny/:/userfiles/:cached --rm -it metaboshiny/master /bin/bash
+  # with autorun
+  # docker run -p 8080:8080 -v ~/MetaboShiny/:/userfiles/:cached --rm metaboshiny/master Rscript startShiny.R
+  # docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny /bin/bash
+  # docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny Rscript startShiny.R
+  # current instructions
+  #Rshiny app to analyse untargeted metabolomics data! BASH INSTRUCTIONS: STEP 1: mydir=~"/MetaboShiny" #or another of your choice | STEP 2: mkdir $mydir | STEP 3: docker run -p 8080:8080 -v $mydir:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny /start.sh
+  
+  library(httr)
+  
+  # rjava.so error.. or rdb corrupt.. 'sudo R CMD javareconf'
+  
+  runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
+  
+  options('unzip.unzip' = getOption("unzip"),
+          'download.file.extra' = switch(runmode, 
+                                         docker="--insecure",
+                                         local=""),  # bad but only way to have internet in docker...
+          'download.file.method' = 'curl',
+          width = 1200, height=800)
+  
+  # - - - - - - - -
   
   showModal(loadModal())
   
@@ -31,6 +44,7 @@ shinyServer(function(input, output, session) {
   lcl = list(
     proj_name ="",
     last_mset="",
+    load_ui = F,
     tables=list(last_matches=data.table::data.table(query_mz = "none")),
     aes = list(font = list(),
                mycols = c(),
@@ -70,24 +84,21 @@ shinyServer(function(input, output, session) {
   search = reactiveValues(go = F)
   
   ####### !!!!!!!!!!! #########
-  metshi_mode <<- "one_user" #" multi_user" # for server mode
-  
   observe({
+    print("...loading user settings...")
     if(exists("lcl")){
-      if(metshi_mode == "one_user"){
-        print("Single-user mode activated~")
-        # - - - 
-        userfolder = "~/MetaboShiny/saves/admin"
-        dbdir = "~/MetaboShiny/databases"
-        # - - - 
-        if(!dir.exists(userfolder)) dir.create(userfolder,recursive = T)
-        if(!dir.exists(dbdir)) dir.create(dbdir,recursive = T)
-        lcl$paths$opt.loc <<- file.path(userfolder, "options.txt")
-        lcl$paths$work_dir <<- userfolder
-        lcl$paths$db_dir <<- dbdir
-        
-        if(!file.exists(lcl$paths$opt.loc)){
-          contents = gsubfn::fn$paste('db_dir = $dbdir
+      # - - - 
+      userfolder = "~/MetaboShiny/saves/admin"
+      dbdir = "~/MetaboShiny/databases"
+      # - - - 
+      if(!dir.exists(userfolder)) dir.create(userfolder,recursive = T)
+      if(!dir.exists(dbdir)) dir.create(dbdir,recursive = T)
+      lcl$paths$opt.loc <<- file.path(userfolder, "options.txt")
+      lcl$paths$work_dir <<- userfolder
+      lcl$paths$db_dir <<- dbdir
+      
+      if(!file.exists(lcl$paths$opt.loc)){
+        contents = gsubfn::fn$paste('db_dir = $dbdir
 work_dir = $userfolder
 proj_name = MY_METSHI
 ppm = 2
@@ -109,92 +120,19 @@ gtheme = classic
 gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
 gspec = RdBu
 mode = complete')
-          writeLines(contents, lcl$paths$opt.loc)
-        }
-        opts = getOptions(lcl$paths$opt.loc)
-        logged$status <<- switch(opts$mode, dbonly = "db_only", complete= "logged")
+        writeLines(contents, lcl$paths$opt.loc)
       }
+      opts = getOptions(lcl$paths$opt.loc)
     }
   })
   
-  output$login_status <- renderText({
-    logged$text
-  })
+  # init all observer
+  for(fp in list.files("reactive", full.names = T)){
+      source(fp, local = T)
+  }  
   
-  # init all observers
-  for(fp in list.files("./backend/scripts/reactive", full.names = T)){
-    source(fp, local = T)
-  }
   
   # ================================== LOGIN =====================================
-  
-  userdb = normalizePath("./users.db")
-  
-  # if logged in, check if exists
-  if(metshi_mode != "one_user"){
-    observeEvent(input$login,{
-      if(input$username != "" & input$password != ""){
-        # get user role
-        role = get_user_role(input$username, input$password)
-        if(is.null(role)){
-          logged$text <<- "wrong username/password (｡•́︿•̀｡)"
-        }else{
-          
-          runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
-          
-          work_dir <- normalizePath("~/MetaboShiny/saves")
-          
-          dbdir <- local = normalizePath("~/MetaboShiny/databases")
-          
-          # check if user folder exists, otherwise make it
-          userfolder = file.path(work_dir, input$username)
-          
-          if(!dir.exists(userfolder)){
-            logged$text <<- "creating new user..."
-            dir.create(userfolder)
-          }
-          
-          logged$text <<- "logging in..."
-          
-          username = input$username
-          
-          # check if opts file exists, otherwise make it with the proper files
-          lcl$paths$opt.loc <<- file.path(userfolder, "options.txt")
-          lcl$paths$work_dir <<- userfolder
-          lcl$paths$db_dir <<- dbdir
-          
-          if(!file.exists(lcl$paths$opt.loc)){
-            contents = gsubfn::fn$paste('db_dir = $dbdir
-                                        work_dir = $userfolder
-                                        proj_name = MY_METSHI
-                                        ppm = 2
-                                        packages_installed = Y
-                                        font1 = Pacifico
-                                        font2 = Pacifico
-                                        font3 = Open Sans
-                                        font4 = Open Sans
-                                        col1 = #000000
-                                        col2 = #DBDBDB
-                                        col3 = #FFFFFF
-                                        col4 = #FFFFFF
-                                        size1 = 40
-                                        size2 = 20
-                                        size3 = 15
-                                        size4 = 11
-                                        taskbar_image = gemmy_rainbow.png
-                                        gtheme = classic
-                                        gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
-                                        gspec = RdBu')
-            writeLines(contents, lcl$paths$opt.loc)
-          }
-          
-          logged$status <- "logged"
-        }
-      }else{
-        logged$text <- "try again (｡•́︿•̀｡)"
-      }
-    })
-  }
   
   output$manual_search <- renderUI({
     if(search_button$on){
@@ -211,7 +149,6 @@ mode = complete')
   })
   
   # ================================= DEFAULTS ===================================
-  
   
   # set progress bar style to 'old' (otherwise it's not movable with CSS)
   shinyOptions(progress.style="old")
@@ -236,7 +173,6 @@ mode = complete')
   })
   
   showtext::showtext_auto() ## Automatically use showtext to render text for future devices
-  
   
   # create image objects in UI
   lapply(gbl$constants$images, FUN=function(image){
@@ -889,6 +825,7 @@ mode = complete')
                       adduct.table = adducts,cl = 0)
     
   })
+  
   # ==== ON EXIT ====
   
   onStop(function() {
@@ -898,6 +835,7 @@ mode = complete')
     debug_mSet <<- mSet
     debug_matches <<- shown_matches
     debug_selection <<- my_selection
+
     # remove metaboshiny csv files
     switch(runmode,
            local = {
@@ -910,4 +848,4 @@ mode = complete')
     rmv <- list.files(".", pattern = ".csv|.log", full.names = T)
     if(all(file.remove(rmv))) NULL
   })
-})
+}
