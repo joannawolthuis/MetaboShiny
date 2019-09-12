@@ -56,7 +56,8 @@ function(input, output, session) {
   
   # == REACTIVE VALUES ==
   
-  interface <- shiny::reactiveValues(html="")
+  interface <- shiny::reactiveValues(html=renderUI({ shiny::helpText("loading...")}),
+                                     load = F)
   
   shown_matches <- shiny::reactiveValues(forward = list(full=data.table::data.table(),
                                                         unique=data.table::data.table()),
@@ -123,16 +124,168 @@ gspec = RdBu
 mode = complete')
         writeLines(contents, lcl$paths$opt.loc)
       }
-      opts = MetaboShiny::getOptions(lcl$paths$opt.loc)
-    }
+      
+      # = = = = = = =
+      
+      print("...loading ui...")
+      opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
+      
+      # generate CSS for the interface based on user settings for colours, fonts etc.
+      bar.css <<- MetaboShiny::nav.bar.css(opts$col1, opts$col2, opts$col3, opts$col4)
+      font.css <<- MetaboShiny::app.font.css(opts$font1, opts$font2, opts$font3, opts$font4,
+                                             opts$size1, opts$size2, opts$size3,
+                                             opts$size4, online=online)
+      
+      # === GOOGLE FONT SUPPORT FOR GGPLOT2 ===
+      online = MetaboShiny::internetWorks()
+      
+      # Download a webfont
+      if(online){
+        lapply(c(opts[grepl(pattern = "font", names(opts))]), function(font){
+          try({
+            sysfonts::font_add_google(name = font,
+                                      family = font,
+                                      regular.wt = 400,
+                                      bold.wt = 700)
+          })
+        })
+      }
+      
+      # set taskbar image as set in options
+      taskbar_image <- opts$task_img
+      
+      # parse color opts
+      lcl$aes$mycols <<- MetaboShiny::get.col.map(lcl$paths$opt.loc) # colours for discrete sets, like group A vs group B etc.
+      lcl$aes$theme <<- opts$gtheme # gradient function for heatmaps, volcano plot etc.
+      lcl$aes$spectrum <<- opts$gspec # gradient function for heatmaps, volcano plot etc.
+      
+      # - - load custom dbs - -
+      
+      # load in custom databases
+      has.customs <- dir.exists(file.path(lcl$paths$db_dir, "custom"))
+      
+      if(has.customs){
+        
+        customs = list.files(path = file.path(lcl$paths$db_dir, "custom"),
+                             pattern = "\\.RData")
+        
+        dbnames = unique(tools::file_path_sans_ext(customs))
+        
+        for(db in dbnames){
+          # add name to global
+          dblist <- gbl$vectors$db_list
+          dblist <- dblist[-which(dblist == "custom")]
+          if(!(db %in% dblist)){
+            dblist <- c(dblist, db, "custom")
+            gbl$vectors$db_list <- dblist
+          }
+          metadata.path <- file.path(lcl$paths$db_dir, "custom", paste0(db, ".RData"))
+          load(metadata.path)
+          
+          # add description to global
+          gbl$constants$db.build.info[[db]] <- meta.dbpage
+          
+          # add image to global
+          maxi = length(gbl$constants$images)
+          gbl$constants$images[[maxi + 1]] <- meta.img
+        }
+      }
+      
+      # init stuff that depends on opts file
+      
+      lcl$proj_name <<- opts$proj_name
+      lcl$paths$patdb <<- file.path(opts$work_dir,
+                                    paste0(opts$proj_name, ".db"))
+      lcl$paths$csv_loc <<- file.path(opts$work_dir,
+                                      paste0(opts$proj_name, ".csv"))
+      lcl$texts <<- list(
+        list(name='curr_exp_dir', text=lcl$paths$work_dir),
+        list(name='curr_db_dir', text=lcl$paths$db_dir),
+        list(name='ppm', text=opts$ppm),
+        list(name='proj_name', text=opts$proj_name)
+      )
+      
+      lcl$vectors$project_names <<- unique(gsub(list.files(opts$work_dir,pattern = "\\.csv"),
+                                                pattern = "(_no_out\\.csv)|(\\.csv)",
+                                                replacement=""))
+      
+      lapply(1:4, function(i){
+        colourpicker::updateColourInput(session=session,
+                                        inputId = paste0("bar.col.", i),
+                                        value = opts[[paste0("col", i)]])
+      })
+      
+      lapply(1:4, function(i){
+        shiny::updateTextInput(session=session,
+                               inputId = paste0("font.", i),
+                               value = opts[[paste0("font", i)]])
+      })
+      
+      lapply(1:4, function(i){
+        shiny::updateSliderInput(session=session,
+                                 inputId = paste0("size.", i),
+                                 value = opts[[paste0("size", i)]])
+      })
+      
+      shiny::updateSelectInput(session, "ggplot_theme", selected = opts$gtheme)
+      
+      shiny::updateSelectInput(session, "color_ramp", selected = opts$gspec)
+      
+      #TODO: set these
+      #shiny::div(class="plus", img(class="imagetop", src=opts$taskbar_image, width="100px", height="100px")),
+      #shiny::div(class="minus", img(class="imagebottom", src=opts$taskbar_image, width="100px", height="100px"))
+      
+      bgcol <<- opts$col1
+      
+      shiny::updateCheckboxInput(session, "db_only", 
+                                 value=switch(opts$mode, dbonly=T, complete=F))
+      shiny::updateSelectizeInput(session,
+                                  "proj_name",
+                                  choices = lcl$vectors$proj_names,
+                                  selected = opts$proj_name)
+      lapply(lcl$texts, FUN=function(default){
+        output[[default$name]] = shiny::renderText(default$text)
+      })
+      
+      lcl$aes$font <- list(family = opts$font4,
+                           ax.num.size = 11,
+                           ax.txt.size = 15,
+                           ann.size = 20,
+                           title.size = 25)
+      
+      # create color pickers based on amount of colours allowed in global
+      output$colorPickers <- shiny::renderUI({
+        lapply(c(1:gbl$constants$max.cols), function(i) {
+          colourpicker::colourInput(inputId = paste("col", i, sep="_"),
+                                    label = paste("Choose colour", i),
+                                    value = lcl$aes$mycols[i],
+                                    allowTransparent = F)
+        })
+      })
+      
+      # create color1, color2 etc variables to use in plotting functions
+      # and update when colours picked change
+      shiny::observe({
+        values <- unlist(lapply(c(1:gbl$constants$max.cols), function(i) {
+          input[[paste("col", i, sep="_")]]
+        }))
+        if(!any(is.null(values))){
+          if(lcl$paths$opt.loc != ""){
+            MetaboShiny::set.col.map(optionfile = lcl$paths$opt.loc, values)
+            lcl$aes$mycols <<- values
+          }
+        }
+      })
+      
+      shiny::updateSelectInput(session, "ggplot_theme", selected = opts$gtheme)
+      shiny::updateSelectInput(session, "color_ramp", selected = opts$gspec)
+    
+      }
+    
+    shiny::removeModal()
+    
   })
   
-  # init all observer
-  for(fp in list.files("reactive", full.names = T)){
-    if(!grepl(pattern = "loginUI", x = fp)){
-      source(fp, local = T)
-    }
-  }  
   
   
   # ================================== LOGIN =====================================
@@ -215,7 +368,7 @@ mode = complete')
         grouped_uniques = uniques[, .(structure = list(structure)), 
                                   by = setdiff(names(uniques), "structure")]
         shiny::setProgress(0.4)
-
+        
         structs <- lapply(1:nrow(grouped_uniques), function(i){
           row = grouped_uniques[i,]
           opts = row$structure[[1]]
@@ -624,13 +777,10 @@ mode = complete')
   })
   
   shiny::observeEvent(input$select_db_prematch_all, {
-    
     dbs <- gbl$vectors$db_list[-which(gbl$vectors$db_list %in% c("custom", "magicball"))]
-    
     currently.on <- sapply(dbs, function(db){
       input[[paste0("prematch_", db)]]
     })
-    
     if(any(currently.on)){
       set.to = F
     }else{
@@ -859,7 +1009,12 @@ mode = complete')
   
   # ==== LOAD LOGIN UI ====
   
-  source("reactive/loginUI.R", local = T)
+  # init all observer
+  for(fp in list.files("reactive", full.names = T)){
+    source(fp, local = T)
+  }  
+  
+  interface$load <- TRUE
   
   # ==== ON EXIT ====
   
