@@ -7,23 +7,29 @@ http://biorxiv.org/cgi/content/short/734236v1
 
 Please report any issues and feedback on the Issues page here, along with suggestions! =)
 ## R PATH ##
-# STEP 0: pull the repository through the terminal
-# STEP 1: install an R version that at least is R 3.5
-# STEP 3: run either start.sh or startShiny.R (the latter with "Rscript startShiny.R" from the command line
-# STEP 4: wait for all the packages to install 
-# STEP 5: browser should open automatically for you and you're in!
+# STEP 1
+pull the repository through the terminal or through download
+# STEP 2: requirements (these may require admin rights)
+install an R version that at least is R 3.5, install Java(https://www.java.com/en/download/) and JDK (https://www.oracle.com/technetwork/java/javase/downloads/jdk12-downloads-5295953.html, may require creating an Oracle account)
+# STEP 3
+run either start.sh or startShiny.R (the latter with "Rscript startShiny.R" from the command line)
+# STEP 4
+wait for all the packages to install 
+# STEP 5
+browser should open automatically for you and you're in!
 
 ## DOCKER PATH ##
-# STEP 0: install docker
+# STEP 1
+Install docker
 If you are on Windows and not running 10 pro or enterprise (likely) please try the following tutorial:
 https://docs.docker.com/toolbox/toolbox_install_windows/
-
-# STEP 1: pull from docker
+# STEP 2:
+pull from docker
 docker pull jcwolthuis/metaboshiny
-
-# STEP 3: run the following on command line/terminal
+# STEP 3:
+run the following on command line/terminal
 docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny Rscript startShiny.R
-
-# STEP 4: navigate to http://localhost:8080 OR if on windows http://192.168.99.100:8080/
-
-# STEP 5: you're in!
+# STEP 4
+navigate to http://localhost:8080 OR if on docker toolbox http://192.168.99.100:8080/
+# STEP 5
+you're in!
