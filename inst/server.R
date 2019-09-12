@@ -128,7 +128,9 @@ mode = complete')
   
   # init all observer
   for(fp in list.files("reactive", full.names = T)){
+    if(!grepl(pattern = "loginUI", x = fp)){
       source(fp, local = T)
+    }
   }  
   
   
@@ -825,6 +827,10 @@ mode = complete')
                       adduct.table = adducts,cl = 0)
     
   })
+  
+  # ==== LOAD LOGIN UI ====
+  
+  source("reactive/loginUI.R", local = T)
   
   # ==== ON EXIT ====
   

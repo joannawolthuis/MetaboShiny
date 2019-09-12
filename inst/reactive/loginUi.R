@@ -126,10 +126,10 @@ output$currUI <- renderUI({
   updateSelectInput(session, "ggplot_theme", selected = opts$gtheme)
   updateSelectInput(session, "color_ramp", selected = opts$gspec)
   
-  html = navbarPage(windowTitle='MetaboShiny',
-                    tags$style(type="text/css", bar.css),
-                    tags$script(src="spinnytitle.js"), 
-                    tags$script(src="sparkle.js"),
+  html = tagList(tags$style(type="text/css", bar.css),
+                 tags$script(src="spinnytitle.js"), 
+                 tags$script(src="sparkle.js"),
+                 navbarPage(windowTitle='MetaboShiny',
                     inverse=TRUE,
                     # use this for title
                     # https://codepen.io/maxspeicher/pen/zrVKLE
@@ -1012,7 +1012,7 @@ output$currUI <- renderUI({
                         actionButton("debug", label="debug", icon = icon("bug"),style=gsubfn::fn$paste("background-color:$bgcol; border-color:$bgcol;"))
                         , style=gsubfn::fn$paste("position:fixed;bottom:0;width:100%;height:40px;z-index:1005;background-color:$bgcol;border-style:solid; border-color:black;border-width:1px;")),
                       align="center")
-  )
+  ))
   removeModal()
   return(html)
 })    
