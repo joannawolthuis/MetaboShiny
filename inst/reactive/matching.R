@@ -1,4 +1,4 @@
-observeEvent(input$clear_prematch,{
+shiny::observeEvent(input$clear_prematch,{
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb) # change this to proper var later
   RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_content")
   RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_mapper")
@@ -8,7 +8,7 @@ observeEvent(input$clear_prematch,{
   RSQLite::dbDisconnect(conn)
 })
   
-observeEvent(input$prematch,{
+shiny::observeEvent(input$prematch,{
   if(is.null(mSet)){
     print("Requires mSet!")
     return(NULL)
@@ -35,7 +35,7 @@ observeEvent(input$prematch,{
     
     blocksize=100
     blocks = split(colnames(mSet$dataSet$norm), ceiling(seq_along(1:ncol(mSet$dataSet$norm))/blocksize))
-    withProgress({
+    shiny::witnProgress({
       i = 0
       matches = pbapply::pblapply(blocks, function(mzs){
         res = MetaDBparse::searchMZ(mzs = mzs,
@@ -47,14 +47,18 @@ observeEvent(input$prematch,{
                               append = F,
                               outfolder = normalizePath(lcl$paths$db_dir))
         i <<- i + 1
-        setProgress(value = i)
+        shiny::setProgress(value = i)
         list(mapper = unique(res[,c("query_mz", "structure", "%iso", "adduct", "dppm")]), 
              content = unique(res[,-c("query_mz", "%iso", "adduct", "dppm")]))
       })
     }, min=0, max=length(blocks))
     
-    RSQLite::dbWriteTable(conn, "match_mapper", unique(data.table::rbindlist(lapply(matches, function(x) x$mapper))), append=T)
-    RSQLite::dbWriteTable(conn, "match_content", unique(data.table::rbindlist(lapply(matches, function(x) x$content))), append=T)
+    RSQLite::dbWriteTable(conn, 
+                          "match_mapper", 
+                          unique(data.table::rbindlist(lapply(matches, function(x) x$mapper))), append=T)
+    RSQLite::dbWriteTable(conn, 
+                          "match_content", 
+                          unique(data.table::rbindlist(lapply(matches, function(x) x$content))), append=T)
     
     mSet$metshiParams$prematched<<-T
     search_button$on <<- FALSE
@@ -64,10 +68,10 @@ observeEvent(input$prematch,{
 })
 
 # triggers on clicking the 'search' button in sidebar
-observeEvent(input$search_mz, {
+shiny::observeEvent(input$search_mz, {
   if(length(lcl$vectors$db_search_list) > 0 & my_selection$mz != ""){ # go through selected databases
       # get ion modes
-    withProgress({
+    shiny::witnProgress({
       conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb) # change this to proper var later
       RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_mapper") 
       RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_content")   
@@ -109,7 +113,7 @@ observeEvent(input$search_mz, {
 })
 
 # triggers if isotope scoring is clicked after finding db matches
-observeEvent(input$score_iso, {
+shiny::observeEvent(input$score_iso, {
 
   # check if the matches table even exists
   if(!data.table::is.data.table(shown_matches$forward$unique)) return(NULL)
@@ -123,7 +127,7 @@ observeEvent(input$score_iso, {
 
   # get table including isotope scores
   # as input, takes user method for doing this scoring
-  withProgress({
+  shiny::witnProgress({
     score_table <- score.isos(table = shown_matches$forward$unique, mSet = mSet, lcl$paths$patdb, method=input$iso_score_method, inshiny=T, intprec = intprec)
     })
 
@@ -131,8 +135,8 @@ observeEvent(input$score_iso, {
   shown_matches$forward$unique <<- shown_matches$forward$unique[score_table, on = c("baseformula", "adduct")]
 })
 
-observeEvent(input$search_pubmed,{
-  withProgress({
+shiny::observeEvent(input$search_pubmed,{
+  shiny::witnProgress({
     abstr <- RISmed::EUtilsSummary(
       as.character(input$pm_query),
       type="esearch",
@@ -142,16 +146,16 @@ observeEvent(input$search_pubmed,{
       maxdate=input$pm_year[2],
       retmax=as.numeric(input$pm_max))
 
-    setProgress(0.2)
+    shiny::setProgress(0.2)
 
     fetch <- RISmed::EUtilsGet(abstr)
 
     if(length(fetch@PMID) > 0){
-      res <- abstracts2wordcloud(abstracts = fetch,
+      res <- MetaboShiny::abstracts2wordcloud(abstracts = fetch,
                                  top = input$wc_topn_pm, 
                                  queryword = input$pm_query)
 
-      setProgress(0.4)
+      shiny::setProgress(0.4)
 
       tbl <- data.frame(
         pmids = RISmed::PMID(fetch),
@@ -159,7 +163,7 @@ observeEvent(input$search_pubmed,{
         #abstracts = RISmed::AbstractText(fetch)
       )
 
-      setProgress(0.6)
+      shiny::setProgress(0.6)
 
       wcdata <- res
       colnames(wcdata) <- c("word", "freq")
@@ -168,7 +172,7 @@ observeEvent(input$search_pubmed,{
         wordcloud2::wordcloud2(wcdata,
                                size = 0.7,
                                shuffle = FALSE,
-                               fontFamily = getOptions(lcl$paths$opt.loc)$font4,
+                               fontFamily = MetaboShiny::getOptions(lcl$paths$opt.loc)$font4,
                                ellipticity = 1,
                                minRotation = -pi/8,
                                maxRotation = pi/8,
@@ -182,9 +186,9 @@ observeEvent(input$search_pubmed,{
                       plotlyfy = TRUE,
                       font = lcl$aes$font)})
       
-      setProgress(0.8)
+      shiny::setProgress(0.8)
     }else{
-      tbl <- data.table("no papers found" = "Please try another term!	(｡•́︿•̀｡)")
+      tbl <- data.table::data.table("no papers found" = "Please try another term!	(｡•́︿•̀｡)")
     }
 
     output$pm_tab <- DT::renderDataTable({

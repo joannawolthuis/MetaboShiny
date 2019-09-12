@@ -1,7 +1,7 @@
 # set default timemode switcher button mode to hidden
-timebutton <- reactiveValues(status = "off")
+timebutton <- shiny::reactiveValues(status = "off")
 
-observe({
+shiny::observe({
   if(!is.null(mSet)){
     print(mSet$timeseries)
     if(is.null(mSet$timeseries)) mSet$timeseries <<- FALSE
@@ -13,12 +13,12 @@ observe({
   }
 })
 
-observe({
-  if(timebutton$status == "off") updateCheckboxInput(session, "timecourse_trigger", label = NULL, value = FALSE)
+shiny::observe({
+  if(timebutton$status == "off") shiny::updateCheckboxInput(session, "timecourse_trigger", label = NULL, value = FALSE)
 })
 
 # render time series swap button
-output$timebutton <- renderUI({
+output$timebutton <- shiny::renderUI({
   if (is.null(timebutton$status)) {
     input$timecourse_trigger <- FALSE
   } else{
@@ -33,7 +33,7 @@ output$timebutton <- renderUI({
 })
 
 
-observeEvent(input$timecourse_trigger, {
+shiny::observeEvent(input$timecourse_trigger, {
 
   if(!("storage" %in% names(mSet))){
     mSet$storage <<- list()
@@ -85,7 +85,7 @@ observeEvent(input$timecourse_trigger, {
 
     # REMOVE PREVIOUS ANALYSIS TO TRIGGER RELOAD (or the PCA won't reload)
     mSet$analSet$pca <<- NULL
-    output$curr_name <- renderText({mSet$dataSet$cls.name})
+    output$curr_name <- shiny::renderText({mSet$dataSet$cls.name})
 
   }else{
 
@@ -127,7 +127,7 @@ observeEvent(input$timecourse_trigger, {
     else{
       interface$mode <- "multivar"}
 
-    output$curr_name <- renderText({mSet$dataSet$cls.name})
+    output$curr_name <- shiny::renderText({mSet$dataSet$cls.name})
 
   }
 

@@ -1,14 +1,16 @@
 # triggers when a plotly plot is clicked by user
-observeEvent(plotly::event_data("plotly_click"),{
+shiny::observeEvent(plotly::event_data("plotly_click"),{
 
   d <- plotly::event_data("plotly_click") # get click details (which point, additional included info, etc..)
   
   for(pietype in c("add", "iso", "db")){
+    print(input$tab_iden_4)
     if(input$tab_iden_4 == paste0("pie_",pietype)){
       i = d$pointNumber + 1
       showsubset = as.character(pieinfo[[pietype]]$Var1[i])
       result_filters[[pietype]] <<- showsubset
       search$go <<- T
+      return(NULL)
     }
   }
 
@@ -40,7 +42,7 @@ observeEvent(plotly::event_data("plotly_click"),{
           #ml_type <- xvals$type[[1]]
           #model <- xvals$models[[attempt]]
           output$ml_tab <- DT::renderDataTable({
-            imp <- as.data.table(xvals$imp[[attempt]], keep.rownames = T)
+            imp <- data.table::as.data.table(xvals$imp[[attempt]], keep.rownames = T)
             colnames(imp) <- c("mz", "importance")
             imp <- imp[importance > 0,]
             lcl$tables$ml_roc <<- data.frame(importance = imp$importance,
@@ -56,8 +58,9 @@ observeEvent(plotly::event_data("plotly_click"),{
       }, bar = { # for bar plot just grab the # bar clicked
         my_selection$mz <<- as.character(lcl$tables$ml_bar[d$x,"mz"][[1]])
       })}else if(req(curr_tab) == "heatmap"){#grepl(pattern = "heatmap", x = curr_tab)){ # heatmap requires the table used to make it saved to global (hmap_mzs)
-        if(d$y > length(lcl$vectors$heatmap)) return(NULL)
-        my_selection$mz <<- lcl$vectors$heatmap[d$y]
+        if(!is.null(d$y)){
+          if(d$y > length(lcl$vectors$heatmap)) return(NULL)
+          my_selection$mz <<- lcl$vectors$heatmap[d$y]  
+        }
       }
-  #datamanager$reload <- "mz_forward"
 })

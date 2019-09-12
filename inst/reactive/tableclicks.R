@@ -1,5 +1,5 @@
 # check which adducts are currently selected by user
-observe({
+shiny::observe({
   wanted.adducts <- lcl$vectors$calc_adducts[input$magicball_add_tab_rows_selected]
   # ---------
   lcl$vectors$add_list <<- wanted.adducts
@@ -22,7 +22,7 @@ res.update.tables <<- c("tt",
 
 # creates observers for click events in the tables defined above
 lapply(unique(res.update.tables), FUN=function(table){
-  observeEvent(input[[paste0(table, "_tab_rows_selected")]], {
+  shiny::observeEvent(input[[paste0(table, "_tab_rows_selected")]], {
     curr_row = input[[paste0(table, "_tab_rows_selected")]]
     # do nothing if not clicked yet, or the clicked cell is not in the 1st column
 
@@ -105,7 +105,7 @@ lapply(unique(res.update.tables), FUN=function(table){
 
 # mummichog enrichment
 lapply(c("pos", "neg"), function(mode){
-  observeEvent(input[[paste0("mummi_", mode, "_tab_rows_selected")]],{
+  shiny::observeEvent(input[[paste0("mummi_", mode, "_tab_rows_selected")]],{
     curr_row <- input[[paste0("mummi_", mode, "_tab_rows_selected")]] # get current row
     if (is.null(curr_row)) return()
     curr_pw <- rownames(lcl$vectors[[paste0("mummi_", mode)]]$sig)[curr_row]
@@ -131,7 +131,7 @@ lapply(c("pos", "neg"), function(mode){
 })
 
 # triggers on clicking a row in the match results table
-observeEvent(input$match_tab_rows_selected,{
+shiny::observeEvent(input$match_tab_rows_selected,{
   curr_row <<- input$match_tab_rows_selected # get current row
   if (is.null(curr_row)) return()
   # - - - - - - - - - - - - - - - - - - - - - -
@@ -140,34 +140,22 @@ observeEvent(input$match_tab_rows_selected,{
     updateTextInput(session,
                     "pm_query",
                     value = my_selection$name)
-    curr_struct <<- shown_matches$forward$unique[curr_row,'structure'][[1]] # get current formula
-    
-    sesshInfo <<- reactiveValuesToList(session$clientData)
-    width = sesshInfo$output_empty_width
-    if(width > 300) width = 300
-    
-    output$curr_struct <- renderPlot({plot.mol(curr_struct,
-                                               style = "cow")},
-                                     width=width, 
-                                     height=width) # plot molecular structure WITH CHEMMINER
-    
-    curr_formula <<- shown_matches$forward$unique[curr_row,'baseformula'][[1]] # get current formula
-    output$curr_formula <- renderText({curr_formula}) # render text of current formula
+    my_selection$struct <<- unlist(shown_matches$forward$unique[curr_row,'structure']) # get current formula
   })
 })
 
 
-observeEvent(input$browse_tab_rows_selected,{
+shiny::observeEvent(input$browse_tab_rows_selected,{
   curr_row <- input$browse_tab_rows_selected
   if (is.null(curr_row)) return()
   # -----------------------------
   curr_def <- browse_content$table[curr_row, description]
-  output$browse_definition <- renderText(curr_def)
+  output$browse_definition <- shiny::renderText(curr_def)
   my_selection$revstruct <<- browse_content$table[curr_row,c('structure')][[1]]
 })
 
 # triggers on clicking a row in the reverse hit results table
-observeEvent(input$hits_tab_rows_selected,{
+shiny::observeEvent(input$hits_tab_rows_selected,{
   curr_row <<- input$hits_tab_rows_selected # get current row
   if (is.null(curr_row)) return()
   my_selection$mz <<- shown_matches$reverse[curr_row,'query_mz'][[1]]

@@ -196,7 +196,7 @@ score.isos <- function(table, mSet, patdb, method="mscore", inshiny=TRUE, intpre
     
     # - - - - - - - - -
     
-    score_tbl <- rbindlist(res_rows)
+    score_tbl <- data.table::rbindlist(res_rows)
     merged_tbl <- merge(score_tbl, mapper)
     unique(merged_tbl[,-"fullformula"])
     
@@ -278,12 +278,12 @@ get_predicted <- function(mz,
     
     row <- adducts[Name == add_name]
     
-    if(!is.na(row$AddEx)){
-      add.ele = unlist(strsplit(row$AddEx,
+    add.ele <- if(!is.na(row$AddEx)){
+      ele = unlist(strsplit(row$AddEx,
                                 split = "\\d*"))
-      add.ele <<- add.ele[add.ele != ""]
+      ele[ele != ""]
     }else{
-      add.ele <<- c()
+      c()
     }
     
     settings = list(
@@ -316,16 +316,16 @@ get_predicted <- function(mz,
       corrected = enviPat::check_chemform(isotopes = isotopes, chemforms = predicted$formula)
       
       deconstructed = data.table::data.table(
-        nrC = as.numeric(str_match(corrected$new_formula, pattern = "C(\\d*)")[,2]),
-        nrH = as.numeric(str_match(corrected$new_formula, pattern = "H(\\d*)")[,2]),
-        nrBr = as.numeric(str_match(corrected$new_formula, pattern = "Br(\\d*)")[,2]),
-        nrCl = as.numeric(str_match(corrected$new_formula, pattern = "Cl(\\d*)")[,2]),
-        nrF = as.numeric(str_match(corrected$new_formula, pattern = "F(\\d*)")[,2]),
-        nrN = as.numeric(str_match(corrected$new_formula, pattern = "N(\\d*)")[,2]),
-        nrO = as.numeric(str_match(corrected$new_formula, pattern = "O(\\d*)")[,2]),
-        nrP = as.numeric(str_match(corrected$new_formula, pattern = "P(\\d*)")[,2]),
-        nrS = as.numeric(str_match(corrected$new_formula, pattern = "S(\\d*)")[,2]),
-        nrSi = as.numeric(str_match(corrected$new_formula, pattern = "Si(\\d*)")[,2])  
+        nrC = as.numeric(stringr::str_match(corrected$new_formula, pattern = "C(\\d*)")[,2]),
+        nrH = as.numeric(stringr::str_match(corrected$new_formula, pattern = "H(\\d*)")[,2]),
+        nrBr = as.numeric(stringr::str_match(corrected$new_formula, pattern = "Br(\\d*)")[,2]),
+        nrCl = as.numeric(stringr::str_match(corrected$new_formula, pattern = "Cl(\\d*)")[,2]),
+        nrF = as.numeric(stringr::str_match(corrected$new_formula, pattern = "F(\\d*)")[,2]),
+        nrN = as.numeric(stringr::str_match(corrected$new_formula, pattern = "N(\\d*)")[,2]),
+        nrO = as.numeric(stringr::str_match(corrected$new_formula, pattern = "O(\\d*)")[,2]),
+        nrP = as.numeric(stringr::str_match(corrected$new_formula, pattern = "P(\\d*)")[,2]),
+        nrS = as.numeric(stringr::str_match(corrected$new_formula, pattern = "S(\\d*)")[,2]),
+        nrSi = as.numeric(stringr::str_match(corrected$new_formula, pattern = "Si(\\d*)")[,2])  
       )
       
       electron.per.atom <- data.table(
@@ -404,7 +404,7 @@ get_predicted <- function(mz,
         res
       })
       
-      checks = rbindlist(ch_nops_chnops_rows)
+      checks = data.table::rbindlist(ch_nops_chnops_rows)
       deconstructed <- cbind(deconstructed, checks)
       
       passes.checks <- with(deconstructed, {
@@ -415,7 +415,7 @@ get_predicted <- function(mz,
       
       res = lapply(keep.candidates, function(formula, row){
         
-        checked <- check_chemform(isotopes, formula)
+        checked <- enviPat::check_chemform(isotopes, formula)
         new_formula <- checked[1,]$new_formula
         # check which adducts are possible
         theor_orig_formula = new_formula
@@ -430,7 +430,7 @@ get_predicted <- function(mz,
         
         # remove multiplic
         if(row$xM > 1){
-          theor_orig_formula <- multiform.joanna(theor_orig_formula, 1/row$xM)
+          theor_orig_formula <- multiform(theor_orig_formula, 1/row$xM)
         }
         
         # remove initial adduct
@@ -453,9 +453,9 @@ get_predicted <- function(mz,
       
       if(length(res) > 0){
         
-        res_proc = flattenlist(res)
+        res_proc = MetaboShiny::flattenlist(res)
         
-        tbl <<- rbindlist(res_proc[!sapply(res_proc, is.null)])
+        tbl <- data.table::rbindlist(res_proc[!sapply(res_proc, is.null)])
         
         if(nrow(tbl) == 0) return(NULL)
         
@@ -465,7 +465,7 @@ get_predicted <- function(mz,
       
     })
     
-    tbl <- unique(rbindlist(temp_res[!sapply(temp_res, is.null)]))
+    tbl <- unique(data.table::rbindlist(temp_res[!sapply(temp_res, is.null)]))
     uniques <- unique(tbl$baseformula)
     
     if(is.null(uniques)) return(NULL)
@@ -512,11 +512,11 @@ get_predicted <- function(mz,
       if(is.null(pc_rows)) return(NULL)
       
       if(length(pc_rows) > 0){
-        pc_tbl <- rbindlist(flattenlist(pc_rows), fill=T)
+        pc_tbl <- data.table::rbindlist(MetaboShiny::flattenlist(pc_rows), fill=T)
         
         tbl.merge <- merge(pc_tbl, tbl, by = "baseformula")
         
-        checked <- check.chemform.joanna(chemforms = tbl.merge$baseformula, isotopes = isotopes)
+        checked <- check.chemform(chemforms = tbl.merge$baseformula, isotopes = isotopes)
         tbl.merge$baseformula <- checked$new_formula
         
         tbl <- tbl.merge[, list(name = name.x, baseformula, adduct, `%iso`, structure = structure.x, description = description)]
@@ -544,9 +544,9 @@ get_predicted <- function(mz,
           ch = rcdk::get.total.formal.charge(mol)
           data.table(baseformula = mf, charge = ch)
       }, row = row)
-      backtrack <- cbind(backtrack, rbindlist(backtrack_molinfo))
+      backtrack <- cbind(backtrack, data.table::rbindlist(backtrack_molinfo))
     }else{
-      backtrack <- rbindlist(lapply(1:nrow(tbl_uniq), function(i,row){
+      backtrack <- data.table::rbindlist(lapply(1:nrow(tbl_uniq), function(i,row){
         r = tbl_uniq[i,]
         data.table(baseformula = r$baseformula, 
                    structure = c(NA),
@@ -559,7 +559,7 @@ get_predicted <- function(mz,
     tbl_fin
    })
   
-  total_tbl <- rbindlist(per_adduct_results[sapply(per_adduct_results, function(x)!is.null(x))], fill=T)
+  total_tbl <- data.table::rbindlist(per_adduct_results[sapply(per_adduct_results, function(x)!is.null(x))], fill=T)
   
   # get more info
   has.struct <- which(!is.na(total_tbl$structure))
@@ -676,7 +676,7 @@ info_from_cids <- function(cids,
         row[,-"Synonym"]
         
       })
-      tbl.renamed <- rbindlist(rows.renamed, fill=T)
+      tbl.renamed <- data.table::rbindlist(rows.renamed, fill=T)
     }else{
       tbl.renamed <- rows
     }

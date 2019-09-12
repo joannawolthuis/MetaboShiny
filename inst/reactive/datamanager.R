@@ -1,8 +1,8 @@
 # create listener for what mode we're currently working in (bivariate, multivariate, time series...)
-datamanager <- reactiveValues()
+datamanager <- shiny::reactiveValues()
 
 # preload pca/plsda
-observe({
+shiny::observe({
   if(is.null(datamanager$reload)){
     NULL # if not reloading anything, nevermind
   }else{
@@ -20,12 +20,12 @@ observe({
                output$curr_name <- renderText({mSet$dataSet$cls.name})
                # reload pca, plsda, ml(make datamanager do that)
                # update select input bars with current variable and covariables defined in excel
-               updateSelectInput(session, "stats_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
-               updateSelectInput(session, "shape_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
-               updateSelectInput(session, "col_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
-               updateSelectInput(session, "txt_var", selected = "sample", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
-               updateSelectInput(session, "subset_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
-               updateSelectInput(session, "ml_exclude_covars", 
+               shiny::updateSelectInput(session, "stats_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
+               shiny::updateSelectInput(session, "shape_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
+               shiny::updateSelectInput(session, "col_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
+               shiny::updateSelectInput(session, "txt_var", selected = "sample", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
+               shiny::updateSelectInput(session, "subset_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
+               shiny::updateSelectInput(session, "ml_exclude_covars", 
                                  choices = c(colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "animal_internal_id"))]))
                
                output$curr_name <- renderText({mSet$dataSet$cls.name})
@@ -39,12 +39,12 @@ observe({
                if(interface$mode == 'bivar'){
                  if("tt" %in% names(mSet$analSet)){
                    if("V" %in% colnames(mSet$analSet$tt$sig.mat)){
-                     updateCheckboxInput(session, "tt_nonpar", value = T)
+                     shiny::updateCheckboxInput(session, "tt_nonpar", value = T)
                    }else{
-                     updateCheckboxInput(session, "tt_nonpar", value = F)
+                     shiny::updateCheckboxInput(session, "tt_nonpar", value = F)
                    }
                  }else{
-                   updateCheckboxInput(session, "tt_nonpar", value = F)
+                   shiny::updateCheckboxInput(session, "tt_nonpar", value = F)
                  }
                }
 
@@ -140,7 +140,7 @@ observe({
                  # render results table for UI
                  output$aov_tab <- DT::renderDataTable({
                    DT::datatable(if(is.null(mSet$analSet[[which.anova]]$sig.mat)){
-                     data.table("No significant hits found")
+                     data.table::data.table("No significant hits found")
                    }else{mSet$analSet[[which.anova]]$sig.mat[,keep]
                    },
                    selection = 'single',
@@ -151,7 +151,7 @@ observe({
                  # render manhattan-like plot for UI
                  output$aov_overview_plot <- plotly::renderPlotly({
                    # --- ggplot ---
-                   ggPlotAOV(mSet,
+                   MetaboShiny::ggPlotAOV(mSet,
                              cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 20,
                              plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                              plotlyfy=TRUE,font = lcl$aes$font)
@@ -162,7 +162,7 @@ observe({
                # render volcano plot with user defined colours
                output$volc_plot <- plotly::renderPlotly({
                  # --- ggplot ---
-                 ggPlotVolc(mSet,
+                 MetaboShiny::ggPlotVolc(mSet,
                             cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
                             20,
                             plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
@@ -183,7 +183,7 @@ observe({
                  # create PCA legend plot
                  # TODO: re-enable this plot, it was clickable so you could filter out certain groups
                  # output$pca_legend <- plotly::renderPlotly({
-                 #   frame <- data.table(x = c(1),
+                 #   frame <- data.table::data.table(x = c(1),
                  #                       y = mSet$dataSet$cls.num)
                  #   p <- ggplot(data=frame,
                  #               aes(x,
@@ -201,7 +201,7 @@ observe({
                  # })
                  # render PCA variance per PC table for UI
                  output$pca_tab <-DT::renderDataTable({
-                   pca.table <- as.data.table(round(mSet$analSet$pca$variance * 100.00,
+                   pca.table <- data.table::as.data.table(round(mSet$analSet$pca$variance * 100.00,
                                                     digits = 2),
                                               keep.rownames = T)
                    colnames(pca.table) <- c("Principal Component", "% variance")
@@ -223,7 +223,7 @@ observe({
                                  options = list(lengthMenu = c(5, 10, 15), pageLength = 10))
                  })
                  output$pca_scree <- renderPlot({
-                   ggPlotScree(mSet,
+                   MetaboShiny::ggPlotScree(mSet,
                                cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
                                plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                font = lcl$aes$font)
@@ -272,20 +272,20 @@ observe({
 
                  # render cross validation plot
                  output$plsda_cv_plot <- renderPlot({
-                   ggPlotClass(mSet, cf = gbl$functions$color.functions[[lcl$aes$spectrum]], plotlyfy = F,
+                   MetaboShiny::ggPlotClass(mSet, cf = gbl$functions$color.functions[[lcl$aes$spectrum]], plotlyfy = F,
                                plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                font = lcl$aes$font)
                  })
                  # render permutation plot
                  output$plsda_perm_plot <- renderPlot({
-                   ggPlotPerm(mSet,cf = gbl$functions$color.functions[[lcl$aes$spectrum]], plotlyfy = F,
+                   MetaboShiny::ggPlotPerm(mSet,cf = gbl$functions$color.functions[[lcl$aes$spectrum]], plotlyfy = F,
                               plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                               font = lcl$aes$font)
                  })
                  # render table with variance per PC
                  output$plsda_tab <- DT::renderDataTable({
                    # - - - -
-                   plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar
+                   plsda.table <- data.table::as.data.table(round(mSet$analSet$plsr$Xvar
                                                       / mSet$analSet$plsr$Xtotvar
                                                       * 100.0,
                                                       digits = 2),
@@ -338,7 +338,7 @@ observe({
                  roc_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
 
                  output$ml_roc <- plotly::renderPlotly({
-                   plotly::ggplotly(ggPlotROC(roc_data,
+                   plotly::ggplotly(MetaboShiny::ggPlotROC(roc_data,
                                               input$ml_attempts,
                                               gbl$functions$color.functions[[lcl$aes$spectrum]],
                                               plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
@@ -347,7 +347,7 @@ observe({
 
                  bar_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar
 
-                 barplot_data <- ggPlotBar(bar_data,
+                 barplot_data <- MetaboShiny::ggPlotBar(bar_data,
                                          input$ml_attempts,
                                          gbl$functions$color.functions[[lcl$aes$spectrum]],
                                          input$ml_top_x,
@@ -372,7 +372,7 @@ observe({
                    model.names = names(mSet$analSet$ml[[method]])
                    choices <- c(choices, paste0(method, " - ", paste0(model.names)))
                  }
-                 updateSelectInput(session, "show_which_ml", choices = choices, selected = paste0(mSet$analSet$ml$last$method, " - ", mSet$analSet$ml$last$name))
+                 shiny::updateSelectInput(session, "show_which_ml", choices = choices, selected = paste0(mSet$analSet$ml$last$method, " - ", mSet$analSet$ml$last$name))
                  
                }else{NULL}
              },
@@ -405,7 +405,7 @@ observe({
                res <<- mSet$analSet$tt$sig.mat
 
                if(is.null(res)){
-                 res <<- data.table("No significant hits found")
+                 res <<- data.table::data.table("No significant hits found")
                  mSet$analSet$tt <<- NULL
 
                }
@@ -422,7 +422,7 @@ observe({
                # render manhattan-like plot for UI
                output$tt_overview_plot <- plotly::renderPlotly({
                  # --- ggplot ---
-                 ggPlotTT(mSet,
+                 MetaboShiny::ggPlotTT(mSet,
                           gbl$functions$color.functions[[lcl$aes$spectrum]], 20,
                           plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                           plotlyfy=TRUE,font = lcl$aes$font)
@@ -432,7 +432,7 @@ observe({
                # save results table
                res <<- mSet$analSet$fc$sig.mat
                # if none found, give the below table...
-               if(is.null(res)) res <<- data.table("No significant hits found")
+               if(is.null(res)) res <<- data.table::data.table("No significant hits found")
                # render result table for UI
                output$fc_tab <-DT::renderDataTable({
                  # -------------
@@ -445,7 +445,7 @@ observe({
                # render manhattan-like plot for UI
                output$fc_overview_plot <- plotly::renderPlotly({
                  # --- ggplot ---
-                 ggPlotFC(mSet,
+                 MetaboShiny::ggPlotFC(mSet,
                           gbl$functions$color.functions[[lcl$aes$spectrum]], 20,
                           plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                           plotlyfy=TRUE,font = lcl$aes$font)
@@ -528,7 +528,7 @@ observe({
                                         maxRotation = pi/8,
                                         shape = 'heart')
                })
-               output$wordbar_desc <- renderPlotly({ggPlotWordBar(wcdata = wcdata,
+               output$wordbar_desc <- renderPlotly({MetaboShiny::ggPlotWordBar(wcdata = wcdata,
                                                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
                                                                   plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                                                   plotlyfy = TRUE, 

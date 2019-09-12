@@ -5,18 +5,16 @@ if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
 print("...global...")
 
-online = internetWorks()
+online = MetaboShiny::internetWorks()
 
 # load default adduct table
 #TODO: add option to put user custom tables in user directory
-data(adducts,package = "MetaDBparse")
-data(adduct_rules,package = "MetaDBparse")
+data(adducts, package = "MetaDBparse")
+data(adduct_rules, package = "MetaDBparse")
 adducts <- data.table::as.data.table(adducts)
 adduct_rules <- data.table::as.data.table(adduct_rules)
 
 adducts[adducts==''|adducts==' ']<-NA
-
-library(colorRamps)
 
 # set the home path
 home = normalizePath("~")
@@ -24,7 +22,6 @@ home = normalizePath("~")
 caret.mdls <- caret::getModelInfo()
 
 # === THE BELOW LIST CONTAINS ALL GLOBAL VARIABLES THAT METABOSHINY CALLS UPON LATER ===
-
 gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people importing their data through csv
                              # get all caret models that can do classification and have some kind of importance metric
                              ml.models = names(caret.mdls)[sapply(1:length(caret.mdls), function(i){
@@ -190,25 +187,25 @@ functions = list(# default color functions at startup, will be re-loaded from op
     )
     
     # generate direct functions from the brewer colours
-    brew.opts <- lapply(brew.cols, function(opt) colorRampPalette(rev(RColorBrewer::brewer.pal(RColorBrewer::brewer.pal.info[opt,]$maxcolors, opt))))
+    brew.opts <- lapply(brew.cols, function(opt) grDevices::colorRampPalette(rev(RColorBrewer::brewer.pal(RColorBrewer::brewer.pal.info[opt,]$maxcolors, opt))))
     names(brew.opts) <- brew.cols
     
     # add the more general color scale functions as options
     base.opts <- list("rb"=rainbow,
-                      "y2b"=ygobb,
-                      "ml1"=matlab.like2,
-                      "ml2"=matlab.like,
-                      "m2g"=magenta2green,
-                      "c2y"=cyan2yellow,
-                      "b2y"=blue2yellow,
-                      "g2r"=green2red,
-                      "b2g"=blue2green,
-                      "b2r"=blue2red,
-                      "b2p"=cm.colors,
-                      "bgy"=topo.colors,
-                      "gyw"=terrain.colors,
-                      "ryw"=heat.colors,
-                      "bw"=blackwhite.colors)
+                      "y2b"=colorRamps::ygobb,
+                      "ml1"=colorRamps::matlab.like2,
+                      "ml2"=colorRamps::matlab.like,
+                      "m2g"=colorRamps::magenta2green,
+                      "c2y"=colorRamps::cyan2yellow,
+                      "b2y"=colorRamps::blue2yellow,
+                      "g2r"=colorRamps::green2red,
+                      "b2g"=colorRamps::blue2green,
+                      "b2r"=colorRamps::blue2red,
+                      "b2p"=grDevices::cm.colors,
+                      "bgy"=grDevices::topo.colors,
+                      "gyw"=grDevices::terrain.colors,
+                      "ryw"=grDevices::heat.colors,
+                      "bw"=MetaboShiny::blackwhite.colors)
     
     # add into a single list for use in interface
     append(base.opts, brew.opts)
@@ -441,12 +438,11 @@ session_cl <- parallel::makeCluster(max(c(1, parallel::detectCores()-1)))#,outfi
 
 #' Squishes HTML elements close together.
 runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
-require(enviPat)
-data(isotopes)
+data(isotopes, package = "enviPat")
 
 switch(runmode,
        local = {
-         orca_serv_id = start_orca(9091)
+         orca_serv_id = MetaboShiny::start_orca(9091)
        },
        docker = {
          plotly::orca_serve(port = 9091)

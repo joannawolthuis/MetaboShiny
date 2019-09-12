@@ -32,10 +32,10 @@ app.font.css <- function(font.h1 = "Press Start 2P",
   size.h3 <- paste0(size.h3, "pt")
   size.body <- paste0(size.body, "pt")
 
-  font.h1.w <- str_extract(font.h1, "(serif)|(bold)|(italic)")
-  font.h2.w <- str_extract(font.h2, "(serif)|(bold)|(italic)")
-  font.h3.w <- str_extract(font.h3, "(serif)|(bold)|(italic)")
-  font.body.w <- str_extract(font.body, "(serif)|(bold)|(italic)")
+  font.h1.w <- stringr::str_extract(font.h1, "(serif)|(bold)|(italic)")
+  font.h2.w <- stringr::str_extract(font.h2, "(serif)|(bold)|(italic)")
+  font.h3.w <- stringr::str_extract(font.h3, "(serif)|(bold)|(italic)")
+  font.body.w <- stringr::str_extract(font.body, "(serif)|(bold)|(italic)")
 
   if(is.na(font.h1.w)) font.h1.w = ""
   if(is.na(font.h2.w)) font.h2.w = ""

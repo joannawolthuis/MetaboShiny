@@ -14,8 +14,8 @@ build.pat.db <- function(db.name,
   ppm = as.numeric(ppm)
 
   
-  poslist <- fread(pospath,header = T)
-  neglist <- fread(negpath,header = T) 
+  poslist <- data.table::fread(pospath,header = T)
+  neglist <- data.table::fread(negpath,header = T) 
   
   # ------------------------------------
   

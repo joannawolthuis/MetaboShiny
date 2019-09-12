@@ -1,7 +1,7 @@
 # create listener
-statsmanager <- reactiveValues()
+statsmanager <- shiny::reactiveValues()
 
-observe({
+shiny::observe({
 
   if(is.null(statsmanager$calculate)){
 
@@ -19,21 +19,21 @@ observe({
                mSet$storage[[mset_name]] <<- list(analysis = mSet$analSet)
              },
              pca = {
-               withProgress({
-                 mSet <<- PCA.Anal(mSet) # perform PCA analysis
+               shiny::withProgress({
+                 mSet <<- MetaboAnalystR::PCA.Anal(mSet) # perform PCA analysis
                })
              },
              meba = {
-               withProgress({
-                 mSet <<- performMB(mSet, 10) # perform MEBA analysis
+               shiny::withProgress({
+                 mSet <<- MetaboAnalystR::performMB(mSet, 10) # perform MEBA analysis
                })
 
              },
              asca = {
                # perform asca analysis
-               withProgress({
-                 mSet <<- Perform.ASCA(mSet, 1, 1, 2, 2)
-                 mSet <<- CalculateImpVarCutoff(mSet, 0.05, 0.9)
+               shiny::withProgress({
+                 mSet <<- MetaboAnalystR::Perform.ASCA(mSet, 1, 1, 2, 2)
+                 mSet <<- MetaboAnalystR::CalculateImpVarCutoff(mSet, 0.05, 0.9)
                })
 
              },
@@ -52,7 +52,7 @@ observe({
 
                      if("tt" %in% names(mSet$analSet)){
                        if(input$heatsign){
-                         tbl <- req(as.data.frame(mSet$analSet$tt$sig.mat))
+                         tbl <- shiny::req(as.data.frame(mSet$analSet$tt$sig.mat))
                        }else{
                          tbl <- data.frame('p.value' = mSet$analSet$tt$p.value)
                        }
@@ -127,13 +127,13 @@ observe({
                  if(input$timecourse_trigger){
 
                    # create convenient table with the ncessary info
-                   translator <- data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],Group=mSet$dataSet$exp.fac[sample_order], Time=mSet$dataSet$time.fac[sample_order])
+                   translator <- data.table::data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],Group=mSet$dataSet$exp.fac[sample_order], Time=mSet$dataSet$time.fac[sample_order])
                    hmap.lvls <- c(levels(mSet$dataSet$exp.fac), levels(mSet$dataSet$time.fac))
 
                    # reorder first by time, then by sample
                    split.translator <- split(translator, by = c("Time"))
                    split.translator.ordered <- lapply(split.translator, function(tbl) tbl[order(tbl$Group)])
-                   translator <- rbindlist(split.translator.ordered)
+                   translator <- data.table::rbindlist(split.translator.ordered)
 
                    # ensure correct sample order
                    final_matrix <- final_matrix[,match(translator$Sample, colnames(final_matrix))]
@@ -143,13 +143,15 @@ observe({
 
                  }else{
                    # no complicated reordering necessary
-                   translator <- data.table(Sample=as.character(rownames(mSet$dataSet$norm))[sample_order],Group=mSet$dataSet$cls[sample_order])
+                   translator <- data.table::data.table(Sample=as.character(rownames(mSet$dataSet$norm))[sample_order],
+                                                        Group=mSet$dataSet$cls[sample_order])
                    hmap.lvls <- levels(mSet$dataSet$cls)
                    my_order = T # enable sorting through dendrogram
                  }
                }else{
                  # no complicated reordering necessary
-                 translator <- data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],Group=mSet$dataSet$cls[sample_order])
+                 translator <- data.table::data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],
+                                                      Group=mSet$dataSet$cls[sample_order])
                  hmap.lvls <- levels(mSet$dataSet$cls)
                  my_order = T # enable sorting through dendrogram
                }
@@ -172,7 +174,7 @@ observe({
              },
              tt = {
                withProgress({
-                 mSet <<- Ttests.Anal(mSet,
+                 mSet <<- MetaboAnalystR::Ttests.Anal(mSet,
                                       nonpar = input$tt_nonpar,
                                       threshp = 0.05, # TODO: make the threshold user defined...
                                       paired = FALSE,
@@ -182,7 +184,7 @@ observe({
              },
              fc = {
                withProgress({
-                 mSet <<- FC.Anal.unpaired(mSet,
+                 mSet <<- MetaboAnalystR::FC.Anal.unpaired(mSet,
                                            2.0, # TODO: make this threshold user defined
                                            1)
                })
@@ -198,22 +200,22 @@ observe({
                }
 
                if(redo){ # if done, don't redo
-                 withProgress({
+                 shiny::withProgress({
                    if(!is.null(input$timecourse_trigger)){
                      mSet <<- if(input$timecourse_trigger){
-                       ANOVA2.Anal(mSet, 0.05, "fdr", "time", 3, 1)
+                       MetaboAnalystR::ANOVA2.Anal(mSet, 0.05, "fdr", "time", 3, 1)
                      }else{
-                       ANOVA.Anal(mSet, thresh=0.05,nonpar = F)
+                       MetaboAnalystR::ANOVA.Anal(mSet, thresh=0.05,nonpar = F)
                      }
                    }else{
-                     mSet <<- ANOVA.Anal(mSet, thresh=0.05,nonpar = F)
+                     mSet <<- MetaboAnalystR::ANOVA.Anal(mSet, thresh=0.05,nonpar = F)
                    }
                  })
                }
              },
              volc = {
-               withProgress({
-                 mSet <<- Volcano.Anal(mSet,
+               shiny::withProgress({
+                 mSet <<- MetaboAnalystR::Volcano.Anal(mSet,
                                        FALSE, 2.0, 0,
                                        0.75,F, 0.1,
                                        TRUE, "raw") # TODO: make thresholds user-defined

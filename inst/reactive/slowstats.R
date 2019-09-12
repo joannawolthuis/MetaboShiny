@@ -1,7 +1,7 @@
 # triggers when the 'go' button is pressed on the PLS-DA tab
 observeEvent(input$do_plsda, {
 
-  require(e1071)
+  #require(e1071)
 
   # depending on type, do something else
   # TODO: enable sparse and orthogonal PLS-DA
@@ -9,15 +9,15 @@ observeEvent(input$do_plsda, {
          normal={
            require(caret)
            withProgress({
-             mSet <<- PLSR.Anal(mSet) # perform pls regression
+             mSet <<- MetaboAnalystR::PLSR.Anal(mSet) # perform pls regression
              setProgress(0.3)
-             mSet <<- PLSDA.CV(mSet, methodName=if(nrow(mSet$dataSet$norm) < 50) "L" else "T",compNum = 3) # cross validate
+             mSet <<- MetaboAnalystR::PLSDA.CV(mSet, methodName=if(nrow(mSet$dataSet$norm) < 50) "L" else "T",compNum = 3) # cross validate
              setProgress(0.6)
-             mSet <<- PLSDA.Permut(mSet,num = 300, type = "accu") # permute
+             mSet <<- MetaboAnalystR::PLSDA.Permut(mSet,num = 300, type = "accu") # permute
            })
          },
          sparse ={
-           mSet <<- SPLSR.Anal(mSet, comp.num = 3)
+           mSet <<- MetaboAnalystR::SPLSR.Anal(mSet, comp.num = 3)
          })
   # reload pls-da plots
   datamanager$reload <- "plsda"
@@ -25,12 +25,12 @@ observeEvent(input$do_plsda, {
 
 # triggers if 'go' is pressed in the machine learning tab
 observeEvent(input$do_ml, {
-  withProgress({
+  shiny::withProgress({
 
-    setProgress(value = 0)
+    shiny::setProgress(value = 0)
 
     # get base table to use for process
-    curr <- as.data.table(mSet$dataSet$preproc) # the filtered BUT NOT IMPUTED table, ML should be able to deal w/ missing values
+    curr <- data.table::as.data.table(mSet$dataSet$preproc) # the filtered BUT NOT IMPUTED table, ML should be able to deal w/ missing values
 
     # replace NA's with zero
     curr[,(1:ncol(curr)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
@@ -41,7 +41,8 @@ observeEvent(input$do_ml, {
 
     if(!is.null(input$timecourse_trigger)){
       if(input$timecourse_trigger){
-        melted_curr <- melt(as.data.table(curr, keep.rownames = TRUE),id.vars = "rn")
+        melted_curr <- reshape::melt(as.data.table(curr, keep.rownames = TRUE),
+                                     id.vars = "rn")
         split_rn = strsplit(melted_curr$rn, split = "_T")
         melted_curr$time <- as.numeric(sapply(split_rn, function(x) x[[2]]))
         melted_curr$rn <- sapply(split_rn, function(x) x[[1]])
@@ -104,22 +105,6 @@ observeEvent(input$do_ml, {
 
     remapped.lbl <- uniques_new_name[char.lbl]
 
-    # find which variables are covariant with label, they will be removed
-    # covariant.with.label <- sapply(covariates, function(x){
-    #   char.x <- as.character(x)
-    #   uniques <- unique(char.x)
-    #   uniques_new_name <- c(1:length(uniques))
-    #   names(uniques_new_name) = uniques
-    #   remapped.x = uniques_new_name[char.x]
-    #   res = if(length(remapped.x) == length(remapped.lbl)){
-    #     all(remapped.x == remapped.lbl)
-    #   }else{ FALSE }
-    #   res
-    # })
-
-    # now filter out unique, covariate and with missing columns from $covars
-    #keep_configs <- which(!(names(config) %in% names(config)[unique(c(which(has.na), which(has.all.unique), which(covariant.with.label)))]))
-    
     keep_configs <- which(!(names(covariates) %in% names(covariates)[unique(c(which(has.na)))]))
     
         #keep_configs <- which(names(config) == "label")
@@ -136,7 +121,7 @@ observeEvent(input$do_ml, {
 
     # join halves together, user variables and metabolite data
     curr <- cbind(covariates, curr)
-    curr <- as.data.table(curr)
+    curr <- data.table::as.data.table(curr)
 
     # remove cols with all NA
     curr <- curr[,colSums(is.na(curr)) < nrow(curr), with=FALSE]
@@ -178,12 +163,12 @@ observeEvent(input$do_ml, {
     require(caret)
     
     # all methods
-    caret.mdls <- getModelInfo()
+    caret.mdls <- caret::getModelInfo()
     caret.methods <- names(caret.mdls)
     tune.opts <- lapply(caret.methods, function(mdl) caret.mdls[[mdl]]$parameters)
     names(tune.opts) <- caret.methods
     
-    meth.info <- caret::getModelInfo()[[input$ml_method]]
+    meth.info <- caret.mdls[[input$ml_method]]
     params = meth.info$parameters
     
     #grid.def <- meth.info$grid(training, trainY, len = 1)
@@ -280,19 +265,19 @@ observeEvent(input$do_ml, {
         require(caret)
         
         if(ml_folds == "LOOCV"){
-          trainCtrl <- trainControl(verboseIter = T,
+          trainCtrl <- caret::trainControl(verboseIter = T,
                                     allowParallel = F,
                                     method="LOOCV") # need something here...
 
         }else{
-          trainCtrl <- trainControl(verboseIter = T,
+          trainCtrl <- caret::trainControl(verboseIter = T,
                                     allowParallel = F,
                                     method=as.character(ml_perf_metr),
                                     number=as.numeric(ml_folds),
                                     repeats=3) # need something here...
         }
 
-        fit <- train(
+        fit <- caret::train(
           label ~ .,
           data = training,
           method = ml_method,
@@ -303,7 +288,7 @@ observeEvent(input$do_ml, {
           trControl = trainCtrl
         )
 
-        result.predicted.prob <- predict(fit, testing, type="prob") # Prediction
+        result.predicted.prob <- stats::predict(fit, testing, type="prob") # Prediction
 
         # train and cross validate model
         # return list with mode, prediction on test data etc.s
@@ -360,9 +345,9 @@ observeEvent(input$do_ml, {
     #                  predictions = {lapply(repeats, function(x) x$prediction)},
     #                  labels = {lapply(repeats, function(x) x$labels)})
 
-    bar_data <- rbindlist(lapply(1:length(repeats), function(i){
+    bar_data <- data.table::rbindlist(lapply(1:length(repeats), function(i){
       x = repeats[[i]]
-      tbl = as.data.table(varImp(x$model)$importance, keep.rownames=T)
+      tbl = data.table::as.data.table(caret::varImp(x$model)$importance, keep.rownames=T)
       tbl$rep = c(i)
       colnames(tbl) = c("mz",
                         "importance",
@@ -389,7 +374,7 @@ observeEvent(input$do_mummi, {
   peak_tbl <- if(mSet$dataSet$cls.num == 2){
     if("tt" %in% names(mSet$analSet)){
       continue = T
-      data.table(
+      data.table::data.table(
         `p.value` = mSet$analSet$tt$sig.mat[,"p.value"],
         `m.z` = rownames(mSet$analSet$tt$sig.mat),
         `t.score` = mSet$analSet$tt$sig.mat[,if("V" %in% colnames(mSet$analSet$tt$sig.mat)) "V" else "t.stat"]
@@ -399,7 +384,7 @@ observeEvent(input$do_mummi, {
   }else{
     if("aov" %in% names(mSet$analSet)){
       continue = T
-      data.table(
+      data.table::data.table(
         `p.value` = mSet$analSet$aov$sig.mat[,"p.value"],
         `m.z` = rownames(mSet$analSet$aov$sig.mat),
         `t.score` = mSet$analSet$aov$sig.mat[,"F.stat"]
@@ -422,14 +407,14 @@ observeEvent(input$do_mummi, {
 
     path <- tempfile()
     fwrite(x = peak_tbl, file = path, sep = "\t")
-    mummi<-InitDataObjects("mass_all", "mummichog", FALSE)
-    mummi<-Read.PeakListData(mSetObj = mummi, filename = path);
-    mummi<-UpdateMummichogParameters(mummi, as.character(input$mummi_ppm), mode, input$mummi_sigmin);
-    mummi<-SanityCheckMummichogData(mummi)
-    mummi<-PerformMummichog(mummi, input$mummi_org, "fisher", "gamma")
+    mummi <- MetaboAnalystR::InitDataObjects("mass_all", "mummichog", FALSE)
+    mummi <- MetaboAnalystR::Read.PeakListData(mSetObj = mummi, filename = path);
+    mummi <- MetaboAnalystR::UpdateMummichogParameters(mummi, as.character(input$mummi_ppm), mode, input$mummi_sigmin);
+    mummi <- MetaboAnalystR::SanityCheckMummichogData(mummi)
+    mummi <- MetaboAnalystR::PerformMummichog(mummi, input$mummi_org, "fisher", "gamma")
 
     lcl$vectors[[paste0("mummi_", substr(mode, 1, 3))]] <<- list(sig = mummi$mummi.resmat,
-                                                                    pw2cpd = {
+                                                                 pw2cpd = {
                                                                       lst = mummi$pathways$cpds
                                                                       names(lst) <- mummi$pathways$name
                                                                       # - - -

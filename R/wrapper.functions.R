@@ -11,10 +11,6 @@ make.metshi.csv <-
            groupfac = "mz"
   ){
     
-    library(data.table)
-    
-    # - - announce some stuff - -
-    
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(patdb))
     
     cat("Checking for mismatches between peak tables and metadata... \n")
@@ -34,7 +30,7 @@ make.metshi.csv <-
                "\n\n"))
     
     if(DBI::dbExistsTable(conn, "batchinfo")){
-      query <- strwrap(gsubfn::fn$paste("select distinct d.card_id as sample, d.sampling_date as time, d.*, b.injection
+      query <- stringr::strwrap(gsubfn::fn$paste("select distinct d.card_id as sample, d.sampling_date as time, d.*, b.injection
                                         from mzintensities i
                                         join individual_data d
                                         on i.filename = d.card_id
@@ -43,7 +39,7 @@ make.metshi.csv <-
                        width=10000,
                        simplify=TRUE)
     }else{
-      query <- strwrap(gsubfn::fn$paste("select distinct d.card_id as sample, d.sampling_date as time, d.*, s.*
+      query <- stringr::strwrap(gsubfn::fn$paste("select distinct d.card_id as sample, d.sampling_date as time, d.*, s.*
                                         from mzintensities i
                                         join individual_data d
                                         on i.filename = d.card_id
@@ -69,13 +65,13 @@ make.metshi.csv <-
       query_add = gsubfn::fn$paste(" WHERE i.filename = '$filename'")
       
       # get results for sample
-      z.meta = as.data.table(RSQLite::dbGetQuery(conn, paste0(query, query_add)))
+      z.meta = data.table::as.data.table(RSQLite::dbGetQuery(conn, paste0(query, query_add)))
       
       if(nrow(z.meta)==0) return(NA)
       
       z.meta = z.meta[,-c("card_id", "sampling_date")]
       colnames(z.meta) <- tolower(colnames(z.meta))
-      z.int = as.data.table(RSQLite::dbGetQuery(conn, paste0("SELECT DISTINCT 
+      z.int = data.table::as.data.table(RSQLite::dbGetQuery(conn, paste0("SELECT DISTINCT 
                                                 i.mzmed as identifier,
                                                 i.intensity
                                                 FROM mzintensities i", query_add)))
@@ -85,7 +81,7 @@ make.metshi.csv <-
       missing_mz <- setdiff(all_mz, z.int$identifier)
       
       # cast to wide
-      cast.dt <- dcast.data.table(z.int,
+      cast.dt <- data.table::dcast.data.table(z.int,
                                   formula = ... ~ identifier,
                                   fun.aggregate = sum,
                                   value.var = "intensity")
@@ -102,7 +98,7 @@ make.metshi.csv <-
       RSQLite::dbDisconnect(conn)
       
       # write
-      fwrite(c(z.meta, "."=NA, complete.row[reordered]), 
+      data.table::fwrite(c(z.meta, "."=NA, complete.row[reordered]), 
              file = csv,
              append = T)
     })

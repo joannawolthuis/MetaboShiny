@@ -1,15 +1,18 @@
-export(start.metshi)
-export(joanna_debugger)
+exportPattern("^.*")
 import(data.table)
 import(httr)
 import(enviPat)
 import(shiny)
 import(shinyBS)
 import(shinyFiles)
-import(MetaboAnalystR)
 import(gsubfn)
 import(plotly)
 import(colorRamps)
 import(stringr)
-import(MetaDBparse)
-
+import(shinycssloaders)
+importFrom("grDevices", "gray.colors", "rainbow")
+importFrom("graphics", "par", "plot", "rasterImage")
+importFrom("stats", "D", "chisq.test", "complete.cases", "cov",
+           "median", "reorder", "setNames", "var")
+importFrom("utils", "head", "installed.packages", "packageDescription",
+           "read.delim2", "read.table", "type.convert", "write.table")

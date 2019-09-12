@@ -5,7 +5,7 @@
 # create checkcmarks if database is present
 lapply(gbl$vectors$db_list, FUN=function(db){
   # creates listener for if the 'check db' button is pressed
-  observeEvent(input[[paste0("check_", db)]],{
+  shiny::observeEvent(input[[paste0("check_", db)]],{
     # see which db files are present in folder
     db_folder_files <- list.files(getOptions(lcl$paths$opt.loc)$db_dir)
     is.present <- paste0(db, ".db") %in% db_folder_files
@@ -21,7 +21,7 @@ lapply(gbl$vectors$db_list, FUN=function(db){
 
 # these listeners trigger when build_'db' is clicked (loops through dblist in global)
 lapply(gbl$vectors$db_list, FUN=function(db){
-  observeEvent(input[[paste0("build_", db)]], {
+  shiny::observeEvent(input[[paste0("build_", db)]], {
     withProgress({
       # send necessary functions and libraries to parallel threads
       parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(

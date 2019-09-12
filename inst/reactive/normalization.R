@@ -1,19 +1,17 @@
 # this triggers when the user wants to normalize their data to proceed to statistics
-observeEvent(input$initialize, {
+shiny::observeEvent(input$initialize, {
   
-  withProgress({
+  shiny::withProgress({
     
     shiny::setProgress(session=session, value= .1)
     
-    require(MetaboAnalystR)
-    
     # read in original CSV file
-    csv_orig <- fread(lcl$paths$csv_loc,
-                      data.table = TRUE,
-                      header = T)
+    csv_orig <- data.table::fread(lcl$paths$csv_loc,
+                                  data.table = TRUE,
+                                  header = T)
     
     # create empty mSet with 'stat' as default mode
-    mSet <- InitDataObjects("pktable",
+    mSet <- MetaboAnalystR::InitDataObjects("pktable",
                             "stat",
                             FALSE)
     # set default time series mode'
@@ -135,7 +133,7 @@ observeEvent(input$initialize, {
     rownames(covar_table) <- covar_table$sample
     
     # load new csv into empty mSet!
-    mSet <- Read.TextData(mSet,
+    mSet <- MetaboAnalystR::Read.TextData(mSet,
                           filePath = csv_loc_final,
                           "rowu")  # rows contain samples
     
@@ -143,10 +141,10 @@ observeEvent(input$initialize, {
     mSet$dataSet$covars <- covar_table
     
     # sanity check data
-    mSet <- SanityCheckData(mSet)
+    mSet <- MetaboAnalystR::SanityCheckData(mSet)
     
     # remove metabolites with more than user defined perc missing
-    mSet <- RemoveMissingPercent(mSet,
+    mSet <- MetaboAnalystR::RemoveMissingPercent(mSet,
                                  percent = input$perc_limit/100)
     
     # missing value imputation
@@ -194,7 +192,7 @@ observeEvent(input$initialize, {
         # - - - - - - - - - - - -
       }else{
         # use built in imputation methods, knn means etc.
-        mSet <- ImputeVar(mSet,
+        mSet <- MetaboAnalystR::ImputeVar(mSet,
                           method =  #"knn"
                             input$miss_type
         )
@@ -205,7 +203,7 @@ observeEvent(input$initialize, {
     if(req(input$filt_type ) != "none"){
       # filter dataset
       # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
-      mSet <- FilterVariable(mSet,
+      mSet <- MetaboAnalystR::FilterVariable(mSet,
                              filter = input$filt_type,
                              qcFilter = "F",
                              rsd = 25)
@@ -237,10 +235,10 @@ observeEvent(input$initialize, {
     
     dput(mSet$metshiParams)
     
-    mSet <- PreparePrenormData(mSet)
+    mSet <- MetaboAnalystR::PreparePrenormData(mSet)
     
     # normalize dataset with user settings(result: mSet$dataSet$norm)
-    mSet <- Normalization(mSet,
+    mSet <- MetaboAnalystR::Normalization(mSet,
                           rowNorm = input$norm_type,
                           transNorm = input$trans_type,
                           scaleNorm = input$scale_type,
@@ -320,7 +318,7 @@ observeEvent(input$initialize, {
         exp_lbl <- mSet$dataSet$cls
         
         # create csv for comBat
-        csv <- as.data.table(cbind(sample = smp,
+        csv <- data.table::as.data.table(cbind(sample = smp,
                                    label = mSet$dataSet$cls,
                                    mSet$dataSet$norm))
         
@@ -335,7 +333,7 @@ observeEvent(input$initialize, {
                                   batch2 = c(0),
                                   outcome = as.factor(exp_lbl))
           # batch correct with comBat
-          batch_normalized= t(sva::ComBat(dat=csv_edata,
+          batch_normalized = t(sva::ComBat(dat=csv_edata,
                                           batch=csv_pheno$batch1
                                           #mod=mod.pheno,
                                           #par.prior=TRUE
@@ -384,24 +382,24 @@ observeEvent(input$initialize, {
     
     # generate summary plots and render them in UI
     
-    varNormPlots <- ggplotNormSummary(mSet = mSet,
+    varNormPlots <- MetaboShiny::ggplotNormSummary(mSet = mSet,
                                       colmap = lcl$aes$mycols,
                                       plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                       font = lcl$aes$font)
     
-    output$var1 <- renderPlot(varNormPlots$tl)
-    output$var2 <- renderPlot(varNormPlots$bl)
-    output$var3 <- renderPlot(varNormPlots$tr)
-    output$var4 <- renderPlot(varNormPlots$br)
+    output$var1 <- shiny::renderPlot(varNormPlots$tl)
+    output$var2 <- shiny::renderPlot(varNormPlots$bl)
+    output$var3 <- shiny::renderPlot(varNormPlots$tr)
+    output$var4 <- shiny::renderPlot(varNormPlots$br)
     
-    sampNormPlots <-  ggplotSampleNormSummary(mSet,
+    sampNormPlots <- MetaboShiny::ggplotSampleNormSummary(mSet,
                                               #colmap = lcl$aes$mycols,
                                               plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                               font = lcl$aes$font)
-    output$samp1 <- renderPlot(sampNormPlots$tl)
-    output$samp2 <- renderPlot(sampNormPlots$bl)
-    output$samp3 <- renderPlot(sampNormPlots$tr)
-    output$samp4 <- renderPlot(sampNormPlots$br)
+    output$samp1 <- shiny::renderPlot(sampNormPlots$tl)
+    output$samp2 <- shiny::renderPlot(sampNormPlots$bl)
+    output$samp3 <- shiny::renderPlot(sampNormPlots$tr)
+    output$samp4 <- shiny::renderPlot(sampNormPlots$br)
     shiny::setProgress(session=session, value= .8)
     
     # save the used adducts to mSet

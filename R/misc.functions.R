@@ -2,21 +2,24 @@ trim <- function (x) gsub("^\\s+|\\s+$", "", x)
 
 trim.trailing <- function (x) sub("\\s+$", "", x)
 
-#' @export
 list.to.df <- function(lst,
                        type){
   dfStorage <- pbapply::pblapply(seq_along(lst), FUN=function(y, n, i){
     matches <- as.character(y[[i]])
     if((length(matches) == 0) && (typeof(matches) == "character")){ matches = NA }
-    temp.df <- data.frame(stringsAsFactors = FALSE, "mz"=rep(n[[i]], length(matches)), "CompoundName"=matches[[1]], "Adduct"=matches[[2]], "Isotope"=matches[[3]], "Source"=rep(type, length(matches)))
+    temp.df <- data.frame(stringsAsFactors = FALSE, 
+                          "mz"=rep(n[[i]], length(matches)), 
+                          "CompoundName"=matches[[1]], 
+                          "Adduct"=matches[[2]], 
+                          "Isotope"=matches[[3]], 
+                          "Source"=rep(type, length(matches)))
     temp.df
   },y=lst, n=names(lst))
-  df <- rbindlist(dfStorage)
+  df <- data.table::rbindlist(dfStorage)
   # --- return ---
   df
 }
 
-#' @export
 factorize <- function(vector){
   items <- as.factor(vector)
   new.levels <- c(0:(length(levels(items)) - 1 ))
@@ -25,10 +28,8 @@ factorize <- function(vector){
   items
 }
 
-#' @export
 `%not in%` <- function (x, table) is.na(match(x, table, nomatch=NA_integer_))
 
-#' @export
 ppm_range <- function(mz, ppm) c((mz - (ppm/1000000 * mz)), (mz + (ppm/1000000 * mz)))
 
 # --- isotopey testing stuff ---
@@ -288,10 +289,7 @@ download.chebi.joanna <- function (release = "latest", woAssociations = FALSE) {
 
 
 sdfStream.joanna <- function (input, output, append = FALSE, fct, Nlines = 10000,
-                              startline = 1, restartNlines = 10000, silent = FALSE, ...)
-{
-  require(ChemmineR)
-
+                              startline = 1, restartNlines = 10000, silent = FALSE, ...){
   stop <- FALSE
   f <- file(input, "r")
   n <- Nlines
@@ -350,7 +348,7 @@ sdfStream.joanna <- function (input, output, append = FALSE, fct, Nlines = 10000
                                                1, index[-length(index)] + 1), SDFlineEnd = index)
       offset <- indexDF[length(indexDF[, 2]), 2]
       try({
-        sdfset <- read.SDFset(read.SDFstr(complete))
+        sdfset <- ChemmineR::read.SDFset(ChemmineR::read.SDFstr(complete))
         if (length(indexDF[, 1]) == 1) {
           suppressWarnings(sdfset <- c(sdfset, sdfset))
           resultMA <- fct(sdfset, ...)
@@ -404,15 +402,9 @@ plot.mol = function(smi,
   # sends it, because deleteFile=TRUE.
   a <- tempfile(fileext='.png')
  
-  # Generate a png
-  #png(a, width=500, height=500,bg=NA)
-
   plot(NA,NA,xlim=c(1,10),ylim=c(1,10),xaxt='n',yaxt='n',xlab='',ylab='',main=main,bg=NA) # create an empty plot
   rasterImage(temp1,1,1,10,10) # boundaries of raster: xmin, ymin, xmax, ymax. here i set them equal to plot boundaries
 
-  #dev.off()
-
-  #system(gsubfn::fn$paste("convert $a -transparent white $b"))
   # Return a list
   list(src = a)
 }
@@ -422,58 +414,43 @@ find.formulas <- function(mzvals, cl=FALSE, ppm=3, charge=1, element.counts = li
                                                                                    c("N",0,50),c("O",0,50),
                                                                                    c("S",0,50),c("Na", 0, 5),
                                                                                    c("Cl", 0, 5), c("P", 0,5))){
-  require(rcdk)
-  require(pbapply)
-  require(data.table)
-  # ------------------------------------------
-  found.rows <- pblapply(mzvals,cl=cl, function(mz){
+
+  found.rows <- pbapply::pblapply(mzvals,cl=cl, function(mz){
     window = mz * (ppm / 1e6)
     # --- generate molecular formulae ---
-    found.mfs <- generate.formula(mz, window=0.3, element.counts, validation=TRUE, charge=charge)
+    found.mfs <- rcdk::generate.formula(mz, window=0.3, 
+                                  element.counts, 
+                                  validation=TRUE, charge=charge)
     rows <- if(length(found.mfs) == 0) NA else(
       rows <- lapply(found.mfs, function(formula){
         # --- check for ppm range ---
         mz.found <- formula@mass
         within.ppm <- abs(mz - mz.found) < window
         if(within.ppm){
-          data.table(origMZ = mz,
+          data.table::data.table(origMZ = mz,
                      genMZ = mz.found,
                      BaseFormula = formula@string)
-        } else(data.table(origMZ=mz,
+        } else(data.table::data.table(origMZ=mz,
                           genMZ=NA,
                           BaseFormula=NA))
       })
     )
     # --- return ---
-    unique(rbindlist(rows[!is.na(rows)]))
+    unique(data.table::rbindlist(rows[!is.na(rows)]))
   })
-  rbindlist(found.rows[!is.na(found.rows)])
+  data.table::rbindlist(found.rows[!is.na(found.rows)])
 }
 
-get.package.table <- function(){
-  status <- sapply(gbl$constants$packages, FUN=function(package){
-    if(package %in% rownames(installed.packages())) "Yes" else "No"
-  })
-  version <- sapply(gbl$constants$packages, FUN=function(package){
-    if(package %in% rownames(installed.packages())){packageDescription(package)$Version} else ""
-  })
-  result <-data.table(
-    Package = gbl$constants$packages,
-    Installed = status,
-    Version = version
-  )
-  # --- return ---
-  result
-}
-
+# @export
 joanna_debugger <- function(){
   lcl <<- debug_lcl
   mSet <<- debug_mSet
   input <<- debug_input
-  shown_matches <<- isolate({reactiveValuesToList(debug_matches)})
-  my_selection <<- isolate({reactiveValuesToList(debug_selection)})
+  shown_matches <<- shiny::isolate({shiny::reactiveValuesToList(debug_matches)})
+  my_selection <<- shiny::isolate({shiny::reactiveValuesToList(debug_selection)})
 }
 
+# @export
 internetWorks <- function(testsite = "http://www.google.com"){
   works = FALSE
   try({
@@ -515,7 +492,7 @@ getOptions <- function(file.loc){
 setOption <- function(file.loc, key, value){
   opt_conn <- file(file.loc)
   # -------------------------
-  options <- getOptions(file.loc)
+  options <- MetaboShiny::getOptions(file.loc)
   # --- add new or change ---
   options[[key]] = value
   # --- list-ify ---
@@ -638,19 +615,19 @@ switchButton <- function(inputId, label, value=FALSE, col = "GB", type="TF") {
 }
 
 #' Squishes HTML elements close together.
-sardine <- function(content) div(style="display: inline-block;vertical-align:top;", content)
+sardine <- function(content) shiny::div(style="display: inline-block;vertical-align:top;", content)
 
 # loading screen
 loadModal <- function(failed = FALSE) {
-  modalDialog(
-    fluidRow(align="center",
-             br(),br(),
-             h3("Starting MetaboShiny..."),
-             br(),br(),
-             helpText("ଘ(੭ˊᵕˋ)੭* ੈ✩‧₊˚"), 
-             br(),br(),
-             img(class="rotategem", src="gemmy_rainbow.png", width="70px", height="70px"),
-             br(),br(),br()
+  shiny::modalDialog(
+    shiny::fluidRow(align="center",
+             shiny::br(),shiny::br(),
+             shiny::h3("Starting MetaboShiny..."),
+             shiny::br(),shiny::br(),
+             shiny::helpText("ଘ(੭ˊᵕˋ)੭* ੈ✩‧₊˚"), 
+             shiny::br(),shiny::br(),
+             shiny::img(class="rotategem", src="gemmy_rainbow.png", width="70px", height="70px"),
+             shiny::br(),shiny::br(),shiny::br()
     )
   )
 }

@@ -15,8 +15,6 @@ function(input, output, session) {
   # current instructions
   #Rshiny app to analyse untargeted metabolomics data! BASH INSTRUCTIONS: STEP 1: mydir=~"/MetaboShiny" #or another of your choice | STEP 2: mkdir $mydir | STEP 3: docker run -p 8080:8080 -v $mydir:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny /start.sh
   
-  library(httr)
-  
   # rjava.so error.. or rdb corrupt.. 'sudo R CMD javareconf'
   
   runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
@@ -30,7 +28,7 @@ function(input, output, session) {
   
   # - - - - - - - -
   
-  showModal(loadModal())
+  shiny::showModal(MetaboShiny::loadModal())
   
   # - - - - - - - - - -
   
@@ -38,8 +36,8 @@ function(input, output, session) {
   opts <- list()
   showtext::showtext_auto(enable = T)
   
-  logged <- reactiveValues(status = "notlogged",
-                           text = "please log in! ( •́ .̫  •̀ )")
+  logged <- shiny::reactiveValues(status = "notlogged",
+                                  text = "please log in! ( •́ .̫  •̀ )")
   
   lcl = list(
     proj_name ="",
@@ -58,33 +56,36 @@ function(input, output, session) {
   
   # == REACTIVE VALUES ==
   
-  shown_matches <- reactiveValues(forward = list(full=data.table(),
-                                                 unique=data.table()),
-                                  reverse = data.table())
+  interface <- shiny::reactiveValues(html="")
   
-  browse_content <- reactiveValues(table = data.table())
+  shown_matches <- shiny::reactiveValues(forward = list(full=data.table::data.table(),
+                                                        unique=data.table::data.table()),
+                                         reverse = data.table::data.table())
   
-  result_filters <- reactiveValues(add = c(), 
-                                   db = c(), 
-                                   iso = c())
+  browse_content <- shiny::reactiveValues(table = data.table::data.table())
   
-  my_selection = reactiveValues(mz = "",
-                                revstruct = "",
-                                name = "")
+  result_filters <- shiny::reactiveValues(add = c(), 
+                                          db = c(), 
+                                          iso = c())
   
-  scanmode = reactiveValues(positive = FALSE,
-                            negative = FALSE)
+  my_selection = shiny::reactiveValues(mz = "",
+                                       struct = "",
+                                       revstruct = "",
+                                       name = "")
   
-  pieinfo = reactiveValues(add = c(),
-                           db = c(),
-                           iso = c())
+  scanmode = shiny::reactiveValues(positive = FALSE,
+                                   negative = FALSE)
   
-  search_button = reactiveValues(on=TRUE)
+  pieinfo = shiny::reactiveValues(add = c(),
+                                  db = c(),
+                                  iso = c())
   
-  search = reactiveValues(go = F)
+  search_button = shiny::reactiveValues(on=TRUE)
+  
+  search = shiny::reactiveValues(go = F)
   
   ####### !!!!!!!!!!! #########
-  observe({
+  shiny::observe({
     print("...loading user settings...")
     if(exists("lcl")){
       # - - - 
@@ -122,7 +123,7 @@ gspec = RdBu
 mode = complete')
         writeLines(contents, lcl$paths$opt.loc)
       }
-      opts = getOptions(lcl$paths$opt.loc)
+      opts = MetaboShiny::getOptions(lcl$paths$opt.loc)
     }
   })
   
@@ -136,24 +137,24 @@ mode = complete')
   
   # ================================== LOGIN =====================================
   
-  output$manual_search <- renderUI({
+  output$manual_search <- shiny::renderUI({
     if(search_button$on){
-      tags$button(
+      shiny::tags$button(
         id = "search_mz",
         class = "btn btn-default action-button",
         img(src = "detective.png",
             height = "50px")
       )
     }else{
-      fluidRow(align="center", icon("paw","fa-s fa-rotate-90"), br(),
-               tags$i("pre-matched"))
+      shiny::fluidRow(align="center", shiny::icon("paw","fa-s fa-rotate-90"), shiny::br(),
+                      shiny::tags$i("pre-matched"))
     }
   })
   
   # ================================= DEFAULTS ===================================
   
   # set progress bar style to 'old' (otherwise it's not movable with CSS)
-  shinyOptions(progress.style="old")
+  shiny::shinyOptions(progress.style="old")
   
   options(digits=22,
           spinner.size = 0.5,
@@ -171,14 +172,14 @@ mode = complete')
   
   # create default text objects in UI
   lapply(gbl$constants$default.text, FUN=function(default){
-    output[[default$name]] = renderText(default$text)
+    output[[default$name]] = shiny::renderText(default$text)
   })
   
   showtext::showtext_auto() ## Automatically use showtext to render text for future devices
   
   # create image objects in UI
   lapply(gbl$constants$images, FUN=function(image){
-    output[[image$name]] <- renderImage({
+    output[[image$name]] <- shiny::renderImage({
       filename <- normalizePath(image$path)
       # Return a list containing the filename and alt text
       list(src = filename,
@@ -187,51 +188,64 @@ mode = complete')
     }, deleteFile = FALSE)
   })
   
-  observe({
+  shiny::observe({
     if(nrow(shown_matches$forward$unique)>0){
-      pieinfo$add <<- melt(table(shown_matches$forward$unique$adduct))
-      pieinfo$db <<- melt(table(shown_matches$forward$full$source))
-      pieinfo$iso <<- melt(table(shown_matches$forward$unique$isocat))
+      pieinfo$add <<- reshape::melt(table(shown_matches$forward$unique$adduct))
+      pieinfo$db <<- reshape::melt(table(shown_matches$forward$full$source))
+      pieinfo$iso <<- reshape::melt(table(shown_matches$forward$unique$isocat))
     }
   })
   
-  observe({
+  shiny::observe({
     # - - filters - -
     if(search$go){
-      matches = as.data.table(get_prematches(who = my_selection$mz,
-                                             what = "query_mz",
-                                             patdb = lcl$paths$patdb,
-                                             showadd = result_filters$add,
-                                             showdb = result_filters$db,
-                                             showiso = result_filters$iso))
-      
-      shown_matches$forward$full <<- matches[,c("name", "source", "description"),with=F]
-      
-      uniques = as.data.table(unique(as.data.table(matches)[,-c("source", "description"),with=F]))
-      grouped_uniques = uniques[, .(structure = list(structure)), by = setdiff(names(uniques), "structure")]
-      structs <- lapply(1:nrow(grouped_uniques), function(i){
-        row = grouped_uniques[i,]
-        opts = row$structure[[1]]
-        if(length(opts)>1){
-          # check for square brackets
-          if(any(grepl(pattern = "\\[", x = opts))){
-            opts[!grepl(pattern="\\[",x = opts)]
+      shiny::withProgress({
+        matches = data.table::as.data.table(MetaboShiny::get_prematches(who = my_selection$mz,
+                                                                        what = "query_mz",
+                                                                        patdb = lcl$paths$patdb,
+                                                                        showadd = result_filters$add,
+                                                                        showdb = result_filters$db,
+                                                                        showiso = result_filters$iso))
+        
+        shiny::setProgress(0.2)
+        
+        shown_matches$forward$full <<- matches[,c("name", "source", "description"),with=F]
+        
+        uniques = data.table::as.data.table(unique(data.table::as.data.table(matches)[,-c("source", "description"),with=F]))
+        grouped_uniques = uniques[, .(structure = list(structure)), 
+                                  by = setdiff(names(uniques), "structure")]
+        shiny::setProgress(0.4)
+
+        structs <- lapply(1:nrow(grouped_uniques), function(i){
+          row = grouped_uniques[i,]
+          opts = row$structure[[1]]
+          if(length(opts)>1){
+            # check for square brackets
+            if(any(grepl(pattern = "\\[", x = opts))){
+              opts[!grepl(pattern="\\[",x = opts)]
+            }else{
+              # just grab the first
+              opts[1]
+            }
           }else{
-            # just grab the first
-            opts[1]
+            opts
           }
-        }else{
-          opts
-        }
+        })
+        shiny::setProgress(0.6)
+        
+        grouped_uniques$structure <- structs
+        shown_matches$forward$unique <<- grouped_uniques
+        my_selection$name <<- ""
+        my_selection$struct <<- ""
+        
+        shiny::setProgress(0.8)
+        
       })
-      grouped_uniques$structure <- structs
-      shown_matches$forward$unique <<- grouped_uniques
-      my_selection$name <<- ""
       search$go <<- FALSE #reset self
     }
   })
   
-  observe({
+  shiny::observe({
     if(my_selection$mz != ""){
       if(mSet$metshiParams$prematched){
         search$go <<- TRUE
@@ -240,13 +254,13 @@ mode = complete')
     }
   })
   
-  observe({
+  shiny::observe({
     if(my_selection$name != ""){
       
-      subsec = as.data.table(shown_matches$forward$full)[name == my_selection$name]
+      subsec = data.table::as.data.table(shown_matches$forward$full)[name == my_selection$name]
       
       # render descriptions seperately
-      output$desc_ui <- renderUI({lapply(1:nrow(subsec), function(i){
+      output$desc_ui <- shiny::renderUI({lapply(1:nrow(subsec), function(i){
         row = subsec[i,]
         # icon(s) in one row
         dbs = strsplit(row$source, split=",")[[1]]
@@ -261,7 +275,7 @@ mode = complete')
           # ICONS IN A ROW
           name = names(img)[i]
           address = img[i]
-          output[[paste0("desc_icon_", name)]] <- renderImage({
+          output[[paste0("desc_icon_", name)]] <- shiny::renderImage({
             # When input$n is 3, filename is ./images/image3.jpeg
             list(src = address,
                  #width=30,
@@ -270,30 +284,46 @@ mode = complete')
         })
         
         desc_id = paste0("curr_desc_", dbs, collapse="_")
-        output[[desc_id]] <- renderText({trimws(desc)})
+        output[[desc_id]] <- shiny::renderText({trimws(desc)})
         
         # ui
-        list(fluidRow(align="center", 
-                      lapply(dbs, function(db){
-                        sardine(imageOutput(paste0("desc_icon_",db),inline = T))}),
-                      br(),
-                      textOutput(desc_id)),
-             hr()
+        list(shiny::fluidRow(align="center", 
+                             lapply(dbs, function(db){
+                               MetaboShiny::sardine(shiny::imageOutput(paste0("desc_icon_",db),inline = T))}),
+                             shiny::br(),
+                             textOutput(desc_id)),
+             shiny::hr()
         )
       })
       }) 
     }
   })
   
-  observe({
+  shiny::observe({
+    if(my_selection$struct != ""){
+      sesshInfo <<- shiny::reactiveValuesToList(session$clientData)
+      width = sesshInfo$output_empty_width
+      if(width > 300) width = 300
+      
+      output$curr_struct <- shiny::renderPlot({plot.mol(my_selection$struct,
+                                                        style = "cow")},
+                                              width=width, 
+                                              height=width) # plot molecular structure WITH CHEMMINER
+      
+      curr_formula <<- unlist(shown_matches$forward$unique[curr_row,'baseformula']) # get current formula
+      output$curr_formula <- shiny::renderText({curr_formula}) # render text of current formula
+    }
+  })
+  
+  shiny::observe({
     if(my_selection$revstruct != ""){
       if(!mSet$metshiParams$prematched){
         print("Please perform pre-matching first to enable this feature!")
         return(NULL)
       }else{
-        shown_matches$reverse <<- unique(get_prematches(who = my_selection$revstruct,
-                                                        what = "map.structure", #map.mz as alternative
-                                                        patdb = lcl$paths$patdb)[,c("query_mz", "adduct", "%iso", "dppm")])
+        shown_matches$reverse <<- unique(MetaboShiny::get_prematches(who = my_selection$revstruct,
+                                                                     what = "map.structure", #map.mz as alternative
+                                                                     patdb = lcl$paths$patdb)[,c("query_mz", "adduct", "%iso", "dppm")])
       } 
     }
   })
@@ -303,17 +333,17 @@ mode = complete')
     output[[paste0("match_pie_", which_pie)]] <- plotly::renderPlotly({
       pievec = pieinfo[[which_pie]]
       if(length(pievec)>0){
-        plot_ly(pievec, labels = ~Var1, 
-                values = ~value, size=~value*10, type = 'pie',
-                textposition = 'inside',
-                textinfo = 'label+percent',
-                insidetextfont = list(color = '#FFFFFF'),
-                hoverinfo = 'text',
-                text = ~paste0(Var1, ": ", value, ' matches'),
-                marker = list(colors = colors,
-                              line = list(color = '#FFFFFF', width = 1)),
-                #The 'pull' attribute can also be used to create space between the sectors
-                showlegend = FALSE) %>%
+        plotly::plot_ly(pievec, labels = ~Var1, 
+                        values = ~value, size=~value*10, type = 'pie',
+                        textposition = 'inside',
+                        textinfo = 'label+percent',
+                        insidetextfont = list(color = '#FFFFFF'),
+                        hoverinfo = 'text',
+                        text = ~paste0(Var1, ": ", value, ' matches'),
+                        marker = list(colors = colors,
+                                      line = list(color = '#FFFFFF', width = 1)),
+                        #The 'pull' attribute can also be used to create space between the sectors
+                        showlegend = FALSE) %>%
           layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
                  yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))  
       }
@@ -322,11 +352,8 @@ mode = complete')
   
   # ===== UI SWITCHER ====
   
-  # create interface mode storage object.
-  interface <- reactiveValues()
-  
   # this toggles when 'interface' values change (for example from 'bivar' to 'multivar' etc.)
-  observe({
+  shiny::observe({
     # hide all tabs by default, easier to hide them and then make visible selectively
     hide.tabs <- list(
       list("statistics", "inf"),
@@ -367,15 +394,17 @@ mode = complete')
     
     # hide all the tabs to begin with
     for(tab in hide.tabs){
-      hideTab(inputId = unlist(tab)[1],
-              unlist(tab)[2],
-              session = session)
+      shiny::hideTab(inputId = unlist(tab)[1],
+                     unlist(tab)[2],
+                     session = session)
     }
     
     i=1
     # show the relevant tabs
     for(tab in show.tabs){
-      showTab(inputId = unlist(tab)[1], unlist(tab)[2], session = session, select = ifelse(i==1, TRUE, FALSE))
+      shiny::showTab(inputId = unlist(tab)[1], 
+                     unlist(tab)[2], session = session, 
+                     select = ifelse(i==1, TRUE, FALSE))
       #showTab(inputId = "statistics", tab, select = ifelse(i==1, TRUE, FALSE), session = session)
       i = i + 1
     }
@@ -383,31 +412,31 @@ mode = complete')
   })
   
   # print current compound in sidebar
-  output$curr_mz <- renderText(my_selection$mz)
+  output$curr_mz <- shiny::renderText(my_selection$mz)
   
   # make miniplot for sidebar with current compound
   output$curr_plot <- plotly::renderPlotly({
     if(my_selection$mz != ""){
-      ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, 
-                    cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
-                    styles = input$ggplot_sum_style,
-                    add_stats = input$ggplot_sum_stats, 
-                    col.fac = input$col_var,
-                    txt.fac = input$txt_var,
-                    plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                    font = lcl$aes$font)
+      MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, 
+                                 cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                 styles = input$ggplot_sum_style,
+                                 add_stats = input$ggplot_sum_stats, 
+                                 col.fac = input$col_var,
+                                 txt.fac = input$txt_var,
+                                 plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                                 font = lcl$aes$font)
     }
   })
   
   # -----------------
-  observeEvent(input$undo_match_filt, {
+  shiny::observeEvent(input$undo_match_filt, {
     result_filters$add <<- c()
     result_filters$db <<- c()
     result_filters$iso <<- c()
     search$go <<- T
   })
   
-  observe({
+  shiny::observe({
     if(my_selection$mz != ""){
       scanmode$positive <<- F
       scanmode$negative <<- F
@@ -423,21 +452,21 @@ mode = complete')
   ref.selector <- reactive({
     # -------------
     if(input$norm_type == "ProbNorm" | input$norm_type == "CompNorm"){
-      fluidRow(
-        hr(),
+      shiny::fluidRow(
+        shiny::hr(),
         selectInput('ref_var',
                     'What is your reference condition?',
                     choices = c("")),
         actionButton("check_csv",
                      "Get options",
-                     icon=icon("search")),
-        hr()
+                     icon=shiny::icon("search")),
+        shiny::hr()
       )
     }
   })
   
   # triggers when check_csv is clicked - get factors usable for normalization
-  observeEvent(input$check_csv, {
+  shiny::observeEvent(input$check_csv, {
     req(lcl$paths$csv_loc)
     switch(input$norm_type,
            ProbNorm=updateSelectInput(session, "ref_var",
@@ -453,7 +482,7 @@ mode = complete')
   
   # triggered when user enters the statistics tab
   
-  observeEvent(input$statistics, {
+  shiny::observeEvent(input$statistics, {
     if(!is.null(mSet)){
       # check if an mset is present, otherwise abort
       switch(input$statistics,
@@ -486,7 +515,7 @@ mode = complete')
     }
   })
   
-  observeEvent(input$tab_iden_4, {
+  shiny::observeEvent(input$tab_iden_4, {
     if(!is.null(mSet)){
       subtab = if(grepl(pattern="pie", input$tab_iden_4)) "pie" else input$tab_iden_4
       switch(subtab,
@@ -501,7 +530,7 @@ mode = complete')
     }
   })
   
-  observeEvent(input$dimred, {
+  shiny::observeEvent(input$dimred, {
     # check if an mset is present, otherwise abort
     if(!is.null(mSet)){
       # depending on the present tab, perform analyses accordingly
@@ -512,7 +541,7 @@ mode = complete')
     }
   })
   
-  observeEvent(input$permz, {
+  shiny::observeEvent(input$permz, {
     # check if an mset is present, otherwise abort
     if(!is.null(mSet)){
       # depending on the present tab, perform analyses accordingly
@@ -523,7 +552,7 @@ mode = complete')
     }
   })
   
-  observeEvent(input$overview, {
+  shiny::observeEvent(input$overview, {
     # check if an mset is present, otherwise abort
     if(!is.null(mSet)){
       # depending on the present tab, perform analyses accordingly
@@ -534,32 +563,32 @@ mode = complete')
     }
   })
   
-  observeEvent(input$ml_top_x, {
+  shiny::observeEvent(input$ml_top_x, {
     if(!is.null(mSet)){
       datamanager$reload <- "ml"
     }
   },ignoreInit = T, ignoreNULL = T)
   
-  observe({
+  shiny::observe({
     if(!is.null(input$ml_method)){
       mdl = caret::getModelInfo()[[input$ml_method]]
       params <- mdl$parameters
       output$ml_params <- renderUI({
         list(
-          helpText(mdl$label),
-          hr(),
+          shiny::helpText(mdl$label),
+          shiny::hr(),
           h2("Tuning settings"),
           lapply(1:nrow(params), function(i){
             row = params[i,]
             list(
-              textInput(inputId = paste0("ml_", row$parameter),
-                        label = row$parameter,
-                        value=if(input$ml_method=="glmnet"){
-                          switch(row$parameter,
-                                 alpha = 1,
-                                 lambda = "0:1:0.01")
-                        }),
-              helpText(paste0(row$label, " (", row$class, ")."))
+              shiny::textInput(inputId = paste0("ml_", row$parameter),
+                               label = row$parameter,
+                               value=if(input$ml_method=="glmnet"){
+                                 switch(row$parameter,
+                                        alpha = 1,
+                                        lambda = "0:1:0.01")
+                               }),
+              shiny::helpText(paste0(row$label, " (", row$class, ")."))
             )
           })
         )
@@ -567,7 +596,7 @@ mode = complete')
     }
   })
   
-  observeEvent(input$show_which_ml,{
+  shiny::observeEvent(input$show_which_ml,{
     if(!is.null(mSet)){
       split.name = strsplit(input$show_which_ml, split = " - ")[[1]]
       mSet$analSet$ml$last$method <<- split.name[[1]]
@@ -576,7 +605,7 @@ mode = complete')
     }
   },ignoreNULL = T, ignoreInit = T)
   
-  observeEvent(input$select_db_all, {
+  shiny::observeEvent(input$select_db_all, {
     
     dbs <- gbl$vectors$db_list[-which(gbl$vectors$db_list %in% c("custom", "magicball"))]
     
@@ -594,7 +623,7 @@ mode = complete')
     }
   })
   
-  observeEvent(input$select_db_prematch_all, {
+  shiny::observeEvent(input$select_db_prematch_all, {
     
     dbs <- gbl$vectors$db_list[-which(gbl$vectors$db_list %in% c("custom", "magicball"))]
     
@@ -624,39 +653,39 @@ mode = complete')
       # create 3 fluidrows followed by a break
       list(
         # row 1: name
-        fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
-          column(width=3,align="center", h2(gbl$constants$db.build.info[[db]]$title))
+        shiny::fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
+          shiny::column(width=3,align="center", h2(gbl$constants$db.build.info[[db]]$title))
         })),
         # row 2: description
-        fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
-          column(width=3,align="center", helpText(gbl$constants$db.build.info[[db]]$description))
+        shiny::fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
+          shiny::column(width=3,align="center", shiny::helpText(gbl$constants$db.build.info[[db]]$description))
         })),
         # row 3: image
-        fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
+        shiny::fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
           if(db != "custom"){
-            column(width=3,align="center", imageOutput(gbl$constants$db.build.info[[db]]$image_id, inline=T))
+            shiny::column(width=3,align="center", shiny::imageOutput(gbl$constants$db.build.info[[db]]$image_id, inline=T))
           }else{
-            column(width=3,align="center", shinyWidgets::circleButton("make_custom_db",
-                                                                      size = "lg",
-                                                                      icon = icon("plus",class = "fa-lg"),
-                                                                      style = "stretch",
-                                                                      color = "default"))
+            shiny::column(width=3,align="center", shinyWidgets::circleButton("make_custom_db",
+                                                                             size = "lg",
+                                                                             icon = shiny::icon("plus",class = "fa-lg"),
+                                                                             style = "stretch",
+                                                                             color = "default"))
           }
         })),
         # row 4: button
-        fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
-          column(width=3,align="center",
-                 if(!(db %in% c("magicball", "custom"))){
-                   list(actionButton(paste0("check_", db), "Check", icon = icon("check")),
-                        actionButton(paste0("build_", db), "Build", icon = icon("wrench")),
-                        br(),br(),
-                        imageOutput(paste0(db, "_check"),inline = T))
-                 }else{
-                   helpText("")
-                 }
+        shiny::fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
+          shiny::column(width=3,align="center",
+                        if(!(db %in% c("magicball", "custom"))){
+                          list(actionButton(paste0("check_", db), "Check", icon = shiny::icon("check")),
+                               actionButton(paste0("build_", db), "Build", icon = shiny::icon("wrench")),
+                               shiny::br(),shiny::br(),
+                               shiny::imageOutput(paste0(db, "_check"),inline = T))
+                        }else{
+                          shiny::helpText("")
+                        }
           )
         })),
-        br())
+        shiny::br())
     })
     # return
     database_layout
@@ -669,10 +698,10 @@ mode = complete')
     output[[paste0("db_", prefix, "_select")]] <- renderUI({
       built.dbs <- c(gsub(x = list.files(lcl$paths$db_dir, pattern = "\\.db"), 
                           pattern = "\\.db", replacement = ""), "custom")
-      fluidRow(
+      shiny::fluidRow(
         lapply(gbl$vectors$db_list[-which(gbl$vectors$db_list == "custom" | !(gbl$vectors$db_list %in% built.dbs))], function(db){
           which_idx = grep(sapply(gbl$constants$images, function(x) x$name), pattern = db) # find the matching image (NAME MUST HAVE DB NAME IN IT COMPLETELY)
-          sardine(fadeImageButton(inputId = paste0(prefix, "_", db), img.path = basename(gbl$constants$images[[which_idx]]$path))) # generate fitting html
+          MetaboShiny::sardine(fadeImageButton(inputId = paste0(prefix, "_", db), img.path = basename(gbl$constants$images[[which_idx]]$path))) # generate fitting html
         })
       )
     })
@@ -680,7 +709,7 @@ mode = complete')
   
   # check if these buttons are selected or not
   lapply(db_button_prefixes, function(prefix){
-    observe({
+    shiny::observe({
       # ---------------------------------
       db_path_list <- lapply(gbl$vectors$db_list[-which(gbl$vectors$db_list == "custom")], # go through the dbs defined in db_lists
                              FUN = function(db){
@@ -701,9 +730,9 @@ mode = complete')
   })
   
   
-  observeEvent(input$save_mset, {
+  shiny::observeEvent(input$save_mset, {
     # save mset
-    withProgress({
+    shiny::withProgress({
       fn <- paste0(tools::file_path_sans_ext(lcl$paths$patdb), ".metshi")
       if(exists("mSet")){
         save(mSet, file = fn)
@@ -711,14 +740,14 @@ mode = complete')
     })
   })
   
-  observeEvent(input$load_mset, {
+  shiny::observeEvent(input$load_mset, {
     # load mset
-    withProgress({
+    shiny::withProgress({
       fn <- paste0(tools::file_path_sans_ext(lcl$paths$patdb), ".metshi")
       if(file.exists(fn)){
         load(fn)
         mSet <<- mSet
-        opts <- getOptions(lcl$paths$opt.loc)
+        opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
         lcl$proj_name <<- opts$proj_name
         lcl$paths$patdb <<- file.path(opts$work_dir, paste0(opts$proj_name, ".db"))
         lcl$paths$csv_loc <<- file.path(opts$work_dir, paste0(opts$proj_name, ".csv"))
@@ -729,13 +758,13 @@ mode = complete')
     updateNavbarPage(session, "statistics", selected = "inf")
   })
   
-  observeEvent(input$debug, {
-    debug_input <<- isolate(reactiveValuesToList(input))
+  shiny::observeEvent(input$debug, {
+    debug_input <<- shiny::isolate(shiny::reactiveValuesToList(input))
     debug_lcl <<- lcl
     debug_mSet <<- mSet
   })
   
-  observeEvent(input$ml_train_ss, {
+  shiny::observeEvent(input$ml_train_ss, {
     keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]
     subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
     gbl$vectors$ml_train <<- c(input$subset_var,
@@ -743,7 +772,7 @@ mode = complete')
     output$ml_train_ss <- renderText(subset.name)
   })
   
-  observeEvent(input$ml_test_ss, {
+  shiny::observeEvent(input$ml_test_ss, {
     keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]
     subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
     gbl$vectors$ml_test <<- c(input$subset_var, input$subset_group)
@@ -767,29 +796,29 @@ mode = complete')
   })
   
   # observeEvent
-  observeEvent(input$make_custom_db, {
+  shiny::observeEvent(input$make_custom_db, {
     
     # get window
     showModal(modalDialog(
-      fluidRow(align="center",
-               textInput("my_db_name", label = "Database full name", value = "MyDb"),
-               textInput("my_db_short", label = "Database shorthand name", value = "mydb"),
-               textInput("my_db_description", label = "Database description", value = "Custom database for MetaboShiny."),
-               hr(),
-               helpText("Please input a CSV file with at these columns (example below):"),
-               helpText("'baseformula', 'charge', 'compoundname', 'identifier', 'description', 'structure' (in SMILES!)"),
-               div(DT::dataTableOutput("db_example"), style="font-size:60%"),
-               br(),
-               shinyFiles::shinyFilesButton("custom_db", title = "Please pick a .csv file", multiple = F, label = "Select"),
-               hr(),
-               helpText("Please upload a database logo"),
-               shinyFilesButton("custom_db_img_path",
-                                'Select image',
-                                'Please select a png file',
-                                FALSE),br(),
-               imageOutput("custom_db_img", inline=T),br(),
-               hr(),
-               shinyWidgets::circleButton("build_custom_db",icon = icon("arrow-right", "fa-lg"), size = "lg")
+      shiny::fluidRow(align="center",
+                      shiny::textInput("my_db_name", label = "Database full name", value = "MyDb"),
+                      shiny::textInput("my_db_short", label = "Database shorthand name", value = "mydb"),
+                      shiny::textInput("my_db_description", label = "Database description", value = "Custom database for MetaboShiny."),
+                      shiny::hr(),
+                      shiny::helpText("Please input a CSV file with at these columns (example below):"),
+                      shiny::helpText("'baseformula', 'charge', 'compoundname', 'identifier', 'description', 'structure' (in SMILES!)"),
+                      shiny::div(DT::dataTableOutput("db_example"), style="font-size:60%"),
+                      shiny::br(),
+                      shinyFiles::shinyFilesButton("custom_db", title = "Please pick a .csv file", multiple = F, label = "Select"),
+                      shiny::hr(),
+                      shiny::helpText("Please upload a database logo"),
+                      shinyFiles::shinyFilesButton("custom_db_img_path",
+                                                   'Select image',
+                                                   'Please select a png file',
+                                                   FALSE),shiny::br(),
+                      shiny::imageOutput("custom_db_img", inline=T),shiny::br(),
+                      shiny::hr(),
+                      shinyWidgets::circleButton("build_custom_db",icon = shiny::icon("arrow-right", "fa-lg"), size = "lg")
       ),
       title = "Custom database creation",
       easyClose = TRUE,
@@ -799,7 +828,7 @@ mode = complete')
     )
   })
   
-  observeEvent(input$export_plot,{
+  shiny::observeEvent(input$export_plot,{
     switch(runmode,
            docker = plotly::orca(p = plotly::last_plot(), 
                                  file=file.path(lcl$paths$work_dir,paste0(lcl$proj_name, "_", basename(tempfile()), input$export_format))),
@@ -808,7 +837,7 @@ mode = complete')
                                  port = 9091))
   })
   
-  observeEvent(input$build_custom_db, {
+  shiny::observeEvent(input$build_custom_db, {
     
     csv_path <- parseFilePaths(gbl$paths$volumes, input$custom_db)$datapath
     
@@ -836,12 +865,12 @@ mode = complete')
   
   onStop(function() {
     print("closing metaboShiny ~ヾ(＾∇＾)")
-    debug_input <<- isolate(reactiveValuesToList(input))
+    debug_input <<- shiny::isolate(shiny::reactiveValuesToList(input))
     debug_lcl <<- lcl
     debug_mSet <<- mSet
     debug_matches <<- shown_matches
     debug_selection <<- my_selection
-
+    
     # remove metaboshiny csv files
     switch(runmode,
            local = {

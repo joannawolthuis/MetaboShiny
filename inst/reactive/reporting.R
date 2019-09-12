@@ -1,7 +1,7 @@
 dataModal <- function(failed = FALSE) {
-  modalDialog(
-    fluidRow(align="center",
-             textInput("report_plot_title", "Title", value = switch(input$statistics,
+  shiny::modalDialog(
+    shiny::fluidRow(align="center",
+                    shiny::textInput("report_plot_title", "Title", value = switch(input$statistics,
                                                                     tt = paste0("T-test", " - ", lcl$curr_mz, " m/z"),
                                                                     fc = paste0("Fold-change",  " - ", lcl$curr_mz, " m/z"),
                                                                     anova = paste0("ANOVA",  " - ", lcl$curr_mz, " m/z"),
@@ -11,20 +11,20 @@ dataModal <- function(failed = FALSE) {
                                                                     meba = paste0("MEBA",  " - ", lcl$curr_mz, " m/z"),
                                                                     asca = paste0("ASCA",  " - ", lcl$curr_mz, " m/z"),
                                                                     ml = "Machine learning")),
-             textAreaInput("report_plot_notes", "Notes", value = "", height = "100px")
+                    shiny::textAreaInput("report_plot_notes", "Notes", value = "", height = "100px")
     ),
-    footer = tagList(
-      fluidRow(align="center",
-               modalButton("Cancel"),
-               actionButton("report_plot", "Add plot to report")
+    footer = shiny::tagList(
+      shiny::fluidRow(align="center",
+                      shiny::modalButton("Cancel"),
+                      shiny::actionButton("report_plot", "Add plot to report")
       )
 
     )
   )
 }
 
-observeEvent(input$show_window, {
-  showModal(dataModal())
+shiny::observeEvent(input$show_window, {
+  shiny::showModal(dataModal())
   shinyjqui::jqui_draggable(selector = '.modal-content') # make draggable
 })
 
@@ -60,7 +60,7 @@ reportAppend = function(reportPlot, plotTitle, plotNotes){
   tmpFigureName <- paste(tempfile(pattern = "plot", tmpdir = file.path(options$work_dir, "report", "figures")), ".png", sep = "")
   # save plo† as PDF
   # ggsave(tmpFigureName, plot = lcl$last_plot)
-  ggsave(tmpFigureName, plot = reportPlot)
+  ggplot2::ggsave(tmpFigureName, plot = reportPlot)
   dev.off()
 
   # htmlwidgets::saveWidget(lcl$last_plot, tmpFigureName)
@@ -89,30 +89,30 @@ reportAppend = function(reportPlot, plotTitle, plotNotes){
   setwd(currentWD)
 
   # reset title, caption, and notes
-  updateTextInput(session, "plotTitle", label = "Title", value = "")
-  updateTextAreaInput(session, "plotNotes", label = "Notes", value = "")
+  shiny::updateTextInput(session, "plotTitle", label = "Title", value = "")
+  shiny::updateTextAreaInput(session, "plotNotes", label = "Notes", value = "")
 }
 # observe report button presses, need one for each button*
 
-observeEvent(input$report_plot, {
-  reportAppend(lcl$last_plot, input$report_plot_title, input$report_plot_notes)
+shiny::observeEvent(input$report_plot, {
+  shiny::reportAppend(lcl$last_plot, input$report_plot_title, input$report_plot_notes)
 })
 
 # For report tab where user can choose plots to appear in report
 # nonselected
 
 
-report_yes = reactiveValues(start = data.frame(),
+report_yes = shiny::reactiveValues(start = data.frame(),
                             now = data.frame())
 
-report_no = reactiveValues(start = data.frame(c("a", "b", "c")),
+report_no = shiny::reactiveValues(start = data.frame(c("a", "b", "c")),
                            now = data.frame(c("a", "b", "c")))
 
-observe({
+shiny::observe({
   if(exists("mSet")){
     if("storage" %in% names(mSet)){
       analyses = names(mSet$storage)
-      report_no$start <- rbindlist(lapply(analyses, function(name){
+      report_no$start <- data.table::rbindlist(lapply(analyses, function(name){
         analysis = mSet$storage[[name]]$analysis
         analysis_names = names(analysis)
         # - - -
@@ -148,9 +148,9 @@ observe({
   }
 })
 
-report_members <- reactiveValues(mzvals = list())
+report_members <- shiny::reactiveValues(mzvals = list())
 
-observeEvent(input$report_add, {
+shiny::observeEvent(input$report_add, {
   # add to the 'selected' table
   rows <- input$report_unselected_rows_selected
   # get members and send to members list
@@ -159,7 +159,7 @@ observeEvent(input$report_add, {
   report_no$now <- data.frame(report_no$now[-rows,])
 })
 
-observeEvent(input$report_remove, {
+shiny::observeEvent(input$report_remove, {
   # add to the 'selected' table
   rows <- input$report_selected_rows_selected
   # get members and send to non members list

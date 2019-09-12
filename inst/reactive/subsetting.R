@@ -1,14 +1,14 @@
-observeEvent(input$change_subset, {
+shiny::observeEvent(input$change_subset, {
 
   # save previous
-  mset_name <- get_mset_name(mainvar = mSet$dataSet$cls.name,
+  mset_name <- MetaboShiny::get_mset_name(mainvar = mSet$dataSet$cls.name,
                              subsetvar = NULL,
                              subsetgroups = NULL)
   mSet$storage[[mset_name]] <<- list(data = mSet$dataSet,
                                      analysis = mSet$analSet)
 
   # make new subset
-  mset_name <- get_mset_name(mainvar = mSet$dataSet$cls.name,#gsub(mSet$dataSet$cls.name,
+  mset_name <- MetaboShiny::get_mset_name(mainvar = mSet$dataSet$cls.name,#gsub(mSet$dataSet$cls.name,
                                         #    pattern = ":.*", replacement = ""),
                              subsetvar = input$subset_var,
                              subsetgroups = input$subset_group)
@@ -47,24 +47,26 @@ observeEvent(input$change_subset, {
     # - -
     keep
   }))]
-  updateSelectInput(session, "subset_var", choices = subsettable.covars)
-  output$curr_name <- renderText({mSet$dataSet$cls.name})
+  shiny::updateSelectInput(session, "subset_var", choices = subsettable.covars)
+  output$curr_name <- shiny::renderText({mSet$dataSet$cls.name})
 
-  invalidateLater(100, session)
+  shiny::invalidateLater(100, session)
   
   datamanager$reload <- "general"
-  updateNavbarPage(session, "statistics", selected = "inf")
+  shiny::updateNavbarPage(session, "statistics", selected = "inf")
   
   })
 
-observeEvent(input$reset_subset, {
+shiny::observeEvent(input$reset_subset, {
 
   # save previous
   mSet$storage[[mSet$dataSet$cls.name]] <<- list(data = mSet$dataSet,
                                                  analysis = mSet$analSet)
 
   # load previous
-  mset_name <- get_mset_name(mainvar = gsub(mSet$dataSet$cls.name, pattern = ":.*", replacement = ""),
+  mset_name <- MetaboShiny::get_mset_name(mainvar = gsub(mSet$dataSet$cls.name, 
+                                                         pattern = ":.*", 
+                                                         replacement = ""),
                              subsetvar = NULL,
                              subsetgroups = NULL)
 
@@ -102,19 +104,19 @@ observeEvent(input$reset_subset, {
     keep
   }))]
 
-  updateSelectInput(session, "subset_var", choices = subsettable.covars)
+  shiny::updateSelectInput(session, "subset_var", choices = subsettable.covars)
 
-  output$curr_name <- renderText({mSet$dataSet$cls.name})
+  output$curr_name <- shiny::renderText({mSet$dataSet$cls.name})
 
-  invalidateLater(100, session)
+  shiny::invalidateLater(100, session)
 
   datamanager$reload <- "general"
 
-  updateNavbarPage(session, "statistics", selected = "inf")
+  shiny::updateNavbarPage(session, "statistics", selected = "inf")
 
 })
 
-observeEvent(input$subset_var, {
+shiny::observeEvent(input$subset_var, {
   lvls = levels(as.factor(mSet$dataSet$covars[[input$subset_var]]))
-  updateSelectizeInput(session, "subset_group", choices = lvls)
+  shiny::updateSelectizeInput(session, "subset_group", choices = lvls)
 },ignoreInit = T)

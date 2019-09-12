@@ -35,7 +35,7 @@ output$browse_tab <-DT::renderDataTable({
 
 # generate positive and negative adduct picker tabs (for csv creation)
 # defaults are in the huge global object :-)
-observe({
+shiny::observe({
   modes = c("pos", "neg")
   lapply(modes, function(mode){
     output[[paste0(mode, "_add_tab")]] <- DT::renderDataTable({
@@ -57,35 +57,35 @@ output$mzgroup_add_tab <- DT::renderDataTable({
 })
 
 # toggles when 'select all adducts' is pressed (filled circle)
-observeEvent(input$sel_all_adducts, {
+shiny::observeEvent(input$sel_all_adducts, {
   lcl$vectors$neg_selected_adducts <<- c(1:nrow(lcl$vectors$pos_adducts))
   lcl$vectors$pos_selected_adducts <<- c(1:nrow(lcl$vectors$neg_adducts))
 })
 
 # triggers when 'select no adducts' is selected
-observeEvent(input$sel_no_adducts, {
+shiny::observeEvent(input$sel_no_adducts, {
   lcl$vectors$neg_selected_adducts <<- c(0)
   lcl$vectors$pos_selected_adducts <<- c(0)
 })
 
 # triggers when common adducts are to be selected
-observeEvent(input$sel_comm_adducts, {
+shiny::observeEvent(input$sel_comm_adducts, {
   lcl$vectors$neg_selected_adducts <<- c(1:3, nrow(lcl$vectors$pos_adducts))
   lcl$vectors$pos_selected_adducts <<- c(1, 2, 14:15, nrow(lcl$vectors$neg_adducts))
 })
 
 # adduct table editing from settings tab
 
-values = reactiveValues()
+values = shiny::reactiveValues()
 
 # TODO: fix and re-docment this
-observeEvent(input$import_adducts, {
-  DF = fread(input$add_tab$datapath)
+shiny::observeEvent(input$import_adducts, {
+  DF = data.table::fread(input$add_tab$datapath)
   output$adduct_tab <- rhandsontable::renderRHandsontable({
     if (!is.null(DF))
       rhandsontable::rhandsontable(DF, stretchH = "all", useTypes = TRUE)
   })
-  output$adduct_upload_check <- renderImage({
+  output$adduct_upload_check <- shiny::renderImage({
     # When input$n is 3, filename is ./images/image3.jpeg
     filename <- normalizePath('www/yes.png')
     # Return a list containing the filename and alt text
@@ -96,7 +96,7 @@ observeEvent(input$import_adducts, {
 
 # uses rhandsontable for live table editing...
 # TODO: fix
-adduct_tab_data <- reactive({
+adduct_tab_data <- shiny::reactive({
   if (!is.null(input$adduct_tab)){
     DF = rhandsontable::hot_to_r(input$adduct_tab)
   } else {
@@ -116,10 +116,10 @@ output$adduct_tab <- rhandsontable::renderRHandsontable({
     rhandsontable::rhandsontable(DF, stretchH = "all", useTypes = TRUE)
 })
 
-observe({
+shiny::observe({
   DF = adduct_tab_data()
-  shinyFileSave(input, "save_adducts", roots = c(home = '~'), session=session)
-  fileinfo <- parseSavePath(roots = c(home = '~'), input$save_adducts)
+  shinyFiles::shinyFileSave(input, "save_adducts", roots = c(home = '~'), session=session)
+  fileinfo <- shinyFiles::parseFilePaths(roots = c(home = '~'), input$save_adducts)
   if (nrow(fileinfo) > 0) {
     switch(fileinfo$type,
            csv = fwrite(file = fileinfo$datapath, x = DF)
@@ -128,7 +128,7 @@ observe({
 
 output$magicball_add_tab <- DT::renderDataTable({
   if(any(unlist(scanmode))){
-    DT::datatable(data.table(Adduct = if(all(unlist(scanmode))){
+    DT::datatable(data.table::data.table(Adduct = if(all(unlist(scanmode))){
       adducts$Name
     }else{adducts[scanmode %in% Ion_mode]$Name}),
     selection = list(mode = 'multiple',

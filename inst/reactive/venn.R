@@ -1,14 +1,14 @@
 # nonselected
 
-venn_yes = reactiveValues(start = data.frame(),
+venn_yes = shiny::reactiveValues(start = data.frame(),
                           now = data.frame())
 
-venn_no = reactiveValues(start = data.frame(c("a", "b", "c")),
+venn_no = shiny::reactiveValues(start = data.frame(c("a", "b", "c")),
                          now = data.frame(c("a", "b", "c")))
 
-venn_members <- reactiveValues(mzvals = list())
+venn_members <- shiny::reactiveValues(mzvals = list())
 
-observeEvent(input$venn_add, {
+shiny::observeEvent(input$venn_add, {
   # add to the 'selected' table
   rows <- input$venn_unselected_rows_selected
   # get members and send to members list
@@ -17,7 +17,7 @@ observeEvent(input$venn_add, {
   venn_no$now <<- data.frame(venn_no$now[-rows,])
 })
 
-observeEvent(input$venn_remove, {
+shiny::observeEvent(input$venn_remove, {
   # add to the 'selected' table
   rows <- input$venn_selected_rows_selected
   # get members and send to non members list
@@ -29,16 +29,16 @@ observeEvent(input$venn_remove, {
 
 # the 'non-selected' table
 output$venn_unselected <- DT::renderDataTable({
-  res = DT::datatable(data.table(), rownames=FALSE, colnames="excluded", options = list(dom = 'tp'))
+  res = DT::datatable(data.table::data.table(), rownames=FALSE, colnames="excluded", options = list(dom = 'tp'))
   try({
-    res = DT::datatable(venn_no$now,rownames = FALSE, colnames="excluded", selection = "multiple", options = list(dom = 'tp'))
+    res = DT::datatable(venn_no$now, rownames = FALSE, colnames="excluded", selection = "multiple", options = list(dom = 'tp'))
   })
   res
 })
 
 # the 'selected' table
 output$venn_selected <- DT::renderDataTable({
-  res = DT::datatable(data.table(), rownames=FALSE, colnames="included", options = list(dom = 'tp'))
+  res = DT::datatable(data.table::data.table(), rownames=FALSE, colnames="included", options = list(dom = 'tp'))
   try({
     res = DT::datatable(venn_yes$now,rownames = FALSE, colnames="included", selection = "multiple", options = list(dom = 'tp'))
   })
@@ -46,7 +46,7 @@ output$venn_selected <- DT::renderDataTable({
 })
 
 # triggers on clicking the 'go' button on the venn diagram sidebar panel
-observeEvent(input$venn_build, {
+shiny::observeEvent(input$venn_build, {
 
   # get user input for how many top values to use for venn
   top = input$venn_tophits
@@ -69,7 +69,7 @@ observeEvent(input$venn_build, {
       lcl$vectors$venn_lists <<- p$info
       
       # render plot in UI
-      output$venn_plot <- renderPlot({
+      output$venn_plot <- shiny::renderPlot({
         p$plot
       })
       # update the selectize input that the user can use to find which hits are intersecting
@@ -79,7 +79,7 @@ observeEvent(input$venn_build, {
 })
 
 # triggers when users pick which intersecting hits they want
-observeEvent(input$intersect_venn, {
+shiny::observeEvent(input$intersect_venn, {
 
   if(length(input$intersect_venn) == 0){
     lcl$tables$venn_overlap <<- data.frame()
@@ -121,8 +121,8 @@ observeEvent(input$intersect_venn, {
                       length(lcl$vectors$venn_lists[[input$intersect_venn[2]]]))
     stars = p2stars(pval)
     boxcolor = if(stars == "") "blue" else if(stars == "*") "green" else if(stars == "**") "yellow" else if(stars == "***") "orange" else if (stars == "****") "red"
-    output$venn_pval <- renderUI({
-      div(renderText({
+    output$venn_pval <- shiny::renderUI({
+      div(shiny::renderText({
         paste0("significance: ", stars, " (p = ", pval, ")" )
       }), style=paste0("background:", boxcolor))
     })

@@ -42,34 +42,34 @@ switchButton <- function(inputId, label, value=FALSE, col = "GB", type="TF") {
   # duplicate code for giving the possibility to choose default value
   
   if(value){
-    tagList(
-      tags$div(class = "form-group shiny-input-container",
-        tags$div(class = colclass,
-          tags$label(label, class = "control-label"),
-          tags$div(class = "onoffswitch",
-            tags$input(type = "checkbox", name = "onoffswitch", class = "onoffswitch-checkbox",
+    shiny::tagList(
+      shiny::tags$div(class = "form-group shiny-input-container",
+        shiny::tags$div(class = colclass,
+          shiny::tags$label(label, class = "control-label"),
+          shiny::tags$div(class = "onoffswitch",
+            shiny::tags$input(type = "checkbox", name = "onoffswitch", class = "onoffswitch-checkbox",
               id = inputId, checked = ""
             ),
-            tags$label(class = "onoffswitch-label", `for` = inputId,
-              tags$span(class = "onoffswitch-inner"),
-              tags$span(class = "onoffswitch-switch")
+            shiny::tags$label(class = "onoffswitch-label", `for` = inputId,
+              shiny::tags$span(class = "onoffswitch-inner"),
+              shiny::tags$span(class = "onoffswitch-switch")
             )
           )
         )
       )
     )
   } else {
-    tagList(
-      tags$div(class = "form-group shiny-input-container",
-        tags$div(class = colclass,
-          tags$label(label, class = "control-label"),
-          tags$div(class = "onoffswitch",
-            tags$input(type = "checkbox", name = "onoffswitch", class = "onoffswitch-checkbox",
+    shiny::tagList(
+      shiny::tags$div(class = "form-group shiny-input-container",
+        shiny::tags$div(class = colclass,
+          shiny::tags$label(label, class = "control-label"),
+          shiny::tags$div(class = "onoffswitch",
+            shiny::tags$input(type = "checkbox", name = "onoffswitch", class = "onoffswitch-checkbox",
               id = inputId
             ),
-            tags$label(class = "onoffswitch-label", `for` = inputId,
-              tags$span(class = "onoffswitch-inner"),
-              tags$span(class = "onoffswitch-switch")
+            shiny::tags$label(class = "onoffswitch-label", `for` = inputId,
+              shiny::tags$span(class = "onoffswitch-inner"),
+              shiny::tags$span(class = "onoffswitch-switch")
             )
           )
         )
@@ -83,15 +83,15 @@ fadeImageButton <- function(inputId, img.path=NULL,value=FALSE) {
   # ---------------
   #if(is.null(img)) stop("Please enter an image name (place in www folder please)")
   # ---------------
-  tagList(
-    tags$div(class = "form-group shiny-input-container",
+  shiny::tagList(
+    shiny::tags$div(class = "form-group shiny-input-container",
              if(value){
-               tags$input(type="checkbox", class="fadebox", id=inputId)
+               shiny::tags$input(type="checkbox", class="fadebox", id=inputId)
              } else{
-               tags$input(type="checkbox", class="fadebox", id=inputId, checked="")
+               shiny::tags$input(type="checkbox", class="fadebox", id=inputId, checked="")
              },
-    tags$label(class="btn", "for"=inputId,
-               tags$img(src=img.path, id="btnLeft"))
+    shiny::tags$label(class="btn", "for"=inputId,
+               shiny::tags$img(src=img.path, id="btnLeft"))
     )
   )
 }
