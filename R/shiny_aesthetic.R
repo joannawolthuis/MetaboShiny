@@ -1,15 +1,36 @@
+footer.css <- function(RGB.bg = "#ffc8c2", font.col="white"){
+  base <- ".footer {position:fixed;
+                    bottom:0;
+                    width:100%;
+                    height:40px;
+                    z-index:1005;
+                    color: white;
+                    background-color:$RGB.bg;
+                    border-style:solid; 
+                    border-color:black;
+                    border-width:1px; }
+            .footer .btn {margin-top:2px; 
+                          background-color:$RGB.bg; 
+                          color:$font.col; 
+                          border-style:none;}"
+  no.na <- gsub(x = base, pattern = "\\n", replacement = "")
+  filled <- gsubfn::fn$paste(no.na)
+  # --- return ---
+  filled
+}
+
 nav.bar.css <- function(RGB.bg = "#ffc8c2",
                         RGB.active.bg = "#e1897f",
                         RGB.col = "#ffffff",
                         RGB.active.col = "#ffffff"){
 
-  base <- ".navbar { background-color: $RGB.bg;}
-  .navbar-default .navbar-brand{color: $RGB.col;}
-  .tabs-above > .nav > li[class=active] > a {
-  background-color: $RGB.active.bg;
-  color: $RGB.active.col;
-  .tab-panel{ background-color: $RGB.bg; color: $RGB.col}
-  }"
+  base <- ".navbar { background-color: $RGB.bg !important;}
+  .nav > li[class=active] > a {
+  background-color: $RGB.active.bg !important;
+  color: $RGB.active.col !important; }
+  .nav > li > a {
+  background-color: $RGB.bg !important;
+  color: $RGB.col !important;}"
 
   no.na <- gsub(x = base, pattern = "\\n", replacement = "")
   filled <- gsubfn::fn$paste(no.na)
@@ -25,6 +46,7 @@ app.font.css <- function(font.h1 = "Press Start 2P",
                         size.h2 = 22,
                         size.h3 = 15,
                         size.body = 13,
+                        font.col = "white",
                         online=T){
 
   size.h1 <- paste0(size.h1, "pt")
@@ -85,6 +107,7 @@ app.font.css <- function(font.h1 = "Press Start 2P",
   h1 {
   margin: 2px;
   font-family: "$font.h1";
+  color: $font.col !important;
   $font.h1.w
   font-size: $size.h1;
   line-height: 0.5;s
@@ -114,8 +137,7 @@ app.font.css <- function(font.h1 = "Press Start 2P",
   font-family: "$font.body";
   $font.body.w
   font-size: $size.body;
-  }
-}'
+  }'
 
   no.na <- gsub(x = base, pattern = "\\n", replacement = "")
   filled <- gsubfn::fn$paste(no.na)

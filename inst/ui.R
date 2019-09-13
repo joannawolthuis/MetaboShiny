@@ -1,12 +1,10 @@
-shiny::fluidPage(theme = "metaboshiny.css",
+shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                  ECharts2Shiny::loadEChartsLibrary(),
                  shinyalert::useShinyalert(), 
                  shinyjs::useShinyjs(),
                  shiny::navbarPage(windowTitle='MetaboShiny',
-                                   inverse=TRUE,
                                    header=shiny::tagList(shiny::tags$script(src="spinnytitle.js"),
-                                                         shiny::tags$script(src="sparkle.js")
-                                                         ),
+                                                         shiny::tags$script(src="sparkle.js")),
                                    # use this for title
                                    # https://codepen.io/maxspeicher/pen/zrVKLE
                                    title=shiny::div(shiny::h1("MetaboShiny"), 
@@ -197,7 +195,7 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                    shiny::tabPanel("analyse",  icon = shiny::icon("bar-chart",class = "outlined"), value = "analysis",
                                                    sidebarLayout(position="right",
                                                                  mainPanel = mainPanel(width = 8,
-                                                                                       shiny::tabsetPanel(id="statistics",selected = "pca",
+                                                                                       shiny::tabsetPanel(id="statistics", selected = "pca",
                                                                                                           #shiny::navbarPage(inverse=F, "", id="statistics", selected = "pca", collapsible = T,
                                                                                                           # TODO: T-SNE
                                                                                                           # this tab shows general information, mostly a message with 'please give me some data' :-)
@@ -789,10 +787,9 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                      )#close column
                                                    )#close fluidrow
                                    ),#close tabpanel
-                                   
                                    # this tab is used to change general settings.
                                    shiny::tabPanel("settings",  icon = shiny::icon("cog",class = "outlined"), value="options",
-                                                   shiny::navbarPage(inverse=TRUE,"Settings", id="tab_settings",
+                                                   shiny::tabsetPanel(id="tab_settings",
                                                                      shiny::tabPanel("Mode", icon=shiny::icon("box-open"),
                                                                                      MetaboShiny::switchButton(inputId = "db_only", label = "Run in database-only mode?",
                                                                                                                value = F,
@@ -840,11 +837,11 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                #value = opts$col2,
                                                                                                                allowTransparent = FALSE),
                                                                                      colourpicker::colourInput(inputId = "bar.col.3",
-                                                                                                               label = paste("Active tab"),
+                                                                                                               label = paste("Active tab text"),
                                                                                                                #value = opts$col3,
                                                                                                                allowTransparent = FALSE),
                                                                                      colourpicker::colourInput(inputId = "bar.col.4",
-                                                                                                               label = paste("Inactive tab"),
+                                                                                                               label = paste("Inactive tab text"),
                                                                                                                #value = opts$col4,
                                                                                                                allowTransparent = FALSE),
                                                                                      shiny::br(),
@@ -875,20 +872,19 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                    # TODO: add 'save project?' dialog
                                    #tabPanel(title = "", value="stop", icon = shiny::icon("times-circle",class = "outlined")),
                                    shiny::div(class="spinnylocation1",
-                                              shiny::div(class="plus", img(class="imagetop", src="gemmy_rainbow.png", width="100px", height="100px")),
-                                              shiny::div(class="minus", img(class="imagebottom", src="gemmy_rainbow.png", width="100px", height="100px"))
+                                              shiny::div(class="plus", img(class="imagetop", 
+                                                                           src="gemmy_rainbow.png", 
+                                                                           width="80px", height="80px"))
                                    ),
                                    shiny::div(class="line")
                                    ,footer=shiny::fluidRow(
-                                     shiny::div(id="footie",
+                                     br(),br(),br(),br(),
+                                     shiny::div(class = "footer",
                                        #shiny::actionButton("show_window", label="", icon = shiny::icon("map-marked")),
-                                       shiny::actionButton("load_mset", label="load", icon = shiny::icon("folder-open"),style=gsubfn::fn$paste("background-color:black; border-color:black; color:white;")),
-                                       shiny::actionButton("save_mset", label="save", icon = shiny::icon("save"),style=gsubfn::fn$paste("background-color:black; border-color:black; color:white;")),
-                                       shiny::actionButton("debug", label="debug", icon = shiny::icon("bug"),style=gsubfn::fn$paste("background-color:black; border-color:black; color:white;"))
-                                       , style = gsubfn::fn$paste("position:fixed;bottom:0;width:100%;height:70px;
-                                                                  z-index:1005;background-color:black;
-                                                                  border-style:solid; border-color:white;
-                                                                  border-width:1px;")),
+                                       shiny::actionButton("load_mset", label="load", icon = shiny::icon("folder-open")),
+                                       shiny::actionButton("save_mset", label="save", icon = shiny::icon("save")),
+                                       shiny::actionButton("debug", label="debug", icon = shiny::icon("bug"))
+                                       ),
                                      align="center")
                  )
 )

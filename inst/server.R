@@ -224,8 +224,6 @@ mode = complete')
       #shiny::div(class="plus", img(class="imagetop", src=opts$taskbar_image, width="100px", height="100px")),
       #shiny::div(class="minus", img(class="imagebottom", src=opts$taskbar_image, width="100px", height="100px"))
       
-      bgcol <<- opts$col1
-      
       shiny::updateCheckboxInput(session, "db_only", 
                                  value=switch(opts$mode, dbonly=T, complete=F))
       shiny::updateSelectizeInput(session,
@@ -272,17 +270,24 @@ mode = complete')
       # = = update css.. = =
       
       # generate CSS for the interface based on user settings for colours, fonts etc.
-      bar.css <<- MetaboShiny::nav.bar.css(opts$col1, opts$col2, opts$col3, opts$col4)
-      font.css <<- MetaboShiny::app.font.css(opts$font1, opts$font2, opts$font3, opts$font4,
+      bar.css <- MetaboShiny::nav.bar.css(opts$col1, opts$col2, opts$col3, opts$col4)
+      font.css <- MetaboShiny::app.font.css(opts$font1, opts$font2, opts$font3, opts$font4,
                                              opts$size1, opts$size2, opts$size3,
-                                             opts$size4, online=online)
+                                             opts$size4, online=online, font.col=opts$col3)
+      foot.css <- MetaboShiny::footer.css(opts$col1, font.col = opts$col3)
+                                          
       # set taskbar image as set in options
       taskbar_image <- opts$task_img
      
       # $("head").append('<style type="text/css"></style>');
-      jq = paste0('$("head")',".append('", '<style type="text/css">', bar.css, font.css, "</style>');")
-      cat(jq)
+      jq = paste0('$("head")',
+                  ".append('", '<style type="text/css">', 
+                  bar.css, font.css, foot.css,
+                  "</style>');")
+      
       shinyjs::runjs(jq)
+      
+      shinyjs::removeClass(class="hidden",id = "metshi")
       
       }
     

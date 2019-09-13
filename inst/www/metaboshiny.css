@@ -1,3 +1,7 @@
+.hidden {
+  display: none !important;
+}
+
 .modal { 
   show: true; 
   backdrop: true;
@@ -21,13 +25,23 @@
             }
 
 .progress-bar {
-  height: 10px;
+  height: 4px;
   position: absolute;
   left: 15px;
   background: linear-gradient(to right, transparent 50%, white 50%), linear-gradient(to right, orange, yellow, green, cyan, blue, violet) !important;
-  background-size: 16px 5px, 100% 5px !important;
+  background-size: 5px 2px, 100% 1px; !important;
 }
 
+.line {
+  height: 4px;
+  width: calc(100% - 130px);
+  position: absolute;
+  top: 56px;
+  left: 15px;
+  background: linear-gradient(to right, transparent 50%, white 50%), linear-gradient(to right, orange, yellow, green, cyan, blue, violet);
+  background-size: 5px 2px, 100% 1px;
+  /*z-index:99998 !important;*/
+}
 .progress-text {
   display: none;
 }
@@ -35,24 +49,15 @@
 .outlined {
  font-size: 1.5em;
  -webkit-text-stroke: .5px #000;
- -webkit-text-fill-color: white;
 }
+
+/* -webkit-text-fill-color: white; }*/
 
 /* rainbow gradient line */
 
-.line {
-  height: 7px;
-  width: calc(100% - 190px);
-  position: absolute;
-  top: 52px;
-  left: 15px;
-  background: linear-gradient(to right, transparent 50%, white 50%), linear-gradient(to right, orange, yellow, green, cyan, blue, violet);
-  background-size: 16px 5px, 100% 5px;
-  /*z-index:99998 !important;*/
-}
 
 /* ON-OFF switch button */
-/* Sébastien Rochette */
+/* SÃ©bastien Rochette */
 /* http://sebrock.fr/en/ */
 /* CSS modified from : https://proto.io/freebies/onoff/ */
 /* All switch */
@@ -283,8 +288,8 @@
 .spinnylocation1
 {
   position: absolute;
-  top: -30px;
-  right: 0;
+  top: 20px;
+  right: -70px;
   animation-fill-mode: forwards;
   z-index:99998 !important;
 }
@@ -294,28 +299,12 @@
   -webkit-animation:spin 30s linear infinite;
   -moz-animation:spin 30s linear infinite;
   animation:spin 30s linear infinite;
-  /*filter: invert(100%);*/
-  margin-top: 20px;
-  margin-left: 15px;
-  -webkit-filter: drop-shadow(2px 1px 0 black)
+  -webkit-filter: drop-shadow(1px 1px 0 black)
                   drop-shadow(-1px -1px 0 black);
-  filter: drop-shadow(2px 1px 0 black) 
+  filter: drop-shadow(1px 1px 0 black) 
           drop-shadow(-1px -1px 0 black);
+          outline: 1px solid transparent;
 }
-
-.imagebottom
-{
-  -webkit-animation:spin 30s linear infinite;
-  -moz-animation:spin 30s linear infinite;
-  animation:spin 30s linear infinite;
-  margin-top: -60px;
-  margin-left: 15px;
-  -webkit-filter: drop-shadow(2px 1px 0 black)
-                  drop-shadow(-1px -1px 0 black);
-  filter: drop-shadow(2px 1px 0 black) 
-          drop-shadow(-1px -1px 0 black);
-}
-
 
 .plus
 {
@@ -459,5 +448,3 @@
     transform: rotate(720deg) scale(0);
   }
 }
-
-
