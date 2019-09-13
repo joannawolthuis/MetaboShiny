@@ -2,6 +2,8 @@
 
 function(input, output, session) {
   
+  shiny::showModal(MetaboShiny::loadModal())
+  
   print("...server...")
   #detach("package:MetaboShiny", unload=T)
   # used to be in startshiny.R
@@ -27,10 +29,6 @@ function(input, output, session) {
           width = 1200, height=800)
   
   # - - - - - - - -
-  
-  shiny::showModal(MetaboShiny::loadModal())
-  
-  # - - - - - - - - - -
   
   mSet <- NULL
   opts <- list()
@@ -130,12 +128,6 @@ mode = complete')
       print("...loading ui...")
       opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
       
-      # generate CSS for the interface based on user settings for colours, fonts etc.
-      bar.css <<- MetaboShiny::nav.bar.css(opts$col1, opts$col2, opts$col3, opts$col4)
-      font.css <<- MetaboShiny::app.font.css(opts$font1, opts$font2, opts$font3, opts$font4,
-                                             opts$size1, opts$size2, opts$size3,
-                                             opts$size4, online=online)
-      
       # === GOOGLE FONT SUPPORT FOR GGPLOT2 ===
       online = MetaboShiny::internetWorks()
       
@@ -150,9 +142,6 @@ mode = complete')
           })
         })
       }
-      
-      # set taskbar image as set in options
-      taskbar_image <- opts$task_img
       
       # parse color opts
       lcl$aes$mycols <<- MetaboShiny::get.col.map(lcl$paths$opt.loc) # colours for discrete sets, like group A vs group B etc.
@@ -280,6 +269,21 @@ mode = complete')
       shiny::updateSelectInput(session, "ggplot_theme", selected = opts$gtheme)
       shiny::updateSelectInput(session, "color_ramp", selected = opts$gspec)
     
+      # = = update css.. = =
+      
+      # generate CSS for the interface based on user settings for colours, fonts etc.
+      bar.css <<- MetaboShiny::nav.bar.css(opts$col1, opts$col2, opts$col3, opts$col4)
+      font.css <<- MetaboShiny::app.font.css(opts$font1, opts$font2, opts$font3, opts$font4,
+                                             opts$size1, opts$size2, opts$size3,
+                                             opts$size4, online=online)
+      # set taskbar image as set in options
+      taskbar_image <- opts$task_img
+     
+      # $("head").append('<style type="text/css"></style>');
+      jq = paste0('$("head")',".append('", '<style type="text/css">', bar.css, font.css, "</style>');")
+      cat(jq)
+      shinyjs::runjs(jq)
+      
       }
     
     shiny::removeModal()

@@ -77,14 +77,14 @@ app.font.css <- function(font.h1 = "Press Start 2P",
   font.h3.w = if(font.h3.w == "") "" else{paste0("font-weight: ", font.h3.w, ";")}
   font.body.w = if(font.body.w == "") "" else{paste0("font-weight: ", font.body.w, ";")}
 
-  base.import <- if(online) gsubfn::fn$paste("@import url('https://fonts.googleapis.com/css?family=$font.url');") else ""
+  base.import <- if(online) gsubfn::fn$paste('@import url("https://fonts.googleapis.com/css?family=$font.url");') else ""
   print(base.import)
   
-  base <- "$base.import
+  base <- '$base.import
 
   h1 {
   margin: 2px;
-  font-family: '$font.h1';
+  font-family: "$font.h1";
   $font.h1.w
   font-size: $size.h1;
   line-height: 0.5;s
@@ -94,7 +94,7 @@ app.font.css <- function(font.h1 = "Press Start 2P",
   h2 {
   margin: 1px;
   color: black;
-  font-family: '$font.h2';
+  font-family: "$font.h2";
   $font.h2.w
   font-size: $size.h2;
   line-height: 1;
@@ -103,7 +103,7 @@ app.font.css <- function(font.h1 = "Press Start 2P",
   h3 {
   margin: 1px;
   color: black;
-  font-family: '$font.h3';
+  font-family: "$font.h3";
   $font.h3.w
   font-size: $size.h3;
   line-height: 1;
@@ -111,11 +111,11 @@ app.font.css <- function(font.h1 = "Press Start 2P",
 
   body {
   color: black;
-  font-family: '$font.body';
+  font-family: "$font.body";
   $font.body.w
   font-size: $size.body;
   }
-}"
+}'
 
   no.na <- gsub(x = base, pattern = "\\n", replacement = "")
   filled <- gsubfn::fn$paste(no.na)

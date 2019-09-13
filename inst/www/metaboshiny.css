@@ -1,7 +1,14 @@
 .modal { 
   show: true; 
-  backdrop: false;
+  backdrop: true;
   }
+
+.modal-backdrop.in
+{
+    opacity:0.99 !important;
+    position:fixed;
+    height:100%;
+}
 
 .selectize-dropdown, .selectize-dropdown.form-control{z-index:99998 !important;}
 

@@ -1,12 +1,11 @@
 shiny::fluidPage(theme = "metaboshiny.css",
                  ECharts2Shiny::loadEChartsLibrary(),
                  shinyalert::useShinyalert(), 
+                 shinyjs::useShinyjs(),
                  shiny::navbarPage(windowTitle='MetaboShiny',
                                    inverse=TRUE,
                                    header=shiny::tagList(shiny::tags$script(src="spinnytitle.js"),
                                                          shiny::tags$script(src="sparkle.js")
-                                                         #,shiny::tags$style(type="text/css", bar.css),
-                                                         #shiny::tags$style(type="text/css", font.css)
                                                          ),
                                    # use this for title
                                    # https://codepen.io/maxspeicher/pen/zrVKLE
@@ -881,15 +880,15 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                    ),
                                    shiny::div(class="line")
                                    ,footer=shiny::fluidRow(
-                                     shiny::br(),
-                                     shiny::br(),
-                                     shiny::br(),
-                                     shiny::div(
+                                     shiny::div(id="footie",
                                        #shiny::actionButton("show_window", label="", icon = shiny::icon("map-marked")),
-                                       shiny::actionButton("load_mset", label="load", icon = shiny::icon("folder-open"),style=gsubfn::fn$paste("background-color:black; border-color:black; font-color:white;")),
-                                       shiny::actionButton("save_mset", label="save", icon = shiny::icon("save"),style=gsubfn::fn$paste("background-color:black; border-color:black; font-color:white;")),
-                                       shiny::actionButton("debug", label="debug", icon = shiny::icon("bug"),style=gsubfn::fn$paste("background-color:black; border-color:white;"))
-                                       , style = gsubfn::fn$paste("position:fixed;bottom:0;width:100%;height:770px;z-index:1005;background-color:black;border-style:solid; border-color:white;border-width:1px;")),
+                                       shiny::actionButton("load_mset", label="load", icon = shiny::icon("folder-open"),style=gsubfn::fn$paste("background-color:black; border-color:black; color:white;")),
+                                       shiny::actionButton("save_mset", label="save", icon = shiny::icon("save"),style=gsubfn::fn$paste("background-color:black; border-color:black; color:white;")),
+                                       shiny::actionButton("debug", label="debug", icon = shiny::icon("bug"),style=gsubfn::fn$paste("background-color:black; border-color:black; color:white;"))
+                                       , style = gsubfn::fn$paste("position:fixed;bottom:0;width:100%;height:70px;
+                                                                  z-index:1005;background-color:black;
+                                                                  border-style:solid; border-color:white;
+                                                                  border-width:1px;")),
                                      align="center")
                  )
 )
