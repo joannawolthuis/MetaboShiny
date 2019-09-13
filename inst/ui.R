@@ -775,18 +775,19 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                    )),
                                    
                                    # report tab
-                                   shiny::tabPanel("report",
-                                                   icon = shiny::icon("file-invoice", class = "outlined"),
-                                                   value="reportTab",
-                                                   shiny::fluidRow(
-                                                     shiny::column(width=12, align="center",
-                                                                   shiny::h2("Report"),
-                                                                   br(),
-                                                                   shiny::helpText("Report contents:"),
-                                                                   shiny::div(DT::dataTableOutput('report_unselected',  width="100%"))
-                                                     )#close column
-                                                   )#close fluidrow
-                                   ),#close tabpanel
+                                   #TODO: update to most recent version using orca and re-enable
+                                   # shiny::tabPanel("report",
+                                   #                 icon = shiny::icon("file-invoice", class = "outlined"),
+                                   #                 value="reportTab",
+                                   #                 shiny::fluidRow(
+                                   #                   shiny::column(width=12, align="center",
+                                   #                                 shiny::h2("Report"),
+                                   #                                 br(),
+                                   #                                 shiny::helpText("Report contents:"),
+                                   #                                 shiny::div(DT::dataTableOutput('report_unselected',  width="100%"))
+                                   #                   )#close column
+                                   #                 )#close fluidrow
+                                   #),#close tabpanel
                                    # this tab is used to change general settings.
                                    shiny::tabPanel("settings",  icon = shiny::icon("cog",class = "outlined"), value="options",
                                                    shiny::tabsetPanel(id="tab_settings",

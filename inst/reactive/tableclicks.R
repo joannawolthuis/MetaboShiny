@@ -5,23 +5,19 @@ shiny::observe({
   lcl$vectors$add_list <<- wanted.adducts
 })
 
-
-# which table names to check for user click events
-res.update.tables <<- c("tt",
-                        "fc",
-                        "aov",
-                        "rf",
-                        "asca",
-                        "meba",
-                        "pca_load",
-                        "plsda_load",
-                        "enrich_pw",
-                        "ml",
-                        "mummi_detail",
-                        "venn")
-
 # creates observers for click events in the tables defined above
-lapply(unique(res.update.tables), FUN=function(table){
+lapply(c("tt",
+         "fc",
+         "aov",
+         "rf",
+         "asca",
+         "meba",
+         "pca_load",
+         "plsda_load",
+         "enrich_pw",
+         "ml",
+         "mummi_detail",
+         "venn"), FUN=function(table){
   shiny::observeEvent(input[[paste0(table, "_tab_rows_selected")]], {
     curr_row = input[[paste0(table, "_tab_rows_selected")]]
     # do nothing if not clicked yet, or the clicked cell is not in the 1st column
@@ -53,7 +49,7 @@ lapply(unique(res.update.tables), FUN=function(table){
     if(nrow(res_tbl) > 0){
 
       # get current selected compound from the original table (needs to be available in global env)
-      my_selection$mz <<- res_tbl[curr_row, rn]
+      my_selection$mz <- res_tbl[curr_row, rn]
       
       outplot_name <- paste0(table, "_specific_plot")
 
@@ -132,15 +128,15 @@ lapply(c("pos", "neg"), function(mode){
 
 # triggers on clicking a row in the match results table
 shiny::observeEvent(input$match_tab_rows_selected,{
-  curr_row <<- input$match_tab_rows_selected # get current row
+  curr_row <- input$match_tab_rows_selected # get current row
   if (is.null(curr_row)) return()
   # - - - - - - - - - - - - - - - - - - - - - -
   try({
-    my_selection$name <<- shown_matches$forward$unique[curr_row,'name'][[1]] # get current structure
+    my_selection$name <- shown_matches$forward_unique[curr_row,'name'][[1]] # get current structure
     updateTextInput(session,
                     "pm_query",
                     value = my_selection$name)
-    my_selection$struct <<- unlist(shown_matches$forward$unique[curr_row,'structure']) # get current formula
+    my_selection$struct <- unlist(shown_matches$forward_unique[curr_row,'structure']) # get current formula
   })
 })
 
@@ -151,12 +147,12 @@ shiny::observeEvent(input$browse_tab_rows_selected,{
   # -----------------------------
   curr_def <- browse_content$table[curr_row, description]
   output$browse_definition <- shiny::renderText(curr_def)
-  my_selection$revstruct <<- browse_content$table[curr_row,c('structure')][[1]]
+  my_selection$revstruct <- browse_content$table[curr_row,c('structure')][[1]]
 })
 
 # triggers on clicking a row in the reverse hit results table
 shiny::observeEvent(input$hits_tab_rows_selected,{
-  curr_row <<- input$hits_tab_rows_selected # get current row
+  curr_row <- input$hits_tab_rows_selected # get current row
   if (is.null(curr_row)) return()
-  my_selection$mz <<- shown_matches$reverse[curr_row,'query_mz'][[1]]
+  my_selection$mz <- shown_matches$reverse[curr_row,'query_mz'][[1]]
 })

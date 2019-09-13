@@ -127,7 +127,7 @@ shiny::observeEvent(input$initialize, {
     if(file.exists(csv_loc_final)) file.remove(csv_loc_final)
     
     # write new csv to new location
-    fwrite(csv[,-remove,with=F], file = csv_loc_final)
+    data.table::fwrite(csv[,-remove,with=F], file = csv_loc_final)
     
     # rename row names of covariant table to the sample names
     rownames(covar_table) <- covar_table$sample
@@ -193,8 +193,7 @@ shiny::observeEvent(input$initialize, {
       }else{
         # use built in imputation methods, knn means etc.
         mSet <- MetaboAnalystR::ImputeVar(mSet,
-                          method =  #"knn"
-                            input$miss_type
+                                          method = input$miss_type
         )
       }
     }
@@ -204,9 +203,9 @@ shiny::observeEvent(input$initialize, {
       # filter dataset
       # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
       mSet <- MetaboAnalystR::FilterVariable(mSet,
-                             filter = input$filt_type,
-                             qcFilter = "F",
-                             rsd = 25)
+                                             filter = input$filt_type,
+                                             qcFilter = "F",
+                                             rsd = 25)
     }
     
     shiny::setProgress(session=session, value= .2)
@@ -239,10 +238,10 @@ shiny::observeEvent(input$initialize, {
     
     # normalize dataset with user settings(result: mSet$dataSet$norm)
     mSet <- MetaboAnalystR::Normalization(mSet,
-                          rowNorm = input$norm_type,
-                          transNorm = input$trans_type,
-                          scaleNorm = input$scale_type,
-                          ref = input$ref_var)
+                                          rowNorm = input$norm_type,
+                                          transNorm = input$trans_type,
+                                          scaleNorm = input$scale_type,
+                                          ref = input$ref_var)
     
     shiny::setProgress(session=session, value= .4)
     

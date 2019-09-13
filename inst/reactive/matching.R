@@ -35,7 +35,7 @@ shiny::observeEvent(input$prematch,{
     
     blocksize=100
     blocks = split(colnames(mSet$dataSet$norm), ceiling(seq_along(1:ncol(mSet$dataSet$norm))/blocksize))
-    shiny::witnProgress({
+    shiny::withProgress({
       i = 0
       matches = pbapply::pblapply(blocks, function(mzs){
         res = MetaDBparse::searchMZ(mzs = mzs,
@@ -71,7 +71,7 @@ shiny::observeEvent(input$prematch,{
 shiny::observeEvent(input$search_mz, {
   if(length(lcl$vectors$db_search_list) > 0 & my_selection$mz != ""){ # go through selected databases
       # get ion modes
-    shiny::witnProgress({
+    shiny::withProgress({
       conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb) # change this to proper var later
       RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_mapper") 
       RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_content")   
@@ -127,7 +127,7 @@ shiny::observeEvent(input$score_iso, {
 
   # get table including isotope scores
   # as input, takes user method for doing this scoring
-  shiny::witnProgress({
+  shiny::withProgress({
     score_table <- score.isos(table = shown_matches$forward$unique, mSet = mSet, lcl$paths$patdb, method=input$iso_score_method, inshiny=T, intprec = intprec)
     })
 
@@ -136,7 +136,7 @@ shiny::observeEvent(input$score_iso, {
 })
 
 shiny::observeEvent(input$search_pubmed,{
-  shiny::witnProgress({
+  shiny::withProgress({
     abstr <- RISmed::EUtilsSummary(
       as.character(input$pm_query),
       type="esearch",

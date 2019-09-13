@@ -1,7 +1,7 @@
 output$match_tab <- DT::renderDataTable({
   # don't show some columns but keep them in the original table, so they can be used
   # for showing molecule descriptions, structure
-  DT::datatable(shown_matches$forward$unique,
+  DT::datatable(shown_matches$forward_unique,
                 selection = 'single',
                 autoHideNavigation = T,
                 #filter = "top",
@@ -10,8 +10,8 @@ output$match_tab <- DT::renderDataTable({
                                #searchCols = lcl$default_search_columns,
                                #search = list(regex = FALSE, caseInsensitive = FALSE, search = lcl$default_search),
                                columnDefs = list(list(visible=FALSE, 
-                                                      targets=c(which(colnames(shown_matches$forward$unique) %in% gbl$vectors$hide_match_cols),
-                                                                which(colnames(shown_matches$forward$unique)=="isocat"))))
+                                                      targets=c(which(colnames(shown_matches$forward_unique) %in% gbl$vectors$hide_match_cols),
+                                                                which(colnames(shown_matches$forward_unique)=="isocat"))))
                 )
   )
 })

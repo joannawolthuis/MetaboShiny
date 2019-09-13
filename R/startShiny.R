@@ -1,4 +1,4 @@
-start.metshi <- function(port=8080, inBrowser=F){
+start.metshi <- function(port=8080, inBrowser=F, debug=F){
   
   options("download.file.method" = "libcurl")
   
@@ -28,13 +28,15 @@ start.metshi <- function(port=8080, inBrowser=F){
          local = {
            shiny::runApp(
              appDir = appdir,
-             launch.browser = inBrowser)
+             launch.browser = inBrowser,
+             display.mode = if(debug) "showcase" else "normal")
          },
          docker = {
            shiny::runApp(appdir,
                          port = port,
                          host = "0.0.0.0",
-                         launch.browser = T)
+                         launch.browser = T,
+                         display.mode = if(debug) "showcase" else "normal")
          })
 }
 

@@ -29,7 +29,7 @@
   position: absolute;
   left: 15px;
   background: linear-gradient(to right, transparent 50%, white 50%), linear-gradient(to right, orange, yellow, green, cyan, blue, violet) !important;
-  background-size: 5px 2px, 100% 1px; !important;
+  background-size: 5px 2px, 100% 1px !important;
 }
 
 .line {
@@ -39,7 +39,7 @@
   top: 56px;
   left: 15px;
   background: linear-gradient(to right, transparent 50%, white 50%), linear-gradient(to right, orange, yellow, green, cyan, blue, violet);
-  background-size: 5px 2px, 100% 1px;
+  background-size: 5px 2px, 100% 1px !important;
   /*z-index:99998 !important;*/
 }
 .progress-text {

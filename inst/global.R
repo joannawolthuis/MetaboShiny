@@ -5,6 +5,10 @@ if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
 print("...global...")
 
+library(ggplot2)
+library(data.table)
+library(plotly)
+
 online = MetaboShiny::internetWorks()
 
 # load default adduct table
