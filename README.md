@@ -7,16 +7,14 @@ http://biorxiv.org/cgi/content/short/734236v1
 
 Please report any issues and feedback on the Issues page here, along with suggestions! =)
 ## R PATH ##
-# STEP 1
-pull the repository through the terminal or through download
-# STEP 2: requirements (these may require admin rights)
+# STEP 1: requirements (these may require admin rights)
 install an R version that at least is R 3.5, install Java(https://www.java.com/en/download/) and JDK (https://www.oracle.com/technetwork/java/javase/downloads/jdk12-downloads-5295953.html, may require creating an Oracle account)
+# STEP 2
+in R: 'devtools::install_github("UMCUGenetics/MetaboShiny")'
 # STEP 3
-run either start.sh or startShiny.R (the latter with "Rscript startShiny.R" from the command line)
+in R: 'library("MetaboShiny"); start.metshi(inBrowser=T);'
 # STEP 4
-wait for all the packages to install 
-# STEP 5
-browser should open automatically for you and you're in!
+browser should open automatically for you and you're in! Otherwise browse to the "Listening on x.x.x.x" address noted in terminal in your browser.
 
 ## DOCKER PATH ##
 # STEP 1
