@@ -177,7 +177,7 @@ shiny::observeEvent(input$create_csv, {
                "\n\n"))
     
     if(DBI::dbExistsTable(conn, "batchinfo")){
-      query <- stringr::strwrap(gsubfn::fn$paste("select distinct d.card_id as sample, d.sampling_date as time, d.*, b.batch, b.injection
+      query <- strwrap(gsubfn::fn$paste("select distinct d.card_id as sample, d.sampling_date as time, d.*, b.batch, b.injection
                                         from mzintensities i
                                         join individual_data d
                                         on i.filename = d.card_id
@@ -186,7 +186,7 @@ shiny::observeEvent(input$create_csv, {
                        width=10000,
                        simplify=TRUE)
     }else{
-      query <- stringr::strwrap(gsubfn::fn$paste("select distinct d.card_id as sample, d.sampling_date as time, d.*, s.*
+      query <- strwrap(gsubfn::fn$paste("select distinct d.card_id as sample, d.sampling_date as time, d.*, s.*
                                         from mzintensities i
                                         join individual_data d
                                         on i.filename = d.card_id
@@ -261,8 +261,6 @@ shiny::observeEvent(input$create_csv, {
                
                z.meta$sample <- gsub(z.meta$sample, pattern=" |\\(|\\)|\\+", replacement="")
                
-               print(z.meta[1,])
-               print(complete.row[1:10])
                # write
                data.table::fwrite(c(z.meta, complete.row), 
                       file = lcl$paths$csv_loc,

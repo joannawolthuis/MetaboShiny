@@ -356,10 +356,7 @@ mode = complete')
     # - - filters - -
     if(search$go){
       shiny::withProgress({
-        print("searching...")
 
-        print(shiny::reactiveValuesToList(result_filters))
-        
         matches = data.table::as.data.table(MetaboShiny::get_prematches(who = my_selection$mz,
                                                                         what = "query_mz",
                                                                         patdb = lcl$paths$patdb,
@@ -370,38 +367,43 @@ mode = complete')
         shiny::setProgress(0.2)
         
         uniques = data.table::as.data.table(unique(data.table::as.data.table(matches)[,-c("source", "description"),with=F]))
-        grouped_uniques = uniques[, .(structure = list(structure)), 
-                                  by = setdiff(names(uniques), "structure")]
-        shiny::setProgress(0.4)
-        
-        structs <- lapply(1:nrow(grouped_uniques), function(i){
-          row = grouped_uniques[i,]
-          opts = row$structure[[1]]
-          if(length(opts)>1){
-            # check for square brackets
-            if(any(grepl(pattern = "\\[", x = opts))){
-              opts[!grepl(pattern="\\[",x = opts)]
+        if(nrow(uniques)>1){
+          uniques = uniques[, .(structure = list(structure)), 
+                                    by = setdiff(names(uniques), "structure")]
+          
+          structs <- lapply(1:nrow(uniques), function(i){
+            row = uniques[i,]
+            opts = row$structure[[1]]
+            if(length(opts)>1){
+              # check for square brackets
+              if(any(grepl(pattern = "\\[", x = opts))){
+                opts[!grepl(pattern="\\[",x = opts)]
+              }else{
+                # just grab the first
+                opts[1]
+              }
             }else{
-              # just grab the first
-              opts[1]
+              opts
             }
-          }else{
-            opts
+          })
+          uniques$structure <- structs
+          
           }
-        })
+          shiny::setProgress(0.4)
         
         shiny::setProgress(0.6)
         
-        grouped_uniques$structure <- structs
-        
-        shown_matches$forward_unique <- grouped_uniques
+        shown_matches$forward_unique <- uniques
         
         shown_matches$forward_full <- matches[,c("name", "source", "description"),with=F]
         
-        pieinfo$add <- reshape::melt(table(shown_matches$forward_unique$adduct))
-        pieinfo$db <- reshape::melt(table(shown_matches$forward_full$source))
-        pieinfo$iso <- reshape::melt(table(shown_matches$forward_unique$isocat))
         
+        if(nrow(shown_matches$forward_full)>0){
+          pieinfo$add <- reshape::melt(table(shown_matches$forward_unique$adduct))
+          pieinfo$db <- reshape::melt(table(shown_matches$forward_full$source))
+          pieinfo$iso <- reshape::melt(table(shown_matches$forward_unique$isocat))
+        }
+
         my_selection$name <- ""
         my_selection$struct <- ""
         

@@ -1,5 +1,9 @@
 shiny::observeEvent(input$clear_prematch,{
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb) # change this to proper var later
+  
+  RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS map_mz")
+  RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS map_struc")
+  RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS cont_struc")
   RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_content")
   RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_mapper")
   RSQLite::dbExecute(conn, "VACUUM")
@@ -16,6 +20,9 @@ shiny::observeEvent(input$prematch,{
   if(length(lcl$vectors$db_prematch_list) > 0){ # go through selected databases
     
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb) # change this to proper var later
+    RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS map_mz")
+    RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS map_struc")
+    RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS cont_struc")
     RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_content")
     RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_mapper")
     RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTS match_mapper(query_mz decimal(30,13),
@@ -29,9 +36,6 @@ shiny::observeEvent(input$prematch,{
                                                             description VARCHAR(255),
                                                             structure TEXT,
                                                             source TEXT)")
-    RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS map_mz ON match_mapper(query_mz)")
-    RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS map_struc ON match_mapper(structure)")
-    RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS cont_struc ON match_content(structure)")
     
     blocksize=100
     blocks = split(colnames(mSet$dataSet$norm), ceiling(seq_along(1:ncol(mSet$dataSet$norm))/blocksize))
@@ -60,6 +64,10 @@ shiny::observeEvent(input$prematch,{
                           "match_content", 
                           unique(data.table::rbindlist(lapply(matches, function(x) x$content))), append=T)
     
+    RSQLite::dbExecute(conn, "CREATE INDEX map_mz ON match_mapper(query_mz)")
+    RSQLite::dbExecute(conn, "CREATE INDEX map_struc ON match_mapper(structure)")
+    RSQLite::dbExecute(conn, "CREATE INDEX cont_struc ON match_content(structure)")
+    
     mSet$metshiParams$prematched<<-T
     search_button$on <<- FALSE
     
@@ -73,22 +81,22 @@ shiny::observeEvent(input$search_mz, {
       # get ion modes
     shiny::withProgress({
       conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb) # change this to proper var later
+      RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS map_mz")
+      RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS map_struc")
+      RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS cont_struc")
       RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_mapper") 
       RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_content")   
       RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTS match_mapper(query_mz decimal(30,13),
-                                                           structure TEXT,
-                                                           `%iso` decimal(30,13),
-                                                           adduct TEXT,
-                                                           dppm decimal(30,13))")    
+                                                                       structure TEXT,
+                                                                       `%iso` decimal(30,13),
+                                                                       adduct TEXT,
+                                                                       dppm decimal(30,13))")    
       RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTS match_content(name TEXT,
-                                                            baseformula TEXT,
-                                                            identifier TEXT,
-                                                            description VARCHAR(255),
-                                                            structure TEXT,
-                                                            source TEXT)")
-      RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS map_mz ON match_mapper(query_mz)")
-      RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS map_struc ON match_mapper(structure)")
-      RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS cont_struc ON match_content(structure)")
+                                                                        baseformula TEXT,
+                                                                        identifier TEXT,
+                                                                        description VARCHAR(255),
+                                                                        structure TEXT,
+                                                                        source TEXT)")
       
       res <- MetaDBparse::searchMZ(mzs = my_selection$mz, 
                                    ionmodes = getIonMode(my_selection$mz, 
@@ -105,6 +113,9 @@ shiny::observeEvent(input$search_mz, {
         content = unique(res[,-c("query_mz", "%iso", "adduct", "dppm")])
         RSQLite::dbWriteTable(conn, "match_mapper", mapper, append=T)
         RSQLite::dbWriteTable(conn, "match_content", content, append=T)
+        RSQLite::dbExecute(conn, "CREATE INDEX map_mz ON match_mapper(query_mz)")
+        RSQLite::dbExecute(conn, "CREATE INDEX map_struc ON match_mapper(structure)")
+        RSQLite::dbExecute(conn, "CREATE INDEX cont_struc ON match_content(structure)")
         search$go <<- TRUE
       }
     })
