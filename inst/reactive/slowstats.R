@@ -1,8 +1,8 @@
 # triggers when the 'go' button is pressed on the PLS-DA tab
 observeEvent(input$do_plsda, {
 
-  #require(e1071)
-
+  library(e1071)
+  library(pls)
   # depending on type, do something else
   # TODO: enable sparse and orthogonal PLS-DA
   switch(input$plsda_type,
