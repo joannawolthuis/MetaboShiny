@@ -1,4 +1,5 @@
-start.metshi <- function(port=8080, inBrowser=F, debug=F){
+start.metshi <- function(port=8080, inBrowser=F, 
+                         debug=F, runmode="local"){
   
   options("download.file.method" = "libcurl")
   
@@ -13,8 +14,6 @@ start.metshi <- function(port=8080, inBrowser=F, debug=F){
   
   # rjava.so error.. or rdb corrupt.. 'sudo R CMD javareconf'
   
-  runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
-  
   options('unzip.unzip' = getOption("unzip"),
           'download.file.extra' = switch(runmode, 
                                          docker="--insecure",
@@ -26,12 +25,16 @@ start.metshi <- function(port=8080, inBrowser=F, debug=F){
 
   switch(runmode,
          local = {
+           MetaboShiny::start_orca(9091)
+           
            shiny::runApp(
              appDir = appdir,
              launch.browser = inBrowser,
              display.mode = if(debug) "showcase" else "normal")
          },
          docker = {
+           plotly::orca_serve(port = 9091)
+           
            shiny::runApp(appdir,
                          port = port,
                          host = "0.0.0.0",

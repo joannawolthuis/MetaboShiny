@@ -37,7 +37,8 @@ observeEvent(input$change_cls, {
   shiny::invalidateLater(100, session)
   
   datamanager$reload <- "general"
-
+  datamanager$reload <- "ml"
+  
   shiny::updateNavbarPage(session, "statistics", selected = "inf")
 
 })

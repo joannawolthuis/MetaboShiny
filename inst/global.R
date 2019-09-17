@@ -441,16 +441,8 @@ gbl$vectors$wordcloud$skip <- unique(c( # manual curation(
 session_cl <- parallel::makeCluster(max(c(1, parallel::detectCores()-1)))#,outfile="") # leave 1 core for general use and 1 core for shiny session
 
 #' Squishes HTML elements close together.
-runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
+#runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
 data(isotopes, package = "enviPat")
-
-switch(runmode,
-       local = {
-         orca_serv_id = MetaboShiny::start_orca(9091)
-       },
-       docker = {
-         plotly::orca_serve(port = 9091)
-       })
 
 # interleave for sorting later ...
 add_idx <- order(c(seq_along(gbl$vectors$pos_adducts$Name), seq_along(gbl$vectors$neg_adducts$Name)))
