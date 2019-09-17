@@ -33,6 +33,8 @@ RUN apt-get update && apt-get install -y \
 RUN sudo R CMD javareconf
 
 RUN R -e 'install.packages("devtools")'
+RUN R -e 'install.packages("BiocManager")'
+RUN R -e 'BiocManager::install("org.Hs.eg.db")'
 RUN R -e 'devtools::install_github("UMCUGenetics/MetaboShiny")'
 
 # Make the ShinyApp available at port 8080

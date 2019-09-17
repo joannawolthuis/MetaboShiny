@@ -107,10 +107,6 @@ Imports:
   plotROC,
   rcdk
 Remotes:
-  github::UMCUgenetics/MetaDBparse,
-  github::xia-lab/MetaboAnalystR,
-  github::rwehrens/BatchCorrMetabolomics,
-  github::yixuan/showtext,
   bioc::impute, 
   bioc::pcaMethods, 
   bioc::siggenes, 
@@ -129,4 +125,7 @@ Remotes:
   bioc::Biostrings,
   bioc::GOSemSim,
   bioc::fmcsR,
-  bioc::org.Hs.eg.db
+  github::UMCUgenetics/MetaDBparse,
+  github::xia-lab/MetaboAnalystR,
+  github::rwehrens/BatchCorrMetabolomics,
+  github::yixuan/showtext
