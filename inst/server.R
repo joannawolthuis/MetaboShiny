@@ -1027,7 +1027,9 @@ mode = complete')
     debug_mSet <<- mSet
     debug_matches <<- shown_matches
     debug_selection <<- my_selection
-    
+    parallel::stopCluster(session_cl)
+    rmv <- list.files(".", pattern = ".csv|.log", full.names = T)
+    if(all(file.remove(rmv))) NULL
     # remove metaboshiny csv files
     switch(runmode,
            local = {
@@ -1036,8 +1038,5 @@ mode = complete')
            docker = {
              NULL
            })
-    parallel::stopCluster(session_cl)
-    rmv <- list.files(".", pattern = ".csv|.log", full.names = T)
-    if(all(file.remove(rmv))) NULL
   })
 }

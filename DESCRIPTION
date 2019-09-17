@@ -125,7 +125,7 @@ Remotes:
   bioc::Biostrings,
   bioc::GOSemSim,
   bioc::fmcsR,
-  github::UMCUGenetics/MetaDBparse,
-  github::xia-lab/MetaboAnalystR,
-  github::rwehrens/BatchCorrMetabolomics,
-  github::yixuan/showtext
+  UMCUGenetics/MetaDBparse,
+  xia-lab/MetaboAnalystR,
+  rwehrens/BatchCorrMetabolomics,
+  yixuan/showtext

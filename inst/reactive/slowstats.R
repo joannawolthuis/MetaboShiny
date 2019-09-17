@@ -216,8 +216,7 @@ observeEvent(input$do_ml, {
                                           ml_preproc = ml_preproc,
                                           tuneGrid = tuneGrid,
                                           ml_train_perc = ml_train_perc){
-                                   #shiny::isolate({
-                                   
+
                                    # get user training percentage
                                    ml_train_perc <- ml_train_perc/100
                                    
@@ -228,7 +227,6 @@ observeEvent(input$do_ml, {
                                      inTest = test_idx
                                    }else if(unique(train_vec)[1] != "all"){ #ONLY TRAIN IS DEFINED
                                      train_idx <- which(config[,train_vec[1], with=F][[1]] == train_vec[2])
-                                     #train_idx = grep(config$sample, pattern = ml_train_regex) # get training sample ids with regex
                                      test_idx = setdiff(1:nrow(curr), train_idx) # use the other rows for testing
                                      reTrain <- caret::createDataPartition(y = config[train_idx, label], p = ml_train_perc) # take a user-defined percentage of the regexed training set
                                      inTrain <- train_idx[reTrain$Resample1]
@@ -250,31 +248,26 @@ observeEvent(input$do_ml, {
                                    testY <- curr[inTest,
                                                  ..predictor][[1]]
                                    
-                                   # remove predictive column from training set
-                                   #remove.cols <- c("label") #TODO: make group column removed at start
                                    training <- curr[inTrain,]
                                    testing <- curr[inTest,]
-                                   
-                                   #rmv.configCols.tr <- which(sapply(configCols, function(i, training) ifelse(length(levels(as.factor(training[,..i][[1]]))) == 1, TRUE, FALSE), training = training))
-                                   #training[, (rmv.configCols.tr) := NULL]
-                                   #rmv.configCols.te <- which(sapply(configCols, function(i, testing) ifelse(length(levels(as.factor(testing[,..i][[1]]))) == 1, TRUE, FALSE), testing = testing))
-                                   #testing[, (rmv.configCols.te) := NULL]
-                                   
-                                   # ======= WIP =======
                                    
                                    require(caret)
                                    
                                    if(ml_folds == "LOOCV"){
                                      trainCtrl <- caret::trainControl(verboseIter = T,
                                                                       allowParallel = F,
-                                                                      method="LOOCV") # need something here...
+                                                                      method="LOOCV",
+                                                                      trim=TRUE, 
+                                                                      returnData = FALSE) # need something here...
                                      
                                    }else{
                                      trainCtrl <- caret::trainControl(verboseIter = T,
                                                                       allowParallel = F,
                                                                       method=as.character(ml_perf_metr),
                                                                       number=as.numeric(ml_folds),
-                                                                      repeats=3) # need something here...
+                                                                      repeats=3,
+                                                                      trim=TRUE, 
+                                                                      returnData = FALSE) # need something here...
                                    }
                                    
                                    fit <- caret::train(
@@ -293,10 +286,10 @@ observeEvent(input$do_ml, {
                                    # train and cross validate model
                                    # return list with mode, prediction on test data etc.s
                                    list(type = ml_method,
-                                        model = fit,
+                                       # model = fit,
+                                        importance = caret::varImp(fit)$importance,
                                         prediction = result.predicted.prob[,2],
                                         labels = testing$label)
-                                   #})
                                  },
                                  train_vec = lcl$vectors$ml_train,
                                  test_vec = lcl$vectors$ml_test,
@@ -314,7 +307,8 @@ observeEvent(input$do_ml, {
       mSet$analSet$ml <<- list() # otherwise make it
     }
     
-    mz.imp <- lapply(lapply(repeats, function(x) x$model), function(x) caret::varImp(x)$importance)
+    #mz.imp <- lapply(lapply(repeats, function(x) x$model), function(x) caret::varImp(x)$importance)
+    mz.imp <- lapply(repeats, function(x) x$importance)
     
     # save the summary of all repeats (will be used in plots) TOO MEMORY HEAVY
     pred <- ROCR::prediction(lapply(repeats, function(x) x$prediction), 
@@ -340,14 +334,9 @@ observeEvent(input$do_ml, {
                      perf = perf.long,
                      imp = mz.imp)
     
-    # roc_data <- list(type = {unique(lapply(repeats, function(x) x$type))},
-    #                  models = {lapply(repeats, function(x) x$model)},
-    #                  predictions = {lapply(repeats, function(x) x$prediction)},
-    #                  labels = {lapply(repeats, function(x) x$labels)})
-    
     bar_data <- data.table::rbindlist(lapply(1:length(repeats), function(i){
       x = repeats[[i]]
-      tbl = data.table::as.data.table(caret::varImp(x$model)$importance, keep.rownames=T)
+      tbl = data.table::as.data.table(x$importance, keep.rownames=T)
       tbl$rep = c(i)
       colnames(tbl) = c("mz",
                         "importance",
