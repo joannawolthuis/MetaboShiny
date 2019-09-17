@@ -124,4 +124,9 @@ Remotes:
   bioc::sva, 
   bioc::ChemmineR, 
   bioc::KEGGREST,
-  bioc::fgsea
+  bioc::fgsea,
+  bioc::Rdisop,
+  bioc::Biostrings,
+  bioc::GOSemSim,
+  bioc::fmcsR,
+  bioc::org.Hs.eg.db
