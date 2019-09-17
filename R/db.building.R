@@ -182,7 +182,7 @@ load.metadata.excel <- function(path.to.xlsx,
                                   "Individual Data"
                                   #,"Pen Data",
                                   #"Admin"
-                                ),ppm){
+                                )){
   
   # --- connect to sqlite db ---
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), path.to.patdb)

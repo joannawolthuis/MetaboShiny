@@ -78,7 +78,15 @@ shiny::observeEvent(input$create_db,{
              excel_path <- shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath
 
              # copy the user selected db to the processing folder under proj_name renaming
-             file.copy(db_path, lcl$paths$patdb, overwrite = T)
+             if(file.exists(lcl$paths$patdb)) file.remove(lcl$paths$patdb)
+             
+             # copy db
+             conn <- RSQLite::dbConnect(RSQLite::SQLite(), db_path)
+
+             RSQLite::sqliteCopyDatabase(conn, lcl$paths$patdb)
+             
+             RSQLite::dbDisconnect(conn)
+             # - - - - -
              
              shiny::setProgress(session=session, value= .30)
 
@@ -86,9 +94,9 @@ shiny::observeEvent(input$create_db,{
              metadata_path <- shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath
 
              if(grepl(metadata_path, pattern = "csv")){
-               exp_vars <<- MetaboShiny::load.metadata.csv(metadata_path, lcl$paths$patdb, ppm=input$ppm)
+               MetaboShiny::load.metadata.csv(metadata_path, lcl$paths$patdb)
              }else{
-               exp_vars <<- MetaboShiny::load.metadata.excel(metadata_path, lcl$paths$patdb, ppm=input$ppm)
+               MetaboShiny::load.metadata.excel(metadata_path, lcl$paths$patdb)
              }
 
              shiny::setProgress(session=session, value= .60)
