@@ -57,11 +57,10 @@ get_prematches <- function(who = NA,
   return(res)
 }
 
-score.isos <- function(table, mSet, patdb, method="mscore", inshiny=TRUE, intprec){
+score.isos <- function(table, mSet, patdb, method="mscore", inshiny=TRUE, session=0, intprec, ppm){
   
   func <- function(){
     
-    ppm <- get.ppm(patdb=patdb)
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
     
     if(inshiny) shiny::setProgress(value = 0.2)
@@ -96,7 +95,7 @@ score.isos <- function(table, mSet, patdb, method="mscore", inshiny=TRUE, intpre
     mzmatches <- as.data.table(unique(mzmatches[complete.cases(mzmatches),]))
     mzmatches$mzmed <- as.factor(mzmatches$mzmed)
     
-    sourceTable <- as.data.table(mSet$dataSet$orig, keep.rownames = T)
+    sourceTable <- data.table::as.data.table(mSet$dataSet$orig, keep.rownames = T)
     longints <- melt(sourceTable, id.var="rn")
     
     colnames(longints) <- c("filename", "mzmed", "intensity")
@@ -104,19 +103,15 @@ score.isos <- function(table, mSet, patdb, method="mscore", inshiny=TRUE, intpre
     table <- merge(mzmatches, longints)
     table <- unique(table[,c("fullformula", "isoprevalence", "filename", "mzmed", "fullmz", "intensity")])
     
-    # table <- data.table::setDT(table)[, .(mzmed = mean(mzmed), intensity = sum(intensity)),
-    #                                   by=.(fullmz, fullformula, isoprevalence, filename)]
-    
     p.cpd <- split(x = table,
                    f = list(table$fullformula))
     
     if(inshiny) shiny::setProgress(value = 0.6)
     
-    i <<- 0
+    i <- 0
     
-    #cpd_tab <- p.cpd$C9H18N3O6
-    
-    res_rows <- pbapply::pblapply(p.cpd, cl = session_cl, function(cpd_tab, method = method, i = i, inshiny = inshiny, ppm = ppm, intprec = intprec){
+
+    res_rows <- pbapply::pblapply(p.cpd, cl = cl, function(cpd_tab, method = method, i = i, inshiny = inshiny, ppm = ppm, intprec = intprec){
       
       formula = unique(cpd_tab$fullformula)
       #adduct = unique(cpd_tab$adduct)
@@ -202,11 +197,7 @@ score.isos <- function(table, mSet, patdb, method="mscore", inshiny=TRUE, intpre
     
   }
   
-  tbl <<- func()
-  
-  tbl
-  
-  #if(inshiny) func() else func()
+ func()
   
 }
 
@@ -328,7 +319,7 @@ get_predicted <- function(mz,
         nrSi = as.numeric(stringr::str_match(corrected$new_formula, pattern = "Si(\\d*)")[,2])  
       )
       
-      electron.per.atom <- data.table(
+      electron.per.atom <- data.table::data.table(
         nrC = 12,
         nrH = 1,
         nrBr = 79,
@@ -382,7 +373,7 @@ get_predicted <- function(mz,
       
       ch_nops_chnops_rows <- pbapply::pblapply(1:nrow(deconstructed), function(i){
         row = deconstructed[i,]
-        res= data.table(hc = F, chnops = F, nops = F)
+        res= data.table::data.table(hc = F, chnops = F, nops = F)
         # T4, V4, X4, X4, Y4 -> H/C N/C	O/C	P/C	S/C
         # chnops
         #IF(AND(T4>=0.2,T4<=3,V4>=0,V4<=2,W4>=0,W4<=1.2,X4>=0,X4<=0.32,Y4>=0,Y4<=0.65),"YES","NO")
@@ -398,7 +389,7 @@ get_predicted <- function(mz,
             hc = HC %between% c(0, 6)
             chnops = HC %between% c(0.2, 3) & NC %between% c(0, 2) & OC %between% c(0, 1.2) & PC %between% c(0, 0.32) & SC %between% c(0,65)  
             nops = NC %between% c(0, 4) & OC %between% c(0,3) & PC %between% c(0,2) & SC %between% c(0,3)
-            data.table(hc = hc, chnops = chnops, nops = nops)
+            data.table::data.table(hc = hc, chnops = chnops, nops = nops)
             })  
         })
         res
@@ -440,7 +431,7 @@ get_predicted <- function(mz,
         if(!is.na(row$RemAt)){
           theor_orig_formula <- Rdisop::addMolecules(theor_orig_formula, row$RemAt)$formula
         }
-        data.table(name = theor_orig_formula,
+        data.table::data.table(name = theor_orig_formula,
                    baseformula = theor_orig_formula,
                    adduct = row$Name,
                    `%iso` = 100,
@@ -480,7 +471,7 @@ get_predicted <- function(mz,
           i <<- i + 1
           url = paste0("https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/fastformula/", formula, "/cids/JSON")
           description = "No PubChem hits for this predicted formula."
-          rows = data.table(name = formula,
+          rows = data.table::data.table(name = formula,
                             baseformula = formula,
                             structure = NA,
                             description = description)
@@ -533,7 +524,6 @@ get_predicted <- function(mz,
     mols <- lapply(1:nrow(tbl_uniq), function(i) return(NA))
     
     if(length(valid.struct) > 0){
-      saveme <<- tbl_uniq
       mols[valid.struct] <- rcdk::parse.smiles(tbl_uniq$structure[valid.struct])#sapply(smiles, rcdk::parse.smiles)
       backtrack <- data.table::data.table(structure = tbl_uniq$structure[valid.struct])
       backtrack_molinfo <- lapply(valid.struct, function(i,row){
@@ -692,7 +682,6 @@ info_from_cids <- function(cids,
     
   })
   
-  chunk.row.list <<- chunk.row.list
   res <- chunk.row.list[sapply(chunk.row.list, function(x){
     if(is.null(nrow(x))) TRUE else FALSE})]
   

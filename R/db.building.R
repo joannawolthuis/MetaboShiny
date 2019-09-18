@@ -260,26 +260,14 @@ load.metadata.excel <- function(path.to.xlsx,
                             stool_condition = "qc")
   qc_tab_ind = unique(rbindlist(qc_ind_data))
   
-  # --- join to existing ---
-  
   setup <- rbind(setup, qc_tab_setup, fill=TRUE)
   individual.data <- rbindlist(list(individual.data, qc_tab_ind), fill=TRUE)
   individual.data$label <- 1:nrow(individual.data)
   
-  #pen.data <- data.table::as.data.table(apply(pen.data, MARGIN=2, trimws))
-  #admin <- data.table::as.data.table(apply(admin, MARGIN=2, trimws))
-  
-  RSQLite::dbWriteTable(conn, "params", 
-                        data.table::data.table(ppm=ppm), 
-                        overwrite=T)
-  
   # --- import to patient sql file ---
-  #RSQLite::dbWriteTable(conn, "general", general, overwrite=TRUE) # insert into BUGGED FIX LATER
   RSQLite::dbWriteTable(conn, "setup", setup, overwrite=TRUE) # insert into
   RSQLite::dbWriteTable(conn, "individual_data", individual.data, overwrite=TRUE) # insert into
-  #RSQLite::dbWriteTable(conn, "pen_data", pen.data, overwrite=TRUE) # insert into
-  #RSQLite::dbWriteTable(conn, "admin", admin, overwrite=TRUE) # insert into
-  # --- disconnect ---
+ # --- disconnect ---
   RSQLite::dbDisconnect(conn)
 }
 
@@ -308,8 +296,8 @@ db.build.custom <- function(db.name = "MyDb",
   }
   
   # check the formulas
-  checked <- data.table::as.data.table(check.chemform.joanna(isotopes,
-                                                             db.formatted$baseformula))
+  checked <- data.table::as.data.table(enviPat::check.chemform(isotopes,
+                                                               db.formatted$baseformula))
   db.formatted$baseformula <- checked$new_formula
   keep <- checked[warning == FALSE, which = TRUE]
   db.formatted <- db.formatted[keep]
@@ -336,5 +324,7 @@ db.build.custom <- function(db.name = "MyDb",
   meta.img =
     list(name = paste0(db.short, "_icon"), path = db.icon, dimensions = c(200, 200))
   
-  save(list = c("meta.img", "meta.dbpage"), file = file.path(outfolder, paste0(db.short, ".RData")))
+  save(list = c("meta.img", 
+                "meta.dbpage"), 
+       file = file.path(outfolder, paste0(db.short, ".RData")))
 }

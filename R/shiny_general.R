@@ -1,20 +1,18 @@
-#' @export
-get_ref_vars <- function(fac="Label"){
-  req(csv_loc)
-  # csv_loc = "backend/appdata/euronutrition/Test.csv"
-  csv <- fread(csv_loc, sep="\t", header = T)[,1:5]
-  # --- return ---
-  c(unique(csv[,..fac]))[[fac]]
-}
-
-get_ref_cpds <- function(){
-  req(csv_loc)
-  # csv_loc = "backend/appdata/euronutrition/Test.csv"
-  csv <- fread(csv_loc, sep="\t", header = T)[1,]
-  keep.colnames <- colnames(csv)[!colnames(csv) %in% c("Sample", "Label", "Time")]
-  # --- return ---
-  c(keep.colnames)
-}
+# get_ref_vars <- function(fac="Label"){
+#   req(csv_loc)
+#   # csv_loc = "backend/appdata/euronutrition/Test.csv"
+#   csv <- fread(csv_loc, sep="\t", header = T)[,1:5]
+#   # --- return ---
+#   c(unique(csv[,..fac]))[[fac]]
+# }
+# get_ref_cpds <- function(){
+#   req(csv_loc)
+#   # csv_loc = "backend/appdata/euronutrition/Test.csv"
+#   csv <- fread(csv_loc, sep="\t", header = T)[1,]
+#   keep.colnames <- colnames(csv)[!colnames(csv) %in% c("Sample", "Label", "Time")]
+#   # --- return ---
+#   c(keep.colnames)
+# }
 
 getProfile <- function(mSet, varName, title=varName, mode="stat"){
   sourceTable = mSet$dataSet$norm

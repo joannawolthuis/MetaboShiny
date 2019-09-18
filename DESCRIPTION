@@ -25,7 +25,6 @@ Imports:
   gsubfn,
   DT, 
   R.utils, 
-  data.table, 
   shinyFiles,
   shinyBS, 
   rhandsontable,
@@ -112,6 +111,7 @@ Imports:
   rcdk
 Remotes:
   github::UMCUGenetics/MetaDBparse,
+  github::xia-lab/MetaboAnalystR,
   github::rwehrens/BatchCorrMetabolomics,
   github::yixuan/showtext,
   bioc::impute, 

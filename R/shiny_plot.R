@@ -204,7 +204,7 @@ ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
       ggtitle(paste(cpd, "m/z"))
   }
   if(plotlyfy){
-    ggplotly(p, tooltip="Sample", originalData=T)
+    plotly::ggplotly(p, tooltip="Sample", originalData=T)
   }else{
     p
   }
@@ -229,7 +229,7 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
   # - - -
   
   profile <- getProfile(mSet, cpd, mode=if(mode == "nm") "stat" else "time")
-  df_line <- data.table(x = c(1,2),
+  df_line <- data.table::data.table(x = c(1,2),
                         y = rep(min(profile$Abundance - 0.1),2))
   stars = ""
   
@@ -264,7 +264,7 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
   
   profiles <- switch(mode,
                      ts = split(profile, f = profile$Group),
-                     nm = list(x = data.table(profile)))
+                     nm = list(x = data.table::data.table(profile)))
   
   i = 1
   
@@ -384,7 +384,7 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
   }
   # ---------------
   if(plotlyfy){
-    ggplotly(p, tooltip = "Text")#, originalData=T)
+    plotly::ggplotly(p, tooltip = "Text")#, originalData=T)
   }else{
     p
   }
@@ -392,7 +392,7 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
 
 ggPlotAOV <- function(mSet, cf, n=20,
                       plot.theme, plotlyfy=TRUE,font){
-  profile <- as.data.table(mSet$analSet$aov$p.log[mSet$analSet$aov$inx.imp],
+  profile <- data.table::as.data.table(mSet$analSet$aov$p.log[mSet$analSet$aov$inx.imp],
                            keep.rownames = T)
   colnames(profile) <- c("cpd", "-logp")
   profile[,2] <- round(profile[,2], digits = 2)
@@ -418,14 +418,14 @@ ggPlotAOV <- function(mSet, cf, n=20,
     #ggplot2::scale_y_log10()+
     scale_y_continuous(labels=scaleFUN)
   if(plotlyfy){
-    ggplotly(p, tooltip="m/z")
+    plotly::ggplotly(p, tooltip="m/z")
   }else{
     p
   }
 }
 ggPlotTT <- function(mSet, cf, n=20,
                      plot.theme, plotlyfy=TRUE,font){
-  profile <- as.data.table(mSet$analSet$tt$p.log[mSet$analSet$tt$inx.imp],keep.rownames = T)
+  profile <- data.table::as.data.table(mSet$analSet$tt$p.log[mSet$analSet$tt$inx.imp],keep.rownames = T)
   colnames(profile) <- c("cpd", "-logp")
   profile[,2] <- round(profile[,2], digits = 2)
   profile$Peak <- c(1:nrow(profile))
@@ -450,7 +450,7 @@ ggPlotTT <- function(mSet, cf, n=20,
     #ggplot2::scale_y_log10()+
     scale_y_continuous(labels=scaleFUN)
   if(plotlyfy){
-    ggplotly(p, tooltip="m/z")
+    plotly::ggplotly(p, tooltip="m/z")
   }else{
     p
   }
@@ -459,7 +459,7 @@ ggPlotTT <- function(mSet, cf, n=20,
 ggPlotFC <- function(mSet, cf, n=20,
                      plot.theme,
                      plotlyfy=TRUE,font){
-  profile <- as.data.table(mSet$analSet$fc$fc.log[mSet$analSet$fc$inx.imp],keep.rownames = T)
+  profile <- data.table::as.data.table(mSet$analSet$fc$fc.log[mSet$analSet$fc$inx.imp],keep.rownames = T)
   profile
   colnames(profile) <- c("cpd", "log2fc")
   profile$Peak <- c(1:nrow(profile))
@@ -477,7 +477,7 @@ ggPlotFC <- function(mSet, cf, n=20,
     ggplot2::scale_colour_gradientn(colours = cf(n))
   
   if(plotlyfy){
-    ggplotly(p, tooltip="log2fc")
+    plotly::ggplotly(p, tooltip="log2fc")
   }else{
     p
   }
@@ -491,7 +491,7 @@ ggPlotVolc <- function(mSet,
                        font ){
   
   vcn<-mSet$analSet$volcano;
-  dt <- as.data.table(vcn$sig.mat[,c(2,4)],keep.rownames = T)
+  dt <- data.table::as.data.table(vcn$sig.mat[,c(2,4)],keep.rownames = T)
   colnames(dt) <- c("cpd", "log2FC", "-log10P")
   p <- ggplot2::ggplot() +
     #ggplot2::geom_point(data=dt[!imp.inx], ggplot2::aes(x=log2FC, y=minlog10P)) +
@@ -510,7 +510,7 @@ ggPlotVolc <- function(mSet,
     ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE)
   
   if(plotlyfy){
-    ggplotly(p, tooltop="cpd")
+    plotly::ggplotly(p, tooltop="cpd")
   }else{
     p
   }
@@ -542,7 +542,7 @@ ggPlotClass <- function(mSet,
     facet_grid(~Component) +
     scale_fill_manual(values=cf(pcs))
   if(plotlyfy){
-    ggplotly(p)
+    plotly::ggplotly(p)
   }else{
     p
   }
@@ -586,7 +586,7 @@ ggPlotPerm <- function(mSet,
     geom_text(mapping = aes(x = bw.vec[1], y =  .11*nrow(df), label = pval), color = "black", size = 4)
   
   if(plotlyfy){
-    ggplotly(p)
+    plotly::ggplotly(p)
   }else{
     p
   }
@@ -656,7 +656,7 @@ plot.many <- function(res.obj = models,
     coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
   
   if(plotlyfy){
-    ggplotly(p)
+    plotly::ggplotly(p)
   }else{
     p
   }
@@ -668,12 +668,6 @@ ggPlotROC <- function(data,
                       cf,
                       plot.theme,
                       plotlyfy=TRUE,font){
-  
-  # - - - - - - - - - - - -
-  
-  require(ROCR)
-  require(ggplot2)
-  require(data.table)
   
   mean.auc <- data$m_auc
   perf.long <- data$perf
@@ -694,7 +688,6 @@ ggPlotROC <- function(data,
                       size = 8,
                       x = 0.77,
                       y = 0.03) +
-    #   geom_text(label = paste0("Average AUC: ", format(mean.auc,2, drop0trailing = TRUE,digits = 2)), size = 8, mapping = aes(x = 0.82, y = 0.03)) +
     plot.theme(base_size = 10) +
     ggplot2::scale_color_gradientn(colors = cols) +
     theme(legend.position="none",
@@ -708,7 +701,7 @@ ggPlotROC <- function(data,
     coord_cartesian(xlim = c(.04,.96), ylim = c(.04,.96))
   
   if(plotlyfy){
-    ggplotly(p)
+    plotly::ggplotly(p)
   }else{
     p
   }
@@ -730,13 +723,10 @@ ggPlotBar <- function(data,
     lname <- "all"
   }
   
-  library(Rmisc)
-  require(data.table)
-  
   data.norep <- data[,-3]
-  data.ci = group.CI(importance ~ mz, data.norep)
+  data.ci = Rmisc::group.CI(importance ~ mz, data.norep)
   
-  data.ordered <- data.ci[order(data.ci$importance.mean, decreasing = T),]
+  data.ordered <- Rmisc::data.ci[order(data.ci$importance.mean, decreasing = T),]
   
   data.subset <- data.ordered[1:topn,]
   
@@ -777,7 +767,7 @@ ggPlotBar <- function(data,
   mzdata$mz <- gsub(mzdata$mz, pattern = "`", replacement="")
   
   if(plotlyfy){
-    list(mzdata = mzdata, plot = ggplotly(p, tooltip="label"))
+    list(mzdata = mzdata, plot = plotly::ggplotly(p, tooltip="label"))
   }else{
     list(mzdata = mzdata, plot = p)
   }
@@ -788,11 +778,6 @@ plotPCA.3d <- function(mSet,
                        shape.fac="label",
                        pcx, pcy, pcz,
                        mode="pca",font){
-  
-  print(pcx)
-  print(pcy)
-  print(pcz)
-  print(mode)
   
   switch(mode,
          pca = {
@@ -806,7 +791,7 @@ plotPCA.3d <- function(mSet,
            y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
            z.var <- round(mSet$analSet$pca$variance[pcz] * 100.00, digits=1)
          }, plsda = {
-           plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar
+           plsda.table <- data.table::as.data.table(round(mSet$analSet$plsr$Xvar
                                               / mSet$analSet$plsr$Xtotvar
                                               * 100.0,
                                               digits = 2),
@@ -903,7 +888,7 @@ plotPCA.3d <- function(mSet,
       show.orbs <- c(show.orbs, worked)
     }
     
-    adj_plot <<- plotly_build(plots)
+    adj_plot <- plotly_build(plots)
     rgbcols <- toRGB(cols[show.orbs])
     c = 1
     
@@ -920,7 +905,7 @@ plotPCA.3d <- function(mSet,
     )
     
     # --- return ---
-    pca_plot <<- adj_plot %>% add_trace(
+    pca_plot <- adj_plot %>% add_trace(
       hoverinfo = 'text',
       text = rownames(df),
       x = df[,pcx],
@@ -1007,7 +992,7 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
            
          },
          plsda = {
-           plsda.table <- as.data.table(round(mSet$analSet$plsr$Xvar
+           plsda.table <- data.table::as.data.table(round(mSet$analSet$plsr$Xvar
                                               / mSet$analSet$plsr$Xtotvar
                                               * 100.0,
                                               digits = 2),
@@ -1062,7 +1047,7 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
   if(mode == "ipca") p <- p + facet_wrap(~time)
   
   if(plotlyfy){
-    ggplotly(p)
+    plotly::ggplotly(p)
   }else{
     p
   }
@@ -1163,7 +1148,7 @@ ggPlotVenn <- function(mSet,
                        
                        which.plsda <- gsub(name, pattern = "^.*- | ", replacement="")
                        
-                       compounds_pc <- as.data.table(analysis$plsda$vip.mat,keep.rownames = T)
+                       compounds_pc <- data.table::as.data.table(analysis$plsda$vip.mat,keep.rownames = T)
                        colnames(compounds_pc) <- c("rn", paste0("PC", 1:(ncol(compounds_pc)-1)))
                        ordered_pc <- setorderv(compounds_pc, which.plsda, -1)
                        
@@ -1175,7 +1160,7 @@ ggPlotVenn <- function(mSet,
                      pca = {
                        which.pca <- gsub(name, pattern = "^.*- | ", replacement="")
                        
-                       compounds_pc <- as.data.table(analysis$pca$rotation,keep.rownames = T)
+                       compounds_pc <- data.table::as.data.table(analysis$pca$rotation,keep.rownames = T)
                        ordered_pc <- setorderv(compounds_pc, which.pca, -1)
                        res <- list(ordered_pc$rn)
                        names(res) <- paste0(which.pca, " (PCA)")
@@ -1205,9 +1190,6 @@ ggPlotVenn <- function(mSet,
     })
     
     # unnest the nested lists
-    
-    debug_input <<- tables
-    
     flattened <- flattenlist(tables)
     
     # remove NAs
@@ -1235,7 +1217,7 @@ ggPlotVenn <- function(mSet,
   items <- strsplit(as.character(venn.plot), split = ",")[[1]]
   
   # get which are circles
-  circ_values <<- data.frame(
+  circ_values <- data.frame(
     id = 1:length(grep(items, pattern="polygon"))
     #,value = c(3, 3.1, 3.1, 3.2, 3.15, 3.5)
   )
@@ -1314,14 +1296,14 @@ ggPlotVenn <- function(mSet,
     scale_x_continuous(expand = c(.1, .1)) +
     scale_y_continuous(expand = c(.1, .1))
   if(plotlyfy){
-    list(plot = ggplotly(p), info = flattened)
+    list(plot = plotly::ggplotly(p), info = flattened)
   }else{
     list(plot = p, info = flattened)
   }
 }
 
 ggPlotScree <- function(mSet, plot.theme, cf, font, pcs=20){
-  df <- data.table(
+  df <- data.table::data.table(
     pc = 1:length(names(mSet$analSet$pca$variance)),
     var = round(mSet$analSet$pca$variance*100,digits = 1))
   p <- ggplot2::ggplot(data=df[1:20,]) + ggplot2::geom_line(mapping = aes(x=pc, y=var, colour=var), cex=3) +
@@ -1356,7 +1338,7 @@ ggPlotWordBar <- function(wcdata, plot.theme, cf, font, plotlyfy=T){
           text = element_text(family = font$family)) +
     labs(x="Word",y="Frequency")
   if(plotlyfy){
-    ggplotly(g,tooltip = "freq")
+    plotly::ggplotly(g,tooltip = "freq")
   }else{
     g
   }
