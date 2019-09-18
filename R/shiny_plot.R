@@ -870,7 +870,6 @@ plotPCA.3d <- function(mSet,
       })
       
       if(worked){
-        print("adding orb to plots...")
         mesh <- c(list(x = o$vb[1, o$ib]/o$vb[4, o$ib],
                        y = o$vb[2, o$ib]/o$vb[4, o$ib],
                        z = o$vb[3, o$ib]/o$vb[4, o$ib]))
@@ -956,8 +955,7 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
               "1"#'o'
   )
   
-  print(mode)
-  
+
   switch(mode,
          pca={
            df <- mSet$analSet$pca$x
@@ -1061,8 +1059,6 @@ ggPlotVenn <- function(mSet,
                        cf,
                        plotlyfy=TRUE,font){
   
-  print("I'M HERE O_O")
-  
   experiments <- stringr::str_match(unlist(venn_yes$now), 
                                     pattern = "\\(.*\\)")[,1]
   
@@ -1085,8 +1081,6 @@ ggPlotVenn <- function(mSet,
     # go through the to include analyses
     
     tables <- lapply(categories, function(name){
-      
-      print(name)
       
       base_name <- search_name <- gsub(name, pattern = " -.*$| ", replacement="")
       
