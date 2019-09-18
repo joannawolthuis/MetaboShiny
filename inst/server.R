@@ -841,8 +841,19 @@ mode = complete')
   # generate all the fadebuttons for the database selection
   lapply(db_button_prefixes, function(prefix){
     output[[paste0("db_", prefix, "_select")]] <- renderUI({
-      built.dbs <- c(gsub(x = list.files(lcl$paths$db_dir, pattern = "\\.db"), 
+      db.paths = list.files(lcl$paths$db_dir, pattern = "\\.db$",full.names = T)
+      built.dbs <- c(gsub(x = basename(db.paths), 
                           pattern = "\\.db", replacement = ""), "custom")
+      really.built.dbs <- sapply(db.paths, function(path) {
+        print(path)
+        conn <- RSQLite::dbConnect(RSQLite::SQLite(), path) # change this to proper var later
+        exists = RSQLite::dbExistsTable(conn, "base")
+        if(exists) exists = RSQLite::dbGetQuery(conn, "select count(*) from base")[1,] > 0 
+        RSQLite::dbDisconnect(conn)
+        exists
+      })
+      
+      built.dbs <- intersect(built.dbs[really.built.dbs], gbl$vectors$db_list)
       shiny::fluidRow(
         lapply(gbl$vectors$db_list[-which(gbl$vectors$db_list == "custom" | !(gbl$vectors$db_list %in% built.dbs))], function(db){
           which_idx = grep(sapply(gbl$constants$images, function(x) x$name), pattern = db) # find the matching image (NAME MUST HAVE DB NAME IN IT COMPLETELY)
