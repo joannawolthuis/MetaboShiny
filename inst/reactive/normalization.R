@@ -160,9 +160,9 @@ shiny::observeEvent(input$initialize, {
       }
       else if(req(input$miss_type ) == "pmm"){ # use predictive mean matching
         # TODO: re-enable, it's very slow
-        require(mice)
         base <- mSet$dataSet$preproc
         imp <- mice::mice(base, printFlag = TRUE)
+        
       }else if(req(input$miss_type ) == "rf"){ # random forest
         samples <- rownames(mSet$dataSet$preproc)
         
@@ -231,8 +231,6 @@ shiny::observeEvent(input$initialize, {
       ref_var = input$ref_var,
       prematched = F
     )
-    
-    dput(mSet$metshiParams)
     
     mSet <- MetaboAnalystR::PreparePrenormData(mSet)
     

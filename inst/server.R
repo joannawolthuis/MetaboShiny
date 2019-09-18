@@ -359,7 +359,6 @@ mode = complete')
                                                                         showadd = result_filters$add,
                                                                         showdb = result_filters$db,
                                                                         showiso = result_filters$iso))
-        
         shiny::setProgress(0.2)
         
         uniques = data.table::as.data.table(unique(data.table::as.data.table(matches)[,-c("source", "description"),with=F]))
@@ -604,7 +603,7 @@ mode = complete')
     if(my_selection$mz != ""){
       scanmode$positive <- F
       scanmode$negative <- F
-      ion_mode <- getIonMode(my_selection$mz, lcl$paths$patdb)
+      ion_mode <- MetaboShiny::getIonMode(my_selection$mz, lcl$paths$patdb)
       for(mode in ion_mode){
         scanmode[[mode]] <- TRUE
       }
@@ -633,16 +632,16 @@ mode = complete')
   shiny::observeEvent(input$check_csv, {
     req(lcl$paths$csv_loc)
     switch(input$norm_type,
-           ProbNorm=updateSelectInput(session, "ref_var",
+           ProbNorm=shiny::updateSelectInput(session, "ref_var",
                                       choices = get_ref_vars(fac = "label") # please add options for different times later, not difficult
            ),
-           CompNorm=updateSelectInput(session, "ref_var",
+           CompNorm=shiny::updateSelectInput(session, "ref_var",
                                       choices = get_ref_cpds() # please add options for different times later, not difficult
            ))
   })
   
   # render the created UI
-  output$ref_select <- renderUI({ref.selector()})
+  output$ref_select <- shiny::renderUI({ref.selector()})
   
   # triggered when user enters the statistics tab
   
@@ -768,7 +767,7 @@ mode = complete')
       set.to = T
     }
     for(db in dbs){
-      updateCheckboxInput(session, paste0("search_", db), value = set.to)
+      shiny::updateCheckboxInput(session, paste0("search_", db), value = set.to)
     }
   })
   
@@ -783,7 +782,7 @@ mode = complete')
       set.to = T
     }
     for(db in dbs){
-      updateCheckboxInput(session, paste0("prematch_", db), value = set.to)
+      shiny::updateCheckboxInput(session, paste0("prematch_", db), value = set.to)
     }
   })
   
@@ -905,7 +904,7 @@ mode = complete')
       datamanager$reload <- "general"
     })
     # reload current plot
-    updateNavbarPage(session, "statistics", selected = "inf")
+    shiny::updateNavbarPage(session, "statistics", selected = "inf")
   })
   
   shiny::observeEvent(input$debug, {
@@ -919,14 +918,14 @@ mode = complete')
     subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
     lcl$vectors$ml_train <<- c(input$subset_var,
                                input$subset_group)
-    output$ml_train_ss <- renderText(subset.name)
+    output$ml_train_ss <- shiny::renderText(subset.name)
   })
   
   shiny::observeEvent(input$ml_test_ss, {
     keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]
     subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
     lcl$vectors$ml_test <<- c(input$subset_var, input$subset_group)
-    output$ml_test_ss <- renderText(subset.name)
+    output$ml_test_ss <- shiny::renderText(subset.name)
   })
   
   output$db_example <- DT::renderDataTable({
@@ -981,9 +980,13 @@ mode = complete')
   shiny::observeEvent(input$export_plot,{
     switch(runmode,
            docker = plotly::orca(p = plotly::last_plot(), 
-                                 file=file.path(lcl$paths$work_dir,paste0(lcl$proj_name, "_", basename(tempfile()), input$export_format))),
+                                 file=file.path(lcl$paths$work_dir,paste0(lcl$proj_name, "_", 
+                                                                          basename(tempfile()), 
+                                                                          input$export_format))),
            local = export_plotly(p = plotly::last_plot(), 
-                                 file=file.path(lcl$paths$work_dir,paste0(lcl$proj_name, "_", basename(tempfile()), input$export_format)),
+                                 file=file.path(lcl$paths$work_dir,paste0(lcl$proj_name, "_",
+                                                                          basename(tempfile()), 
+                                                                          input$export_format)),
                                  port = 9091))
   })
   
@@ -1029,7 +1032,7 @@ mode = complete')
     # remove metaboshiny csv files
     switch(runmode,
            local = {
-             stop_orca(orca_serv_id)
+             MetaboShiny::stop_orca(orca_serv_id)
            },
            docker = {
              NULL

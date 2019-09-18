@@ -726,7 +726,7 @@ ggPlotBar <- function(data,
   data.norep <- data[,-3]
   data.ci = Rmisc::group.CI(importance ~ mz, data.norep)
   
-  data.ordered <- Rmisc::data.ci[order(data.ci$importance.mean, decreasing = T),]
+  data.ordered <- data.ci[order(data.ci$importance.mean, decreasing = T),]
   
   data.subset <- data.ordered[1:topn,]
   
@@ -1061,7 +1061,10 @@ ggPlotVenn <- function(mSet,
                        cf,
                        plotlyfy=TRUE,font){
   
-  experiments <- stringr::str_match(unlist(venn_yes$now), pattern = "\\(.*\\)")[,1]
+  print("I'M HERE O_O")
+  stringr::str_match
+  experiments <- stringr::str_match(unlist(venn_yes$now), 
+                                    pattern = "\\(.*\\)")[,1]
   
   experiments <- unique(gsub(experiments, pattern = "\\(\\s*(.+)\\s*\\)", replacement="\\1"))
   

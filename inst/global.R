@@ -8,6 +8,7 @@ print("...global...")
 library(ggplot2)
 library(data.table)
 library(plotly)
+library(MetaboShiny)
 
 online = MetaboShiny::internetWorks()
 
@@ -438,10 +439,9 @@ gbl$vectors$wordcloud$skip <- unique(c( # manual curation(
 
 # create parallel workers, leaving 1 core for general use
 # TODO: make this a user slider
-session_cl <- parallel::makeCluster(max(c(1, parallel::detectCores()-1)))#,outfile="") # leave 1 core for general use and 1 core for shiny session
+session_cl <- parallel::makeCluster(max(c(1, parallel::detectCores() - 1)))#,outfile="") # leave 1 core for general use and 1 core for shiny session
 
 #' Squishes HTML elements close together.
-#runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
 data(isotopes, package = "enviPat")
 
 # interleave for sorting later ...

@@ -296,7 +296,7 @@ db.build.custom <- function(db.name = "MyDb",
   }
   
   # check the formulas
-  checked <- data.table::as.data.table(enviPat::check.chemform(isotopes,
+  checked <- data.table::as.data.table(enviPat::check_chemform(isotopes,
                                                                db.formatted$baseformula))
   db.formatted$baseformula <- checked$new_formula
   keep <- checked[warning == FALSE, which = TRUE]

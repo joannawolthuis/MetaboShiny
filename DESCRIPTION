@@ -15,8 +15,8 @@ URL: https://github.com/UMCUGenetics/MetaboShiny
 Imports:
   remotes,
   data.table,
-  enviPat,
   BiocManager, 
+  mice,
   shiny, 
   shinydashboard, 
   httr, 
