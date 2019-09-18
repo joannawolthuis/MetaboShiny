@@ -7,7 +7,7 @@ lapply(gbl$vectors$db_list, FUN=function(db){
   # creates listener for if the 'check db' button is pressed
   shiny::observeEvent(input[[paste0("check_", db)]],{
     # see which db files are present in folder
-    db_folder_files <- list.files(getOptions(lcl$paths$opt.loc)$db_dir)
+    db_folder_files <- list.files(MetaboShiny::getOptions(lcl$paths$opt.loc)$db_dir)
     is.present <- paste0(db, ".db") %in% db_folder_files
     check_pic <- if(is.present) "yes.png" else "no.png"
     # generate checkmark image objects

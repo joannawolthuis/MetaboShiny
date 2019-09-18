@@ -560,7 +560,7 @@ ggPlotPerm <- function(mSet,
   colnames(df) = "acc"
   # round p value
   pval <- mSet$analSet$plsda$permut.p
-  rounded <- round(as.numeric(str_match(pval, "0\\.\\d*")), digits = 3)
+  rounded <- round(as.numeric(stringr::str_match(pval, "0\\.\\d*")), digits = 3)
   pval <- gsub(pval, pattern = "(0\\.\\d*)", replacement=rounded)
   # - - -
   p <- ggplot(df) +
@@ -1076,7 +1076,7 @@ ggPlotVenn <- function(mSet,
                        cf,
                        plotlyfy=TRUE,font){
   
-  experiments <- str_match(unlist(venn_yes$now), pattern = "\\(.*\\)")[,1]
+  experiments <- stringr::str_match(unlist(venn_yes$now), pattern = "\\(.*\\)")[,1]
   
   experiments <- unique(gsub(experiments, pattern = "\\(\\s*(.+)\\s*\\)", replacement="\\1"))
   
