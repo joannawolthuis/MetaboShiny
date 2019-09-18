@@ -328,9 +328,6 @@ mode = complete')
   
   
   # send specific functions/packages to other threads
-  parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
-    "flattenlist"))
-  
   parallel::clusterEvalQ(session_cl, library(data.table))
   
   # create default text objects in UI
