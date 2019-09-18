@@ -3,13 +3,17 @@ Type: Package
 Title: Interactive Untargeted Metabolomics Analysis and Identification
 Version: 0.1.0
 Author: Joanna Wolthuis
+Depends: 
+    R (>= 3.5)
 Maintainer: Joanna Wolthuis <J.C.Wolthuis-2@umcutrecht.nl>
 Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
 License: Apache License Version 2.0 + file LICENSE
 Encoding: UTF-8
 LazyData: true
+URL: https://github.com/UMCUGenetics/MetaboShiny
 Imports:
+  remotes,
   data.table,
   enviPat,
   BiocManager, 
@@ -107,6 +111,9 @@ Imports:
   plotROC,
   rcdk
 Remotes:
+  github::UMCUGenetics/MetaDBparse,
+  github::rwehrens/BatchCorrMetabolomics,
+  github::yixuan/showtext,
   bioc::impute, 
   bioc::pcaMethods, 
   bioc::siggenes, 
@@ -124,8 +131,4 @@ Remotes:
   bioc::Rdisop,
   bioc::Biostrings,
   bioc::GOSemSim,
-  bioc::fmcsR,
-  UMCUGenetics/MetaDBparse,
-  xia-lab/MetaboAnalystR,
-  rwehrens/BatchCorrMetabolomics,
-  yixuan/showtext
+  bioc::fmcsR

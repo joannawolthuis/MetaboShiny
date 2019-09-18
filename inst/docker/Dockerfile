@@ -51,6 +51,10 @@ RUN chmod -R 777 /home/squashfs-root/
 RUN R -e 'install.packages("devtools")'
 RUN R -e 'install.packages("BiocManager")'
 RUN R -e 'BiocManager::install("org.Hs.eg.db")'
+
+RUN R -e 'devtools::install_github("xia-lab/MetaboAnalystR")'
+RUN R -e 'devtools::install_github("rwehrens/BatchCorrMetabolomics")'
+RUN R -e 'devtools::install_github("yixuan/showtext")'
 RUN R -e 'devtools::install_github("UMCUGenetics/MetaDBparse")'
 RUN R -e 'devtools::install_github("UMCUGenetics/MetaboShiny")'
 

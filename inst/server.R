@@ -329,7 +329,6 @@ mode = complete')
   
   # send specific functions/packages to other threads
   parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
-    "mape",
     "flattenlist"))
   
   parallel::clusterEvalQ(session_cl, library(data.table))
