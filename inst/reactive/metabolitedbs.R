@@ -25,19 +25,13 @@ lapply(gbl$vectors$db_list, FUN=function(db){
     withProgress({
       # send necessary functions and libraries to parallel threads
       parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
-        "isotopes",
-        "kegg.charge",
-        "mape",
-        "flattenlist"
+        "isotopes"
       )) 
       pkgs = c("data.table", "enviPat", 
                "KEGGREST", "XML", 
                "SPARQL", "RCurl", 
                "MetaDBparse")
       parallel::clusterCall(session_cl, function(pkgs) {
-        try({
-          detach("package:MetaDBparse", unload=T)
-        })
         for (req in pkgs) {
           library(req, character.only = TRUE)
         }
