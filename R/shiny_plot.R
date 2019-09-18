@@ -1062,7 +1062,7 @@ ggPlotVenn <- function(mSet,
                        plotlyfy=TRUE,font){
   
   print("I'M HERE O_O")
-  stringr::str_match
+  
   experiments <- stringr::str_match(unlist(venn_yes$now), 
                                     pattern = "\\(.*\\)")[,1]
   
