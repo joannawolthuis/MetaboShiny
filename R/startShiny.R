@@ -9,7 +9,9 @@ start.metshi <- function(port=8080, inBrowser=F,
   # docker run -p 8080:8080 -v ~/MetaboShiny/:/userfiles/:cached --rm metaboshiny/master Rscript startShiny.R
   # docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny /bin/bash
   # docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny Rscript startShiny.R
-
+  # docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny R -e "MetaboShiny::start.metshi(inBrowser=F, port=8080, runmode='docker')"
+  
+    
   library(httr)
   
   # rjava.so error.. or rdb corrupt.. 'sudo R CMD javareconf'
@@ -22,7 +24,9 @@ start.metshi <- function(port=8080, inBrowser=F,
           width = 1200, height=800)
   
   appdir = system.file(package = "MetaboShiny")
-
+  
+  runmode <<- runmode
+  
   switch(runmode,
          local = {
            MetaboShiny::start_orca(9091)

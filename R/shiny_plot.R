@@ -723,12 +723,17 @@ ggPlotBar <- function(data,
     lname <- "all"
   }
   
-  data.norep <- data[,-3]
-  data.ci = Rmisc::group.CI(importance ~ mz, data.norep)
-  
-  data.ordered <- data.ci[order(data.ci$importance.mean, decreasing = T),]
-  
-  data.subset <- data.ordered[1:topn,]
+  if(ml_type == "glmnet"){
+    colnames(data) = c("mz", "importance.mean", "dummy")
+    data.ordered <- data[order(data$importance, decreasing=T),1:2]
+  }else{
+    data.norep <- data[,-3]
+    data.ci = Rmisc::group.CI(importance ~ mz, data.norep)
+    
+    data.ordered <- data.ci[order(data.ci$importance.mean, decreasing = T),]
+    }
+
+  data.subset <- data.ordered[1:topn,]    
   
   p <- ggplot(data.subset, aes(x = reorder(mz,-importance.mean),
                                y = importance.mean,
@@ -737,7 +742,6 @@ ggPlotBar <- function(data,
              aes(fill = importance.mean)) +
     scale_fill_gradientn(colors=cf(20)) +
     plot.theme() +
-    #geom_errorbar(mapping = aes(x=mz,ymin=importance.lower, ymax=importance.upper))+
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
@@ -746,7 +750,7 @@ ggPlotBar <- function(data,
           axis.text.x=element_blank(),
           axis.ticks.x=element_blank(),
           text = element_text(family = font$family))+
-    labs(x="Top hits (m/z)",y="Relative importance (%)")
+    labs(x="Top hits (m/z)",y=if(ml_type == "glmnet") "Times included in final model" else "Relative importance (%)")
   
   if(topn <= 15){
     p <- p + geom_text(aes(x=mz, y=importance.mean, label=sapply(mz, function(x){

@@ -341,9 +341,18 @@ observeEvent(input$do_ml, {
       colnames(tbl) = c("mz",
                         "importance",
                         "rep")
-      # - - -
+      # - - - - - - -
       tbl
     }))
+    
+    if(input$ml_method == "glmnet"){
+      bar_filt = bar_data[importance > 0]
+      all_mz <- table(bar_filt$mz)
+      tbl = data.table::as.data.table(t(all_mz))[,2:3]
+      colnames(tbl) = c("mz", "importance")
+      tbl$dummy <- c(NA)
+      bar_data <- tbl
+    }
     
     # save results to mset
     mSet$analSet$ml[[input$ml_method]][[input$ml_name]] <<- list("roc" = roc_data,

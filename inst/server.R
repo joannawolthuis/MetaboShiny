@@ -46,7 +46,8 @@ function(input, output, session) {
                mycols = c(),
                spectrum = "rb",
                theme = "min"),
-    vectors = list(proj_names = c()),
+    vectors = list(proj_names = c(),
+                   built_dbs = gbl$vectors$db_list),
     paths = list(opt.loc = "",
                  patdb = "",
                  work_dir="")
@@ -755,7 +756,7 @@ mode = complete')
   
   shiny::observeEvent(input$select_db_all, {
     
-    dbs <- gbl$vectors$db_list[-which(gbl$vectors$db_list %in% c("custom", "magicball"))]
+    dbs <- lcl$vectors$built_dbs[-which(lcl$vectors$built_dbs %in% c("custom", "magicball"))]
     
     currently.on <- sapply(dbs, function(db){
       input[[paste0("search_", db)]]
@@ -766,13 +767,14 @@ mode = complete')
     }else{
       set.to = T
     }
+    
     for(db in dbs){
       shiny::updateCheckboxInput(session, paste0("search_", db), value = set.to)
     }
   })
   
   shiny::observeEvent(input$select_db_prematch_all, {
-    dbs <- gbl$vectors$db_list[-which(gbl$vectors$db_list %in% c("custom", "magicball"))]
+    dbs <- lcl$vectors$built_dbs[-which(lcl$vectors$built_dbs %in% c("custom", "magicball"))]
     currently.on <- sapply(dbs, function(db){
       input[[paste0("prematch_", db)]]
     })
@@ -845,7 +847,6 @@ mode = complete')
       built.dbs <- c(gsub(x = basename(db.paths), 
                           pattern = "\\.db", replacement = ""), "custom")
       really.built.dbs <- sapply(db.paths, function(path) {
-        print(path)
         conn <- RSQLite::dbConnect(RSQLite::SQLite(), path) # change this to proper var later
         exists = RSQLite::dbExistsTable(conn, "base")
         if(exists) exists = RSQLite::dbGetQuery(conn, "select count(*) from base")[1,] > 0 
@@ -854,8 +855,11 @@ mode = complete')
       })
       
       built.dbs <- intersect(built.dbs[really.built.dbs], gbl$vectors$db_list)
+      
+      lcl$vectors$built_dbs <<- built.dbs
+      
       shiny::fluidRow(
-        lapply(gbl$vectors$db_list[-which(gbl$vectors$db_list == "custom" | !(gbl$vectors$db_list %in% built.dbs))], function(db){
+        lapply(gbl$vectors$db_list[-which(gbl$vectors$db_list == "custom" | !(gbl$vectors$db_list %in% lcl$vectors$built_dbs))], function(db){
           which_idx = grep(sapply(gbl$constants$images, function(x) x$name), pattern = db) # find the matching image (NAME MUST HAVE DB NAME IN IT COMPLETELY)
           MetaboShiny::sardine(MetaboShiny::fadeImageButton(inputId = paste0(prefix, "_", db), img.path = basename(gbl$constants$images[[which_idx]]$path))) # generate fitting html
         })
