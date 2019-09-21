@@ -83,6 +83,12 @@ shiny::observeEvent(input$create_db,{
              # copy db
              conn <- RSQLite::dbConnect(RSQLite::SQLite(), db_path)
 
+             if(!RSQLite::dbExistsTable(conn, "params")){
+               RSQLite::dbWriteTable(conn, "params", 
+                                     data.table::data.table(ppm=input$ppm), 
+                                     overwrite=T)
+             }
+             
              RSQLite::sqliteCopyDatabase(conn, lcl$paths$patdb)
              
              RSQLite::dbDisconnect(conn)

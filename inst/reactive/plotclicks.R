@@ -3,14 +3,16 @@ shiny::observeEvent(plotly::event_data("plotly_click"),{
   
   d <- plotly::event_data("plotly_click") # get click details (which point, additional included info, etc..)
   
-  for(pietype in c("add", "iso", "db")){
-    if(input$tab_iden_4 == paste0("pie_",pietype)){
-      i = d$pointNumber + 1
-      showsubset = as.character(pieinfo[[pietype]]$Var.1[i])
-      result_filters[[pietype]] <- showsubset
-      search$go <- T
+  try({
+    for(pietype in c("add", "iso", "db")){
+      if(input$tab_iden_4 == paste0("pie_",pietype)){
+        i = d$pointNumber + 1
+        showsubset = as.character(pieinfo[[pietype]]$Var.1[i])
+        result_filters[[pietype]] <- showsubset
+        search$go <- T
+      }
     }
-  }
+  }, silent=T)
   
   curr_tab <- switch(input$statistics,
                      dimred = {
