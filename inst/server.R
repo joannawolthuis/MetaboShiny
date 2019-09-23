@@ -1054,13 +1054,5 @@ mode = complete')
     parallel::stopCluster(session_cl)
     rmv <- list.files(".", pattern = ".csv|.log", full.names = T)
     if(all(file.remove(rmv))) NULL
-    # remove metaboshiny csv files
-    # switch(runmode,
-    #        local = {
-    #          MetaboShiny::stop_orca(orca_serv_id)
-    #        },
-    #        docker = {
-    #          NULL
-    #        })
   })
 }
