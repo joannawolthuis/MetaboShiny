@@ -116,6 +116,7 @@ shiny::observeEvent(input$search_mz, {
         RSQLite::dbExecute(conn, "CREATE INDEX map_mz ON match_mapper(query_mz)")
         RSQLite::dbExecute(conn, "CREATE INDEX map_struc ON match_mapper(structure)")
         RSQLite::dbExecute(conn, "CREATE INDEX cont_struc ON match_content(structure)")
+        RSQLite::dbDisconnect(conn)
         search$go <<- TRUE
       }
     })

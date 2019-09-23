@@ -131,13 +131,12 @@ shiny::observeEvent(input$match_tab_rows_selected,{
   curr_row <- input$match_tab_rows_selected # get current row
   if (is.null(curr_row)) return()
   # - - - - - - - - - - - - - - - - - - - - - -
-  try({
-    my_selection$name <- shown_matches$forward_unique[curr_row,'name'][[1]] # get current structure
-    updateTextInput(session,
-                    "pm_query",
-                    value = my_selection$name)
-    my_selection$struct <- unlist(shown_matches$forward_unique[curr_row,'structure']) # get current formula
-  })
+  my_selection$name <- shown_matches$forward_unique[curr_row,'name'][[1]] # get current structure
+  updateTextInput(session,
+                  "pm_query",
+                   value = my_selection$name)
+  my_selection$form <- unlist(shown_matches$forward_unique[curr_row,'baseformula']) # get current formula
+  my_selection$struct <- unlist(shown_matches$forward_unique[curr_row,'structure']) # get current formula
 })
 
 

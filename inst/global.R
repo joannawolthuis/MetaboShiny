@@ -247,7 +247,7 @@ vectors = list(
     "massbank",
     "metabolights",
     "foodb",
-    #"maconda",
+    "maconda",
     "bloodexposome",
     "expoexplorer",
     "lipidmaps",

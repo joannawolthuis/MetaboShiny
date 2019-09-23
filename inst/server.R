@@ -371,20 +371,19 @@ mode = complete')
             row = uniques[i,]
             opts = row$structure[[1]]
             if(length(opts)>1){
-              # check for square brackets
-              if(any(grepl(pattern = "\\[", x = opts))){
-                opts[!grepl(pattern="\\[",x = opts)]
+              if(any(grepl(opts, pattern = "\\[.*]-?\\d",perl = T))){
+                res = opts[!grepl(opts, pattern = "\\[.*]-?\\d", perl=T)][1]
               }else{
-                # just grab the first
-                opts[1]
+                res = opts[1]
               }
             }else{
-              opts
+              res = opts
             }
+            res
           })
-          uniques$structure <- structs
-          
-          }
+          uniques$structure <- unlist(structs)
+        }
+        
           shiny::setProgress(0.4)
         
         shiny::setProgress(0.6)
@@ -393,7 +392,6 @@ mode = complete')
         
         shown_matches$forward_full <- matches[,c("name", "source", "description"),with=F]
         
-        
         if(nrow(shown_matches$forward_full)>0){
           pieinfo$add <- reshape::melt(table(shown_matches$forward_unique$adduct))
           pieinfo$db <- reshape::melt(table(shown_matches$forward_full$source))
@@ -401,6 +399,7 @@ mode = complete')
         }
 
         my_selection$name <- ""
+        my_selection$form <- ""
         my_selection$struct <- ""
         
         shiny::setProgress(0.8)
@@ -465,7 +464,7 @@ mode = complete')
   })
   
   shiny::observe({
-    if(my_selection$struct != ""){
+    if(!MetaDBparse::is.empty(my_selection$struct)){
       width = shiny::reactiveValuesToList(session$clientData)$output_empty_width
       if(width > 300) width = 300
       
@@ -473,7 +472,11 @@ mode = complete')
                                                         style = "cow")},
                                               width=width, 
                                               height=width) # plot molecular structure WITH CHEMMINER
-      output$curr_formula <- shiny::renderText({unlist(shown_matches$forward_unique[curr_row,'baseformula'])}) # render text of current formula
+      output$curr_formula <- shiny::renderUI({
+        tags$div(
+          HTML(gsub(my_selection$form,pattern="(\\d+)", replacement="<sub>\\1</sub>",perl = T))
+          )
+        }) # render text of current formula
     }
   })
   
@@ -598,6 +601,16 @@ mode = complete')
     result_filters$db <- c()
     result_filters$iso <- c()
     search$go <- T
+  })
+  
+  output$curr_add <- shiny::renderText({
+    paste0(result_filters$add, collapse=", ")
+  })
+  output$curr_iso <- shiny::renderText({
+    paste0(result_filters$iso, collapse=", ")
+  })
+  output$curr_db <- shiny::renderText({
+    paste0(result_filters$db, collapse=", ")
   })
   
   shiny::observe({
