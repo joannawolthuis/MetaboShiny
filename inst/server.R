@@ -1006,18 +1006,15 @@ mode = complete')
   })
   
   shiny::observeEvent(input$export_plot,{
-    switch(runmode,
-           docker = plotly::orca(p = plotly::last_plot(), 
-                                 file=file.path(lcl$paths$work_dir,paste0(lcl$proj_name, "_", 
-                                                                          basename(tempfile()), 
-                                                                          input$export_format))),
-           local = export_plotly(p = plotly::last_plot(), 
-                                 file=file.path(lcl$paths$work_dir,paste0(lcl$proj_name, "_",
-                                                                          basename(tempfile()), 
-                                                                          input$export_format)),
-                                 port = 9091))
+    success=F
+    try({
+      orca_server$export(plotly::last_plot(), file.path(lcl$paths$work_dir,paste0(lcl$proj_name, "_",
+                                                                                  basename(tempfile()), 
+                                                                                  input$export_format)))
+      success=T
+    })
+    if(!success) print("Orca isn't working, please check your installation. If on Mac, please try starting Rstudio from the command line with the command 'open -a Rstudio' ")
   })
-  
   # shiny::observeEvent(input$build_custom_db, {
   #   
   #   csv_path <- parseFilePaths(gbl$paths$volumes, input$custom_db)$datapath
@@ -1058,12 +1055,12 @@ mode = complete')
     rmv <- list.files(".", pattern = ".csv|.log", full.names = T)
     if(all(file.remove(rmv))) NULL
     # remove metaboshiny csv files
-    switch(runmode,
-           local = {
-             MetaboShiny::stop_orca(orca_serv_id)
-           },
-           docker = {
-             NULL
-           })
+    # switch(runmode,
+    #        local = {
+    #          MetaboShiny::stop_orca(orca_serv_id)
+    #        },
+    #        docker = {
+    #          NULL
+    #        })
   })
 }

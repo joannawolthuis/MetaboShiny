@@ -452,4 +452,8 @@ debug_mSet <- NULL
 debug_lcl <- NULL
 debug_input <- NULL
 
+try({
+  orca_server <- plotly::orca_serve()
+})
+
 msg.vec <- c()
