@@ -127,7 +127,6 @@ shiny::observe({
         shiny::fluidRow(
           lapply(gbl$vectors$db_list[-which(gbl$vectors$db_list == "custom" | !(gbl$vectors$db_list %in% lcl$vectors$built_dbs))], function(db){
             which_idx = grep(sapply(gbl$constants$images, function(x) x$name), pattern = db) # find the matching image (NAME MUST HAVE DB NAME IN IT COMPLETELY)
-            print(gbl$constants$images[[which_idx]]$path)
             MetaboShiny::sardine(MetaboShiny::fadeImageButton(inputId = paste0(prefix, "_", db), img.path = gbl$constants$images[[which_idx]]$path)) # generate fitting html
           })
         )

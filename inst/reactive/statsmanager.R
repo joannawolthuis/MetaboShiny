@@ -221,6 +221,46 @@ shiny::observe({
                                        TRUE, "raw") # TODO: make thresholds user-defined
                })
              },
+             match_wordcloud_pm = {
+               shiny::withProgress({
+                 abstr <- RISmed::EUtilsSummary(
+                   as.character(input$pm_query),
+                   type="esearch",
+                   db="pubmed",
+                   datetype='pdat',
+                   mindate=input$pm_year[1],
+                   maxdate=input$pm_year[2],
+                   retmax=as.numeric(input$pm_max))
+                 
+                 shiny::setProgress(0.2)
+                 
+                 fetch <- RISmed::EUtilsGet(abstr)
+                 wcdata = data.frame()
+                 if(length(fetch@PMID) > 0){
+                   res <- MetaboShiny::abstracts2wordcloud(abstracts = fetch,
+                                                           top = input$wc_topn_pm, 
+                                                           queryword = input$pm_query)
+                   
+                   shiny::setProgress(0.4)
+                   
+                   tbl <- data.frame(
+                     pmids = RISmed::PMID(fetch),
+                     titles = RISmed::ArticleTitle(fetch)
+                     #abstracts = RISmed::AbstractText(fetch)
+                   )
+                   
+                   lcl$tables$pm_absdata <<- tbl
+                   
+                   shiny::setProgress(0.6)
+                   
+                   wcdata <- res
+                   colnames(wcdata) <- c("name", "value")
+                 }
+                 
+                 lcl$tables$word_freq_pm <<- wcdata
+                 
+               })
+             },
              match_wordcloud = {
                
                if(nrow(shown_matches$forward_full) > 0){

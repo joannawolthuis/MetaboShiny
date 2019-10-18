@@ -513,6 +513,46 @@ shiny::observe({
                  }
                })
              }, 
+             match_wordcloud_pm = {
+               
+               wcdata <- data.frame(word = head(lcl$tables$word_freq_pm, input$wc_topn_pm)$name,
+                                    freq = head(lcl$tables$word_freq_pm, input$wc_topn_pm)$value)
+               
+               
+               if(nrow(wcdata)>0){
+               output$wordcloud_desc_pm  <- wordcloud2::renderWordcloud2({
+                 wordcloud2::wordcloud2(wcdata,
+                                        size = 0.7,
+                                        shuffle = FALSE,
+                                        fontFamily = MetaboShiny::getOptions(lcl$paths$opt.loc)$font4,
+                                        ellipticity = 1,
+                                        minRotation = -pi/8,
+                                        maxRotation = pi/8,
+                                        shape = 'heart')
+               })
+               
+               output$wordbar_desc_pm <- plotly::renderPlotly({
+                 ggPlotWordBar(wcdata = wcdata,
+                               cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                               plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                               plotlyfy = TRUE,
+                               font = lcl$aes$font)})
+               
+               tbl <- lcl$tables$pm_absdata
+               
+               shiny::setProgress(0.8)
+             }else{
+               tbl <- data.table::data.table("no papers found" = "Please try another term!	(｡•́︿•̀｡)")
+             }
+             
+             output$pm_tab <- DT::renderDataTable({
+               DT::datatable(tbl,
+                             selection = "single",
+                             options = list(lengthMenu = c(5, 10, 15),
+                                            pageLength = 5)
+               )
+               })
+             },
              match_wordcloud = {
                if(nrow(shown_matches$forward_full) > 0){
                wcdata <- data.frame(word = head(lcl$tables$word_freq, input$wc_topn)$name,

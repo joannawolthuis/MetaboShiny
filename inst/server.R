@@ -132,7 +132,6 @@ function(input, output, session) {
         gbl$constants$db.build.info[[db]] <<- dbinfo
       }
       
-      print("ran this...")
       db_section$load <- TRUE
       
       # look for existing source folder that DOESN'T MATCH the files
@@ -525,7 +524,6 @@ mode = complete')
   # pie charts
   lapply(c("add", "db", "iso"), function(which_pie){
     output[[paste0("match_pie_", which_pie)]] <- plotly::renderPlotly({
-      print("pies reloading...")
       pievec = pieinfo[[which_pie]]
       if(length(pievec)>0){
         plotly::plot_ly(pievec, labels = ~Var.1, 
