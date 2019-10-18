@@ -27,23 +27,10 @@ start.metshi <- function(port=8080, inBrowser=F,
   
   runmode <<- runmode
   
-  switch(runmode,
-         local = {
-           MetaboShiny::start_orca(9091)
-           
-           shiny::runApp(
-             appDir = appdir,
-             launch.browser = inBrowser,
-             display.mode = if(debug) "showcase" else "normal")
-         },
-         docker = {
-           plotly::orca_serve(port = 9091)
-           
-           shiny::runApp(appdir,
-                         port = port,
-                         host = "0.0.0.0",
-                         launch.browser = T,
-                         display.mode = if(debug) "showcase" else "normal")
-         })
+  shiny::runApp(
+    appDir = appdir,
+    launch.browser = inBrowser,
+    display.mode = if(debug) "showcase" else "normal")
+  
 }
 

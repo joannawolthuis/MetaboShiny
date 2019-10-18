@@ -514,7 +514,7 @@ shiny::observe({
                })
              }, 
              match_wordcloud = {
-               if(nrow(shown_matches$forward) > 0){
+               if(nrow(shown_matches$forward_full) > 0){
                wcdata <- data.frame(word = head(lcl$tables$word_freq, input$wc_topn)$name,
                                     freq = head(lcl$tables$word_freq, input$wc_topn)$value)
                

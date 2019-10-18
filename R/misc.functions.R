@@ -284,11 +284,3 @@ loadModal <- function(failed = FALSE) {
     )
   )
 }
-
-start_orca = function(port=9091){
-  system(gsubfn::fn$paste("docker run -d -p $port:$port quay.io/plotly/orca"),intern = T)
-}
-
-stop_orca = function(id){
-  system(gsubfn::fn$paste("docker stop $id"))
-}

@@ -2,27 +2,183 @@
 # as well as the logos defined here
 # if you add a db, both the name and associated logo need to be added
 
-# create checkcmarks if database is present
-lapply(gbl$vectors$db_list, FUN=function(db){
-  # creates listener for if the 'check db' button is pressed
-  shiny::observeEvent(input[[paste0("check_", db)]],{
-    # see which db files are present in folder
-    db_folder_files <- list.files(lcl$paths$db_dir, full.names = T)
-    dbname = paste0(db, ".db")
-    is.present <- dbname %in% basename(db_folder_files)
-    if(is.present){
-      conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(file.path(lcl$paths$db_dir, dbname))) # change this to proper var later
-      is.present <- RSQLite::dbExistsTable(conn, "base")
-      RSQLite::dbDisconnect(conn)
-    }
-    check_pic <- if(is.present) "yes.png" else "no.png"
-    # generate checkmark image objects
-    output[[paste0(db,"_check")]] <- renderImage({
-      filename <- normalizePath(file.path(getwd(), 'www', check_pic))
-      list(src = filename, width = 70,
-           height = 70)
-    }, deleteFile = FALSE)
-  })
+# ==== DATABASES UI ====
+
+shiny::observe({
+  if(db_section$load){
+    
+    print("loading databases...")
+    
+    # create image objects in UI
+    lapply(gbl$constants$images, FUN=function(image){
+      output[[image$name]] <- shiny::renderImage({
+        filename <- image$path
+        # Return a list containing the filename and alt text
+        list(src = filename,
+             width = image$dimensions[1],
+             height = image$dimensions[2])
+      }, deleteFile = FALSE)
+    })
+    
+    shiny::observeEvent(input$select_db_all, {
+      
+      dbs <- lcl$vectors$built_dbs[-which(lcl$vectors$built_dbs %in% c("magicball", "custom"))]
+      
+      currently.on <- sapply(dbs, function(db){
+        input[[paste0("search_", db)]]
+      })
+      
+      if(any(currently.on)){
+        set.to = F
+      }else{
+        set.to = T
+      }
+      
+      for(db in dbs){
+        shiny::updateCheckboxInput(session, paste0("search_", db), value = set.to)
+      }
+    })
+    
+    shiny::observeEvent(input$select_db_prematch_all, {
+      dbs <- lcl$vectors$built_dbs[-which(lcl$vectors$built_dbs %in% c("custom", "magicball"))]
+      currently.on <- sapply(dbs, function(db){
+        input[[paste0("prematch_", db)]]
+      })
+      if(any(currently.on)){
+        set.to = F
+      }else{
+        set.to = T
+      }
+      for(db in dbs){
+        shiny::updateCheckboxInput(session, paste0("prematch_", db), value = set.to)
+      }
+    })
+    
+    # render the database download area
+    output$db_build_ui <- renderUI({
+      dbs_per_line = 4
+      max_col_width = 12
+      rows = ceiling(length(gbl$vectors$db_list) / dbs_per_line)
+      database_layout = lapply(1:rows, function(i){
+        min_i = (dbs_per_line * i) - (dbs_per_line - 1)
+        max_i = (dbs_per_line * i)
+        if(max_i > length(gbl$vectors$db_list)) max_i <- length(gbl$vectors$db_list)
+        # create 3 fluidrows followed by a break
+        list(
+          # row 1: name
+          shiny::fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
+            shiny::column(width=3,align="center", h2(gbl$constants$db.build.info[[db]]$title))
+          })),
+          # row 2: description
+          shiny::fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
+            shiny::column(width=3,align="center", shiny::helpText(gbl$constants$db.build.info[[db]]$description))
+          })),
+          # row 3: image
+          shiny::fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
+            if(db != "custom"){
+              shiny::column(width=3,align="center", shiny::imageOutput(gbl$constants$db.build.info[[db]]$image_id, inline=T))
+            }else{
+              shiny::column(width=3,align="center", shinyWidgets::circleButton("make_custom_db",
+                                                                               size = "lg",
+                                                                               icon = shiny::icon("plus",class = "fa-lg"),
+                                                                               style = "stretch",
+                                                                               color = "default"))
+            }
+          })),
+          # row 4: button
+          shiny::fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
+            shiny::column(width=3,align="center",
+                          if(!(db %in% c("magicball", "custom"))){
+                            list(actionButton(paste0("check_", db), "Check", icon = shiny::icon("check")),
+                                 actionButton(paste0("build_", db), "Build", icon = shiny::icon("wrench")),
+                                 shiny::br(),shiny::br(),
+                                 shiny::imageOutput(paste0(db, "_check"),inline = T))
+                          }else{
+                            shiny::helpText("")
+                          }
+            )
+          })),
+          shiny::br())
+      })
+      # return
+      database_layout
+    })
+    
+    db_button_prefixes = c("search", "add", "enrich", "prematch")
+    
+    # generate all the fadebuttons for the database selection
+    lapply(db_button_prefixes, function(prefix){
+      output[[paste0("db_", prefix, "_select")]] <- renderUI({
+        db.paths = list.files(lcl$paths$db_dir, pattern = "\\.db$",full.names = T)
+        built.dbs <- c(gsub(x = basename(db.paths), 
+                            pattern = "\\.db", replacement = ""), "custom")
+        really.built.dbs <- sapply(db.paths, function(path) {
+          conn <- RSQLite::dbConnect(RSQLite::SQLite(), path) # change this to proper var later
+          exists = RSQLite::dbExistsTable(conn, "base")
+          if(exists) exists = RSQLite::dbGetQuery(conn, "select count(*) from base")[1,] > 0 
+          RSQLite::dbDisconnect(conn)
+          exists
+        })
+        
+        built.dbs <- intersect(built.dbs[really.built.dbs], gbl$vectors$db_list)
+        
+        lcl$vectors$built_dbs <<- built.dbs
+        
+        shiny::fluidRow(
+          lapply(gbl$vectors$db_list[-which(gbl$vectors$db_list == "custom" | !(gbl$vectors$db_list %in% lcl$vectors$built_dbs))], function(db){
+            which_idx = grep(sapply(gbl$constants$images, function(x) x$name), pattern = db) # find the matching image (NAME MUST HAVE DB NAME IN IT COMPLETELY)
+            print(gbl$constants$images[[which_idx]]$path)
+            MetaboShiny::sardine(MetaboShiny::fadeImageButton(inputId = paste0(prefix, "_", db), img.path = gbl$constants$images[[which_idx]]$path)) # generate fitting html
+          })
+        )
+      })
+    })
+    
+    # check if these buttons are selected or not
+    lapply(db_button_prefixes, function(prefix){
+      shiny::observe({
+        # ---------------------------------
+        db_path_list <- lapply(gbl$vectors$db_list, # go through the dbs defined in db_lists
+                               FUN = function(db){
+                                 button_id = input[[paste0(prefix, "_", db)]]
+                                 if(is.null(button_id)){
+                                   NA
+                                 }else{
+                                   if(!button_id){
+                                     c(file.path(lcl$paths$db_dir, paste0(db, ".db"))) # add path to list of dbpaths
+                                   }
+                                   else{NA}
+                                 }
+                               }
+        )
+        # save the selected database paths to global
+        lcl$vectors[[paste0("db_", prefix, "_list")]] <<- db_path_list[!is.na(db_path_list)]
+      })
+    })
+    # create checkcmarks if database is present
+    lapply(gbl$vectors$db_list, FUN=function(db){
+      # creates listener for if the 'check db' button is pressed
+      shiny::observeEvent(input[[paste0("check_", db)]],{
+        # see which db files are present in folder
+        db_folder_files <- list.files(lcl$paths$db_dir, full.names = T)
+        dbname = paste0(db, ".db")
+        is.present <- dbname %in% basename(db_folder_files)
+        if(is.present){
+          conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(file.path(lcl$paths$db_dir, dbname))) # change this to proper var later
+          is.present <- RSQLite::dbExistsTable(conn, "base")
+          RSQLite::dbDisconnect(conn)
+        }
+        check_pic <- if(is.present) "yes.png" else "no.png"
+        # generate checkmark image objects
+        output[[paste0(db,"_check")]] <- renderImage({
+          filename <- normalizePath(file.path(getwd(), 'www', check_pic))
+          list(src = filename, width = 70,
+               height = 70)
+        }, deleteFile = FALSE)
+      })
+    })
+    
+  }
 })
 
 shiny::observeEvent(input$build_custom_db, {
@@ -109,4 +265,53 @@ lapply(c(gbl$vectors$db_list), FUN=function(db){
         } 
     })
   })
+})
+
+output$db_example <- DT::renderDataTable({
+  DT::datatable(data = data.table::data.table(
+    compoundname = c("1-Methylhistidine", "1,3-Diaminopropane", "2-Ketobutyric acid"),
+    description = c("One-methylhistidine (1-MHis) is derived mainly from the anserine of dietary flesh sources, especially poultry.",
+                    "1,3-Diaminopropane is a stable, flammable and highly hydroscopic fluid. It is a polyamine that is normally quite toxic if swallowed, inhaled or absorbed through the skin.",
+                    "2-Ketobutyric acid is a substance that is involved in the metabolism of many amino acids (glycine, methionine, valine, leucine, serine, threonine, isoleucine) as well as propanoate metabolism and C-5 branched dibasic acid metabolism. "),
+    baseformula = c("C7H11N3O2", "C3H10N2", "C4H6O3"),
+    identifier = c("HMDB1", "HMDB2", "HMDB3"),
+    charge = c(0, 0, 0),
+    structure = c("CN1C=NC(C[C@H](N)C(O)=O)=C1", "NCCCN", "CCC(=O)C(O)=O")
+  ),
+  options = list(searching = FALSE,
+                 paging = FALSE,
+                 info = FALSE))
+})
+
+# observeEvent
+shiny::observeEvent(input$make_custom_db, {
+  
+  # get window
+  showModal(modalDialog(
+    shiny::fluidRow(align="center",
+                    shiny::textInput("my_db_name", label = "Database full name", value = "MyDb"),
+                    shiny::textInput("my_db_short", label = "Database shorthand name", value = "mydb"),
+                    shiny::textInput("my_db_description", label = "Database description", value = "Custom database for MetaboShiny."),
+                    shiny::hr(),
+                    shiny::helpText("Please input a CSV file with at these columns (example below):"),
+                    shiny::helpText("'baseformula', 'charge', 'compoundname', 'identifier', 'description', 'structure' (in SMILES!)"),
+                    shiny::div(DT::dataTableOutput("db_example"), style="font-size:60%"),
+                    shiny::br(),
+                    shinyFiles::shinyFilesButton("custom_db", title = "Please pick a .csv file", multiple = F, label = "Select"),
+                    shiny::hr(),
+                    shiny::helpText("Please upload a database logo"),
+                    shinyFiles::shinyFilesButton("custom_db_img_path",
+                                                 'Select image',
+                                                 'Please select a .png file',
+                                                 FALSE),shiny::br(),
+                    shiny::imageOutput("custom_db_img", inline=T),shiny::br(),
+                    shiny::hr(),
+                    shinyWidgets::circleButton("build_custom_db",icon = shiny::icon("arrow-right", "fa-lg"), size = "lg")
+    ),
+    title = "Custom database creation",
+    easyClose = TRUE,
+    size = "l",
+    footer = NULL
+  )
+  )
 })

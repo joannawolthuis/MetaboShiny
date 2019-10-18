@@ -223,15 +223,15 @@ shiny::observe({
              },
              match_wordcloud = {
                
-               if(nrow(shown_matches$forward) > 0){
+               if(nrow(shown_matches$forward_full) > 0){
                 
                   try({
                    
                    # remove unwanted words (defined in global) from description
-                   filtered_descriptions <- sapply(1:length(shown_matches$forward$description),
+                   filtered_descriptions <- sapply(1:length(shown_matches$forward_full$description),
                                                    function(i){
                                                      # get description
-                                                     desc <- shown_matches$forward$description[[i]]
+                                                     desc <- shown_matches$forward_full$description[[i]]
                                                      # return
                                                      desc
                                                    })
@@ -269,7 +269,6 @@ shiny::observe({
                    v <- sort(rowSums(m), decreasing = TRUE)
                    
                    lcl$tables$word_freq <<- data.frame(name = names(v), value = v)
-                   
                    
                  })
                }
