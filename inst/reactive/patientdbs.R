@@ -1,24 +1,11 @@
 # create checkcmarks if database is present
-lapply(c("merge", "db", "csv"), FUN=function(col){
+lapply(c("merge", "csv"), FUN=function(col){
   # creates listener for if the 'check db' button is pressed
   shiny::observe({
     # see which db files are present in folder
     folder_files <- list.files(lcl$paths$work_dir)
     is.present <- switch(col,
-                         merge = {
-                           if(!is.null(input$importmode)){
-                             switch(input$importmode,
-                                    db = {
-                                      is.list(input$database) & is.list(input$metadata) 
-                                    },
-                                    csv = {
-                                      is.list(input$metadata) & is.list(input$outlist_pos) & is.list(input$outlist_neg)
-                                    })  
-                           }else{
-                             F
-                           }
-                         },
-                         db = paste0(input$proj_name_new, ".db") %in% folder_files,
+                         merge = is.list(input$metadata) & is.list(input$outlist_pos) & is.list(input$outlist_neg),
                          csv = paste0(input$proj_name_new, ".csv") %in% folder_files)
     check_pic <- if(is.present) "yes.png" else "no.png"
     # generate checkmark image objects
@@ -33,14 +20,8 @@ lapply(c("merge", "db", "csv"), FUN=function(col){
 # triggers when user wants to create database from .db and excel or 2 csv files and excel
 shiny::observeEvent(input$create_db,{
 
-  files.present = switch(input$importmode,
-         db = {
-           is.list(input$database) & is.list(input$metadata) 
-         },
-         csv = {
-           is.list(input$metadata) & is.list(input$outlist_pos) & is.list(input$outlist_neg)
-         })
-  
+  files.present = is.list(input$metadata) & is.list(input$outlist_pos) & is.list(input$outlist_neg)
+
   if(!files.present) return(NULL)
   
   # update the path to patient db
@@ -68,68 +49,23 @@ shiny::observeEvent(input$create_db,{
     output$proj_name <<- shiny::renderText(proj_name)
     # change path CSV should be / is saved to in session
     #lcl$paths$csv_loc <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name,".csv"))
-
-    switch(input$importmode,
-           # if loading in a .db file... (FAST, MOSTLY FOR ADMINS USING HPC)
-           db = {
-
-             # get the db and excel path from the UI elemnts
-             db_path <- shinyFiles::parseFilePaths(gbl$paths$volumes, input$database)$datapath
-             excel_path <- shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath
-
-             # copy the user selected db to the processing folder under proj_name renaming
-             if(file.exists(lcl$paths$patdb)) file.remove(lcl$paths$patdb)
-             
-             # copy db
-             conn <- RSQLite::dbConnect(RSQLite::SQLite(), db_path)
-
-             if(!RSQLite::dbExistsTable(conn, "params")){
-               RSQLite::dbWriteTable(conn, "params", 
-                                     data.table::data.table(ppm=input$ppm), 
-                                     overwrite=T)
-             }
-             
-             RSQLite::sqliteCopyDatabase(conn, lcl$paths$patdb)
-             
-             RSQLite::dbDisconnect(conn)
-             # - - - - -
-             
-             shiny::setProgress(session=session, value= .30)
-
-             # add metadata file to .db file generated in previous step
-             metadata_path <- shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath
-
-             if(grepl(metadata_path, pattern = "csv")){
-               MetaboShiny::load.metadata.csv(metadata_path, lcl$paths$patdb)
-             }else{
-               MetaboShiny::load.metadata.excel(metadata_path, lcl$paths$patdb)
-             }
-
-             shiny::setProgress(session=session, value= .60)
-
-           },
-           # if loading in .csv files...
-           csv = {
-
-             # build patient db from csv files with a given ppm error margin
-             MetaboShiny::build.pat.db(lcl$paths$patdb,
-                          ppm = input$ppm,
-                          pospath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath,
-                          negpath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath,
-                          overwrite = T)
-
-             shiny::setProgress(session=session, value= .95,message = "Adding metadata to database...")
-
-             # add excel file to .db file generated in previous step
-             metadata_path <- shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath
-
-             if(grepl(metadata_path, pattern = "csv")){
-               MetaboShiny::load.metadata.csv(metadata_path, lcl$paths$patdb)
-             }else{
-               MetaboShiny::load.metadata.excel(metadata_path, lcl$paths$patdb)
-             }
-          }
-    )
+    # if loading in .csv files...
+    MetaboShiny::build.pat.db(lcl$paths$patdb,
+                              ppm = input$ppm,
+                              pospath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath,
+                              negpath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath,
+                              overwrite = T)
+    
+    shiny::setProgress(session=session, value= .95,message = "Adding metadata to database...")
+    
+    # add excel file to .db file generated in previous step
+    metadata_path <- shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath
+    
+    if(grepl(metadata_path, pattern = "csv")){
+      MetaboShiny::load.metadata.csv(metadata_path, lcl$paths$patdb)
+    }else{
+      MetaboShiny::load.metadata.excel(metadata_path, lcl$paths$patdb)
+    }
     
     output$proj_db_check <- shiny::renderImage({
       filename <- normalizePath(file.path('www', "yes.png"))

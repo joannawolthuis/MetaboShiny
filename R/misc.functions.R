@@ -277,8 +277,8 @@ loadModal <- function(failed = FALSE) {
              shiny::br(),shiny::br(),
              shiny::h3("Starting MetaboShiny..."),
              shiny::br(),shiny::br(),
-             shiny::helpText("ଘ(੭ˊᵕˋ)੭* ੈ✩‧₊˚"), 
-             shiny::br(),shiny::br(),
+             #shiny::helpText("ଘ(੭ˊᵕˋ)੭* ੈ✩‧₊˚"), 
+             #shiny::br(),shiny::br(),
              shiny::img(class="rotategem", src="gemmy_rainbow.png", width="70px", height="70px"),
              shiny::br(),shiny::br(),shiny::br()
     )

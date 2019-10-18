@@ -30,17 +30,17 @@ build.pat.db <- function(db.name,
   
   # - - - fix QCs - - -
   
-  which.qc <- grep(colnames(poslist), pattern = "^QC")
-  qc.i = 1
-  
-  for(qc in which.qc){
-    new.qc.name <- paste0("QC", qc.i)
-    new.qc.name <- gsub(colnames(poslist)[qc], pattern = "(^QC[\\d|\\d\\d])", replacement = new.qc.name,perl = T)
-    colnames(poslist)[qc] <- new.qc.name
-    colnames(neglist)[qc] <- new.qc.name
-    # - - -
-    qc.i = qc.i + 1
-  }
+  # which.qc <- grep(colnames(poslist), pattern = "^QC")
+  # qc.i = 1
+  # 
+  # for(qc in which.qc){
+  #   new.qc.name <- paste0("QC", qc.i)
+  #   new.qc.name <- gsub(colnames(poslist)[qc], pattern = "(^QC[\\d|\\d\\d])", replacement = new.qc.name,perl = T)
+  #   colnames(poslist)[qc] <- new.qc.name
+  #   colnames(neglist)[qc] <- new.qc.name
+  #   # - - -
+  #   qc.i = qc.i + 1
+  # }
   # - - - - - - - - - -
   if(inshiny) setProgress(.20)
   
@@ -53,17 +53,17 @@ build.pat.db <- function(db.name,
   
   # --- SAVE BATCH INFO (kinda ugly...  ; _;") ---
   
-  if(any(grepl("\\*", x = colnames(poslist)))){
-    samp_split = strsplit(colnames(poslist)[2:ncol(poslist)], "\\*")
-    batch_split = strsplit(unlist(lapply(samp_split, function(x) x[2])), "\\_")
-    batch_info = data.table::data.table(sample = sapply(samp_split, function(x) x[1]),
-                                        batch = sapply(samp_split, function(x) x[2]),
-                                        injection = sapply(samp_split, function(x) x[3]))
-    colnames(poslist) = gsub(colnames(poslist), pattern = "(\\*.*$)", replacement = "")
-    colnames(neglist) = gsub(colnames(poslist), pattern = "(\\*.*$)", replacement = "")
-  } else{
-    batch_info = NULL
-  }
+  # if(any(grepl("\\*", x = colnames(poslist)))){
+  #   samp_split = strsplit(colnames(poslist)[2:ncol(poslist)], "\\*")
+  #   batch_split = strsplit(unlist(lapply(samp_split, function(x) x[2])), "\\_")
+  #   batch_info = data.table::data.table(sample = sapply(samp_split, function(x) x[1]),
+  #                                       batch = sapply(samp_split, function(x) x[2]),
+  #                                       injection = sapply(samp_split, function(x) x[3]))
+  #   colnames(poslist) = gsub(colnames(poslist), pattern = "(\\*.*$)", replacement = "")
+  #   colnames(neglist) = gsub(colnames(poslist), pattern = "(\\*.*$)", replacement = "")
+  # } else{
+  #   batch_info = NULL
+  # }
   
   gc()
   
@@ -92,9 +92,9 @@ build.pat.db <- function(db.name,
   
   # ------------------------s
   
-  if(!is.null(batch_info)){
-    RSQLite::dbWriteTable(conn, "batchinfo", batch_info, overwrite=T) # insert into
-  }
+  # if(!is.null(batch_info)){
+  #   RSQLite::dbWriteTable(conn, "batchinfo", batch_info, overwrite=T) # insert into
+  # }
   
   # ------------------------
   
@@ -151,11 +151,8 @@ build.pat.db <- function(db.name,
 load.metadata.csv <- function(path.to.csv,
                               path.to.patdb){
   
-  #path.to.csv = "~/Downloads/maria_meta.csv"
-  #path.to.patdb = "~/Downloads/maria_3ppm.db"
-  
-  
   # --- connect to sqlite db ---
+  
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), path.to.patdb)
   
   tab <- data.table::fread(path.to.csv)
@@ -163,7 +160,7 @@ load.metadata.csv <- function(path.to.csv,
   
   colnames(tab) <- tolower(gsub(x=colnames(tab), pattern = "\\.$|\\.\\.$", replacement = ""))
   colnames(tab) <- gsub(x=colnames(tab), pattern = "\\.|\\.\\.| ", replacement = "_")
-  colnames(tab)[grep(x=colnames(tab), pattern= "*date*")] <- "sampling_date"
+  #colnames(tab)[grep(x=colnames(tab), pattern= "*date*")] <- "sampling_date"
   
   setup <- data.table(group = as.character(unique(tab[,c("group")][[1]])))
   
@@ -193,13 +190,12 @@ load.metadata.excel <- function(path.to.xlsx,
     # --- reformat colnames ---
     colnames(tab) <- tolower(gsub(x=colnames(tab), pattern = "\\.$|\\.\\.$", replacement = ""))
     colnames(tab) <- gsub(x=colnames(tab), pattern = "\\.|\\.\\.", replacement = "_")
-    colnames(tab)[grep(x=colnames(tab), pattern= "*date*")] <- "sampling_date"
+    #colnames(tab)[grep(x=colnames(tab), pattern= "*date*")] <- "sampling_date"
     # -----------------------------------------------------------------------------------------
     data.table::as.data.table(tab, keep.rownames=F)
   })
   
   # --- convert to data table --- ## make this nicer loooking in the future
-  #general <- data.store[[1]]
   setup <- data.store[[1]]
   individual.data <- data.store[[2]]
   
@@ -208,15 +204,11 @@ load.metadata.excel <- function(path.to.xlsx,
   indx <- which(sapply(setup, is.character))
   for (j in indx) set(setup, i = grep("^$|^ $", setup[[j]]), j = j, value = NA_character_)
   
-  # indx <- which(sapply(general, is.character))
-  # for (j in indx) set(general, i = grep("^$|^ $", general[[j]]), j = j, value = NA_character_)
-  
   indx <- which(sapply(individual.data, is.character))
   for (j in indx) set(individual.data, i = grep("^$|^ $", individual.data[[j]]), j = j, value = NA_character_)
   
   # --- remove empty lines ---
   
-  #general <- general[rowSums(is.na(general)) != ncol(general),]
   setup <- setup[rowSums(is.na(setup)) != ncol(setup),]
   individual.data <- individual.data[rowSums(is.na(individual.data)) != ncol(individual.data),]
   
@@ -238,31 +230,31 @@ load.metadata.excel <- function(path.to.xlsx,
   
   setup <- data.table::as.data.table(apply(setup, MARGIN=2, trimws))
   individual.data <- data.table::as.data.table(apply(individual.data, MARGIN=2, trimws))
+  
   #general <- data.table::as.data.table(apply(general, MARGIN=2, trimws))
   
   # --- add the QC samples ---
   
-  qc_samps = RSQLite::dbGetQuery(conn, "SELECT * FROM batchinfo WHERE sample LIKE '%QC%'")
-  
-  placeholder_date <- individual.data$sampling_date[[1]]
-  
-  qc_ind_data <- lapply(qc_samps$sample, function(qc) {
-    data.table(label = c(1),
-               card_id = qc,
-               animal_internal_id = qc,
-               sampling_date = placeholder_date,
-               sex = "qc",
-               group = "qc",
-               farm = "QcLand")
-  })
-  
-  qc_tab_setup = data.table(group = "qc",
-                            stool_condition = "qc")
-  qc_tab_ind = unique(rbindlist(qc_ind_data))
-  
-  setup <- rbind(setup, qc_tab_setup, fill=TRUE)
-  individual.data <- rbindlist(list(individual.data, qc_tab_ind), fill=TRUE)
-  individual.data$label <- 1:nrow(individual.data)
+  # qc_samps = RSQLite::dbGetQuery(conn, "SELECT * FROM batchinfo WHERE sample LIKE '%QC%'")
+  # 
+  # placeholder_date <- individual.data$sampling_date[[1]]
+  # 
+  # qc_ind_data <- lapply(qc_samps$sample, function(qc) {
+  #   data.table(label = c(1),
+  #              card_id = qc,
+  #              animal_internal_id = qc,
+  #              sampling_date = placeholder_date,
+  #              sex = "qc",
+  #              group = "qc",
+  #              farm = "QcLand")
+  # })
+  # qc_tab_setup = data.table(group = "qc",
+  #                           stool_condition = "qc")
+  # qc_tab_ind = unique(rbindlist(qc_ind_data))
+  # 
+  # setup <- rbind(setup, qc_tab_setup, fill=TRUE)
+  # individual.data <- rbindlist(list(individual.data, qc_tab_ind), fill=TRUE)
+  # individual.data$label <- 1:nrow(individual.data)
   
   # --- import to patient sql file ---
   RSQLite::dbWriteTable(conn, "setup", setup, overwrite=TRUE) # insert into

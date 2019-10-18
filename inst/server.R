@@ -35,7 +35,7 @@ function(input, output, session) {
   showtext::showtext_auto(enable = T)
   
   logged <- shiny::reactiveValues(status = "notlogged",
-                                  text = "please log in! ( •́ .̫  •̀ )")
+                                  text = "please log in!")
   
   lcl = list(
     proj_name ="",
@@ -47,7 +47,8 @@ function(input, output, session) {
                spectrum = "rb",
                theme = "min"),
     vectors = list(proj_names = c(),
-                   built_dbs = gbl$vectors$db_list),
+                   built_dbs = gbl$vectors$db_list,
+                   custom_db_list = c()),
     paths = list(opt.loc = "",
                  patdb = "",
                  work_dir="")
@@ -97,6 +98,107 @@ function(input, output, session) {
       lcl$paths$work_dir <<- userfolder
       lcl$paths$db_dir <<- dbdir
       
+      # - - - - check for custom databases - - - -
+      
+      last_db = length(gbl$vectors$db_list) - 2
+      
+      files_db_folder = list.files(lcl$paths$db_dir)
+      all_dbs = unique(gsub(files_db_folder, pattern = "_source|\\.db", replacement=""))
+      which.custom = which(!((all_dbs %in% c(gbl$vectors$db_list, "extended"))))
+      gbl$vectors$db_list <<- append(gbl$vectors$db_list, values = folder_belongs[which.custom], after = last_db)
+      
+      for(db in folder_belongs[which.custom]){
+        sourcefolder = file.path(lcl$paths$db_dir, paste0(db, "_source"))
+        # add image to gbl images
+        image = list(name = paste0(db, '_logo'), 
+                     path = normalizePath(file.path(sourcefolder, "logo.png")),
+                     dimensions = c(150, 150))
+        
+        output[[image$name]] <- shiny::renderImage({
+          filename <- normalizePath(image$path)
+          # Return a list containing the filename and alt text
+          list(src = filename,
+               width = image$dimensions[1],
+               height = image$dimensions[2])
+        }, deleteFile = FALSE)
+      
+        shiny::observeEvent(input[[paste0("check_", db)]],{
+          # see which db files are present in folder
+          db_folder_files <- list.files(lcl$paths$db_dir, full.names = T)
+          dbname = paste0(db, ".db")
+          is.present <- dbname %in% basename(db_folder_files)
+          if(is.present){
+            conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(file.path(lcl$paths$db_dir, dbname))) # change this to proper var later
+            is.present <- RSQLite::dbExistsTable(conn, "base")
+            RSQLite::dbDisconnect(conn)
+          }
+          check_pic <- if(is.present) "yes.png" else "no.png"
+          # generate checkmark image objects
+          output[[paste0(db,"_check")]] <- renderImage({
+            filename <- normalizePath(file.path(getwd(), 'www', check_pic))
+            list(src = filename, width = 70,
+                 height = 70)
+          }, deleteFile = FALSE)
+        })
+        
+        shiny::observeEvent(input[[paste0("build_", db)]], {
+          withProgress({
+            # send necessary functions and libraries to parallel threads
+            parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
+              "isotopes"
+            )) 
+            pkgs = c("data.table", "enviPat", 
+                     "KEGGREST", "XML", 
+                     "SPARQL", "RCurl", 
+                     "MetaDBparse")
+            parallel::clusterCall(session_cl, function(pkgs) {
+              for (req in pkgs) {
+                library(req, character.only = TRUE)
+              }
+            }, pkgs = pkgs)
+            
+            shiny::setProgress(session = session, 0.1)
+            
+            if(input$db_build_mode %in% c("base", "both")){
+              MetaDBparse::buildBaseDB(dbname = db,
+                                       outfolder = normalizePath(lcl$paths$db_dir), 
+                                       cl = session_cl,
+                                       custom_csv_path = file.path(lcl$paths$db_dir, paste0(db,"_source"), "base.csv"),
+                                       silent = F)
+            }
+            
+            # build base db (differs per db, parsers for downloaded data)
+            shiny::setProgress(session = session, 0.5)
+            
+            if(input$db_build_mode %in% c("extended", "both")){
+              
+              if(!grepl(db, pattern = "maconda")){
+                if(file.exists(file.path(lcl$paths$db_dir, paste0(db, ".db")))){
+                  my_range <- input$db_mz_range
+                  outfolder <- lcl$paths$db_dir
+                  MetaDBparse::buildExtDB(base.dbname = db,
+                                          outfolder = outfolder,
+                                          cl = session_cl,
+                                          blocksize = 500,
+                                          mzrange = my_range,
+                                          adduct_table = adducts,
+                                          adduct_rules = adduct_rules, 
+                                          silent = T,
+                                          ext.dbname = "extended") #TODO: figure out the optimal fetch limit... seems 200 for now
+                }else{
+                  print("Please build base DB first! > _<")
+                }
+              }
+            } 
+          })
+        })
+        # add db info
+        load(file.path(sourcefolder, "info.RData"))
+        gbl$constants$db.build.info[[db]] <<- dbinfo
+      }
+      
+      # look for existing source folder that DOESN'T MATCH the files
+      # - - - - - - - - - - - - - - - - - - - - - 
       if(!file.exists(lcl$paths$opt.loc)){
         contents = gsubfn::fn$paste('db_dir = $dbdir
 work_dir = $userfolder
@@ -337,17 +439,6 @@ mode = complete')
   })
   
   showtext::showtext_auto() ## Automatically use showtext to render text for future devices
-  
-  # create image objects in UI
-  lapply(gbl$constants$images, FUN=function(image){
-    output[[image$name]] <- shiny::renderImage({
-      filename <- normalizePath(image$path)
-      # Return a list containing the filename and alt text
-      list(src = filename,
-           width = image$dimensions[1],
-           height = image$dimensions[2])
-    }, deleteFile = FALSE)
-  })
   
   shiny::observe({
     # - - filters - -
@@ -769,7 +860,7 @@ mode = complete')
   
   shiny::observeEvent(input$select_db_all, {
     
-    dbs <- lcl$vectors$built_dbs[-which(lcl$vectors$built_dbs %in% c("custom", "magicball"))]
+    dbs <- lcl$vectors$built_dbs[-which(lcl$vectors$built_dbs %in% c("magicball"))]
     
     currently.on <- sapply(dbs, function(db){
       input[[paste0("search_", db)]]
@@ -799,6 +890,19 @@ mode = complete')
     for(db in dbs){
       shiny::updateCheckboxInput(session, paste0("prematch_", db), value = set.to)
     }
+  })
+  
+  # create image objects in UI
+  lapply(gbl$constants$images, FUN=function(image){
+    print(image$name)
+    output[[image$name]] <- shiny::renderImage({
+      filename <- normalizePath(image$path)
+      print(filename)
+      # Return a list containing the filename and alt text
+      list(src = filename,
+           width = image$dimensions[1],
+           height = image$dimensions[2])
+    }, deleteFile = FALSE)
   })
   
   # render the database download area
@@ -884,7 +988,7 @@ mode = complete')
   lapply(db_button_prefixes, function(prefix){
     shiny::observe({
       # ---------------------------------
-      db_path_list <- lapply(gbl$vectors$db_list[-which(gbl$vectors$db_list == "custom")], # go through the dbs defined in db_lists
+      db_path_list <- lapply(gbl$vectors$db_list, # go through the dbs defined in db_lists
                              FUN = function(db){
                                button_id = input[[paste0(prefix, "_", db)]]
                                if(is.null(button_id)){
@@ -991,7 +1095,7 @@ mode = complete')
                       shiny::helpText("Please upload a database logo"),
                       shinyFiles::shinyFilesButton("custom_db_img_path",
                                                    'Select image',
-                                                   'Please select a png file',
+                                                   'Please select a .png file',
                                                    FALSE),shiny::br(),
                       shiny::imageOutput("custom_db_img", inline=T),shiny::br(),
                       shiny::hr(),
@@ -1015,30 +1119,12 @@ mode = complete')
     })
     if(!success) print("Orca isn't working, please check your installation. If on Mac, please try starting Rstudio from the command line with the command 'open -a Rstudio' ")
   })
-  # shiny::observeEvent(input$build_custom_db, {
-  #   
-  #   csv_path <- parseFilePaths(gbl$paths$volumes, input$custom_db)$datapath
-  #   
-  #   # build base db
-  #   db.build.custom(
-  #     db.name = input$my_db_name,
-  #     db.short = input$my_db_short,
-  #     db.description = input$my_db_description,
-  #     db.icon = gbl$paths$custom.db.path,
-  #     csv = csv_path
-  #   )
-  #   
-  #   # build extended db
-  #   build.extended.db(tolower(input$my_db_short),
-  #                     outfolder = file.path(lcl$paths$db_dir, "custom"),
-  #                     adduct.table = adducts,cl = 0)
-  #   
-  # })
   
   # ==== LOAD LOGIN UI ====
   
   # init all observer
   for(fp in list.files("reactive", full.names = T)){
+    print(fp)
     source(fp, local = T)
   }  
   

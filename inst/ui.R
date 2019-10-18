@@ -33,18 +33,12 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                    shiny::hr(),
                                                    shiny::fluidRow(shiny::column(3, align="center",
                                                                                  shiny::imageOutput("merge_icon",inline = T),
-                                                                                 shiny::radioButtons("importmode", label = "",
-                                                                                                     choices = list("Peaks are in a .db file"="db", "Peaks are in two .csv files (pos/neg mode)"="csv"),
-                                                                                                     selected = "db"),
                                                                                  shiny::tags$b("STEP 3: Click buttons to load data."),
                                                                                  shinyFiles::shinyFilesButton('metadata', 'metadata', 'Select metadata in csv/xls(x)', FALSE),
-                                                                                 shiny::conditionalPanel(condition = "input.importmode == 'db'",
-                                                                                                         shinyFiles::shinyFilesButton('database', 'database', 'Select .db file', FALSE)
-                                                                                 ),
-                                                                                 shiny::conditionalPanel(condition = "input.importmode == 'csv'",
+                                                                                 condition = "input.importmode == 'csv'",
                                                                                                          shinyFiles::shinyFilesButton('outlist_pos', '+ peaks', 'Select .csv for + mode peaks', FALSE),
                                                                                                          shinyFiles::shinyFilesButton('outlist_neg', '- peaks', 'Select .csv for - mode peaks', FALSE)
-                                                                                 )
+                                                                                 
                                                    )
                                                    ,shiny::column(2, align="center", #ok
                                                                   shiny::tags$b("STEP 4: Merge data and metadata"),shiny::br(),shiny::br(),

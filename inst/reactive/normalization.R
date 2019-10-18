@@ -24,7 +24,7 @@ shiny::observeEvent(input$initialize, {
     csv_orig$sample <- gsub(csv_orig$sample, pattern=" |\\(|\\)|\\+", replacement="")
     
     # find experimental variables by converting to numeric
-    as.numi <- as.numeric(colnames(csv_orig)[1:100])
+    as.numi <- as.numeric(colnames(csv_orig)[1:200])
     exp.vars <- which(is.na(as.numi))
     
     # load batch variable chosen by user
@@ -54,7 +54,7 @@ shiny::observeEvent(input$initialize, {
     
     # if 'batch' is selected, 'injection' is often also present
     # TODO: i can imagine this doesn't work for all  users, please disable this...
-    if("batch" %in% batches){
+    if("batch" %in% batches & "injection" %in% colnames(csv_orig)){
       batches = c(batches, "injection")
     }
     
@@ -62,7 +62,7 @@ shiny::observeEvent(input$initialize, {
     first_part <- csv_orig[,..exp.vars, with=FALSE]
     
     # set NULL or missing levels to "unknown"
-    first_part[first_part == "" | is.null(first_part)] <- "Unknown"
+    first_part[first_part == "" | is.null(first_part)] <- "unknown"
     
     # re-make csv with the corrected data
     csv <- cbind(first_part[,-c("label")], # if 'label' is in excel file remove it, it will clash with the metaboanalystR 'label'
@@ -88,12 +88,12 @@ shiny::observeEvent(input$initialize, {
     csv <- csv[,which(unlist(lapply(csv, function(x)!all(is.na(x))))),with=F]
     
     # remove samples with really low numbers of peaks
-    complete.perc <- rowMeans(!is.na(csv))
-    keep_samps <- csv$sample[which(complete.perc > .2)]
-    csv <- csv[sample %in% keep_samps,]
+    #complete.perc <- rowMeans(!is.na(csv))
+    #keep_samps <- csv$sample[which(complete.perc > .1)]
+    #csv <- csv[sample %in% keep_samps,]
     
     # also remove them in the table with covariates
-    covar_table <- first_part[sample %in% keep_samps,]
+    covar_table <- first_part#[sample %in% keep_samps,]
     
     # if the experimental condition is batch, make sure QC samples are not removed at the end for analysis
     # TODO: this is broken with the new system, move this to the variable switching segment of code
@@ -112,7 +112,7 @@ shiny::observeEvent(input$initialize, {
     colnames(csv)[which( colnames(csv) == "time")] <- "Time"
 
     # find experimental variables
-    as.numi <- as.numeric(colnames(csv)[1:100])
+    as.numi <- as.numeric(colnames(csv)[1:200])
     exp.vars <- which(is.na(as.numi))
     
     # remove all except sample and time in saved csv
@@ -145,8 +145,9 @@ shiny::observeEvent(input$initialize, {
     
     # remove metabolites with more than user defined perc missing
     mSet <- MetaboAnalystR::RemoveMissingPercent(mSet,
-                                 percent = input$perc_limit/100)
+                                 percent = input$perc_limit/20)
     
+    debug_mSet2 <<- mSet
     # missing value imputation
     if(req(input$miss_type ) != "none"){
       if(req(input$miss_type ) == "rowmin"){ # use sample minimum
@@ -288,7 +289,6 @@ shiny::observeEvent(input$initialize, {
         rownames(qc_corr_matrix) <- rownames(mSet$dataSet$norm)
         # save to mSet
         mSet$dataSet$norm <- as.data.frame(qc_corr_matrix)
-        
       }
       
       # remove QC samples if user doesn't use batch as condition
@@ -352,8 +352,7 @@ shiny::observeEvent(input$initialize, {
         }
         # save normalized table to mSet
         mSet$dataSet$norm <- as.data.frame(batch_normalized)
-      }
-    } else{
+      }}else{
       # if qcs presnt and user doesn't want to analyse qc samples
       if(!batchview & has.qc){
         # remove QC rows and associated data from mSet
