@@ -32,6 +32,8 @@ shiny::observeEvent(input$prematch,{
                                                            dppm decimal(30,13))")    
     RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTS match_content(name TEXT,
                                                             baseformula TEXT,
+                                                            fullformula TEXT,
+                                                            finalcharge INT,
                                                             identifier TEXT,
                                                             description VARCHAR(255),
                                                             structure TEXT,
@@ -52,8 +54,9 @@ shiny::observeEvent(input$prematch,{
                               outfolder = normalizePath(lcl$paths$db_dir))
         i <<- i + 1
         shiny::setProgress(value = i)
-        list(mapper = unique(res[,c("query_mz", "structure", "%iso", "adduct", "dppm")]), 
-             content = unique(res[,-c("query_mz", "%iso", "adduct", "dppm")]))
+        list(mapper = unique(res[,c("query_mz", "structure", "%iso", 
+                                    "adduct", "dppm")]), 
+             content = unique(res[,-c("query_mz", "%iso", "adduct","dppm")]))
       })
     }, min=0, max=length(blocks))
     
@@ -93,6 +96,8 @@ shiny::observeEvent(input$search_mz, {
                                                                        dppm decimal(30,13))")    
       RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTS match_content(name TEXT,
                                                                         baseformula TEXT,
+                                                                        fullformula TEXT,
+                                                                        finalcharge INT,
                                                                         identifier TEXT,
                                                                         description VARCHAR(255),
                                                                         structure TEXT,
@@ -109,7 +114,8 @@ shiny::observeEvent(input$search_mz, {
                                    outfolder=normalizePath(lcl$paths$db_dir))
       
       if(nrow(res)>0){
-        mapper = unique(res[,c("query_mz", "structure", "%iso", "adduct", "dppm")]) 
+        mapper = unique(res[,c("query_mz", "structure", 
+                               "%iso", "adduct", "dppm")]) 
         content = unique(res[,-c("query_mz", "%iso", "adduct", "dppm")])
         RSQLite::dbWriteTable(conn, "match_mapper", mapper, append=T)
         RSQLite::dbWriteTable(conn, "match_content", content, append=T)
@@ -128,11 +134,11 @@ shiny::observeEvent(input$search_mz, {
 shiny::observeEvent(input$score_iso, {
 
   # check if the matches table even exists
-  if(!data.table::is.data.table(shown_matches$forward$unique)) return(NULL)
+  if(!data.table::is.data.table(shown_matches$forward_unique)) return(NULL)
 
   # check if a previous scoring was already done (remove that column if so, new score is generated in a bit)
   if("score" %in% colnames(shown_matches$forward)){
-    shown_matches$forward$unique <<- shown_matches$forward$unique[,-"score"]
+    shown_matches$forward_unique <<- shown_matches$forward_unique[,-"score"]
   }
 
   intprec = as.numeric(input$int_prec)/100.00
@@ -140,7 +146,11 @@ shiny::observeEvent(input$score_iso, {
   # get table including isotope scores
   # as input, takes user method for doing this scoring
   shiny::withProgress({
-    score_table <- score.isos(table = shown_matches$forward$unique, mSet = mSet, lcl$paths$patdb, method=input$iso_score_method, inshiny=T, intprec = intprec)
+    score_table <- score.isos(table = shown_matches$forward_unique, 
+                              mSet = mSet, ppm=25,
+                              patdb = lcl$paths$patdb, 
+                              method=input$iso_score_method, 
+                              inshiny=T, intprec = intprec)
     })
 
   # update the match table available to the rest of metaboshiny

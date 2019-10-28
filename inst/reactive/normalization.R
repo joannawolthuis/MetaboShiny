@@ -24,7 +24,7 @@ shiny::observeEvent(input$initialize, {
     csv_orig$sample <- gsub(csv_orig$sample, pattern=" |\\(|\\)|\\+", replacement="")
     
     # find experimental variables by converting to numeric
-    as.numi <- as.numeric(colnames(csv_orig)[1:200])
+    as.numi <- as.numeric(colnames(csv_orig))
     exp.vars <- which(is.na(as.numi))
     
     # load batch variable chosen by user
@@ -112,7 +112,7 @@ shiny::observeEvent(input$initialize, {
     colnames(csv)[which( colnames(csv) == "time")] <- "Time"
 
     # find experimental variables
-    as.numi <- as.numeric(colnames(csv)[1:200])
+    as.numi <- as.numeric(colnames(csv))
     exp.vars <- which(is.na(as.numi))
     
     # remove all except sample and time in saved csv
@@ -143,9 +143,21 @@ shiny::observeEvent(input$initialize, {
     # sanity check data
     mSet <- MetaboAnalystR::SanityCheckData(mSet)
     
+    int.mat <- mSet$dataSet$preproc
+    minConc <- mSet$dataSet$minConc
+    missvals = apply(is.na(int.mat), 2, sum)/nrow(int.mat)
+    good.inx <- missvals < 
+      input$perc_limit/100
+    if(length(which(good.inx))==0){
+      print("No m/z left after filtering, please make your missing value correction more lenient...")
+      print(paste("Recommended minumum to retain at least 1 m/z value:", paste0(min(missvals)*100, "%")))
+      return(NULL)
+    }
+    
+    
     # remove metabolites with more than user defined perc missing
     mSet <- MetaboAnalystR::RemoveMissingPercent(mSet,
-                                 percent = input$perc_limit/20)
+                                 percent = input$perc_limit/100)
     
     debug_mSet2 <<- mSet
     # missing value imputation

@@ -109,18 +109,22 @@ function(input, output, session) {
       addResourcePath('www', system.file('www', package = 'MetaboShiny'))
       
       # - - - - check for custom databases - - - - 
+      
       last_db = length(gbl$vectors$db_list) - 2
       
       files_db_folder = list.files(lcl$paths$db_dir)
       all_dbs = unique(gsub(files_db_folder, pattern = "_source|\\.db", replacement=""))
-      which.custom = which(!((all_dbs %in% c(gbl$vectors$db_list, "extended"))))
+      which.custom = which(!((all_dbs %in% gbl$vectors$db_list)|grepl(all_dbs,pattern="^ext.*$")))
       
-      gbl$vectors$db_list <<- append(gbl$vectors$db_list, values = all_dbs[which.custom], after = last_db)
+      gbl$vectors$db_list <<- append(gbl$vectors$db_list, 
+                                     values = all_dbs[which.custom], 
+                                     after = last_db)
       
       for(db in all_dbs[which.custom]){
         dbfolder = paste0(db, "_source")
         addResourcePath(prefix = db, 
                         normalizePath(file.path(lcl$paths$db_dir, dbfolder)))
+        
         # add image to gbl images
         gbl$constants$images <<- append(gbl$constants$images, values = 
                                           list(list(name = paste0(db, '_logo'), 
@@ -135,7 +139,6 @@ function(input, output, session) {
       db_section$load <- TRUE
       
       # look for existing source folder that DOESN'T MATCH the files
-      # - - - - - - - - - - - - - - - - - - - - - 
       if(!file.exists(lcl$paths$opt.loc)){
         contents = gsubfn::fn$paste('db_dir = $dbdir
 work_dir = $userfolder
@@ -187,8 +190,6 @@ mode = complete')
       lcl$aes$theme <<- opts$gtheme # gradient function for heatmaps, volcano plot etc.
       lcl$aes$spectrum <<- opts$gspec # gradient function for heatmaps, volcano plot etc.
       
-      # = = update css.. = =
-      
       # generate CSS for the interface based on user settings for colours, fonts etc.
       bar.css <- MetaboShiny::nav.bar.css(opts$col1, opts$col2, opts$col3, opts$col4)
       font.css <- MetaboShiny::app.font.css(opts$font1, opts$font2, opts$font3, opts$font4,
@@ -207,12 +208,12 @@ mode = complete')
       
       shinyjs::runjs(jq)
       
-      shinyjs::removeClass(class="hidden",id = "metshi")
-      
-      # - - load custom dbs - -
+      shinyjs::removeClass(class="hidden",
+                           id = "metshi")
       
       # load in custom databases
-      has.customs <- dir.exists(file.path(lcl$paths$db_dir, "custom"))
+      has.customs <- dir.exists(file.path(lcl$paths$db_dir, 
+                                          "custom"))
       
       if(has.customs){
         
@@ -229,7 +230,9 @@ mode = complete')
             dblist <- c(dblist, db, "custom")
             gbl$vectors$db_list <- dblist
           }
-          metadata.path <- file.path(lcl$paths$db_dir, "custom", paste0(db, ".RData"))
+          metadata.path <- file.path(lcl$paths$db_dir, 
+                                     "custom", 
+                                     paste0(db, ".RData"))
           load(metadata.path)
           
           # add description to global
@@ -249,13 +252,18 @@ mode = complete')
       lcl$paths$csv_loc <<- file.path(opts$work_dir,
                                       paste0(opts$proj_name, ".csv"))
       lcl$texts <<- list(
-        list(name='curr_exp_dir', text=lcl$paths$work_dir),
-        list(name='curr_db_dir', text=lcl$paths$db_dir),
-        list(name='ppm', text=opts$ppm),
-        list(name='proj_name', text=opts$proj_name)
+        list(name='curr_exp_dir', 
+             text=lcl$paths$work_dir),
+        list(name='curr_db_dir', 
+             text=lcl$paths$db_dir),
+        list(name='ppm', 
+             text=opts$ppm),
+        list(name='proj_name', 
+             text=opts$proj_name)
       )
       
-      lcl$vectors$project_names <<- unique(gsub(list.files(opts$work_dir,pattern = "\\.csv"),
+      lcl$vectors$project_names <<- unique(gsub(list.files(opts$work_dir,
+                                                           pattern = "\\.csv"),
                                                 pattern = "(_no_out\\.csv)|(\\.csv)",
                                                 replacement=""))
       
@@ -277,16 +285,22 @@ mode = complete')
                                  value = opts[[paste0("size", i)]])
       })
       
-      shiny::updateSelectInput(session, "ggplot_theme", selected = opts$gtheme)
+      shiny::updateSelectInput(session, 
+                               "ggplot_theme", 
+                               selected = opts$gtheme)
       
-      shiny::updateSelectInput(session, "color_ramp", selected = opts$gspec)
+      shiny::updateSelectInput(session, 
+                               "color_ramp", 
+                               selected = opts$gspec)
       
       #TODO: set these
       #shiny::div(class="plus", img(class="imagetop", src=opts$taskbar_image, width="100px", height="100px")),
       #shiny::div(class="minus", img(class="imagebottom", src=opts$taskbar_image, width="100px", height="100px"))
       
       shiny::updateCheckboxInput(session, "db_only", 
-                                 value=switch(opts$mode, dbonly=T, complete=F))
+                                 value=switch(opts$mode, 
+                                              dbonly=T, 
+                                              complete=F))
       shiny::updateSelectizeInput(session,
                                   "proj_name",
                                   choices = lcl$vectors$project_names,
@@ -311,7 +325,7 @@ mode = complete')
                                     label = paste("Choose colour", i),
                                     value = lcl$aes$mycols[i],
                                     allowTransparent = F)
-        })
+          })
       })
       
       # create color1, color2 etc variables to use in plotting functions
@@ -322,14 +336,17 @@ mode = complete')
         }))
         if(!any(is.null(values))){
           if(lcl$paths$opt.loc != ""){
-            MetaboShiny::set.col.map(optionfile = lcl$paths$opt.loc, values)
+            MetaboShiny::set.col.map(optionfile = lcl$paths$opt.loc, 
+                                     values)
             lcl$aes$mycols <<- values
           }
         }
       })
       
-      shiny::updateSelectInput(session, "ggplot_theme", selected = opts$gtheme)
-      shiny::updateSelectInput(session, "color_ramp", selected = opts$gspec)
+      shiny::updateSelectInput(session, "ggplot_theme", 
+                               selected = opts$gtheme)
+      shiny::updateSelectInput(session, "color_ramp", 
+                               selected = opts$gspec)
       
     }
     
@@ -350,7 +367,9 @@ mode = complete')
             height = "50px")
       )
     }else{
-      shiny::fluidRow(align="center", shiny::icon("paw","fa-s fa-rotate-90"), shiny::br(),
+      shiny::fluidRow(align="center", 
+                      shiny::icon("paw","fa-s fa-rotate-90"), 
+                      shiny::br(),
                       shiny::tags$i("pre-matched"))
     }
   })
@@ -371,7 +390,8 @@ mode = complete')
   parallel::clusterEvalQ(session_cl, library(data.table))
   
   # create default text objects in UI
-  lapply(gbl$constants$default.text, FUN=function(default){
+  lapply(gbl$constants$default.text, 
+         FUN=function(default){
     output[[default$name]] = shiny::renderText(default$text)
   })
   
@@ -390,10 +410,12 @@ mode = complete')
                                                                         showiso = result_filters$iso))
         shiny::setProgress(0.2)
         
-        uniques = data.table::as.data.table(unique(data.table::as.data.table(matches)[,-c("source", "description"),with=F]))
+        uniques = data.table::as.data.table(unique(data.table::as.data.table(matches)[,-c("source", "description"),
+                                                                                      with=F]))
         if(nrow(uniques)>1){
           uniques = uniques[, .(structure = list(structure)), 
-                                    by = setdiff(names(uniques), "structure")]
+                                    by = setdiff(names(uniques), 
+                                                 "structure")]
           
           structs <- lapply(1:nrow(uniques), function(i){
             row = uniques[i,]

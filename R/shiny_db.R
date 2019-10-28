@@ -31,8 +31,11 @@ get_prematches <- function(who = NA,
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
   
   firstpart = "SELECT DISTINCT
-               lower(name) as name,baseformula,adduct,`%iso`,dppm,
-               description,map.structure as structure,GROUP_CONCAT(source) as source
+               lower(name) as name,baseformula,adduct,
+                              fullformula,finalcharge,`%iso`,
+                              dppm,
+               description, map.structure as structure,
+               GROUP_CONCAT(source) as source
                FROM match_mapper map indexed by map_mz
                JOIN match_content con indexed by cont_struc
                ON map.structure = con.structure"
@@ -45,7 +48,7 @@ get_prematches <- function(who = NA,
   
   query = gsubfn::fn$paste("$firstpart WHERE $what = '$who' $dbfrag $addfrag $isofrag")
 
-  query = paste0(query, " GROUP BY name, baseformula, adduct, `%iso`, dppm, map.structure, description")
+  query = paste0(query, " GROUP BY name, baseformula, fullformula, finalcharge, adduct, `%iso`, dppm, map.structure, description")
   
   res = RSQLite::dbGetQuery(conn, query)
  
@@ -59,184 +62,92 @@ get_prematches <- function(who = NA,
 
 score.isos <- function(table, mSet, patdb, method="mscore", inshiny=TRUE, session=0, intprec, ppm){
   
-  func <- function(){
+  require(InterpretMSSpectrum)
+  
+  table = shown_matches$forward_unique
+  formulas = unique(table$fullformula)
+  # uniques = unique(table[,-1])
+  # fullformulas = unique(sapply(1:nrow(uniques), function(i) MetaDBparse::doAdduct(structure = c(""),
+  #                                                                                 formula = uniques$baseformula[i], 
+  #                                                                                 charge = as.numeric(gsub(
+  #                                                                                   x=gsub(x = uniques$adduct[i],
+  #                                                                                        pattern = ".*\\]", 
+  #                                                                                        replacement=""),
+  #                                                                                   pattern="(\\d)([+|-])",
+  #                                                                                   replacement="\\2\\1")
+  #                                                                                   ),
+  #                                                                                 adduct_table = adducts,
+  #                                                                                 query_adduct = uniques$adduct[i])$final))
+  repr.smiles <- sapply(formulas, function(form){
+    table[fullformula == form][1,]$structure
+  })
+  
+  mini.table <- table[structure %in% repr.smiles]
+  
+  isotopies = lapply(1:nrow(mini.table), function(i){
+    smi=mini.table$structure[i]
+    add=mini.table$adduct[i]
+    form=mini.table$baseformula[i]
+    revres = as.data.table(MetaDBparse::searchRev(smi, "extended", lcl$paths$db_dir))
+    isotopes_to_find = revres[adduct == add]
+    isotopes_to_find$form = c(form)
+    isotopes_to_find
+  })
+  
+  scores = pbapply::pblapply(isotopies, function(l){
     
-    conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
+    mzs = l$fullmz
     
-    if(inshiny) shiny::setProgress(value = 0.2)
-    
-    RSQLite::dbSendQuery(conn, "DROP TABLE IF EXISTS selection")
-    RSQLite::dbWriteTable(conn, "selection", table)
-    
-    RSQLite::dbSendQuery(conn, "DROP TABLE IF EXISTS selected_isos")
-    RSQLite::dbSendQuery(conn,"CREATE TABLE selected_isos AS
-      SELECT DISTINCT iso.baseformula, iso.adduct, iso.fullformula, iso.isoprevalence, iso.fullmz
-      FROM isotopes iso
-      JOIN selection sel
-      ON iso.baseformula = sel.baseformula
-      AND iso.adduct = sel.adduct")
-    
-    mzmatches <- RSQLite::dbGetQuery(conn,gsubfn::fn$paste(strwrap(
-      "SELECT mz.mzmed, iso.baseformula, iso.adduct, iso.fullformula, iso.isoprevalence, iso.fullmz
-      FROM selected_isos iso
-      JOIN mzranges rng
-      ON iso.fullmz BETWEEN rng.mzmin AND rng.mzmax
-      JOIN mzvals mz
-      ON rng.ID = mz.ID"
-      , width=10000, simplify=TRUE)))
-    
-    if(inshiny) shiny::setProgress(value = 0.4)
-    
-    mapper = as.data.table(unique(mzmatches[,2:4]))
-    
-    mapper = mapper[baseformula %in% table$baseformula & adduct %in% table$adduct]
-    
-    mzmatches <- mzmatches[,-c(2:3)]
-    mzmatches <- as.data.table(unique(mzmatches[complete.cases(mzmatches),]))
-    mzmatches$mzmed <- as.factor(mzmatches$mzmed)
-    
-    sourceTable <- data.table::as.data.table(mSet$dataSet$orig, keep.rownames = T)
-    longints <- melt(sourceTable, id.var="rn")
-    
-    colnames(longints) <- c("filename", "mzmed", "intensity")
-    
-    table <- merge(mzmatches, longints)
-    table <- unique(table[,c("fullformula", "isoprevalence", "filename", "mzmed", "fullmz", "intensity")])
-    
-    p.cpd <- split(x = table,
-                   f = list(table$fullformula))
-    
-    if(inshiny) shiny::setProgress(value = 0.6)
-    
-    i <- 0
-    
-
-    res_rows <- pbapply::pblapply(p.cpd, cl = cl, function(cpd_tab, method = method, i = i, inshiny = inshiny, ppm = ppm, intprec = intprec){
-      
-      formula = unique(cpd_tab$fullformula)
-      #adduct = unique(cpd_tab$adduct)
-      
-      # https://assets.thermofisher.com/TFS-Assets/CMD/Reference-Materials/pp-absoluteidq-qexactive-ms-targeted-metabolic-lipid-metabolomics2017-en.pdf
-      
-      if(any(cpd_tab$isoprevalence > 99.999999)){
-        
-        # - - - - - - - - -
-        
-        sorted <- data.table::as.data.table(unique(cpd_tab[order(cpd_tab$isoprevalence,
-                                                                 decreasing = TRUE),]))
-        
-        split.by.samp <- split(sorted,
-                               sorted[,"filename"])
-        # - - - - - - - - -
-        
-        score <- sapply(split.by.samp, function(samp_tab){
-          
-          samp_tab <- data.table::as.data.table(samp_tab)
-          
-          if(nrow(samp_tab) == 1){
-            
-            res = 0
-            
-          }else{
-            
-            theor_mat <- samp_tab[,c("fullmz", "isoprevalence")]
-            theor <- matrix(ncol = nrow(theor_mat), nrow = 2, data = c(theor_mat$fullmz, theor_mat$isoprevalence),byrow = T)
-            
-            obs_mat <- samp_tab[,c("mzmed", "intensity")]
-            obs <- matrix(ncol = nrow(obs_mat), nrow = 2, data = c(obs_mat$mzmed, obs_mat$intensity),byrow = T)
-            
-            theor[2,] <- theor[2,]/sum(theor[2,])
-            obs[2,] <- obs[2,]/sum(obs[2,])
-            
-            res <- switch(method,
-                          mape={
-                            actual = obs[2,]
-                            theor = theor[2,]
-                            deltaSignal = abs(theor - actual)
-                            percentageDifference = deltaSignal / actual * 100# Percent by element.
-                            # - - -
-                            mean(percentageDifference) #Average percentage over all elements.
-                          },
-                          mscore={
-                            InterpretMSSpectrum::mScore(obs=obs,
-                                                        the=theor,
-                                                        dppm = ppm,
-                                                        int_prec = intprec)#, int_prec = 0.225)
-                          },
-                          sirius={NULL},
-                          chisq={
-                            test <- chisq.test( obs[2,],
-                                                p = theor[2,],
-                                                rescale.p = T)
-                            # - - -
-                            as.numeric(test$p.value)
-                          }
-            )
-            
-          }
-          res
-        })
-        
-        #i <<- i + 1
-        #if(inshiny) shiny::setProgress(value = 0.6 + i * (.4/length(cpd_tab)))
-        
-        mean_error <- round(mean(score, na.rm=TRUE), digits = 1)
-        
-        data.table::data.table(fullformula = formula,
-                               score = as.numeric(mean_error))
+    per_mz_cols = lapply(mzs, function(mz){
+      matches = which(as.numeric(colnames(mSet$dataSet$orig)) %between% MetaboShiny::ppm_range(mz, ppm))
+      if(length(matches)>0){
+        int = as.data.table(mSet$dataSet$orig)[,..matches]
+        ppm = 
+          int = rowMeans(int)  
       }else{
-        data.table::data.table()
+        int = rep(0, nrow(mSet$dataSet$orig))
       }
-    }, method = method, i = i, inshiny = inshiny, ppm = ppm, intprec=intprec)
+      l = list(values = int)
+      names(l) = mz
+      l[[1]]
+    })
     
-    # - - - - - - - - -
+    bound = do.call("cbind", per_mz_cols)
+    colnames(bound) = mzs
     
-    score_tbl <- data.table::rbindlist(res_rows)
-    merged_tbl <- merge(score_tbl, mapper)
-    unique(merged_tbl[,-"fullformula"])
+    theor = matrix(c(l$fullmz, l$isoprevalence), nrow=2, byrow = T)
     
-  }
+    scores_persamp = apply(bound, MARGIN=1, FUN = function(row){
+      obs = matrix(c(as.numeric(names(row)), row), nrow=2, byrow = T)
+      switch(method,
+             mape={
+               actual = obs[2,]
+               theor = theor[2,]
+               deltaSignal = abs(theor - actual)
+               percentageDifference = deltaSignal / actual * 100# Percent by element.
+               # - - -
+               mean(percentageDifference) #Average percentage over all elements.
+             },
+             mscore={
+               InterpretMSSpectrum::mScore(obs = obs,
+                                           the = theor,
+                                           dppm = ppm,
+                                           int_prec = intprec)#, int_prec = 0.225)
+             },
+             sirius={NULL},
+             chisq={
+               test <- chisq.test(obs[2,],
+                                  p = theor[2,],
+                                  rescale.p = T)
+               # - - -
+               as.numeric(test$p.value)
+             }
+      )
+    })
+    meanScore = mean(scores_persamp, na.rm = T)
+    meanScore
+  })
   
- func()
-  
-}
-
-#' @export
-get_mzs <- function(baseformula, charge, chosen.db, patdb){
-  # --- connect to db ---
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
-  query.zero <- gsubfn::fn$paste("ATTACH '$chosen.db' AS db")
-  RSQLite::dbExecute(conn, query.zero)
-  # search combo of baseformula and charge matching your choice and find all possible mzvals and adducts
-  query.one <-  gsubfn::fn$paste(strwrap(
-    "CREATE TEMP TABLE possible_options AS
-    SELECT DISTINCT e.fullmz, e.adduct, e.isoprevalence
-    FROM db.extended e
-    WHERE e.baseformula = '$baseformula'
-    AND e.basecharge = $charge"
-    , width=10000, simplify=TRUE))
-  RSQLite::dbExecute(conn, query.one)
-  
-  # join with patdb
-  query.two <- gsubfn::fn$paste(strwrap(
-    "CREATE TEMP TABLE isotopes AS
-    SELECT DISTINCT mz.mzmed, o.*
-    FROM possible_options o
-    JOIN mzranges rng
-    ON o.fullmz BETWEEN rng.mzmin AND rng.mzmax
-    JOIN mzvals mz
-    ON rng.ID = mz.ID", width=10000, simplify=TRUE))
-  
-  RSQLite::dbExecute(conn, query.two)
-  # isofilter and only in
-  query.three <-  strwrap(
-    "SELECT DISTINCT iso.mzmed, adduct, iso.isoprevalence
-    FROM isotopes iso"
-    #HAVING COUNT(iso.isoprevalence > 99.99999999999) > 0"
-    , width=10000, simplify=TRUE)
-  results <- RSQLite::dbGetQuery(conn,query.three)
-  # --------
-  results
 }
 
 get_predicted <- function(mz,
