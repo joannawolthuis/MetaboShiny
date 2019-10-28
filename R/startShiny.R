@@ -30,6 +30,7 @@ start.metshi <- function(port=8080, inBrowser=F,
   shiny::runApp(
     appDir = appdir,
     launch.browser = inBrowser,
+    port = 8080,
     display.mode = if(debug) "showcase" else "normal")
   
 }
