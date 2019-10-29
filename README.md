@@ -10,6 +10,7 @@ Please report any issues and feedback on the Issues page here, along with sugges
 # STEP 1: requirements (these may require admin rights)
 install an R version that at least is R 3.5, install Java(https://www.java.com/en/download/) and JDK (https://www.oracle.com/technetwork/java/javase/downloads/jdk12-downloads-5295953.html, may require creating an Oracle account)
 # STEP 2
+in R: 'install.packages("devtools")'
 in R: 'devtools::install_github("UMCUGenetics/MetaboShiny")'
 # STEP 3
 in R: 'library("MetaboShiny"); start.metshi(inBrowser=T);'
