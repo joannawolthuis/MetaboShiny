@@ -536,9 +536,14 @@ mode = complete')
         print("Please perform pre-matching first to enable this feature!")
         return(NULL)
       }else{
-        shown_matches$reverse <- unique(MetaboShiny::get_prematches(who = my_selection$revstruct,
-                                                                    what = "map.structure", #map.mz as alternative
-                                                                    patdb = lcl$paths$patdb)[,c("query_mz", "adduct", "%iso", "dppm")])
+        rev_matches = MetaboShiny::get_prematches(who = my_selection$revstruct,
+                                                  what = "map.structure", #map.mz as alternative
+                                                  patdb = lcl$paths$patdb)
+        if(nrow(rev_matches)>0){
+          shown_matches$reverse <- unique(rev_matches[,c("query_mz", "adduct", "%iso", "dppm")])
+        }else{
+          shown_matches$reverse <- data.table()
+        }
       } 
     }
   })

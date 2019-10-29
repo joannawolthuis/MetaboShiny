@@ -35,7 +35,7 @@ shiny::observeEvent(input$prematch,{
                                                             fullformula TEXT,
                                                             finalcharge INT,
                                                             identifier TEXT,
-                                                            description VARCHAR(255),
+                                                            description VA RCHAR(255),
                                                             structure TEXT,
                                                             source TEXT)")
     
