@@ -36,8 +36,8 @@ get_prematches <- function(who = NA,
                               dppm,
                description, map.structure as structure,
                GROUP_CONCAT(source) as source
-               FROM match_mapper map indexed by map_mz
-               JOIN match_content con indexed by cont_struc
+               FROM match_mapper map
+               JOIN match_content con
                ON map.structure = con.structure"
   
   dbfrag = if(length(showdb)>0) gsubfn::fn$paste("AND source = '$showdb'") else ""

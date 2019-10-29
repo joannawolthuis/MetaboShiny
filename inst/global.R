@@ -228,7 +228,7 @@ paths = list(
 ),
 # default vectors to go through in metaboshiny
 vectors = list(
-  hide_match_cols = c("structure", "baseformula","isocat"),#, "source"), #"query_mz", "identifier"), #c("description","structure", "baseformula", "dppm", "source"),
+  hide_match_cols = c("structure", "baseformula","isocat", "fullformula", "finalcharge"),#, "source"), #"query_mz", "identifier"), #c("description","structure", "baseformula", "dppm", "source"),
   # default indices of chosen adducts
   pos_selected_add = c(2),
   neg_selected_add = c(2),

@@ -89,7 +89,7 @@ shiny::observeEvent(input$initialize, {
     
     # remove samples with really low numbers of peaks
     #complete.perc <- rowMeans(!is.na(csv))
-    #keep_samps <- csv$sample[which(complete.perc > .1)]
+    #keep_samps <- csv$sample[which(complete.perc > .2)]
     #csv <- csv[sample %in% keep_samps,]
     
     # also remove them in the table with covariates
@@ -109,7 +109,7 @@ shiny::observeEvent(input$initialize, {
     }
     
     # rename time column or metaboanalyst won't recognize it
-    colnames(csv)[which( colnames(csv) == "time")] <- "Time"
+    colnames(csv)[which(colnames(csv) == "time")] <- "Time"
 
     # find experimental variables
     as.numi <- as.numeric(colnames(csv))
@@ -159,13 +159,14 @@ shiny::observeEvent(input$initialize, {
     mSet <- MetaboAnalystR::RemoveMissingPercent(mSet,
                                  percent = input$perc_limit/100)
     
-    debug_mSet2 <<- mSet
     # missing value imputation
     if(req(input$miss_type ) != "none"){
       if(req(input$miss_type ) == "rowmin"){ # use sample minimum
-        new.mat <- apply(mSet$dataSet$preproc, 1, function(x) {
+        w.missing <- mSet$dataSet$preproc
+        w.missing <- apply(w.missing, 2, as.numeric)
+        new.mat <- apply(w.missing, 1, function(x) {
           if (sum(is.na(x)) > 0) {
-            x[is.na(x)] <- min(x, na.rm = T)/2
+            x[is.na(x)] <- min(x[!is.na(x)], na.rm = T)/2
           }
           x
         })
@@ -214,6 +215,7 @@ shiny::observeEvent(input$initialize, {
     # if user picked a data filter
     if(req(input$filt_type ) != "none"){
       # filter dataset
+      print("Filtering dataset...")
       # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
       mSet <- MetaboAnalystR::FilterVariable(mSet,
                                              filter = input$filt_type,
@@ -224,7 +226,7 @@ shiny::observeEvent(input$initialize, {
     shiny::setProgress(session=session, value= .2)
     
     # if normalizing by a factor, do the below
-    if(req(input$norm_type ) == "SpecNorm"){
+    if(req(input$norm_type) == "SpecNorm"){
       norm.vec <- mSet$dataSet$covars[match(mSet$dataSet$covars$sample,
                                             rownames(mSet$dataSet$preproc)),][[input$samp_var]]
       norm.vec <- scale(x = norm.vec, center = 1) # normalize scaling factor

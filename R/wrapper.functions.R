@@ -29,24 +29,13 @@ make.metshi.csv <-
                       collapse=", "), 
                "\n\n"))
     
-    if(DBI::dbExistsTable(conn, "batchinfo")){
-      query <- strwrap(gsubfn::fn$paste("select distinct d.card_id as sample, d.sampling_date as time, d.*, b.injection
-                                        from mzintensities i
-                                        join individual_data d
-                                        on i.filename = d.card_id
-                                        join setup s on d.[Group] = s.[Group]
-                                        join batchinfo b on b.sample = d.card_id"),
+    query <- strwrap(gsubfn::fn$paste("select distinct d.*, s.*
+                                      from mzintensities i
+                                      join individual_data d
+                                      on i.filename = d.card_id
+                                      join setup s on d.[group] = s.[group]"),
                        width=10000,
                        simplify=TRUE)
-    }else{
-      query <- strwrap(gsubfn::fn$paste("select distinct d.card_id as sample, d.sampling_date as time, d.*, s.*
-                                        from mzintensities i
-                                        join individual_data d
-                                        on i.filename = d.card_id
-                                        join setup s on d.[Group] = s.[Group]"),
-                       width=10000,
-                       simplify=TRUE)
-    }
     
     RSQLite::dbExecute(conn, "PRAGMA journal_mode=WAL;")
     RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS filenames ON mzintensities(filename)")
@@ -65,17 +54,22 @@ make.metshi.csv <-
       query_add = gsubfn::fn$paste(" WHERE i.filename = '$filename'")
       
       # get results for sample
+      #colnames(RSQLite::dbGetQuery(conn, "SELECT DISTINCT * FROM individual_data LIMIT 5"))
+      #colnames(RSQLite::dbGetQuery(conn, "SELECT DISTINCT * FROM setup LIMIT 5"))
+      
       z.meta = data.table::as.data.table(RSQLite::dbGetQuery(conn, paste0(query, query_add)))
+      duplicate <- which(duplicated(gsub(colnames(z.meta), pattern = "\\.+\\d+$", replacement="")))
+      z.meta <- z.meta[1,-duplicate,with=F]
       
       if(nrow(z.meta)==0) return(NA)
       
       z.meta = z.meta[,-c("card_id", "sampling_date")]
       colnames(z.meta) <- tolower(colnames(z.meta))
-      z.int = data.table::as.data.table(RSQLite::dbGetQuery(conn, paste0("SELECT DISTINCT 
+      z.int = data.table::as.data.table(RSQLite::dbGetQuery(conn, 
+                                          paste0("SELECT DISTINCT 
                                                 i.mzmed as identifier,
                                                 i.intensity
                                                 FROM mzintensities i", query_add)))
-      
       if(nrow(z.int)==0) return(NA)
       
       missing_mz <- setdiff(all_mz, z.int$identifier)

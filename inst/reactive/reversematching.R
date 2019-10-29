@@ -17,7 +17,9 @@ observeEvent(input$browse_db,{
 # triggers on reverse searching TODO: fix this, it's broken
 observeEvent(input$revsearch_mz, {
   curr_row <- input$browse_tab_rows_selected
-  my_selection$structure <- browse_content$table[curr_row,c('structure')][[1]]
+  if(!is.null(curr_row)){
+    my_selection$structure <- browse_content$table[curr_row,c('structure')][[1]]
+  }
 })
 
 

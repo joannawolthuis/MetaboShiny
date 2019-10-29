@@ -33,7 +33,7 @@ observeEvent(input$do_ml, {
     curr <- data.table::as.data.table(mSet$dataSet$preproc) # the filtered BUT NOT IMPUTED table, ML should be able to deal w/ missing values
     
     # replace NA's with zero
-    curr[,(1:ncol(curr)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
+    curr <- curr[,(1:ncol(curr)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
     
     # conv to data frame
     curr <- as.data.frame(curr)
@@ -93,11 +93,22 @@ observeEvent(input$do_ml, {
     # names(covariates) <- colnames(config)
     
     # # remove ones with na present
-    has.na <- sapply(covariates, function(x) any(is.na(x) | tolower(x) == "unknown"))
+    has.na <- apply(covariates, MARGIN=2, FUN=function(x) any(is.na(x) | tolower(x) == "unknown"))
+    has.all.unique <- apply(covariates, MARGIN=2, FUN=function(x) length(unique(x)) == length(x))
+    remove = colnames(covariates)[which(has.na | has.all.unique)]
     
-    # has.all.unique <- sapply(covariates, function(x) length(unique(x)) == length(x))
+    #keep_configs <- which(names(config) == "label")
+    remove <- unique(c(remove, input$ml_exclude_covars, "sample",  "animal_internal_id", colnames(covariates)[caret::nearZeroVar(covariates)]))
+    
+    keep_configs <- which(!(colnames(covariates) %in% remove))
+    
+    print("Removing covariates and unique columns. Keeping non-mz variables:")
+    print(names(covariates)[keep_configs])
+    
+    covariates <- covariates[,..keep_configs,with=F]
     
     # rename the variable of interest to 0-1-2 etc.
+    
     char.lbl <- as.character(covariates$label)
     uniques <- unique(char.lbl)
     uniques_new_name <- c(1:length(uniques))
@@ -105,28 +116,17 @@ observeEvent(input$do_ml, {
     
     remapped.lbl <- uniques_new_name[char.lbl]
     
-    keep_configs <- which(!(names(covariates) %in% names(covariates)[unique(c(which(has.na)))]))
-    
-    #keep_configs <- which(names(config) == "label")
-    remove_configs <- unique(c(input$ml_exclude_covars, "sample",  "animal_internal_id", colnames(covariates)[caret::nearZeroVar(covariates)]))
-    
-    keep_configs <- which(!(names(covariates) %in% remove_configs))
-    
-    print("Removing covariates and unique columns. Keeping non-mz variables:")
-    print(names(covariates)[keep_configs])
-    
-    covariates <- covariates[,..keep_configs,with=F]
-    
     # - - - - - - - - - - - - - - - - - - - - - - -
     
     # join halves together, user variables and metabolite data
     curr <- cbind(covariates, curr)
     curr <- data.table::as.data.table(curr)
     
-    # remove cols with all NA
-    curr <- curr[,colSums(is.na(curr)) < nrow(curr), with=FALSE]
-    # remove rows with all NA
-    curr <- curr[complete.cases(curr),]
+    # # remove cols with all NA
+    # curr <- curr[,colSums(is.na(curr)) < nrow(curr), with=FALSE]
+    # 
+    # # remove rows with all NA
+    # curr <- curr[,rowSums(is.na(curr)) < ncol(curr), with=FALSE]
     
     # how many models will be built? user input
     goes = as.numeric(input$ml_attempts)
