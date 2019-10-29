@@ -28,12 +28,11 @@ start.metshi <- function(port=8080, inBrowser=F,
   
   runmode <<- runmode
   
-  print("port 8080")
-  
   shiny::runApp(
     appDir = appdir,
     launch.browser = inBrowser,
     port = 8080,
+    host = "0.0.0.0",
     display.mode = if(debug) "showcase" else "normal")
   
 }
