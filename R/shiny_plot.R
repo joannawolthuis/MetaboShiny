@@ -221,6 +221,7 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                           styles=c("box", "beeswarm"), add_stats = "mean",
                           col.fac = "label", txt.fac = "label",font){
   
+  print("!!!")
   sourceTable = mSet$dataSet$norm
   
   if(length(styles) == 0){
@@ -228,7 +229,7 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
   }
   # - - -
   
-  profile <- getProfile(mSet, cpd, mode=if(mode == "nm") "stat" else "time")
+  profile <- MetaboShiny::getProfile(mSet, cpd, mode=if(mode == "nm") "stat" else "time")
   df_line <- data.table::data.table(x = c(1,2),
                         y = rep(min(profile$Abundance - 0.1),2))
   stars = ""

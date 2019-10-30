@@ -57,7 +57,7 @@ lapply(c("tt",
       output[[outplot_name]] <- plotly::renderPlotly({
         # --- ggplot ---
         if(table == 'meba'){ # meba needs a split by time
-          ggplotMeba(mSet, my_selection$mz,
+          MetaboShiny::ggplotMeba(mSet, my_selection$mz,
                      draw.average = T,
                      cols = lcl$aes$mycols,
                      cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
@@ -65,7 +65,7 @@ lapply(c("tt",
                      font = lcl$aes$font
                      )
         }else if(table == 'asca'){ # asca needs a split by time
-          ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, 
+          MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, 
                         cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]], mode = "ts",
                         styles = input$ggplot_sum_style,
                         add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var,
@@ -74,20 +74,20 @@ lapply(c("tt",
         }else{ # regular boxplot
           if(!is.null(input$timecourse_trigger)){
             if(input$timecourse_trigger){
-              ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]], mode = "ts",
+              MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]], mode = "ts",
                             styles = input$ggplot_sum_style,
                             add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var,
                             plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                             font = lcl$aes$font)
             }else{
-              ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
+              MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
                             styles = input$ggplot_sum_style,
                             add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var,
                             plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                             font = lcl$aes$font)
             }
           }else{
-            ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
+            MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
                           styles = input$ggplot_sum_style,
                           add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var,
                           plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],

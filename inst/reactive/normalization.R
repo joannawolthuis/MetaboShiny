@@ -137,6 +137,8 @@ shiny::observeEvent(input$initialize, {
                           filePath = csv_loc_final,
                           "rowu")  # rows contain samples
     
+    covar_table$sample <- gsub("[^[:alnum:]./_-]", "", covar_table$sample) # match metaboanalystr formatting
+    
     # add covars to the mSet for later switching and machine learning
     mSet$dataSet$covars <- covar_table
     

@@ -154,9 +154,14 @@ load.metadata.csv <- function(path.to.csv,
   # --- connect to sqlite db ---
   
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), path.to.patdb)
+  filenames = RSQLite::dbGetQuery(conn, "SELECT DISTINCT filename FROM mzintensities")
   
   tab <- data.table::fread(path.to.csv)
   colnames(tab) <- tolower(colnames(tab))
+  
+  if(length(intersect(filenames[,1], tab$sample)) == 0){
+    stop("Mismatch between metadata sample names and file sample names. Aborting...")
+  }
   
   colnames(tab) <- tolower(gsub(x=colnames(tab), pattern = "\\.$|\\.\\.$", replacement = ""))
   colnames(tab) <- gsub(x=colnames(tab), pattern = "\\.|\\.\\.| ", replacement = "_")
@@ -224,7 +229,7 @@ load.metadata.excel <- function(path.to.xlsx,
   }
   
   individual.data$card_id <- as.character(individual.data$card_id)
-  individual.data$animal_internal_id <- as.character(individual.data$animal_internal_id)
+  individual.data$internal_id <- as.character(individual.data$internal_id)
   
   if(is.na(individual.data$sampling_date[1])) levels(individual.data$sampling_date) <- factor(1)
   
@@ -242,7 +247,7 @@ load.metadata.excel <- function(path.to.xlsx,
   # qc_ind_data <- lapply(qc_samps$sample, function(qc) {
   #   data.table(label = c(1),
   #              card_id = qc,
-  #              animal_internal_id = qc,
+  #              internal_id = qc,
   #              sampling_date = placeholder_date,
   #              sex = "qc",
   #              group = "qc",

@@ -15,7 +15,7 @@ make.metshi.csv <-
     
     cat("Checking for mismatches between peak tables and metadata... \n")
     
-    fn_meta <- RSQLite::dbGetQuery(conn, "SELECT DISTINCT card_id FROM individual_data")[,1]
+    fn_meta <- RSQLite::dbGetQuery(conn, "SELECT DISTINCT sample FROM individual_data")[,1]
     fn_int <- RSQLite::dbGetQuery(conn, "SELECT DISTINCT filename FROM mzintensities")[,1]
     
     cat(paste0("-- in peaklist, not in metadata: --- \n", 
@@ -32,7 +32,7 @@ make.metshi.csv <-
     query <- strwrap(gsubfn::fn$paste("select distinct d.*, s.*
                                       from mzintensities i
                                       join individual_data d
-                                      on i.filename = d.card_id
+                                      on i.filename = d.sample
                                       join setup s on d.[group] = s.[group]"),
                        width=10000,
                        simplify=TRUE)
@@ -43,6 +43,7 @@ make.metshi.csv <-
     
     RSQLite::dbDisconnect(conn)
     
+    if(file.exists(csv)) file.remove(csv)
     # write rows to csv
     pbapply::pblapply(fn_meta, 
                       #cl = session_cl, 
@@ -63,7 +64,7 @@ make.metshi.csv <-
       
       if(nrow(z.meta)==0) return(NA)
       
-      z.meta = z.meta[,-c("card_id", "sampling_date")]
+      #z.meta = z.meta[,-c("card_id", "sampling_date")]
       colnames(z.meta) <- tolower(colnames(z.meta))
       z.int = data.table::as.data.table(RSQLite::dbGetQuery(conn, 
                                           paste0("SELECT DISTINCT 

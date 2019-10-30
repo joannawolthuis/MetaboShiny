@@ -94,7 +94,7 @@ find.formulas <- function(mzvals, cl=FALSE, ppm=3, charge=1, element.counts = li
   data.table::rbindlist(found.rows[!is.na(found.rows)])
 }
 
-# @export
+#'@export
 joanna_debugger <- function(){
   lcl <<- debug_lcl
   mSet <<- debug_mSet
