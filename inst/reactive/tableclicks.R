@@ -24,6 +24,8 @@ lapply(c("tt",
 
     if (is.null(curr_row)) return()
 
+    which_aov = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
+    
     res_tbl <- data.table::as.data.table(switch(table,
                                                 tt = mSet$analSet$tt$sig.mat,
                                                 fc = mSet$analSet$fc$sig.mat,
@@ -31,15 +33,7 @@ lapply(c("tt",
                                                 plsda_load = mSet$analSet$plsda$vip.mat,
                                                 ml = lcl$tables$ml_roc, #TODO: fix this, now in global
                                                 asca = mSet$analSet$asca$sig.list$Model.ab,
-                                                aov = {
-                                                  if(!is.null(input$timecourse_trigger)){
-                                                    switch(input$timecourse_trigger,
-                                                           mSet$analSet$aov2$sig.mat,
-                                                           mSet$analSet$aov$sig.mat)
-                                                  }else{
-                                                    mSet$analSet$aov$sig.mat
-                                                  }
-                                                },
+                                                aov = mSet$analSet[[which_aov]]$sig.mat,
                                                 rf = vip.score,
                                                 enrich_pw = enrich_overview_tab,
                                                 meba = mSet$analSet$MB$stats,
@@ -53,6 +47,9 @@ lapply(c("tt",
       
       outplot_name <- paste0(table, "_specific_plot")
 
+      if(table == "aov"){
+        table <- which_aov
+      }
       # send plot to relevant spot in UI
       output[[outplot_name]] <- plotly::renderPlotly({
         # --- ggplot ---
@@ -64,36 +61,20 @@ lapply(c("tt",
                      plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                      font = lcl$aes$font
                      )
-        }else if(table == 'asca'){ # asca needs a split by time
+        }else if(table %in% c('aov2', 'asca')){ # asca needs a split by time
           MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, 
-                        cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]], mode = "ts",
+                        cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]], mode = "multi",
                         styles = input$ggplot_sum_style,
                         add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var,
                         plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                         font = lcl$aes$font)
-        }else{ # regular boxplot
-          if(!is.null(input$timecourse_trigger)){
-            if(input$timecourse_trigger){
-              MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]], mode = "ts",
-                            styles = input$ggplot_sum_style,
-                            add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var,
-                            plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                            font = lcl$aes$font)
-            }else{
-              MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
-                            styles = input$ggplot_sum_style,
-                            add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var,
-                            plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                            font = lcl$aes$font)
-            }
-          }else{
+        }else{
             MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
                           styles = input$ggplot_sum_style,
                           add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var,
                           plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                           font = lcl$aes$font)
           }
-        }
       })
     }
   })

@@ -174,11 +174,11 @@ ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
                        plot.theme,
                        plotlyfy=TRUE,font){
   cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
-  profile <- getProfile(mSet, cpd, mode="time")
+  profile <- getProfile(mSet, cpd, mode="multi")
   p <- if(draw.average){
     ggplot2::ggplot(data=profile) +
-      ggplot2::geom_line(size=0.3, ggplot2::aes(x=Time, y=Abundance, group=Sample, color=Group, text=Sample), alpha=0.4) +
-      stat_summary(fun.y="mean", size=1.5, geom="line", ggplot2::aes(x=Time, y=Abundance, color=Group, group=Group)) +
+      ggplot2::geom_line(size=0.3, ggplot2::aes(x=GroupB, y=Abundance, group=Sample, color=GroupA, text=Sample), alpha=0.4) +
+      stat_summary(fun.y="mean", size=1.5, geom="line", ggplot2::aes(x=GroupB, y=Abundance, color=GroupA, group=GroupA)) +
       ggplot2::scale_x_discrete(expand = c(0, 0)) +
       plot.theme(base_size = 15) +
       ggplot2::scale_color_manual(values=cols) +
@@ -191,7 +191,7 @@ ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
       ggtitle(paste(cpd, "m/z"))
   } else{
     ggplot2::ggplot(data=profile) +
-      ggplot2::geom_line(size=0.7, ggplot2::aes(x=Time, y=Abundance, group=Sample, color=Group, text=Sample)) +
+      ggplot2::geom_line(size=0.7, ggplot2::aes(x=GroupB, y=Abundance, group=Sample, color=GroupA, text=Sample)) +
       ggplot2::scale_x_discrete(expand = c(0, 0)) +
       plot.theme(base_size = 15) +
       ggplot2::scale_color_manual(values=cols) +
@@ -206,7 +206,7 @@ ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
   if(plotlyfy){
     plotly::ggplotly(p, tooltip="Sample", originalData=T)
   }else{
-    p
+    p + ggplot2::xlab("Time")
   }
 }
 
@@ -221,15 +221,18 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                           styles=c("box", "beeswarm"), add_stats = "mean",
                           col.fac = "label", txt.fac = "label",font){
   
-  print("!!!")
+
   sourceTable = mSet$dataSet$norm
   
   if(length(styles) == 0){
     styles = c("beeswarm")
   }
   # - - -
+
+  profile <- MetaboShiny::getProfile(mSet, cpd, mode=if(mode == "nm") "stat" else "multi")
+ 
+  print(head(profile))
   
-  profile <- MetaboShiny::getProfile(mSet, cpd, mode=if(mode == "nm") "stat" else "time")
   df_line <- data.table::data.table(x = c(1,2),
                         y = rep(min(profile$Abundance - 0.1),2))
   stars = ""
@@ -264,7 +267,7 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
   p <- ggplot2::ggplot() + plot.theme(base_size = 15)
   
   profiles <- switch(mode,
-                     ts = split(profile, f = profile$Group),
+                     multi = split(profile, f = profile$GroupA),
                      nm = list(x = data.table::data.table(profile)))
   
   i = 1
@@ -297,28 +300,29 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                                                                                                    fill = Color), position = position_jitterdodge())
                )
              },
-             ts = {
+             multi = {
                p <- p + switch(style,
-                               box = ggplot2::geom_boxplot(data = prof, alpha=0.4, aes(x = Time,
+                               box = ggplot2::geom_boxplot(data = prof, alpha=0.4, aes(x = GroupB,
                                                                                        y = Abundance,
                                                                                        text = Text,
-                                                                                       color = Group,
-                                                                                       fill = Group)),
-                               violin = ggplot2::geom_violin(data = prof, alpha=0.4, position = "identity", aes(x = Time,
+                                                                                       color = GroupA,
+                                                                                       fill = GroupA)),
+                               violin = ggplot2::geom_violin(data = prof, alpha=0.4, position = "identity", aes(x = GroupB,
                                                                                                                 y = Abundance,
-                                                                                                                group = Time,
-                                                                                                                color = Group,
-                                                                                                                fill = Group)),
-                               beeswarm = ggbeeswarm::geom_beeswarm(data = prof, alpha=0.7, size = 2, position = position_dodge(width=.3), aes(x = Time,
+                                                                                                                group = GroupB,
+                                                                                                                text = Text,
+                                                                                                                color = GroupA,
+                                                                                                                fill = GroupA)),
+                               beeswarm = ggbeeswarm::geom_beeswarm(data = prof, alpha=0.7, size = 2, position = position_dodge(width=.3), aes(x = GroupB,
                                                                                                                                                y = Abundance,
                                                                                                                                                text=Text,
-                                                                                                                                               color = Group,
-                                                                                                                                               fill = Color)),
-                               scatter = ggplot2::geom_point(data = prof, alpha=0.7, size = 2, position = position_jitterdodge(), aes(x = Time,
+                                                                                                                                               color = GroupA,
+                                                                                                                                               fill = GroupA)),
+                               scatter = ggplot2::geom_point(data = prof, alpha=0.7, size = 2, position = position_jitterdodge(), aes(x = GroupB,
                                                                                                                                       y = Abundance,
                                                                                                                                       text=Text,
-                                                                                                                                      color = Group,
-                                                                                                                                      fill = Color))
+                                                                                                                                      color = GroupA,
+                                                                                                                                      fill = GroupA))
                )
              })
       
@@ -332,7 +336,7 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                    text = element_text(family = font$family))+
       ggplot2::annotate("text",
                         x = switch(mode, nm = 1.5,
-                                   ts = max(as.numeric(profile$Time))/2 + .5),
+                                   multi = max(as.numeric(as.factor(profile$GroupB)))/2 + .5),
                         y = min(profile$Abundance - 0.3),
                         label = stars, size = 8, col = "black") + ggtitle(paste(cpd, "m/z"))
     
@@ -340,21 +344,21 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
       p <- switch(add_stats,
                   median = {
                     p + stat_summary(data = prof,
-                                     aes( x = if(mode == "nm") Group else Time,
+                                     aes( x = if(mode == "nm") Group else GroupB,
                                           y = Abundance,
-                                          color = Group),
+                                          color = if(mode == "nm") Group else GroupA),
                                      fun.y = median,
                                      fun.ymin = median,
                                      fun.ymax = median,
                                      geom = "crossbar",
                                      width = 0.5,
                                      color = switch(mode,
-                                                    ts = cols[i],
+                                                    multi = cols[i],
                                                     nm = cols[1:length(unique(levels(profile$Group)))]))
                   },
                   mean = {
                     p + stat_summary(data = prof,
-                                     aes( x = if(mode == "nm") Group else Time,
+                                     aes( x = if(mode == "nm") Group else GroupB,
                                           y = Abundance),
                                      fun.y = mean,
                                      fun.ymin = mean,
@@ -373,16 +377,24 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
     i <- i + 1
   }
   
-  p <- p + ggplot2::scale_color_manual(values=cols[1:length(unique(levels(profile$Group)))])
-  
-  if(all(as.character(profile$Color) == as.character(profile$Group))){
-    p <- p + ggplot2::scale_fill_manual(values = cols[1:length(unique(levels(profile$Group)))])
-  }else{
-    ncols = length(levels(profile$Color))
-    scale = c(cols[1:length(unique(levels(profile$Group)))],cf(ncols))
-    names(scale) <- c(levels(profile$Group),levels(profile$Color))
-    p <- p + ggplot2::scale_fill_manual(values = scale)
+  if(mode == "multi"){
+    p <- p + ggplot2::scale_color_manual(values=cols[1:length(unique(levels(profile$GroupA)))])
+    p <- p + ggplot2::scale_fill_manual(values = cols[1:length(unique(levels(profile$GroupA)))])
+    p <- p + ggplot2::xlab(Hmisc::capitalize(mSet$dataSet$facB.lbl))
+    }else{
+    p <- p + ggplot2::scale_color_manual(values=cols[1:length(unique(levels(profile$Color)))])
+    if(all(as.character(profile$Color) == as.character(profile$Group))){
+      p <- p + ggplot2::scale_fill_manual(values = cols[1:length(unique(levels(profile$Group)))])
+    }else{
+      ncols = length(levels(profile$Color))
+      scale = c(cols[1:length(unique(levels(profile$Group)))],cf(ncols))
+      names(scale) <- c(levels(profile$Group),levels(profile$Color))
+      p <- p + ggplot2::scale_fill_manual(values = scale)
+    }  
+    p <- p + ggplot2::xlab(Hmisc::capitalize(gsub(x=mSet$dataSet$cls.name, pattern = ":.*$", replacement="")))
   }
+ 
+
   # ---------------
   if(plotlyfy){
     plotly::ggplotly(p, tooltip = "Text")#, originalData=T)
@@ -393,7 +405,9 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
 
 ggPlotAOV <- function(mSet, cf, n=20,
                       plot.theme, plotlyfy=TRUE,font){
-  profile <- data.table::as.data.table(mSet$analSet$aov$p.log[mSet$analSet$aov$inx.imp],
+  which_aov = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
+  
+  profile <- data.table::as.data.table(mSet$analSet[[which_aov]]$p.log[mSet$analSet[[which_aov]]$inx.imp],
                            keep.rownames = T)
   colnames(profile) <- c("cpd", "-logp")
   profile[,2] <- round(profile[,2], digits = 2)
@@ -949,7 +963,7 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
                        plotlyfy="T",font){
   
   classes <- switch(mode,
-                    ipca = mSet$dataSet$exp.fac,
+                    ipca = mSet$dataSet$facA,
                     pca = mSet$dataSet$cls,
                     plsda = mSet$dataSet$cls)
   
@@ -982,14 +996,14 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
            #x =1;y=2;z=3
            x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
            y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
-           fac.lvls <- length(levels(mSet$dataSet$exp.fac))
+           fac.lvls <- length(levels(mSet$dataSet$facA))
            
            xc=mSet$analSet$pca$x[, pcx]
            yc=mSet$analSet$pca$x[, pcy]
            
            dat_long <- data.table(variable = names(xc),
                                   group = classes,
-                                  time = mSet$dataSet$time.fac,
+                                  groupB = mSet$dataSet$facB,
                                   x = xc,
                                   y = yc)
            
@@ -1047,7 +1061,10 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
     scale_fill_manual(values=cols) +
     scale_color_manual(values = cols)
   
-  if(mode == "ipca") p <- p + facet_wrap(~time)
+  if(mode == "ipca"){
+    p <- p + facet_wrap(~groupB,)
+    p <- p + ggplot2::ggtitle(Hmisc::capitalize(mSet$dataSet$facB.lbl))
+  }
   
   if(plotlyfy){
     plotly::ggplotly(p)

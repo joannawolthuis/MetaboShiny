@@ -572,44 +572,59 @@ mode = complete')
   
   # ===== UI SWITCHER ====
   
+  shiny::observeEvent(input$heattable,{
+    statsmanager$calculate <- "heatmap"
+  })
+  
   # this toggles when 'interface' values change (for example from 'bivar' to 'multivar' etc.)
   shiny::observe({
     # hide all tabs by default, easier to hide them and then make visible selectively
     hide.tabs <- list(
-      list("statistics", "inf"),
-      list("dimred", "pca"),
-      list("dimred", "plsda"),
-      list("permz", "asca"),
-      list("permz", "meba"),
-      list("permz", "aov"),
-      list("statistics", "ml"),
-      list("overview", "volc"),
-      list("overview", "venn"),
-      list("overview", "heatmap"),
-      list("permz", "tt"),
-      list("permz", "fc"),
-      list("dimred", "tsne")
+      list("statistics", "inf"),#1
+      list("dimred", "pca"),#2
+      list("dimred", "plsda"),#3
+      list("permz", "asca"),#4
+      list("permz", "meba"),#5
+      list("permz", "aov"),#6
+      list("statistics", "ml"),#7
+      list("overview", "volc"),#8
+      list("overview", "venn"),#9
+      list("overview", "heatmap"),#10
+      list("permz", "tt"),#11
+      list("permz", "fc"),#12
+      list("dimred", "tsne")#13
     )
+    print(interface$mode)
     # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
     # then show the relevent tabs
     # TODO: enable multivariate time series analysis
     if(is.null(interface$mode)) {
       show.tabs <- hide.tabs[1]
-    }else if(interface$mode == 'multivar'){
-      show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,13)]
-      heatbutton$status <- NULL
-      #show.tabs <- c("inf","pca", "aov", "heatmap", "enrich", "venn")
-    }else if(interface$mode == 'bivar'){
-      show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13)]
-      heatbutton$status <- "ttfc"
-      #show.tabs <- c("inf","pca", "plsda", "tt", "fc", "volc", "heatmap", "ml", "enrich", "venn")
-    }else if(interface$mode == 'time'){
-      show.tabs <- hide.tabs[c(1,2,4,5,6,7,9,10,13)]
-      heatbutton$status <- "asmb"
-      #show.tabs <- c("inf", "pca", "aov", "asca", "meba", "heatmap", "ml", "venn")
+    }else if(interface$mode == '1f'){
+      if(mSet$dataSet$cls.num > 2){
+        show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,13)]
+        shiny::updateSelectInput(session, "heattable", choices = c("aov"), selected = "aov")
+      }else{
+        show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13)]
+        shiny::updateSelectInput(session, "heattable", choices = list("T-test"="tt", 
+                                                                      "Fold-change analysis"="fc"), selected = "tt")
+      }
+    }else if(interface$mode == '2f'){
+      show.tabs <- hide.tabs[c(1,2,4,6,7,9,10,13)]
+      shiny::updateSelectInput(session, "heattable", choices = list(ANOVA="aov2", 
+                                                                    ASCA="asca"), selected = "aov2")
+    }else if(interface$mode == 't1f'){
+      show.tabs = hide.tabs[c(1,2,4,5,6,7,9,10,13)]
+      shiny::updateSelectInput(session, "heattable", choices = list(ANOVA="aov2", 
+                                                                    ASCA="asca",
+                                                                    MEBA="meba"), selected = "aov2")
+    }else if(interface$mode == 't'){
+      show.tabs = hide.tabs[c(1,2,5,6,7,9,10,13)]
+      shiny::updateSelectInput(session, "heattable", choices = list(ANOVA="aov2",
+                                                                    MEBA="meba"), selected = "aov2")
+      
     }else{
       show.tabs <- hide.tabs[1]
-      #show.tabs <- c("inf") # 'info' tab that loads when no data is loaded currently
     }
     
     # hide all the tabs to begin with
@@ -619,13 +634,12 @@ mode = complete')
                      session = session)
     }
     
-    i=1
+    i = 1
     # show the relevant tabs
     for(tab in show.tabs){
       shiny::showTab(inputId = unlist(tab)[1], 
                      unlist(tab)[2], session = session, 
                      select = ifelse(i==1, TRUE, FALSE))
-      #showTab(inputId = "statistics", tab, select = ifelse(i==1, TRUE, FALSE), session = session)
       i = i + 1
     }
     
@@ -714,6 +728,7 @@ mode = complete')
   
   shiny::observeEvent(input$statistics, {
     if(!is.null(mSet)){
+      print(input$statistics)
       # check if an mset is present, otherwise abort
       switch(input$statistics,
              dimred = {
@@ -725,6 +740,7 @@ mode = complete')
                }
              },permz = {
                if(!is.null(input$permz)){
+                 print(input$permz)
                  if(input$permz %not in% names(mSet$analSet)){
                    statsmanager$calculate <- input$permz
                  }
@@ -759,6 +775,7 @@ mode = complete')
   shiny::observeEvent(input$permz, {
     # check if an mset is present, otherwise abort
     if(!is.null(mSet)){
+      print(input$permz)
       # depending on the present tab, perform analyses accordingly
       if(input$permz %not in% names(mSet$analSet)){
         statsmanager$calculate <- input$permz
@@ -843,6 +860,16 @@ mode = complete')
     })
   })
   
+  # shiny::observeEvent(input$stats_type,{
+  #   if(!is.null(mSet)){
+  #     if(input$stats_type == "2f"){
+  #       shiny::updateSelectizeInput(session, "stats_var", options = list(maxItems = 2))
+  #     }else{
+  #       shiny::updateSelectizeInput(session, "stats_var", options = list(maxItems = 1))
+  #     }  
+  #   }
+  # })
+  
   shiny::observeEvent(input$load_mset, {
     # load mset
     shiny::withProgress({
@@ -868,6 +895,8 @@ mode = complete')
     debug_input <<- shiny::isolate(shiny::reactiveValuesToList(input))
     debug_lcl <<- lcl
     debug_mSet <<- mSet
+    debug_matches <<- shown_matches
+    debug_selection <<- my_selection
   })
   
   shiny::observeEvent(input$ml_train_ss, {

@@ -9,19 +9,26 @@ shiny::observe({
     if(!is.null(mSet)){
       switch(datamanager$reload,
              general = {
-               # change interface
-               if(mSet$dataSet$cls.num <= 1){
-                 interface$mode <- NULL }
-               else if(mSet$dataSet$cls.num == 2){
-                 interface$mode <- "bivar"}
-               else{
-                 interface$mode <- "multivar"}
                # reload sidebar
                output$curr_name <- renderText({mSet$dataSet$cls.name})
+               
                # reload pca, plsda, ml(make datamanager do that)
                # update select input bars with current variable and covariables defined in excel
+               if(is.null(mSet)){
+                 interface$mode <- NULL
+               }else{
+                 if(is.null(mSet$dataSet$exp.type)){
+                   mSet$dataSet$exp.type <<- "1f"
+                 }  
+                 interface$mode <<- mSet$dataSet$exp.type
+               }
+
+               shiny::updateSelectInput(session, "stats_type", 
+                                        selected = mSet$dataSet$exp.type) 
                shiny::updateSelectInput(session, "stats_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
-               shiny::updateSelectInput(session, "shape_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
+               shiny::updateSelectInput(session, "time_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
+               shiny::updateSelectInput(session, "shape_var", 
+                                        choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
                shiny::updateSelectInput(session, "col_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
                shiny::updateSelectInput(session, "txt_var", selected = "sample", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
                shiny::updateSelectInput(session, "subset_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
@@ -29,45 +36,26 @@ shiny::observe({
                                  choices = c(colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "animal_internal_id"))]))
                
                output$curr_name <- renderText({mSet$dataSet$cls.name})
-               # if _T in sample names, data is time series. This makes the time series swap button visible.
-               if(all(grepl(pattern = "_T\\d", x = rownames(mSet$dataSet$norm)))){
-                 timebutton$status <- "on"
-               }else{
-                 timebutton$status <- "off"
-               }
-
-               if(interface$mode == 'bivar'){
-                 if("tt" %in% names(mSet$analSet)){
-                   if("V" %in% colnames(mSet$analSet$tt$sig.mat)){
-                     shiny::updateCheckboxInput(session, "tt_nonpar", value = T)
+               
+               if(interface$mode == '1f'){
+                 if(mSet$dataSet$cls.num == 2){
+                   if("tt" %in% names(mSet$analSet)){
+                     if("V" %in% colnames(mSet$analSet$tt$sig.mat)){
+                       shiny::updateCheckboxInput(session, "tt_nonpar", value = T)
+                     }else{
+                       shiny::updateCheckboxInput(session, "tt_nonpar", value = F)
+                     }
                    }else{
                      shiny::updateCheckboxInput(session, "tt_nonpar", value = F)
-                   }
-                 }else{
-                   shiny::updateCheckboxInput(session, "tt_nonpar", value = F)
+                   }  
                  }
                }
-
-               # show a button with t-test or fold-change analysis if data is bivariate. hide otherwise.
-               # TODO: add button for anova/other type of sorting...
-               if(mSet$dataSet$cls.num == 2 ){
-                 heatbutton$status <- "ttfc"
-               }else{
-                 heatbutton$status <- NULL
-               }
-               # tab loading
-               if(mSet$dataSet$cls.num <= 1){
-                 interface$mode <- NULL }
-               else if(mSet$dataSet$cls.num == 2){
-                 interface$mode <- "bivar"}
-               else{
-                 interface$mode <- "multivar"}
                
-                 if(mSet$metshiParams$prematched){
-                   search_button$on <<- FALSE
-                 }else{
-                   search_button$on <<- TRUE
-                 }
+               if(mSet$metshiParams$prematched){
+                   search_button$on <- FALSE
+                }else{
+                   search_button$on <- TRUE
+                }
              },
              venn = {
                if("storage" %in% names(mSet)){
@@ -115,46 +103,31 @@ shiny::observe({
                }
              },
              aov = {
-               if(!is.null(input$timecourse_trigger)){
-                 present = switch(input$timecourse_trigger,
-                                  {"aov2" %in% names(mSet$analSet)},
-                                  {"aov" %in% names(mSet$analSet)})
-                 if(present){
-                   if(input$timecourse_trigger){ # send time series anova to normal anova storage
-                     which.anova <- "aov2"
-                     keep <- grepl("adj\\.p", colnames(mSet$analSet$aov2$sig.mat))
-                   }else{
-                     which.anova = "aov"
-                     keep <- c("p.value", "FDR", "Fisher's LSD")
-                   }
-                 }
-               }else{
-                 present = "aov" %in% names(mSet$analSet)
-                 if(present){
-                   which.anova = "aov"
-                   keep <- c("p.value", "FDR", "Fisher's LSD")
-                 }
-               }
-
-               if(present){
-                 # render results table for UI
+               which_aov = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
+               
+               if(which_aov %in% names(mSet$analSet)){
+                 
+                 keep <- switch(which_aov,
+                                aov = c("p.value", "FDR", "Fisher's LSD"),
+                                aov2 = grepl("adj\\.p", colnames(mSet$analSet$aov2$sig.mat)))
+                 
                  output$aov_tab <- DT::renderDataTable({
-                   DT::datatable(if(is.null(mSet$analSet[[which.anova]]$sig.mat)){
+                   DT::datatable(if(is.null(mSet$analSet[[which_aov]]$sig.mat)){
                      data.table::data.table("No significant hits found")
-                   }else{mSet$analSet[[which.anova]]$sig.mat[,keep]
+                   }else{mSet$analSet[[which_aov]]$sig.mat[,keep]
                    },
                    selection = 'single',
                    autoHideNavigation = T,
                    options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
                  })
-
+                 
                  # render manhattan-like plot for UI
                  output$aov_overview_plot <- plotly::renderPlotly({
                    # --- ggplot ---
                    MetaboShiny::ggPlotAOV(mSet,
-                             cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 20,
-                             plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                             plotlyfy=TRUE,font = lcl$aes$font)
+                                          cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 20,
+                                          plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                                          plotlyfy=TRUE, font = lcl$aes$font)
                  })
                }
              },
@@ -229,15 +202,12 @@ shiny::observe({
                                font = lcl$aes$font)
                  })
                  # chekc which mode we're in
-                 mode <- if("timecourse_trigger" %in% names(req(input))){
-                   if(input$timecourse_trigger){ # if time series mode
+                 mode <- if(mSet$dataSet$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
                      "ipca" # interactive PCA (old name, i like tpca more :P )
                    }else{
                      "pca" # normal pca
                    }
-                 }else{
-                   "pca"
-                 }
+                 
 
                  if(input$pca_2d3d){ # check if switch button is in 2d or 3d mode
                    # render 2d plot
@@ -245,7 +215,7 @@ shiny::observe({
                      plotPCA.2d(mSet, lcl$aes$mycols,
                                 pcx = input$pca_x,
                                 pcy = input$pca_y, mode = mode,
-                                shape.fac = input$second_var,
+                                shape.fac = input$shape_var,
                                 plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                 plotlyfy=TRUE,
                                 font = lcl$aes$font
@@ -258,7 +228,7 @@ shiny::observe({
                                 pcx = input$pca_x,
                                 pcy = input$pca_y,
                                 pcz = input$pca_z, mode = mode,
-                                shape.fac = input$second_var,
+                                shape.fac = input$shape_var,
                                 font = lcl$aes$font)
                    })
                  }
@@ -407,7 +377,6 @@ shiny::observe({
                if(is.null(res)){
                  res <<- data.table::data.table("No significant hits found")
                  mSet$analSet$tt <<- NULL
-
                }
                # set buttons to proper thingy
                # render results table for UI
@@ -502,7 +471,7 @@ shiny::observe({
                      }
                    })
                    # save the order of mzs for later clicking functionality
-                   lcl$vectors$heatmap <<- hmap$x$layout[[if(mSet$timeseries) "yaxis2" else "yaxis3"]]$ticktext 
+                   lcl$vectors$heatmap <<- hmap$x$layout[[if(mSet$dataSet$exp.type %in% c("2f", "t", "t1f")) "yaxis2" else "yaxis3"]]$ticktext 
                     # return
                    hmap
                  }else{
@@ -576,8 +545,6 @@ shiny::observe({
              }}
              )
     }
-
-    # - - - -
     datamanager$reload <- NULL # set reloading to 'off'
   }
 })

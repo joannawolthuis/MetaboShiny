@@ -1,38 +1,3 @@
-# set default timemode switcher button mode to hidden
-timebutton <- shiny::reactiveValues(status = "off")
-
-shiny::observe({
-  if(!is.null(mSet)){
-    print(mSet$timeseries)
-    if(is.null(mSet$timeseries)) mSet$timeseries <<- FALSE
-    datamanager$reload <- "general"
-  }else{
-    # hide time series button
-    timebutton$status <- "off"
-    heatbutton$status <- "asmb"
-  }
-})
-
-shiny::observe({
-  if(timebutton$status == "off") shiny::updateCheckboxInput(session, "timecourse_trigger", label = NULL, value = FALSE)
-})
-
-# render time series swap button
-output$timebutton <- shiny::renderUI({
-  if (is.null(timebutton$status)) {
-    input$timecourse_trigger <- FALSE
-  } else{
-    switch(timebutton$status,
-           off = NULL,
-           on = switchButton(inputId = "timecourse_trigger", # this is used to trigger time series dataswap
-                             label = "Toggle time course mode?",
-                             value = mSet$timeseries,
-                             col = "BW",
-                             type = "YN"))
-  }
-})
-
-
 shiny::observeEvent(input$timecourse_trigger, {
 
   if(!("storage" %in% names(mSet))){

@@ -8,6 +8,8 @@ shiny::observe({
     NULL # if not reloading anything, nevermind
 
   }else{
+    
+    print(statsmanager$calculate)
 
     if(!is.null(mSet)){
 
@@ -42,78 +44,59 @@ shiny::observe({
 
                mSet$analSet$heatmap <<- NULL
 
+               if(!(input$heattable %in% names(mSet$analSet))) return(NULL)
+               switch(input$heattable,
+                             tt={
+                               decreasing <- F
+                               if(input$heatsign){
+                                 tbl=as.data.frame(mSet$analSet$tt$sig.mat)
+                                 sigvals = (tbl$p.value)
+                               }else{
+                                 tbl = as.data.frame(mSet$analSet$tt$p.value)
+                                 sigvals = tbl[,1]
+                               }
+                             },
+                             fc={
+                               decreasing <- T
+                               
+                               if(input$heatsign){
+                                 tbl <- as.data.frame(mSet$analSet$fc$sig.mat)
+                                 sigvals=abs(tbl$`log2(FC)`)
+                               }else{
+                                 tbl = as.data.frame(abs(mSet$analSet$fc$fc.log))
+                                 sigvals = tbl[,1]
+                               }
+                             },
+                             aov= {
+                               decreasing=F
+                               tbl=as.data.frame(mSet$analSet$aov$sig.mat)
+                               sigvals = tbl$p.value
+                             },
+                             aov2={
+                               decreasing=F
+                               tbl = as.data.frame(mSet$analSet$aov2$sig.mat)
+                               sigvals = tbl$`Interaction(adj.p)`
+                             },
+                             asca={
+                               decreasing=T
+                               tbl = as.data.frame(mSet$analSet$asca$sig.list$Model.ab)
+                               sigvals = tbl$Leverage
+                             },
+                             meba={
+                               decreasing=T
+                               tbl = as.data.frame(mSet$analSet$MB$stats)
+                               sigvals = tbl$`Hotelling-T2`
+                             })
                # change top hits used in heatmap depending on time series / bivariate / multivariate mode
                # reordering of hits according to most significant at the top
-               if(interface$mode == "bivar"){
-
-                 if(!is.null(input$heatmode)){
-
-                   if(input$heatmode){
-
-                     if("tt" %in% names(mSet$analSet)){
-                       if(input$heatsign){
-                         tbl <- shiny::req(as.data.frame(mSet$analSet$tt$sig.mat))
-                       }else{
-                         tbl <- data.frame('p.value' = mSet$analSet$tt$p.value)
-                       }
-
-                       used.values <- "p.value"
-
-                       decreasing <- F
-
-                     }else{
-
-                       NULL
-
-                     }
-
-
-                   }else{
-
-                     if("fc" %in% names(mSet$analSet)){
-                       
-                       if(input$heatsign){
-                         tbl <- req(as.data.frame(mSet$analSet$fc$sig.mat))
-                         tbl$abs_log2 <- abs(tbl$`log2(FC)`)
-                       }else{
-                         tbl <- data.frame("abs_log2" = abs(mSet$analSet$fc$fc.log))
-                       }
-
-                       used.values <- "abs_log2"
-                       decreasing <- T
-                     }else{
-                       NULL
-                     }
-
-                   }
-                 }
-               }else if(interface$mode == "multivar"){
-
-                 tbl <- as.data.frame(mSet$analSet$aov$sig.mat)
-                 used.values <- "p.value"
-                 decreasing <- F
-
-               }else{
-                 if(!is.null(input$heatmode)){
-                   
-                 if(input$heatmode){
-                   tbl <- as.data.frame(mSet$analSet$asca$sig.list$Model.ab)
-                   used.values <- "Leverage"
-                 }else{
-                   tbl <- as.data.frame(mSet$analSet$MB$stats)
-                   used.values <- "Hotelling-T2"
-                 }
-                 decreasing = T
-                 }
-                 }
-
-               if(!exists("tbl")) return(NULL)
-               if(is.null(tbl)) return(NULL)
-               if(nrow(tbl) == 0 ) return(NULL)
+            
+               if(!exists("sigvals")) return(NULL)
+               if(is.null(sigvals)) return(NULL)
+               if(length(sigvals) == 0 ) return(NULL)
 
                #check top x used (slider bar in UI), if more than total matches use total matches
-               topn = if(length(tbl[[used.values]]) < input$heatmap_topn) length(tbl[[used.values]]) else input$heatmap_topn
-               mzorder <- order(tbl[[used.values]], decreasing = decreasing)
+               topn = if(length(sigvals) < input$heatmap_topn) length(sigvals) else input$heatmap_topn
+               mzorder <- order(sigvals, decreasing = decreasing)
                mzsel <- rownames(tbl)[mzorder]#[1:topn]
 
                # reorder matrix used
@@ -123,16 +106,15 @@ shiny::observe({
                # check if the sample order is correct - mSet$..$ norm needs to match the matrix
                sample_order <- match(colnames(final_matrix), rownames(mSet$dataSet$norm))
 
-               if(timebutton$status == "on"){ # check if time series
-                 if(input$timecourse_trigger){
+               if(mSet$dataSet$exp.type %in% c("2f", "t1f", "t")){
 
                    # create convenient table with the ncessary info
-                   translator <- data.table::data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],Group=mSet$dataSet$exp.fac[sample_order], Time=mSet$dataSet$time.fac[sample_order])
-                   hmap.lvls <- c(levels(mSet$dataSet$exp.fac), levels(mSet$dataSet$time.fac))
+                   translator <- data.table::data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],GroupA=mSet$dataSet$facA[sample_order], GroupB=mSet$dataSet$facB[sample_order])
+                   hmap.lvls <- c(levels(mSet$dataSet$facA), levels(mSet$dataSet$facB))
 
                    # reorder first by time, then by sample
-                   split.translator <- split(translator, by = c("Time"))
-                   split.translator.ordered <- lapply(split.translator, function(tbl) tbl[order(tbl$Group)])
+                   split.translator <- split(translator, by = c("GroupB"))
+                   split.translator.ordered <- lapply(split.translator, function(tbl) tbl[order(tbl$GroupA)])
                    translator <- data.table::rbindlist(split.translator.ordered)
 
                    # ensure correct sample order
@@ -141,13 +123,6 @@ shiny::observe({
                    # disable automatic ordering of samples through clustering
                    my_order=F
 
-                 }else{
-                   # no complicated reordering necessary
-                   translator <- data.table::data.table(Sample=as.character(rownames(mSet$dataSet$norm))[sample_order],
-                                                        Group=mSet$dataSet$cls[sample_order])
-                   hmap.lvls <- levels(mSet$dataSet$cls)
-                   my_order = T # enable sorting through dendrogram
-                 }
                }else{
                  # no complicated reordering necessary
                  translator <- data.table::data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],
@@ -191,25 +166,16 @@ shiny::observe({
              },
              aov = {
                
-               if(!is.null(input$timecourse_trigger)){
-                 redo = switch(input$timecourse_trigger,
-                               {"aov2" %not in% names(mSet$analSet)},
-                               {"aov" %not in% names(mSet$analSet)})
-               }else{
-                 redo = "aov" %not in% names(mSet$analSet)
-               }
-
+              aovtype = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
+              redo = aovtype %not in% names(mSet$analSet)
+               
                if(redo){ # if done, don't redo
                  shiny::withProgress({
-                   if(!is.null(input$timecourse_trigger)){
-                     mSet <<- if(input$timecourse_trigger){
-                       MetaboAnalystR::ANOVA2.Anal(mSet, 0.05, "fdr", "time", 3, 1)
-                     }else{
-                       MetaboAnalystR::ANOVA.Anal(mSet, thresh=0.05,nonpar = F)
-                     }
-                   }else{
-                     mSet <<- MetaboAnalystR::ANOVA.Anal(mSet, thresh=0.05,nonpar = F)
-                   }
+                   mSet <<- switch(mSet$dataSet$exp.type,
+                                   "1f"=MetaboAnalystR::ANOVA.Anal(mSet, thresh=0.05,nonpar = F),
+                                   "2f"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.05, "fdr", "", 1, 1),
+                                   "t"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.05, "fdr", "time0", 1, 1),
+                                   "t1f"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.05, "fdr", "time", 3, 1))
                  })
                }
              },

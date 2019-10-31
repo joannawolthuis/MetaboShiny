@@ -328,7 +328,8 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                             ),
                                                                                                                                                             shiny::fluidRow(shiny::column(align="center",
                                                                                                                                                                                           width=12,
-                                                                                                                                                                                          shiny::uiOutput("heatbutton"),
+                                                                                                                                                                                          #shiny::uiOutput("heatbutton"),
+                                                                                                                                                                                          shiny::selectInput("heattable", label = "Use statistics from:", choices = c(), selected = c()),
                                                                                                                                                                                           MetaboShiny::switchButton("heatsign", label = "Only significant hits?", col = "GB", type = "YN"),
                                                                                                                                                                                           MetaboShiny::switchButton("heatlimits", label = "Color based on -all- metabolites?", col = "GB", type = "YN")
                                                                                                                                                             ))
@@ -548,7 +549,6 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                                                       shiny::tabPanel(title=shiny::icon("atlas"),
                                                                                                                                                                                                                                       wellPanel(id = "def",style = "overflow-y:scroll; max-height: 200px",
                                                                                                                                                                                                                                                 shiny::uiOutput("desc_ui")
-                                                                                                                                                                                                                                                #shiny::textOutput("curr_definition")
                                                                                                                                                                                                                                       )
                                                                                                                                                                                                                       ),
                                                                                                                                                                                                                       shiny::tabPanel(title=shiny::icon("atom"),
@@ -690,9 +690,22 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                border-bottom: 1px solid #DFDCDC;"))
                                                                                                                    ,shiny::hr()
                                                                                                                    ,shiny::h2("Change variable of interest")
-                                                                                                                   ,shiny::selectInput("stats_var", label="Do statistics on:", choices = c("label"))
+                                                                                                                   ,shiny::selectizeInput("stats_type", label = "Normal, two-factor or time series?", 
+                                                                                                                                        choices = list("one factor"="1f", 
+                                                                                                                                                       "two factors"="2f",
+                                                                                                                                                       "time series"="t",
+                                                                                                                                                       "time series + one factor"="t1f"),
+                                                                                                                                        selected = "1f")
+                                                                                                                   ,shiny::conditionalPanel("input.stats_type != 't'",
+                                                                                                                                            shiny::selectizeInput("stats_var", 
+                                                                                                                                                                  label="Experimental factor(s):", 
+                                                                                                                                                                  choices = c("label"), multiple=T)
+                                                                                                                   )
+                                                                                                                   ,shiny::conditionalPanel("input.stats_type == 't' || input.stats_type == 't1f'",
+                                                                                                                                            shiny::selectizeInput("time_var", 
+                                                                                                                                                               label="Time series variable:", 
+                                                                                                                                                               choices = c("label")))
                                                                                                                    ,shinyWidgets::circleButton("change_cls", icon = shiny::icon("hand-pointer-o"), size = "sm")
-                                                                                                                   ,shiny::fluidRow(shiny::column(12, align="center", shiny::uiOutput("timebutton")))
                                                                                                                    ,shiny::hr()
                                                                                                                    ,shiny::h2("Subset data")
                                                                                                                    ,shiny::selectInput("subset_var", label="Subset data based on:", choices = c("label"))
