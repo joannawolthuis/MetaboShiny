@@ -230,6 +230,8 @@ lapply(c(gbl$vectors$db_list), FUN=function(db){
         # check if custom
         if(!(db %in% gbl$vectors$db_list)){
           custom = TRUE
+        }else{
+          custom = FALSE
         }
         # - - - - - - - -
         MetaDBparse::buildBaseDB(dbname = db,
