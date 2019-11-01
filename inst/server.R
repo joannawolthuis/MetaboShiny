@@ -594,7 +594,6 @@ mode = complete')
       list("permz", "fc"),#12
       list("dimred", "tsne")#13
     )
-    print(interface$mode)
     # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
     # then show the relevent tabs
     # TODO: enable multivariate time series analysis
@@ -728,7 +727,6 @@ mode = complete')
   
   shiny::observeEvent(input$statistics, {
     if(!is.null(mSet)){
-      print(input$statistics)
       # check if an mset is present, otherwise abort
       switch(input$statistics,
              dimred = {
@@ -871,6 +869,7 @@ mode = complete')
   # })
   
   shiny::observeEvent(input$load_mset, {
+    print("loading mset...")
     # load mset
     shiny::withProgress({
       fn <- paste0(tools::file_path_sans_ext(lcl$paths$patdb), ".metshi")

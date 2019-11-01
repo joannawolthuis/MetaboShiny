@@ -65,9 +65,17 @@ observeEvent(input$do_ml, {
     config <- config[,input$ml_include_covars,with=F]# reorder so both halves match up later
     if(mSet$dataSet$exp.type %in% c("2f", "t1f")){
       # just set to facA for now..
-      config <- cbind(config, label=mSet$dataSet$facA[order]) # add current experimental condition
+      if(nrow(config)==0){
+        config <- data.frame(label=mSet$dataSet$facA[order])
+      }else{
+        config <- cbind(config, label=mSet$dataSet$facA[order]) # add current experimental condition
+      }
     }else{
-      config <- cbind(config, label=mSet$dataSet$cls[order]) # add current experimental condition
+      if(nrow(config)==0){
+        config <- data.frame(label=mSet$dataSet$cls[order])
+      }else{
+        config <- cbind(config, label=mSet$dataSet$cls[order]) # add current experimental condition
+      }
     }
     config <- config[,apply(!is.na(config), 2, any), with=FALSE]
     

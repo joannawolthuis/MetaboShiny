@@ -231,8 +231,6 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
 
   profile <- MetaboShiny::getProfile(mSet, cpd, mode=if(mode == "nm") "stat" else "multi")
  
-  print(head(profile))
-  
   df_line <- data.table::data.table(x = c(1,2),
                         y = rep(min(profile$Abundance - 0.1),2))
   stars = ""
@@ -274,26 +272,28 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
   
   for(prof in profiles){
     
+    print(prof)
+    
     for(style in styles){
       
       switch(mode,
              nm = {
-               p <- p + switch(style,
-                               box = ggplot2::geom_boxplot(data = prof, alpha=0.4, aes(x = Group,
+               p <- switch(style,
+                               box = p+ggplot2::geom_boxplot(data = prof, alpha=0.4, aes(x = Group,
                                                                                        y = Abundance,
                                                                                        text = Text,
                                                                                        color = Group,
                                                                                        fill = Group)),
-                               violin = ggplot2::geom_violin(data = prof, alpha=0.4, position = "identity", aes(x = Group,
+                               violin = p+ggplot2::geom_violin(data = prof, alpha=0.4, position = "identity", aes(x = Group,
                                                                                                                 y = Abundance,
                                                                                                                 color = Group,
                                                                                                                 fill = Group)),
-                               beeswarm = ggbeeswarm::geom_beeswarm(data = prof, alpha=0.7, size = 2, position = position_dodge(width=.3), aes(x = Group,
+                               beeswarm = p+ggbeeswarm::geom_beeswarm(data = prof, alpha=0.7, size = 2, position = position_dodge(width=.3), aes(x = Group,
                                                                                                                                                y = Abundance,
                                                                                                                                                text= Text,
                                                                                                                                                color = Group,
                                                                                                                                                fill = Color)),
-                               scatter = ggplot2::geom_point(data = prof, alpha=0.7, size = 2, aes(x = Group,
+                               scatter = p+ggplot2::geom_point(data = prof, alpha=0.7, size = 2, aes(x = Group,
                                                                                                    y = Abundance,
                                                                                                    text=Text,
                                                                                                    color = Group,
@@ -301,33 +301,34 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                )
              },
              multi = {
-               p <- p + switch(style,
-                               box = ggplot2::geom_boxplot(data = prof, alpha=0.4, aes(x = GroupB,
+               p <- switch(style,
+                               box = p+ggplot2::geom_boxplot(data = prof, alpha=0.4, aes(x = GroupB,
                                                                                        y = Abundance,
                                                                                        text = Text,
                                                                                        color = GroupA,
                                                                                        fill = GroupA)),
-                               violin = ggplot2::geom_violin(data = prof, alpha=0.4, position = "identity", aes(x = GroupB,
+                               violin = p+ggplot2::geom_violin(data = prof, alpha=0.4, position = "identity", aes(x = GroupB,
                                                                                                                 y = Abundance,
                                                                                                                 group = GroupB,
                                                                                                                 text = Text,
                                                                                                                 color = GroupA,
                                                                                                                 fill = GroupA)),
-                               beeswarm = ggbeeswarm::geom_beeswarm(data = prof, alpha=0.7, size = 2, position = position_dodge(width=.3), aes(x = GroupB,
+                               beeswarm = p+ggbeeswarm::geom_beeswarm(data = prof, alpha=0.7, size = 2, position = position_dodge(width=.3), aes(x = GroupB,
                                                                                                                                                y = Abundance,
                                                                                                                                                text=Text,
                                                                                                                                                color = GroupA,
                                                                                                                                                fill = GroupA)),
-                               scatter = ggplot2::geom_point(data = prof, alpha=0.7, size = 2, position = position_jitterdodge(), aes(x = GroupB,
+                               scatter = p+ggplot2::geom_point(data = prof, alpha=0.7, size = 2, position = position_jitterdodge(), aes(x = GroupB,
                                                                                                                                       y = Abundance,
                                                                                                                                       text=Text,
                                                                                                                                       color = GroupA,
                                                                                                                                       fill = GroupA))
                )
              })
-      
+
     }
     
+    print(head(profile))
     p <- p + theme(legend.position="none",
                    plot.title = element_text(hjust = 0.5),
                    axis.text=element_text(size=font$ax.num.size),
@@ -1359,37 +1360,4 @@ ggPlotWordBar <- function(wcdata, plot.theme, cf, font, plotlyfy=T){
   }else{
     g
   }
-}
-
-export_plotly = function(p=last_plot(), file = "plot.png", 
-                         format = tools::file_ext(file),
-                         scale = NULL, width = NULL, height = NULL, port=9091) {
-  bod <- list(figure = plotly_build(p)$x[c("data", 
-                                           "layout")], 
-              format = format,
-              width = width, 
-              height = height,
-              scale = scale)
-  res <- httr::POST(paste0("http://127.0.0.1:", port), 
-                    body = plotly:::to_JSON(bod))
-  httr::stop_for_status(res)
-  httr::warn_for_status(res)
-  con <- httr::content(res, as = "raw")
-  writeBin(con, file)
-}
-
-export_plotly_2 <- function (p, file = "plot.png", format = tools::file_ext(file), 
-                             scale = NULL, width = 300, height = 300,port) 
-{
-  b <- plotly::plotly_build(p)
-  bod = plotly:::to_JSON(b$x[c("data", "layout")])
-  
-  # - - - -
-  
-  res <- httr::POST(paste0("http://127.0.0.1:", port), 
-                    body = plotly:::to_JSON(bod))
-  httr::stop_for_status(res)
-  httr::warn_for_status(res)
-  con <- httr::content(res, as = "raw")
-  writeBin(con, file)
 }
