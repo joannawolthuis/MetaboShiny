@@ -59,57 +59,47 @@ observeEvent(input$do_ml, {
     curr <- curr[!is.qc,]
     
     # reorder according to covars table (will be used soon)
-    if(!is.null(input$timecourse_trigger)){
-      if(input$timecourse_trigger){
-        config <- unique(mSet$dataSet$covars[, c("sample",
-                                                 "sex")]) # reorder so both halves match up later
-        config$sample <- gsub(x = config$sample, pattern = "_T\\d", replacement = "")
-        config <- unique(config)
-        order <- match(config$sample,rownames(curr))
-        config <- cbind(config[order,], label=mSet$dataSet$cls[order]) # add current experimental condition
-        config <- config[,apply(!is.na(config), 2, any), with=FALSE]
-      }else{
-        order <- match(mSet$dataSet$covars$sample,rownames(curr))
-        config <- mSet$dataSet$covars[order, -"label"] # reorder so both halves match up later
-        config <- cbind(config, label=mSet$dataSet$cls[order]) # add current experimental condition
-        config <- config[,apply(!is.na(config), 2, any), with=FALSE]
-      }
+    
+    order <- match(mSet$dataSet$covars$sample,rownames(curr))
+    config <- mSet$dataSet$covars[order, -"label"]
+    config <- config[,input$ml_include_covars,with=F]# reorder so both halves match up later
+    if(mSet$dataSet$exp.type %in% c("2f", "t1f")){
+      # just set to facA for now..
+      config <- cbind(config, label=mSet$dataSet$facA[order]) # add current experimental condition
     }else{
-      order <- match(mSet$dataSet$covars$sample,rownames(curr))
-      config <- mSet$dataSet$covars[order, -"label"] # reorder so both halves match up later
       config <- cbind(config, label=mSet$dataSet$cls[order]) # add current experimental condition
-      config <- config[,apply(!is.na(config), 2, any), with=FALSE]
     }
+    config <- config[,apply(!is.na(config), 2, any), with=FALSE]
     
     predictor = config$label
     predict_idx <- which(colnames(config)== "label")
     exact_matches <- which(unlist(lapply(config, function(col) all(col == predictor))))
     remove = setdiff(exact_matches, predict_idx)
     
-    covariates = config[,-..remove]
-    
     # remove ones w/ every row being different(may be used to identify...)
-    # covariates <- lapply(1:ncol(config), function(i) as.factor(config[,..i][[1]]))
-    # names(covariates) <- colnames(config)
+    #covariates <- lapply(1:ncol(config), function(i) as.factor(config[,..i][[1]]))
+    #names(covariates) <- colnames(config)
     
     # # remove ones with na present
-    has.na <- apply(covariates, MARGIN=2, FUN=function(x) any(is.na(x) | tolower(x) == "unknown"))
-    has.all.unique <- apply(covariates, MARGIN=2, FUN=function(x) length(unique(x)) == length(x))
-    remove = colnames(covariates)[which(has.na | has.all.unique)]
+    has.na <- apply(config, MARGIN=2, FUN=function(x) any(is.na(x) | tolower(x) == "unknown"))
+    has.all.unique <- apply(config, MARGIN=2, FUN=function(x) length(unique(x)) == length(x))
+    remove = colnames(config)[which(has.na | has.all.unique)]
     
     #keep_configs <- which(names(config) == "label")
-    remove <- unique(c(remove, input$ml_exclude_covars, "sample",  "animal_internal_id", colnames(covariates)[caret::nearZeroVar(covariates)]))
+    remove <- unique(c(remove, "sample",  
+                       "individual", 
+                       colnames(config)[caret::nearZeroVar(config)]))
     
-    keep_configs <- which(!(colnames(covariates) %in% remove))
+    keep_configs <- which(!(colnames(config) %in% remove))
     
-    print("Removing covariates and unique columns. Keeping non-mz variables:")
-    print(names(covariates)[keep_configs])
+    print("Keeping non-mz variables after NA/unique filtering:")
+    print(names(config)[keep_configs])
     
-    covariates <- covariates[,..keep_configs,with=F]
+    config <- config[,..keep_configs,with=F]
     
     # rename the variable of interest to 0-1-2 etc.
     
-    char.lbl <- as.character(covariates$label)
+    char.lbl <- as.character(config$label)
     uniques <- unique(char.lbl)
     uniques_new_name <- c(1:length(uniques))
     names(uniques_new_name) = uniques
@@ -119,15 +109,9 @@ observeEvent(input$do_ml, {
     # - - - - - - - - - - - - - - - - - - - - - - -
     
     # join halves together, user variables and metabolite data
-    curr <- cbind(covariates, curr)
+    curr <- cbind(config, curr)
     curr <- data.table::as.data.table(curr)
-    
-    # # remove cols with all NA
-    # curr <- curr[,colSums(is.na(curr)) < nrow(curr), with=FALSE]
-    # 
-    # # remove rows with all NA
-    # curr <- curr[,rowSums(is.na(curr)) < ncol(curr), with=FALSE]
-    
+
     # how many models will be built? user input
     goes = as.numeric(input$ml_attempts)
     

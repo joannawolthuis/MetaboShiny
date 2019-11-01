@@ -238,6 +238,7 @@ vectors = list(
     "chebi",
     "kegg",
     "metacyc",
+    #"dsstox",
     #"wikipathways",
     "smpdb",
     "dimedb",

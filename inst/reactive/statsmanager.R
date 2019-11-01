@@ -32,12 +32,13 @@ shiny::observe({
 
              },
              asca = {
-               # perform asca analysis
-               shiny::withProgress({
-                 mSet <<- MetaboAnalystR::Perform.ASCA(mSet, 1, 1, 2, 2)
-                 mSet <<- MetaboAnalystR::CalculateImpVarCutoff(mSet, 0.05, 0.9)
+               try({
+                 # perform asca analysis
+                 shiny::withProgress({
+                   mSet <<- MetaboAnalystR::Perform.ASCA(mSet, 1, 1, 2, 2)
+                   mSet <<- MetaboAnalystR::CalculateImpVarCutoff(mSet, 0.05, 0.9)
+                 })
                })
-
              },
              heatmap = {
                # reset

@@ -393,8 +393,6 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
     }  
     p <- p + ggplot2::xlab(Hmisc::capitalize(gsub(x=mSet$dataSet$cls.name, pattern = ":.*$", replacement="")))
   }
- 
-
   # ---------------
   if(plotlyfy){
     plotly::ggplotly(p, tooltip = "Text")#, originalData=T)
