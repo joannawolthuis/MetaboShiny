@@ -8,16 +8,11 @@ build.pat.db <- function(db.name,
                          ppm=2,
                          inshiny=F){
 
-  # pospath="/Users/jwolthuis/Documents/Documents/xls/example_pos.csv"
-  # negpath="/Users/jwolthuis/Documents/Documents/xls/example_neg.csv"
-  
   ppm = as.numeric(ppm)
 
   
   poslist <- data.table::fread(pospath,header = T)
   neglist <- data.table::fread(negpath,header = T) 
-  
-  # ------------------------------------
   
   keepcols <- intersect(colnames(poslist), colnames(neglist))
   
@@ -27,21 +22,7 @@ build.pat.db <- function(db.name,
   # replace commas with dots
   poslist <- as.data.table(sapply(poslist, gsub, pattern = ",", replacement= "."))
   neglist <- as.data.table(sapply(neglist, gsub, pattern = ",", replacement= "."))
-  
-  # - - - fix QCs - - -
-  
-  # which.qc <- grep(colnames(poslist), pattern = "^QC")
-  # qc.i = 1
-  # 
-  # for(qc in which.qc){
-  #   new.qc.name <- paste0("QC", qc.i)
-  #   new.qc.name <- gsub(colnames(poslist)[qc], pattern = "(^QC[\\d|\\d\\d])", replacement = new.qc.name,perl = T)
-  #   colnames(poslist)[qc] <- new.qc.name
-  #   colnames(neglist)[qc] <- new.qc.name
-  #   # - - -
-  #   qc.i = qc.i + 1
-  # }
-  # - - - - - - - - - -
+
   if(inshiny) setProgress(.20)
   
   gc()
@@ -50,20 +31,6 @@ build.pat.db <- function(db.name,
                                    foundinmode = c(rep("positive", nrow(poslist)), rep("negative", nrow(neglist))))
   
   mzvals$foundinmode <- trimws(mzvals$foundinmode)
-  
-  # --- SAVE BATCH INFO (kinda ugly...  ; _;") ---
-  
-  # if(any(grepl("\\*", x = colnames(poslist)))){
-  #   samp_split = strsplit(colnames(poslist)[2:ncol(poslist)], "\\*")
-  #   batch_split = strsplit(unlist(lapply(samp_split, function(x) x[2])), "\\_")
-  #   batch_info = data.table::data.table(sample = sapply(samp_split, function(x) x[1]),
-  #                                       batch = sapply(samp_split, function(x) x[2]),
-  #                                       injection = sapply(samp_split, function(x) x[3]))
-  #   colnames(poslist) = gsub(colnames(poslist), pattern = "(\\*.*$)", replacement = "")
-  #   colnames(neglist) = gsub(colnames(poslist), pattern = "(\\*.*$)", replacement = "")
-  # } else{
-  #   batch_info = NULL
-  # }
   
   gc()
   
@@ -86,17 +53,7 @@ build.pat.db <- function(db.name,
 
   if(overwrite==TRUE & file.exists(db.name)) file.remove(db.name)
   
-  # --- reconnect / remake ---
-  
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), db.name)
-  
-  # ------------------------s
-  
-  # if(!is.null(batch_info)){
-  #   RSQLite::dbWriteTable(conn, "batchinfo", batch_info, overwrite=T) # insert into
-  # }
-  
-  # ------------------------
   
   sql.make.int <- strwrap("CREATE TABLE mzintensities(
                           ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -159,17 +116,24 @@ load.metadata.csv <- function(path.to.csv,
   tab <- data.table::fread(path.to.csv)
   colnames(tab) <- tolower(colnames(tab))
   
+  if(any(colnames(tab)=="sampling_date")){
+    if(any(is.na(as.numeric(tab$sampling_date)))){
+      tab$sampling_date <- as.factor(as.Date(as.character(tab$sampling_date),
+                                                         format = "%d-%m-%y"))
+    }else{
+      tab$sampling_date <- as.factor(as.Date(as.numeric(tab$sampling_date),
+                                                         origin = "1899-12-30"))
+    }
+    if(is.na(tab$sampling_date[1])) levels(tab$sampling_date) <- factor(1)
+  }
+  
   if(length(intersect(filenames[,1], tab$sample)) == 0){
-    stop("Mismatch between metadata sample names and file sample names. Aborting...")
+    stop("Complete mismatch between metadata sample names and file sample names. Aborting...")
   }
   
   colnames(tab) <- tolower(gsub(x=colnames(tab), pattern = "\\.$|\\.\\.$", replacement = ""))
   colnames(tab) <- gsub(x=colnames(tab), pattern = "\\.|\\.\\.| ", replacement = "_")
-  #colnames(tab)[grep(x=colnames(tab), pattern= "*date*")] <- "sampling_date"
   
-  setup <- data.table(group = as.character(unique(tab[,c("group")][[1]])))
-  
-  RSQLite::dbWriteTable(conn, "setup", setup, overwrite=TRUE) # insert into
   RSQLite::dbWriteTable(conn, "individual_data", tab, overwrite=TRUE) # insert into
   
   RSQLite::dbDisconnect(conn)
@@ -179,11 +143,8 @@ load.metadata.csv <- function(path.to.csv,
 load.metadata.excel <- function(path.to.xlsx,
                                 path.to.patdb,
                                 tabs.to.read = c(
-                                  #"General",
                                   "Setup",
                                   "Individual Data"
-                                  #,"Pen Data",
-                                  #"Admin"
                                 )){
   
   # --- connect to sqlite db ---
@@ -219,48 +180,23 @@ load.metadata.excel <- function(path.to.xlsx,
   
   # --------------------------
   
-  if(any(is.na(as.numeric(individual.data$sampling_date)))){
-    individual.data$sampling_date <- as.factor(as.Date(as.character(individual.data$sampling_date),
-                                                       format = "%d-%m-%y"))
-  }else{
-    individual.data$sampling_date <- as.factor(as.Date(as.numeric(individual.data$sampling_date),
-                                                       origin = "1899-12-30"))
-    
+  if(any(colnames(individual.data)=="sampling_date")){
+    if(any(is.na(as.numeric(individual.data$sampling_date)))){
+      individual.data$sampling_date <- as.factor(as.Date(as.character(individual.data$sampling_date),
+                                                         format = "%d-%m-%y"))
+    }else{
+      individual.data$sampling_date <- as.factor(as.Date(as.numeric(individual.data$sampling_date),
+                                                         origin = "1899-12-30"))
+    }
+    if(is.na(individual.data$sampling_date[1])) levels(individual.data$sampling_date) <- factor(1)
   }
   
-  individual.data$card_id <- as.character(individual.data$card_id)
-  individual.data$internal_id <- as.character(individual.data$internal_id)
-  
-  if(is.na(individual.data$sampling_date[1])) levels(individual.data$sampling_date) <- factor(1)
-  
+  individual.data$sample <- as.character(individual.data$sample)
+  individual.data$individual <- as.character(individual.data$individual)
+ 
   setup <- data.table::as.data.table(apply(setup, MARGIN=2, trimws))
   individual.data <- data.table::as.data.table(apply(individual.data, MARGIN=2, trimws))
-  
-  #general <- data.table::as.data.table(apply(general, MARGIN=2, trimws))
-  
-  # --- add the QC samples ---
-  
-  # qc_samps = RSQLite::dbGetQuery(conn, "SELECT * FROM batchinfo WHERE sample LIKE '%QC%'")
-  # 
-  # placeholder_date <- individual.data$sampling_date[[1]]
-  # 
-  # qc_ind_data <- lapply(qc_samps$sample, function(qc) {
-  #   data.table(label = c(1),
-  #              card_id = qc,
-  #              internal_id = qc,
-  #              sampling_date = placeholder_date,
-  #              sex = "qc",
-  #              group = "qc",
-  #              farm = "QcLand")
-  # })
-  # qc_tab_setup = data.table(group = "qc",
-  #                           stool_condition = "qc")
-  # qc_tab_ind = unique(rbindlist(qc_ind_data))
-  # 
-  # setup <- rbind(setup, qc_tab_setup, fill=TRUE)
-  # individual.data <- rbindlist(list(individual.data, qc_tab_ind), fill=TRUE)
-  # individual.data$label <- 1:nrow(individual.data)
-  
+
   # --- import to patient sql file ---
   RSQLite::dbWriteTable(conn, "setup", setup, overwrite=TRUE) # insert into
   RSQLite::dbWriteTable(conn, "individual_data", individual.data, overwrite=TRUE) # insert into
@@ -268,60 +204,3 @@ load.metadata.excel <- function(path.to.xlsx,
   RSQLite::dbDisconnect(conn)
 }
 
-db.build.custom <- function(db.name = "MyDb",
-                            db.short = "mydb",
-                            db.description = "Personal custom database.",
-                            db.icon = "www/questionmark.png",
-                            outfolder = getOptions(lcl$paths$opt.loc)$db_dir,
-                            csv){
-  
-  db.base = data.table::fread(csv)
-  
-  columns =  c("compoundname",
-               "description",
-               "baseformula",
-               "identifier",
-               "charge",
-               "structure")
-  
-  keep.columns <- intersect(columns,colnames(db.base))
-  
-  db.formatted <- db.base[, ..keep.columns]
-  
-  if(all(is.na(db.formatted$identifier))){
-    db.formatted$identifier <- c(1:nrow(db.formatted))
-  }
-  
-  # check the formulas
-  checked <- data.table::as.data.table(enviPat::check_chemform(isotopes,
-                                                               db.formatted$baseformula))
-  db.formatted$baseformula <- checked$new_formula
-  keep <- checked[warning == FALSE, which = TRUE]
-  db.formatted <- db.formatted[keep]
-  
-  # open db
-  outfolder <- file.path(outfolder, "custom")
-  if(!dir.exists(outfolder)) dir.create(outfolder)
-  
-  db <- file.path(outfolder, paste0(db.short, ".base.db"))
-  if(file.exists(db)) file.remove(db)
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), db)
-  RSQLite::dbExecute(conn, statement = "create table base(compoundname text, description text, baseformula text, identifier text, charge text, structure text)")
-  
-  # create folder for db
-  RSQLite::dbWriteTable(conn, "base", db.formatted, overwrite=TRUE)
-  RSQLite::dbDisconnect(conn)
-  
-  # write metadata to file.. json?
-  meta.dbpage =
-    list(title = db.name,
-         description = db.description,
-         image_id = paste0(db.short, "_icon"))
-  
-  meta.img =
-    list(name = paste0(db.short, "_icon"), path = db.icon, dimensions = c(200, 200))
-  
-  save(list = c("meta.img", 
-                "meta.dbpage"), 
-       file = file.path(outfolder, paste0(db.short, ".RData")))
-}

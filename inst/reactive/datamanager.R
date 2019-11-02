@@ -18,13 +18,14 @@ shiny::observe({
                  interface$mode <- NULL
                }else{
                  if(is.null(mSet$dataSet$exp.type)){
-                   mSet$dataSet$exp.type <<- "1f"
+                   mSet$dataSet$exp.type <<- "1fb" # one factor, binary class
                  }  
+                 print("updating interface...")
                  interface$mode <<- mSet$dataSet$exp.type
                }
 
                shiny::updateSelectInput(session, "stats_type", 
-                                        selected = mSet$dataSet$exp.type) 
+                                        selected = gsub(mSet$dataSet$exp.type, "^1f\\w", "1f")) 
                shiny::updateSelectInput(session, "stats_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
                shiny::updateSelectInput(session, "time_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
                shiny::updateSelectInput(session, "shape_var", 
@@ -36,21 +37,7 @@ shiny::observe({
                                  choices = c(colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "animal_internal_id"))]))
                
                output$curr_name <- renderText({mSet$dataSet$cls.name})
-               
-               if(interface$mode == '1f'){
-                 if(mSet$dataSet$cls.num == 2){
-                   if("tt" %in% names(mSet$analSet)){
-                     if("V" %in% colnames(mSet$analSet$tt$sig.mat)){
-                       shiny::updateCheckboxInput(session, "tt_nonpar", value = T)
-                     }else{
-                       shiny::updateCheckboxInput(session, "tt_nonpar", value = F)
-                     }
-                   }else{
-                     shiny::updateCheckboxInput(session, "tt_nonpar", value = F)
-                   }  
-                 }
-               }
-               
+        
                if(mSet$metshiParams$prematched){
                    search_button$on <- FALSE
                 }else{
@@ -148,7 +135,7 @@ shiny::observe({
                                selection = 'single',
                                autoHideNavigation = T,
                                options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-
+ 
                })
              },
              pca = {

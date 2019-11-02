@@ -272,8 +272,6 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
   
   for(prof in profiles){
     
-    print(prof)
-    
     for(style in styles){
       
       switch(mode,
@@ -328,7 +326,6 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
 
     }
     
-    print(head(profile))
     p <- p + theme(legend.position="none",
                    plot.title = element_text(hjust = 0.5),
                    axis.text=element_text(size=font$ax.num.size),
@@ -689,10 +686,14 @@ ggPlotROC <- function(data,
   cols = cf(attempts)
   
   p <- ggplot(perf.long, aes(FPR,TPR)) +
-    stat_summary_bin(aes(FPR, TPR), fun.y=mean, geom="line", colour="black", cex = 2) +
+    stat_summary_bin(alpha=.6,
+                     aes(FPR, TPR, 
+                         color=comparison, group=comparison), 
+                     fun.y=mean, geom="line", 
+                     cex = 1.2) +
     geom_path(alpha=.5,
               cex=.5,
-              aes(color = attempt, group = attempt)) +
+              aes(color = comparison, group = attempt)) +
     ggplot2::annotate("text",
                       label = paste0("Average AUC: ",
                                      format(mean.auc,
@@ -703,8 +704,12 @@ ggPlotROC <- function(data,
                       x = 0.77,
                       y = 0.03) +
     plot.theme(base_size = 10) +
-    ggplot2::scale_color_gradientn(colors = cols) +
-    theme(legend.position="none",
+    stat_summary_bin(aes(FPR, TPR), 
+                     fun.y=mean, color="black", 
+                     geom="line", cex = 2) +
+    
+    #ggplot2::scale_color_gradientn(colors = cols) +
+    theme(legend.position= if(mSet$dataSet$cls.num == 2) "none" else "right",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
           plot.title = element_text(hjust = 0.5),

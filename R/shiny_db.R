@@ -3,15 +3,6 @@ get_exp_vars <- function(from, patdb){
   RSQLite::dbGetQuery(conn, gsubfn::fn$paste("PRAGMA table_info($from)"))$name
 }
 
-get_times <- function(chosen.db){
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), chosen.db) # change this to proper var later
-  # --- browse ---
-  result <- RSQLite::dbGetQuery(conn, "SELECT DISTINCT sampling_date as Date FROM individual_data WHERE sampling_date != ''")
-  times <- as.numeric(as.factor(as.Date(result$Date)))
-  # --- result ---
-  times
-}
-
 #' @export
 browse_db <- function(chosen.db){
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), chosen.db) # change this to proper var later
@@ -31,7 +22,7 @@ get_prematches <- function(who = NA,
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
   
   firstpart = "SELECT DISTINCT
-               lower(name) as name,baseformula,adduct,
+               query_mz, lower(name) as name,baseformula,adduct,
                               fullformula,finalcharge,`%iso`,
                               dppm,
                description, map.structure as structure,
@@ -634,7 +625,7 @@ filterPatDB <- function(patdb){
   # which samples to remove?
   cat("Removing samples without metadata from new DB file...\n")
   to_remove <- RSQLite::dbGetQuery(conn, "SELECT DISTINCT filename FROM mzintensities WHERE filename
-                                          NOT IN (SELECT DISTINCT card_id FROM individual_data)")[,1]
+                                          NOT IN (SELECT DISTINCT sample FROM individual_data)")[,1]
   
   pbapply::pblapply(to_remove, function(sample){
     RSQLite::dbExecute(conn, gsubfn::fn$paste("DELETE FROM mzintensities WHERE filename='$sample'"))

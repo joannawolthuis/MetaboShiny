@@ -27,7 +27,7 @@ shiny::observeEvent(input$change_subset, {
     mSet$dataSet$preproc <<- mSet$dataSet$preproc[keep.log.preproc,]
     mSet$dataSet$cls <<- droplevels(mSet$dataSet$cls[keep.log.norm])
     mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
-
+    
     if("facA" %in% names(mSet$dataSet)){
       mSet$dataSet$facA <<- mSet$dataSet$facA[keep.log.norm]
       mSet$dataSet$facB <<- mSet$dataSet$facB[keep.log.norm]
@@ -35,6 +35,7 @@ shiny::observeEvent(input$change_subset, {
       mSet$dataSet$exp.fac <<- mSet$dataSet$exp.fac[keep.log.norm]
     }
   }
+  
   mSet$last_mset <<- mset_name
   mSet$analSet <<- NULL
 
@@ -46,11 +47,19 @@ shiny::observeEvent(input$change_subset, {
     # - -
     keep
   }))]
+  
+  if(grepl(mSet$dataSet$exp.type, pattern = "^1f")){
+    if(mSet$dataSet$cls.num == 2){
+      mSet$dataSet$exp.type <<- "1fb"
+    }else{
+      mSet$dataSet$exp.type <<- "1fm"
+    }  
+  }
+  
   shiny::updateSelectInput(session, "subset_var", choices = subsettable.covars)
   output$curr_name <- shiny::renderText({mSet$dataSet$cls.name})
 
-  shiny::invalidateLater(100, session)
-  
+  interface$mode <- mSet$dataSet$exp.type
   datamanager$reload <- "general"
   shiny::updateNavbarPage(session, "statistics", selected = "inf")
   

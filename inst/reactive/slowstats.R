@@ -77,6 +77,7 @@ observeEvent(input$do_ml, {
         config <- cbind(config, label=mSet$dataSet$cls[order]) # add current experimental condition
       }
     }
+    config <- data.table::as.data.table(config)
     config <- config[,apply(!is.na(config), 2, any), with=FALSE]
     
     predictor = config$label
@@ -292,35 +293,50 @@ observeEvent(input$do_ml, {
                                  ml_preproc = input$ml_preproc,
                                  tuneGrid = tuneGrid,
                                  ml_train_perc <- input$ml_train_perc
-    ) # for session_cl
+    )
     
     # check if a storage list for machine learning results already exists
     if(!"ml" %in% names(mSet$analSet)){
       mSet$analSet$ml <<- list() # otherwise make it
     }
     
-    #mz.imp <- lapply(lapply(repeats, function(x) x$model), function(x) caret::varImp(x)$importance)
     mz.imp <- lapply(repeats, function(x) x$importance)
     
-    # save the summary of all repeats (will be used in plots) TOO MEMORY HEAVY
-    pred <- ROCR::prediction(lapply(repeats, function(x) x$prediction), 
-                             lapply(repeats, function(x) x$labels))
-    perf <- ROCR::performance(pred, "tpr", "fpr")
-    perf_auc <- ROCR::performance(pred, "auc")
-    
-    perf.long <- data.table::rbindlist(lapply(1:length(perf@x.values), function(i){
-      xvals <- perf@x.values[[i]]
-      yvals <- perf@y.values[[i]]
-      aucs <- signif(perf_auc@y.values[[i]][[1]], digits = 2)
-      
-      res <- data.table::data.table(attempt = c(i),
-                                    FPR = xvals,
-                                    TPR = yvals,
-                                    AUC = aucs)
-      res
-    }))
-    
-    mean.auc <- mean(unlist(perf_auc@y.values))
+    # aucs
+    if(length(levels(mSet$dataSet$cls)) > 2){
+      perf <- lapply(1:length(repeats), function(i){
+        x = repeats[[i]]
+        roc = pROC::multiclass.roc(x$labels, x$prediction)
+        data.table::rbindlist(lapply(roc$rocs, function(roc.pair){
+          data.table(attempt = c(i),
+                     FPR = sapply(roc.pair$specificities, function(x) 1-x),
+                     TPR = roc.pair$sensitivities,
+                     AUC = as.numeric(roc$auc),
+                     comparison = paste0(roc.pair$levels,collapse=" vs. "))
+        }))
+      })
+      perf.long <- data.table::rbindlist(perf)
+      mean.auc <- mean(perf.long$AUC)
+    }else{
+        # save the summary of all repeats (will be used in plots) TOO MEMORY HEAVY
+        pred <- ROCR::prediction(lapply(repeats, function(x) x$prediction), 
+                                 lapply(repeats, function(x) x$labels))
+        perf <- ROCR::performance(pred, "tpr", "fpr")
+        perf_auc <- ROCR::performance(pred, "auc")
+        perf.long <- data.table::rbindlist(lapply(1:length(perf@x.values), function(i){
+          xvals <- perf@x.values[[i]]
+          yvals <- perf@y.values[[i]]
+          aucs <- signif(perf_auc@y.values[[i]][[1]], digits = 2)
+          
+          res <- data.table::data.table(attempt = c(i),
+                                        FPR = xvals,
+                                        TPR = yvals,
+                                        AUC = aucs)
+          res
+        }))
+        perf.long$comparison <- paste0(levels(mSet$dataSet$cls),collapse=" vs. ")
+        mean.auc <- mean(unlist(perf_auc@y.values))
+    }
     
     roc_data <- list(m_auc = mean.auc,
                      perf = perf.long,

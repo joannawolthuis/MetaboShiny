@@ -112,7 +112,7 @@ shiny::observeEvent(input$create_csv, {
     
     cat("Checking for mismatches between peak tables and metadata... \n")
     
-    fn_meta <- RSQLite::dbGetQuery(conn, "SELECT DISTINCT card_id FROM individual_data")[,1]
+    fn_meta <- RSQLite::dbGetQuery(conn, "SELECT DISTINCT sample FROM individual_data")[,1]
     fn_int <- RSQLite::dbGetQuery(conn, "SELECT DISTINCT filename FROM mzintensities")[,1]
     
     cat(paste0("-- in peaklist, not in metadata: --- \n", 
@@ -126,32 +126,30 @@ shiny::observeEvent(input$create_csv, {
                       collapse=", "), 
                "\n\n"))
     
-    if(DBI::dbExistsTable(conn, "batchinfo")){
-      query <- strwrap(gsubfn::fn$paste("select distinct d.card_id as sample, d.sampling_date as time, d.*, b.batch, b.injection
+    if(DBI::dbExistsTable(conn, "setup")){
+      query <- strwrap(gsubfn::fn$paste("select distinct d.sample as sample, d.*, s.*
                                         from mzintensities i
                                         join individual_data d
-                                        on i.filename = d.card_id
-                                        join setup s on d.[Group] = s.[Group]
-                                        join batchinfo b on b.sample = d.card_id"),
-                       width=10000,
-                       simplify=TRUE)
-    }else{
-      query <- strwrap(gsubfn::fn$paste("select distinct d.card_id as sample, d.sampling_date as time, d.*, s.*
-                                        from mzintensities i
-                                        join individual_data d
-                                        on i.filename = d.card_id
+                                        on i.filename = d.sample
                                         join setup s on d.[Group] = s.[Group]"),
+                       width=10000,
+                       simplify=TRUE)   
+    }else{
+      query <- strwrap(gsubfn::fn$paste("select distinct d.sample as sample, d.*
+                                        from mzintensities i
+                                        join individual_data d
+                                        on i.filename = d.sample"),
                        width=10000,
                        simplify=TRUE)
     }
-    
+   
     RSQLite::dbExecute(conn, "PRAGMA journal_mode=WAL;")
     RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS filenames ON mzintensities(filename)")
     
     all_mz = RSQLite::dbGetQuery(conn, "select distinct i.mzmed
                                         from mzintensities i
                                         join individual_data d
-                                        on i.filename = d.card_id")[,1]
+                                        on i.filename = d.sample")[,1]
     
     RSQLite::dbDisconnect(conn)
     
@@ -177,7 +175,8 @@ shiny::observeEvent(input$create_csv, {
                
                if(nrow(z.meta)==0) return(NA)
                
-               z.meta = z.meta[,-c("card_id", "sampling_date")]
+               #z.meta = z.meta[,-c("sample", "sampling_date")]
+               
                colnames(z.meta) <- tolower(colnames(z.meta))
                z.int = data.table::as.data.table(RSQLite::dbGetQuery(conn, 
                                         paste0("SELECT DISTINCT

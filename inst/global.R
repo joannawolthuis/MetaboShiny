@@ -28,6 +28,15 @@ caret.mdls <- caret::getModelInfo()
 
 # === THE BELOW LIST CONTAINS ALL GLOBAL VARIABLES THAT METABOSHINY CALLS UPON LATER ===
 gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people importing their data through csv
+                             ml.twoonly = c("adaboost","logicBag","bartMachine","binda",
+                                            "ada","gamboost","glmboost","chaid",
+                                            "C5.0Cost","rpartCost","deepboost",
+                                            "dwdPoly","dwdRadial","glm","glmnet",
+                                            "glmStepAIC","glmnet_h2o","svmLinearWeights2",
+                                            "dwdLinear","svmLinearWeights","logreg","mlpKerasDropoutCost",
+                                            "mlpKerasDecayCost","ORFlog","ORFpls","ORFridge","ORFsvm",
+                                            "plsRglm","rotationForest","rotationForestCp",
+                                            "svmRadialWeights","nodeHarvest"),
                              # get all caret models that can do classification and have some kind of importance metric
                              ml.models = names(caret.mdls)[sapply(1:length(caret.mdls), function(i){
                                curr.mdl = caret.mdls[[i]]
@@ -228,7 +237,7 @@ paths = list(
 ),
 # default vectors to go through in metaboshiny
 vectors = list(
-  hide_match_cols = c("structure", "baseformula","isocat", "fullformula", "finalcharge"),#, "source"), #"query_mz", "identifier"), #c("description","structure", "baseformula", "dppm", "source"),
+  hide_match_cols = c("structure", "baseformula","isocat", "fullformula", "finalcharge", "query_mz"),#, "source"), #"query_mz", "identifier"), #c("description","structure", "baseformula", "dppm", "source"),
   # default indices of chosen adducts
   pos_selected_add = c(2),
   neg_selected_add = c(2),

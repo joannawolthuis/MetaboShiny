@@ -11,6 +11,7 @@ make.metshi.csv <-
            groupfac = "mz"
   ){
     
+    print("new ver...")
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(patdb))
     
     cat("Checking for mismatches between peak tables and metadata... \n")
@@ -29,13 +30,24 @@ make.metshi.csv <-
                       collapse=", "), 
                "\n\n"))
     
-    query <- strwrap(gsubfn::fn$paste("select distinct d.*, s.*
+    if(DBI::dbExistsTable(conn, "setup")){
+      query <- strwrap(gsubfn::fn$paste("select distinct d.*, s.*
                                       from mzintensities i
                                       join individual_data d
                                       on i.filename = d.sample
                                       join setup s on d.[group] = s.[group]"),
                        width=10000,
+                       simplify=TRUE)  
+    }else{
+      query <- strwrap(gsubfn::fn$paste("select distinct d.*
+                                      from mzintensities i
+                                      join individual_data d
+                                      on i.filename = d.sample"),
+                       width=10000,
                        simplify=TRUE)
+    }
+    
+    print(query)
     
     RSQLite::dbExecute(conn, "PRAGMA journal_mode=WAL;")
     RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS filenames ON mzintensities(filename)")
@@ -54,17 +66,12 @@ make.metshi.csv <-
       # adjust query
       query_add = gsubfn::fn$paste(" WHERE i.filename = '$filename'")
       
-      # get results for sample
-      #colnames(RSQLite::dbGetQuery(conn, "SELECT DISTINCT * FROM individual_data LIMIT 5"))
-      #colnames(RSQLite::dbGetQuery(conn, "SELECT DISTINCT * FROM setup LIMIT 5"))
-      
       z.meta = data.table::as.data.table(RSQLite::dbGetQuery(conn, paste0(query, query_add)))
       duplicate <- which(duplicated(gsub(colnames(z.meta), pattern = "\\.+\\d+$", replacement="")))
       z.meta <- z.meta[1,-duplicate,with=F]
       
       if(nrow(z.meta)==0) return(NA)
       
-      #z.meta = z.meta[,-c("card_id", "sampling_date")]
       colnames(z.meta) <- tolower(colnames(z.meta))
       z.int = data.table::as.data.table(RSQLite::dbGetQuery(conn, 
                                           paste0("SELECT DISTINCT 

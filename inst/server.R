@@ -537,8 +537,8 @@ mode = complete')
         return(NULL)
       }else{
         rev_matches = MetaboShiny::get_prematches(who = my_selection$revstruct,
-                                                  what = "map.structure", #map.mz as alternative
-                                                  patdb = lcl$paths$patdb)
+                                     what = "map.structure",
+                                     patdb = lcl$paths$patdb)
         if(nrow(rev_matches)>0){
           shown_matches$reverse <- unique(rev_matches[,c("query_mz", "adduct", "%iso", "dppm")])
         }else{
@@ -594,26 +594,41 @@ mode = complete')
       list("permz", "fc"),#12
       list("dimred", "tsne")#13
     )
+    
     # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
     # then show the relevent tabs
     # TODO: enable multivariate time series analysis
     if(is.null(interface$mode)) {
       show.tabs <- hide.tabs[1]
-    }else if(interface$mode == '1f'){
-      if(mSet$dataSet$cls.num > 2){
-        show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,13)]
-        shiny::updateSelectInput(session, "heattable", choices = c("aov"), selected = "aov")
+    }else if(interface$mode == '1fb'){
+      show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13)]
+      shiny::updateSelectInput(session, "ml_method",
+                               selected = "rf",
+                               choices = as.list(gbl$constants$ml.models))
+      shiny::updateSelectInput(session, "heattable", choices = list("T-test"="tt", 
+                                                                    "Fold-change analysis"="fc"), selected = "tt")
+      if("tt" %in% names(mSet$analSet)){
+        if("V" %in% colnames(mSet$analSet$tt$sig.mat)){
+          shiny::updateCheckboxInput(session, "tt_nonpar", value = T)
+        }else{
+          shiny::updateCheckboxInput(session, "tt_nonpar", value = F)
+        }
       }else{
-        show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13)]
-        shiny::updateSelectInput(session, "heattable", choices = list("T-test"="tt", 
-                                                                      "Fold-change analysis"="fc"), selected = "tt")
-      }
+        shiny::updateCheckboxInput(session, "tt_nonpar", value = F)
+      } 
+    }else if(interface$mode == '1fm'){
+      show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,13)]
+      shiny::updateSelectInput(session, "heattable", choices = c("aov"), selected = "aov")
+      shiny::updateSelectInput(session, "ml_method",
+                               selected = "rf",
+                               choices = as.list(setdiff(gbl$constants$ml.models, gbl$constants$ml.twoonly)))
+      
     }else if(interface$mode == '2f'){
-      show.tabs <- hide.tabs[c(1,2,4,6,7,9,10,13)]
+      show.tabs <- hide.tabs[c(1,2,4,6,9,10,13)]
       shiny::updateSelectInput(session, "heattable", choices = list(ANOVA="aov2", 
                                                                     ASCA="asca"), selected = "aov2")
     }else if(interface$mode == 't1f'){
-      show.tabs = hide.tabs[c(1,2,4,5,6,7,9,10,13)]
+      show.tabs = hide.tabs[c(1,2,4,5,6,9,10,13)]
       shiny::updateSelectInput(session, "heattable", choices = list(ANOVA="aov2", 
                                                                     ASCA="asca",
                                                                     MEBA="meba"), selected = "aov2")
@@ -621,7 +636,6 @@ mode = complete')
       show.tabs = hide.tabs[c(1,2,5,6,7,9,10,13)]
       shiny::updateSelectInput(session, "heattable", choices = list(ANOVA="aov2",
                                                                     MEBA="meba"), selected = "aov2")
-      
     }else{
       show.tabs <- hide.tabs[1]
     }
@@ -738,7 +752,6 @@ mode = complete')
                }
              },permz = {
                if(!is.null(input$permz)){
-                 print(input$permz)
                  if(input$permz %not in% names(mSet$analSet)){
                    statsmanager$calculate <- input$permz
                  }
@@ -850,12 +863,14 @@ mode = complete')
   
   shiny::observeEvent(input$save_mset, {
     # save mset
-    shiny::withProgress({
-      fn <- paste0(tools::file_path_sans_ext(lcl$paths$patdb), ".metshi")
-      if(exists("mSet")){
-        save(mSet, file = fn)
-      }
-    })
+    if(!is.null(mSet)){
+      shiny::withProgress({
+        fn <- paste0(tools::file_path_sans_ext(lcl$paths$patdb), ".metshi")
+        if(exists("mSet")){
+          save(mSet, file = fn)
+        }
+      })  
+    }
   })
   
   # shiny::observeEvent(input$stats_type,{

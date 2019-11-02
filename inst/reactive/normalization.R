@@ -69,15 +69,8 @@ shiny::observeEvent(input$initialize, {
                  "label" = first_part[,..condition][[1]], # set label as the initial variable of interest
                  csv_orig[,-..exp.vars,with=FALSE])
     
-    if(all(grepl(pattern = "_T\\d", x = first_part$sample))){
-      keep.all.samples <- TRUE
-      print("Potential for time series - disallowing outlier removal")
-    }else{
-      keep.all.samples <- FALSE
-    }
-    
     # remove outliers by making a boxplot and going from there
-    if(input$remove_outliers & !keep.all.samples){
+    if(input$remove_outliers){
       sums <- rowSums(csv[,-exp.vars,with=FALSE],na.rm = TRUE)
       names(sums) <- csv$sample
       outliers = c(car::Boxplot(as.data.frame(sums)))

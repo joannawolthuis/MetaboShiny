@@ -22,6 +22,11 @@ observeEvent(input$change_cls, {
            mSet$dataSet$cls <- as.factor(mSet$dataSet$covars[,input$stats_var, with=F][[1]])
            # adjust bivariate/multivariate (2, >2)...
            mSet$dataSet$cls.num <- length(levels(mSet$dataSet$cls))
+           if(mSet$dataSet$cls.num == 2){
+             mSet$dataSet$exp.type <- "1fb"
+           }else{
+             mSet$dataSet$exp.type <- "1fm"
+           }
            mSet$dataSet$cls.name <- paste0(input$stats_var, subset_name)
            # - - - 
            mSet
@@ -43,6 +48,7 @@ observeEvent(input$change_cls, {
            mSet$dataSet$facA.lbl <- input$stats_var[idx1]
            mSet$dataSet$facB.lbl <- input$stats_var[idx2]
            mSet$dataSet$cls.name <- paste0(paste0(input$stats_var[c(idx1,idx2)],collapse="+"), subset_name)
+           mSet$dataSet$exp.type <- "2f"
            # ONLY ANOVA2
            # - - - 
            mSet
@@ -56,7 +62,7 @@ observeEvent(input$change_cls, {
            }
            mSet$dataSet$time.fac <- as.factor(mSet$dataSet$covars[,input$time_var, with=F][[1]])
            mSet$dataSet$cls.name <- paste0("time", subset_name)
-           
+           mSet$dataSet$exp.type <- "t"
            # - - - 
            mSet
          },
@@ -73,11 +79,11 @@ observeEvent(input$change_cls, {
            mSet$dataSet$exp.fac <- mSet$dataSet$facA
            mSet$dataSet$time.fac <- mSet$dataSet$facB
            mSet$dataSet$cls.name <- paste0(paste0(input$stats_var,"+time"), subset_name)
+           mSet$dataSet$exp.type <- "t1f"
            # - - - 
            mSet
          })
   
-
   if(mSet$dataSet$cls.name %in% names(mSet$storage)){
     mSet$analSet <- mSet$storage[[input$stats_var]]$analysis
   }else{
@@ -85,13 +91,11 @@ observeEvent(input$change_cls, {
     mSet$analSet <- NULL
   }
   
-  mSet$dataSet$exp.type <- input$stats_type
-
   mSet <<- mSet
   
   interface$mode <- input$stats_type
   datamanager$reload <- "general"
-  
+
   shiny::updateNavbarPage(session, "statistics", selected = "inf")
 
 })
