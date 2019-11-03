@@ -806,6 +806,17 @@ mode = complete')
     }
   })
   
+  
+  shiny::observeEvent(input$ml, {
+    # check if an mset is present, otherwise abort
+    if(!is.null(mSet)){
+      # depending on the present tab, perform analyses accordingly
+      if("ml" %in% names(mSet$analSet)){
+        datamanager$reload <- input$overview
+        }
+    }
+  })
+  
   shiny::observeEvent(input$tab_iden_4, {
     # check if an mset is present, otherwise abort
     if(!is.null(mSet)){

@@ -1,5 +1,6 @@
 shiny::observeEvent(input$change_subset, {
 
+  print("changing subset...")
   # save previous
   mset_name <- MetaboShiny::get_mset_name(mainvar = mSet$dataSet$cls.name,
                              subsetvar = NULL,
@@ -12,7 +13,10 @@ shiny::observeEvent(input$change_subset, {
                              subsetvar = input$subset_var,
                              subsetgroups = input$subset_group)
 
+  print(mset_name)
+  
   if(mset_name %in% names(mSet$storage)){
+    print("loading previous...")
     mSet$dataSet <<- mSet$storage[[mset_name]]$data
     mSet$analSet <<- mSet$storage[[mset_name]]$analysis
   }else{
@@ -37,7 +41,6 @@ shiny::observeEvent(input$change_subset, {
   }
   
   mSet$last_mset <<- mset_name
-  mSet$analSet <<- NULL
 
   covars <- colnames(mSet$dataSet$covars)
   subsettable.covars <- covars[which(sapply(covars, function(x){
@@ -78,28 +81,8 @@ shiny::observeEvent(input$reset_subset, {
                              subsetvar = NULL,
                              subsetgroups = NULL)
 
-  if(mset_name %in% names(mSet$storage)){
-    mSet$dataSet <<- mSet$storage[[mset_name]]$data
-    mSet$analSet <<- mSet$storage[[mset_name]]$analysis
-  }else{
-    main.var <- gsub(mSet$dataSet$cls.name, pattern = ":.*", replacement = "")
-
-    # get any non subsetted mset
-    full.msets <- grep(names(mSet$storage), pattern = ":", invert = T)
-    keep <- which(sapply(full.msets, function(mset){
-      "data" %in% names(mSet$storage[[mset]])
-    }))[[1]]
-    mSet$dataSet <<- mSet$storage[[keep]]$data
-    mSet$analSet <<- mSet$storage[[keep]]$analysis
-    # change current variable of interest to user pick from covars table
-    mSet$dataSet$cls <<- as.factor(mSet$dataSet$covars[,main.var, with=F][[1]])
-    levels(mSet$dataSet$cls) <<- droplevels(mSet$dataSet$cls)
-
-    # adjust bivariate/multivariate (2, >2)...
-    mSet$dataSet$cls.num <<- length(levels(mSet$dataSet$cls))
-    mSet$dataSet$cls.name <<- mset_name
-    mSet$analSet <- NULL
-  }
+  mSet$dataSet <<- mSet$storage[[mset_name]]$data
+  mSet$analSet <<- mSet$storage[[mset_name]]$analysis
 
   lcl$last_mset <<- mset_name
 
