@@ -53,28 +53,17 @@ get_prematches <- function(who = NA,
 
 score.isos <- function(table, mSet, patdb, method="mscore", inshiny=TRUE, session=0, intprec, ppm){
   
+  print("...")
   require(InterpretMSSpectrum)
   
-  table = shown_matches$forward_unique
   formulas = unique(table$fullformula)
-  # uniques = unique(table[,-1])
-  # fullformulas = unique(sapply(1:nrow(uniques), function(i) MetaDBparse::doAdduct(structure = c(""),
-  #                                                                                 formula = uniques$baseformula[i], 
-  #                                                                                 charge = as.numeric(gsub(
-  #                                                                                   x=gsub(x = uniques$adduct[i],
-  #                                                                                        pattern = ".*\\]", 
-  #                                                                                        replacement=""),
-  #                                                                                   pattern="(\\d)([+|-])",
-  #                                                                                   replacement="\\2\\1")
-  #                                                                                   ),
-  #                                                                                 adduct_table = adducts,
-  #                                                                                 query_adduct = uniques$adduct[i])$final))
+  
   repr.smiles <- sapply(formulas, function(form){
     table[fullformula == form][1,]$structure
   })
   
   mini.table <- table[structure %in% repr.smiles]
-  
+
   isotopies = lapply(1:nrow(mini.table), function(i){
     smi=mini.table$structure[i]
     add=mini.table$adduct[i]
@@ -85,16 +74,19 @@ score.isos <- function(table, mSet, patdb, method="mscore", inshiny=TRUE, sessio
     isotopes_to_find
   })
   
-  scores = pbapply::pblapply(isotopies, function(l){
+  isotopies <- unique(isotopies)
+  
+  score_rows = pbapply::pblapply(isotopies, function(l){
     
     mzs = l$fullmz
+    formula = unique(l$fullformula)
     
     per_mz_cols = lapply(mzs, function(mz){
       matches = which(as.numeric(colnames(mSet$dataSet$orig)) %between% MetaboShiny::ppm_range(mz, ppm))
-      if(length(matches)>0){
+      if(length(matches) > 0){
         int = as.data.table(mSet$dataSet$orig)[,..matches]
-        ppm = 
-          int = rowMeans(int)  
+        int[is.na(int)] <- 0
+        int = rowMeans(int)
       }else{
         int = rep(0, nrow(mSet$dataSet$orig))
       }
@@ -107,9 +99,16 @@ score.isos <- function(table, mSet, patdb, method="mscore", inshiny=TRUE, sessio
     colnames(bound) = mzs
     
     theor = matrix(c(l$fullmz, l$isoprevalence), nrow=2, byrow = T)
-    
+
     scores_persamp = apply(bound, MARGIN=1, FUN = function(row){
+      foundiso = which(row > 0)
+      if(length(foundiso) <= 1){
+        return(0)
+      }
+
+      row <- sapply(row, function(x) if(x == max(row)) 100 else x/max(row))
       obs = matrix(c(as.numeric(names(row)), row), nrow=2, byrow = T)
+      
       switch(method,
              mape={
                actual = obs[2,]
@@ -120,10 +119,11 @@ score.isos <- function(table, mSet, patdb, method="mscore", inshiny=TRUE, sessio
                mean(percentageDifference) #Average percentage over all elements.
              },
              mscore={
-               InterpretMSSpectrum::mScore(obs = obs,
-                                           the = theor,
-                                           dppm = ppm,
-                                           int_prec = intprec)#, int_prec = 0.225)
+               score = InterpretMSSpectrum::mScore(obs = obs,
+                                                   the = theor,
+                                                   dppm = ppm,
+                                                   int_prec = input$int_prec/100)
+               score
              },
              sirius={NULL},
              chisq={
@@ -136,9 +136,9 @@ score.isos <- function(table, mSet, patdb, method="mscore", inshiny=TRUE, sessio
       )
     })
     meanScore = mean(scores_persamp, na.rm = T)
-    meanScore
+    data.table::data.table(fullformula = formula, score = meanScore)
   })
-  
+  data.table::rbindlist(score_rows)
 }
 
 get_predicted <- function(mz,

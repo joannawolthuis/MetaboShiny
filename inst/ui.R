@@ -373,7 +373,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                           # this tab enables machine learning
                                                                                                           shiny::tabPanel("machine learning", value = "ml", icon=shiny::icon("signature"),
                                                                                                                           shiny::br(),
-                                                                                                                          shiny::navbarPage(inverse=F, shiny::icon("signature"), id = "ml",
+                                                                                                                          shiny::navbarPage(inverse=F, shiny::icon("signature"), id = "ml2",
                                                                                                                                             shiny::tabPanel("initialize", value="init",
                                                                                                                                                             shiny::fluidRow(
                                                                                                                                                               shiny::column(width=3,align="center",
@@ -806,10 +806,11 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                    # this tab is used to change general settings.
                                    shiny::tabPanel("settings",  icon = shiny::icon("cog",class = "outlined"), value="options",
                                                    shiny::tabsetPanel(id="tab_settings",
-                                                                     shiny::tabPanel("Mode", icon=shiny::icon("box-open"),
-                                                                                     MetaboShiny::switchButton(inputId = "db_only", label = "Run in database-only mode?",
-                                                                                                               value = F,
-                                                                                                               col = "BW", type = "YN")
+                                                                     shiny::tabPanel("Global", icon=shiny::icon("box-open"),
+                                                                                     # MetaboShiny::switchButton(inputId = "db_only", label = "Run in database-only mode?",
+                                                                                     #                           value = F,
+                                                                                     #                           col = "BW", type = "YN")
+                                                                                     shiny::sliderInput("ncores", "How many cores can MetShi use?", value=2, min=1, max = parallel::detectCores() - 1)
                                                                      ),
                                                                      shiny::tabPanel("Project", icon=shiny::icon("gift"),
                                                                                      #shiny::textInput(inputId="proj_name", label="Project name", value = ''),

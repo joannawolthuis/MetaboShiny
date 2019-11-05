@@ -146,15 +146,14 @@ shiny::observeEvent(input$score_iso, {
   # get table including isotope scores
   # as input, takes user method for doing this scoring
   shiny::withProgress({
-    score_table <- score.isos(table = shown_matches$forward_unique, 
-                              mSet = mSet, ppm=25,
+    score_table <- MetaboShiny::score.isos(table = shown_matches$forward_unique, 
+                              mSet = mSet, 
+                              ppm = as.numeric(mSet$ppm),
                               patdb = lcl$paths$patdb, 
-                              method=input$iso_score_method, 
-                              inshiny=T, intprec = intprec)
+                              method = input$iso_score_method, 
+                              inshiny = T, intprec = intprec)
     })
-
-  # update the match table available to the rest of metaboshiny
-  shown_matches$forward$unique <<- shown_matches$forward$unique[score_table, on = c("baseformula", "adduct")]
+  shown_matches$forward_unique <- shown_matches$forward_unique[score_table, on = c("fullformula")]
 })
 
 shiny::observeEvent(input$search_pubmed,{

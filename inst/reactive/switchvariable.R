@@ -5,8 +5,9 @@ observeEvent(input$change_cls, {
   mset_name = mSet$dataSet$cls.name
 
   # save previous analyses (should be usable in venn diagram later)
-  mSet$storage[[mset_name]] <- list(analysis = mSet$analSet)
-
+  mSet$storage[[mset_name]] <<- list(data = mSet$dataSet,
+                                     analysis = mSet$analSet)
+  
   lcl$constants$last_mset <- mset_name
 
   # adjust name of experimental variable
@@ -18,8 +19,9 @@ observeEvent(input$change_cls, {
   
   mSet <- switch(input$stats_type,
          "1f"={
+           change_var <- if(length(input$stats_var)>1) input$stats_var[1] else input$stats_var
            # change current variable of interest to user pick from covars table
-           mSet$dataSet$cls <- as.factor(mSet$dataSet$covars[,input$stats_var, with=F][[1]])
+           mSet$dataSet$cls <- as.factor(mSet$dataSet$covars[,change_var, with=F][[1]])
            # adjust bivariate/multivariate (2, >2)...
            mSet$dataSet$cls.num <- length(levels(mSet$dataSet$cls))
            if(mSet$dataSet$cls.num == 2){
@@ -27,7 +29,7 @@ observeEvent(input$change_cls, {
            }else{
              mSet$dataSet$exp.type <- "1fm"
            }
-           mSet$dataSet$cls.name <- paste0(input$stats_var, subset_name)
+           mSet$dataSet$cls.name <- paste0(change_var, subset_name)
            # - - - 
            mSet
          },
@@ -72,13 +74,15 @@ observeEvent(input$change_cls, {
              print("Won't work, need multiple of the same sample in the 'individual' metadata column!")
              return(NULL)
            }
-           mSet$dataSet$facA <- as.factor(mSet$dataSet$covars[,input$stats_var, with=F][[1]])
+           change_var <- if(length(input$stats_var)>1) input$stats_var[1] else input$stats_var
+           
+           mSet$dataSet$facA <- as.factor(mSet$dataSet$covars[,change_var, with=F][[1]])
            mSet$dataSet$facB <- as.factor(mSet$dataSet$covars[,input$time_var, with=F][[1]])
-           mSet$dataSet$facA.lbl <- input$stats_var
+           mSet$dataSet$facA.lbl <- change_var
            mSet$dataSet$facB.lbl <- "time"
            mSet$dataSet$exp.fac <- mSet$dataSet$facA
            mSet$dataSet$time.fac <- mSet$dataSet$facB
-           mSet$dataSet$cls.name <- paste0(paste0(input$stats_var,"+time"), subset_name)
+           mSet$dataSet$cls.name <- paste0(paste0(change_var,"+time"), subset_name)
            mSet$dataSet$exp.type <- "t1f"
            # - - - 
            mSet

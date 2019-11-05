@@ -1,13 +1,12 @@
 #' @export
 #' Plot a summary of metaboanalystR normalization results. Takes the total of 20 m/z values and 20 samples before and after normalization and plots that distribution.
 #' @param mSet input user mSet
-#' @param colmap character vector of colours used in plotting
 #' @param plot.theme function for ggplot theme used.
 #' @return list of four plots that fit in a 2x2 raster used in MetaboShiny.
 ggplotNormSummary <- function(mSet,
-                              colmap,
                               plot.theme,
-                              font){
+                              font,
+                              cf){
   
   # load in original data (pre-normalization, post-filter)
   orig_data <- as.data.frame(mSet$dataSet$prenorm)
@@ -46,7 +45,7 @@ ggplotNormSummary <- function(mSet,
   # second result plot: shows the spread of the intensities before normalization
   RES2 <- plot + ggplot2::geom_boxplot(
     ggplot2::aes(x=value,y=variable),
-    color=rainbow(sampsize),
+    color=cf(sampsize),
     alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(orig_melt$value)))+
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
@@ -71,7 +70,7 @@ ggplotNormSummary <- function(mSet,
   # fourth result plot: spread of intensities after normalization
   RES4 <- plot + ggplot2::geom_boxplot(
     ggplot2::aes(x=value,y=variable),
-    color=rainbow(sampsize),
+    color=cf(sampsize),
     alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(norm_melt$value))) +
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
@@ -92,7 +91,8 @@ ggplotNormSummary <- function(mSet,
 #' @return list of four plots that fit in a 2x2 raster used in MetaboShiny.
 ggplotSampleNormSummary <- function(mSet,
                                     plot.theme,
-                                    font){
+                                    font,
+                                    cf){
   # 4 by 4 plot, based on random 20-30 picked
   orig_data <- as.data.frame(mSet$dataSet$prenorm)
   norm_data <- as.data.frame(mSet$dataSet$norm)
@@ -134,7 +134,7 @@ ggplotSampleNormSummary <- function(mSet,
   RES2 <- ggplot2::ggplot(data=orig_melt) +
     plot.theme(base_size = 15) + ggplot2::geom_boxplot(
       ggplot2::aes(x=value,y=Label),
-      color=rainbow(sampsize),
+      color=cf(sampsize),
       alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(orig_melt$value),text=Label))+
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
@@ -155,7 +155,7 @@ ggplotSampleNormSummary <- function(mSet,
   RES4 <- ggplot2::ggplot(data=norm_melt) +
     plot.theme(base_size = 15) + ggplot2::geom_boxplot(
       ggplot2::aes(x=value,y=Label),
-      color=rainbow(sampsize),
+      color=cf(sampsize),
       alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(norm_melt$value),text=Label))+
     theme(legend.position="none",
           axis.text=element_text(size=font$ax.num.size),
@@ -173,7 +173,13 @@ ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
                        cf,
                        plot.theme,
                        plotlyfy=TRUE,font){
-  cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else(cols)
+  cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else{
+    if(length(cols) < length(levels(mSet$dataSet$cls))){
+      cols <- cf(mSet$dataSet$cls)
+    }
+    cols
+  }
+  
   profile <- getProfile(mSet, cpd, mode="multi")
   p <- if(draw.average){
     ggplot2::ggplot(data=profile) +
@@ -267,6 +273,10 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
   profiles <- switch(mode,
                      multi = split(profile, f = profile$GroupA),
                      nm = list(x = data.table::data.table(profile)))
+  
+  if(length(cols) < length(levels(profile$Color))){
+    cols <- cf(length(levels(profile$Color)))
+  }
   
   i = 1
   
@@ -678,7 +688,8 @@ ggPlotROC <- function(data,
                       attempts = 50,
                       cf,
                       plot.theme,
-                      plotlyfy=TRUE,font){
+                      plotlyfy=TRUE,font,
+                      class_type="b"){
   
   mean.auc <- data$m_auc
   perf.long <- data$perf
@@ -709,7 +720,7 @@ ggPlotROC <- function(data,
                      geom="line", cex = 2) +
     
     #ggplot2::scale_color_gradientn(colors = cols) +
-    theme(legend.position= if(mSet$dataSet$cls.num == 2) "none" else "right",
+    theme(legend.position= if(class_type == "b") "none" else "right",
           axis.text=element_text(size=font$ax.num.size),
           axis.title=element_text(size=font$ax.txt.size),
           plot.title = element_text(hjust = 0.5),
@@ -843,6 +854,13 @@ plotPCA.3d <- function(mSet,
   df <- as.data.frame(df)
   rownames(df) <- rownames(mSet$dataSet$norm)
   df_list <- list(df)
+  
+  cols <- if(is.null(cols)) cf(length(levels(classes))) else{
+    if(length(cols) < length(levels(classes))){
+      cols <- cf(mSet$dataSet$cls)
+    }
+    cols
+  }
   
   cols <- cols[c(1:length(unique(classes)))]
   
@@ -1045,6 +1063,13 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
     dat_long$group
   }else{
     as.factor(mSet$dataSet$covars[,..shape.fac][[1]])
+  }
+  
+  cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else{
+    if(length(cols) < length(levels(mSet$dataSet$cls))){
+      cols <- cf(mSet$dataSet$cls)
+    }
+    cols
   }
   
   p <- ggplot(dat_long, aes(x, y,group=group)) +

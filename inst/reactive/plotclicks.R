@@ -55,7 +55,10 @@ shiny::observeEvent(plotly::event_data("plotly_click"),{
       }
     }, bar = { # for bar plot just grab the # bar clicked
       try({
-        my_selection$mz <- as.character(lcl$tables$ml_bar[d$x,"mz"][[1]])
+        supposed_mz <- as.character(lcl$tables$ml_bar[d$x,"mz"][[1]])
+        if(supposed_mz %in% colnames(mSet$dataSet$preproc)){
+          my_selection$mz <- supposed_mz
+        }
       })
     })}else if(req(curr_tab) == "heatmap"){#grepl(pattern = "heatmap", x = curr_tab)){ # heatmap requires the table used to make it saved to global (hmap_mzs)
       if(!is.null(d$y)){

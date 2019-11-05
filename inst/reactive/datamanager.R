@@ -140,25 +140,6 @@ shiny::observe({
              },
              pca = {
                if("pca" %in% names(mSet$analSet)){
-                 # create PCA legend plot
-                 # TODO: re-enable this plot, it was clickable so you could filter out certain groups
-                 # output$pca_legend <- plotly::renderPlotly({
-                 #   frame <- data.table::data.table(x = c(1),
-                 #                       y = mSet$dataSet$cls.num)
-                 #   p <- ggplot(data=frame,
-                 #               aes(x,
-                 #                   y,
-                 #                   color=factor(y),
-                 #                   fill=factor(y)
-                 #               )
-                 #   ) +
-                 #     geom_point(shape = 21, size = 5, stroke = 5) +
-                 #     scale_colour_manual(values=lcl$aes$$mycols) +
-                 #     theme_void() +
-                 #     theme(legend.position="none")
-                 #   # --- return ---
-                 #   ggplotly(p, tooltip = NULL) %>% config(displayModeBar = F)
-                 # })
                  # render PCA variance per PC table for UI
                  output$pca_tab <-DT::renderDataTable({
                    pca.table <- data.table::as.data.table(round(mSet$analSet$pca$variance * 100.00,
@@ -292,6 +273,8 @@ shiny::observe({
              ml = {
                if("ml" %in% names(mSet$analSet)){
 
+                 shiny::showTab(session = session, inputId = "ml2",target = "res")
+                 
                  roc_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
 
                  output$ml_roc <- plotly::renderPlotly({
@@ -299,7 +282,7 @@ shiny::observe({
                                               input$ml_attempts,
                                               gbl$functions$color.functions[[lcl$aes$spectrum]],
                                               plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                              plotlyfy=TRUE,font = lcl$aes$font))
+                                              plotlyfy=TRUE,font = lcl$aes$font,class_type=if(mSet$dataSet$cls.type=="1fb") "b" else "m"))
                  })
 
                  bar_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar
@@ -322,7 +305,6 @@ shiny::observe({
                    plotly::ggplotly(ml_barplot)
                    
                  })
-                 
                  choices = c()
                  methods <- setdiff(names(mSet$analSet$ml), "last")
                  for(method in methods){
@@ -331,7 +313,9 @@ shiny::observe({
                  }
                  shiny::updateSelectInput(session, "show_which_ml", choices = choices, selected = paste0(mSet$analSet$ml$last$method, " - ", mSet$analSet$ml$last$name))
                  
-               }else{NULL}
+               }else{
+                 shiny::hideTab(session = session, inputId = "ml2", target = "res")
+               }
              },
              asca = {
                if("asca" %in% names(mSet$analSet)){

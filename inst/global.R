@@ -10,7 +10,6 @@ library(data.table)
 library(plotly)
 library(MetaboShiny)
 
-online = MetaboShiny::internetWorks()
 
 # load default adduct table
 #TODO: add option to put user custom tables in user directory
@@ -44,7 +43,7 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                has.importance = if("varImp" %in% names(curr.mdl)) TRUE else FALSE
                                can.classify & has.importance
                              })],
-                             max.cols = 8, # Maximum colours available to choose (need to change if anyone does ANOVA with >8 variables)
+                             max.cols = 20, # Maximum colours available to choose (need to change if anyone does ANOVA with >8 variables)
                              # packages = unique(c(base.packs, "data.table", "DBI", "RSQLite", "ggplot2", "minval", "enviPat",
                              #                     "plotly", "parallel", "shinyFiles", "curl", "httr", "pbapply",
                              #                     "sqldf", "plyr", "ChemmineR", "gsubfn", "stringr", "heatmaply",
@@ -451,10 +450,6 @@ gbl$vectors$wordcloud$skip <- unique(c( # manual curation(
   gbl$vectors$db_list
 ))
 
-# create parallel workers, leaving 1 core for general use
-# TODO: make this a user slider
-session_cl <- parallel::makeCluster(max(c(1, parallel::detectCores() - 1)))#,outfile="") # leave 1 core for general use and 1 core for shiny session
-
 #' Squishes HTML elements close together.
 data(isotopes, package = "enviPat")
 
@@ -462,6 +457,7 @@ data(isotopes, package = "enviPat")
 add_idx <- order(c(seq_along(gbl$vectors$pos_adducts$Name), seq_along(gbl$vectors$neg_adducts$Name)))
 sort_order <<- unlist(c(gbl$vectors$pos_adducts$Name, gbl$vectors$neg_adducts$Name))[add_idx]
 
+session_cl <- NULL
 debug_mSet <- NULL
 debug_lcl <- NULL
 debug_input <- NULL

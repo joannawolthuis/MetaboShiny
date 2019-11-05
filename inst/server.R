@@ -161,7 +161,8 @@ taskbar_image = gemmy_rainbow.png
 gtheme = classic
 gcols = #FF0004&#38A9FF&#FFC914&#2E282A&#8A00ED&#00E0C2&#95C200&#FF6BE4
 gspec = RdBu
-mode = complete')
+mode = complete
+cores = 1')
         writeLines(contents, lcl$paths$opt.loc)
       }
       
@@ -170,6 +171,10 @@ mode = complete')
       print("...loading ui...")
       opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
       
+      print(opts$cores)
+      shiny::updateSliderInput(session, "ncores", value = as.numeric(opts$cores))
+      # send specific functions/packages to other threads
+
       # === GOOGLE FONT SUPPORT FOR GGPLOT2 ===
       online = MetaboShiny::internetWorks()
       
@@ -348,6 +353,7 @@ mode = complete')
       shiny::updateSelectInput(session, "color_ramp", 
                                selected = opts$gspec)
       
+
     }
     
     shiny::removeModal()
@@ -384,10 +390,6 @@ mode = complete')
           spinner.type = 6,
           spinner.color = "black",
           spinner.color.background = "white")
-  
-  
-  # send specific functions/packages to other threads
-  parallel::clusterEvalQ(session_cl, library(data.table))
   
   # create default text objects in UI
   lapply(gbl$constants$default.text, 
@@ -765,9 +767,7 @@ mode = complete')
                  datamanager$reload <- input$overview
                }
              }, ml = {
-               if(!is.null(input$ml)){
-                 datamanager$reload <- "ml"
-               }
+               datamanager$reload <- "ml"
              })
     }
   })
@@ -806,14 +806,23 @@ mode = complete')
     }
   })
   
+  shiny::observeEvent(input$ncores, {
+    if(!is.null(session_cl)){
+      print("stopping cores...")
+      parallel::stopCluster(session_cl)
+    }
+    print("setting up new cores...")
+    session_cl <<- parallel::makeCluster(input$ncores)#,outfile="") # leave 1 core for general use and 1 core for shiny session
+    # send specific functions/packages to other threads
+    parallel::clusterEvalQ(session_cl, library(data.table))
+    MetaboShiny::setOption(lcl$paths$opt.loc, "cores", input$ncores)
+  })
   
   shiny::observeEvent(input$ml, {
     # check if an mset is present, otherwise abort
     if(!is.null(mSet)){
       # depending on the present tab, perform analyses accordingly
-      if("ml" %in% names(mSet$analSet)){
-        datamanager$reload <- input$overview
-        }
+      datamanager$reload <- input$overview
     }
   })
   
@@ -895,7 +904,6 @@ mode = complete')
   # })
   
   shiny::observeEvent(input$load_mset, {
-    print("loading mset...")
     # load mset
     shiny::withProgress({
       fn <- paste0(tools::file_path_sans_ext(lcl$paths$patdb), ".metshi")
@@ -903,9 +911,7 @@ mode = complete')
         load(fn)
         mSet <<- mSet
         opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
-        if("ml" %in% names(mSet$analSet)){
-          datamanager$reload <- "ml"
-        }
+        datamanager$reload <- "ml"
         lcl$proj_name <<- opts$proj_name
         lcl$paths$patdb <<- file.path(opts$work_dir, paste0(opts$proj_name, ".db"))
         lcl$paths$csv_loc <<- file.path(opts$work_dir, paste0(opts$proj_name, ".csv"))
@@ -967,7 +973,10 @@ mode = complete')
     debug_mSet <<- mSet
     debug_matches <<- shown_matches
     debug_selection <<- my_selection
-    parallel::stopCluster(session_cl)
+    if(!is.null(session_cl)){
+      parallel::stopCluster(session_cl)
+    }
+    session_cl <<- NULL
     rmv <- list.files(".", pattern = ".csv|.log", full.names = T)
     if(all(file.remove(rmv))) NULL
   })
