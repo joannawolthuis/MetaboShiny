@@ -153,16 +153,23 @@ shiny::observe({
                  mSet <<- MetaboAnalystR::Ttests.Anal(mSet,
                                       nonpar = input$tt_nonpar,
                                       threshp = 0.05, # TODO: make the threshold user defined...
-                                      paired = FALSE,
+                                      paired = mSet$dataSet$paired,
                                       equal.var = input$tt_eqvar
                  )
                })
              },
              fc = {
                withProgress({
-                 mSet <<- MetaboAnalystR::FC.Anal.unpaired(mSet,
-                                           2.0, # TODO: make this threshold user defined
-                                           1)
+                 if(mSet$dataSet$paired){
+                   mSet <<- MetaboAnalystR::FC.Anal.paired(mSet,
+                                                           2.0, # TODO: make this threshold user defined
+                                                             1)  
+                 }else{
+                   mSet <<- MetaboAnalystR::FC.Anal.unpaired(mSet,
+                                                             2.0, # TODO: make this threshold user defined
+                                                             1) 
+                 }
+                 
                })
              },
              aov = {
@@ -183,9 +190,10 @@ shiny::observe({
              volc = {
                shiny::withProgress({
                  mSet <<- MetaboAnalystR::Volcano.Anal(mSet,
-                                       FALSE, 2.0, 0,
-                                       0.75,F, 0.1,
-                                       TRUE, "raw") # TODO: make thresholds user-defined
+                                                       paired = mSet$dataSet$paired, 
+                                                       2.0, 0,
+                                                       0.75,F, 0.1,
+                                                       TRUE, "raw") # TODO: make thresholds user-defined
                })
              },
              match_wordcloud_pm = {

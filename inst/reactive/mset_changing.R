@@ -8,7 +8,8 @@ shiny::observeEvent(input$paired, {
     if(input$paired){
       mSetter$do <- "pair"
     }else{
-      mSetter$do <- "unpair"
+      mSetter$do <- "unsubset"
+      mSet$dataSet$paired <<- FALSE
     }
   }
   datamanager$reload <- "general"

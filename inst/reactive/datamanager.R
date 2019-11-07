@@ -10,34 +10,46 @@ shiny::observe({
       switch(datamanager$reload,
              general = {
                # reload sidebar
-               output$curr_name <- renderText({mSet$dataSet$cls.name})
-               
                # reload pca, plsda, ml(make datamanager do that)
                # update select input bars with current variable and covariables defined in excel
                if(is.null(mSet)){
                  interface$mode <- NULL
                }else{
                  if(is.null(mSet$dataSet$exp.type)){
-                   mSet$dataSet$exp.type <<- "1fb" # one factor, binary class
+                   mSet$dataSet$exp.type <<- "1f" # one factor, binary class
                  }  
                  print("updating interface...")
                  interface$mode <<- mSet$dataSet$exp.type
+                 output$curr_name <- shiny::renderText({mSet$dataSet$cls.name})
+                 shiny::updateNavbarPage(session, "statistics", selected = "inf")
                }
 
                shiny::updateSelectInput(session, "stats_type", 
                                         selected = gsub(mSet$dataSet$exp.type, "^1f\\w", "1f")) 
-               shiny::updateSelectInput(session, "stats_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
-               shiny::updateSelectInput(session, "time_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
-               shiny::updateSelectInput(session, "shape_var", 
+               shiny::updateSelectInput(session, "stats_var", selected = mSet$dataSet$exp.var, 
                                         choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
-               shiny::updateSelectInput(session, "col_var", selected = mSet$dataSet$cls.name, choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
-               shiny::updateSelectInput(session, "txt_var", selected = "sample", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
-               shiny::updateSelectInput(session, "subset_var", choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
+               shiny::updateSelectInput(session, "time_var", selected = mSet$dataSet$time.var, 
+                                        choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
+               shiny::updateSelectInput(session, "shape_var", 
+                                        choices = c("label", 
+                                                    colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
+               shiny::updateSelectInput(session, "col_var", 
+                                        selected = mSet$dataSet$cls.name, 
+                                        choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
+               shiny::updateSelectInput(session, "txt_var", 
+                                        selected = "sample", 
+                                        choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
+               shiny::updateSelectInput(session, "subset_var", 
+                                        choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
                shiny::updateSelectInput(session, "ml_include_covars", 
                                  choices = c(colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "animal_internal_id"))]))
                
-               output$curr_name <- renderText({mSet$dataSet$cls.name})
-        
+               if(input$paired != mSet$dataSet$paired){
+                 updateCheckboxInput(session,
+                                     "paired",
+                                     value = mSet$dataSet$paired)
+               }
+               
                if(mSet$metshiParams$prematched){
                    search_button$on <- FALSE
                 }else{

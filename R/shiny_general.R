@@ -1,19 +1,3 @@
-# get_ref_vars <- function(fac="Label"){
-#   req(csv_loc)
-#   # csv_loc = "backend/appdata/euronutrition/Test.csv"
-#   csv <- fread(csv_loc, sep="\t", header = T)[,1:5]
-#   # --- return ---
-#   c(unique(csv[,..fac]))[[fac]]
-# }
-# get_ref_cpds <- function(){
-#   req(csv_loc)
-#   # csv_loc = "backend/appdata/euronutrition/Test.csv"
-#   csv <- fread(csv_loc, sep="\t", header = T)[1,]
-#   keep.colnames <- colnames(csv)[!colnames(csv) %in% c("Sample", "Label", "Time")]
-#   # --- return ---
-#   c(keep.colnames)
-# }
-
 getProfile <- function(mSet, varName, title=varName, mode="stat"){
   sourceTable = mSet$dataSet$norm
   # ---------------
@@ -89,40 +73,6 @@ set.col.map <- function(optionfile, colmap){
   setOption(optionfile, key="gcols", value=joined)
 }
 
-# - - - mset actions - - -
-
-# function to generate names for msets
-get_mset_name <- function(mainvar, subsetvar, subsetgroups, timeseries=FALSE){
-  if(timeseries){
-    mset_name = paste0(mainvar, "(timeseries)" ,if(!is.null(subsetgroups)) ":" else "", tolower(paste0(subsetgroups, collapse="+")))
-  }else{
-    mset_name = paste0(mainvar,if(!is.null(subsetgroups)) ":" else "",tolower(paste0(subsetgroups, collapse="+")))
-  }
-  mset_name
-}
-
-
-subset.mSet <- function(mSetObj, used.variable, keep.groups, new.name){
-  mSetObj$dataSet$cls.name <- new.name
-  if(!is.null(used.variable)){
-    keep.samples <- mSetObj$dataSet$covars$sample[which(mSetObj$dataSet$covars[[used.variable]] %in% keep.groups)]
-    mSetObj$dataSet$covars <- mSetObj$dataSet$covars[sample %in% keep.samples]
-    keep.log.procr <- rownames(mSetObj$dataSet$procr) %in% keep.samples
-    mSetObj$dataSet$procr <- mSetObj$dataSet$procr[keep.log.procr,]
-    keep.log.norm <- rownames(mSetObj$dataSet$norm) %in% keep.samples
-    mSetObj$dataSet$norm <- mSetObj$dataSet$norm[keep.log.norm,]
-    mSetObj$dataSet$cls <- mSetObj$dataSet$cls[keep.log.norm]
-    if("facA" %in% names(mSetObj$dataSet)){
-      mSetObj$dataSet$facA <<- mSetObj$dataSet$facA[keep.log.norm]
-      mSetObj$dataSet$facB <<- mSetObj$dataSet$facB[keep.log.norm]
-      mSetObj$dataSet$time.fac <<- mSetObj$dataSet$time.fac[keep.log.norm]
-      mSetObj$dataSet$exp.fac <<- mSetObj$dataSet$exp.fac[keep.log.norm]
-    }
-    #print(paste0("Samples left: ", length(keep.samples)))
-  }
-  mSetObj
-}
-
 abstracts2wordcloud <-function(abstracts, queryword,  top=20){
   abstracts1 <- data.frame('Abstract' = RISmed::AbstractText(abstracts))#, 'Year'=YearPubmed(fetch))
   abstractsOnly <- as.character(abstracts1$Abstract)
@@ -149,15 +99,6 @@ p2stars = function(pval){
   }
 }
 
-# function to generate names for msets
-get_mset_name <- function(mainvar, subsetvar, subsetgroups, timeseries=FALSE){
-  if(timeseries){
-    mset_name = paste0(mainvar, "(timeseries)" ,if(!is.null(subsetgroups)) ":" else "", tolower(paste0(subsetgroups, collapse="+")))
-  }else{
-    mset_name = paste0(mainvar,if(!is.null(subsetgroups)) ":" else "",tolower(paste0(subsetgroups, collapse="+")))
-  }
-  mset_name
-}
 
 havingIP <- function(){
   if(.Platform$OS.type == "windows"){

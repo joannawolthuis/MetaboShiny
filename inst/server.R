@@ -63,6 +63,8 @@ function(input, output, session) {
   # == REACTIVE VALUES ==
   
   interface <- shiny::reactiveValues()
+
+  mSetter <- shiny::reactiveValues(do = NULL)
   
   shown_matches <- shiny::reactiveValues(forward_full = data.table::data.table(),
                                          forward_unique=data.table::data.table(),
@@ -945,7 +947,11 @@ cores = 1')
     output$ml_test_ss <- shiny::renderText(subset.name)
   })
   
-    
+  shiny::observeEvent(input$subset_var, {
+    lvls = levels(as.factor(mSet$dataSet$covars[[input$subset_var]]))
+    shiny::updateSelectizeInput(session, "subset_group", choices = lvls)
+  },ignoreInit = T)
+  
   shiny::observeEvent(input$export_plot,{
     success=F
     try({

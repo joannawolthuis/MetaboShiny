@@ -15,7 +15,8 @@ shiny::observeEvent(input$initialize, {
                             "stat",
                             FALSE)
     # set default time series mode'
-    mSet$timeseries <- FALSE
+    mSet$dataSet$paired = F
+    mSet$dataSet$subset = c()
     
     # convert all 0's to NA so metaboanalystR will recognize them
     csv_orig[,(1:ncol(csv_orig)) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)})]
@@ -418,6 +419,21 @@ shiny::observeEvent(input$initialize, {
     mSet$ppm <- sprintf("%.1f",RSQLite::dbGetQuery(conn, "select ppm from params"))
     
     RSQLite::dbDisconnect(conn)
+    
+    mSet$paired <- F
+    mSet$dataSet$subset <- list()
+    mSet$dataSet$exp.var <- condition
+    mSet$dataSet$time.var <- c()
+    if(mSet$dataSet$cls.num == 2){
+      mSet$dataSet$exp.type <- "1fb"
+    }else{
+      mSet$dataSet$exp.type <- "1fm"
+    }
+    
+    mSet$storage <- list(orig = list(data = mSet$dataSet,
+                                     analysis = mSet$analSet))
+    
+    
     
     # return?
     mSet <<- mSet
