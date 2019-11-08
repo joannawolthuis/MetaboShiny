@@ -44,12 +44,6 @@ shiny::observe({
                shiny::updateSelectInput(session, "ml_include_covars", 
                                  choices = c(colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "animal_internal_id"))]))
                
-               if(input$paired != mSet$dataSet$paired){
-                 updateCheckboxInput(session,
-                                     "paired",
-                                     value = mSet$dataSet$paired)
-               }
-               
                if(mSet$metshiParams$prematched){
                    search_button$on <- FALSE
                 }else{
@@ -108,12 +102,19 @@ shiny::observe({
                  
                  keep <- switch(which_aov,
                                 aov = c("p.value", "FDR", "Fisher's LSD"),
-                                aov2 = grepl("adj\\.p", colnames(mSet$analSet$aov2$sig.mat)))
+                                aov2 = grepl("adj\\.p|Adj", colnames(mSet$analSet$aov2$sig.mat)))
                  
                  output$aov_tab <- DT::renderDataTable({
                    DT::datatable(if(is.null(mSet$analSet[[which_aov]]$sig.mat)){
                      data.table::data.table("No significant hits found")
-                   }else{mSet$analSet[[which_aov]]$sig.mat[,keep]
+                   }else{
+                     if(sum(keep) == 1){
+                       tbl = data.table::data.table(rn=rownames(mSet$analSet[[which_aov]]$sig.mat),
+                                                    "adj. p-value"=mSet$analSet[[which_aov]]$sig.mat[,keep])
+                       
+                     }else{
+                       mSet$analSet[[which_aov]]$sig.mat[,keep]
+                     }
                    },
                    selection = 'single',
                    autoHideNavigation = T,

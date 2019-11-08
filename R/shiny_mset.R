@@ -26,15 +26,14 @@ prev.mSet <- function(mSet, what, input=input){
   return(mSet)
 }
 
-# function to generate names for msets
 name.mSet <- function(mSet){
   info_vec = c()
   if(mSet$dataSet$exp.type %in% c("t1f", "t")){
     info_vec = c("timeseries")
-  }
-  if(mSet$dataSet$paired){
+  }else if(mSet$dataSet$paired){
     info_vec = c(info_vec, "paired")
   }
+  
   if(length(mSet$dataSet$subset) > 0){
     subsetgroups = sapply(1:length(mSet$dataSet$subset), function(i){
       if(names(mSet$dataSet$subset)[i] == "sample"){
@@ -47,8 +46,10 @@ name.mSet <- function(mSet){
     subsetgroups = NULL
   }
   
+  subsetgroups <- unlist(subsetgroups)
+  
   if(length(info_vec)>0){
-    extra_info <- paste0("(", info_vec, ")", collapse = " & ")
+    extra_info <- paste0("(", paste0(info_vec, collapse = " & "), ")")
   }else{
     extra_info <- ""
   }
@@ -81,11 +82,10 @@ name.mSet <- function(mSet){
                         },
                         "t1f"={
                           change_var <- if(length(mSet$dataSet$exp.var)>1) mSet$dataSet$exp.var[1] else mSet$dataSet$exp.var
-                          paste0(change_var," in time")
+                          change_var
                         })
-  
-  mset_name = paste0(prefix.name, extra_info, if(!is.null(subsetgroups)) ":" else "", tolower(paste0(subsetgroups, collapse=",")))
-  
+  mset_name = paste0(prefix.name, extra_info, 
+                     if(!is.null(subsetgroups)) tolower(paste0(":", subsetgroups, collapse=",")) else "")
   mset_name
 }
 
@@ -103,12 +103,17 @@ store.mSet <- function(mSet, name=mSet$dataSet$cls.name){
 
 change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
   
+  mSet.orig <- mSet
+  
+  mSet$dataSet$exp.type <- stats_type
   mSet$dataSet$exp.var <- stats_var
   mSet$dataSet$time.var <- time_var
   
   if(grepl(mSet$dataSet$exp.type, pattern = "^1f")){
     mSet$dataSet$exp.type <- "1f"
   }
+  
+  print(mSet$dataSet$exp.type)
   
   mSet <- switch(mSet$dataSet$exp.type,
                    "1f"={
@@ -136,22 +141,20 @@ change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
                      mSet$dataSet$facA.lbl <- stats_var[idx1]
                      mSet$dataSet$facB.lbl <- stats_var[idx2]
                      mSet$dataSet$exp.type <- "2f"
-                     # ONLY ANOVA2
-                     mSet$dataSet$paired <- F
+                     
                      # - - - 
                      mSet
                    },
                    "t"={
                      mSet <- MetaboAnalystR::SetDesignType(mSet, "time0")
-                     mSet$dataSet$sbj <- as.factor(mSet$dataSet$covars$individual)
-                     if(!any(duplicated(mSet$dataSet$sbj))){
+                     mSet$dataSet$exp.fac <- as.factor(mSet$dataSet$covars$individual)
+                     if(!any(duplicated(mSet$dataSet$exp.fac))){
                        print("Won't work, need multiple of the same sample in the 'individual' metadata column!")
                        return(NULL)
                      }
                      mSet$dataSet$time.fac <- as.factor(mSet$dataSet$covars[,time_var, with=F][[1]])
                      mSet$dataSet$exp.type <- "t"
-                     mSet$paired <- F
-                     
+
                      # - - - 
                      mSet
                    },
@@ -170,11 +173,11 @@ change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
                      mSet$dataSet$exp.fac <- mSet$dataSet$facA
                      mSet$dataSet$time.fac <- mSet$dataSet$facB
                      mSet$dataSet$exp.type <- "t1f"
-                     mSet$paired <- F
                      # - - - 
                      mSet
                    })
   mSet$analSet <- NULL
+  if(is.null(mSet)) mSet <- mSet.orig 
   return(mSet)
 }
 
@@ -192,13 +195,67 @@ subset.mSet <- function(mSet, subset_var, subset_group, name=mSet$dataSet$cls.na
     mSet$dataSet$cls <- droplevels(mSet$dataSet$cls[keep.norm])
     mSet$dataSet$cls.num <- length(levels(mSet$dataSet$cls))
     if("facA" %in% names(mSet$dataSet)){
-      mSet$dataSet$facA <- mSet$dataSet$facA[keep.norm]
-      mSet$dataSet$facB <- mSet$dataSet$facB[keep.norm]
-      mSet$dataSet$time.fac <- mSet$dataSet$time.fac[keep.norm]
-      mSet$dataSet$exp.fac <- mSet$dataSet$exp.fac[keep.norm]
+      mSet$dataSet$facA <- droplevels(mSet$dataSet$facA[keep.norm])
+      mSet$dataSet$facB <- droplevels(mSet$dataSet$facB[keep.norm])
+    }
+    if("time.fac" %in% names(mSet$dataSet)){
+      mSet$dataSet$time.fac <- droplevels(mSet$dataSet$time.fac[keep.norm])
+      mSet$dataSet$exp.fac <- droplevels(mSet$dataSet$exp.fac[keep.norm])
     }
     mSet$dataSet$subset[[subset_var]] <- subset_group
     print(paste0("Samples left: ", length(keep.samples)))
   }
+  mSet
+}
+
+pair.mSet <- function(mSet, name){
+  
+  stats_var = mSet$dataSet$exp.var  
+  
+  overview.tbl <- data.table::as.data.table(cbind(sample = mSet$dataSet$covars$sample,
+                                                  individual = mSet$dataSet$covars$individual,
+                                                  variable = as.character(
+                                                    mSet$dataSet$covars[, ..stats_var][[1]])
+                                                  ))
+  # which samples should we keep?
+  # A. which individuals are present multiple times in the dataset?
+  indiv.samp <- unique(overview.tbl[, c("individual","sample")])
+  indiv.var <-  unique(overview.tbl[, c("individual","variable")])
+  
+  indiv.present.multiple <- indiv.samp$individual[c(which(duplicated(indiv.samp$individual)))]
+
+  # A2: mandatory for time series 1 factor. which individuals remain in the same category?
+  indiv.cat.change = indiv.var$individual[c(which(duplicated(indiv.var$individual)))] 
+  indiv.no.cat.change <- setdiff(indiv.present.multiple, indiv.cat.change)
+
+  # B: we want to balance the classes...
+  # DOWNSAMPLE invidiv
+  if(mSet$dataSet$exp.type == "t1f"){
+    considerations = list(indiv.present.multiple, indiv.no.cat.change)
+  }else if(mSet$dataSet$exp.type == "t"){
+    considerations = list(indiv.present.multiple)
+  }else{
+    considerations = list(indiv.present.multiple, indiv.cat.change)
+  }
+  
+  # C. which individuals do we keep?
+  keep.indiv <- Reduce(f = intersect, considerations)
+
+  filtered.indiv.var <- indiv.var[individual %in% keep.indiv]
+  keep.indiv = caret::downSample(filtered.indiv.var$individual, as.factor(filtered.indiv.var$variable))$x
+  
+  filtered.indiv.samp <- indiv.samp[individual %in% keep.indiv]
+  keep.samp = caret::downSample(filtered.indiv.samp$sample, as.factor(filtered.indiv.samp$individual))$x
+  
+  if(length(keep.samp)> 2){
+    mSet <- MetaboShiny::subset.mSet(mSet, 
+                                     subset_var = "sample", 
+                                     subset_group = keep.samp)
+    mSet$dataSet$paired <- TRUE  
+  }else{
+    print("Not enough samples for paired analysis!! Doing regular switching...")
+    mSet$dataSet$paired <- FALSE  
+  }  
+  
   mSet
 }

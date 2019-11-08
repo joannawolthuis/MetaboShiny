@@ -18,32 +18,31 @@ shiny::observe({
                # save previous mset
                mset_name = mSet$dataSet$cls.name
                # TODO: use this in venn diagram creation
-               mSet$storage[[mset_name]] <<- list(analysis = mSet$analSet)
+               mSet$storage[[mset_name]] <-  list(analysis = mSet$analSet)
              },
              pca = {
                shiny::withProgress({
-                 mSet <<- MetaboAnalystR::PCA.Anal(mSet) # perform PCA analysis
+                 mSet <-  MetaboAnalystR::PCA.Anal(mSet) # perform PCA analysis
                })
              },
              meba = {
                shiny::withProgress({
-                 mSet <<- MetaboAnalystR::performMB(mSet, 10) # perform MEBA analysis
+                 mSet <-  MetaboAnalystR::performMB(mSet, 10) # perform MEBA analysis
                })
-
              },
              asca = {
                try({
                  # perform asca analysis
                  shiny::withProgress({
-                   mSet <<- MetaboAnalystR::Perform.ASCA(mSet, 1, 1, 2, 2)
-                   mSet <<- MetaboAnalystR::CalculateImpVarCutoff(mSet, 0.05, 0.9)
+                   mSet <-  MetaboAnalystR::Perform.ASCA(mSet, 1, 1, 2, 2)
+                   mSet <-  MetaboAnalystR::CalculateImpVarCutoff(mSet, 0.05, 0.9)
                  })
                })
              },
              heatmap = {
                # reset
 
-               mSet$analSet$heatmap <<- NULL
+               mSet$analSet$heatmap <-  NULL
 
                if(!(input$heattable %in% names(mSet$analSet))) return(NULL)
                switch(input$heattable,
@@ -142,7 +141,7 @@ shiny::observe({
                }
 
                # write to mSet
-               mSet$analSet$heatmap <<- list(
+               mSet$analSet$heatmap <-  list(
                  matrix = final_matrix,
                  translator = translator,
                  colors = color.mapper,
@@ -150,7 +149,7 @@ shiny::observe({
              },
              tt = {
                withProgress({
-                 mSet <<- MetaboAnalystR::Ttests.Anal(mSet,
+                 mSet <-  MetaboAnalystR::Ttests.Anal(mSet,
                                       nonpar = input$tt_nonpar,
                                       threshp = 0.05, # TODO: make the threshold user defined...
                                       paired = mSet$dataSet$paired,
@@ -161,11 +160,11 @@ shiny::observe({
              fc = {
                withProgress({
                  if(mSet$dataSet$paired){
-                   mSet <<- MetaboAnalystR::FC.Anal.paired(mSet,
+                   mSet <-  MetaboAnalystR::FC.Anal.paired(mSet,
                                                            2.0, # TODO: make this threshold user defined
                                                              1)  
                  }else{
-                   mSet <<- MetaboAnalystR::FC.Anal.unpaired(mSet,
+                   mSet <-  MetaboAnalystR::FC.Anal.unpaired(mSet,
                                                              2.0, # TODO: make this threshold user defined
                                                              1) 
                  }
@@ -176,11 +175,10 @@ shiny::observe({
                
               aovtype = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
               redo = aovtype %not in% names(mSet$analSet)
-               
                if(redo){ # if done, don't redo
                  shiny::withProgress({
-                   mSet <<- switch(mSet$dataSet$exp.type,
-                                   "1fm"=MetaboAnalystR::ANOVA.Anal(mSet, thresh=0.05,nonpar = F),
+                   mSet <- switch(mSet$dataSet$exp.type,
+                                   "1fm"=MetaboAnalystR::ANOVA.Anal(mSet, thresh=0.05,post.hoc = "fdr",nonpar = F),
                                    "2f"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.05, "fdr", "", 1, 1),
                                    "t"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.05, "fdr", "time0", 1, 1),
                                    "t1f"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.05, "fdr", "time", 3, 1))
@@ -189,7 +187,7 @@ shiny::observe({
              },
              volc = {
                shiny::withProgress({
-                 mSet <<- MetaboAnalystR::Volcano.Anal(mSet,
+                 mSet <-  MetaboAnalystR::Volcano.Anal(mSet,
                                                        paired = mSet$dataSet$paired, 
                                                        2.0, 0,
                                                        0.75,F, 0.1,
@@ -224,7 +222,7 @@ shiny::observe({
                      #abstracts = RISmed::AbstractText(fetch)
                    )
                    
-                   lcl$tables$pm_absdata <<- tbl
+                   lcl$tables$pm_absdata <-  tbl
                    
                    shiny::setProgress(0.6)
                    
@@ -232,7 +230,7 @@ shiny::observe({
                    colnames(wcdata) <- c("name", "value")
                  }
                  
-                 lcl$tables$word_freq_pm <<- wcdata
+                 lcl$tables$word_freq_pm <-  wcdata
                  
                })
              },
@@ -283,12 +281,14 @@ shiny::observe({
                    
                    v <- sort(rowSums(m), decreasing = TRUE)
                    
-                   lcl$tables$word_freq <<- data.frame(name = names(v), value = v)
+                   lcl$tables$word_freq <-  data.frame(name = names(v), value = v)
                    
                  })
                }
              })
     }
+    mSet <<- mSet
+    lcl <<- lcl
     # - - - -
     statsmanager$calculate <- NULL # set reloading to 'off'
   }

@@ -7,13 +7,24 @@ getProfile <- function(mSet, varName, title=varName, mode="stat"){
   samp.names <- rownames(sourceTable)
   # ---------------
   if(mode == "multi"){
-    translator <- data.table(
-      index = 1:length(samp.names),
-      Sample = gsub(x = samp.names, pattern = "_T|_t\\d$", replacement=""),
-      GroupA = mSet$dataSet$facA,
-      GroupB = mSet$dataSet$facB,
-      Abundance = sourceTable[,varInx]
-    )
+    if(mSet$dataSet$exp.type == "t"){
+      translator <- data.table(
+        index = 1:length(samp.names),
+        Sample = gsub(x = samp.names, pattern = "_T|_t\\d$", replacement=""),
+        GroupA = mSet$dataSet$time.fac,
+        GroupB = mSet$dataSet$time.fac,
+        Abundance = sourceTable[,varInx]
+      )
+    }else{
+      translator <- data.table(
+        index = 1:length(samp.names),
+        Sample = gsub(x = samp.names, pattern = "_T|_t\\d$", replacement=""),
+        GroupA = mSet$dataSet$facA,
+        GroupB = mSet$dataSet$facB,
+        Abundance = sourceTable[,varInx]
+      )  
+    }
+    
   }else if(mode == "stat"){
     translator <- data.table(
       index = 1:length(samp.names),

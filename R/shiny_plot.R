@@ -237,6 +237,8 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
 
   profile <- MetaboShiny::getProfile(mSet, cpd, mode=if(mode == "nm") "stat" else "multi")
  
+  print(head(profile))
+  
   df_line <- data.table::data.table(x = c(1,2),
                         y = rep(min(profile$Abundance - 0.1),2))
   stars = ""
@@ -245,7 +247,8 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
     pval <- if(mode == "nm"){
       mSet$analSet$tt$sig.mat[which(rownames(mSet$analSet$tt$sig.mat) == cpd), "p.value"]
     }else{
-      mSet$analSet$aov2$sig.mat[which(rownames(mSet$analSet$aov2$sig.mat) == cpd), 'Interaction(adj.p)']
+      int.col <- grep("adj|Adj", colnames(mSet$analSet$aov2$sig.mat),value=T)
+      mSet$analSet$aov2$sig.mat[which(rownames(mSet$analSet$aov2$sig.mat) == cpd), int.col]
     }
     stars <- p2stars(pval)
   })
@@ -366,8 +369,8 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                   },
                   mean = {
                     p + stat_summary(data = prof,
-                                     aes( x = if(mode == "nm") Group else GroupB,
-                                          y = Abundance),
+                                     aes(x = if(mode == "nm") Group else GroupB,
+                                         y = Abundance),
                                      fun.y = mean,
                                      fun.ymin = mean,
                                      fun.ymax = mean,
@@ -388,7 +391,11 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
   if(mode == "multi"){
     p <- p + ggplot2::scale_color_manual(values=cols[1:length(unique(levels(profile$GroupA)))])
     p <- p + ggplot2::scale_fill_manual(values = cols[1:length(unique(levels(profile$GroupA)))])
-    p <- p + ggplot2::xlab(Hmisc::capitalize(mSet$dataSet$facB.lbl))
+    if(mSet$dataSet$exp.type == "t"){
+      p <- p + ggplot2::xlab("Time")
+    }else{
+      p <- p + ggplot2::xlab(Hmisc::capitalize(mSet$dataSet$facB.lbl))
+    }
     }else{
     p <- p + ggplot2::scale_color_manual(values=cols[1:length(unique(levels(profile$Color)))])
     if(all(as.character(profile$Color) == as.character(profile$Group))){

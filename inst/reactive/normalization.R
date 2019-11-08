@@ -41,6 +41,7 @@ shiny::observeEvent(input$initialize, {
       length(lvls)
     })
     
+    unique.levels <- unique.levels[!(names(unique.levels) %in% c("batch", "injection", "sample"))]
     # use this as the default selected experimental variable (user can change later)
     which.default <- unique.levels[which(unique.levels == min(unique.levels[which(unique.levels> 1)]))][1]
     condition = names(which.default)
@@ -66,7 +67,7 @@ shiny::observeEvent(input$initialize, {
     first_part[first_part == "" | is.null(first_part)] <- "unknown"
     
     # re-make csv with the corrected data
-    csv <- cbind(first_part[,-c("label")], # if 'label' is in excel file remove it, it will clash with the metaboanalystR 'label'
+    csv <- cbind(first_part, # if 'label' is in excel file remove it, it will clash with the metaboanalystR 'label'
                  "label" = first_part[,..condition][[1]], # set label as the initial variable of interest
                  csv_orig[,-..exp.vars,with=FALSE])
     
@@ -432,10 +433,7 @@ shiny::observeEvent(input$initialize, {
     
     mSet$storage <- list(orig = list(data = mSet$dataSet,
                                      analysis = mSet$analSet))
-    
-    
-    
-    # return?
+
     mSet <<- mSet
     
     statsmanager$calculate <- "pca"

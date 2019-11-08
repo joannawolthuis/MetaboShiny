@@ -917,6 +917,9 @@ cores = 1')
         lcl$proj_name <<- opts$proj_name
         lcl$paths$patdb <<- file.path(opts$work_dir, paste0(opts$proj_name, ".db"))
         lcl$paths$csv_loc <<- file.path(opts$work_dir, paste0(opts$proj_name, ".csv"))
+        updateCheckboxInput(session,
+                            "paired",
+                            value = mSet$dataSet$paired)
       }
       datamanager$reload <- "general"
     })
