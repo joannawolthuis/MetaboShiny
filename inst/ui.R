@@ -669,12 +669,8 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                   shiny::textOutput("browse_definition")),
                                                                                                                                                                         shiny::div(DT::dataTableOutput('browse_tab'),style='font-size:80%'),
                                                                                                                                                                         br(),
-                                                                                                                                                                        shiny::tags$i("Find m/z values matching adducts or isotopes of this compound."),br(),
-                                                                                                                                                                        shiny::actionButton("revsearch_mz", "Search", icon=shiny::icon("search"))
-                                                                                                                                                        ),
-                                                                                                                                                        shiny::tabPanel(NULL, icon = shiny::icon("search-location"),
-                                                                                                                                                                        shiny::div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
-                                                                                                                                                        )
+                                                                                                                                                                        shiny::tags$i("M/z values matching adducts or isotopes of this compound:"),br(),
+                                                                                                                                                                        shiny::div(DT::dataTableOutput('hits_tab'),style='font-size:80%'))
                                                                                                                                                       )
                                                                                                                                                       
                                                                                                                                       ))
@@ -697,17 +693,13 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                        "time series"="t",
                                                                                                                                                        "time series + one factor"="t1f"),
                                                                                                                                         selected = "1f")
+                                                                                                                   ,fluidRow(align="center",shiny::uiOutput("stats_picker"))
                                                                                                                    ,shiny::conditionalPanel("input.stats_type == '1f'",
                                                                                                                                             fluidRow(align="center",MetaboShiny::switchButton("paired", 
-                                                                                                                                                                      "Paired sample analysis?",
-                                                                                                                                                                      value = F,
-                                                                                                                                                                      col = "BW",
-                                                                                                                                                                      type = "YN"))
-                                                                                                                   )
-                                                                                                                   ,shiny::conditionalPanel("input.stats_type != 't'",
-                                                                                                                                            shiny::selectizeInput("stats_var", 
-                                                                                                                                                                  label="Experimental factor(s):", 
-                                                                                                                                                                  choices = c("label"), multiple=T)
+                                                                                                                                                                                              "Paired sample analysis?",
+                                                                                                                                                                                              value = F,
+                                                                                                                                                                                              col = "BW",
+                                                                                                                                                                                              type = "YN"))
                                                                                                                    )
                                                                                                                    ,shiny::conditionalPanel("input.stats_type == 't' || input.stats_type == 't1f'",
                                                                                                                                             shiny::selectizeInput("time_var", 

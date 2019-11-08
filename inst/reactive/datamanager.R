@@ -19,6 +19,7 @@ shiny::observe({
                    mSet$dataSet$exp.type <<- "1f" # one factor, binary class
                  }  
                  print("updating interface...")
+                 datamanager$reload <- "statspicker"
                  interface$mode <<- mSet$dataSet$exp.type
                  output$curr_name <- shiny::renderText({mSet$dataSet$cls.name})
                  shiny::updateNavbarPage(session, "statistics", selected = "inf")
@@ -26,9 +27,16 @@ shiny::observe({
 
                shiny::updateSelectInput(session, "stats_type", 
                                         selected = gsub(mSet$dataSet$exp.type, "^1f\\w", "1f")) 
+               
+               if(!any(duplicated(mSet$dataSet$covars$individual))){
+                 shiny::updateSelectInput(session, "stats_type", 
+                                          choices = list("one factor"="1f", 
+                                                         "two factors"="2f")) 
+               }else{
+                 shiny::updateSelectInput(session, "time_var", selected = mSet$dataSet$time.var, 
+                                          choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
+               }
                shiny::updateSelectInput(session, "stats_var", selected = mSet$dataSet$exp.var, 
-                                        choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
-               shiny::updateSelectInput(session, "time_var", selected = mSet$dataSet$time.var, 
                                         choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
                shiny::updateSelectInput(session, "shape_var", 
                                         choices = c("label", 
@@ -49,6 +57,28 @@ shiny::observe({
                 }else{
                    search_button$on <- TRUE
                 }
+             },
+             statspicker = {
+               output$stats_picker <- shiny::renderUI({
+                 if(input$stats_type == "2f"){
+                   shiny::selectizeInput("stats_var", 
+                                         label="Experimental variables:", 
+                                         multiple = T,
+                                         selected = mSet$dataSet$exp.var, 
+                                         choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, 
+                                                                                                        MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]),
+                                         options = list(maxItems = 2)) 
+                 }else if(input$stats_type == "t"){
+                   br()
+                 }else{
+                   shiny::selectizeInput("stats_var", 
+                                         label="Experimental variable:", 
+                                         selected = mSet$dataSet$exp.var, 
+                                         choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, 
+                                                                                                        MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]),
+                                         multiple = F)
+                 }
+               })  
              },
              venn = {
                if("storage" %in% names(mSet)){

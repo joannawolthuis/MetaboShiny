@@ -895,15 +895,14 @@ cores = 1')
     }
   })
   
-  # shiny::observeEvent(input$stats_type,{
-  #   if(!is.null(mSet)){
-  #     if(input$stats_type == "2f"){
-  #       shiny::updateSelectizeInput(session, "stats_var", options = list(maxItems = 2))
-  #     }else{
-  #       shiny::updateSelectizeInput(session, "stats_var", options = list(maxItems = 1))
-  #     }  
-  #   }
-  # })
+  shiny::observe({
+    
+  })
+  shiny::observeEvent(input$stats_type,{
+    if(!is.null(mSet)){
+      datamanager$reload <- "statspicker"
+    }
+    })
   
   shiny::observeEvent(input$load_mset, {
     # load mset
