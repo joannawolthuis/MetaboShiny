@@ -8,9 +8,7 @@ shiny::observe({
     NULL # if not reloading anything, nevermind
     
   }else{
-    
-    print(statsmanager$calculate)
-    
+
     if(!is.null(mSet)){
       
       mSet.old <- mSet
@@ -45,8 +43,6 @@ shiny::observe({
                  # reset
                  
                  mSet$analSet$heatmap <-  NULL
-                 
-                 print(input$heattable)
                  
                  if(input$heattable %in% names(mSet$analSet)){
                    
@@ -291,7 +287,6 @@ shiny::observe({
                  }
                }) 
         success <- T
-        print(success)
       })
       if(success){
         mSet <<- mSet

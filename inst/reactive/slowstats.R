@@ -197,104 +197,105 @@ observeEvent(input$do_ml, {
     # ============ LOOP HERE ============
     
     # get results for the amount of attempts chosen
-    repeats <- pbapply::pblapply(1:goes,
-                                 cl=session_cl,
-                                 function(i,
-                                          train_vec = train_vec,
-                                          test_vec = test_vec,
-                                          configCols = configCols,
-                                          ml_method = ml_method,
-                                          ml_perf_metr = ml_perf_metr,
-                                          ml_folds = ml_folds,
-                                          ml_preproc = ml_preproc,
-                                          tuneGrid = tuneGrid,
-                                          ml_train_perc = ml_train_perc){
-
-                                   # get user training percentage
-                                   ml_train_perc <- ml_train_perc/100
-                                   
-                                   if(unique(train_vec)[1] == "all" & unique(test_vec)[1] == "all"){ # BOTH ARE NOT DEFINED
-                                     test_idx = caret::createDataPartition(y = curr$label, p = ml_train_perc, list = FALSE) # partition data in a balanced way (uses labels)
-                                     train_idx = setdiff(1:nrow(curr), test_idx) #use the other rows for testing
-                                     inTrain = train_idx
-                                     inTest = test_idx
-                                   }else if(unique(train_vec)[1] != "all"){ #ONLY TRAIN IS DEFINED
-                                     train_idx <- which(config[,train_vec[1], with=F][[1]] == train_vec[2])
-                                     test_idx = setdiff(1:nrow(curr), train_idx) # use the other rows for testing
-                                     reTrain <- caret::createDataPartition(y = config[train_idx, label], p = ml_train_perc) # take a user-defined percentage of the regexed training set
-                                     inTrain <- train_idx[reTrain$Resample1]
-                                     inTest = test_idx
-                                   }else{ # ONLY TEST IS DEFINED
-                                     test_idx = which(config[,test_vec[1], with=F][[1]] == test_vec[2])
-                                     train_idx = setdiff(1:nrow(curr), test_idx) # use the other rows for testing
-                                     reTrain <- caret::createDataPartition(y = config[train_idx, label], p = ml_train_perc) # take a user-defined percentage of the regexed training set
-                                     inTrain <- train_idx[reTrain$Resample1]
-                                     inTest <- test_idx
-                                   }
-                                   
-                                   # choose predictor "label" (some others are also included but cross validation will be done on this)
-                                   predictor = "label"
-                                   
-                                   # split training and testing data
-                                   trainY <- curr[inTrain,
-                                                  ..predictor][[1]]
-                                   testY <- curr[inTest,
-                                                 ..predictor][[1]]
-                                   
-                                   training <- curr[inTrain,]
-                                   testing <- curr[inTest,]
-                                   
-                                   require(caret)
-                                   
-                                   if(ml_folds == "LOOCV"){
-                                     trainCtrl <- caret::trainControl(verboseIter = T,
-                                                                      allowParallel = F,
-                                                                      method="LOOCV",
-                                                                      trim=TRUE, 
-                                                                      returnData = FALSE) # need something here...
+    shiny::withProgress(message = "Running...",{
+      repeats <- pbapply::pblapply(1:goes,
+                                   cl=session_cl,
+                                   function(i,
+                                            train_vec = train_vec,
+                                            test_vec = test_vec,
+                                            configCols = configCols,
+                                            ml_method = ml_method,
+                                            ml_perf_metr = ml_perf_metr,
+                                            ml_folds = ml_folds,
+                                            ml_preproc = ml_preproc,
+                                            tuneGrid = tuneGrid,
+                                            ml_train_perc = ml_train_perc){
                                      
-                                   }else{
-                                     trainCtrl <- caret::trainControl(verboseIter = T,
-                                                                      allowParallel = F,
-                                                                      method=as.character(ml_perf_metr),
-                                                                      number=as.numeric(ml_folds),
-                                                                      repeats=3,
-                                                                      trim=TRUE, 
-                                                                      returnData = FALSE) # need something here...
-                                   }
-                                   
-                                   fit <- caret::train(
-                                     label ~ .,
-                                     data = training,
-                                     method = ml_method,
-                                     ## Center and scale the predictors for the training
-                                     ## set and all future samples.
-                                     preProc = ml_preproc,
-                                     tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
-                                     trControl = trainCtrl
-                                   )
-                                   
-                                   result.predicted.prob <- stats::predict(fit, testing, type="prob") # Prediction
-                                   
-                                   # train and cross validate model
-                                   # return list with mode, prediction on test data etc.s
-                                   list(type = ml_method,
-                                       # model = fit,
-                                        importance = caret::varImp(fit)$importance,
-                                        prediction = result.predicted.prob[,2],
-                                        labels = testing$label)
-                                 },
-                                 train_vec = lcl$vectors$ml_train,
-                                 test_vec = lcl$vectors$ml_test,
-                                 configCols = configCols,
-                                 ml_method = input$ml_method,
-                                 ml_perf_metr = input$ml_perf_metr,
-                                 ml_folds = input$ml_folds,
-                                 ml_preproc = input$ml_preproc,
-                                 tuneGrid = tuneGrid,
-                                 ml_train_perc <- input$ml_train_perc
-    )
-    
+                                     # get user training percentage
+                                     ml_train_perc <- ml_train_perc/100
+                                     
+                                     if(unique(train_vec)[1] == "all" & unique(test_vec)[1] == "all"){ # BOTH ARE NOT DEFINED
+                                       test_idx = caret::createDataPartition(y = curr$label, p = ml_train_perc, list = FALSE) # partition data in a balanced way (uses labels)
+                                       train_idx = setdiff(1:nrow(curr), test_idx) #use the other rows for testing
+                                       inTrain = train_idx
+                                       inTest = test_idx
+                                     }else if(unique(train_vec)[1] != "all"){ #ONLY TRAIN IS DEFINED
+                                       train_idx <- which(config[,train_vec[1], with=F][[1]] == train_vec[2])
+                                       test_idx = setdiff(1:nrow(curr), train_idx) # use the other rows for testing
+                                       reTrain <- caret::createDataPartition(y = config[train_idx, label], p = ml_train_perc) # take a user-defined percentage of the regexed training set
+                                       inTrain <- train_idx[reTrain$Resample1]
+                                       inTest = test_idx
+                                     }else{ # ONLY TEST IS DEFINED
+                                       test_idx = which(config[,test_vec[1], with=F][[1]] == test_vec[2])
+                                       train_idx = setdiff(1:nrow(curr), test_idx) # use the other rows for testing
+                                       reTrain <- caret::createDataPartition(y = config[train_idx, label], p = ml_train_perc) # take a user-defined percentage of the regexed training set
+                                       inTrain <- train_idx[reTrain$Resample1]
+                                       inTest <- test_idx
+                                     }
+                                     
+                                     # choose predictor "label" (some others are also included but cross validation will be done on this)
+                                     predictor = "label"
+                                     
+                                     # split training and testing data
+                                     trainY <- curr[inTrain,
+                                                    ..predictor][[1]]
+                                     testY <- curr[inTest,
+                                                   ..predictor][[1]]
+                                     
+                                     training <- curr[inTrain,]
+                                     testing <- curr[inTest,]
+                                     
+                                     require(caret)
+                                     
+                                     if(ml_folds == "LOOCV"){
+                                       trainCtrl <- caret::trainControl(verboseIter = T,
+                                                                        allowParallel = F,
+                                                                        method="LOOCV",
+                                                                        trim=TRUE, 
+                                                                        returnData = FALSE) # need something here...
+                                       
+                                     }else{
+                                       trainCtrl <- caret::trainControl(verboseIter = T,
+                                                                        allowParallel = F,
+                                                                        method=as.character(ml_perf_metr),
+                                                                        number=as.numeric(ml_folds),
+                                                                        repeats=3,
+                                                                        trim=TRUE, 
+                                                                        returnData = FALSE) # need something here...
+                                     }
+                                     
+                                     fit <- caret::train(
+                                       label ~ .,
+                                       data = training,
+                                       method = ml_method,
+                                       ## Center and scale the predictors for the training
+                                       ## set and all future samples.
+                                       preProc = ml_preproc,
+                                       tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
+                                       trControl = trainCtrl
+                                     )
+                                     
+                                     result.predicted.prob <- stats::predict(fit, testing, type="prob") # Prediction
+                                     
+                                     # train and cross validate model
+                                     # return list with mode, prediction on test data etc.s
+                                     list(type = ml_method,
+                                          # model = fit,
+                                          importance = caret::varImp(fit)$importance,
+                                          prediction = result.predicted.prob[,2],
+                                          labels = testing$label)
+                                   },
+                                   train_vec = lcl$vectors$ml_train,
+                                   test_vec = lcl$vectors$ml_test,
+                                   configCols = configCols,
+                                   ml_method = input$ml_method,
+                                   ml_perf_metr = input$ml_perf_metr,
+                                   ml_folds = input$ml_folds,
+                                   ml_preproc = input$ml_preproc,
+                                   tuneGrid = tuneGrid,
+                                   ml_train_perc <- input$ml_train_perc
+      )
+    })
     # check if a storage list for machine learning results already exists
     if(!"ml" %in% names(mSet$analSet)){
       mSet$analSet$ml <<- list() # otherwise make it

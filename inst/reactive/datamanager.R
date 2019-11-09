@@ -132,7 +132,7 @@ shiny::observe({
                if(which_aov %in% names(mSet$analSet)){
                  
                  keep <- switch(which_aov,
-                                aov = c("p.value", "FDR", "Fisher's LSD"),
+                                aov = colnames(mSet$analSet$aov$sig.mat) %in% c("p.value", "FDR", "Fisher's LSD"),
                                 aov2 = grepl("adj\\.p|Adj", colnames(mSet$analSet$aov2$sig.mat)))
                  
                  output$aov_tab <- DT::renderDataTable({
