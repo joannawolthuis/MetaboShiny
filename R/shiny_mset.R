@@ -129,7 +129,7 @@ change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
                      time.check = grepl("time", mSet$dataSet$exp.var)
                      is.time = any(time.check)
                      if(is.time){
-                       print("time series potential")
+                       shiny::showNotification("One variable may be time-related. Using for visualisation...")
                        idx2 = which(time.check)
                        idx1 = setdiff(c(1,2), idx2)
                      }else{
@@ -149,7 +149,7 @@ change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
                      mSet <- MetaboAnalystR::SetDesignType(mSet, "time0")
                      mSet$dataSet$exp.fac <- as.factor(mSet$dataSet$covars$individual)
                      if(!any(duplicated(mSet$dataSet$exp.fac))){
-                       print("Won't work, need multiple of the same sample in the 'individual' metadata column!")
+                       MetaboShiny::metshiAlert("This analysis needs multiple of the same sample in the 'individual' metadata column!")
                        return(NULL)
                      }
                      mSet$dataSet$time.fac <- as.factor(mSet$dataSet$covars[,time_var, with=F][[1]])
@@ -161,7 +161,7 @@ change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
                    "t1f"={
                      mSet <- MetaboAnalystR::SetDesignType(mSet, "time")
                      if(!any(duplicated(as.factor(mSet$dataSet$covars$individual)))){
-                       print("Won't work, need multiple of the same sample in the 'individual' metadata column!")
+                       MetaboShiny::metshiAlert("This analysis needs multiple of the same sample in the 'individual' metadata column!")
                        return(NULL)
                      }
                      change_var <- if(length(stats_var)>1) stats_var[1] else stats_var
@@ -203,7 +203,6 @@ subset.mSet <- function(mSet, subset_var, subset_group, name=mSet$dataSet$cls.na
       mSet$dataSet$exp.fac <- droplevels(mSet$dataSet$exp.fac[keep.norm])
     }
     mSet$dataSet$subset[[subset_var]] <- subset_group
-    print(paste0("Samples left: ", length(keep.samples)))
   }
   mSet
 }
@@ -253,8 +252,8 @@ pair.mSet <- function(mSet, name){
                                      subset_group = keep.samp)
     mSet$dataSet$paired <- TRUE  
   }else{
-    print("Not enough samples for paired analysis!! Doing regular switching...")
-    mSet$dataSet$paired <- FALSE  
+    MetaboShiny::metshiAlert("Not enough samples for paired analysis!")
+    return(NULL)
   }  
   
   mSet

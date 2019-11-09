@@ -100,8 +100,7 @@ app.font.css <- function(font.h1 = "Press Start 2P",
   font.body.w = if(font.body.w == "") "" else{paste0("font-weight: ", font.body.w, ";")}
 
   base.import <- if(online) gsubfn::fn$paste('@import url("https://fonts.googleapis.com/css?family=$font.url");') else ""
-  print(base.import)
-  
+
   base <- '$base.import
 
   h1 {

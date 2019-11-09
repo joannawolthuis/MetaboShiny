@@ -14,7 +14,9 @@ shiny::observeEvent(input$clear_prematch,{
   
 shiny::observeEvent(input$prematch,{
   if(is.null(mSet)){
-    print("Requires mSet!")
+    
+    MetaboShiny::metshiAlert("Requires mSet!")
+    
     return(NULL)
   }
   if(length(lcl$vectors$db_prematch_list) > 0){ # go through selected databases

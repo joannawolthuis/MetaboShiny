@@ -53,7 +53,7 @@ get_prematches <- function(who = NA,
 
 score.isos <- function(table, mSet, patdb, method="mscore", inshiny=TRUE, session=0, intprec, ppm){
   
-  print("...")
+  shiny::showNotification("Scoring isotopes...")
   require(InterpretMSSpectrum)
   
   formulas = unique(table$fullformula)

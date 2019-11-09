@@ -110,7 +110,6 @@ p2stars = function(pval){
   }
 }
 
-
 havingIP <- function(){
   if(.Platform$OS.type == "windows"){
     ipmessage = system("ipconfig", intern=T)
@@ -129,4 +128,19 @@ internetWorks <- function(testsite = "http://www.google.com"){
     works=TRUE
   },silent = T)
   works
+}
+
+metshiAlert <- function(message, session = shiny::getDefaultReactiveDomain()){
+  shinyWidgets::sendSweetAlert(
+    session = session,
+    title = "Error",
+    text = tags$div(
+      shiny::img(#class = "rotategem", 
+                 src = "gemmy_rainbow.png", 
+                 width = "30px", height = "30px"),
+      br(),
+      h3(message)
+    ),
+    html = TRUE
+  )
 }

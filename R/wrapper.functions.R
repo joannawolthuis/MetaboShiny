@@ -11,24 +11,16 @@ make.metshi.csv <-
            groupfac = "mz"
   ){
     
-    print("new ver...")
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(patdb))
     
-    cat("Checking for mismatches between peak tables and metadata... \n")
+    shiny::showNotification("Checking for mismatches between peak tables and metadata...")
     
     fn_meta <- RSQLite::dbGetQuery(conn, "SELECT DISTINCT sample FROM individual_data")[,1]
     fn_int <- RSQLite::dbGetQuery(conn, "SELECT DISTINCT filename FROM mzintensities")[,1]
     
-    cat(paste0("-- in peaklist, not in metadata: --- \n", 
-               paste0(setdiff(fn_int,
-                              fn_meta), 
-                      collapse=", "), 
-               "\n"))
-    cat(paste0("-- in metadata, not in peaklist: --- \n", 
-               paste0(setdiff(fn_meta,
-                              fn_int), 
-                      collapse=", "), 
-               "\n\n"))
+    MetaboShiny::metshiAlert(paste0(
+      "Missing from metadata:", paste0(setdiff(fn_int,fn_meta), collapse=", ")),
+      "Missing from peaklist:", paste0(setdiff(fn_meta,fn_int), collapse=", "))
     
     if(DBI::dbExistsTable(conn, "setup")){
       query <- strwrap(gsubfn::fn$paste("select distinct d.*, s.*
@@ -46,8 +38,6 @@ make.metshi.csv <-
                        width=10000,
                        simplify=TRUE)
     }
-    
-    print(query)
     
     RSQLite::dbExecute(conn, "PRAGMA journal_mode=WAL;")
     RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS filenames ON mzintensities(filename)")

@@ -416,10 +416,17 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
 
 ggPlotAOV <- function(mSet, cf, n=20,
                       plot.theme, plotlyfy=TRUE,font){
+  
   which_aov = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
   
   profile <- data.table::as.data.table(mSet$analSet[[which_aov]]$p.log[mSet$analSet[[which_aov]]$inx.imp],
                            keep.rownames = T)
+  
+  if(nrow(profile)==0){
+    shiny::showNotification("No significant hits")
+    return(NULL)
+  }
+  
   colnames(profile) <- c("cpd", "-logp")
   profile[,2] <- round(profile[,2], digits = 2)
   profile$Peak <- c(1:nrow(profile))
@@ -452,6 +459,12 @@ ggPlotAOV <- function(mSet, cf, n=20,
 ggPlotTT <- function(mSet, cf, n=20,
                      plot.theme, plotlyfy=TRUE,font){
   profile <- data.table::as.data.table(mSet$analSet$tt$p.log[mSet$analSet$tt$inx.imp],keep.rownames = T)
+  
+  if(nrow(profile)==0){
+    shiny::showNotification("No significant hits")
+    return(NULL)
+  }
+  
   colnames(profile) <- c("cpd", "-logp")
   profile[,2] <- round(profile[,2], digits = 2)
   profile$Peak <- c(1:nrow(profile))
@@ -486,7 +499,12 @@ ggPlotFC <- function(mSet, cf, n=20,
                      plot.theme,
                      plotlyfy=TRUE,font){
   profile <- data.table::as.data.table(mSet$analSet$fc$fc.log[mSet$analSet$fc$inx.imp],keep.rownames = T)
-  profile
+  
+  if(nrow(profile)==0){
+    shiny::showNotification("No significant hits")
+    return(NULL)
+  }
+  
   colnames(profile) <- c("cpd", "log2fc")
   profile$Peak <- c(1:nrow(profile))
   # ---------------------------
@@ -517,6 +535,12 @@ ggPlotVolc <- function(mSet,
                        font ){
   
   vcn<-mSet$analSet$volcano;
+  
+  if(nrow(vcn$sig.mat)==0){
+    shiny::showNotification("No significant hits")
+    return(NULL)
+  }
+  
   dt <- data.table::as.data.table(vcn$sig.mat[,c(2,4)],keep.rownames = T)
   colnames(dt) <- c("cpd", "log2FC", "-log10P")
   p <- ggplot2::ggplot() +
@@ -617,77 +641,6 @@ ggPlotPerm <- function(mSet,
     p
   }
 }
-
-plot.many <- function(res.obj = models,
-                      which_alpha = 1,
-                      plot.theme,
-                      plotlyfy=TRUE,font){
-  
-  predictions <- if(length(res.obj) > 1) do.call("cbind", lapply(res.obj, function(x) x$prediction)) else data.frame(res.obj[[1]]$prediction)
-  
-  colnames(predictions) <- if(length(res.obj) > 1) sapply(res.obj, function(x) x$alpha) else res.obj[[1]]$alpha
-  testY = res.obj[[1]]$labels
-  
-  if(length(unique(testY)) > 2){
-    
-    return("not supported yet")
-    # https://stats.stackexchange.com/questions/112383/roc-for-more-than-2-outcome-categories
-    #
-    # for (type.id in length(unique(testY))) {
-    #   type = as.factor(iris.train$Species == lvls[type.id])
-    #
-    #   nbmodel = NaiveBayes(type ~ ., data=iris.train[, -5])
-    #   nbprediction = predict(nbmodel, iris.test[,-5], type='raw')
-    #
-    #   score = nbprediction$posterior[, 'TRUE']
-    #   actual.class = iris.test$Species == lvls[type.id]
-    #
-    #   pred = prediction(score, actual.class)
-    #   nbperf = performance(pred, "tpr", "fpr")
-    #
-    #   roc.x = unlist(nbperf@x.values)
-    #   roc.y = unlist(nbperf@y.values)
-    #   lines(roc.y ~ roc.x, col=type.id+1, lwd=2)
-    #
-    #   nbauc = performance(pred, "auc")
-    #   nbauc = unlist(slot(nbauc, "y.values"))
-    #   aucs[type.id] = nbauc
-    # }
-  }else{
-    data <- data.frame(D = as.numeric(as.factor(testY))-1,
-                       D.str = testY)
-    data <- cbind(data, predictions)
-    if(length(res.obj) > 1){
-      roc_coord <- plotROC::melt_roc(data, "D", m = 3:ncol(data))
-    }else{
-      roc_coord <- data.frame(D = rep(data[, "D"], length(3)),
-                              M = data[, 3],
-                              name = rep(names(data)[3], each = nrow(data)),
-                              stringsAsFactors = FALSE)
-    }
-  }
-  
-  names(roc_coord)[which(names(roc_coord) == "name")] <- "alpha"
-  
-  roc_coord <- roc_coord[roc_coord$alpha %in% which_alpha,]
-  # plot
-  p <- ggplot2::ggplot(roc_coord,
-                       ggplot2::aes(d = D, m = M, color = alpha)) +
-    plotROC::geom_roc(labelsize=0,show.legend = TRUE) +
-    plotROC::style_roc() +
-    theme(axis.text=element_text(size=19),
-          axis.title=element_text(size=19,face="bold"),
-          legend.title=element_text(size=19),
-          legend.text=element_text(size=19)) +
-    coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
-  
-  if(plotlyfy){
-    plotly::ggplotly(p)
-  }else{
-    p
-  }
-}
-
 
 ggPlotROC <- function(data,
                       attempts = 50,
@@ -1225,7 +1178,7 @@ ggPlotVenn <- function(mSet,
                        names(res) = base_name
                        res
                      },
-                     {print("not currently supported")
+                     {MetaboShiny::metshiAlert("Not currently supported...")
                        return(NULL)})
       
       if(is.null(tbls)) return(NULL)

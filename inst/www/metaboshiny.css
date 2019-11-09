@@ -16,13 +16,13 @@
 
 .selectize-dropdown, .selectize-dropdown.form-control{z-index:99998 !important;}
 
+/*
 .shiny-notification {
-            height: 50px;
-            width: 100%;
-            position:fixed;
-            left: 0%;
-            bottom: 0%;
-            }
+             position:fixed;
+             top: calc(50%);
+             left: calc(50%);
+             }
+*/
 
 .progress-bar {
   height: 4px;

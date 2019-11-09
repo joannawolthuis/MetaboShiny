@@ -7,6 +7,7 @@ shiny::observe({
     NULL # if not reloading anything, nevermind
   }else{
     if(!is.null(mSet)){
+      
       switch(datamanager$reload,
              general = {
                # reload sidebar
@@ -18,7 +19,7 @@ shiny::observe({
                  if(is.null(mSet$dataSet$exp.type)){
                    mSet$dataSet$exp.type <<- "1f" # one factor, binary class
                  }  
-                 print("updating interface...")
+                 shiny::showNotification("Updating interface...")
                  datamanager$reload <- "statspicker"
                  interface$mode <<- mSet$dataSet$exp.type
                  output$curr_name <- shiny::renderText({mSet$dataSet$cls.name})
@@ -218,7 +219,6 @@ shiny::observe({
                    }else{
                      "pca" # normal pca
                    }
-                 
 
                  if(input$pca_2d3d){ # check if switch button is in 2d or 3d mode
                    # render 2d plot

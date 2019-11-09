@@ -4,7 +4,8 @@ function(input, output, session) {
   
   shiny::showModal(MetaboShiny::loadModal())
   
-  print("...server...")
+  shiny::showNotification("Starting server process...")
+  
   #detach("package:MetaboShiny", unload=T)
   # used to be in startshiny.R
   options("download.file.method" = "libcurl")
@@ -96,7 +97,7 @@ function(input, output, session) {
   
   ####### !!!!!!!!!!! #########
   shiny::observe({
-    print("...loading user settings...")
+    shiny::showNotification("Loading user settings.")
     if(exists("lcl")){
       # - - - 
       userfolder = "~/MetaboShiny/saves/admin"
@@ -170,10 +171,9 @@ cores = 1')
       
       # = = = = = = =
       
-      print("...loading ui...")
+      shiny::showNotification("Loading interface...")
       opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
       
-      print(opts$cores)
       shiny::updateSliderInput(session, "ncores", value = as.numeric(opts$cores))
       # send specific functions/packages to other threads
 
@@ -537,7 +537,7 @@ cores = 1')
   shiny::observe({
     if(my_selection$revstruct != ""){
       if(!mSet$metshiParams$prematched){
-        print("Please perform pre-matching first to enable this feature!")
+        MetaboShiny::metshiAlert("Please perform pre-matching first to enable this feature!")
         return(NULL)
       }else{
         rev_matches = MetaboShiny::get_prematches(who = my_selection$revstruct,
@@ -577,7 +577,12 @@ cores = 1')
   # ===== UI SWITCHER ====
   
   shiny::observeEvent(input$heattable,{
-    statsmanager$calculate <- "heatmap"
+    if(!is.null(input$overview)){
+      if(input$overview == "heatmap"){
+        statsmanager$calculate <- "heatmap"
+        datamanager$reload <- "heatmap"
+      }  
+    }
   })
   
   # this toggles when 'interface' values change (for example from 'bivar' to 'multivar' etc.)
@@ -602,64 +607,43 @@ cores = 1')
     # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
     # then show the relevent tabs
     # TODO: enable multivariate time series analysis
-    if(is.null(interface$mode)) {
-      show.tabs <- hide.tabs[1]
-    }else if(interface$mode == '1fb'){
-      show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13)]
-      shiny::updateSelectInput(session, "ml_method",
-                               selected = "rf",
-                               choices = as.list(gbl$constants$ml.models))
-      shiny::updateSelectInput(session, "heattable", choices = list("T-test"="tt", 
-                                                                    "Fold-change analysis"="fc"), selected = "tt")
-      if("tt" %in% names(mSet$analSet)){
-        if("V" %in% colnames(mSet$analSet$tt$sig.mat)){
-          shiny::updateCheckboxInput(session, "tt_nonpar", value = T)
-        }else{
-          shiny::updateCheckboxInput(session, "tt_nonpar", value = F)
-        }
+      if(is.null(interface$mode)) {
+        show.tabs <- hide.tabs[1]
+      }else if(interface$mode == '1fb'){
+        show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13)]
+        shiny::updateSelectInput(session, "ml_method",
+                                 selected = "rf",
+                                 choices = as.list(gbl$constants$ml.models))
+      }else if(interface$mode == '1fm'){
+        show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,13)]
+        shiny::updateSelectInput(session, "ml_method",
+                                 selected = "rf",
+                                 choices = as.list(setdiff(gbl$constants$ml.models, gbl$constants$ml.twoonly)))
+      }else if(interface$mode == '2f'){
+        show.tabs <- hide.tabs[c(1,2,4,6,9,10,13)]
+      }else if(interface$mode == 't1f'){
+        show.tabs = hide.tabs[c(1,2,4,5,6,9,10,13)]
+      }else if(interface$mode == 't'){
+        show.tabs = hide.tabs[c(1,2,5,6,7,9,10,13)]
       }else{
-        shiny::updateCheckboxInput(session, "tt_nonpar", value = F)
-      } 
-    }else if(interface$mode == '1fm'){
-      show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,13)]
-      shiny::updateSelectInput(session, "heattable", choices = c("aov"), selected = "aov")
-      shiny::updateSelectInput(session, "ml_method",
-                               selected = "rf",
-                               choices = as.list(setdiff(gbl$constants$ml.models, gbl$constants$ml.twoonly)))
+        show.tabs <- hide.tabs[1]
+      }
       
-    }else if(interface$mode == '2f'){
-      show.tabs <- hide.tabs[c(1,2,4,6,9,10,13)]
-      shiny::updateSelectInput(session, "heattable", choices = list(ANOVA="aov2", 
-                                                                    ASCA="asca"), selected = "aov2")
-    }else if(interface$mode == 't1f'){
-      show.tabs = hide.tabs[c(1,2,4,5,6,9,10,13)]
-      shiny::updateSelectInput(session, "heattable", choices = list(ANOVA="aov2", 
-                                                                    ASCA="asca",
-                                                                    MEBA="meba"), selected = "aov2")
-    }else if(interface$mode == 't'){
-      show.tabs = hide.tabs[c(1,2,5,6,7,9,10,13)]
-      shiny::updateSelectInput(session, "heattable", choices = list(ANOVA="aov2",
-                                                                    MEBA="meba"), selected = "aov2")
-    }else{
-      show.tabs <- hide.tabs[1]
-    }
-    
-    # hide all the tabs to begin with
-    for(tab in hide.tabs){
-      shiny::hideTab(inputId = unlist(tab)[1],
-                     unlist(tab)[2],
-                     session = session)
-    }
-    
-    i = 1
-    # show the relevant tabs
-    for(tab in show.tabs){
-      shiny::showTab(inputId = unlist(tab)[1], 
-                     unlist(tab)[2], session = session, 
-                     select = ifelse(i==1, TRUE, FALSE))
-      i = i + 1
-    }
-    
+      # hide all the tabs to begin with
+      for(tab in hide.tabs){
+        shiny::hideTab(inputId = unlist(tab)[1],
+                       unlist(tab)[2],
+                       session = session)
+      }
+      
+      i = 1
+      # show the relevant tabs
+      for(tab in show.tabs){
+        shiny::showTab(inputId = unlist(tab)[1], 
+                       unlist(tab)[2], session = session, 
+                       select = ifelse(i==1, TRUE, FALSE))
+        i = i + 1
+      }
   })
   
   # print current compound in sidebar
@@ -763,7 +747,7 @@ cores = 1')
                }
              },overview = {
                if(!is.null(input$overview)){
-                 if(input$overview %not in% names(mSet$analSet) | input$overview %in% c("heatmap", "venn")){
+                 if(input$overview %not in% names(mSet$analSet) | input$overview ==  "venn"){
                    statsmanager$calculate <- input$overview
                  }
                  datamanager$reload <- input$overview
@@ -788,7 +772,6 @@ cores = 1')
   shiny::observeEvent(input$permz, {
     # check if an mset is present, otherwise abort
     if(!is.null(mSet)){
-      print(input$permz)
       # depending on the present tab, perform analyses accordingly
       if(input$permz %not in% names(mSet$analSet)){
         statsmanager$calculate <- input$permz
@@ -810,10 +793,12 @@ cores = 1')
   
   shiny::observeEvent(input$ncores, {
     if(!is.null(session_cl)){
-      print("stopping cores...")
+      
+      shiny::showNotification("Stopping threads...")
       parallel::stopCluster(session_cl)
     }
-    print("setting up new cores...")
+    shiny::showNotification("Starting new threads...")
+    
     session_cl <<- parallel::makeCluster(input$ncores)#,outfile="") # leave 1 core for general use and 1 core for shiny session
     # send specific functions/packages to other threads
     parallel::clusterEvalQ(session_cl, library(data.table))
@@ -894,10 +879,6 @@ cores = 1')
       })  
     }
   })
-  
-  shiny::observe({
-    
-  })
   shiny::observeEvent(input$stats_type,{
     if(!is.null(mSet)){
       datamanager$reload <- "statspicker"
@@ -912,13 +893,38 @@ cores = 1')
         load(fn)
         mSet <<- mSet
         opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
-        datamanager$reload <- "ml"
+        if("ml" %in% names(mSet$analSet)){
+          datamanager$reload <- "ml"
+        }
+        if("tt" %in% names(mSet$analSet)){
+            if("V" %in% colnames(mSet$analSet$tt$sig.mat)){
+              shiny::updateCheckboxInput(session, "tt_nonpar", value = T)
+            }else{
+              shiny::updateCheckboxInput(session, "tt_nonpar", value = F)
+            }
+          }else{
+            shiny::updateCheckboxInput(session, "tt_nonpar", value = F)
+          }
+    
+        switch(mSet$dataSet$exp.type,
+               "1fb"=shiny::updateSelectInput(session, "heattable", choices = list("T-test"="tt", 
+                                                                                   "Fold-change analysis"="fc"), 
+                                              selected = "tt"),
+               "1fm"=shiny::updateSelectInput(session, "heattable", choices = c("aov"), selected = "aov"),
+               "2f"=shiny::updateSelectInput(session, "heattable", choices = list(ANOVA="aov2", 
+                                                                                  ASCA="asca"), selected = "aov2"),
+               "t1f"=shiny::updateSelectInput(session, "heattable", choices = list(ANOVA="aov2", 
+                                                                                   ASCA="asca",
+                                                                                   MEBA="meba"), selected = "aov2"),
+               "t"=shiny::updateSelectInput(session, "heattable", choices = list(ANOVA="aov2",
+                                                                                 MEBA="meba"), selected = "aov2"))
+        
         lcl$proj_name <<- opts$proj_name
         lcl$paths$patdb <<- file.path(opts$work_dir, paste0(opts$proj_name, ".db"))
         lcl$paths$csv_loc <<- file.path(opts$work_dir, paste0(opts$proj_name, ".csv"))
-        updateCheckboxInput(session,
-                            "paired",
-                            value = mSet$dataSet$paired)
+        shiny::updateCheckboxInput(session,
+                                   "paired",
+                                   value = mSet$dataSet$paired)
       }
       datamanager$reload <- "general"
     })
@@ -962,7 +968,7 @@ cores = 1')
                                                                                   input$export_format)))
       success=T
     })
-    if(!success) print("Orca isn't working, please check your installation. If on Mac, please try starting Rstudio from the command line with the command 'open -a Rstudio' ")
+    if(!success) MetaboShiny::metshiAlert("Orca isn't working, please check your installation. If on Mac, please try starting Rstudio from the command line with the command 'open -a Rstudio'", session=session)
   })
   
   # ==== LOAD LOGIN UI ====
@@ -975,7 +981,7 @@ cores = 1')
   # ==== ON EXIT ====
   
   onStop(function() {
-    print("closing metaboShiny ~ヾ(＾∇＾)")
+    print("Closing metaboShiny ~ヾ(＾∇＾)")
     debug_input <<- shiny::isolate(shiny::reactiveValuesToList(input))
     debug_lcl <<- lcl
     debug_mSet <<- mSet

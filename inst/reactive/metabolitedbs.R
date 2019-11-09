@@ -7,7 +7,7 @@
 shiny::observe({
   if(db_section$load){
     
-    print("loading databases...")
+    shiny::showNotification("Loading database screen...")
     
     # create image objects in UI
     lapply(gbl$constants$images, FUN=function(image){
@@ -200,7 +200,7 @@ shiny::observeEvent(input$build_custom_db, {
   
   save(dbinfo, file = file.path(cust_dir, "info.RData"))
   # print OK message and ask to restart
-  print("Import OK! Please restart MetaboShiny to view and build your database :-)")
+  shiny::showNotification("Import OK! Please restart MetaboShiny to view and build your database.")
   
   shiny::removeModal()
   
@@ -260,7 +260,7 @@ lapply(c(gbl$vectors$db_list), FUN=function(db){
                                   silent = T,
                                   ext.dbname = "extended") #TODO: figure out the optimal fetch limit... seems 200 for now
         }else{
-          print("Please build base DB first! > _<")
+          MetaboShiny::metshiAlert("Please build base DB first! (can be changed in settings)")
         }
       }
         } 

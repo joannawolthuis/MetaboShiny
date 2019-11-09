@@ -146,11 +146,9 @@ shiny::observeEvent(input$initialize, {
     good.inx <- missvals < 
       input$perc_limit/100
     if(length(which(good.inx))==0){
-      print("No m/z left after filtering, please make your missing value correction more lenient...")
-      print(paste("Recommended minumum to retain at least 1 m/z value:", paste0(min(missvals)*100, "%")))
+      MetaboShiny::metshiAlert(paste("No m/z left after filtering, please make your missing value correction more lenient... Recommended minumum to retain at least 1 m/z value:", paste0(min(missvals)*100, "%")))
       return(NULL)
     }
-    
     
     # remove metabolites with more than user defined perc missing
     mSet <- MetaboAnalystR::RemoveMissingPercent(mSet,
@@ -189,8 +187,7 @@ shiny::observeEvent(input$initialize, {
         auto.mtry <- floor(sqrt(ncol(mSet$dataSet$preproc)))
         
         mtry <- ifelse(auto.mtry > 100, 100, auto.mtry)
-        print(paste0("mtry=",mtry))
-        
+
         # impute missing values with random forest
         imp <- missForest::missForest(w.missing,
                                       parallelize = input$rf_norm_parallelize, # parallelize over variables, 'forests' is other option
@@ -212,7 +209,7 @@ shiny::observeEvent(input$initialize, {
     # if user picked a data filter
     if(req(input$filt_type ) != "none"){
       # filter dataset
-      print("Filtering dataset...")
+      shiny::showNotification("Filtering dataset...")
       # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
       mSet <- MetaboAnalystR::FilterVariable(mSet,
                                              filter = input$filt_type,
@@ -436,6 +433,7 @@ shiny::observeEvent(input$initialize, {
 
     mSet <<- mSet
     
+    datamanager$reload <- "statspicker"
     statsmanager$calculate <- "pca"
     statsmanager$reload <- "pca"
     datamanager$reload <- "general"

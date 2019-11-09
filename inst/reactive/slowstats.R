@@ -101,9 +101,9 @@ observeEvent(input$do_ml, {
     
     keep_configs <- which(!(colnames(config) %in% remove))
     
-    print("Keeping non-mz variables after NA/unique filtering:")
-    print(names(config)[keep_configs])
-    
+    shiny::showNotification(paste0("Keeping non-mz variables after NA/unique filtering: ",
+                                   names(config)[keep_configs]))
+
     config <- config[,..keep_configs,with=F]
     
     # rename the variable of interest to 0-1-2 etc.
@@ -133,9 +133,9 @@ observeEvent(input$do_ml, {
     
     if(all(lcl$vectors$ml_test == lcl$vectors$ml_train)){
       if(unique(lcl$vectors$ml_test) == "all"){
-        print("nothing selected... continuing in normal non-subset mode")
+        shiny::showNotification("No subset selected... continuing in normal non-subset mode")
       }else{
-        print("no can do, need to test on something else than train!!!")
+        MetaboShiny::metshiAlert("Cannot test on the training set!")
         return(NULL)
       }
     }

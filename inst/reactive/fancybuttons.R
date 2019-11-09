@@ -8,38 +8,18 @@ shiny::observeEvent(input$plsda_2d3d, {
 }, ignoreNULL = T)
 
 shiny::observeEvent(input$tt_nonpar, {
-  statsmanager$calculate <- "tt"
-  datamanager$reload <- "tt"
+  if(!is.null(input$permz)){
+    if(input$permz == "tt"){
+      statsmanager$calculate <- "tt"
+      datamanager$reload <- "tt" 
+    }  
+  }
 },ignoreInit = TRUE)
 
 shiny::observeEvent(input$tt_eqvar, {
   statsmanager$calculate <- "tt"
   datamanager$reload <- "tt"
 },ignoreInit = TRUE)
-
-# set default mode for heatmap top hits pick button (tt/fc or asca/meba)
-heatbutton <- shiny::reactiveValues(status = "ttfc")
-
-# render heatmap button
-output$heatbutton <- shiny::renderUI({
-  if(is.null(heatbutton$status)){
-    NULL
-  }else{
-    switch(heatbutton$status,
-           asmb = switchButton(inputId = "heatmode",
-                               label = "Use data from:", 
-                               value = TRUE, col = "BW", type = "ASMB"),
-           ttfc = switchButton(inputId = "heatmode",
-                               label = "Use data from:", 
-                               value = TRUE, col = "BW", type = "TTFC")
-    )
-  }
-})
-
-shiny::observeEvent(input$heatmode, {
-  statsmanager$calculate <- "heatmap"
-  datamanager$reload <- "heatmap"
-})#,ignoreInit = F, ignoreNULL = T)
 
 shiny::observeEvent(input$heatsign, {
   statsmanager$calculate <- "heatmap"

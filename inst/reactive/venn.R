@@ -53,8 +53,8 @@ shiny::observeEvent(input$venn_build, {
   
   if(nrow(venn_yes$now) > 5 | nrow(venn_yes$now) == 0){
     
-      print("can only take more than zero and less than five analyses!")
-      NULL
+      MetaboShiny::metshiAlert("Can only take more than zero and less than five analyses!")
+      return(NULL)
       
     }else{
       
