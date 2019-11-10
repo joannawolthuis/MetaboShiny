@@ -40,7 +40,7 @@ get_prematches <- function(who = NA,
   
   query = gsubfn::fn$paste("$firstpart WHERE $what = '$who' $dbfrag $addfrag $isofrag")
 
-  query = paste0(query, "GROUP BY map.query_mz, name, baseformula, fullformula, finalcharge, adduct, `%iso`, dppm, map.structure, description")
+  query = paste0(query, " GROUP BY map.query_mz, name, baseformula, fullformula, finalcharge, adduct, `%iso`, dppm, map.structure, description")
   
   res = RSQLite::dbGetQuery(conn, query)
  
