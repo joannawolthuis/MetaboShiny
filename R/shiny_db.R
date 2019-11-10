@@ -22,14 +22,15 @@ get_prematches <- function(who = NA,
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
   
   firstpart = "SELECT DISTINCT
-               query_mz, lower(name) as name,baseformula,adduct,
+               map.query_mz as query_mz, lower(name) as name,baseformula,adduct,
                               fullformula,finalcharge,`%iso`,
                               dppm,
                description, map.structure as structure,
                GROUP_CONCAT(source) as source
                FROM match_mapper map
                JOIN match_content con
-               ON map.structure = con.structure"
+               ON map.structure = con.structure
+               AND map.query_mz = con.query_mz"
   
   dbfrag = if(length(showdb)>0) gsubfn::fn$paste("AND source = '$showdb'") else ""
   addfrag = if(length(showadd)>0) gsubfn::fn$paste("AND adduct = '$showadd'") else ""
@@ -39,7 +40,7 @@ get_prematches <- function(who = NA,
   
   query = gsubfn::fn$paste("$firstpart WHERE $what = '$who' $dbfrag $addfrag $isofrag")
 
-  query = paste0(query, " GROUP BY name, baseformula, fullformula, finalcharge, adduct, `%iso`, dppm, map.structure, description")
+  query = paste0(query, "GROUP BY map.query_mz, name, baseformula, fullformula, finalcharge, adduct, `%iso`, dppm, map.structure, description")
   
   res = RSQLite::dbGetQuery(conn, query)
  

@@ -8,15 +8,13 @@ shiny::observeEvent(input$clear_prematch,{
   RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_mapper")
   RSQLite::dbExecute(conn, "VACUUM")
   mSet$metshiParams$prematched <<- FALSE
-  search_button$go <<- TRUE
+  search_button$go <- TRUE
   RSQLite::dbDisconnect(conn)
 })
   
 shiny::observeEvent(input$prematch,{
   if(is.null(mSet)){
-    
     MetaboShiny::metshiAlert("Requires mSet!")
-    
     return(NULL)
   }
   if(length(lcl$vectors$db_prematch_list) > 0){ # go through selected databases
@@ -28,18 +26,19 @@ shiny::observeEvent(input$prematch,{
     RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_content")
     RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_mapper")
     RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTS match_mapper(query_mz decimal(30,13),
-                                                           structure TEXT,
-                                                           `%iso` decimal(30,13),
-                                                           adduct TEXT,
-                                                           dppm decimal(30,13))")    
-    RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTS match_content(name TEXT,
-                                                            baseformula TEXT,
-                                                            fullformula TEXT,
-                                                            finalcharge INT,
-                                                            identifier TEXT,
-                                                            description VA RCHAR(255),
-                                                            structure TEXT,
-                                                            source TEXT)")
+                                                                       structure TEXT,
+                                                                       `%iso` decimal(30,13),
+                                                                       adduct TEXT,
+                                                                       dppm decimal(30,13))")    
+    RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTS match_content(query_mz decimal(30,13),
+                                                                      name TEXT,
+                                                                      baseformula TEXT,
+                                                                      fullformula TEXT,
+                                                                      finalcharge INT,
+                                                                      identifier TEXT,
+                                                                      description VARCHAR(255),
+                                                                      structure TEXT,
+                                                                      source TEXT)")
     
     blocksize=100
     blocks = split(colnames(mSet$dataSet$norm), ceiling(seq_along(1:ncol(mSet$dataSet$norm))/blocksize))
@@ -48,17 +47,20 @@ shiny::observeEvent(input$prematch,{
       matches = pbapply::pblapply(blocks, function(mzs){
         res = MetaDBparse::searchMZ(mzs = mzs,
                               ionmodes = getIonMode(mzs, lcl$paths$patdb),
-                              base.dbname = gsub(x=gsub(basename(unlist(lcl$vectors$db_prematch_list)), pattern="\\.db", replacement=""),
+                              base.dbname = gsub(x=gsub(basename(unlist(lcl$vectors$db_prematch_list)), 
+                                                        pattern="\\.db", 
+                                                        replacement=""),
                                                  pattern="\\.db",
-                                                 replacement = "", perl=T),
+                                                 replacement = "", 
+                                                 perl=T),
                               ppm = as.numeric(mSet$ppm),
                               append = F,
                               outfolder = normalizePath(lcl$paths$db_dir))
         i <<- i + 1
         shiny::setProgress(value = i)
-        list(mapper = unique(res[,c("query_mz", "structure", "%iso", 
-                                    "adduct", "dppm")]), 
-             content = unique(res[,-c("query_mz", "%iso", "adduct","dppm")]))
+        list(mapper = unique(res[,c("query_mz", "structure", 
+                                    "%iso", "adduct", "dppm")]),
+             content = unique(res[,-c("%iso", "adduct", "dppm")]))
       })
     }, min=0, max=length(blocks))
     
@@ -96,7 +98,8 @@ shiny::observeEvent(input$search_mz, {
                                                                        `%iso` decimal(30,13),
                                                                        adduct TEXT,
                                                                        dppm decimal(30,13))")    
-      RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTS match_content(name TEXT,
+      RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTS match_content(query_mz decimal(30,13),
+                                                                        name TEXT,
                                                                         baseformula TEXT,
                                                                         fullformula TEXT,
                                                                         finalcharge INT,
@@ -118,7 +121,7 @@ shiny::observeEvent(input$search_mz, {
       if(nrow(res)>0){
         mapper = unique(res[,c("query_mz", "structure", 
                                "%iso", "adduct", "dppm")]) 
-        content = unique(res[,-c("query_mz", "%iso", "adduct", "dppm")])
+        content = unique(res[,-c("%iso", "adduct", "dppm")])
         RSQLite::dbWriteTable(conn, "match_mapper", mapper, append=T)
         RSQLite::dbWriteTable(conn, "match_content", content, append=T)
         RSQLite::dbExecute(conn, "CREATE INDEX map_mz ON match_mapper(query_mz)")

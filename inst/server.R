@@ -407,7 +407,7 @@ cores = 1')
       shiny::withProgress({
 
         matches = data.table::as.data.table(MetaboShiny::get_prematches(who = my_selection$mz,
-                                                                        what = "query_mz",
+                                                                        what = "map.query_mz",
                                                                         patdb = lcl$paths$patdb,
                                                                         showadd = result_filters$add,
                                                                         showdb = result_filters$db,
@@ -417,8 +417,8 @@ cores = 1')
         uniques = data.table::as.data.table(unique(data.table::as.data.table(matches)[,-c("source", "description"),
                                                                                       with=F]))
         if(nrow(uniques)>1){
-          uniques = uniques[, .(structure = list(structure)), 
-                                    by = setdiff(names(uniques), 
+          uniques = uniques[, .(structure = list(structure)),
+                                    by = setdiff(names(uniques),
                                                  "structure")]
           
           structs <- lapply(1:nrow(uniques), function(i){
@@ -476,44 +476,53 @@ cores = 1')
     if(my_selection$name != ""){
       
       subsec = data.table::as.data.table(shown_matches$forward_full)[name == my_selection$name]
-      
-      # render descriptions seperately
-      output$desc_ui <- shiny::renderUI({lapply(1:nrow(subsec), function(i){
-        row = subsec[i,]
-        # icon(s) in one row
-        dbs = strsplit(row$source, split=",")[[1]]
-        img = sapply(dbs, function(db){
-          id = gbl$constants$db.build.info[[db]]$image_id
-          address = unlist(sapply(gbl$constants$images, function(item) if(item$name == id) item$path else NULL))
+      keep <- which(trimws(subsec$description) %not in% c("","Unknown","unknown", " ",
+                                                  "Involved in pathways: . More specifically: . Also associated with compound classes:"))
+      subsec <- subsec[keep,]
+      if(nrow(subsec)>0){
+        # render descriptions seperately
+        output$desc_ui <- shiny::renderUI({lapply(1:nrow(subsec), function(i){
+          row = subsec[i,]
+          # icon(s) in one row
+          dbs = strsplit(row$source, split=",")[[1]]
+          img = sapply(dbs, function(db){
+            id = gbl$constants$db.build.info[[db]]$image_id
+            address = unlist(sapply(gbl$constants$images, function(item) if(item$name == id) item$path else NULL))
+          })
+          
+          # text cloud underneath https://codepen.io/rikschennink/pen/mjywQb
+          desc = row$description
+          lapply(1:length(img), function(i){
+            # ICONS IN A ROW
+            name = names(img)[i]
+            address = img[i]
+            output[[paste0("desc_icon_", name)]] <- shiny::renderImage({
+              # When input$n is 3, filename is ./images/image3.jpeg
+              list(src = address,
+                   #width=30,
+                   height=30)
+            }, deleteFile = FALSE)
+          })
+          
+          desc_id = paste0("curr_desc_", dbs, collapse="_")
+          output[[desc_id]] <- shiny::renderText({trimws(desc)})
+          
+          # ui
+          list(shiny::fluidRow(align="center", 
+                               lapply(dbs, function(db){
+                                 MetaboShiny::sardine(shiny::imageOutput(paste0("desc_icon_",db),inline = T))}),
+                               shiny::br(),
+                               textOutput(desc_id)),
+               shiny::hr()
+          )
         })
-        
-        # text cloud underneath https://codepen.io/rikschennink/pen/mjywQb
-        desc = row$description
-        lapply(1:length(img), function(i){
-          # ICONS IN A ROW
-          name = names(img)[i]
-          address = img[i]
-          output[[paste0("desc_icon_", name)]] <- shiny::renderImage({
-            # When input$n is 3, filename is ./images/image3.jpeg
-            list(src = address,
-                 #width=30,
-                 height=30)
-          }, deleteFile = FALSE)
+        })    
+      }else{
+        output$desc_ui <- shiny::renderUI({
+          helpText("No additional info available!")
         })
-        
-        desc_id = paste0("curr_desc_", dbs, collapse="_")
-        output[[desc_id]] <- shiny::renderText({trimws(desc)})
-        
-        # ui
-        list(shiny::fluidRow(align="center", 
-                             lapply(dbs, function(db){
-                               MetaboShiny::sardine(shiny::imageOutput(paste0("desc_icon_",db),inline = T))}),
-                             shiny::br(),
-                             textOutput(desc_id)),
-             shiny::hr()
-        )
-      })
-      }) 
+      }
+     
     }
   })
   
