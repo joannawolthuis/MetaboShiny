@@ -896,28 +896,6 @@ cores = 1')
         if("ml" %in% names(mSet$analSet)){
           datamanager$reload <- "ml"
         }
-        if("tt" %in% names(mSet$analSet)){
-            if("V" %in% colnames(mSet$analSet$tt$sig.mat)){
-              shiny::updateCheckboxInput(session, "tt_nonpar", value = T)
-            }else{
-              shiny::updateCheckboxInput(session, "tt_nonpar", value = F)
-            }
-          }else{
-            shiny::updateCheckboxInput(session, "tt_nonpar", value = F)
-          }
-    
-        switch(mSet$dataSet$exp.type,
-               "1fb"=shiny::updateSelectInput(session, "heattable", choices = list("T-test"="tt", 
-                                                                                   "Fold-change analysis"="fc"), 
-                                              selected = "tt"),
-               "1fm"=shiny::updateSelectInput(session, "heattable", choices = c("aov"), selected = "aov"),
-               "2f"=shiny::updateSelectInput(session, "heattable", choices = list(ANOVA="aov2", 
-                                                                                  ASCA="asca"), selected = "aov2"),
-               "t1f"=shiny::updateSelectInput(session, "heattable", choices = list(ANOVA="aov2", 
-                                                                                   ASCA="asca",
-                                                                                   MEBA="meba"), selected = "aov2"),
-               "t"=shiny::updateSelectInput(session, "heattable", choices = list(ANOVA="aov2",
-                                                                                 MEBA="meba"), selected = "aov2"))
         
         lcl$proj_name <<- opts$proj_name
         lcl$paths$patdb <<- file.path(opts$work_dir, paste0(opts$proj_name, ".db"))
@@ -926,7 +904,7 @@ cores = 1')
                                    "paired",
                                    value = mSet$dataSet$paired)
       }
-      datamanager$reload <- "general"
+      datamanager$reload <- c("general","statspicker")
     })
     # reload current plot
     shiny::updateNavbarPage(session, "statistics", selected = "inf")
