@@ -50,8 +50,7 @@ shiny::observe({
         NULL
       }else{
         dbs <- lcl$vectors$built_dbs[-which(lcl$vectors$built_dbs %in% c("custom", "magicball"))]
-        dbs <- list()[-which(list() %in% c("custom", "magicball"))]
-        
+
         currently.on <- sapply(dbs, function(db){
           input[[paste0("prematch_", db)]]
         })

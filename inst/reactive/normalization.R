@@ -433,10 +433,9 @@ shiny::observeEvent(input$initialize, {
 
     mSet <<- mSet
     
-    datamanager$reload <- "statspicker"
+    datamanager$reload <- c("general","statspicker")
     statsmanager$calculate <- "pca"
     statsmanager$reload <- "pca"
-    datamanager$reload <- "general"
     
   })
 })

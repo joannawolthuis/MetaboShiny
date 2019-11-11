@@ -27,7 +27,13 @@ shiny::observe({
                  }
                  
                  shiny::updateSelectInput(session, "stats_type", 
-                                          selected = gsub(mSet$dataSet$exp.type, "^1f\\w", "1f")) 
+                                          selected = {
+                                            if(grepl(mSet$dataSet$exp.type, pattern = "^1f\\w")){
+                                              gsub(mSet$dataSet$exp.type, pattern="^1f\\w", "1f")
+                                            }else{
+                                              mSet$dataSet$exp.type
+                                            }
+                                          })
                  
                  if(!any(duplicated(mSet$dataSet$covars$individual))){
                    shiny::updateSelectInput(session, "stats_type", 
