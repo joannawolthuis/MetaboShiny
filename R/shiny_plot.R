@@ -769,7 +769,8 @@ plotPCA.3d <- function(mSet,
                        cols ,
                        shape.fac="label",
                        pcx, pcy, pcz,
-                       mode="pca",font){
+                       mode="pca",font,
+                       cf){
   
   switch(mode,
          pca = {
@@ -940,7 +941,7 @@ plotPCA.3d <- function(mSet,
 
 plotPCA.2d <- function(mSet, shape.fac = "label", cols,
                        pcx, pcy, mode="pca", plot.theme,
-                       plotlyfy="T",font){
+                       plotlyfy="T", font, cf){
   
   classes <- switch(mode,
                     ipca = mSet$dataSet$facA,

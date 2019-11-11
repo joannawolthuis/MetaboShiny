@@ -251,7 +251,8 @@ shiny::observe({
                                   shape.fac = input$shape_var,
                                   plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                   plotlyfy=TRUE,
-                                  font = lcl$aes$font
+                                  font = lcl$aes$font, 
+                                  cf = gbl$functions$color.functions[[lcl$aes$spectrum]]
                        )
                      })
                    }else{
@@ -262,7 +263,8 @@ shiny::observe({
                                   pcy = input$pca_y,
                                   pcz = input$pca_z, mode = mode,
                                   shape.fac = input$shape_var,
-                                  font = lcl$aes$font)
+                                  font = lcl$aes$font,
+                                  cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                      })
                    }
                  }else{
@@ -317,10 +319,12 @@ shiny::observe({
                      output$plot_plsda <- plotly::renderPlotly({
                        plotPCA.2d(mSet, lcl$aes$mycols,
                                   pcx = input$plsda_x,
-                                  pcy = input$plsda_y, mode = "plsda",
+                                  pcy = input$plsda_y, 
+                                  mode = "plsda",
                                   shape.fac = input$second_var,
                                   plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                  font = lcl$aes$font)
+                                  font = lcl$aes$font,
+                                  cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                      })
                    }else{
                      # 3d
@@ -328,9 +332,11 @@ shiny::observe({
                        plotPCA.3d(mSet, lcl$aes$mycols,
                                   pcx = input$plsda_x,
                                   pcy = input$plsda_y,
-                                  pcz = input$plsda_z, mode = "plsda",
+                                  pcz = input$plsda_z, 
+                                  mode = "plsda",
                                   shape.fac = input$second_var,
-                                  font = lcl$aes$font)
+                                  font = lcl$aes$font, 
+                                  cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                      })
                    }
                  }else{NULL}
@@ -338,7 +344,9 @@ shiny::observe({
                ml = {
                  if("ml" %in% names(mSet$analSet)){
                    
-                   shiny::showTab(session = session, inputId = "ml2",target = "res")
+                   shiny::showTab(session = session, 
+                                  inputId = "ml2", 
+                                  target = "res")
                    
                    roc_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
                    
