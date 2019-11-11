@@ -816,7 +816,7 @@ plotPCA.3d <- function(mSet,
   
   cols <- if(is.null(cols)) cf(length(levels(classes))) else{
     if(length(cols) < length(levels(classes))){
-      cols <- cf(mSet$dataSet$cls)
+      cols <- cf(levels(mSet$dataSet$cls))
     }
     cols
   }
@@ -1026,7 +1026,7 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
   
   cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else{
     if(length(cols) < length(levels(mSet$dataSet$cls))){
-      cols <- cf(mSet$dataSet$cls)
+      cols <- cf(levels(mSet$dataSet$cls))
     }
     cols
   }
