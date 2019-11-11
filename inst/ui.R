@@ -696,7 +696,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                    ,fluidRow(align="center",shiny::uiOutput("stats_picker"))
                                                                                                                    ,shiny::conditionalPanel("input.stats_type == '1f'",
                                                                                                                                             fluidRow(align="center",MetaboShiny::switchButton("paired", 
-                                                                                                                                                                                              "Paired sample analysis?",
+                                                                                                                                                                                              "Matched samples only?",
                                                                                                                                                                                               value = F,
                                                                                                                                                                                               col = "BW",
                                                                                                                                                                                               type = "YN"))
@@ -708,6 +708,9 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                    ,shinyWidgets::circleButton("change_cls", icon = shiny::icon("hand-pointer-o"), size = "sm")
                                                                                                                    ,shiny::hr()
                                                                                                                    ,shiny::h2("Subset data")
+                                                                                                                   ,helpText("Current sample count:")
+                                                                                                                   ,h2(shiny::textOutput("samp_count"))
+                                                                                                                   ,br()
                                                                                                                    ,shiny::selectInput("subset_var", label="Subset data based on:", choices = c("label"))
                                                                                                                    ,shiny::selectizeInput("subset_group", label="Group(s) in subset:", choices = c(), multiple=TRUE)
                                                                                                                    ,shinyWidgets::circleButton("change_subset", icon = shiny::icon("hand-pointer-o"), size = "sm")

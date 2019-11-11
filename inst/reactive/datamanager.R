@@ -24,7 +24,13 @@ shiny::observe({
                    interface$mode <<- mSet$dataSet$exp.type
                    output$curr_name <- shiny::renderText({mSet$dataSet$cls.name})
                    shiny::updateNavbarPage(session, "statistics", selected = "inf")
-                 }
+                   origcount = nrow(mSet$storage$orig$data$norm)
+                   output$samp_count <- shiny::renderText({
+                     paste0(as.character(nrow(mSet$dataSet$norm)),
+                            if(nrow(mSet$dataSet$norm)==origcount) "" else paste0("/",as.character(origcount)))
+                     
+                   })
+                   }
                  
                  shiny::updateSelectInput(session, "stats_type", 
                                           selected = {
@@ -49,7 +55,8 @@ shiny::observe({
                                           choices = c("label", 
                                                       colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
                  shiny::updateSelectInput(session, "col_var", 
-                                          selected = mSet$dataSet$cls.name, 
+                                          selected = mSet$dataSet$exp.lbl,
+                                          mSet$dataSet$exp.var, 
                                           choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
                  shiny::updateSelectInput(session, "txt_var", 
                                           selected = "sample", 

@@ -118,6 +118,7 @@ change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
   mSet <- switch(mSet$dataSet$exp.type,
                    "1f"={
                      change_var <- if(length(stats_var)>1) stats_var[1] else stats_var
+                     mSet$dataSet$exp.lbl <- change_var
                      # change current variable of interest to user pick from covars table
                      mSet$dataSet$cls <- as.factor(mSet$dataSet$covars[,change_var, with=F][[1]])
                      # adjust bivariate/multivariate (2, >2)...
@@ -141,7 +142,7 @@ change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
                      mSet$dataSet$facA.lbl <- stats_var[idx1]
                      mSet$dataSet$facB.lbl <- stats_var[idx2]
                      mSet$dataSet$exp.type <- "2f"
-                     
+                     mSet$dataSet$exp.lbl <- stats_var
                      # - - - 
                      mSet
                    },
@@ -152,6 +153,7 @@ change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
                        MetaboShiny::metshiAlert("This analysis needs multiple of the same sample in the 'individual' metadata column!")
                        return(NULL)
                      }
+                     mSet$dataSet$exp.lbl <- "sample"
                      mSet$dataSet$time.fac <- as.factor(mSet$dataSet$covars[,time_var, with=F][[1]])
                      mSet$dataSet$exp.type <- "t"
 
@@ -173,6 +175,7 @@ change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
                      mSet$dataSet$exp.fac <- mSet$dataSet$facA
                      mSet$dataSet$time.fac <- mSet$dataSet$facB
                      mSet$dataSet$exp.type <- "t1f"
+                     mSet$dataSet$exp.lbl <- change_var
                      # - - - 
                      mSet
                    })
