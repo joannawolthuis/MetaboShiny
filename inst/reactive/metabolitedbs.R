@@ -22,37 +22,49 @@ shiny::observe({
     
     shiny::observeEvent(input$select_db_all, {
       
-      dbs <- lcl$vectors$built_dbs[-which(lcl$vectors$built_dbs %in% c("magicball", "custom"))]
-      
-      currently.on <- sapply(dbs, function(db){
-        input[[paste0("search_", db)]]
-      })
-      
-      if(any(currently.on)){
-        set.to = F
+      if(length(lcl$vectors$built_dbs) == 0){
+        MetaboShiny::metshiAlert("Please create at least one database to use this feature!")
+        NULL
       }else{
-        set.to = T
-      }
-      
-      for(db in dbs){
-        shiny::updateCheckboxInput(session, paste0("search_", db), value = set.to)
+        dbs <- lcl$vectors$built_dbs[-which(lcl$vectors$built_dbs %in% c("magicball", "custom"))]
+        
+        currently.on <- sapply(dbs, function(db){
+          input[[paste0("search_", db)]]
+        })
+        
+        if(any(currently.on)){
+          set.to = F
+        }else{
+          set.to = T
+        }
+        
+        for(db in dbs){
+          shiny::updateCheckboxInput(session, paste0("search_", db), value = set.to)
+        } 
       }
     })
     
     shiny::observeEvent(input$select_db_prematch_all, {
-      dbs <- lcl$vectors$built_dbs[-which(lcl$vectors$built_dbs %in% c("custom", "magicball"))]
-      currently.on <- sapply(dbs, function(db){
-        input[[paste0("prematch_", db)]]
-      })
-      if(any(currently.on)){
-        set.to = F
+      if(length(lcl$vectors$built_dbs) == 0){
+        MetaboShiny::metshiAlert("Please create at least one database to use this feature!")
+        NULL
       }else{
-        set.to = T
+        dbs <- lcl$vectors$built_dbs[-which(lcl$vectors$built_dbs %in% c("custom", "magicball"))]
+        dbs <- list()[-which(list() %in% c("custom", "magicball"))]
+        
+        currently.on <- sapply(dbs, function(db){
+          input[[paste0("prematch_", db)]]
+        })
+        if(any(currently.on)){
+          set.to = F
+        }else{
+          set.to = T
+        }
+        for(db in dbs){
+          shiny::updateCheckboxInput(session, paste0("prematch_", db), value = set.to)
+        }
       }
-      for(db in dbs){
-        shiny::updateCheckboxInput(session, paste0("prematch_", db), value = set.to)
-      }
-    })
+      })
     
     # render the database download area
     output$db_build_ui <- renderUI({
@@ -120,16 +132,29 @@ shiny::observe({
           exists
         })
         
-        built.dbs <- intersect(built.dbs[really.built.dbs], gbl$vectors$db_list)
+        if(length(really.built.dbs) > 0){
+          built.dbs <- intersect(built.dbs[really.built.dbs], gbl$vectors$db_list)
+        }else{
+          built.dbs <- list()
+        }
         
         lcl$vectors$built_dbs <<- built.dbs
         
-        shiny::fluidRow(
-          lapply(gbl$vectors$db_list[-which(gbl$vectors$db_list == "custom" | !(gbl$vectors$db_list %in% lcl$vectors$built_dbs))], function(db){
-            which_idx = grep(sapply(gbl$constants$images, function(x) x$name), pattern = db) # find the matching image (NAME MUST HAVE DB NAME IN IT COMPLETELY)
-            MetaboShiny::sardine(MetaboShiny::fadeImageButton(inputId = paste0(prefix, "_", db), img.path = gbl$constants$images[[which_idx]]$path)) # generate fitting html
-          })
-        )
+        if(length(lcl$vectors$built_dbs) == 0){
+          MetaboShiny::metshiAlert("Please create at least one database to use this feature!")
+          shiny::fluidRow(align="center", 
+                          br(),
+                          helpText("No databases built..."),
+                          br()
+                          )
+        }else{
+          shiny::fluidRow(
+            lapply(gbl$vectors$db_list[-which(gbl$vectors$db_list == "custom" | !(gbl$vectors$db_list %in% lcl$vectors$built_dbs))], function(db){
+              which_idx = grep(sapply(gbl$constants$images, function(x) x$name), pattern = db) # find the matching image (NAME MUST HAVE DB NAME IN IT COMPLETELY)
+              MetaboShiny::sardine(MetaboShiny::fadeImageButton(inputId = paste0(prefix, "_", db), img.path = gbl$constants$images[[which_idx]]$path)) # generate fitting html
+            })
+          )
+        }
       })
     })
     

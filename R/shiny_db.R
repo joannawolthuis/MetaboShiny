@@ -230,7 +230,7 @@ get_predicted <- function(mz,
         nrF = 19, 
         nrN = 14,
         nrO = 16,
-        nrP =31,
+        nrP = 31,
         nrS = 32,
         nrSi = 28
       )

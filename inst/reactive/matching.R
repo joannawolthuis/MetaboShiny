@@ -79,6 +79,9 @@ shiny::observeEvent(input$prematch,{
     search_button$on <<- FALSE
     
     RSQLite::dbDisconnect(conn)
+  }else{
+    MetaboShiny::metshiAlert("Please build at least one database to enable this feature!")
+    return(NULL)
   }
 })
 
