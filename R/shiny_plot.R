@@ -672,12 +672,17 @@ ggPlotROC <- function(data,
   
   means.per.comp=perf.long[, lapply(.SD, mean), by = .(comparison)]
   
-  shiny::showNotification("Calculating AUCs per comparison...")
+  if(length(unique(means.per.comp$comparison))>2){
+    class_type = "m"
+    shiny::showNotification("Calculating AUCs per comparison...")
+    perf.long$comparison <- pbapply::pbsapply(perf.long$comparison,
+                                              function(comp){
+                                                paste0(comp, " || avg. AUC=", round(means.per.comp[comparison == comp]$AUC, digits=3), " ||")
+                                              })  
+  }else{
+    class_type = "b"
+  }
   
-  perf.long$comparison <- pbapply::pbsapply(perf.long$comparison,
-                                 function(comp){
-                                   paste0(comp, " || avg. AUC=", round(means.per.comp[comparison == comp]$AUC, digits=3), " ||")
-                                 })
   cols = cf(attempts)
   
   p <- ggplot(perf.long, aes(FPR,TPR)) +

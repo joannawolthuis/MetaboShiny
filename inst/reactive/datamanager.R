@@ -368,7 +368,7 @@ shiny::observe({
                                                              input$ml_attempts,
                                                              gbl$functions$color.functions[[lcl$aes$spectrum]],
                                                              plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                             plotlyfy=TRUE,font = lcl$aes$font,class_type=if(mSet$dataSet$cls.type=="1fb") "b" else "m"))
+                                                             plotlyfy=TRUE,font = lcl$aes$font))
                    })
                    
                    bar_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar
