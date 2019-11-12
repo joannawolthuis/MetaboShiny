@@ -114,7 +114,8 @@ shiny::observe({
                                              selected = mSet$dataSet$exp.var, 
                                              choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, 
                                                                                                             MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]),
-                                             options = list(maxItems = 2)) 
+                                             options = list(maxItems = 2),
+                                             width = "80%") 
                      }else if(input$stats_type == "t"){
                        list()
                      }else{
@@ -123,7 +124,8 @@ shiny::observe({
                                              selected = mSet$dataSet$exp.var, 
                                              choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, 
                                                                                                             MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]),
-                                             multiple = F)
+                                             multiple = F,
+                                             width = "80%")
                      }
                    })  
                  },
