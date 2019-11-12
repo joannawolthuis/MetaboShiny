@@ -32,45 +32,48 @@ shiny::observe({
           if(fut.name %in% names(mSet$storage)){
             mSet <- MetaboShiny::load.mSet(mSet, fut.name)
           }else{
+            # - - - - - - - - - - - - -
             mSet <- switch(mSetter$do,
                            change = {
+                             was.paired <- mSet.old$dataSet$paired
+                             was.timeseries <- grepl(mSet.old$dataSet$exp.type, "t") # also was paired
+                             
+                             if(was.paired){
+                               nonpaired.name <- gsub(mSet.old$dataSet$cls.name, pattern = if(was.timeseries) "\\(timeseries\\)" else  "\\(paired\\)", replacement = "")
+                               mSet <- MetaboShiny::load.mSet(mSet, nonpaired.name)
+                             }
+                             
                              mSet <- MetaboShiny::change.mSet(mSet, 
                                                               stats_var = input$stats_var, 
                                                               stats_type = input$stats_type, 
                                                               time_var = input$time_var)
-                             mSet$dataSet$cls.name <- fut.name
-                             
-                             if(grepl("t", input$stats_type)){
-                               mSet <- MetaboShiny::pair.mSet(mSet, fut.name) 
-                               shiny::updateCheckboxInput(session, "paired", value = T)
+                             if(mSet$dataSet$paired){
+                               mSet <- MetaboShiny::pair.mSet(mSet, fut.name)
                              }
+                             mSet$dataSet$cls.name <- fut.name
                              mSet
                            },
                            subset = {
                              mSet <- MetaboShiny::subset.mSet(mSet, 
                                                               subset_var = input$subset_var, 
                                                               subset_group = input$subset_group)
+                             mSet$dataSet$paired <- FALSE
                              mSet$dataSet$cls.name <- fut.name
-                             
                              mSet
                            },
                            unsubset = {
-                             mSet.old <- mSet
                              mSet <- MetaboShiny::load.mSet(mSet,"orig")
                              mSet <- MetaboShiny::change.mSet(mSet, 
                                                               stats_var = mSet.old$dataSet$exp.var, 
                                                               time_var =  mSet.old$dataSet$time.var,
                                                               stats_type = mSet.old$dataSet$exp.type)
+                             mSet$dataSet$paired <- FALSE
                              mSet$dataSet$cls.name <- fut.name
-                             
-                             mSet
-                           },
-                           pair = {
-                             # paired
-                             mSet <- MetaboShiny::pair.mSet(mSet, fut.name)
                              mSet
                            }
             ) 
+            
+            shiny::updateCheckboxInput(session, "paired", value = mSet$dataSet$paired) 
             
             mSet$dataSet$cls.name <- fut.name
             if(grepl(mSet$dataSet$exp.type, pattern = "^1f")){
@@ -90,7 +93,6 @@ shiny::observe({
         
           })
 
-        
         if(success){
           mSet <<- mSet
         }else{

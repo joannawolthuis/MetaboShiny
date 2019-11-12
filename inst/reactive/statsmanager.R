@@ -184,7 +184,7 @@ shiny::observe({
                                     "1fm"=MetaboAnalystR::ANOVA.Anal(mSet, thresh=0.05,post.hoc = "fdr",nonpar = F),
                                     "2f"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.05, "fdr", "", 1, 1),
                                     "t"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.05, "fdr", "time0", 1, 1),
-                                    "t1f"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.05, "fdr", "time", 3, 1))
+                                    "t1f"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.05, "fdr", "time", 1, 1))
                    })
                  }
                },

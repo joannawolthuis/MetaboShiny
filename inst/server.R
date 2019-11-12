@@ -905,7 +905,6 @@ cores = 1')
         if("ml" %in% names(mSet$analSet)){
           datamanager$reload <- "ml"
         }
-        
         lcl$proj_name <<- opts$proj_name
         lcl$paths$patdb <<- file.path(opts$work_dir, paste0(opts$proj_name, ".db"))
         lcl$paths$csv_loc <<- file.path(opts$work_dir, paste0(opts$proj_name, ".csv"))

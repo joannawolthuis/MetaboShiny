@@ -173,28 +173,39 @@ ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
                        cf,
                        plot.theme,
                        plotlyfy=TRUE,font){
-  cols <- if(is.null(cols)) cf(length(levels(mSet$dataSet$cls))) else{
-    if(length(cols) < length(levels(mSet$dataSet$cls))){
-      cols <- cf(mSet$dataSet$cls)
+  
+  time.mode = mSet$dataSet$exp.type
+  classes = unique(switch(time.mode, 
+                          t1f=mSet$dataSet$facA, 
+                          t=mSet$dataSet$sbj))
+  spec.cols = cf(length(classes))
+  cols <- if(is.null(cols)) spec.cols else{
+    if(length(cols) < length(classes)){
+      cols <- spec.cols
     }
     cols
   }
   
-  profile <- MetaboShiny::getProfile(mSet, cpd, mode="multi")
-  profile$Individual <- mSet$dataSet$covars[match(mSet$dataSet$covars$sample, table = profile$Sample),"individual"][[1]]
-
-  p <- if(draw.average){
-    ggplot2::ggplot(data=profile) +
-      ggplot2::geom_line(size=0.3, ggplot2::aes(x=GroupB, 
+  profile <- MetaboShiny::getProfile(mSet, 
+                                     cpd, 
+                                     mode="multi")
+  profile$Individual <- mSet$dataSet$covars[match(mSet$dataSet$covars$sample, 
+                                                  table = profile$Sample),"individual"][[1]]
+  profile$Color <- switch(time.mode, 
+                          t1f=profile$GroupA, 
+                          t=profile$Individual, 
+                          group=profile$GroupA)
+  
+  p <- ggplot2::ggplot(data=profile) +
+      ggplot2::geom_line(size=if(draw.average) 0.3 else 1, ggplot2::aes(x=GroupB, 
                                                 y=Abundance, 
                                                 group=Individual, 
-                                                color=GroupA, 
+                                                color=Color,
                                                 text=Sample), alpha=0.4) +
-      ggplot2::stat_summary(fun.y="mean", size=1.5, geom="line", ggplot2::aes(x=GroupB, y=Abundance, color=GroupA, group=GroupA)) +
       ggplot2::scale_x_discrete(expand = c(0, 0)) +
       plot.theme(base_size = 15) +
       ggplot2::scale_color_manual(values=cols) +
-     ggplot2::theme(#legend.position="none",
+     ggplot2::theme(legend.position=switch(time.mode, t="none", t1f="right"),
             axis.text=ggplot2::element_text(size=font$ax.num.size),
             axis.title=ggplot2::element_text(size=font$ax.txt.size),
             plot.title = ggplot2::element_text(hjust = 0.5),
@@ -202,26 +213,21 @@ ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
             text = ggplot2::element_text(family = font$family)) +
       ggtitle(paste(cpd, "m/z")) + 
       xlab(Hmisc::capitalize(mSet$dataSet$facB.lbl)) + 
-      labs(color = Hmisc::capitalize(mSet$dataSet$facA.lbl))
-  } else{
-    ggplot2::ggplot(data=profile) +
-      ggplot2::geom_line(size=.5,aes(x=GroupB, y=Abundance,
-                                      text=Sample, group=Individual, color=GroupA),alpha=0.4) +
-      ggplot2::scale_x_discrete(expand = c(0, 0)) +
-      plot.theme(base_size = 15) +
-      ggplot2::scale_color_manual(values=cols) +
-     ggplot2::theme(#legend.position="none",
-            axis.text=ggplot2::element_text(size=font$ax.num.size),
-            axis.title=ggplot2::element_text(size=font$ax.txt.size),
-            plot.title = ggplot2::element_text(hjust = 0.5),
-            axis.line = ggplot2::element_line(colour = 'black', size = .5),
-            text = ggplot2::element_text(family = font$family)) +
-      ggtitle(paste(cpd, "m/z")) + 
-      xlab(Hmisc::capitalize(mSet$dataSet$facB.lbl)) + 
-      labs(color = Hmisc::capitalize(mSet$dataSet$facA.lbl))
+      labs(color = Hmisc::capitalize(switch(mSet$dataSet$exp.type, 
+                                            t1f=mSet$dataSet$facA.lbl,
+                                            t="Individual")))
+  if(draw.average){
+    p <- p + ggplot2::stat_summary(fun.y="mean", size=2, 
+                                   geom="line", ggplot2::aes(x=GroupB, 
+                                                             y=Abundance, 
+                                                             color = Color, 
+                                                             group = switch(time.mode, 
+                                                                            t=c(1),
+                                                                            t1f=Color)))
   }
+  
   if(plotlyfy){
-    plotly::ggplotly(p, tooltip="Sample", originalData=T)
+    plotly::ggplotly(p, tooltip="Individual", originalData=T)
   }else{
     p
   }
@@ -400,9 +406,6 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
     }
     i <- i + 1
   }
-  
-  print(profile)
-  print(unique(profile$Color))
   
   if(mode == "multi"){
     p <- p + ggplot2::scale_color_manual(values=cols[1:length(unique(profile$GroupA))])

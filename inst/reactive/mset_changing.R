@@ -1,17 +1,8 @@
 observeEvent(input$change_cls, {
-  mSetter$do <- "change"
-  datamanager$reload <- "general"
-})
-
-shiny::observeEvent(input$paired, {
-  if(!is.null(mSet)){
-    if(input$paired){
-      mSetter$do <- "pair"
-    }else{
-      mSetter$do <- "unsubset"
-      mSet$dataSet$paired <<- FALSE
-    }
+  if(input$stats_type %in% c("t", "t1f")){
+    shiny::updateCheckboxInput(session, "paired", value = T) # auto set for time series 
   }
+  mSetter$do <- "change"
   datamanager$reload <- "general"
 })
 

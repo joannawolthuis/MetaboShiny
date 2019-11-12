@@ -5,18 +5,15 @@ prev.mSet <- function(mSet, what, input=input){
                    mSet$dataSet$exp.var <- input$stats_var
                    mSet$dataSet$time.var <- input$time_var
                    mSet$dataSet$exp.type <- input$stats_type
+                   if(input$stats_type %in% c("t", "t1f") | input$paired){
+                     mSet$dataSet$paired <- TRUE 
+                   }else{
+                     mSet$dataSet$paired <- FALSE
+                   }
                    mSet
                  },
                  subset = {
                    mSet$dataSet$subset[[input$subset_var]] <- input$subset_group
-                   mSet
-                 },
-                 pair = {
-                   mSet$dataSet$paired <- TRUE
-                   mSet
-                 },
-                 unpair = {
-                   mSet$dataSet$paired <- FALSE
                    mSet
                  },
                  unsubset = {
@@ -224,7 +221,7 @@ pair.mSet <- function(mSet, name){
   indiv.samp <- unique(overview.tbl[, c("individual","sample")])
   indiv.var <-  unique(overview.tbl[, c("individual","variable")])
   
-  indiv.present.multiple <- indiv.samp$individual[c(which(duplicated(indiv.samp$individual)))]
+  indiv.present.multiple <- unique(indiv.samp$individual[c(which(duplicated(indiv.samp$individual)))])
 
   # A2: mandatory for time series 1 factor. which individuals remain in the same category?
   indiv.cat.change = indiv.var$individual[c(which(duplicated(indiv.var$individual)))] 
@@ -234,20 +231,49 @@ pair.mSet <- function(mSet, name){
   # DOWNSAMPLE invidiv
   if(mSet$dataSet$exp.type == "t1f"){
     considerations = list(indiv.present.multiple, indiv.no.cat.change)
+    times = unique(mSet$dataSet$covars[, ..time_var][[1]])
   }else if(mSet$dataSet$exp.type == "t"){
     considerations = list(indiv.present.multiple)
+    times = unique(mSet$dataSet$covars[, ..time_var][[1]])
   }else{
     considerations = list(indiv.present.multiple, indiv.cat.change)
   }
   
   # C. which individuals do we keep?
   keep.indiv <- Reduce(f = intersect, considerations)
-
-  filtered.indiv.var <- indiv.var[individual %in% keep.indiv]
-  keep.indiv = caret::downSample(filtered.indiv.var$individual, as.factor(filtered.indiv.var$variable))$x
   
-  filtered.indiv.samp <- indiv.samp[individual %in% keep.indiv]
-  keep.samp = caret::downSample(filtered.indiv.samp$sample, as.factor(filtered.indiv.samp$individual))$x
+  if(mSet$dataSet$exp.type %in% c("t","t1f")){
+    keep.indiv.final = unique(overview.tbl[sample %in% keep.samp, c("individual", "variable")])
+    keep.indiv = caret::downSample(keep.indiv.final$individual, as.factor(keep.indiv.final$variable))$x
+  }
+  
+  req.groups <- unique(mSet$dataSet$covars[, ..stats_var][[1]])
+  
+  keep.samp <- unlist(pbapply::pbsapply(keep.indiv, function(indiv){
+    # get samples matching
+    # if multiple for each, only pick one
+    overv = overview.tbl[individual == indiv]
+    if(mSet$dataSet$exp.type %in% c("t", "t1f")){
+      # all time points need a sample, otherwise nvm (TODO: add a check for if only one sample has timepoint 4 and the rest has 3, majority vote...)
+      time_var = mSet$dataSet$time.var
+      ind.times = mSet$dataSet$covars[individual == indiv, ..time_var][[1]]
+      if(length(intersect(ind.times, times)) == length(times)){
+        indiv.samp[individual == indiv]$sample
+      }else{
+        c()
+      }
+    }else{
+      has.all.groups = all(req.groups %in% overv$variable)
+      samps = if(!has.all.groups) c() else{
+        spl.overv <- split(overv, overv$variable)
+        minsamp = min(unlist(lapply(spl.overv, nrow)))
+        Reduce("c",lapply(req.groups, function(grp){
+          rows = spl.overv[[grp]]
+          rows$sample[sample(1:nrow(rows), minsamp)]
+        }))
+      }
+    } 
+  }))
   
   if(length(keep.samp)> 2){
     mSet <- MetaboShiny::subset.mSet(mSet, 
@@ -258,6 +284,5 @@ pair.mSet <- function(mSet, name){
     MetaboShiny::metshiAlert("Not enough samples for paired analysis!")
     return(NULL)
   }  
-  
   mSet
 }
