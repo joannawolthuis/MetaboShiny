@@ -32,7 +32,7 @@ shiny::observe({
                      origcount = nrow(mSet$storage$orig$data$norm)
                      output$samp_count <- shiny::renderText({
                        paste0(as.character(nrow(mSet$dataSet$norm)),
-                              if(nrow(mSet$dataSet$norm)==origcount) "" else paste0("/",as.character(origcount)))
+                              if(nrow(mSet$dataSet$norm) == origcount) "" else paste0("/",as.character(origcount)))
                        
                      })
                    }
@@ -51,8 +51,14 @@ shiny::observe({
                                               choices = list("one factor"="1f", 
                                                              "two factors"="2f")) 
                    }else{
+                     shiny::updateSelectInput(session, "stats_type", 
+                                              choices = list("one factor"="1f", 
+                                                             "two factors"="2f",
+                                                             "time series"="t",
+                                                             "time series + one factor"="t1f"))
                      shiny::updateSelectInput(session, "time_var", selected = mSet$dataSet$time.var, 
-                                              choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
+                                              choices = c("label", 
+                                                          colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
                    }
                    shiny::updateSelectInput(session, "stats_var", selected = mSet$dataSet$exp.var, 
                                             choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
