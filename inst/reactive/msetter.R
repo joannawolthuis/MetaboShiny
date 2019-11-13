@@ -39,8 +39,12 @@ shiny::observe({
                              was.timeseries <- grepl(mSet.old$dataSet$exp.type, "t") # also was paired
                              
                              if(was.paired){
-                               nonpaired.name <- gsub(mSet.old$dataSet$cls.name, pattern = if(was.timeseries) "\\(timeseries\\)" else  "\\(paired\\)", replacement = "")
-                               mSet <- MetaboShiny::load.mSet(mSet, nonpaired.name)
+                               if(was.timeseries){
+                                 mSet <- MetaboShiny::load.mSet(mSet, "orig") 
+                               }else{
+                                 nonpaired.name <- gsub(mSet.old$dataSet$cls.name, pattern = if(was.timeseries) "\\(timeseries\\)" else  "\\(paired\\)", replacement = "")
+                                 mSet <- MetaboShiny::load.mSet(mSet, nonpaired.name) 
+                               }
                              }
                              
                              mSet <- MetaboShiny::change.mSet(mSet, 

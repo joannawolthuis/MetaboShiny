@@ -153,7 +153,8 @@ change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
                      mSet$dataSet$exp.lbl <- "sample"
                      mSet$dataSet$time.fac <- as.factor(mSet$dataSet$covars[,time_var, with=F][[1]])
                      mSet$dataSet$exp.type <- "t"
-
+                     mSet$dataSet$facA <- mSet$dataSet$time.fac
+                     mSet$dataSet$facA.lbl <- "Time"
                      # - - - 
                      mSet
                    },
@@ -210,6 +211,7 @@ subset.mSet <- function(mSet, subset_var, subset_group, name=mSet$dataSet$cls.na
 pair.mSet <- function(mSet, name){
   
   stats_var = mSet$dataSet$exp.var  
+  time_var = mSet$dataSet$time.var
   
   overview.tbl <- data.table::as.data.table(cbind(sample = mSet$dataSet$covars$sample,
                                                   individual = mSet$dataSet$covars$individual,
@@ -242,11 +244,6 @@ pair.mSet <- function(mSet, name){
   # C. which individuals do we keep?
   keep.indiv <- Reduce(f = intersect, considerations)
   
-  if(mSet$dataSet$exp.type %in% c("t","t1f")){
-    keep.indiv.final = unique(overview.tbl[sample %in% keep.samp, c("individual", "variable")])
-    keep.indiv = caret::downSample(keep.indiv.final$individual, as.factor(keep.indiv.final$variable))$x
-  }
-  
   req.groups <- unique(mSet$dataSet$covars[, ..stats_var][[1]])
   
   keep.samp <- unlist(pbapply::pbsapply(keep.indiv, function(indiv){
@@ -257,9 +254,10 @@ pair.mSet <- function(mSet, name){
       # all time points need a sample, otherwise nvm (TODO: add a check for if only one sample has timepoint 4 and the rest has 3, majority vote...)
       time_var = mSet$dataSet$time.var
       ind.times = mSet$dataSet$covars[individual == indiv, ..time_var][[1]]
-      if(length(intersect(ind.times, times)) == length(times)){
+      if(length(ind.times) == length(times)){
         indiv.samp[individual == indiv]$sample
       }else{
+        print("nah")
         c()
       }
     }else{
@@ -275,10 +273,16 @@ pair.mSet <- function(mSet, name){
     } 
   }))
   
+  if(mSet$dataSet$exp.type == c("t1f")){
+    indiv.final = unique(overview.tbl[sample %in% keep.samp, c("individual", "variable")])
+    keep.indiv = caret::downSample(indiv.final$individual, as.factor(indiv.final$variable))$x
+    keep.samp <- keep.samp[which(gsub(names(keep.samp), pattern="\\d$", replacement="") %in% keep.indiv)]
+  }
+  
   if(length(keep.samp)> 2){
     mSet <- MetaboShiny::subset.mSet(mSet, 
-                                     subset_var = "sample", 
-                                     subset_group = keep.samp)
+                                      subset_var = "sample", 
+                                      subset_group = keep.samp)
     mSet$dataSet$paired <- TRUE  
   }else{
     MetaboShiny::metshiAlert("Not enough samples for paired analysis!")

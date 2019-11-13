@@ -56,14 +56,20 @@ observeEvent(input$do_ml, {
         }
       }
       
-      # find the qc rows
+      # find the qc rows and remove them
       is.qc <- grepl("QC|qc", rownames(curr))
-      curr <- curr[!is.qc,]
-      
+      if(sum(is.qc) > 0){
+        curr <- curr[!is.qc,]
+      }
       # reorder according to covars table (will be used soon)
       
       order <- match(mSet$dataSet$covars$sample,rownames(curr))
-      config <- mSet$dataSet$covars[order, -"label"]
+      if("label" %in% colnames(mSet$dataSet$covars)){
+        config <- mSet$dataSet$covars[order, -"label"]
+      }else{
+        config <- mSet$dataSet$covars[order, ]
+      }
+      
       config <- config[,input$ml_include_covars,with=F]# reorder so both halves match up later
       if(mSet$dataSet$exp.type %in% c("2f", "t1f")){
         # just set to facA for now..
