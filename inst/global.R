@@ -446,7 +446,6 @@ gbl$vectors$wordcloud$skip <- unique(c( # manual curation(
 #TODO: add option to put user custom tables in user directory
 data(adducts, package = "MetaDBparse")
 adducts <- data.table::as.data.table(adducts)
-
 data(adduct_rules, package = "MetaDBparse")
 adduct_rules <- data.table::as.data.table(adduct_rules)
 
