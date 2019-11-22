@@ -8,24 +8,6 @@ library(data.table)
 library(plotly)
 library(MetaboShiny)
 
-# load default adduct table
-#TODO: add option to put user custom tables in user directory
-
-if("adducts.csv" %in% basename(list.files(lcl$paths$work_dir))){
-  adducts = fread(file.path(lcl$paths$work_dir, "adducts.csv"))
-}else{
-  data(adducts, package = "MetaDBparse")
-  adducts <- data.table::as.data.table(adducts)
-}
-if("adduct_rules.csv" %in% basename(list.files(lcl$paths$work_dir))){
-  adduct_rules = fread(file.path(lcl$paths$work_dir, "adduct_rules.csv"))
-}else{
-  data(adduct_rules, package = "MetaDBparse")
-  adduct_rules <- data.table::as.data.table(adduct_rules)
-}
-
-adducts[adducts==''|adducts==' ']<-NA
-
 # set the home path
 home = normalizePath("~")
 

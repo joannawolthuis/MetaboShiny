@@ -30,10 +30,12 @@ shiny::observe({
           dbs <- lcl$vectors$built_dbs[-which(lcl$vectors$built_dbs %in% gbl$vectors$db_no_build)]
           
           currently.on <- sapply(dbs, function(db){
-            input[[paste0("search_", db)]]
+            input[[paste0(switch(midfix, 
+                                 "db" = "search_",
+                                 "db_prematch" = "prematch_"), db)]]
           })
           
-          if(any(currently.on)){
+          if(any(unlist(currently.on))){
             set.to = F
           }else{
             set.to = T
@@ -42,7 +44,7 @@ shiny::observe({
           for(db in dbs){
             shiny::updateCheckboxInput(session, paste0(switch(midfix, 
                                                               "db" = "search_",
-                                                              "db_all" = "prematch_"), db), value = set.to)
+                                                              "db_prematch" = "prematch_"), db), value = set.to)
           } 
         }
       })      

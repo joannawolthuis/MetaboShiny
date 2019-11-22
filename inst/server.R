@@ -109,6 +109,24 @@ function(input, output, session) {
       lcl$paths$work_dir <<- userfolder
       lcl$paths$db_dir <<- dbdir
       
+      # load default adduct table
+      #TODO: add option to put user custom tables in user directory
+      
+      if("adducts.csv" %in% basename(list.files(lcl$paths$work_dir))){
+        adducts <<- fread(file.path(lcl$paths$work_dir, "adducts.csv"))
+      }else{
+        data(adducts, package = "MetaDBparse")
+        adducts <<- data.table::as.data.table(adducts)
+      }
+      if("adduct_rules.csv" %in% basename(list.files(lcl$paths$work_dir))){
+        adduct_rules <<- fread(file.path(lcl$paths$work_dir, "adduct_rules.csv"))
+      }else{
+        data(adduct_rules, package = "MetaDBparse")
+        adduct_rules <<- data.table::as.data.table(adduct_rules)
+      }
+      
+      adducts[adducts == ''|adducts == ' '] <<- NA
+      
       addResourcePath('www', system.file('www', package = 'MetaboShiny'))
       
       # - - - - check for custom databases - - - - 
@@ -165,7 +183,8 @@ gtheme = classic
 gcols = #1C1400&#FFE552&#D49C1A&#EBC173&#8A00ED&#00E0C2&#95C200&#FF6BE4&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF
 gspec = RdBu
 mode = complete
-cores = 1')
+cores = 1
+apikey = ')
         writeLines(contents, lcl$paths$opt.loc)
       }
       
@@ -192,11 +211,15 @@ cores = 1')
         })
       }
       
+      if(opts$apikey != ""){
+        output$api_set <- shiny::renderText("key saved!")
+      }
+      
       # parse color opts
       lcl$aes$mycols <<- MetaboShiny::get.col.map(lcl$paths$opt.loc) # colours for discrete sets, like group A vs group B etc.
       lcl$aes$theme <<- opts$gtheme # gradient function for heatmaps, volcano plot etc.
       lcl$aes$spectrum <<- opts$gspec # gradient function for heatmaps, volcano plot etc.
-      
+      lcl$apikey <<- opts$apikey
       # generate CSS for the interface based on user settings for colours, fonts etc.
       bar.css <- MetaboShiny::nav.bar.css(opts$col1, opts$col2, opts$col3, opts$col4)
       font.css <- MetaboShiny::app.font.css(opts$font1, opts$font2, opts$font3, opts$font4,
@@ -812,6 +835,12 @@ cores = 1')
     # send specific functions/packages to other threads
     parallel::clusterEvalQ(session_cl, library(data.table))
     MetaboShiny::setOption(lcl$paths$opt.loc, "cores", input$ncores)
+  })
+  
+  shiny::observeEvent(input$set_api, {
+    MetaboShiny::setOption(lcl$paths$opt.loc, "apikey", input$apikey)
+    lcl$apikey <<- input$apikey
+    output$api_set <- shiny::renderText("key saved!")
   })
   
   shiny::observeEvent(input$ml, {
