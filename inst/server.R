@@ -68,7 +68,7 @@ function(input, output, session) {
   mSetter <- shiny::reactiveValues(do = NULL)
   
   shown_matches <- shiny::reactiveValues(forward_full = data.table::data.table(),
-                                         forward_unique=data.table::data.table(),
+                                         forward_unique = data.table::data.table(),
                                          reverse = data.table::data.table())
   
   browse_content <- shiny::reactiveValues(table = data.table::data.table())
@@ -98,6 +98,7 @@ function(input, output, session) {
   ####### !!!!!!!!!!! #########
   shiny::observe({
     shiny::showNotification("Loading user settings.")
+    
     if(exists("lcl")){
       # - - - 
       userfolder = "~/MetaboShiny/saves/admin"
@@ -112,18 +113,19 @@ function(input, output, session) {
       # load default adduct table
       #TODO: add option to put user custom tables in user directory
       
+      data(adducts, package = "MetaDBparse")
+      adducts <- data.table::as.data.table(adducts)
+      
+      data(adduct_rules, package = "MetaDBparse")
+      adduct_rules <- data.table::as.data.table(adduct_rules)
+      
       if("adducts.csv" %in% basename(list.files(lcl$paths$work_dir))){
         adducts <<- fread(file.path(lcl$paths$work_dir, "adducts.csv"))
-      }else{
-        data(adducts, package = "MetaDBparse")
-        adducts <<- data.table::as.data.table(adducts)
-      }
+        }
+      
       if("adduct_rules.csv" %in% basename(list.files(lcl$paths$work_dir))){
         adduct_rules <<- fread(file.path(lcl$paths$work_dir, "adduct_rules.csv"))
-      }else{
-        data(adduct_rules, package = "MetaDBparse")
-        adduct_rules <<- data.table::as.data.table(adduct_rules)
-      }
+        }
       
       adducts[adducts == ''|adducts == ' '] <<- NA
       
