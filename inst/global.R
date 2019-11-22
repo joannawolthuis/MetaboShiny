@@ -11,6 +11,13 @@ library(MetaboShiny)
 # set the home path
 home = normalizePath("~")
 
+# load default adduct table
+#TODO: add option to put user custom tables in user directory
+data(adducts, package = "MetaDBparse")
+adducts <- data.table::as.data.table(adducts)
+data(adduct_rules, package = "MetaDBparse")
+adduct_rules <- data.table::as.data.table(adduct_rules)
+
 caret.mdls <- caret::getModelInfo()
 
 # === THE BELOW LIST CONTAINS ALL GLOBAL VARIABLES THAT METABOSHINY CALLS UPON LATER ===
@@ -434,20 +441,14 @@ gbl$vectors$wordcloud$skip <- unique(c( # manual curation(
     "clinical", "higher", "control", "increased", "associated", 
     "mode", "decreased", "studies", "study", "patient", "patients", 
     "years", "type", "gene", "compared", "including", "lower", 
-    "ci", "concentration", "concentrations", "reduced", "increase", "results", "result", "levels", 
-    "It", "lt", "model", "effect", "high", "low", "expression", "test", "production", "aim",
+    "ci", "concentration", "concentrations", "reduced", "increase", 
+    "results", "result", "levels", "It", "lt", "model", "effect", 
+    "high", "low", "expression", "test", "production", "aim",
     "tested","studied","ng", "se"),
   qdapDictionaries::Top200Words,
   tm::stopwords("english"),
   gbl$vectors$db_list
 ))
-
-# load default adduct table
-#TODO: add option to put user custom tables in user directory
-data(adducts, package = "MetaDBparse")
-adducts <- data.table::as.data.table(adducts)
-data(adduct_rules, package = "MetaDBparse")
-adduct_rules <- data.table::as.data.table(adduct_rules)
 
 #' Squishes HTML elements close together.
 data(isotopes, package = "enviPat")
