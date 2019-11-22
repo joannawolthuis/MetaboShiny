@@ -71,7 +71,7 @@ find.formulas <- function(mzvals, cl=FALSE, ppm=3, charge=1, element.counts = li
   found.rows <- pbapply::pblapply(mzvals,cl=cl, function(mz){
     window = mz * (ppm / 1e6)
     # --- generate molecular formulae ---
-    found.mfs <- rcdk::generate.formula(mz, window=0.3, 
+    found.mfs <- rcdk::generate.formula(mz, window = window, 
                                   element.counts, 
                                   validation=TRUE, charge=charge)
     rows <- if(length(found.mfs) == 0) NA else(

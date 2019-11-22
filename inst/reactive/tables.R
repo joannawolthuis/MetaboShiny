@@ -48,50 +48,63 @@ shiny::observe({
   })
 })
 
-output$mzgroup_add_tab <- DT::renderDataTable({
-  DT::datatable(data.table::data.table(adduct=adducts$Name),
-                selection = list(mode = 'multiple',
-                                 target="row"),
-                options = list(pageLength = 5, dom = 'tp'),
-                rownames = F)
-})
-
-# toggles when 'select all adducts' is pressed (filled circle)
-shiny::observeEvent(input$sel_all_adducts, {
-  lcl$vectors$neg_selected_adducts <<- c(1:nrow(lcl$vectors$pos_adducts))
-  lcl$vectors$pos_selected_adducts <<- c(1:nrow(lcl$vectors$neg_adducts))
-})
-
-# triggers when 'select no adducts' is selected
-shiny::observeEvent(input$sel_no_adducts, {
-  lcl$vectors$neg_selected_adducts <<- c(0)
-  lcl$vectors$pos_selected_adducts <<- c(0)
-})
-
-# triggers when common adducts are to be selected
-shiny::observeEvent(input$sel_comm_adducts, {
-  lcl$vectors$neg_selected_adducts <<- c(1:3, nrow(lcl$vectors$pos_adducts))
-  lcl$vectors$pos_selected_adducts <<- c(1, 2, 14:15, nrow(lcl$vectors$neg_adducts))
-})
-
 # adduct table editing from settings tab
 
 values = shiny::reactiveValues()
 
-# TODO: fix and re-docment this
-shiny::observeEvent(input$import_adducts, {
-  DF = data.table::fread(input$add_tab$datapath)
-  output$adduct_tab <- rhandsontable::renderRHandsontable({
-    if (!is.null(DF))
-      rhandsontable::rhandsontable(DF, stretchH = "all", useTypes = TRUE)
+lapply(c("adducts", "adduct_rules"), function(prefix){
+  switch(prefix,
+         adducts = {
+           show.tab = adducts
+           tab.pfx = "add_tab"
+         },
+         adduct_rules = {
+           show.tab = adduct_rules
+           tab.pfx = "add_rule_tab"
+         })
+  
+  shiny::observeEvent(input[[paste0("import_", prefix)]], {
+    file.copy(input[[tab.pfx]]$datapath, 
+              file.path(lcl$paths$work_dir, 
+                        paste0(prefix, ".csv")), 
+              overwrite = T)
+    switch(prefix,
+           adducts = {
+             adducts <<- data.table::fread(input$add_tab$datapath)
+             show.tab = adducts
+           },
+           adduct_rules = {
+             adduct_rules <<- data.table::fread(input$add_rule_tab$datapath)
+             show.tab = adduct_rules
+           })
+    output[[tab.pfx]] <- rhandsontable::renderRHandsontable({
+      if (!exists(prefix))
+        rhandsontable::rhandsontable(show.tab, stretchH = "all", useTypes = TRUE)
+    })
+  }) 
+  
+  shiny::observeEvent(input[[paste0("import_", prefix)]], {
+    file.copy(input[[tab.pfx]]$datapath, 
+              file.path(lcl$paths$work_dir, 
+                        paste0(prefix,".csv")), 
+              overwrite = T)
+    
+    switch(prefix,
+           adducts = {
+             adducts <<- data.table::fread(input$add_tab$datapath)
+             show.tab = adducts
+           },
+           adduct_rules = {
+             adduct_rules <<- data.table::fread(input$add_rule_tab$datapath)
+             show.tab = adduct_rules
+           })
+    
+    output[[paste0(prefix, "_tab")]] <- rhandsontable::renderRHandsontable({
+      if (!is.null(show.tbl))
+        rhandsontable::rhandsontable(show.tbl, stretchH = "all", useTypes = TRUE)
+    })
   })
-  output$adduct_upload_check <- shiny::renderImage({
-    # When input$n is 3, filename is ./images/image3.jpeg
-    filename <- normalizePath('www/yes.png')
-    # Return a list containing the filename and alt text
-    list(src = filename, width = 20,
-         height = 20)
-  }, deleteFile = FALSE)
+  
 })
 
 # uses rhandsontable for live table editing...
@@ -100,12 +113,26 @@ adduct_tab_data <- shiny::reactive({
   if (!is.null(input$adduct_tab)){
     DF = rhandsontable::hot_to_r(input$adduct_tab)
   } else {
-    if (is.null(values[["DF"]]))
+    if (is.null(values[["adducts"]]))
       DF = adducts
     else
-      DF = values[["DF"]]
+      DF = values[["adducts"]]
   }
-  values[["DF"]] = DF
+  values[["adducts"]] = DF
+  # ---------------
+  DF
+})
+
+adduct_rules_tab_data <- shiny::reactive({
+  if (!is.null(input$adduct_rules_tab)){
+    DF = rhandsontable::hot_to_r(input$adduct_rules_tab)
+  } else {
+    if (is.null(values[["adduct_rules"]]))
+      DF = adduct_rules
+    else
+      DF = values[["adduct_rules"]]
+  }
+  values[["adduct_rules"]] = DF
   # ---------------
   DF
 })
@@ -116,15 +143,19 @@ output$adduct_tab <- rhandsontable::renderRHandsontable({
     rhandsontable::rhandsontable(DF, stretchH = "all", useTypes = TRUE)
 })
 
-shiny::observe({
-  DF = adduct_tab_data()
-  shinyFiles::shinyFileSave(input, "save_adducts", roots = c(home = '~'), session=session)
-  fileinfo <- shinyFiles::parseFilePaths(roots = c(home = '~'), input$save_adducts)
-  if (nrow(fileinfo) > 0) {
-    switch(fileinfo$type,
-           csv = fwrite(file = fileinfo$datapath, x = DF)
-    )}
+output$adduct_rules_tab <- rhandsontable::renderRHandsontable({
+  # TODO: implement https://smartsview.zbh.uni-hamburg.de/rest
+  DF = adduct_rules_tab_data()
+  if (!is.null(DF))
+    rhandsontable::rhandsontable(DF, stretchH = "all", useTypes = TRUE)
 })
+
+observeEvent(input$save_adducts, {
+  shiny::showNotification("Saving changes to adducts ...")
+  fwrite(values$adducts, file = file.path(lcl$paths$work_dir, "adducts.csv"))
+  fwrite(values$adduct_rules, file = file.path(lcl$paths$work_dir, "adduct_rules.csv"))
+})
+
 
 output$magicball_add_tab <- DT::renderDataTable({
   if(any(unlist(scanmode))){

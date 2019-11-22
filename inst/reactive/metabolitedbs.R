@@ -20,50 +20,35 @@ shiny::observe({
       }, deleteFile = FALSE)
     })
     
-    shiny::observeEvent(input$select_db_all, {
-      
-      if(length(lcl$vectors$built_dbs) == 0){
-        MetaboShiny::metshiAlert("Please create at least one database to use this feature!")
-        NULL
-      }else{
-        dbs <- lcl$vectors$built_dbs[-which(lcl$vectors$built_dbs %in% c("magicball", "custom"))]
+    lapply(c("db", "db_prematch"), function(midfix){
+      shiny::observeEvent(input[[paste0("select_", midfix, "_all")]], {
         
-        currently.on <- sapply(dbs, function(db){
-          input[[paste0("search_", db)]]
-        })
-        
-        if(any(currently.on)){
-          set.to = F
+        if(length(lcl$vectors$built_dbs) == 0){
+          MetaboShiny::metshiAlert("Please create at least one database to use this feature!")
+          NULL
         }else{
-          set.to = T
+          dbs <- lcl$vectors$built_dbs[-which(lcl$vectors$built_dbs %in% gbl$vectors$db_no_build)]
+          
+          currently.on <- sapply(dbs, function(db){
+            input[[paste0("search_", db)]]
+          })
+          
+          if(any(currently.on)){
+            set.to = F
+          }else{
+            set.to = T
+          }
+          
+          for(db in dbs){
+            shiny::updateCheckboxInput(session, paste0(switch(midfix, 
+                                                              "db" = "search_",
+                                                              "db_all" = "prematch_"), db), value = set.to)
+          } 
         }
-        
-        for(db in dbs){
-          shiny::updateCheckboxInput(session, paste0("search_", db), value = set.to)
-        } 
-      }
+      })      
     })
-    
-    shiny::observeEvent(input$select_db_prematch_all, {
-      if(length(lcl$vectors$built_dbs) == 0){
-        MetaboShiny::metshiAlert("Please create at least one database to use this feature!")
-        NULL
-      }else{
-        dbs <- lcl$vectors$built_dbs[-which(lcl$vectors$built_dbs %in% c("custom", "magicball"))]
 
-        currently.on <- sapply(dbs, function(db){
-          input[[paste0("prematch_", db)]]
-        })
-        if(any(currently.on)){
-          set.to = F
-        }else{
-          set.to = T
-        }
-        for(db in dbs){
-          shiny::updateCheckboxInput(session, paste0("prematch_", db), value = set.to)
-        }
-      }
-      })
+    # check for the magicball-requiring databases...
     
     # render the database download area
     output$db_build_ui <- renderUI({
@@ -99,7 +84,7 @@ shiny::observe({
           # row 4: button
           shiny::fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
             shiny::column(width=3,align="center",
-                          if(!(db %in% c("magicball", "custom"))){
+                          if(!(db %in% gbl$vectors$db_no_build)){
                             list(actionButton(paste0("check_", db), "Check", icon = shiny::icon("check")),
                                  actionButton(paste0("build_", db), "Build", icon = shiny::icon("wrench")),
                                  shiny::br(),shiny::br(),
@@ -115,14 +100,15 @@ shiny::observe({
       database_layout
     })
     
-    db_button_prefixes = c("search", "add", "enrich", "prematch")
+    db_button_prefixes = c("search", "prematch")
     
     # generate all the fadebuttons for the database selection
     lapply(db_button_prefixes, function(prefix){
       output[[paste0("db_", prefix, "_select")]] <- renderUI({
         db.paths = list.files(lcl$paths$db_dir, pattern = "\\.db$",full.names = T)
         built.dbs <- c(gsub(x = basename(db.paths), 
-                            pattern = "\\.db", replacement = ""), "custom")
+                            pattern = "\\.db", replacement = ""), 
+                       gbl$vectors$db_no_build)
         really.built.dbs <- sapply(db.paths, function(path) {
           conn <- RSQLite::dbConnect(RSQLite::SQLite(), path) # change this to proper var later
           exists = RSQLite::dbExistsTable(conn, "base")
@@ -130,11 +116,15 @@ shiny::observe({
           RSQLite::dbDisconnect(conn)
           exists
         })
+        really.built.dbs <- db.paths[really.built.dbs]
+        really.built.dbs <- gsub(x = basename(really.built.dbs), 
+                            pattern = "\\.db", replacement = "")
         
+        no.need.build = c("cmmmediator", "pubchem","chemspider","magicball")
         if(length(really.built.dbs) > 0){
-          built.dbs <- intersect(built.dbs[really.built.dbs], gbl$vectors$db_list)
+          built.dbs <- unique(c(no.need.build, intersect(really.built.dbs, gbl$vectors$db_list)))
         }else{
-          built.dbs <- list()
+          built.dbs <- list(no.need.build)
         }
         
         lcl$vectors$built_dbs <<- built.dbs
@@ -144,8 +134,7 @@ shiny::observe({
           shiny::fluidRow(align="center", 
                           br(),
                           helpText("No databases built..."),
-                          br()
-                          )
+                          br())
         }else{
           shiny::fluidRow(
             lapply(gbl$vectors$db_list[-which(gbl$vectors$db_list == "custom" | !(gbl$vectors$db_list %in% lcl$vectors$built_dbs))], function(db){
@@ -168,7 +157,7 @@ shiny::observe({
                                    NA
                                  }else{
                                    if(!button_id){
-                                     c(file.path(lcl$paths$db_dir, paste0(db, ".db"))) # add path to list of dbpaths
+                                     c(db)# add path to list of dbpaths
                                    }
                                    else{NA}
                                  }
@@ -206,7 +195,8 @@ shiny::observe({
 
 shiny::observeEvent(input$build_custom_db, {
 
-  cust_dir = file.path(lcl$paths$db_dir, paste0(input$my_db_short, "_source"))
+  cust_dir = file.path(lcl$paths$db_dir, paste0(input$my_db_short, 
+                                                "_source"))
   # make folder for this db
   if(dir.exists(cust_dir)) unlink(cust_dir)
   dir.create(cust_dir)

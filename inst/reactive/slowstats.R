@@ -202,7 +202,15 @@ observeEvent(input$do_ml, {
           #lst <- lst[sapply(lst,function(x)all(!is.na(x)))]
           lst
         })
+      
+      # ============ DOWNSAMPLE ===========
+      if(input$downsample){
+        keepers = caret::downSample(1:nrow(curr), curr$label)$x
+        curr = curr[keepers,]
+      }
       # ============ LOOP HERE ============
+      
+      print(dim(curr))
       
       # get results for the amount of attempts chosen
       shiny::withProgress(message = "Running...",{

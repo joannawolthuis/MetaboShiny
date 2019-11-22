@@ -10,10 +10,19 @@ library(MetaboShiny)
 
 # load default adduct table
 #TODO: add option to put user custom tables in user directory
-data(adducts, package = "MetaDBparse")
-data(adduct_rules, package = "MetaDBparse")
-adducts <- data.table::as.data.table(adducts)
-adduct_rules <- data.table::as.data.table(adduct_rules)
+
+if("adducts.csv" %in% basename(list.files(lcl$paths$work_dir))){
+  adducts = fread(file.path(lcl$paths$work_dir, "adducts.csv"))
+}else{
+  data(adducts, package = "MetaDBparse")
+  adducts <- data.table::as.data.table(adducts)
+}
+if("adduct_rules.csv" %in% basename(list.files(lcl$paths$work_dir))){
+  adduct_rules = fread(file.path(lcl$paths$work_dir, "adduct_rules.csv"))
+}else{
+  data(adduct_rules, package = "MetaDBparse")
+  adduct_rules <- data.table::as.data.table(adduct_rules)
+}
 
 adducts[adducts==''|adducts==' ']<-NA
 
@@ -52,7 +61,6 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                            list(name = 'chebi_logo', path = 'www/chebilogo.png', dimensions = c(140, 140)),
                                            list(name = 'wikipathways_logo', path = 'www/wikipathways.png', dimensions = c(130, 150)),
                                            list(name = 'kegg_logo', path = 'www/kegglogo.gif', dimensions = c(200, 150)),
-                                           list(name = 'pubchem_logo', path = 'www/pubchemlogo.png', dimensions = c(145, 90)),
                                            list(name = 'smpdb_logo', path = 'www/smpdb_logo_adj.png', dimensions = c(200, 160)),
                                            list(name = 'dimedb_logo', path = 'www/dimedb_logo.png', dimensions = c(310, 120)),
                                            list(name = 'wikidata_logo', path = 'www/wikidata.png', dimensions = c(250, 200)),
@@ -76,13 +84,16 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                            list(name= 'expoexplorer_logo', path = 'www/exposome_explorer.png', dimensions = c(250,100)),
                                            list(name= 't3db_logo', path = 'www/t3db_logo.png', dimensions = c(200,80)),
                                            list(name= 'drugbank_logo', path = 'www/drugbank_logo_2.png', dimensions = c(230,80)),
+                                           list(name= 'cmmmediator_logo', path = 'www/ceummlogo.jpeg', dimensions = c(230,80)),
+                                           list(name= 'pubchem_logo', path = 'www/pubchem_logo.png', dimensions = c(260,70)),
+                                           list(name= 'chemspider_logo', path = 'www/chemspider_logo.png', dimensions = c(130,150)),
                                            list(name= 'phenolexplorer_logo', path = 'www/phenolexplorer_logo.jpg', dimensions = c(200,60)),
                                            list(name = 'sidebar_icon', path = 'www/detective.png', dimensions = c(60, 60)),
                                            list(name = 'merge_icon', path = 'www/merge.png', dimensions = c(150, 150)),
                                            list(name = 'db_icon', path = 'www/database.png', dimensions = c(150, 150)),
                                            list(name = 'laptop_icon', path = 'www/laptop.png', dimensions = c(150, 150))
                                            
-                             ), # all image paths, if you add an image you can add it here
+                             ),# all image paths, if you add an image you can add it here
                              default.text = list(list(name='curr_definition', text="No m/z selected"),
                                                  list(name="curr_cpd", text="..."),# default text options at startup
                                                  list(name="ml_train_ss", text="all"),
@@ -151,9 +162,18 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                                      description = "Phenol-Explorer is the first comprehensive database on polyphenol content in foods. The database contains more than 35,000 content values for 500 different polyphenols in over 400 foods.",
                                                      image_id = "phenolexplorer_logo"),
                                # - - leave magicball last - -
+                               cmmmediator = list(title = "CEU Mass Mediator",
+                                              description = "(ONLINE ONLY) CEU Mass Mediator is a tool for searching metabolites in different databases (Kegg, HMDB, LipidMaps, Metlin, MINE and an in-house library).",
+                                              image_id = "cmmmediator_logo"),
                                magicball = list(title = "MagicBall",
                                                 description = "Algorithm to predict molecular formula from m/z value",
                                                 image_id = "magicball"),
+                               pubchem = list(title = "PubChem",
+                                                description = "(VIA MAGICBALL) PubChem is the world's largest collection of freely accessible chemical information.",
+                                                image_id = "pubchem_logo"),
+                               chemspider = list(title = "ChemSpider",
+                                                description = "(VIA MAGICBALL) 	A chemical structure database providing fast access to over 77 million structures, properties and associated information.",
+                                                image_id = "chemspider_logo"),
                                custom = list(title = "Custom",
                                              description = "Please select to start your own database creation!",
                                              image_id = "plus")
@@ -223,6 +243,11 @@ vectors = list(
   pos_selected_add = c(2),
   neg_selected_add = c(2),
   # list of available databases!!
+  db_no_build = c("cmmmediator",
+                  "chemspider",
+                  "magicball",
+                  "custom",
+                  "pubchem"),
   db_list = c( # this determines the show order of dbs in the app
     "hmdb",
     "chebi",
@@ -246,6 +271,9 @@ vectors = list(
     'drugbank',
     'phenolexplorer',
     "magicball",
+    'cmmmediator',
+    'pubchem',
+    'chemspider',
     "custom"
   ),
   # list of positive adducts

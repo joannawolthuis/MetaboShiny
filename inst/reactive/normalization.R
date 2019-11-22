@@ -23,9 +23,11 @@ shiny::observeEvent(input$initialize, {
     
     # remove whitespace
     csv_orig$sample <- gsub(csv_orig$sample, pattern=" |\\(|\\)|\\+", replacement="")
-    
+    suppressWarnings({
+      csv_orig <- csv_orig[,-"label"]
+      as.numi <- as.numeric(colnames(csv_orig))
+    })
     # find experimental variables by converting to numeric
-    as.numi <- as.numeric(colnames(csv_orig))
     exp.vars <- which(is.na(as.numi))
     
     # load batch variable chosen by user
@@ -107,7 +109,7 @@ shiny::observeEvent(input$initialize, {
     colnames(csv)[which(colnames(csv) == "time")] <- "Time"
 
     # find experimental variables
-    as.numi <- as.numeric(colnames(csv))
+    as.numi <- suppressWarnings(as.numeric(colnames(csv)))
     exp.vars <- which(is.na(as.numi))
     
     # remove all except sample and time in saved csv
@@ -143,8 +145,7 @@ shiny::observeEvent(input$initialize, {
     int.mat <- mSet$dataSet$preproc
     minConc <- mSet$dataSet$minConc
     missvals = apply(is.na(int.mat), 2, sum)/nrow(int.mat)
-    good.inx <- missvals < 
-      input$perc_limit/100
+    good.inx <- missvals < input$perc_limit/100
     if(length(which(good.inx))==0){
       MetaboShiny::metshiAlert(paste("No m/z left after filtering, please make your missing value correction more lenient... Recommended minumum to retain at least 1 m/z value:", paste0(min(missvals)*100, "%")))
       return(NULL)
@@ -408,8 +409,6 @@ shiny::observeEvent(input$initialize, {
     
     # save the used adducts to mSet
     shiny::setProgress(session=session, value= .9)
-    
-    mSet$storage <- list()
     
     # get ppm
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb)

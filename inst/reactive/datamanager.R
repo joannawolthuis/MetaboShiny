@@ -7,10 +7,8 @@ shiny::observe({
     NULL # if not reloading anything, nevermind
   }else{
     if(!is.null(mSet)){
-      
       mSet.old <- mSet
       success = F
-      
       try({
         for(do in datamanager$reload){
           switch(do,
