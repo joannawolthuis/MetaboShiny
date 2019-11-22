@@ -110,15 +110,6 @@ function(input, output, session) {
       lcl$paths$work_dir <<- userfolder
       lcl$paths$db_dir <<- dbdir
       
-      # load default adduct table
-      #TODO: add option to put user custom tables in user directory
-      
-      data(adducts, package = "MetaDBparse")
-      adducts <- data.table::as.data.table(adducts)
-      
-      data(adduct_rules, package = "MetaDBparse")
-      adduct_rules <- data.table::as.data.table(adduct_rules)
-      
       if("adducts.csv" %in% basename(list.files(lcl$paths$work_dir))){
         adducts <<- fread(file.path(lcl$paths$work_dir, "adducts.csv"))
         }
