@@ -136,8 +136,8 @@ function(input, output, session) {
       
       for(db in all_dbs[which.custom]){
         dbfolder = paste0(db, "_source")
-        addResourcePath(prefix = db, 
-                        normalizePath(file.path(lcl$paths$db_dir, dbfolder)))
+        shiny::addResourcePath(prefix = db,
+                               directoryPath = normalizePath(file.path(lcl$paths$db_dir, dbfolder)))
         
         # add image to gbl images
         gbl$constants$images <<- append(gbl$constants$images, values = 

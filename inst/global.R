@@ -84,9 +84,9 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                            list(name = 'bmdb_logo', path = 'www/hmp_logo.png', dimensions = c(150, 150)),
                                            list(name = 'rmdb_logo', path = 'www/hmp_logo.png', dimensions = c(150, 150)),
                                            list(name = 'ymdb_logo', path = 'www/ymdb_logo.png', dimensions = c(330, 90)),
-                                           list(name = 'nanpdb_logo', path = 'www/nanpdb_logo.png', dimensions = c(150, 150)),
+                                           list(name = 'nanpdb_logo', path = 'www/nanpdb_logo.png', dimensions = c(150, 70)),
                                            list(name = 'stoff_logo', path = 'www/stoff_logo.png', dimensions = c(250, 130)),
-                                           list(name = 'knapsack_logo', path = 'www/knapsack_logo.gif', dimensions = c(150, 150)),
+                                           list(name = 'knapsack_logo', path = 'www/knapsack_logo.gif', dimensions = c(200, 100)),
                                            list(name = 'laptop_icon', path = 'www/laptop.png', dimensions = c(150, 150))
                                            
                              ),# all image paths, if you add an image you can add it here
@@ -292,7 +292,6 @@ vectors = list(
     'rmdb',
     'bmdb',
     'stoff',
-    'ecmdb',
     'nanpdb',
     'phenolexplorer',
     "magicball",

@@ -50,22 +50,13 @@ shiny::observeEvent(input$create_db,{
     # change path CSV should be / is saved to in session
     #lcl$paths$csv_loc <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name,".csv"))
     # if loading in .csv files...
-    MetaboShiny::build.pat.db(lcl$paths$patdb,
+    MetaboShiny::build.pat.db(db.name = lcl$paths$patdb,
                               ppm = input$ppm,
                               pospath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath,
                               negpath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath,
+                              metapath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath,
+                              wipe.regex = input$wipe_regex,
                               overwrite = T)
-    
-    shiny::setProgress(session=session, value= .95,message = "Adding metadata to database...")
-    
-    # add excel file to .db file generated in previous step
-    metadata_path <- shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath
-    
-    if(grepl(metadata_path, pattern = "csv")){
-      MetaboShiny::load.metadata.csv(metadata_path, lcl$paths$patdb)
-    }else{
-      MetaboShiny::load.metadata.excel(metadata_path, lcl$paths$patdb)
-    }
     
     output$proj_db_check <- shiny::renderImage({
       filename <- normalizePath(file.path('www', "yes.png"))
@@ -78,7 +69,6 @@ shiny::observeEvent(input$create_db,{
 # imports existing db file
 # TODO: is deprecated, fix!!
 shiny::observeEvent(input$import_db, {
-
   lcl$paths$patdb <<- input$pat_db$datapath
   output$db_upload_check <- shiny::renderImage({
     # When input$n is 3, filename is ./images/image3.jpeg

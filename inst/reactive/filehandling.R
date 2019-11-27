@@ -1,9 +1,9 @@
 # listener for all the file pickers, trigger a window if they are clicked
 shiny::observe({
-  shinyFiles::shinyFileChoose(input, 'outlist_pos', roots=gbl$paths$volumes, filetypes=c('csv'))
-  shinyFiles::shinyFileChoose(input, 'outlist_neg', roots=gbl$paths$volumes, filetypes=c('csv'))
+  shinyFiles::shinyFileChoose(input, 'outlist_pos', roots=gbl$paths$volumes, filetypes=c('csv', 'tsv', 'txt'))
+  shinyFiles::shinyFileChoose(input, 'outlist_neg', roots=gbl$paths$volumes, filetypes=c('csv', 'tsv', 'txt'))
   shinyFiles::shinyFileChoose(input, 'custom_db', roots=gbl$paths$volumes, filetypes=c('csv'))
-  shinyFiles::shinyFileChoose(input, 'metadata', roots=gbl$paths$volumes, filetypes=c('xls', 'xlsm', 'xlsx', 'csv'))
+  shinyFiles::shinyFileChoose(input, 'metadata', roots=gbl$paths$volumes, filetypes=c('xls', 'xlsm', 'xlsx', 'csv', 'tsv', 'txt'))
   shinyFiles::shinyFileChoose(input, 'database', roots=gbl$paths$volumes, filetypes=c('sqlite3', 'db', 'sqlite'))
   shinyFiles::shinyFileChoose(input, 'taskbar_image_path', roots=gbl$paths$volumes, filetypes=c('png', 'jpg', 'jpeg', 'bmp'))
   shinyFiles::shinyFileChoose(input, 'custom_db_img_path', roots=gbl$paths$volumes, filetypes=c('png', 'jpg', 'jpeg', 'bmp'))

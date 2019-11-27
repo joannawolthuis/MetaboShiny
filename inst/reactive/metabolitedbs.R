@@ -185,7 +185,7 @@ shiny::observe({
         check_pic <- if(is.present) "yes.png" else "no.png"
         # generate checkmark image objects
         output[[paste0(db,"_check")]] <- renderImage({
-          filename <- normalizePath(file.path(getwd(), 'www', check_pic))
+          filename <- normalizePath(file.path('www', check_pic))
           list(src = filename, width = 70,
                height = 70)
         }, deleteFile = FALSE)

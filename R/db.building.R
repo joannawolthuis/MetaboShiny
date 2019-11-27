@@ -1,38 +1,79 @@
 #' @export
 build.pat.db <- function(db.name,
+                         metapath,
                          pospath,
                          negpath,
                          overwrite=FALSE,
                          rtree=TRUE,
                          make.full = TRUE,
                          ppm=2,
-                         inshiny=F){
+                         inshiny=F,
+                         wipe.regex = ".*_(?>POS|NEG)_[0+]*"){
 
   ppm = as.numeric(ppm)
 
+  # ==== TESTING ====
+  
+  #metapath = "~/Documents/Documents/code/metshi_paper/MTBLS28_20181107_105647/s_mtbls28_v2.txt"
+  #pospath = "~/Documents/Documents/code/metshi_paper/MTBLS28_20181107_105647/m_mtbls28_POS_v2_maf.tsv"
+  #negpath = "~/Documents/Documents/code/metshi_paper/MTBLS28_20181107_105647/m_mtbls28_NEG_v2_maf.tsv"
+  
+  # =================
+  
+  if(overwrite==TRUE & file.exists(db.name)) file.remove(db.name)
+  
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), db.name)
+  
+  metadata <- data.table::fread(metapath)
+  colnames(metadata) <- tolower(colnames(metadata))
+  
+  colnames(metadata) <- tolower(gsub(x=colnames(metadata), pattern = "\\.$|\\.\\.$|\\]", replacement = ""))
+  colnames(metadata) <- gsub(x=colnames(metadata), pattern = "\\[|\\.|\\.\\.| ", replacement = "_")
+
+  keep.cols = sapply(colnames(metadata), function(x) length(unique(metadata[,..x][[1]])) > 1)  
+  
+  metadata.filt = metadata[, ..keep.cols]
+  
+  colnames(metadata.filt) <- gsub(colnames(metadata.filt), pattern = "characteristics_|factor_value_", replacement="")
+  setnames(metadata.filt, old = c("sample_name", "source_name"), new = c("sample", "individual"), skip_absent = T)
+  if(!("individual" %in% colnames(metadata.filt))) metadata.filt$individual <- metadata.filt$sample
+  
+  RSQLite::dbWriteTable(conn, "individual_data", metadata.filt, overwrite=TRUE) # insert into
+  
+  # =================
   
   poslist <- data.table::fread(pospath,header = T)
   neglist <- data.table::fread(negpath,header = T) 
+  colnames(poslist) <- gsub(colnames(poslist), pattern = wipe.regex, replacement = "", perl=T)
+  colnames(neglist) <- gsub(colnames(neglist), pattern = wipe.regex, replacement = "", perl=T)
   
-  keepcols <- intersect(colnames(poslist), colnames(neglist))
+  unique.samples = unique(metadata.filt$sample)
   
-  poslist <- poslist[,..keepcols]
-  neglist <- neglist[,..keepcols]
+  keep.samples.pos <- intersect(colnames(poslist), unique.samples)
+  keep.samples.neg <- intersect(colnames(neglist), unique.samples)
+  
+  missing.samples = setdiff(unique.samples, unique(c(keep.samples.pos, keep.samples.neg)))
+  if(length(missing.samples) > 0 ){
+    shiny::showNotification(paste0("Missing samples: ", paste0(missing.samples, collapse = ","), ". Please check your peak table < > metadata for naming mismatches!"))
+  }
+  
+  setnames(poslist, "mass_to_charge", "mzmed", skip_absent = T)
+  setnames(neglist, "mass_to_charge", "mzmed", skip_absent = T)
+  
+  keepcols.pos <- c("mzmed", keep.samples.pos)
+  keepcols.neg <- c("mzmed", keep.samples.neg)
+  
+  poslist <- poslist[, ..keepcols.pos]
+  neglist <- neglist[, ..keepcols.neg]
   
   # replace commas with dots
-  poslist <- as.data.table(sapply(poslist, gsub, pattern = ",", replacement= "."))
-  neglist <- as.data.table(sapply(neglist, gsub, pattern = ",", replacement= "."))
-
-  if(inshiny) setProgress(.20)
+  poslist <- data.table::as.data.table(sapply(poslist, gsub, pattern = ",", replacement= "."))
+  neglist <- data.table::as.data.table(sapply(neglist, gsub, pattern = ",", replacement= "."))
   
-  gc()
+ if(inshiny) setProgress(.20)
   
   mzvals <- data.table::data.table(mzmed = c(as.numeric(poslist$mzmed), as.numeric(neglist$mzmed)),
                                    foundinmode = c(rep("positive", nrow(poslist)), rep("negative", nrow(neglist))))
-  
-  mzvals$foundinmode <- trimws(mzvals$foundinmode)
-  
-  gc()
   
   if(inshiny) setProgress(.30)
   
@@ -49,11 +90,6 @@ build.pat.db <- function(db.name,
                               variable.factor=TRUE
   )
   if(inshiny) setProgress(.40)
-  
-
-  if(overwrite==TRUE & file.exists(db.name)) file.remove(db.name)
-  
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), db.name)
   
   sql.make.int <- strwrap("CREATE TABLE mzintensities(
                           ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,107 +136,6 @@ build.pat.db <- function(db.name,
   if(inshiny) setProgress(.90)
   
   # ----------------
-  RSQLite::dbDisconnect(conn)
-}
-
-
-#' @export
-load.metadata.csv <- function(path.to.csv,
-                              path.to.patdb){
-  
-  # --- connect to sqlite db ---
-  
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), path.to.patdb)
-  filenames = RSQLite::dbGetQuery(conn, "SELECT DISTINCT filename FROM mzintensities")
-  
-  tab <- data.table::fread(path.to.csv)
-  colnames(tab) <- tolower(colnames(tab))
-  
-  if(any(colnames(tab)=="sampling_date")){
-    if(any(is.na(as.numeric(tab$sampling_date)))){
-      tab$sampling_date <- as.factor(as.Date(as.character(tab$sampling_date),
-                                                         format = "%d-%m-%y"))
-    }else{
-      tab$sampling_date <- as.factor(as.Date(as.numeric(tab$sampling_date),
-                                                         origin = "1899-12-30"))
-    }
-    if(is.na(tab$sampling_date[1])) levels(tab$sampling_date) <- factor(1)
-  }
-  
-  if(length(intersect(filenames[,1], tab$sample)) == 0){
-    stop("Complete mismatch between metadata sample names and file sample names. Aborting...")
-  }
-  
-  colnames(tab) <- tolower(gsub(x=colnames(tab), pattern = "\\.$|\\.\\.$", replacement = ""))
-  colnames(tab) <- gsub(x=colnames(tab), pattern = "\\.|\\.\\.| ", replacement = "_")
-  
-  RSQLite::dbWriteTable(conn, "individual_data", tab, overwrite=TRUE) # insert into
-  
-  RSQLite::dbDisconnect(conn)
-}
-
-#' @export
-load.metadata.excel <- function(path.to.xlsx,
-                                path.to.patdb,
-                                tabs.to.read = c(
-                                  "Setup",
-                                  "Individual Data"
-                                )){
-  
-  # --- connect to sqlite db ---
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), path.to.patdb)
-  # -------------------------------
-  data.store <- pbapply::pblapply(tabs.to.read, FUN=function(tab.name){
-    #tab <- data.table::as.data.table(xlsx::read.xlsx(path.to.xlsx, sheetName = tab.name))
-    tab <- data.table::as.data.table(openxlsx::read.xlsx(path.to.xlsx, sheet = tab.name))
-    # --- reformat colnames ---
-    colnames(tab) <- tolower(gsub(x=colnames(tab), pattern = "\\.$|\\.\\.$", replacement = ""))
-    colnames(tab) <- gsub(x=colnames(tab), pattern = "\\.|\\.\\.", replacement = "_")
-    #colnames(tab)[grep(x=colnames(tab), pattern= "*date*")] <- "sampling_date"
-    # -----------------------------------------------------------------------------------------
-    data.table::as.data.table(tab, keep.rownames=F)
-  })
-  
-  # --- convert to data table --- ## make this nicer loooking in the future
-  setup <- data.store[[1]]
-  individual.data <- data.store[[2]]
-  
-  # --- fill empty cells w/ na ---
-  
-  indx <- which(sapply(setup, is.character))
-  for (j in indx) set(setup, i = grep("^$|^ $", setup[[j]]), j = j, value = NA_character_)
-  
-  indx <- which(sapply(individual.data, is.character))
-  for (j in indx) set(individual.data, i = grep("^$|^ $", individual.data[[j]]), j = j, value = NA_character_)
-  
-  # --- remove empty lines ---
-  
-  setup <- setup[rowSums(is.na(setup)) != ncol(setup),]
-  individual.data <- individual.data[rowSums(is.na(individual.data)) != ncol(individual.data),]
-  
-  # --------------------------
-  
-  if(any(colnames(individual.data)=="sampling_date")){
-    if(any(is.na(as.numeric(individual.data$sampling_date)))){
-      individual.data$sampling_date <- as.factor(as.Date(as.character(individual.data$sampling_date),
-                                                         format = "%d-%m-%y"))
-    }else{
-      individual.data$sampling_date <- as.factor(as.Date(as.numeric(individual.data$sampling_date),
-                                                         origin = "1899-12-30"))
-    }
-    if(is.na(individual.data$sampling_date[1])) levels(individual.data$sampling_date) <- factor(1)
-  }
-  
-  individual.data$sample <- as.character(individual.data$sample)
-  individual.data$individual <- as.character(individual.data$individual)
- 
-  setup <- data.table::as.data.table(apply(setup, MARGIN=2, trimws))
-  individual.data <- data.table::as.data.table(apply(individual.data, MARGIN=2, trimws))
-
-  # --- import to patient sql file ---
-  RSQLite::dbWriteTable(conn, "setup", setup, overwrite=TRUE) # insert into
-  RSQLite::dbWriteTable(conn, "individual_data", individual.data, overwrite=TRUE) # insert into
- # --- disconnect ---
   RSQLite::dbDisconnect(conn)
 }
 
