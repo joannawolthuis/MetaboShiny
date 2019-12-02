@@ -122,7 +122,7 @@ shiny::observe({
         really.built.dbs <- gsub(x = basename(really.built.dbs), 
                             pattern = "\\.db", replacement = "")
         
-        no.need.build = c("cmmmediator", "pubchem","chemspider","magicball")
+        no.need.build = c("cmmmediator", "pubchem","chemspider","supernatural2","knapsack","magicball")
         if(length(really.built.dbs) > 0){
           built.dbs <- unique(c(no.need.build, intersect(really.built.dbs, gbl$vectors$db_list)))
         }else{

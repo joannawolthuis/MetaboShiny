@@ -86,6 +86,7 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                            list(name = 'ymdb_logo', path = 'www/ymdb_logo.png', dimensions = c(330, 90)),
                                            list(name = 'nanpdb_logo', path = 'www/nanpdb_logo.png', dimensions = c(200, 70)),
                                            list(name = 'lmdb_logo', path = 'www/lmdb_logo.png', dimensions = c(230, 100)),
+                                           list(name = 'supernatural2_logo', path = 'www/supernatural2_logo.png', dimensions = c(300, 60)),
                                            list(name = 'stoff_logo', path = 'www/stoff_logo.png', dimensions = c(250, 130)),
                                            list(name = 'knapsack_logo', path = 'www/knapsack_logo.gif', dimensions = c(200, 100)),
                                            list(name = 'laptop_icon', path = 'www/laptop.png', dimensions = c(150, 150))
@@ -189,6 +190,9 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                pubchem = list(title = "PubChem",
                                               description = "(VIA MAGICBALL) PubChem is the world's largest collection of freely accessible chemical information.",
                                               image_id = "pubchem_logo"),
+                               supernatural2 = list(title = "SUPER NATURAL II",
+                                              description = "(VIA MAGICBALL) A database of natural products. It contains 325,508 natural compounds (NCs), including information about the corresponding 2d structures, physicochemical properties, predicted toxicity class and potential vendors.",
+                                              image_id = "supernatural2_logo"),
                                chemspider = list(title = "ChemSpider",
                                                  description = "(VIA MAGICBALL) A chemical structure database providing fast access to over 77 million structures, properties and associated information.",
                                                  image_id = "chemspider_logo"),
@@ -268,6 +272,7 @@ vectors = list(
                   "chemspider",
                   "magicball",
                   "knapsack",
+                  'supernatural2',
                   "custom",
                   "pubchem"),
   db_list = c( # this determines the show order of dbs in the app
@@ -302,6 +307,7 @@ vectors = list(
     "magicball",
     'cmmmediator',
     'pubchem',
+    'supernatural2',
     'chemspider',
     'knapsack',
     "custom"

@@ -204,6 +204,11 @@ apikey = ')
         })
       }
       
+      if(is.null(opts$apikey)){
+        MetaboShiny::setOption(lcl$paths$opt.loc, "apikey", "")
+        opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
+      }
+      
       if(opts$apikey != ""){
         output$api_set <- shiny::renderText("key saved!")
       }
