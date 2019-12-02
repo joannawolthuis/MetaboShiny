@@ -104,10 +104,10 @@ lapply(c("prematch","search_mz"), function(search_type){
                                                       mode = MetaboShiny::getIonMode(mz, 
                                                                                      lcl$paths$patdb))
               if(nrow(res.predict) > 0){
-                if(lcl$apikey == "") shiny::shinyNotification("Skipping ChemSpider, you haven't entered an API key!")
+                if(lcl$apikey == " ") shiny::shinyNotification("Skipping ChemSpider, you haven't entered an API key!")
                 res.big.db = MetaDBparse::searchFormulaWeb(unique(res.predict$baseformula),
                                                            search = intersect(db_list, 
-                                                                              if(lcl$apikey != "") c("pubchem",
+                                                                              if(lcl$apikey != " ") c("pubchem",
                                                                                                      "chemspider",
                                                                                                      "knapsack",
                                                                                                      "supernatural2") else c("pubchem",
