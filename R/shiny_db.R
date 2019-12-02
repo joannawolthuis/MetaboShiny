@@ -21,27 +21,29 @@ get_prematches <- function(who = NA,
                            showiso=c()){
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
   
-  firstpart = "SELECT DISTINCT
-               map.query_mz as query_mz, lower(name) as name,baseformula,adduct,
-                              fullformula,finalcharge,`%iso`,
-                              dppm,
-               description, map.structure as structure,
-               GROUP_CONCAT(source) as source
+  firstpart = strwrap("SELECT DISTINCT map.query_mz, name,
+                               map.baseformula as baseformula,
+                               map.adduct as adduct,
+                               `%iso`,
+                               fullformula,
+                               finalcharge,
+                               dppm,
+               description, con.structure as structure,
+               source
                FROM match_mapper map
                JOIN match_content con
-               ON map.structure = con.structure
-               AND map.query_mz = con.query_mz"
+               ON map.baseformula = con.baseformula
+               AND map.adduct = con.adduct
+               AND map.query_mz = con.query_mz", simplify=T, width=1000)
   
   dbfrag = if(length(showdb)>0) gsubfn::fn$paste("AND source = '$showdb'") else ""
-  addfrag = if(length(showadd)>0) gsubfn::fn$paste("AND adduct = '$showadd'") else ""
+  addfrag = if(length(showadd)>0) gsubfn::fn$paste("AND map.adduct = '$showadd'") else ""
   isofrag = if(length(showiso)>0) switch(showiso, 
                                          main = "AND `%iso` > 99.9999", 
                                          minor = "AND `%iso` < 99.9999") else ""
   
   query = gsubfn::fn$paste("$firstpart WHERE $what = '$who' $dbfrag $addfrag $isofrag")
 
-  query = paste0(query, " GROUP BY map.query_mz, name, baseformula, fullformula, finalcharge, adduct, `%iso`, dppm, map.structure, description")
-  
   res = RSQLite::dbGetQuery(conn, query)
  
   if(any(grepl(pattern = "iso", colnames(res)))){

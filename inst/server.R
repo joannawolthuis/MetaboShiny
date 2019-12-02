@@ -459,8 +459,6 @@ apikey = ')
           uniques$structure <- unlist(structs)
         }
         
-          shiny::setProgress(0.4)
-        
         shiny::setProgress(0.6)
         
         shown_matches$forward_unique <- uniques

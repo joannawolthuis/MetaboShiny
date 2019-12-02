@@ -31,24 +31,8 @@ lapply(c("prematch","search_mz"), function(search_type){
       
       conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb) # change this to proper var later
       RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS map_mz")
-      RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS map_struc")
-      RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS cont_struc")
-      RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_content")
-      RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_mapper")
-      RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTS match_mapper(query_mz decimal(30,13),
-                                                                       structure TEXT,
-                                                                       `%iso` decimal(30,13),
-                                                                       adduct TEXT,
-                                                                       dppm decimal(30,13))")    
-      RSQLite::dbExecute(conn, "CREATE TABLE IF NOT EXISTS match_content(query_mz decimal(30,13),
-                                                                      name TEXT,
-                                                                      baseformula TEXT,
-                                                                      fullformula TEXT,
-                                                                      finalcharge INT,
-                                                                      identifier TEXT,
-                                                                      description VARCHAR(255),
-                                                                      structure TEXT,
-                                                                      source TEXT)")
+      RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS map_ba")
+      RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS cont_ba")
       
       blocksize=100
       blocks = switch(search_type,
@@ -92,19 +76,32 @@ lapply(c("prematch","search_mz"), function(search_type){
           }else{
             res.online = data.table::data.table()
           }
-          predict = length(intersect(c("magicball",
-                                       "pubchem",
-                                       "chemspider",
-                                       "knapsack",
-                                       "supernatural2"), db_list)) > 0
+          
+          pred_dbs = intersect(c("magicball",
+                                 "pubchem",
+                                 "chemspider",
+                                 "knapsack",
+                                 "supernatural2"), db_list)
+          predict = length(pred_dbs) > 0
+          
           if(predict){
             res.rows.predict = pbapply::pblapply(mzs, function(mz){
               res.predict = MetaDBparse::getPredicted(mz = as.numeric(mz), 
                                                       ppm = as.numeric(mSet$ppm),
                                                       mode = MetaboShiny::getIonMode(mz, 
                                                                                      lcl$paths$patdb))
-              if(nrow(res.predict) > 0){
-                if(lcl$apikey == " ") shiny::shinyNotification("Skipping ChemSpider, you haven't entered an API key!")
+              if(length(pred_dbs) == 1){
+                if(pred_dbs == "magicball"){
+                  search_db = F
+                }else{
+                  search_db = T
+                }
+              }else{
+                search_db = T
+              }
+              
+              if(nrow(res.predict) > 0 & search_db == T){
+                if(lcl$apikey == " ") shiny::showNotification("Skipping ChemSpider, you haven't entered an API key!")
                 res.big.db = MetaDBparse::searchFormulaWeb(unique(res.predict$baseformula),
                                                            search = intersect(db_list, 
                                                                               if(lcl$apikey != " ") c("pubchem",
@@ -113,13 +110,21 @@ lapply(c("prematch","search_mz"), function(search_type){
                                                                                                      "supernatural2") else c("pubchem",
                                                                                                                              "knapsack",
                                                                                                                              "supernatural2")),
-                                                           detailed = input$predict_details,
+                                                           detailed = TRUE,#input$predict_details,
                                                            apikey = lcl$apikey)
                 
-                res.big.db$`%iso` <- c(100)
                 form_add_only <- res.predict[,c("baseformula",
-                                                "adduct")]
-                results_full <- merge(res.big.db, form_add_only)
+                                                "adduct","query_mz",
+                                                "%iso","dppm",
+                                                "fullformula",
+                                                "finalcharge")]
+                keep = form_add_only$baseformula %in% res.big.db$baseformula
+                form_add_only <- form_add_only[keep,]
+                
+                results_full <- merge(res.big.db, form_add_only, on = "baseformula", 
+                                      all.y = ifelse("magicball" %in% db_list, TRUE, FALSE))
+                results_full[is.na(source),]$name <- results_full[is.na(source),]$baseformula
+                results_full[is.na(source),]$source <- c("magicball")
                 withSmi = which(results_full$structure != "")
                 if(length(withSmi) > 0){
                   results_nosmi <- results_full[ -withSmi ]
@@ -147,11 +152,11 @@ lapply(c("prematch","search_mz"), function(search_type){
                 }
                 return(unique(res))
               }else{
-                return(data.table::data.table())
+                return(res.predict)
               }  
             })
-            res.predict = data.table::rbindlist(res.rows.predict, fill=T)
-          }else{
+            res.predict = unique(data.table::rbindlist(res.rows.predict, fill=T))
+            }else{
             res.predict = data.table::data.table()
           }
           dbs.local = setdiff(gsub(x=gsub(basename(unlist(db_list)), 
@@ -171,15 +176,18 @@ lapply(c("prematch","search_mz"), function(search_type){
             res.local <- data.table::data.table()
           }
           res <- data.table::rbindlist(list(res.local, res.online, res.predict), use.names = T, fill=T)
+          res[, c("query_mz") := lapply(.SD, as.character), .SDcols="query_mz"]
+          print(head(res))
           if(nrow(res) > 0){
             list(mapper = unique(res[,c("query_mz", 
-                                        "structure", 
-                                        "%iso", 
+                                        "baseformula", 
                                         "adduct", 
+                                        "%iso",
                                         "dppm")]),
                  content = unique(res[,c("query_mz",
                                          "name",
                                          "baseformula",
+                                         "adduct",
                                          "fullformula",
                                          "finalcharge",
                                          "identifier",
@@ -196,14 +204,14 @@ lapply(c("prematch","search_mz"), function(search_type){
       
       RSQLite::dbWriteTable(conn, 
                             "match_mapper", 
-                            unique(data.table::rbindlist(lapply(matches, function(x) x$mapper))), append=T,use.names = T)
+                            unique(data.table::rbindlist(lapply(matches, function(x) x$mapper))), overwrite=T, use.names = T)
       RSQLite::dbWriteTable(conn, 
                             "match_content", 
-                            unique(data.table::rbindlist(lapply(matches, function(x) x$content))), append=T,use.names = T)
+                            unique(data.table::rbindlist(lapply(matches, function(x) x$content))), overwrite=T, use.names = T)
       
       RSQLite::dbExecute(conn, "CREATE INDEX map_mz ON match_mapper(query_mz)")
-      RSQLite::dbExecute(conn, "CREATE INDEX map_struc ON match_mapper(structure)")
-      RSQLite::dbExecute(conn, "CREATE INDEX cont_struc ON match_content(structure)")
+      RSQLite::dbExecute(conn, "CREATE INDEX map_ba ON match_mapper(baseformula, adduct)")
+      RSQLite::dbExecute(conn, "CREATE INDEX cont_ba ON match_content(baseformula, adduct)")
       
       if(search_type == "prematch"){
         mSet$metshiParams$prematched<<-T
