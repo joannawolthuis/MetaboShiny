@@ -112,11 +112,11 @@ function(input, output, session) {
       
       if("adducts.csv" %in% basename(list.files(lcl$paths$work_dir))){
         adducts <<- fread(file.path(lcl$paths$work_dir, "adducts.csv"))
-        }
+      }
       
       if("adduct_rules.csv" %in% basename(list.files(lcl$paths$work_dir))){
         adduct_rules <<- fread(file.path(lcl$paths$work_dir, "adduct_rules.csv"))
-        }
+      }
       
       adducts[adducts == ''|adducts == ' '] <<- NA
       
@@ -204,7 +204,7 @@ apikey = ')
         })
       }
       
-      if(is.null(opts$apikey)){
+      if(!("apikey" %in% names(opts))){
         MetaboShiny::setOption(lcl$paths$opt.loc, "apikey", "")
         opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
       }
