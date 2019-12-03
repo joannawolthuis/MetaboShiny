@@ -435,6 +435,13 @@ apikey = ')
                                                                         showiso = result_filters$iso))
         shiny::setProgress(0.2)
         
+        
+        # =====
+        
+        matches$name[matches$source != "magicball"] <- tolower(matches$name[matches$source != "magicball"])
+        
+        # =====
+        
         uniques = data.table::as.data.table(unique(data.table::as.data.table(matches)[,-c("source", "description"),
                                                                                       with=F]))
         if(nrow(uniques)>1){
@@ -461,10 +468,41 @@ apikey = ')
         
         shiny::setProgress(0.6)
         
-        shown_matches$forward_unique <- uniques
+        # === aggregate ===
         
-        shown_matches$forward_full <- matches[,c("name", "source", "description"),with=F]
+        info_only = unique(matches[,c("name", "source", "structure", "description"),with=F])
+        info_no_na <- info_only[!is.na(info_only$structure)]
+        info_na <- info_only[is.na(info_only$structure)]
         
+        info_aggr <- aggregate(info_no_na, by = list(info_no_na$structure), FUN = function(x) paste0(unique(x), collapse = "SEPERATOR"))
+        info_aggr <- aggregate(info_aggr, by = list(info_aggr$name), FUN = function(x) paste0(unique(x), collapse = "SEPERATOR"))
+        
+        # fix structures
+        split_structs <- strsplit(info_aggr$structure, split = "SEPERATOR")
+        main_structs <- unlist(lapply(split_structs, function(x) x[[1]]))
+        info_aggr$structure <- main_structs
+        
+        # move extra names to descriptions
+        split_names <- strsplit(info_aggr$name, split = "SEPERATOR")
+        main_names <- unlist(lapply(split_names, function(x) x[[1]]))
+        synonyms <- unlist(lapply(split_names, function(x){
+          if(length(x)>1){
+            paste0("SYNONYMS: ", paste0(x[2:length(x)], collapse=", "),".SEPERATOR") 
+          }else NA
+        }))
+        info_aggr$name <- main_names
+        has.syn <- which(!is.na(synonyms))
+        info_aggr$description[has.syn] <- paste0(synonyms[has.syn], info_aggr$description[has.syn])
+        info_aggr <- as.data.table(info_aggr)
+        
+        # =================
+        is.no.na.uniq <- which(!is.na(uniques$structure))
+        is.no.na.info <- which(!is.na(info_aggr$structure))
+        uniques$name[is.no.na.uniq] <- info_aggr$name[is.no.na.info][match(uniques$structure[is.no.na.uniq], info_aggr$structure[is.no.na.info])]
+        
+        shown_matches$forward_unique <- uniques[,-grepl(colnames(uniques), pattern = "Group\\.\\d"),with=F]
+        shown_matches$forward_full <- info_aggr[,-grepl(colnames(info_aggr), pattern = "Group\\.\\d"),with=F]
+      
         if(nrow(shown_matches$forward_full)>0){
           pieinfo$add <- reshape::melt(table(shown_matches$forward_unique$adduct))
           pieinfo$db <- reshape::melt(table(shown_matches$forward_full$source))
@@ -495,6 +533,14 @@ apikey = ')
     if(my_selection$name != ""){
       
       subsec = data.table::as.data.table(shown_matches$forward_full)[name == my_selection$name]
+      
+      if(grepl("SYNONYMS:", x = subsec$description)){
+        subsec$source <- paste0("synonymSEPERATOR", subsec$source)
+        subsec$description <- gsub(subsec$description, pattern = "SYNONYMS: ", replacement="")
+      }
+      
+      subsec <- subsec[, .(name, source = strsplit(source, "SEPERATOR")[[1]], structure = structure, description = strsplit(description, "SEPERATOR")[[1]])]
+      
       keep <- which(trimws(subsec$description) %not in% c("","Unknown","unknown", " ",
                                                   "Involved in pathways: . More specifically: . Also associated with compound classes:"))
       subsec <- subsec[keep,]
@@ -503,37 +549,32 @@ apikey = ')
         output$desc_ui <- shiny::renderUI({lapply(1:nrow(subsec), function(i){
           row = subsec[i,]
           # icon(s) in one row
-          dbs = strsplit(row$source, split=",")[[1]]
-          img = sapply(dbs, function(db){
-            id = gbl$constants$db.build.info[[db]]$image_id
-            address = unlist(sapply(gbl$constants$images, function(item) if(item$name == id) item$path else NULL))
-          })
-          
-          # text cloud underneath https://codepen.io/rikschennink/pen/mjywQb
+          db = row$source
+          desc_id = paste0("curr_desc_", db)
           desc = row$description
-          lapply(1:length(img), function(i){
-            # ICONS IN A ROW
-            name = names(img)[i]
-            address = img[i]
-            output[[paste0("desc_icon_", name)]] <- shiny::renderImage({
-              # When input$n is 3, filename is ./images/image3.jpeg
-              list(src = address,
-                   #width=30,
-                   height=30)
-            }, deleteFile = FALSE)
-          })
-          
-          desc_id = paste0("curr_desc_", dbs, collapse="_")
           output[[desc_id]] <- shiny::renderText({trimws(desc)})
           
-          # ui
-          list(shiny::fluidRow(align="center", 
-                               lapply(dbs, function(db){
-                                 MetaboShiny::sardine(shiny::imageOutput(paste0("desc_icon_",db),inline = T))}),
-                               shiny::br(),
-                               textOutput(desc_id)),
-               shiny::hr()
-          )
+          if(db == "synonym"){
+            ui = list(shiny::fluidRow(align="center", 
+                                 tags$h3("Synonyms:"),
+                                 shiny::br(),
+                                 textOutput(desc_id)),
+                 shiny::hr()
+            )
+          }else{
+            id = gbl$constants$db.build.info[[db]]$image_id
+            address = unlist(sapply(gbl$constants$images, function(item) if(item$name == id) item$path else NULL))
+            ui = list(shiny::fluidRow(align="center", 
+                                 MetaboShiny::sardine(shiny::imageOutput(paste0("desc_icon_", db),inline = T)),
+                                 shiny::br(),
+                                 textOutput(desc_id)),
+                 shiny::hr()
+            )
+          }
+          
+          
+          # text cloud underneath https://codepen.io/rikschennink/pen/mjywQb
+          return(ui)
         })
         })    
       }else{
@@ -541,7 +582,6 @@ apikey = ')
           helpText("No additional info available!")
         })
       }
-     
     }
   })
   
