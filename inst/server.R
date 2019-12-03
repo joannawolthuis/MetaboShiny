@@ -435,14 +435,14 @@ apikey = ')
                                                                         showiso = result_filters$iso))
         shiny::setProgress(0.2)
         
-        
         # =====
         
         matches$name[matches$source != "magicball"] <- tolower(matches$name[matches$source != "magicball"])
         
         # =====
         
-        uniques = data.table::as.data.table(unique(data.table::as.data.table(matches)[,-c("source", "description"),
+        uniques = data.table::as.data.table(unique(data.table::as.data.table(matches)[, -c("source", 
+                                                                                           "description"),
                                                                                       with=F]))
         if(nrow(uniques)>1){
           uniques = uniques[, .(structure = list(structure)),
@@ -470,12 +470,17 @@ apikey = ')
         
         # === aggregate ===
         
-        info_only = unique(matches[,c("name", "source", "structure", "description"),with=F])
+        info_only = unique(matches[,c("name", 
+                                      "source", 
+                                      "structure", 
+                                      "description"),with=F])
         info_no_na <- info_only[!is.na(info_only$structure)]
         info_na <- info_only[is.na(info_only$structure)]
 
         info_aggr <- aggregate(info_no_na, by = list(info_no_na$name), FUN = function(x) paste0(unique(x), collapse = "SEPERATOR"))
         info_aggr <- aggregate(info_aggr, by = list(info_aggr$structure), FUN = function(x) paste0(unique(x), collapse = "SEPERATOR"))
+        
+        info_aggr <- rbind(info_aggr, info_na, fill=T)
         
         # fix structures
         split_structs <- strsplit(info_aggr$structure, split = "SEPERATOR")
@@ -500,6 +505,9 @@ apikey = ')
         is.no.na.uniq <- which(!is.na(uniques$structure))
         is.no.na.info <- which(!is.na(info_aggr$structure))
         uniques$name[is.no.na.uniq] <- info_aggr$name[is.no.na.info][match(uniques$structure[is.no.na.uniq], info_aggr$structure[is.no.na.info])]
+        uniques$structure[is.no.na.uniq] <- info_aggr$structure[is.no.na.info][match(uniques$structure[is.no.na.uniq], info_aggr$structure[is.no.na.info])]
+        
+        uniques <- unique(uniques)
         
         shown_matches$forward_unique <- uniques[,-grepl(colnames(uniques), pattern = "Group\\.\\d"),with=F]
         shown_matches$forward_full <- info_aggr[,-grepl(colnames(info_aggr), pattern = "Group\\.\\d"),with=F]
@@ -543,12 +551,17 @@ apikey = ')
       subsec <- subsec[, .(name, source = strsplit(source, "SEPERATOR")[[1]], structure = structure, description = strsplit(description, "SEPERATOR")[[1]])]
       
       keep <- which(trimws(subsec$description) %not in% c("","Unknown","unknown", " ",
-                                                  "Involved in pathways: . More specifically: . Also associated with compound classes:"))
+                                                          "Involved in pathways: . More specifically: . Also associated with compound classes:"))
       subsec <- subsec[keep,]
-      if(nrow(subsec)>0){
+      print(subsec)
+      
+      if(nrow(subsec) > 0){
+        
         # render descriptions seperately
         output$desc_ui <- shiny::renderUI({lapply(1:nrow(subsec), function(i){
+          
           row = subsec[i,]
+          
           # icon(s) in one row
           db = row$source
           desc_id = paste0("curr_desc_", db)
@@ -565,18 +578,21 @@ apikey = ')
           }else{
             id = gbl$constants$db.build.info[[db]]$image_id
             address = unlist(sapply(gbl$constants$images, function(item) if(item$name == id) item$path else NULL))
+            
+            output[[paste0("desc_icon_", db)]] <- shiny::renderImage({
+              list(src = address, height=30)
+            }, deleteFile = FALSE)
+            
             ui = list(shiny::fluidRow(align="center", 
                                  MetaboShiny::sardine(shiny::imageOutput(paste0("desc_icon_", db),inline = T)),
                                  shiny::br(),
                                  textOutput(desc_id)),
-                 shiny::hr()
-            )
+                 shiny::hr())
           }
-          
-          
           # text cloud underneath https://codepen.io/rikschennink/pen/mjywQb
           return(ui)
         })
+          
         })    
       }else{
         output$desc_ui <- shiny::renderUI({

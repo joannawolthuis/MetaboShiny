@@ -197,7 +197,7 @@ lapply(c("prematch","search_mz"), function(search_type){
                                          "identifier",
                                          "description",
                                          "structure",
-                                         "source")]))  
+                                         "source")])) 
           }else{
             list(mapper = data.table::data.table(),
                  content = data.table::data.table())
@@ -223,6 +223,7 @@ lapply(c("prematch","search_mz"), function(search_type){
       }else{
         search$go <- TRUE
       }
+      
       RSQLite::dbDisconnect(conn)
     }else{
       MetaboShiny::metshiAlert("Please build at least one database to enable this feature!")
