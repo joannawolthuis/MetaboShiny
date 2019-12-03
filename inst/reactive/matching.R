@@ -101,6 +101,7 @@ lapply(c("prematch","search_mz"), function(search_type){
               }
               
               if(nrow(res.predict) > 0 & search_db == T){
+                res.predict$source = c("magicball")
                 if(lcl$apikey == " ") shiny::showNotification("Skipping ChemSpider, you haven't entered an API key!")
                 res.big.db = MetaDBparse::searchFormulaWeb(unique(res.predict$baseformula),
                                                            search = intersect(db_list, 
@@ -123,6 +124,9 @@ lapply(c("prematch","search_mz"), function(search_type){
                 
                 results_full <- merge(res.big.db, form_add_only, on = "baseformula", 
                                       all.y = ifelse("magicball" %in% db_list, TRUE, FALSE))
+                if(!("source" %in% colnames(results_full))){
+                  results_full$source = "magicball"
+                }
                 results_full[is.na(source),]$name <- results_full[is.na(source),]$baseformula
                 results_full[is.na(source),]$source <- c("magicball")
                 withSmi = which(results_full$structure != "")
