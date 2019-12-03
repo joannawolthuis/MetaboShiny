@@ -473,9 +473,9 @@ apikey = ')
         info_only = unique(matches[,c("name", "source", "structure", "description"),with=F])
         info_no_na <- info_only[!is.na(info_only$structure)]
         info_na <- info_only[is.na(info_only$structure)]
-        
-        info_aggr <- aggregate(info_no_na, by = list(info_no_na$structure), FUN = function(x) paste0(unique(x), collapse = "SEPERATOR"))
-        info_aggr <- aggregate(info_aggr, by = list(info_aggr$name), FUN = function(x) paste0(unique(x), collapse = "SEPERATOR"))
+
+        info_aggr <- aggregate(info_no_na, by = list(info_no_na$name), FUN = function(x) paste0(unique(x), collapse = "SEPERATOR"))
+        info_aggr <- aggregate(info_aggr, by = list(info_aggr$structure), FUN = function(x) paste0(unique(x), collapse = "SEPERATOR"))
         
         # fix structures
         split_structs <- strsplit(info_aggr$structure, split = "SEPERATOR")
@@ -496,6 +496,7 @@ apikey = ')
         info_aggr <- as.data.table(info_aggr)
         
         # =================
+        
         is.no.na.uniq <- which(!is.na(uniques$structure))
         is.no.na.info <- which(!is.na(info_aggr$structure))
         uniques$name[is.no.na.uniq] <- info_aggr$name[is.no.na.info][match(uniques$structure[is.no.na.uniq], info_aggr$structure[is.no.na.info])]
