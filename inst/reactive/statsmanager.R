@@ -193,9 +193,12 @@ shiny::observe({
                    mSet <-  MetaboAnalystR::Volcano.Anal(mSet,
                                                          paired = mSet$dataSet$paired, 
                                                          2.0, 0,
-                                                         0.75,F, 0.1,
+                                                         0.75, F, 0.1,
                                                          TRUE, "raw") # TODO: make thresholds user-defined
                  })
+               },
+               power = {
+                 NULL
                },
                match_wordcloud_pm = {
                  shiny::withProgress({

@@ -689,9 +689,10 @@ apikey = ')
       list("overview", "volc"),#8
       list("overview", "venn"),#9
       list("overview", "heatmap"),#10
-      list("permz", "tt"),#11
-      list("permz", "fc"),#12
-      list("dimred", "tsne")#13
+      list("overview", "power"),#11
+      list("permz", "tt"),#12
+      list("permz", "fc"),#13
+      list("dimred", "tsne")#14
     )
     
     # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
@@ -700,21 +701,21 @@ apikey = ')
       if(is.null(interface$mode)) {
         show.tabs <- hide.tabs[1]
       }else if(interface$mode == '1fb'){
-        show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13)]
+        show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14)]
         shiny::updateSelectInput(session, "ml_method",
                                  selected = "rf",
                                  choices = as.list(gbl$constants$ml.models))
       }else if(interface$mode == '1fm'){
-        show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,13)]
+        show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,11,14)]
         shiny::updateSelectInput(session, "ml_method",
                                  selected = "rf",
                                  choices = as.list(setdiff(gbl$constants$ml.models, gbl$constants$ml.twoonly)))
       }else if(interface$mode == '2f'){
-        show.tabs <- hide.tabs[c(1,2,4,6,9,10,13)]
+        show.tabs <- hide.tabs[c(1,2,4,6,9,11,14)]
       }else if(interface$mode == 't1f'){
-        show.tabs = hide.tabs[c(1,2,4,5,6,9,10,13)]
+        show.tabs = hide.tabs[c(1,2,4,5,6,9,11,14)]
       }else if(interface$mode == 't'){
-        show.tabs = hide.tabs[c(1,2,5,6,7,9,10,13)]
+        show.tabs = hide.tabs[c(1,2,5,6,7,9,11,14)]
       }else{
         show.tabs <- hide.tabs[1]
       }
@@ -1044,6 +1045,22 @@ apikey = ')
     if(!success) MetaboShiny::metshiAlert("Orca isn't working, please check your installation. If on Mac, please try starting Rstudio from the command line with the command 'open -a Rstudio'", session=session)
   })
   
+  shiny::observeEvent(input$do_power, {
+    shiny::withProgress({
+      pwr.analyses = lapply(input$power_comps, function(combi){
+        mSet.temp <- MetaboAnalystR::InitPowerAnal(mSet, combi)
+        mSet.temp <- MetaboAnalystR::PerformPowerProfiling(mSet.temp, 
+                                                           fdr.lvl = input$power_fdr, 
+                                                           smplSize = input$power_nsamp)  
+        shiny::incProgress(amount = 1/length(input$power_comps))
+        mSet.temp$analSet$power
+      })
+      names(pwr.analyses) <- input$power_comps
+    }, max = length(input$power_comps))
+    mSet$analSet$power <- pwr.analyses
+    mSet <<- mSet
+    datamanager$reload <- "power"
+  })
   # ==== LOAD LOGIN UI ====
   
   # init all observer

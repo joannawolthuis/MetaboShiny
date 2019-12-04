@@ -11,6 +11,7 @@ shiny::observe({
       success = F
       try({
         for(do in datamanager$reload){
+          print(do)
           switch(do,
                  general = {
                    # reload sidebar
@@ -88,6 +89,13 @@ shiny::observe({
                      }
                    }else{
                      shiny::updateCheckboxInput(session, "tt_nonpar", value = F)
+                   }
+                   
+                   if(grepl(mSet$dataSet$exp.type, pattern = "1f.")){
+                     pairs = MetaboShiny::expand.grid.unique(levels(mSet$dataSet$cls), 
+                                                             levels(mSet$dataSet$cls))
+                     pairs = paste(pairs[,1], "vs.", pairs[,2])
+                     shiny::updateSelectInput(session, inputId = "power_comps", choices = pairs, selected = pairs[1])
                    }
                    
                    switch(mSet$dataSet$exp.type,
@@ -225,7 +233,6 @@ shiny::observe({
                                    selection = 'single',
                                    autoHideNavigation = T,
                                    options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
-                     
                    })
                  },
                  pca = {
@@ -550,6 +557,21 @@ shiny::observe({
                      }
                    })
                  }, 
+                 power = {
+                     output$power_plot <- plotly::renderPlotly({
+                       if("power" %in% names(mSet$analSet)){
+                       MetaboShiny::ggPlotPower(mSet, 
+                                                max_samples = input$power_nsamp,
+                                                comparisons = input$power_comps,
+                                                plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                                                font = lcl$aes$font,
+                                                cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       }else{
+                         NULL
+                       }
+                     })
+                   
+                 },
                  match_wordcloud_pm = {
                    
                    wcdata <- data.frame(word = head(lcl$tables$word_freq_pm, input$wc_topn_pm)$name,
