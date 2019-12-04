@@ -434,9 +434,7 @@ apikey = ')
                                                                         showdb = result_filters$db,
                                                                         showiso = result_filters$iso))
         if(nrow(matches)>0){
-          pieinfo$add <- reshape::melt(table(matches$adduct))
           pieinfo$db <- reshape::melt(table(matches$source))
-          pieinfo$iso <- reshape::melt(table(matches$isocat))
         }
         
         shiny::setProgress(0.2)
@@ -505,6 +503,11 @@ apikey = ')
         shown_matches$forward_unique <- uniques[,-grepl(colnames(uniques), pattern = "Group\\.\\d"),with=F]
         shown_matches$forward_full <- info_aggr[,-grepl(colnames(info_aggr), pattern = "Group\\.\\d"),with=F]
       
+        if(nrow(shown_matches$forward_unique)>0){
+          pieinfo$add <- reshape::melt(table(shown_matches$forward_unique$adduct))
+          pieinfo$iso <- reshape::melt(table(shown_matches$forward_unique$isocat))
+        }
+        
         my_selection$name <- ""
         my_selection$form <- ""
         my_selection$struct <- ""
