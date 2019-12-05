@@ -1,5 +1,6 @@
 # listener for all the file pickers, trigger a window if they are clicked
 shiny::observe({
+  shinyFiles::shinyFileChoose(input, 'metadata_new', roots=gbl$paths$volumes, filetypes=c('xls', 'xlsm', 'xlsx', 'csv', 'tsv', 'txt'))
   shinyFiles::shinyFileChoose(input, 'outlist_pos', roots=gbl$paths$volumes, filetypes=c('csv', 'tsv', 'txt'))
   shinyFiles::shinyFileChoose(input, 'outlist_neg', roots=gbl$paths$volumes, filetypes=c('csv', 'tsv', 'txt'))
   shinyFiles::shinyFileChoose(input, 'custom_db', roots=gbl$paths$volumes, filetypes=c('csv'))

@@ -187,7 +187,9 @@ shiny::observeEvent(input$initialize, {
         # set amount of tries (defined by missforest package)
         auto.mtry <- floor(sqrt(ncol(mSet$dataSet$preproc)))
         
-        mtry <- ifelse(auto.mtry > 100, 100, auto.mtry)
+        mtry <- ifelse(auto.mtry > 100, 
+                       100, 
+                       auto.mtry)
 
         # impute missing values with random forest
         imp <- missForest::missForest(w.missing,

@@ -25,17 +25,13 @@ build.pat.db <- function(db.name,
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), db.name)
   
   metadata <- data.table::fread(metapath)
-  colnames(metadata) <- tolower(colnames(metadata))
   
-  colnames(metadata) <- tolower(gsub(x=colnames(metadata), pattern = "\\.$|\\.\\.$|\\]", replacement = ""))
-  colnames(metadata) <- gsub(x=colnames(metadata), pattern = "\\[|\\.|\\.\\.| ", replacement = "_")
+  metadata <- MetaboShiny::reformat.metadata(metadata)
 
   keep.cols = sapply(colnames(metadata), function(x) length(unique(metadata[,..x][[1]])) > 1)  
   
   metadata.filt = metadata[, ..keep.cols]
   
-  colnames(metadata.filt) <- gsub(colnames(metadata.filt), pattern = "characteristics_|factor_value_", replacement="")
-  setnames(metadata.filt, old = c("sample_name", "source_name"), new = c("sample", "individual"), skip_absent = T)
   if(!("individual" %in% colnames(metadata.filt))) metadata.filt$individual <- metadata.filt$sample
   
   RSQLite::dbWriteTable(conn, "individual_data", metadata.filt, overwrite=TRUE) # insert into

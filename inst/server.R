@@ -537,6 +537,8 @@ apikey = ')
         has_syn = T
         subsec$source <- paste0("synonymSEPERATOR", subsec$source)
         subsec$description <- gsub(subsec$description, pattern = "SYNONYMS: ", replacement="")
+      }else{
+        has_syn = F
       }
       
       subsec <- subsec[, .(name, 

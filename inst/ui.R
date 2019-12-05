@@ -813,7 +813,16 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                    shiny::h2("Discrete data"),
                                                                                                                                    shiny::uiOutput("colorPickers")
                                                                                                                    ) # colour pickers generated in server.R. default settings taken from user_options.txt.
-                                                                                                   ))
+                                                                                                   ),
+                                                                                                   shiny::tabPanel("metadata",icon = shiny::icon("plus"),
+                                                                                                                   shiny::fluidRow(align="center",
+                                                                                                                                   br(),br(),
+                                                                                                                                   shiny::h2("New metadata"),
+                                                                                                                                   shiny::helpText("If you want to update your metadata, please use the below upload screen! 
+                                                                                                                                                   Any samples missing in your uploaded csv will be labeled as 'unknown' for new metadata columns."),
+                                                                                                                                   shinyFiles::shinyFilesButton('metadata_new', 'upload', 'Select metadata', FALSE),
+                                                                                                                                   shinyWidgets::circleButton("metadata_new_add", icon = shiny::icon("arrow-right"))
+                                                                                                                   )))
                                                                    )
                                                    )),
                                    

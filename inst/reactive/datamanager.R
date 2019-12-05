@@ -11,7 +11,6 @@ shiny::observe({
       success = F
       try({
         for(do in datamanager$reload){
-          print(do)
           switch(do,
                  general = {
                    # reload sidebar

@@ -33,6 +33,7 @@ getProfile <- function(mSet, varName, title=varName, mode="stat"){
       Abundance = sourceTable[,varInx]
     )
   }
+  translator = translator[complete.cases(translator),]
   # ---------------
   return(translator)
 }
@@ -143,4 +144,14 @@ metshiAlert <- function(message, session = shiny::getDefaultReactiveDomain()){
     ),
     html = TRUE
   )
+}
+
+reformat.metadata <- function(metadata){
+  colnames(metadata) <- tolower(colnames(metadata))
+  colnames(metadata) <- tolower(gsub(x=colnames(metadata), pattern = "\\.$|\\.\\.$|\\]", replacement = ""))
+  colnames(metadata) <- gsub(x=colnames(metadata), pattern = "\\[|\\.|\\.\\.| ", replacement = "_")
+  colnames(metadata) <- gsub(colnames(metadata), pattern = "characteristics_|factor_value_", replacement="")
+  setnames(metadata, old = c("sample_name", "source_name"), new = c("sample", "individual"), skip_absent = T)
+  # - - - 
+  return(metadata)
 }

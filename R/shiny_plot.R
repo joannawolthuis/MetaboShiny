@@ -259,7 +259,7 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
   profile <- MetaboShiny::getProfile(mSet, cpd, mode=if(mode == "nm") "stat" else "multi")
   
   df_line <- data.table::data.table(x = c(1,2),
-                                    y = rep(min(profile$Abundance - 0.1),2))
+                                    y = rep(min(profile$Abundance - 0.1), 2))
   stars = ""
   
   try({
@@ -1404,6 +1404,11 @@ ggPlotPower <- function(mSet,
   data = data.table::rbindlist(lapply(comparisons, function(comp) data.table::data.table(samples = mSet$analSet$power[[comp]]$Jpred,
                                                                                          power = mSet$analSet$power[[comp]]$pwrD,
                                                                                          comparison = c(comp))))
+  
+  print(head(data))
+  
+  #data$comparison <- substr(gsub(data$comparison, pattern = " .*$", replacement = ""), 1, 10)
+    
   if(ncol(data) == 1){
     stop("Something went wrong! Try other settings please :(")
   }else{
@@ -1424,21 +1429,20 @@ ggPlotPower <- function(mSet,
             group=comparison), 
         fun.y=mean, geom="line", 
         cex = 1.2) +
-      ggplot2::stat_summary_bin(aes(samples, power), 
+      ggplot2::stat_summary_bin(aes(samples,
+                                    power), 
                                 fun.y=mean, color="black", 
                                 geom="line", cex = 2) +
-      ggplot2::theme(legend.position= "right",
+      ggplot2::theme(legend.position= "none",
                      axis.text=ggplot2::element_text(size=font$ax.num.size),
                      axis.title=ggplot2::element_text(size=font$ax.txt.size),
                      plot.title = ggplot2::element_text(hjust = 0.5),
                      axis.line = ggplot2::element_line(colour = 'black', size = .5),
                      text = ggplot2::element_text(family = font$family, size = 15)) +
-      #scale_y_continuous(limits=c(0,1)) +
-      #ggplot2::coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE) +
       ggplot2::coord_cartesian(xlim = c(0,max_samples), ylim = c(.04,.96))
     
     if(plotlyfy){
-      plotly::ggplotly(p)
+      plotly::ggplotly(p, tooltip="comparison")
     }else{
       p
     } 

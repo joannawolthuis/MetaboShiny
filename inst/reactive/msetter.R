@@ -75,6 +75,15 @@ shiny::observe({
                          }
           ) 
           
+          # if(mSetter$do %in% c("subset", "unsubset")){
+          #   mSet <- MetaboAnalystR::Normalization(mSet,
+          #                                         rowNorm = mSet$metshiParams$norm_type,
+          #                                         transNorm = mSet$metshiParams$trans_type,
+          #                                         scaleNorm = mSet$metshiParams$scale_type,
+          #                                         ref = mSet$metshiParams$ref_var)
+          #   
+          # }
+          
           shiny::updateCheckboxInput(session, "paired", value = mSet$dataSet$paired) 
           
           mSet$dataSet$cls.name <- fut.name

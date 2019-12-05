@@ -154,10 +154,10 @@ shiny::observe({
                tt = {
                  withProgress({
                    mSet <- MetaboAnalystR::Ttests.Anal(mSet,
-                                                        nonpar = input$tt_nonpar,
-                                                        threshp = 0.05, # TODO: make the threshold user defined...
-                                                        paired = mSet$dataSet$paired,
-                                                        equal.var = input$tt_eqvar
+                                                       nonpar = input$tt_nonpar,
+                                                       threshp = 0.1, # TODO: make the threshold user defined...
+                                                       paired = mSet$dataSet$paired,
+                                                       equal.var = input$tt_eqvar
                    )
                  })
                },
@@ -165,11 +165,11 @@ shiny::observe({
                  withProgress({
                    if(mSet$dataSet$paired){
                      mSet <-  MetaboAnalystR::FC.Anal.paired(mSet,
-                                                             2.0, # TODO: make this threshold user defined
+                                                             1.5, # TODO: make this threshold user defined
                                                              1)  
                    }else{
                      mSet <-  MetaboAnalystR::FC.Anal.unpaired(mSet,
-                                                               2.0, # TODO: make this threshold user defined
+                                                               1.5, # TODO: make this threshold user defined
                                                                1) 
                    }
                    
@@ -181,10 +181,10 @@ shiny::observe({
                  if(redo){ # if done, don't redo
                    shiny::withProgress({
                      mSet <- switch(mSet$dataSet$exp.type,
-                                    "1fm"=MetaboAnalystR::ANOVA.Anal(mSet, thresh=0.05,post.hoc = "fdr",nonpar = F),
-                                    "2f"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.05, "fdr", "", 1, 1),
-                                    "t"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.05, "fdr", "time0", 1, 1),
-                                    "t1f"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.05, "fdr", "time", 1, 1))
+                                    "1fm"=MetaboAnalystR::ANOVA.Anal(mSet, thresh=0.1,post.hoc = "fdr",nonpar = F),
+                                    "2f"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.1, "fdr", "", 1, 1),
+                                    "t"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.1, "fdr", "time0", 1, 1),
+                                    "t1f"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.1, "fdr", "time", 1, 1))
                    })
                  }
                },
@@ -192,7 +192,7 @@ shiny::observe({
                  shiny::withProgress({
                    mSet <-  MetaboAnalystR::Volcano.Anal(mSet,
                                                          paired = mSet$dataSet$paired, 
-                                                         2.0, 0,
+                                                         1.5, 0,
                                                          0.75, F, 0.1,
                                                          TRUE, "raw") # TODO: make thresholds user-defined
                  })
