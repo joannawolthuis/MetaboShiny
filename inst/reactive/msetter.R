@@ -42,6 +42,10 @@ shiny::observe({
                            mSet
                          },
                          subset = {
+                           mSet <- MetaboShiny::change.mSet(mSet, 
+                                                            stats_var = mSet.old$dataSet$exp.var, 
+                                                            time_var =  mSet.old$dataSet$time.var,
+                                                            stats_type = mSet.old$dataSet$exp.type)
                            mSet <- MetaboShiny::subset.mSet(mSet, 
                                                             subset_var = input$subset_var, 
                                                             subset_group = input$subset_group)

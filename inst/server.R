@@ -768,7 +768,7 @@ apikey = ')
     result_filters$db <- c()
     result_filters$iso <- c()
     search$go <- T
-  })
+  }) 
   
   output$curr_add <- shiny::renderText({
     paste0(result_filters$add, collapse=", ")
