@@ -179,6 +179,23 @@ shiny::observe({
                      venn_no$now <- venn_no$start
                    }
                  },
+                 pattern = {
+                   output$pattern_plot <- plotly::renderPlotly({
+                     # --- ggplot ---
+                     MetaboShiny::ggPlotPattern(mSet,n = input$pattern_topn,
+                                                cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                                plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                                                plotlyfy=TRUE,font = lcl$aes$font)
+                   })
+                   # render results table
+                   output$pattern_tab <-DT::renderDataTable({
+                     # -------------
+                     DT::datatable(mSet$analSet$corr$cor.mat,
+                                   selection = 'single',
+                                   autoHideNavigation = T,
+                                   options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+                   })
+                 },
                  aov = {
                    which_aov = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
                    

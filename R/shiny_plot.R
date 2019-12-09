@@ -244,7 +244,6 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                           styles=c("box", "beeswarm"), add_stats = "mean",
                           col.fac = "label", txt.fac = "label",font){
   
-  
   sourceTable = mSet$dataSet$norm
   
   if(length(styles) == 0){
@@ -511,6 +510,55 @@ ggPlotTT <- function(mSet, cf, n=20,
     ggplot2::scale_y_continuous(labels=scaleFUN)
   if(plotlyfy){
     plotly::ggplotly(p, tooltip="m/z")
+  }else{
+    p
+  }
+}
+
+ggPlotPattern <- function(mSet, cf, n=20,
+                          plot.theme,
+                          plotlyfy=TRUE,font){
+  profile <- data.table::as.data.table(mSet$analSet$corr$cor.mat,keep.rownames = T)
+  profile <- profile[1:n]
+  
+  if(nrow(profile)==0){
+    shiny::showNotification("No significant hits")
+    return(NULL)
+  }
+  
+  colnames(profile)[1] <- c("cpd")
+  #profile$Peak <- c(1:nrow(profile))
+  scaleFUN <- function(x) sprintf("%.2f", x)
+  
+  # ---------------------------
+  p <- ggplot2::ggplot(data=profile) +
+    ggplot2::geom_bar(mapping = aes(x = reorder(cpd, -`p-value`), 
+                                    y = correlation, 
+                                    color = `p-value`, 
+                                    text = reorder(cpd, -`p-value`),
+                                    fill = `p-value`), 
+                      stat = "identity", alpha=0.5) + 
+    ggplot2::ggtitle(paste("Associated with pattern", 
+                           mSet$analSet$corr$pattern)) +
+    ggplot2::coord_flip() +
+    ggplot2::ylab("correlation") + 
+    ggplot2::xlab("m/z") + 
+    ggplot2::labs(fill="p-value", 
+                  color="p-value")+
+    plot.theme(base_size = 15) +
+    ggplot2::theme(legend.position="none",
+                   axis.text=ggplot2::element_text(size=font$ax.num.size),
+                   axis.title=ggplot2::element_text(size=font$ax.txt.size),
+                   plot.title = ggplot2::element_text(hjust = 0.5),
+                   plot.subtitle = ggplot2::element_text(hjust = 0.5),
+                   axis.line = ggplot2::element_line(colour = 'black', size = .5),
+                   text = ggplot2::element_text(family = font$family)) +
+    ggplot2::scale_colour_gradientn(colours = cf(n)) +
+    ggplot2::scale_fill_gradientn(colours = cf(n)) +
+    ggplot2::scale_y_continuous(labels=scaleFUN)
+  
+  if(plotlyfy){
+    plotly::ggplotly(p, tooltip="text")
   }else{
     p
   }
@@ -861,7 +909,11 @@ plotPCA.3d <- function(mSet,
     cols
   }
   
-  cols <- cols[c(1:length(unique(classes)))]
+  cols <- if(length(unique(classes)) > length(cols)){
+    cols <- cf(length(unique(classes)))
+  }else{
+    cols[c(1:length(unique(classes)))]
+  }
   
   # --- add ellipses ---
   

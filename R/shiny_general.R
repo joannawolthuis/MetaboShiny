@@ -33,7 +33,7 @@ getProfile <- function(mSet, varName, title=varName, mode="stat"){
       Abundance = sourceTable[,varInx]
     )
   }
-  translator = translator[complete.cases(translator),]
+#  translator = translator[complete.cases(translator),]
   # ---------------
   return(translator)
 }

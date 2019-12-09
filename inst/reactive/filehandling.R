@@ -10,6 +10,13 @@ shiny::observe({
   shinyFiles::shinyFileChoose(input, 'custom_db_img_path', roots=gbl$paths$volumes, filetypes=c('png', 'jpg', 'jpeg', 'bmp'))
 })
 
+shiny::observe({
+  lapply(c("outlist_pos", "outlist_neg", "metadata", "metadata_new"), function(item){
+    if(!is.list(input[[item]])) return()
+    path = shinyFiles::parseFilePaths(gbl$paths$volumes, input[[item]])$datapath
+    gbl$paths$volumes$Recent <<- dirname(path)
+  })
+})
 
 # observes if a new tbl csv is chosen by user
 shiny::observe({
@@ -75,7 +82,7 @@ shiny::observe({
 observe({
   # trigger window
   shinyFiles::shinyDirChoose(input, "get_db_dir",
-                 roots=gbl$paths$volumes,
+                 roots = gbl$paths$volumes,
                  session = session)
 
   if(typeof(input$get_db_dir) != "list") return() # if nothing selected or done, ignore

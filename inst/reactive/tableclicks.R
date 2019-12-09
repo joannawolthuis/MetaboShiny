@@ -16,6 +16,7 @@ lapply(c("tt",
          "plsda_load",
          "enrich_pw",
          "ml",
+         "pattern",
          "mummi_detail",
          "venn"), FUN=function(table){
   shiny::observeEvent(input[[paste0(table, "_tab_rows_selected")]], {
@@ -27,6 +28,7 @@ lapply(c("tt",
     which_aov = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
     
     res_tbl <- data.table::as.data.table(switch(table,
+                                                pattern = mSet$analSet$corr$cor.mat,
                                                 tt = mSet$analSet$tt$sig.mat,
                                                 fc = mSet$analSet$fc$sig.mat,
                                                 pca_load = mSet$analSet$pca$rotation,

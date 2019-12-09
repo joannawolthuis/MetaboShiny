@@ -40,21 +40,7 @@ observeEvent(input$do_ml, {
       # conv to data frame
       curr <- as.data.frame(curr)
       rownames(curr) <- rownames(mSet$dataSet$preproc)
-      
-      if(!is.null(input$timecourse_trigger)){
-        if(input$timecourse_trigger){
-          melted_curr <- reshape::melt(as.data.table(curr, keep.rownames = TRUE),
-                                       id.vars = "rn")
-          split_rn = strsplit(melted_curr$rn, split = "_T")
-          melted_curr$time <- as.numeric(sapply(split_rn, function(x) x[[2]]))
-          melted_curr$rn <- sapply(split_rn, function(x) x[[1]])
-          melted_curr$variable <- paste0(melted_curr$variable, "_T", melted_curr$time)
-          curr <- reshape::cast(melted_curr[,-"time"])
-          curr <- as.data.frame(curr)
-          rownames(curr) <- curr$rn
-          curr <- curr[,-1]
-        }
-      }
+
       
       # find the qc rows and remove them
       is.qc <- grepl("QC|qc", rownames(curr))
@@ -109,9 +95,11 @@ observeEvent(input$do_ml, {
       
       keep_configs <- which(!(colnames(config) %in% remove))
       
-      shiny::showNotification(paste0("Keeping non-mz variables after NA/unique filtering: ",
-                                     names(config)[keep_configs]))
-      
+      try({
+        shiny::showNotification(paste0("Keeping non-mz variables after NA/unique filtering: ",
+                                       paste0(names(config)[keep_configs],collapse = ", ")))
+      })
+            
       config <- config[,..keep_configs,with=F]
       
       # rename the variable of interest to 0-1-2 etc.

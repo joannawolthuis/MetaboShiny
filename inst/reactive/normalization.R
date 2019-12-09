@@ -18,9 +18,6 @@ shiny::observeEvent(input$initialize, {
     mSet$dataSet$paired = F
     mSet$dataSet$subset = c()
     
-    # convert all 0's to NA so metaboanalystR will recognize them
-    csv_orig[,(1:ncol(csv_orig)) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)})]
-    
     # remove whitespace
     csv_orig$sample <- gsub(csv_orig$sample, pattern=" |\\(|\\)|\\+", replacement="")
     suppressWarnings({
@@ -29,6 +26,10 @@ shiny::observeEvent(input$initialize, {
     })
     # find experimental variables by converting to numeric
     exp.vars <- which(is.na(as.numi))
+    mz.vars <- which(!is.na(as.numi))
+    # convert all 0's to NA so metaboanalystR will recognize them
+    csv_orig[,(exp.vars) := lapply(.SD,function(x){ ifelse(x == "" | is.na(x), "unknown", x)}), .SDcols = exp.vars]
+    csv_orig[,(mz.vars) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)}), .SDcols = mz.vars]
     
     # load batch variable chosen by user
     batches <- input$batch_var

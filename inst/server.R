@@ -42,6 +42,7 @@ function(input, output, session) {
     proj_name ="",
     last_mset="",
     load_ui = F,
+    last_dir = c(),
     tables=list(last_matches=data.table::data.table(query_mz = "none")),
     aes = list(font = list(),
                mycols = c(),
@@ -435,77 +436,80 @@ apikey = ')
                                                                         showiso = result_filters$iso))
         if(nrow(matches)>0){
           pieinfo$db <- reshape::melt(table(matches$source))
-        }
-        
-        shiny::setProgress(0.2)
-        
-        # =====
-        
-        matches$name[matches$source != "magicball"] <- tolower(matches$name[matches$source != "magicball"])
-        
-        # =====
-        
-        uniques = data.table::as.data.table(unique(data.table::as.data.table(matches)[, -c("source", 
-                                                                                           "description"),
-                                                                                      with=F]))
-        shiny::setProgress(0.6)
-        
-        # === aggregate ===
-        
-        info_only = unique(matches[,c("name", 
-                                      "source", 
-                                      "structure", 
-                                      "description"),with=F])
-        
-        info_no_na <- info_only[!is.na(info_only$structure)]
-        info_na <- info_only[is.na(info_only$structure)]
-
-        info_aggr <- aggregate(info_no_na, by = list(info_no_na$name), FUN = function(x) paste0(x, collapse = "SEPERATOR"))
-        info_aggr <- aggregate(info_aggr, by = list(info_aggr$structure), FUN = function(x) paste0(x, collapse = "SEPERATOR"))
-        
-        info_aggr <- rbind(info_aggr, info_na, fill=T)
-        
-        # fix structures
-        split_structs <- strsplit(info_aggr$structure, split = "SEPERATOR")
-        main_structs <- unlist(lapply(split_structs, function(x) x[[1]]))
-        info_aggr$structure <- main_structs
-        
-        # move extra names to descriptions
-        split_names <- strsplit(info_aggr$name, split = "SEPERATOR")
-        main_names <- unlist(lapply(split_names, function(x) x[[1]]))
-        
-        synonyms <- unlist(lapply(split_names, function(x){
-          if(length(x)>1){
-            paste0("SYNONYMS: ", paste0(x[2:length(x)], collapse=", "),".SEPERATOR") 
-          }else NA
-        }))
-        
-        info_aggr$name <- main_names
-        has.syn <- which(!is.na(synonyms))
-        info_aggr$description[has.syn] <- paste0(synonyms[has.syn], info_aggr$description[has.syn])
-        info_aggr <- as.data.table(info_aggr)
-        
-        # =================
-        
-        uniques = uniques[structure %in% info_aggr$structure]
-        
-        is.no.na.uniq <- which(!is.na(uniques$structure))
-        is.no.na.info <- which(!is.na(info_aggr$structure))
-        
-        uniq.to.aggr <- match(uniques[is.no.na.uniq]$structure, 
-                              info_aggr[is.no.na.info]$structure)
-        
-        uniques$name[is.no.na.uniq] <- info_aggr$name[is.no.na.info][uniq.to.aggr]
-        uniques$structure[is.no.na.uniq] <- info_aggr$structure[is.no.na.info][uniq.to.aggr]
-        
-        uniques <- unique(uniques)
-        
-        shown_matches$forward_unique <- uniques[,-grepl(colnames(uniques), pattern = "Group\\.\\d"),with=F]
-        shown_matches$forward_full <- info_aggr[,-grepl(colnames(info_aggr), pattern = "Group\\.\\d"),with=F]
-      
-        if(nrow(shown_matches$forward_unique)>0){
-          pieinfo$add <- reshape::melt(table(shown_matches$forward_unique$adduct))
-          pieinfo$iso <- reshape::melt(table(shown_matches$forward_unique$isocat))
+          
+          shiny::setProgress(0.2)
+          
+          # =====
+          
+          matches$name[matches$source != "magicball"] <- tolower(matches$name[matches$source != "magicball"])
+          
+          # =====
+          
+          uniques = data.table::as.data.table(unique(data.table::as.data.table(matches)[, -c("source", 
+                                                                                             "description"),
+                                                                                        with=F]))
+          shiny::setProgress(0.6)
+          
+          # === aggregate ===
+          
+          info_only = unique(matches[,c("name", 
+                                        "source", 
+                                        "structure", 
+                                        "description"),with=F])
+          
+          info_no_na <- info_only[!is.na(info_only$structure)]
+          info_na <- info_only[is.na(info_only$structure)]
+          
+          info_aggr <- aggregate(info_no_na, by = list(info_no_na$name), FUN = function(x) paste0(x, collapse = "SEPERATOR"))
+          info_aggr <- aggregate(info_aggr, by = list(info_aggr$structure), FUN = function(x) paste0(x, collapse = "SEPERATOR"))
+          
+          info_aggr <- rbind(info_aggr, info_na, fill=T)
+          
+          # fix structures
+          split_structs <- strsplit(info_aggr$structure, split = "SEPERATOR")
+          main_structs <- unlist(lapply(split_structs, function(x) x[[1]]))
+          info_aggr$structure <- main_structs
+          
+          # move extra names to descriptions
+          split_names <- strsplit(info_aggr$name, split = "SEPERATOR")
+          main_names <- unlist(lapply(split_names, function(x) x[[1]]))
+          
+          synonyms <- unlist(lapply(split_names, function(x){
+            if(length(x)>1){
+              paste0("SYNONYMS: ", paste0(x[2:length(x)], collapse=", "),".SEPERATOR") 
+            }else NA
+          }))
+          
+          info_aggr$name <- main_names
+          has.syn <- which(!is.na(synonyms))
+          info_aggr$description[has.syn] <- paste0(synonyms[has.syn], info_aggr$description[has.syn])
+          info_aggr <- as.data.table(info_aggr)
+          
+          # =================
+          
+          uniques = uniques[structure %in% info_aggr$structure]
+          
+          is.no.na.uniq <- which(!is.na(uniques$structure))
+          is.no.na.info <- which(!is.na(info_aggr$structure))
+          
+          uniq.to.aggr <- match(uniques[is.no.na.uniq]$structure, 
+                                info_aggr[is.no.na.info]$structure)
+          
+          uniques$name[is.no.na.uniq] <- info_aggr$name[is.no.na.info][uniq.to.aggr]
+          uniques$structure[is.no.na.uniq] <- info_aggr$structure[is.no.na.info][uniq.to.aggr]
+          
+          uniques <- unique(uniques)
+          
+          shown_matches$forward_unique <- uniques[,-grepl(colnames(uniques), pattern = "Group\\.\\d"),with=F]
+          shown_matches$forward_full <- info_aggr[,-grepl(colnames(info_aggr), pattern = "Group\\.\\d"),with=F]
+          
+          if(nrow(shown_matches$forward_unique)>0){
+            pieinfo$add <- reshape::melt(table(shown_matches$forward_unique$adduct))
+            pieinfo$iso <- reshape::melt(table(shown_matches$forward_unique$isocat))
+          }
+        }else{
+          shown_matches$forward_unique <- data.table::data.table()
+          shown_matches$forward_full <- data.table::data.table()
         }
         
         my_selection$name <- ""
@@ -694,7 +698,8 @@ apikey = ')
       list("overview", "power"),#11
       list("permz", "tt"),#12
       list("permz", "fc"),#13
-      list("dimred", "tsne")#14
+      list("dimred", "tsne"),#14
+      list("permz", "pattern")#15
     )
     
     # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
@@ -703,12 +708,12 @@ apikey = ')
       if(is.null(interface$mode)) {
         show.tabs <- hide.tabs[1]
       }else if(interface$mode == '1fb'){
-        show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14)]
+        show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14,15)]
         shiny::updateSelectInput(session, "ml_method",
                                  selected = "rf",
                                  choices = as.list(gbl$constants$ml.models))
       }else if(interface$mode == '1fm'){
-        show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,11,14)]
+        show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,11,14,15)]
         shiny::updateSelectInput(session, "ml_method",
                                  selected = "rf",
                                  choices = as.list(setdiff(gbl$constants$ml.models, gbl$constants$ml.twoonly)))
@@ -717,7 +722,7 @@ apikey = ')
       }else if(interface$mode == 't1f'){
         show.tabs = hide.tabs[c(1,2,4,5,6,9,11,14)]
       }else if(interface$mode == 't'){
-        show.tabs = hide.tabs[c(1,2,5,6,7,9,11,14)]
+        show.tabs = hide.tabs[c(1,2,5,6,7,9,11,14,15)]
       }else{
         show.tabs <- hide.tabs[1]
       }
@@ -755,6 +760,7 @@ apikey = ')
                                  font = lcl$aes$font)
     }
   })
+  
   
   # -----------------
   shiny::observeEvent(input$undo_match_filt, {
@@ -973,8 +979,9 @@ apikey = ')
       shiny::withProgress({
         fn <- paste0(tools::file_path_sans_ext(lcl$paths$patdb), ".metshi")
         if(exists("mSet")){
-          save(mSet, file = fn)
+          save(mSet, file = fn,compression_level = 9)
         }
+        
       })  
     }
   })
@@ -1047,6 +1054,15 @@ apikey = ')
     if(!success) MetaboShiny::metshiAlert("Orca isn't working, please check your installation. If on Mac, please try starting Rstudio from the command line with the command 'open -a Rstudio'", session=session)
   })
   
+  shiny::observeEvent(input$do_pattern, {
+    try({
+      shiny::withProgress({
+        mSet <<- MetaboAnalystR::Match.Pattern(mSet, input$pattern_corr, input$pattern_seq)
+      })
+      datamanager$reload <- "pattern"
+    })
+  })
+  
   shiny::observeEvent(input$do_power, {
     shiny::withProgress({
       pwr.analyses = lapply(input$power_comps, function(combi){
@@ -1054,7 +1070,7 @@ apikey = ')
         mSet.temp <- MetaboAnalystR::PerformPowerProfiling(mSet.temp, 
                                                            fdr.lvl = input$power_fdr, 
                                                            smplSize = input$power_nsamp)  
-        shiny::incProgress(amount = 1/length(input$power_comps))
+        shiny::incProgress(amount = 1 / length(input$power_comps))
         mSet.temp$analSet$power
       })
       names(pwr.analyses) <- input$power_comps

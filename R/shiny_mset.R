@@ -86,15 +86,20 @@ name.mSet <- function(mSet){
   mset_name
 }
 
+reset.mSet <- function(mSet){
+  mSet$dataSet <- mSet$storage$orig$data
+  mSet$analSet <- mSet$storage$orig$analysis
+  return(mSet)
+}
+
 load.mSet <- function(mSet, name){
-  mSet$dataSet <- mSet$storage[[name]]$data
+  #mSet$dataSet <- mSet$storage[[name]]$data
   mSet$analSet <- mSet$storage[[name]]$analysis
   return(mSet)
 }
 
 store.mSet <- function(mSet, name=mSet$dataSet$cls.name){
-  mSet$storage[[name]] <- list(data = mSet$dataSet,
-                               analysis = mSet$analSet)
+  mSet$storage[[name]] <- list(analysis = mSet$analSet)
   return(mSet)
 }
 

@@ -3,6 +3,8 @@ shiny::observeEvent(plotly::event_data("plotly_click"),{
   
   d <- plotly::event_data("plotly_click") # get click details (which point, additional included info, etc..)
 
+  print(d)
+  
   try({
     for(pietype in c("add", "iso", "db")){
       if(input$tab_iden_4 == paste0("pie_",pietype)){
@@ -65,5 +67,8 @@ shiny::observeEvent(plotly::event_data("plotly_click"),{
         if(d$y > length(lcl$vectors$heatmap)) return(NULL)
         my_selection$mz <- lcl$vectors$heatmap[d$y]  
       }
+    }else if(curr_tab == "pattern"){
+      print("!!!")
+      my_selection$mz <- rownames(mSet$analSet$corr$cor.mat)[d$curveNumber]
     }
 })

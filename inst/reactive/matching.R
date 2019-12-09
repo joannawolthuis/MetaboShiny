@@ -180,8 +180,8 @@ lapply(c("prematch","search_mz"), function(search_type){
             res.local <- data.table::data.table()
           }
           res <- data.table::rbindlist(list(res.local, res.online, res.predict), use.names = T, fill=T)
-          res[, c("query_mz") := lapply(.SD, as.character), .SDcols="query_mz"]
           if(nrow(res) > 0){
+            res[, c("query_mz") := lapply(.SD, as.character), .SDcols="query_mz"]
             list(mapper = unique(res[,c("query_mz", 
                                         "baseformula", 
                                         "adduct", 

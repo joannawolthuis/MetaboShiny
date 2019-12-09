@@ -253,13 +253,13 @@ functions = list(# default color functions at startup, will be re-loaded from op
 # set default paths
 paths = list(
   # available paths when selecting a new file or folder
-  volumes =  c('MetaboShiny' = getwd(),
-               'Home'=home,
-               '~' = normalizePath("~"),
-               'Documents'=file.path(home, "Documents"),
-               'Downloads'=file.path(home, "Downloads"),
-               'R Installation'=R.home(),
-               'Desktop'=file.path(home, "Desktop"))
+  volumes =  list('MetaboShiny' = getwd(),
+                  'Home' = home,
+                  '~' = normalizePath("~"),
+                  'Documents' = file.path(home, "Documents"),
+                  'Downloads' = file.path(home, "Downloads"),
+                  'R Installation' = R.home(),
+                  'Desktop' = file.path(home, "Desktop"))
 ),
 # default vectors to go through in metaboshiny
 vectors = list(
