@@ -156,14 +156,25 @@ shiny::observeEvent(input$initialize, {
     mSet <- MetaboAnalystR::RemoveMissingPercent(mSet,
                                  percent = input$perc_limit/100)
     
+    # remove samples with now no one...
+    w.missing <- mSet$dataSet$preproc
+    max.missing.per.samp = 80 # percent
+    miss.per.samp = rowSums(is.na(w.missing))
+    miss.per.samp.perc = sapply(miss.per.samp, function(x)( x / ncol(w.missing) ) * 100)
+    rmv = which(miss.per.samp.perc >= max.missing.per.samp)
+    
     # missing value imputation
     if(req(input$miss_type ) != "none"){
       if(req(input$miss_type ) == "rowmin"){ # use sample minimum
         w.missing <- mSet$dataSet$preproc
         w.missing <- apply(w.missing, 2, as.numeric)
         new.mat <- apply(w.missing, 1, function(x) {
-          if (sum(is.na(x)) > 0) {
-            x[is.na(x)] <- min(x[!is.na(x)], na.rm = T)/2
+          if(all(is.na(x))){
+             x = c(0)
+          }else{
+            if (sum(is.na(x)) > 0) {
+              x[is.na(x)] <- c(min(x[!is.na(x)], na.rm = T)/2)
+            }  
           }
           x
         })

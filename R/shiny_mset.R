@@ -1,25 +1,21 @@
-prev.mSet <- function(mSet, what, input=input){
+prev.mSet <- function(mSet, what, input = input){
   
-  mSet <- switch(what,
-                 change = {
-                   mSet$dataSet$exp.var <- input$stats_var
-                   mSet$dataSet$time.var <- input$time_var
-                   mSet$dataSet$exp.type <- input$stats_type
-                   if(input$stats_type %in% c("t", "t1f") | input$paired){
-                     mSet$dataSet$paired <- TRUE 
-                   }else{
-                     mSet$dataSet$paired <- FALSE
-                   }
-                   mSet
-                 },
-                 subset = {
-                   mSet$dataSet$subset[[input$subset_var]] <- input$subset_group
-                   mSet
-                 },
-                 unsubset = {
-                   mSet$dataSet$subset <- list()
-                   mSet
-                 })
+  mSet$dataSet$exp.var <- input$stats_var
+  mSet$dataSet$time.var <- input$time_var
+  mSet$dataSet$exp.type <- input$stats_type
+  
+  if(input$stats_type %in% c("t", "t1f") | input$paired){
+    mSet$dataSet$paired <- TRUE 
+  }else{
+    mSet$dataSet$paired <- FALSE
+  }
+  
+  if(!is.null(input$subset_group)){ # if subset entered OR subset was there...
+    mSet$dataSet$subset[[input$subset_var]] <- input$subset_group
+  }else{
+    mSet$dataSet$subset <- list()
+  }
+  
   return(mSet)
 }
 
@@ -115,8 +111,6 @@ change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
     mSet$dataSet$exp.type <- "1f"
   }
   
-  print(mSet$dataSet$exp.type)
-  
   mSet <- switch(mSet$dataSet$exp.type,
                    "1f"={
                      change_var <- if(length(stats_var)>1) stats_var[1] else stats_var
@@ -160,6 +154,7 @@ change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
                      mSet$dataSet$exp.type <- "t"
                      mSet$dataSet$facA <- mSet$dataSet$time.fac
                      mSet$dataSet$facA.lbl <- "Time"
+                     mSet$dataSet$paired <- TRUE
                      # - - - 
                      mSet
                    },
@@ -179,6 +174,8 @@ change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
                      mSet$dataSet$time.fac <- mSet$dataSet$facB
                      mSet$dataSet$exp.type <- "t1f"
                      mSet$dataSet$exp.lbl <- change_var
+                     mSet$dataSet$paired <- TRUE
+                     
                      # - - - 
                      mSet
                    })
@@ -213,7 +210,7 @@ subset.mSet <- function(mSet, subset_var, subset_group, name=mSet$dataSet$cls.na
   mSet
 }
 
-pair.mSet <- function(mSet, name){
+pair.mSet <- function(mSet){
   
   stats_var = mSet$dataSet$exp.var  
   time_var = mSet$dataSet$time.var

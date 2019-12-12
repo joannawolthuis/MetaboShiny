@@ -8,37 +8,38 @@ shiny::observe({
     
     if(!is.null(mSet)){
       
-      mSet.old <- mSet
-      
       mSet <- MetaboShiny::store.mSet(mSet) # save analyses
       
-      mSet <- MetaboShiny::prev.mSet(mSet, 
-                                     what = mSetter$do,
-                                     input = list(stats_var = input$stats_var, 
-                                                  stats_type = input$stats_type, 
-                                                  time_var = input$time_var,
-                                                  subset_var = input$subset_var, 
-                                                  subset_group = input$subset_group,
-                                                  paired = input$paired))
+      mSet.old <- mSet
       
-      fut.name = MetaboShiny::name.mSet(mSet)
+      mSet <- MetaboShiny::reset.mSet(mSet) # reset dataset
       
+      # mSet <- MetaboShiny::prev.mSet(mSet, 
+      #                                what = mSetter$do,
+      #                                input = list(stats_var = input$stats_var, 
+      #                                             stats_type = input$stats_type, 
+      #                                             time_var = input$time_var,
+      #                                             subset_var = input$subset_var, 
+      #                                             subset_group = input$subset_group,
+      #                                             paired = input$paired))
       success = F
       
       try({
-        
-          mSet <- MetaboShiny::reset.mSet(mSet)
-          # - - - - - - - - - - - - -
-          mSet <- switch(mSetter$do,
+                  mSet <- switch(mSetter$do,
                          change = {
                            mSet <- MetaboShiny::change.mSet(mSet, 
                                                             stats_var = input$stats_var, 
                                                             stats_type = input$stats_type, 
                                                             time_var = input$time_var)
-                           if(mSet$dataSet$paired){
-                             mSet <- MetaboShiny::pair.mSet(mSet, fut.name)
+                           if(length(mSet.old$dataSet$subset) > 0){
+                             subs = mSet.old$dataSet$subset
+                             for(i in 1:length(subs)){
+                               mSet <- MetaboShiny::subset.mSet(mSet, 
+                                                                subset_var = names(subs)[i], 
+                                                                subset_group = subs[[i]])  
+                             }
                            }
-                           mSet$dataSet$cls.name <- fut.name
+                           mSet$dataSet$paired <- if(input$stats_type %in% c("t", "t1f") | input$paired) TRUE else FALSE
                            mSet
                          },
                          subset = {
@@ -46,11 +47,21 @@ shiny::observe({
                                                             stats_var = mSet.old$dataSet$exp.var, 
                                                             time_var =  mSet.old$dataSet$time.var,
                                                             stats_type = mSet.old$dataSet$exp.type)
+                           if(length(mSet.old$dataSet$subset) > 0){
+                             subs = mSet.old$dataSet$subset
+                             subs = subs[names(subs) != "sample"]
+                             if(length(subs) > 0){
+                               for(i in 1:length(subs)){
+                                 mSet <- MetaboShiny::subset.mSet(mSet, 
+                                                                  subset_var = names(subs)[i], 
+                                                                  subset_group = subs[[i]])  
+                               }  
+                             }
+                           }
                            mSet <- MetaboShiny::subset.mSet(mSet, 
                                                             subset_var = input$subset_var, 
                                                             subset_group = input$subset_group)
-                           mSet$dataSet$paired <- FALSE
-                           mSet$dataSet$cls.name <- fut.name
+                           mSet$dataSet$paired <- mSet.old$dataSet$paired
                            mSet
                          },
                          unsubset = {
@@ -58,24 +69,17 @@ shiny::observe({
                                                             stats_var = mSet.old$dataSet$exp.var, 
                                                             time_var =  mSet.old$dataSet$time.var,
                                                             stats_type = mSet.old$dataSet$exp.type)
-                           mSet$dataSet$paired <- FALSE
-                           mSet$dataSet$cls.name <- fut.name
+                           mSet$dataSet$paired <- mSet.old$dataSet$paired
                            mSet
                          }
           ) 
           
-          # if(mSetter$do %in% c("subset", "unsubset")){
-          #   mSet <- MetaboAnalystR::Normalization(mSet,
-          #                                         rowNorm = mSet$metshiParams$norm_type,
-          #                                         transNorm = mSet$metshiParams$trans_type,
-          #                                         scaleNorm = mSet$metshiParams$scale_type,
-          #                                         ref = mSet$metshiParams$ref_var)
-          #   
-          # }
-          
+          if(mSet$dataSet$paired){
+             mSet <- MetaboShiny::pair.mSet(mSet)
+          }
+                  
           shiny::updateCheckboxInput(session, "paired", value = mSet$dataSet$paired) 
           
-          mSet$dataSet$cls.name <- fut.name
           if(grepl(mSet$dataSet$exp.type, pattern = "^1f")){
             if(mSet$dataSet$cls.num == 2){
               mSet$dataSet$exp.type <- "1fb"
@@ -84,12 +88,15 @@ shiny::observe({
             }  
           }
           
-          if(fut.name %in% names(mSet$storage)){
-            mSet <- MetaboShiny::load.mSet(mSet, fut.name)
+          new.name = MetaboShiny::name.mSet(mSet)
+          
+          if(new.name %in% names(mSet$storage)){
+            mSet <- MetaboShiny::load.mSet(mSet, new.name)
           }else{
             mSet$analSet <- list()
           }
         
+        mSet$dataSet$cls.name <- new.name
         lcl$last_mset <- mSet$dataSet$cls.name
         shiny::showNotification("Changed mSet...")
         
