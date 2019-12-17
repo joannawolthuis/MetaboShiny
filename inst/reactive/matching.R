@@ -169,7 +169,7 @@ lapply(c("prematch","search_mz"), function(search_type){
                                    pattern="\\.db",
                                    replacement = "", 
                                    perl=T), gbl$vectors$db_no_build)
-          if(length(dbs.local)>1){
+          if(length(dbs.local)>0){
             res.local = MetaDBparse::searchMZ(mzs = mzs,
                                               ionmodes = MetaboShiny::getIonMode(mzs, lcl$paths$patdb),
                                               base.dbname = dbs.local,
@@ -205,25 +205,31 @@ lapply(c("prematch","search_mz"), function(search_type){
         })
       }, min=0, max=length(blocks))
       
-      RSQLite::dbWriteTable(conn, 
-                            "match_mapper", 
-                            unique(data.table::rbindlist(lapply(matches, function(x) x$mapper))), overwrite=T, use.names = T)
-      RSQLite::dbWriteTable(conn, 
-                            "match_content", 
-                            unique(data.table::rbindlist(lapply(matches, function(x) x$content))), overwrite=T, use.names = T)
+      mapper = unique(data.table::rbindlist(lapply(matches, function(x) x$mapper)))
+      content = unique(data.table::rbindlist(lapply(matches, function(x) x$content)))
       
-      RSQLite::dbExecute(conn, "CREATE INDEX map_mz ON match_mapper(query_mz)")
-      RSQLite::dbExecute(conn, "CREATE INDEX map_ba ON match_mapper(baseformula, adduct)")
-      RSQLite::dbExecute(conn, "CREATE INDEX cont_ba ON match_content(baseformula, adduct)")
-      
-      if(search_type == "prematch"){
-        mSet$metshiParams$prematched<<-T
-        search_button$on <- FALSE   
+      if(nrow(mapper)>0){
+        RSQLite::dbWriteTable(conn, 
+                              "match_mapper", 
+                              mapper, overwrite=T, use.names = T)
+        RSQLite::dbWriteTable(conn, 
+                              "match_content", 
+                              content, overwrite=T, use.names = T)
+        RSQLite::dbExecute(conn, "CREATE INDEX map_mz ON match_mapper(query_mz)")
+        RSQLite::dbExecute(conn, "CREATE INDEX map_ba ON match_mapper(baseformula, adduct)")
+        RSQLite::dbExecute(conn, "CREATE INDEX cont_ba ON match_content(baseformula, adduct)")
+        
+        if(search_type == "prematch"){
+          mSet$metshiParams$prematched<<-T
+          search_button$on <- FALSE   
+        }else{
+          search$go <- TRUE
+        }
+        RSQLite::dbDisconnect(conn)
       }else{
-        search$go <- TRUE
+        shown_matches$forward_unique <- data.table::data.table()
+        shown_matches$forward_full <- data.table::data.table()
       }
-      
-      RSQLite::dbDisconnect(conn)
     }else{
       MetaboShiny::metshiAlert("Please build at least one database to enable this feature!")
       return(NULL)

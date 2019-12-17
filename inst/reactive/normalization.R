@@ -221,17 +221,6 @@ shiny::observeEvent(input$initialize, {
       }
     }
     
-    # if user picked a data filter
-    if(req(input$filt_type ) != "none"){
-      # filter dataset
-      shiny::showNotification("Filtering dataset...")
-      # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
-      mSet <- MetaboAnalystR::FilterVariable(mSet,
-                                             filter = input$filt_type,
-                                             qcFilter = "F",
-                                             rsd = 25)
-    }
-    
     shiny::setProgress(session=session, value= .2)
     
     # if normalizing by a factor, do the below
@@ -444,6 +433,19 @@ shiny::observeEvent(input$initialize, {
     mSet$storage <- list(orig = list(data = mSet$dataSet,
                                      analysis = mSet$analSet))
 
+    # if user picked a data filter
+    if(req(input$filt_type ) != "none"){
+      # filter dataset
+      shiny::showNotification("Filtering dataset...")
+      mSet$dataSet$proc <- mSet$dataSet$norm
+      # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
+      mSet <- MetaboAnalystR::FilterVariable(mSet,
+                                             filter = input$filt_type,
+                                             qcFilter = "F",
+                                             rsd = 25)
+      mSet$dataSet$norm <- mSet$dataSet$filt
+    }
+    
     mSet <<- mSet
     
     datamanager$reload <- c("general","statspicker")

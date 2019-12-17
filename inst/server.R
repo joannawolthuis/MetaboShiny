@@ -427,7 +427,6 @@ apikey = ')
     # - - filters - -
     if(search$go){
       shiny::withProgress({
-
         matches = data.table::as.data.table(MetaboShiny::get_prematches(who = my_selection$mz,
                                                                         what = "map.query_mz",
                                                                         patdb = lcl$paths$patdb,
@@ -979,12 +978,12 @@ apikey = ')
       shiny::withProgress({
         fn <- paste0(tools::file_path_sans_ext(lcl$paths$patdb), ".metshi")
         if(exists("mSet")){
-          save(mSet, file = fn,compression_level = 9)
+          save(mSet, file = fn)
         }
-        
       })  
     }
   })
+  
   shiny::observeEvent(input$stats_type,{
     if(!is.null(mSet)){
       datamanager$reload <- "statspicker"

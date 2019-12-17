@@ -1,3 +1,12 @@
+filt.mSet <- function(mSet, keep.mz){
+  mSet$dataSet$proc <- mSet$dataSet$proc[,keep.mz]
+  mSet$dataSet$preproc <- mSet$dataSet$preproc[,keep.mz]
+  mSet$dataSet$norm <- mSet$dataSet$norm[,keep.mz]
+  mSet$dataSet$orig <- mSet$dataSet$orig[,keep.mz]
+  mSet$dataSet$row.norm <- mSet$dataSet$row.norm[,keep.mz]
+  mSet
+}
+
 prev.mSet <- function(mSet, what, input = input){
   
   mSet$dataSet$exp.var <- input$stats_var
@@ -193,6 +202,10 @@ subset.mSet <- function(mSet, subset_var, subset_group, name=mSet$dataSet$cls.na
     mSet$dataSet$proc <- mSet$dataSet$proc[keep.proc,]
     keep.norm <- rownames(mSet$dataSet$norm) %in% keep.samples
     mSet$dataSet$norm <- mSet$dataSet$norm[keep.norm,]
+    keep.orig <- rownames(mSet$dataSet$orig) %in% keep.samples
+    mSet$dataSet$orig <- mSet$dataSet$orig[keep.orig,]
+    keep.row.norm <- rownames(mSet$dataSet$row.norm) %in% keep.samples
+    mSet$dataSet$row.norm <- mSet$dataSet$row.norm[keep.row.norm,]
     keep.preproc <- rownames(mSet$dataSet$preproc) %in% keep.samples
     mSet$dataSet$preproc <- mSet$dataSet$preproc[keep.preproc,]
     mSet$dataSet$cls <- droplevels(mSet$dataSet$cls[keep.norm])
