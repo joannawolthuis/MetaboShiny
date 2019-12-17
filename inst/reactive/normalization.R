@@ -91,7 +91,7 @@ shiny::observeEvent(input$initialize, {
     #csv <- csv[sample %in% keep_samps,]
     
     # also remove them in the table with covariates
-    covar_table <- first_part#[sample %in% keep_samps,]
+    covar_table <- first_part #[sample %in% keep_samps,]
     
     # if the experimental condition is batch, make sure QC samples are not removed at the end for analysis
     # TODO: this is broken with the new system, move this to the variable switching segment of code
@@ -433,17 +433,16 @@ shiny::observeEvent(input$initialize, {
     mSet$storage <- list(orig = list(data = mSet$dataSet,
                                      analysis = mSet$analSet))
 
-    # if user picked a data filter
+    
     if(req(input$filt_type ) != "none"){
-      # filter dataset
       shiny::showNotification("Filtering dataset...")
-      mSet$dataSet$proc <- mSet$dataSet$norm
       # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
       mSet <- MetaboAnalystR::FilterVariable(mSet,
                                              filter = input$filt_type,
                                              qcFilter = "F",
                                              rsd = 25)
-      mSet$dataSet$norm <- mSet$dataSet$filt
+      keep.mz <- colnames(mSet$dataSet$filt)
+      mSet <- MetaboShiny::filt.mSet(mSet, keep.mz)
     }
     
     mSet <<- mSet

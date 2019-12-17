@@ -1,5 +1,6 @@
 filt.mSet <- function(mSet, keep.mz){
   mSet$dataSet$proc <- mSet$dataSet$proc[,keep.mz]
+  mSet$dataSet$filt <- mSet$dataSet$filt[,keep.mz]
   mSet$dataSet$preproc <- mSet$dataSet$preproc[,keep.mz]
   mSet$dataSet$norm <- mSet$dataSet$norm[,keep.mz]
   mSet$dataSet$orig <- mSet$dataSet$orig[,keep.mz]
@@ -110,8 +111,6 @@ store.mSet <- function(mSet, name=mSet$dataSet$cls.name){
 
 change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
   
-  mSet.orig <- mSet
-  
   mSet$dataSet$exp.type <- stats_type
   mSet$dataSet$exp.var <- stats_var
   mSet$dataSet$time.var <- time_var
@@ -193,31 +192,43 @@ change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
   return(mSet)
 }
 
-subset.mSet <- function(mSet, subset_var, subset_group, name=mSet$dataSet$cls.name){
-  mSet$dataSet$cls.name <- name
+subset.mSet <- function(mSet, subset_var, subset_group){
+  
   if(!is.null(subset_var)){
+    
     keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[subset_var]] %in% subset_group)]
+    
     mSet$dataSet$covars <- mSet$dataSet$covars[sample %in% keep.samples]
-    keep.proc <- rownames(mSet$dataSet$proc) %in% keep.samples
-    mSet$dataSet$proc <- mSet$dataSet$proc[keep.proc,]
-    keep.norm <- rownames(mSet$dataSet$norm) %in% keep.samples
-    mSet$dataSet$norm <- mSet$dataSet$norm[keep.norm,]
-    keep.orig <- rownames(mSet$dataSet$orig) %in% keep.samples
-    mSet$dataSet$orig <- mSet$dataSet$orig[keep.orig,]
-    keep.row.norm <- rownames(mSet$dataSet$row.norm) %in% keep.samples
-    mSet$dataSet$row.norm <- mSet$dataSet$row.norm[keep.row.norm,]
-    keep.preproc <- rownames(mSet$dataSet$preproc) %in% keep.samples
-    mSet$dataSet$preproc <- mSet$dataSet$preproc[keep.preproc,]
-    mSet$dataSet$cls <- droplevels(mSet$dataSet$cls[keep.norm])
-    mSet$dataSet$cls.num <- length(levels(mSet$dataSet$cls))
-    if("facA" %in% names(mSet$dataSet)){
-      mSet$dataSet$facA <- droplevels(mSet$dataSet$facA[keep.norm])
-      mSet$dataSet$facB <- droplevels(mSet$dataSet$facB[keep.norm])
+    
+    tables = c("norm", "proc", "prenorm", "filt", "orig")
+    clss = c("cls", "proc.cls", "prenorm.cls", "filt.cls", "orig.cls")
+    
+    combi.tbl = data.table::data.table(tbl = tables,
+                                       cls = clss)
+    
+    for(i in 1:nrow(combi.tbl)){
+      try({
+        tbl = combi.tbl$tbl[i]
+        cls = combi.tbl$cls[i]
+        keep = which(rownames(mSet$dataSet[[tbl]]) %in% keep.samples)
+        mSet$dataSet[[tbl]] <- mSet$dataSet[[tbl]][keep,]
+        mSet$dataSet[[cls]] <- droplevels(mSet$dataSet[[cls]][keep])
+        if(cls == "cls"){
+          print(mSet$dataSet[[cls]])
+          mSet$dataSet$cls.num <- length(levels(mSet$dataSet[[cls]]))
+        }
+        if("facA" %in% names(mSet$dataSet)){
+          mSet$dataSet$facA <- droplevels(mSet$dataSet$facA[keep])
+          mSet$dataSet$facB <- droplevels(mSet$dataSet$facB[keep])
+        }
+        if("time.fac" %in% names(mSet$dataSet)){
+          mSet$dataSet$time.fac <- droplevels(mSet$dataSet$time.fac[keep])
+          mSet$dataSet$exp.fac <- droplevels(mSet$dataSet$exp.fac[keep])
+        }
+      })
     }
-    if("time.fac" %in% names(mSet$dataSet)){
-      mSet$dataSet$time.fac <- droplevels(mSet$dataSet$time.fac[keep.norm])
-      mSet$dataSet$exp.fac <- droplevels(mSet$dataSet$exp.fac[keep.norm])
-    }
+    
+    
     mSet$dataSet$subset[[subset_var]] <- subset_group
   }
   mSet

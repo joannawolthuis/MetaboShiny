@@ -8,6 +8,8 @@ shiny::observe({
     
     if(!is.null(mSet)){
       
+      print(mSetter$do)
+      
       mSet <- MetaboShiny::store.mSet(mSet) # save analyses
       
       mSet.old <- mSet
@@ -31,6 +33,10 @@ shiny::observe({
           }
         }
         
+        # TODO: fix mismatch between cls order, covars order and table sample order
+        # use match() somehow?
+        # should be fixed in #CHANGE.MSET
+        
         mSet <- switch(mSetter$do,
                        change = {
                          mSet <- MetaboShiny::change.mSet(mSet, 
@@ -45,7 +51,7 @@ shiny::observe({
                                                           stats_var = mSet.old$dataSet$exp.var, 
                                                           time_var =  mSet.old$dataSet$time.var,
                                                           stats_type = mSet.old$dataSet$exp.type)
-                         mSet <- MetaboShiny::subset.mSet(mSet, 
+                         mSeta <- MetaboShiny::subset.mSet(mSet,
                                                           subset_var = input$subset_var, 
                                                           subset_group = input$subset_group)
                          mSet$dataSet$paired <- mSet.old$dataSet$paired
@@ -65,12 +71,10 @@ shiny::observe({
           mSet <- MetaboShiny::pair.mSet(mSet)
         }
         
-        shiny::showNotification("Filtering dataset...")
         
         # ===== FILTERING ======
-        #mSet$dataSet$proc <- mSet$dataSet$norm
-        
         if(mSet$metshiParams$filt_type != "none"){
+          shiny::showNotification("Filtering dataset...")
           mSet$analSet <- mSet$storage$orig$analysis
           # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
           mSet <- MetaboAnalystR::FilterVariable(mSet,
@@ -78,7 +82,6 @@ shiny::observe({
                                                  qcFilter = "F",
                                                  rsd = 25)
           keep.mz <- colnames(mSet$dataSet$filt)
-          
           mSet <- MetaboShiny::filt.mSet(mSet, keep.mz)
         }
         
