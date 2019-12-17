@@ -210,6 +210,13 @@ apikey = ')
         opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
       }
       
+      if(!("omit_unknown" %in% names(opts))){
+        MetaboShiny::setOption(lcl$paths$opt.loc, "omit_unknown", "yes")
+        opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
+      }
+      
+      shiny::updateCheckboxInput(session, "omit_unknown", switch(opts$omit_unknown, yes=TRUE, no=FALSE))
+      
       if(opts$apikey != " "){
         output$api_set <- shiny::renderText("key saved!")
       }
@@ -907,6 +914,11 @@ apikey = ')
     MetaboShiny::setOption(lcl$paths$opt.loc, "apikey", input$apikey)
     lcl$apikey <<- input$apikey
     output$api_set <- shiny::renderText("key saved!")
+  })
+  
+  shiny::observeEvent(input$omit_unknown, {
+    new.val = if(input$omit_unknown) "yes" else "no"
+    MetaboShiny::setOption(lcl$paths$opt.loc, "omit_unknown", new.val)
   })
   
   shiny::observeEvent(input$ml, {

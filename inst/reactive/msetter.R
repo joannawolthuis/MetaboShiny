@@ -44,6 +44,15 @@ shiny::observe({
                                                           stats_type = input$stats_type, 
                                                           time_var = input$time_var)
                          mSet$dataSet$paired <- if(input$stats_type %in% c("t", "t1f") | input$paired) TRUE else FALSE
+                         if(input$omit_unknown & grepl("^1f",input$stats_type)){
+                           shiny::showNotification("omitting 'unknown' labeled samples...")
+                           knowns = mSet$dataSet$covars$sample[which(mSet$dataSet$cls != "unknown")]
+                           if(length(knowns) > 0){
+                             mSet <- MetaboShiny::subset.mSet(mSet,
+                                                              subset_var = "sample", 
+                                                              subset_group = knowns) 
+                           }
+                         }
                          mSet
                        },
                        subset = {
@@ -51,7 +60,7 @@ shiny::observe({
                                                           stats_var = mSet.old$dataSet$exp.var, 
                                                           time_var =  mSet.old$dataSet$time.var,
                                                           stats_type = mSet.old$dataSet$exp.type)
-                         mSeta <- MetaboShiny::subset.mSet(mSet,
+                         mSet <- MetaboShiny::subset.mSet(mSet,
                                                           subset_var = input$subset_var, 
                                                           subset_group = input$subset_group)
                          mSet$dataSet$paired <- mSet.old$dataSet$paired
@@ -70,7 +79,6 @@ shiny::observe({
         if(mSet$dataSet$paired){
           mSet <- MetaboShiny::pair.mSet(mSet)
         }
-        
         
         # ===== FILTERING ======
         if(mSet$metshiParams$filt_type != "none"){

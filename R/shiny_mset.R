@@ -214,7 +214,6 @@ subset.mSet <- function(mSet, subset_var, subset_group){
         mSet$dataSet[[tbl]] <- mSet$dataSet[[tbl]][keep,]
         mSet$dataSet[[cls]] <- droplevels(mSet$dataSet[[cls]][keep])
         if(cls == "cls"){
-          print(mSet$dataSet[[cls]])
           mSet$dataSet$cls.num <- length(levels(mSet$dataSet[[cls]]))
         }
         if("facA" %in% names(mSet$dataSet)){

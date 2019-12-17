@@ -857,7 +857,12 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                      # MetaboShiny::switchButton(inputId = "db_only", label = "Run in database-only mode?",
                                                                                      #                           value = F,
                                                                                      #                           col = "BW", type = "YN")
-                                                                                     shiny::sliderInput("ncores", "How many cores can MetShi use?", value=2, min=1, max = parallel::detectCores() - 1)
+                                                                                     shiny::sliderInput("ncores", "How many cores can MetShi use?", value=2, min=1, max = parallel::detectCores() - 1),
+                                                                                     MetaboShiny::switchButton("omit_unknown", 
+                                                                                                               "In subsetting, omit samples that are labeled as 'unknown'? (zero or empty values in your metadata)",
+                                                                                                               value = T,
+                                                                                                               type = "YN", 
+                                                                                                               col = "BW")
                                                                      ),
                                                                      shiny::tabPanel("Project", icon=shiny::icon("gift"),
                                                                                      #shiny::textInput(inputId="proj_name", label="Project name", value = ''),
