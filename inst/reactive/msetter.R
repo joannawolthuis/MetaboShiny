@@ -46,7 +46,7 @@ shiny::observe({
                          mSet$dataSet$paired <- if(input$stats_type %in% c("t", "t1f") | input$paired) TRUE else FALSE
                          if(input$omit_unknown & grepl("^1f",input$stats_type)){
                            shiny::showNotification("omitting 'unknown' labeled samples...")
-                           knowns = mSet$dataSet$covars$sample[which(mSet$dataSet$cls != "unknown")]
+                           knowns = mSet$dataSet$covars$sample[which(mSet$dataSet$covars[ , input$stats_var, with=F][[1]] != "unknown")]
                            if(length(knowns) > 0){
                              mSet <- MetaboShiny::subset.mSet(mSet,
                                                               subset_var = "sample", 
@@ -77,23 +77,8 @@ shiny::observe({
         ) 
         
         if(mSet$dataSet$paired){
-          mSet <- MetaboShiny::pair.mSet(mSet)
+          mSet <- pair.mSet(mSet)
         }
-        
-        # ===== FILTERING ======
-        if(mSet$metshiParams$filt_type != "none"){
-          shiny::showNotification("Filtering dataset...")
-          mSet$analSet <- mSet$storage$orig$analysis
-          # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
-          mSet <- MetaboAnalystR::FilterVariable(mSet,
-                                                 filter = mSet$metshiParams$filt_type,
-                                                 qcFilter = "F",
-                                                 rsd = 25)
-          keep.mz <- colnames(mSet$dataSet$filt)
-          mSet <- MetaboShiny::filt.mSet(mSet, keep.mz)
-        }
-        
-        # =======================
         
         shiny::updateCheckboxInput(session, 
                                    "paired", 
@@ -121,6 +106,19 @@ shiny::observe({
         
         if(typeof(mSet) != "double"){
           success = T
+          #===== FILTERING ======
+          if(mSet$metshiParams$filt_type != "none"){
+            shiny::showNotification("Filtering dataset...")
+            mSet$analSet <- mSet$storage$orig$analysis
+            # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
+            mSet <- MetaboAnalystR::FilterVariable(mSet,
+                                                   filter = mSet$metshiParams$filt_type,
+                                                   qcFilter = "F",
+                                                   rsd = 25)
+            keep.mz <- colnames(mSet$dataSet$filt)
+            mSet <- MetaboShiny::filt.mSet(mSet, keep.mz)
+          }
+          # =======================
         }
         
       })

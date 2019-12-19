@@ -167,17 +167,19 @@ change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
                      mSet
                    },
                    "t1f"={
+                     print("time series 1 factor")
                      mSet <- MetaboAnalystR::SetDesignType(mSet, "time")
                      if(!any(duplicated(as.factor(mSet$dataSet$covars$individual)))){
                        MetaboShiny::metshiAlert("This analysis needs multiple of the same sample in the 'individual' metadata column!")
                        return(NULL)
                      }
                      change_var <- if(length(stats_var)>1) stats_var[1] else stats_var
+                     print(time_var)
                      
                      mSet$dataSet$facA <- as.factor(mSet$dataSet$covars[,change_var, with=F][[1]])
                      mSet$dataSet$facB <- as.factor(mSet$dataSet$covars[,time_var, with=F][[1]])
                      mSet$dataSet$facA.lbl <- change_var
-                     mSet$dataSet$facB.lbl <- "time"
+                     mSet$dataSet$facB.lbl <- time_var
                      mSet$dataSet$exp.fac <- mSet$dataSet$facA
                      mSet$dataSet$time.fac <- mSet$dataSet$facB
                      mSet$dataSet$exp.type <- "t1f"
@@ -196,13 +198,12 @@ subset.mSet <- function(mSet, subset_var, subset_group){
   
   if(!is.null(subset_var)){
     
-    keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[subset_var]] %in% subset_group)]
-    
-    mSet$dataSet$covars <- mSet$dataSet$covars[sample %in% keep.samples]
+    keep.i <- which(mSet$dataSet$covars[[subset_var]] %in% subset_group)
+    keep.samples <- mSet$dataSet$covars$sample[keep.i]
+    mSet$dataSet$covars <- mSet$dataSet$covars[sample %in% keep.samples,]
     
     tables = c("norm", "proc", "prenorm", "filt", "orig")
     clss = c("cls", "proc.cls", "prenorm.cls", "filt.cls", "orig.cls")
-    
     combi.tbl = data.table::data.table(tbl = tables,
                                        cls = clss)
     
@@ -212,22 +213,21 @@ subset.mSet <- function(mSet, subset_var, subset_group){
         cls = combi.tbl$cls[i]
         keep = which(rownames(mSet$dataSet[[tbl]]) %in% keep.samples)
         mSet$dataSet[[tbl]] <- mSet$dataSet[[tbl]][keep,]
-        mSet$dataSet[[cls]] <- droplevels(mSet$dataSet[[cls]][keep])
+        sampOrder = match(rownames(mSet$dataSet[[tbl]]), mSet$dataSet$covars$sample)
+        mSet$dataSet[[cls]] <- as.factor(mSet$dataSet$covars[sampOrder, mSet$dataSet$exp.lbl, with=F][[1]])
         if(cls == "cls"){
           mSet$dataSet$cls.num <- length(levels(mSet$dataSet[[cls]]))
+          if("facA" %in% names(mSet$dataSet)){
+            mSet$dataSet$facA <- as.factor(mSet$dataSet$covars[sampOrder, mSet$dataSet$facA.lbl, with=F][[1]])
+            mSet$dataSet$facB <- as.factor(mSet$dataSet$covars[sampOrder, mSet$dataSet$facB.lbl, with=F][[1]])
+          }
+          if("time.fac" %in% names(mSet$dataSet)){
+            mSet$dataSet$time.fac <- as.factor(mSet$dataSet$covars[sampOrder, mSet$dataSet$time.var, with=F][[1]])
+            mSet$dataSet$exp.fac <- as.factor(mSet$dataSet$covars[sampOrder, mSet$dataSet$exp.var, with=F][[1]])
+          }
         }
-        if("facA" %in% names(mSet$dataSet)){
-          mSet$dataSet$facA <- droplevels(mSet$dataSet$facA[keep])
-          mSet$dataSet$facB <- droplevels(mSet$dataSet$facB[keep])
-        }
-        if("time.fac" %in% names(mSet$dataSet)){
-          mSet$dataSet$time.fac <- droplevels(mSet$dataSet$time.fac[keep])
-          mSet$dataSet$exp.fac <- droplevels(mSet$dataSet$exp.fac[keep])
-        }
-      })
+      }, silent = T)
     }
-    
-    
     mSet$dataSet$subset[[subset_var]] <- subset_group
   }
   mSet
@@ -243,10 +243,11 @@ pair.mSet <- function(mSet){
                                                   variable = as.character(
                                                     mSet$dataSet$covars[, ..stats_var][[1]])
                                                   ))
+  
   # which samples should we keep?
   # A. which individuals are present multiple times in the dataset?
   indiv.samp <- unique(overview.tbl[, c("individual","sample")])
-  indiv.var <-  unique(overview.tbl[, c("individual","variable")])
+  indiv.var <- unique(overview.tbl[, c("individual","variable")])
   
   indiv.present.multiple <- unique(indiv.samp$individual[c(which(duplicated(indiv.samp$individual)))])
 
@@ -257,7 +258,11 @@ pair.mSet <- function(mSet){
   # B: we want to balance the classes...
   # DOWNSAMPLE invidiv
   if(mSet$dataSet$exp.type == "t1f"){
-    considerations = list(indiv.present.multiple, indiv.no.cat.change)
+    indiv.times = unique(data.table::as.data.table(cbind(individual = mSet$dataSet$covars$individual,
+                                                  time = mSet$dataSet$covars[, ..time_var][[1]])))
+    indiv.all.times <- indiv.times$individual[c(which(duplicated(indiv.times$individual)))]
+    # which samples are present
+    considerations = list(indiv.present.multiple, indiv.no.cat.change, indiv.all.times)
     times = unique(mSet$dataSet$covars[, ..time_var][[1]])
   }else if(mSet$dataSet$exp.type == "t"){
     considerations = list(indiv.present.multiple)
@@ -268,19 +273,19 @@ pair.mSet <- function(mSet){
   
   # C. which individuals do we keep?
   keep.indiv <- Reduce(f = intersect, considerations)
-  
+
   req.groups <- unique(mSet$dataSet$covars[, ..stats_var][[1]])
+  time_var = mSet$dataSet$time.var
   
-  keep.samp <- unlist(pbapply::pbsapply(keep.indiv, function(indiv){
+  keep.samp <- pbapply::pbsapply(keep.indiv, function(indiv){
     # get samples matching
     # if multiple for each, only pick one
     overv = overview.tbl[individual == indiv]
     if(mSet$dataSet$exp.type %in% c("t", "t1f")){
       # all time points need a sample, otherwise nvm (TODO: add a check for if only one sample has timepoint 4 and the rest has 3, majority vote...)
-      time_var = mSet$dataSet$time.var
-      ind.times = mSet$dataSet$covars[individual == indiv, ..time_var][[1]]
+      ind.times = unique(mSet$dataSet$covars[individual == indiv, ..time_var][[1]])
       if(length(ind.times) == length(times)){
-        indiv.samp[individual == indiv]$sample
+        samps = indiv.samp[individual == indiv]$sample
       }else{
         print("nah")
         c()
@@ -290,19 +295,23 @@ pair.mSet <- function(mSet){
       samps = if(!has.all.groups) c() else{
         spl.overv <- split(overv, overv$variable)
         minsamp = min(unlist(lapply(spl.overv, nrow)))
-        Reduce("c",lapply(req.groups, function(grp){
-          rows = spl.overv[[grp]]
+        samps = Reduce("c",lapply(req.groups, function(grp){
+          rows = spl.overv[[as.character(grp)]]
           rows$sample[sample(1:nrow(rows), minsamp)]
         }))
       }
     } 
-  }))
+    unlist(samps)
+  })
   
   if(mSet$dataSet$exp.type == c("t1f")){
-    indiv.final = unique(overview.tbl[sample %in% keep.samp, c("individual", "variable")])
-    keep.indiv = caret::downSample(indiv.final$individual, as.factor(indiv.final$variable))$x
-    keep.samp <- keep.samp[which(gsub(names(keep.samp), pattern="\\d$", replacement="") %in% keep.indiv)]
+    indiv.final = unique(overview.tbl[sample %in% as.character(keep.samp), c("individual", "variable")])
+    downsampled = caret::downSample(indiv.final$individual, as.factor(indiv.final$variable))
+    keep.indiv = downsampled$x
+    keep.samp <- as.character(keep.samp[,which(colnames(keep.samp) %in% keep.indiv)])
   }
+  
+  final.tbl = mSet$dataSet$covars[sample %in% keep.samp]
   
   if(length(keep.samp)> 2){
     mSet <- MetaboShiny::subset.mSet(mSet, 

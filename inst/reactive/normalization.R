@@ -28,7 +28,7 @@ shiny::observeEvent(input$initialize, {
     exp.vars <- which(is.na(as.numi))
     mz.vars <- which(!is.na(as.numi))
     # convert all 0's to NA so metaboanalystR will recognize them
-    csv_orig[,(exp.vars) := lapply(.SD,function(x){ ifelse(x == "" | is.na(x), "unknown", x)}), .SDcols = exp.vars]
+    csv_orig[,(exp.vars) := lapply(.SD,function(x){ ifelse(x == "" | is.na(x) | x == "Unknown", "unknown", x)}), .SDcols = exp.vars]
     csv_orig[,(mz.vars) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)}), .SDcols = mz.vars]
     
     # load batch variable chosen by user
@@ -46,7 +46,7 @@ shiny::observeEvent(input$initialize, {
     
     unique.levels <- unique.levels[!(names(unique.levels) %in% c("batch", "injection", "sample"))]
     # use this as the default selected experimental variable (user can change later)
-    which.default <- unique.levels[which(unique.levels == min(unique.levels[which(unique.levels> 1)]))][1]
+    which.default <- unique.levels[which(unique.levels == min(unique.levels[which(unique.levels > 1)]))][1]
     condition = names(which.default)
     
     # =================================|

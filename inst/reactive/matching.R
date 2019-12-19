@@ -208,7 +208,7 @@ lapply(c("prematch","search_mz"), function(search_type){
       mapper = unique(data.table::rbindlist(lapply(matches, function(x) x$mapper)))
       content = unique(data.table::rbindlist(lapply(matches, function(x) x$content)))
       
-      if(nrow(mapper)>0){
+      #if(nrow(mapper)>0){
         RSQLite::dbWriteTable(conn, 
                               "match_mapper", 
                               mapper, overwrite=T, use.names = T)
@@ -226,10 +226,10 @@ lapply(c("prematch","search_mz"), function(search_type){
           search$go <- TRUE
         }
         RSQLite::dbDisconnect(conn)
-      }else{
-        shown_matches$forward_unique <- data.table::data.table()
-        shown_matches$forward_full <- data.table::data.table()
-      }
+      #}else{
+      #  shown_matches$forward_unique <- data.table::data.table()
+      #  shown_matches$forward_full <- data.table::data.table()
+      #}
     }else{
       MetaboShiny::metshiAlert("Please build at least one database to enable this feature!")
       return(NULL)
