@@ -854,7 +854,7 @@ ggPlotBar <- function(data,
 }
 
 plotPCA.3d <- function(mSet,
-                       cols ,
+                       cols,
                        shape.fac="label",
                        pcx, pcy, pcz,
                        mode="pca",font,
@@ -890,17 +890,18 @@ plotPCA.3d <- function(mSet,
            colnames(df) <- paste0("PC", 1:ncol(df))
          })
   
+  df <- as.data.frame(df)
+  rownames(df) <- rownames(mSet$dataSet$norm)
+  
   if(mode == "ipca"){
-    fac.lvls <- length(levels(mSet$dataSet$exp.fac))
-    classes = mSet$dataSet$exp.fac
+    fac.lvls <- length(levels(mSet$dataSet$facA))
+    classes = mSet$dataSet$facA
+    df_list <- split(df, mSet$dataSet$facB)
   }else{
     fac.lvls <- length(levels(mSet$dataSet$cls))
     classes = mSet$dataSet$cls
+    df_list <- list(df)
   }
-  
-  df <- as.data.frame(df)
-  rownames(df) <- rownames(mSet$dataSet$norm)
-  df_list <- list(df)
   
   cols <- if(is.null(cols)) cf(length(levels(classes))) else{
     if(length(cols) < length(levels(classes))){
@@ -928,18 +929,19 @@ plotPCA.3d <- function(mSet,
   }else if(shape.fac == "label"){
     rep('circle', times = length(classes))
   }else{
-    as.factor(mSet$dataSet$covars[,..shape.fac][[1]])
+    as.factor(mSet$dataSet$covars[, ..shape.fac][[1]])
   }
   
   plots_facet <- lapply(1:length(df_list), function(i){
     
     df = df_list[[i]]
-    
+
     orig_idx = which(rownames(df) %in% rownames(mSet$dataSet$norm))
     
-    plots <- plotly::plot_ly(showlegend = F)
+    plots <- plotly::plot_ly(showlegend = F, 
+                             scene = paste0("scene", if(i > 1) i else ""))
     
-    show.orbs <- c()
+    show.orbs <- c(1:length(levels(classes)))
     
     for(class in levels(classes)){
       
@@ -952,6 +954,7 @@ plotPCA.3d <- function(mSet,
       
       # --- plot ellipse ---
       worked = F
+      
       try({
         o <- rgl::ellipse3d(cov(cbind(xc,yc,zc)),
                             centre=c(mean(xc),
@@ -960,7 +963,7 @@ plotPCA.3d <- function(mSet,
                             level = 0.95)
         worked = T
       })
-      
+    
       if(worked){
         mesh <- c(list(x = o$vb[1, o$ib]/o$vb[4, o$ib],
                        y = o$vb[2, o$ib]/o$vb[4, o$ib],
@@ -974,23 +977,25 @@ plotPCA.3d <- function(mSet,
           opacity=0.1,
           hoverinfo="none"
         )
+        adj_plot <- plotly_build(plots)
+        rgbcols <- toRGB(cols[show.orbs])
+        print(rgbcols)
+        c = 1
+
+        for(i in seq_along(adj_plot$x$data)){
+          item = adj_plot$x$data[[i]]
+          if(item$type == "mesh3d"){
+            adj_plot$x$data[[i]]$color <- rgbcols[c]
+            adj_plot$x$data[[i]]$visible <- TRUE
+            c = c + 1
+          }
+        }
+      }else{
+        adj_plot = plots
       }
-      
       show.orbs <- c(show.orbs, worked)
     }
     
-    adj_plot <- plotly_build(plots)
-    rgbcols <- toRGB(cols[show.orbs])
-    c = 1
-    
-    for(i in seq_along(adj_plot$x$data)){
-      item = adj_plot$x$data[[i]]
-      if(item$type == "mesh3d"){
-        adj_plot$x$data[[i]]$color <- rgbcols[c]
-        adj_plot$x$data[[i]]$visible <- TRUE
-        c = c + 1
-      }
-    }
     t <- list(
       family = font$family
     )
@@ -1004,36 +1009,90 @@ plotPCA.3d <- function(mSet,
       z = df[,pcz],
       visible = rep(T, times=fac.lvls),
       type = "scatter3d",
-      opacity=1,
+      opacity = 1,
       color = classes[orig_idx],
-      colors=cols,
+      colors = cols,
       symbol = symbol.vec[orig_idx],
       symbols = c('circle',
                   'diamond',
                   'square',
                   'x',
                   'o')
-    ) %>%  layout(font = t,
-                  scene = list(
-                    aspectmode="cube",
-                    xaxis = list(
-                      titlefont = list(size = font$ax.txt.size * 1.5),
-                      title = gsubfn::fn$paste("$pcx ($x.var %)")),
-                    yaxis = list(
-                      titlefont = list(size = font$ax.txt.size * 1.5),
-                      title = gsubfn::fn$paste("$pcy ($y.var %)")),
-                    zaxis = list(
-                      titlefont = list(size = font$ax.txt.size * 1.5),
-                      title = gsubfn::fn$paste("$pcz ($z.var %)"))))
+    ) 
     # --- return ---
     pca_plot
   })
-  subplot(plots_facet,shareX = F, shareY = F)
+  
+  
+  basic_scene = list(
+    aspectmode="cube",
+    aspectratio=list(x=1,y=1,z=1),
+    camera = list(
+      eye = list(x=0, y=0, z= 2)
+    ),
+    xaxis = list(
+      titlefont = list(size = font$ax.txt.size * 1.5),
+      title = gsubfn::fn$paste("$pcx ($x.var%)")),
+    yaxis = list(
+      titlefont = list(size = font$ax.txt.size * 1.5),
+      title = gsubfn::fn$paste("$pcy ($y.var%)")),
+    zaxis = list(
+      titlefont = list(size = font$ax.txt.size * 1.5),
+      title = gsubfn::fn$paste("$pcz ($z.var%)")))
+  
+  if(mode != "ipca"){
+    plots_facet[[1]] %>% layout(font = t, 
+                                #title = toupper(mode), 
+                                scene = basic_scene)
+  }else{
+    # X sequence:
+    #   Start: 0, 0.5, 0, 0.5
+    # End: 0.5, 1, 0.5, 1
+    # Y sequence:
+    #   Start: 0.5, 0.5, 0, 0
+    # End: 1, 1, 0.5, 0.5
+    
+    x_start = rep(c(0, 0.5), maxrows)
+    x_end = rep(c(0.5, 1), maxrows)
+    
+    maxrows = ceiling(length(plots_facet)/2)
+    y_start = rev(c(0, 0, rep(sapply(1:(maxrows-1), function(i) c(1/maxrows)*i), each=2)))
+    y_end = rev(rep(sapply(1:(maxrows), function(i) c(1/maxrows)*i), each=2))
+    #y_end = c(0.5, 0.5,1, 1)
+    
+    domains = lapply(1:10, function(i){
+      list(x = c(x_start[i], x_end[i]),
+           y = c(y_start[i], y_end[i])) 
+    })
+    
+    # TODO: make this a less ugly solution ; w;"
+    subplot(plots_facet) %>% layout(font = t,
+                                     scene = append(basic_scene,
+                                                   list(domain=domains[[1]])),
+                                    scene2 = append(basic_scene,
+                                                    list(domain=domains[[2]])),
+                                    scene3 = append(basic_scene,
+                                                    list(domain=domains[[3]])),
+                                    scene4 = append(basic_scene,
+                                                    list(domain=domains[[4]])),
+                                    scene5 = append(basic_scene,
+                                                    list(domain=domains[[5]])),
+                                    scene6 = append(basic_scene,
+                                                    list(domain=domains[[6]])),
+                                    scene7 = append(basic_scene,
+                                                    list(domain=domains[[7]])),
+                                    scene8 = append(basic_scene,
+                                                    list(domain=domains[[8]])),
+                                    scene9 = append(basic_scene,
+                                                    list(domain=domains[[9]])),
+                                    scene10 = append(basic_scene,
+                                                     list(domain=domains[[10]])))
+  }
 }
 
 plotPCA.2d <- function(mSet, shape.fac = "label", cols,
                        pcx, pcy, mode="pca", plot.theme,
-                       plotlyfy="T", font, cf){
+                       plotlyfy = "T", font){
   
   classes <- switch(mode,
                     ipca = mSet$dataSet$facA,
@@ -1051,7 +1110,6 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
   switch(mode,
          pca={
            df <- mSet$analSet$pca$x
-           #x =1;y=2;z=3
            x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
            y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
            fac.lvls <- length(levels(mSet$dataSet$cls))
@@ -1066,13 +1124,14 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
          },
          ipca = {
            df <- mSet$analSet$pca$x
-           #x =1;y=2;z=3
            x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
            y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
            fac.lvls <- length(levels(mSet$dataSet$facA))
            
            xc=mSet$analSet$pca$x[, pcx]
            yc=mSet$analSet$pca$x[, pcy]
+           
+           print("!!")
            
            dat_long <- data.table(variable = names(xc),
                                   group = classes,
@@ -1142,7 +1201,7 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
     ggplot2::scale_color_manual(values = cols)
   
   if(mode == "ipca"){
-    p <- p + facet_wrap(~groupB,)
+    p <- p + facet_wrap(~groupB,ncol = 2)
     p <- p + ggplot2::ggtitle(Hmisc::capitalize(mSet$dataSet$facB.lbl))
   }
   

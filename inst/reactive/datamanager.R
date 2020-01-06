@@ -292,26 +292,29 @@ shiny::observe({
                      if(input$pca_2d3d){ # check if switch button is in 2d or 3d mode
                        # render 2d plot
                        output$plot_pca <- plotly::renderPlotly({
-                         plotPCA.2d(mSet, lcl$aes$mycols,
+                         MetaboShiny::plotPCA.2d(mSet, 
+                                    cols = lcl$aes$mycols,
                                     pcx = input$pca_x,
-                                    pcy = input$pca_y, mode = mode,
+                                    pcy = input$pca_y, 
+                                    mode = mode,
                                     shape.fac = input$shape_var,
                                     plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                     plotlyfy=TRUE,
-                                    font = lcl$aes$font, 
-                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]]
+                                    font = lcl$aes$font
+                                    #,cf = gbl$functions$color.functions[[lcl$aes$spectrum]]
                          )
                        })
                      }else{
                        # render 3d plot
                        output$plot_pca <- plotly::renderPlotly({
-                         plotPCA.3d(mSet, lcl$aes$mycols,
-                                    pcx = input$pca_x,
-                                    pcy = input$pca_y,
-                                    pcz = input$pca_z, mode = mode,
-                                    shape.fac = input$shape_var,
-                                    font = lcl$aes$font,
-                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                        MetaboShiny::plotPCA.3d(mSet, 
+                                                 lcl$aes$mycols,
+                                                 pcx = input$pca_x,
+                                                 pcy = input$pca_y,
+                                                 pcz = input$pca_z, mode = mode,
+                                                 shape.fac = input$shape_var,
+                                                 font = lcl$aes$font,
+                                                 cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                        })
                      }
                    }else{
