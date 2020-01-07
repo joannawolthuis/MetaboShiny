@@ -189,8 +189,8 @@ ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
   profile <- MetaboShiny::getProfile(mSet, 
                                      cpd, 
                                      mode="multi")
-  profile$Individual <- mSet$dataSet$covars[match(mSet$dataSet$covars$sample, 
-                                                  table = profile$Sample),"individual"][[1]]
+  profile$Individual <- mSet$dataSet$covars[match(profile$Sample,
+                                                  table = mSet$dataSet$covars$sample),"individual"][[1]]
   profile$Color <- switch(time.mode, 
                           t1f=profile$GroupA, 
                           t=profile$Individual, 
@@ -857,8 +857,7 @@ plotPCA.3d <- function(mSet,
                        cols,
                        shape.fac="label",
                        pcx, pcy, pcz,
-                       mode="pca",font,
-                       cf){
+                       mode="pca",font,cf){
   
   switch(mode,
          pca = {
@@ -1097,7 +1096,8 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
   classes <- switch(mode,
                     ipca = mSet$dataSet$facA,
                     pca = mSet$dataSet$cls,
-                    plsda = mSet$dataSet$cls)
+                    plsda = mSet$dataSet$cls,
+                    cf = rainbow)
   
   symbols = c("16",#'circle',
               "18",#'diamond',

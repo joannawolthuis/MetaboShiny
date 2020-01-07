@@ -40,7 +40,6 @@ observeEvent(input$do_ml, {
       # conv to data frame
       curr <- as.data.frame(curr)
       rownames(curr) <- rownames(mSet$dataSet$preproc)
-
       
       # find the qc rows and remove them
       is.qc <- grepl("QC|qc", rownames(curr))
@@ -49,26 +48,28 @@ observeEvent(input$do_ml, {
       }
       # reorder according to covars table (will be used soon)
       
-      order <- match(mSet$dataSet$covars$sample,rownames(curr))
+      order <- match(rownames(curr), mSet$dataSet$covars$sample)
       if("label" %in% colnames(mSet$dataSet$covars)){
         config <- mSet$dataSet$covars[order, -"label"]
       }else{
         config <- mSet$dataSet$covars[order, ]
       }
       
-      config <- config[,input$ml_include_covars,with=F]# reorder so both halves match up later
+      config <- config[, input$ml_include_covars,with=F]# reorder so both halves match up later
+      
       if(mSet$dataSet$exp.type %in% c("2f", "t1f")){
         # just set to facA for now..
         if(nrow(config)==0){
-          config <- data.frame(label=mSet$dataSet$facA[order])
+          config <- data.frame(label=mSet$dataSet$facA)
         }else{
-          config <- cbind(config, label=mSet$dataSet$facA[order]) # add current experimental condition
+          config <- cbind(config, label=mSet$dataSet$facA) # add current experimental condition
         }
       }else{
         if(nrow(config)==0){
-          config <- data.frame(label=mSet$dataSet$cls[order])
+          config <- data.frame(label=mSet$dataSet$cls)
         }else{
-          config <- cbind(config, label=mSet$dataSet$cls[order]) # add current experimental condition
+          config <- cbind(config, 
+                          label=mSet$dataSet$cls) # add current experimental condition
         }
       }
       config <- data.table::as.data.table(config)
@@ -95,7 +96,7 @@ observeEvent(input$do_ml, {
       
       keep_configs <- which(!(colnames(config) %in% remove))
       
-      try({
+    try({
         shiny::showNotification(paste0("Keeping non-mz variables after NA/unique filtering: ",
                                        paste0(names(config)[keep_configs],collapse = ", ")))
       })

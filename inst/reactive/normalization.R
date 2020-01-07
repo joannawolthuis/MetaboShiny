@@ -225,8 +225,8 @@ shiny::observeEvent(input$initialize, {
     
     # if normalizing by a factor, do the below
     if(req(input$norm_type) == "SpecNorm"){
-      norm.vec <- mSet$dataSet$covars[match(mSet$dataSet$covars$sample,
-                                            rownames(mSet$dataSet$preproc)),][[input$samp_var]]
+      norm.vec <- mSet$dataSet$covars[match(rownames(mSet$dataSet$preproc),
+                                            mSet$dataSet$covars$sample),][[input$samp_var]]
       norm.vec <- scale(x = norm.vec, center = 1) # normalize scaling factor
       
     }else{
@@ -328,8 +328,8 @@ shiny::observeEvent(input$initialize, {
         
         # create csv for comBat
         csv <- data.table::as.data.table(cbind(sample = smp,
-                                   label = mSet$dataSet$cls,
-                                   mSet$dataSet$norm))
+                                               label = mSet$dataSet$cls,
+                                               mSet$dataSet$norm))
         
         # transpose for combat
         csv_edata <-t(csv[,!c(1,2)])
@@ -342,8 +342,8 @@ shiny::observeEvent(input$initialize, {
                                   batch2 = c(0),
                                   outcome = as.factor(exp_lbl))
           # batch correct with comBat
-          batch_normalized = t(sva::ComBat(dat=csv_edata,
-                                          batch=csv_pheno$batch1
+          batch_normalized = t(sva::ComBat(dat = csv_edata,
+                                           batch = csv_pheno$batch1
                                           #mod=mod.pheno,
                                           #par.prior=TRUE
           ))
@@ -352,8 +352,8 @@ shiny::observeEvent(input$initialize, {
         }else{
           # create a model table
           csv_pheno <- data.frame(sample = 1:nrow(csv),
-                                  batch1 = mSet$dataSet$covars[match(smp, mSet$dataSet$covars$sample), left_batch_vars[1], with=FALSE][[1]],
-                                  batch2 = mSet$dataSet$covars[match(smp, mSet$dataSet$covars$sample), left_batch_vars[2], with=FALSE][[1]],
+                                  batch1 = mSet$dataSet$covars[smp, match(mSet$dataSet$covars$sample), left_batch_vars[1], with=FALSE][[1]],
+                                  batch2 = mSet$dataSet$covars[smp, match(mSet$dataSet$covars$sample), left_batch_vars[2], with=FALSE][[1]],
                                   outcome = as.factor(exp_lbl))
           # batch correct with limma and two batches
           batch_normalized = t(limma::removeBatchEffect(x = csv_edata,

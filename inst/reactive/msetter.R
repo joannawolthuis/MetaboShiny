@@ -8,8 +8,6 @@ shiny::observe({
     
     if(!is.null(mSet)){
       
-      print(mSetter$do)
-      
       mSet <- MetaboShiny::store.mSet(mSet) # save analyses
       
       mSet.old <- mSet

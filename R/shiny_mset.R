@@ -121,7 +121,7 @@ change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
   
   mSet <- switch(mSet$dataSet$exp.type,
                    "1f"={
-                     change_var <- if(length(stats_var)>1) stats_var[1] else stats_var
+                     change_var <- if(length(stats_var) > 1) stats_var[1] else stats_var
                      mSet$dataSet$exp.lbl <- change_var
                      # change current variable of interest to user pick from covars table
                      mSet$dataSet$cls <- as.factor(mSet$dataSet$covars[,change_var, with=F][[1]])
@@ -202,7 +202,7 @@ subset.mSet <- function(mSet, subset_var, subset_group){
     keep.samples <- mSet$dataSet$covars$sample[keep.i]
     mSet$dataSet$covars <- mSet$dataSet$covars[sample %in% keep.samples,]
     
-    tables = c("norm", "proc", "prenorm", "filt", "orig")
+    tables = c("norm", "proc", "preproc", "filt", "orig")
     clss = c("cls", "proc.cls", "prenorm.cls", "filt.cls", "orig.cls")
     combi.tbl = data.table::data.table(tbl = tables,
                                        cls = clss)
