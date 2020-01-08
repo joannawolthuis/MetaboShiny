@@ -67,13 +67,13 @@ lapply(c("tt",
           MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, 
                         cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]], mode = "multi",
                         styles = input$ggplot_sum_style,
-                        add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var,
+                        add_stats = input$ggplot_sum_stats, color.fac = input$col_var, text.fac = input$txt_var,
                         plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                         font = lcl$aes$font)
         }else{
             MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
                           styles = input$ggplot_sum_style,
-                          add_stats = input$ggplot_sum_stats, col.fac = input$col_var, txt.fac = input$txt_var,
+                          add_stats = input$ggplot_sum_stats, color.fac = input$col_var, text.fac = input$txt_var,
                           plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                           font = lcl$aes$font)
           }

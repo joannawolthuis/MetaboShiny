@@ -189,6 +189,7 @@ ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
   profile <- MetaboShiny::getProfile(mSet, 
                                      cpd, 
                                      mode="multi")
+  
   profile$Individual <- mSet$dataSet$covars[match(profile$Sample,
                                                   table = mSet$dataSet$covars$sample),"individual"][[1]]
   profile$Color <- switch(time.mode, 
@@ -242,7 +243,8 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                           cf = rainbow, plot.theme,
                           mode = "nm", plotlyfy = TRUE,
                           styles=c("box", "beeswarm"), add_stats = "mean",
-                          col.fac = "label", txt.fac = "label",font){
+                          color.fac = "label",
+                          text.fac = "label",font){
   
   sourceTable = mSet$dataSet$norm
   
@@ -272,30 +274,22 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
     stars <- p2stars(pval)
   })
   
-  profile$Shape <- if(shape.fac == "label"){
-    as.factor(mSet$dataSet$cls)
-  }else{
-    as.factor(mSet$dataSet$covars[,..shape.fac][[1]])
-  }
-  
-  profile$Color <- if(col.fac == "label"){
-    as.factor(mSet$dataSet$cls)
-  }else{
-    as.factor(mSet$dataSet$covars[,..col.fac][[1]])
-  }
-  
-  profile$Text <- if(txt.fac == "label"){
-    as.factor(mSet$dataSet$cls)
-  }else{
-    as.factor(mSet$dataSet$covars[,..txt.fac][[1]])
-  }
-  
   p <- ggplot2::ggplot() + plot.theme(base_size = 15)
+  
+  for(adj in c("shape", "text")){
+    
+    adj.fac = switch(adj,
+                     shape = shape.fac,
+                     color = color.fac,
+                     text = text.fac,
+    )
+    profile[[Hmisc::capitalize(adj)]] <- as.factor(if(adj.fac != "label") mSet$dataSet$covars[[adj.fac]] else switch(mode, multi = profile$GroupA, nm = profile$Group))
+  }
   
   profiles <- switch(mode,
                      multi = split(profile, f = profile$GroupA),
                      nm = list(x = data.table::data.table(profile)))
-  
+
   if(length(cols) < length(levels(profile$Color))){
     cols <- cf(length(levels(profile$Color)))
   }
@@ -311,21 +305,24 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                p <- switch(style,
                            box = p + ggplot2::geom_boxplot(data = prof, alpha=0.4, aes(x = Group,
                                                                                        y = Abundance,
+                                                                                       shape = Shape,
                                                                                        text = Text,
                                                                                        color = Group,
-                                                                                       fill = Group)),
+                                                                                       fill = Color)),
                            violin = p + ggplot2::geom_violin(data = prof, alpha=0.4, position = "identity", aes(x = Group,
                                                                                                                 y = Abundance,
                                                                                                                 color = Group,
-                                                                                                                fill = Group)),
+                                                                                                                fill = Color)),
                            beeswarm = p + ggbeeswarm::geom_beeswarm(data = prof, alpha=0.7, size = 2, position = position_dodge(width=.3), aes(x = Group,
                                                                                                                                                y = Abundance,
-                                                                                                                                               text= Text,
+                                                                                                                                               text = Text,
+                                                                                                                                               shape = Shape,
                                                                                                                                                color = Group,
                                                                                                                                                fill = Color)),
                            scatter = p + ggplot2::geom_point(data = prof, alpha=0.7, size = 2, aes(x = Group,
                                                                                                    y = Abundance,
                                                                                                    text=Text,
+                                                                                                   shape = Shape,
                                                                                                    color = Group,
                                                                                                    fill = Color), position = position_jitterdodge())
                )
@@ -335,6 +332,7 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                            box = p + ggplot2::geom_boxplot(data = prof, alpha=0.4, aes(x = GroupB,
                                                                                        y = Abundance,
                                                                                        text = Text,
+                                                                                       shape = Shape,
                                                                                        color = GroupA,
                                                                                        fill = GroupA)),
                            violin = p + ggplot2::geom_violin(data = prof, alpha=0.4, position = "identity", aes(x = GroupB,
@@ -346,18 +344,20 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                            beeswarm = p + ggbeeswarm::geom_beeswarm(data = prof, alpha=0.7, size = 2, position = position_dodge(width=.3), aes(x = GroupB,
                                                                                                                                                y = Abundance,
                                                                                                                                                text=Text,
+                                                                                                                                               shape = Shape,
                                                                                                                                                color = GroupA,
                                                                                                                                                fill = GroupA)),
                            scatter = p + ggplot2::geom_point(data = prof, alpha=0.7, size = 2, position = position_jitterdodge(), aes(x = GroupB,
                                                                                                                                       y = Abundance,
                                                                                                                                       text=Text,
+                                                                                                                                      shape = Shape,
                                                                                                                                       color = GroupA,
                                                                                                                                       fill = GroupA))
                )
              })
     }
     
-    p <- p +ggplot2::theme(legend.position="none",
+    p <- p + ggplot2::theme(legend.position="none",
                            plot.title = ggplot2::element_text(hjust = 0.5),
                            axis.text=ggplot2::element_text(size=font$ax.num.size),
                            axis.title=ggplot2::element_text(size=font$ax.txt.size),
@@ -978,7 +978,6 @@ plotPCA.3d <- function(mSet,
         )
         adj_plot <- plotly_build(plots)
         rgbcols <- toRGB(cols[show.orbs])
-        print(rgbcols)
         c = 1
 
         for(i in seq_along(adj_plot$x$data)){
@@ -1051,10 +1050,11 @@ plotPCA.3d <- function(mSet,
     #   Start: 0.5, 0.5, 0, 0
     # End: 1, 1, 0.5, 0.5
     
+    maxrows = ceiling(length(plots_facet)/2)
+    
     x_start = rep(c(0, 0.5), maxrows)
     x_end = rep(c(0.5, 1), maxrows)
     
-    maxrows = ceiling(length(plots_facet)/2)
     y_start = rev(c(0, 0, rep(sapply(1:(maxrows-1), function(i) c(1/maxrows)*i), each=2)))
     y_end = rev(rep(sapply(1:(maxrows), function(i) c(1/maxrows)*i), each=2))
     #y_end = c(0.5, 0.5,1, 1)
@@ -1130,9 +1130,7 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
            
            xc=mSet$analSet$pca$x[, pcx]
            yc=mSet$analSet$pca$x[, pcy]
-           
-           print("!!")
-           
+          
            dat_long <- data.table(variable = names(xc),
                                   group = classes,
                                   groupB = mSet$dataSet$facB,
@@ -1515,9 +1513,7 @@ ggPlotPower <- function(mSet,
   data = data.table::rbindlist(lapply(comparisons, function(comp) data.table::data.table(samples = mSet$analSet$power[[comp]]$Jpred,
                                                                                          power = mSet$analSet$power[[comp]]$pwrD,
                                                                                          comparison = c(comp))))
-  
-  print(head(data))
-  
+
   #data$comparison <- substr(gsub(data$comparison, pattern = " .*$", replacement = ""), 1, 10)
     
   if(ncol(data) == 1){

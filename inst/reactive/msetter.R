@@ -122,6 +122,20 @@ shiny::observe({
       })
       
       if(success){
+        mSet.backup <<- mSet
+        if(MetaboShiny::is.ordered.mSet(mSet)){
+          msg = "mSet class label order still correct! :)"
+          try({
+            shiny::showNotification(msg) 
+          })
+          print(msg)
+        }else{
+          msg = "ordering went wrong with the mset sample order! :("
+          try({
+            shiny::showNotification(msg)
+          })
+          print(msg)
+        }
         mSet <<- mSet
       }else{
         mSet.debug <<- mSet

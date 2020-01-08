@@ -764,8 +764,8 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                    shiny::selectInput("ggplot_sum_stats", label = "Stats shown", choices = list("median", "mean", "none"),width = "80%"),
                                                                                                                                    shiny::h2("Shape")
                                                                                                                                    ,shiny::selectInput("shape_var", label="Marker shape based on:", choices = c("label"),width = "80%")
-                                                                                                                                   ,shiny::h2("Color")
-                                                                                                                                   ,shiny::selectInput("col_var", label="Marker color based on:", choices = c("label"),width = "80%")
+                                                                                                                                   #,shiny::h2("Color")
+                                                                                                                                   #,shiny::selectInput("col_var", label="Marker color based on:", choices = c("label"),width = "80%")
                                                                                                                                    ,shiny::h2("Hover text")
                                                                                                                                    ,shiny::selectInput("txt_var", label="Marker hover text based on:", choices = c("label"),width = "80%"),
                                                                                                                                    shiny::h2("Plot theme"),

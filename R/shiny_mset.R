@@ -1,3 +1,24 @@
+is.ordered.mSet <- function(mSet){
+  covarsMatch = all(mSet$dataSet$covars$sample == rownames(mSet$dataSet$norm))
+  mSet$dataSet$exp.type <- gsub("^1f.",  "1f", mSet$dataSet$exp.type)
+  expVarsMatch <- switch(mSet$dataSet$exp.type,
+                         "1f"={
+                           all(mSet$dataSet$cls == mSet$dataSet$covars[,mSet$dataSet$exp.lbl, with=F][[1]])
+                         },
+                         "2f"={
+                           all(mSet$dataSet$facA == mSet$dataSet$covars[,mSet$dataSet$facA.lbl, with=F][[1]] && mSet$dataSet$facB == mSet$dataSet$covars[,mSet$dataSet$facB.lbl, with=F][[1]])
+                         },
+                         "t"={
+                           all(mSet$dataSet$exp.fac == mSet$dataSet$covars$individual && mSet$dataSet$time.fac == mSet$dataSet$covars[,mSet$dataSet$facA.lbl, with=F] && mSet$dataSet$facA == mSet$dataSet$time.fac)
+                         },
+                         "t1f"={
+                           all(mSet$dataSet$exp.fac == mSet$dataSet$covars$individual && mSet$dataSet$time.fac == mSet$dataSet$covars[ ,mSet$dataSet$facA.lbl, with=F][[1]]
+                               && mSet$dataSet$facA == mSet$dataSet$time.fac && mSet$dataSet$facA == mSet$dataSet$covars[,mSet$dataSet$facA.lbl,with=F][[1]]
+                               && mSet$dataSet$facB == mSet$dataSet$covars[,mSet$dataSet$facB.lbl, with=F][[1]])
+                         })
+  return(covarsMatch & expVarsMatch)
+}
+
 filt.mSet <- function(mSet, keep.mz){
   mSet$dataSet$proc <- mSet$dataSet$proc[,keep.mz]
   mSet$dataSet$filt <- mSet$dataSet$filt[,keep.mz]
@@ -9,23 +30,19 @@ filt.mSet <- function(mSet, keep.mz){
 }
 
 prev.mSet <- function(mSet, what, input = input){
-  
   mSet$dataSet$exp.var <- input$stats_var
   mSet$dataSet$time.var <- input$time_var
   mSet$dataSet$exp.type <- input$stats_type
-  
   if(input$stats_type %in% c("t", "t1f") | input$paired){
     mSet$dataSet$paired <- TRUE 
   }else{
     mSet$dataSet$paired <- FALSE
   }
-  
   if(!is.null(input$subset_group)){ # if subset entered OR subset was there...
     mSet$dataSet$subset[[input$subset_var]] <- input$subset_group
   }else{
     mSet$dataSet$subset <- list()
   }
-  
   return(mSet)
 }
 

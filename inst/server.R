@@ -6,7 +6,7 @@ function(input, output, session) {
   
   shiny::showNotification("Starting server process...")
   
-  #detach("package:MetaboShiny", unload=T)
+  # detach("package:MetaboShiny", unload=T)
   # used to be in startshiny.R
   options("download.file.method" = "libcurl")
   # make metaboshiny_storage dir in home first..
@@ -16,7 +16,7 @@ function(input, output, session) {
   # docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny /bin/bash
   # docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny Rscript startShiny.R
   # current instructions
-  #Rshiny app to analyse untargeted metabolomics data! BASH INSTRUCTIONS: STEP 1: mydir=~"/MetaboShiny" #or another of your choice | STEP 2: mkdir $mydir | STEP 3: docker run -p 8080:8080 -v $mydir:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny /start.sh
+  # Rshiny app to analyse untargeted metabolomics data! BASH INSTRUCTIONS: STEP 1: mydir=~"/MetaboShiny" #or another of your choice | STEP 2: mkdir $mydir | STEP 3: docker run -p 8080:8080 -v $mydir:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny /start.sh
   
   # rjava.so error.. or rdb corrupt.. 'sudo R CMD javareconf'
   
@@ -29,15 +29,10 @@ function(input, output, session) {
           'download.file.method' = 'curl',
           width = 1200, height=800)
   
-  # - - - - - - - -
-  
   mSet <- NULL
   opts <- list()
   showtext::showtext_auto(enable = T)
-  
-  logged <- shiny::reactiveValues(status = "notlogged",
-                                  text = "please log in!")
-  
+
   lcl = list(
     proj_name ="",
     last_mset="",
@@ -1090,6 +1085,7 @@ apikey = ')
     mSet <<- mSet
     datamanager$reload <- "power"
   })
+  
   # ==== LOAD LOGIN UI ====
   
   # init all observer

@@ -61,11 +61,11 @@ shiny::observe({
                    shiny::updateSelectInput(session, "stats_var", selected = mSet$dataSet$exp.var, 
                                             choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
                    shiny::updateSelectInput(session, "shape_var", 
+                                            selected = "label",
                                             choices = c("label", 
                                                         colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
                    shiny::updateSelectInput(session, "col_var", 
-                                            selected = mSet$dataSet$exp.lbl,
-                                            mSet$dataSet$exp.var, 
+                                            selected = "label", 
                                             choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
                    shiny::updateSelectInput(session, "txt_var", 
                                             selected = "sample", 
@@ -73,7 +73,7 @@ shiny::observe({
                    shiny::updateSelectInput(session, "subset_var", 
                                             choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
                    shiny::updateSelectInput(session, "ml_include_covars", 
-                                            choices = c(colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "animal_internal_id"))]))
+                                            choices = c(colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "individual"))]))
                    
                    if(mSet$metshiParams$prematched){
                      search_button$on <- FALSE
