@@ -276,14 +276,12 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
   
   p <- ggplot2::ggplot() + plot.theme(base_size = 15)
   
-  for(adj in c("shape", "text")){
-    
+  for(adj in c("color", "shape", "text")){
     adj.fac = switch(adj,
-                     shape = shape.fac,
-                     color = color.fac,
-                     text = text.fac,
-    )
-    profile[[Hmisc::capitalize(adj)]] <- as.factor(if(adj.fac != "label") mSet$dataSet$covars[[adj.fac]] else switch(mode, multi = profile$GroupA, nm = profile$Group))
+                     "shape" = shape.fac,
+                     "color" = color.fac,
+                     "text" = text.fac)
+    profile[[Hmisc::capitalize(adj)]] <- if(adj.fac != "label") as.factor(mSet$dataSet$covars[[adj.fac]]) else switch(mode, multi = profile$GroupA, nm = profile$Group)
   }
   
   profiles <- switch(mode,
@@ -333,25 +331,25 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                                                                                        y = Abundance,
                                                                                        text = Text,
                                                                                        shape = Shape,
-                                                                                       color = GroupA,
+                                                                                       color = Color,
                                                                                        fill = GroupA)),
                            violin = p + ggplot2::geom_violin(data = prof, alpha=0.4, position = "identity", aes(x = GroupB,
                                                                                                                 y = Abundance,
                                                                                                                 group = GroupB,
                                                                                                                 text = Text,
-                                                                                                                color = GroupA,
+                                                                                                                color = Color,
                                                                                                                 fill = GroupA)),
                            beeswarm = p + ggbeeswarm::geom_beeswarm(data = prof, alpha=0.7, size = 2, position = position_dodge(width=.3), aes(x = GroupB,
                                                                                                                                                y = Abundance,
                                                                                                                                                text=Text,
                                                                                                                                                shape = Shape,
-                                                                                                                                               color = GroupA,
+                                                                                                                                               color = Color,
                                                                                                                                                fill = GroupA)),
                            scatter = p + ggplot2::geom_point(data = prof, alpha=0.7, size = 2, position = position_jitterdodge(), aes(x = GroupB,
                                                                                                                                       y = Abundance,
                                                                                                                                       text=Text,
                                                                                                                                       shape = Shape,
-                                                                                                                                      color = GroupA,
+                                                                                                                                      color = Color,
                                                                                                                                       fill = GroupA))
                )
              })
