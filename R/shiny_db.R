@@ -191,3 +191,98 @@ filterPatDB <- function(patdb){
   RSQLite::dbExecute(conn, "VACUUM")
   RSQLite::dbDisconnect(conn)
 }
+
+prepDatabase <- function(conn){
+  cat("Checking for mismatches between peak tables and metadata... \n")
+  
+  cat(paste0("-- in peaklist, not in metadata: --- \n", 
+             paste0(setdiff(fn_int,
+                            fn_meta), 
+                    collapse=", "), 
+             "\n"))
+  cat(paste0("-- in metadata, not in peaklist: --- \n", 
+             paste0(setdiff(fn_meta,
+                            fn_int), 
+                    collapse=", "), 
+             "\n\n"))
+  
+  RSQLite::dbExecute(conn, "PRAGMA journal_mode=WAL;")
+  RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS filenames ON mzintensities(filename)")
+}
+
+getCSVquery <- function(conn){
+  if(DBI::dbExistsTable(conn, "setup")){
+    query <- strwrap(gsubfn::fn$paste("select distinct d.sample as sample, d.*, s.*
+                                        from mzintensities i
+                                        join individual_data d
+                                        on i.filename = d.sample
+                                        join setup s on d.[Group] = s.[Group]"),
+                     width=10000,
+                     simplify=TRUE)   
+  }else{
+    query <- strwrap(gsubfn::fn$paste("select distinct d.sample as sample, d.*
+                                        from mzintensities i
+                                        join individual_data d
+                                        on i.filename = d.sample"),
+                     width=10000,
+                     simplify=TRUE)
+  }
+}
+
+allMZ <- function(conn){
+  RSQLite::dbGetQuery(conn, "select distinct i.mzmed
+                                        from mzintensities i
+                                        join individual_data d
+                                        on i.filename = d.sample")[,1]  
+}
+
+allSampInMeta <- function(conn){
+  RSQLite::dbGetQuery(conn, "SELECT DISTINCT sample FROM individual_data")[,1]
+}
+
+allSampInPeaktable <- function(conn){
+  RSQLite::dbGetQuery(conn, "SELECT DISTINCT filename FROM mzintensities")[,1]
+}
+
+getSampMeta <- function(conn, filename, query){
+  # adjust query
+  query_add = gsubfn::fn$paste(" WHERE i.filename = '$filename'")
+  
+  # get results for sample
+  z.meta = data.table::as.data.table(RSQLite::dbGetQuery(conn, paste0(query, query_add)))
+  colnames(z.meta) <- tolower(colnames(z.meta))
+  z.meta$sample <- gsub(z.meta$sample, pattern=" |\\(|\\)|\\+", replacement="")
+  
+  if(nrow(z.meta)==0) return(NA) else return(z.meta)
+}
+getSampInt <- function(conn, filename, all_mz){
+  query_add = gsubfn::fn$paste(" WHERE i.filename = '$filename'")
+  z.int = data.table::as.data.table(RSQLite::dbGetQuery(conn, 
+                                                        paste0("SELECT DISTINCT
+                                                i.mzmed as identifier,
+                                                i.intensity
+                                                FROM mzintensities i", query_add)))
+  
+  if(nrow(z.int)==0) return(NA)
+  
+  missing_mz <- setdiff(all_mz, z.int$identifier)
+  
+  # cast to wide
+  cast.dt <- data.table::dcast.data.table(z.int,
+                                          formula = ... ~ identifier,
+                                          fun.aggregate = sum,
+                                          value.var = "intensity")
+  
+  complete = as.numeric(cast.dt[1,-1])
+  names(complete) = colnames(cast.dt)[-1]
+  
+  missing = rep(NA, length(missing_mz))
+  names(missing) <- missing_mz
+  
+  complete.row = c(complete[-1], missing)
+  reordered <- order(as.numeric(names(complete.row)))
+  complete.row <- complete.row[reordered]
+  #complete.row.dt <- data.table::as.data.table(t(data.table::as.data.table(complete.row)))
+  #colnames(complete.row.dt) <- names(complete.row)  
+  complete.row
+}

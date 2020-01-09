@@ -202,93 +202,21 @@ observeEvent(input$do_ml, {
       print(dim(curr))
       
       # get results for the amount of attempts chosen
-      shiny::withProgress(message = "Running...",{
+      
+      shiny::withProgress(message = "Running...", {
         repeats <- pbapply::pblapply(1:goes,
-                                     cl=session_cl,
-                                     function(i,
-                                              train_vec = train_vec,
-                                              test_vec = test_vec,
-                                              configCols = configCols,
-                                              ml_method = ml_method,
-                                              ml_perf_metr = ml_perf_metr,
-                                              ml_folds = ml_folds,
-                                              ml_preproc = ml_preproc,
-                                              tuneGrid = tuneGrid,
-                                              ml_train_perc = ml_train_perc){
-                                       
-                                       # get user training percentage
-                                       ml_train_perc <- ml_train_perc/100
-                                       
-                                       if(unique(train_vec)[1] == "all" & unique(test_vec)[1] == "all"){ # BOTH ARE NOT DEFINED
-                                         test_idx = caret::createDataPartition(y = curr$label, p = ml_train_perc, list = FALSE) # partition data in a balanced way (uses labels)
-                                         train_idx = setdiff(1:nrow(curr), test_idx) #use the other rows for testing
-                                         inTrain = train_idx
-                                         inTest = test_idx
-                                       }else if(unique(train_vec)[1] != "all"){ #ONLY TRAIN IS DEFINED
-                                         train_idx <- which(config[,train_vec[1], with=F][[1]] == train_vec[2])
-                                         test_idx = setdiff(1:nrow(curr), train_idx) # use the other rows for testing
-                                         reTrain <- caret::createDataPartition(y = config[train_idx, label], p = ml_train_perc) # take a user-defined percentage of the regexed training set
-                                         inTrain <- train_idx[reTrain$Resample1]
-                                         inTest = test_idx
-                                       }else{ # ONLY TEST IS DEFINED
-                                         test_idx = which(config[,test_vec[1], with=F][[1]] == test_vec[2])
-                                         train_idx = setdiff(1:nrow(curr), test_idx) # use the other rows for testing
-                                         reTrain <- caret::createDataPartition(y = config[train_idx, label], p = ml_train_perc) # take a user-defined percentage of the regexed training set
-                                         inTrain <- train_idx[reTrain$Resample1]
-                                         inTest <- test_idx
-                                       }
-                                       
-                                       # choose predictor "label" (some others are also included but cross validation will be done on this)
-                                       predictor = "label"
-                                       
-                                       # split training and testing data
-                                       trainY <- curr[inTrain,
-                                                      ..predictor][[1]]
-                                       testY <- curr[inTest,
-                                                     ..predictor][[1]]
-                                       
-                                       training <- curr[inTrain,]
-                                       testing <- curr[inTest,]
-                                       
-                                       require(caret)
-                                       
-                                       if(ml_folds == "LOOCV"){
-                                         trainCtrl <- caret::trainControl(verboseIter = T,
-                                                                          allowParallel = F,
-                                                                          method="LOOCV",
-                                                                          trim=TRUE, 
-                                                                          returnData = FALSE) # need something here...
-                                         
-                                       }else{
-                                         trainCtrl <- caret::trainControl(verboseIter = T,
-                                                                          allowParallel = F,
-                                                                          method=as.character(ml_perf_metr),
-                                                                          number=as.numeric(ml_folds),
-                                                                          repeats=3,
-                                                                          trim=TRUE, 
-                                                                          returnData = FALSE) # need something here...
-                                       }
-                                       
-                                       fit <- caret::train(
-                                         label ~ .,
-                                         data = training,
-                                         method = ml_method,
-                                         ## Center and scale the predictors for the training
-                                         ## set and all future samples.
-                                         preProc = ml_preproc,
-                                         tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
-                                         trControl = trainCtrl
-                                       )
-                                       
-                                       result.predicted.prob <- stats::predict(fit, testing, type="prob") # Prediction
-                                       
-                                       # train and cross validate model
-                                       # return list with mode, prediction on test data etc.s
-                                       list(type = ml_method,
-                                            # model = fit,
-                                            importance = caret::varImp(fit)$importance,
-                                            prediction = result.predicted.prob[,2],
-                                            labels = testing$label)
+                                     cl = session_cl,
+                                     function(i){
+                                       MetaboShiny::runML(curr,
+                                                          train_vec = train_vec,
+                                                          test_vec = test_vec,
+                                                          configCols = configCols,
+                                                          ml_method = ml_method,
+                                                          ml_perf_metr = ml_perf_metr,
+                                                          ml_folds = ml_folds,
+                                                          ml_preproc = ml_preproc,
+                                                          tuneGrid = tuneGrid,
+                                                          ml_train_perc = ml_train_perc)
                                      },
                                      train_vec = lcl$vectors$ml_train,
                                      test_vec = lcl$vectors$ml_test,
@@ -307,19 +235,13 @@ observeEvent(input$do_ml, {
       }
       
       mz.imp <- lapply(repeats, function(x) x$importance)
-      
       # aucs
       if(length(levels(mSet$dataSet$cls)) > 2){
         perf <- lapply(1:length(repeats), function(i){
           x = repeats[[i]]
-          roc = pROC::multiclass.roc(x$labels, x$prediction)
-          data.table::rbindlist(lapply(roc$rocs, function(roc.pair){
-            data.table(attempt = c(i),
-                       FPR = sapply(roc.pair$specificities, function(x) 1-x),
-                       TPR = roc.pair$sensitivities,
-                       AUC = as.numeric(roc$auc),
-                       comparison = paste0(roc.pair$levels,collapse=" vs. "))
-          }))
+          res = MetaboShiny::getMultiMLperformance(x)
+          res$attempt = c(i)
+          res
         })
         perf.long <- data.table::rbindlist(perf)
         mean.auc <- mean(perf.long$AUC)
@@ -382,69 +304,5 @@ observeEvent(input$do_ml, {
       MetaboShiny::metshiAlert("Machine learning failed! Is one of your groups too small? Please retry with other settings.")
       NULL
     }
-  })
-})
-
-# mummichog 
-#TODO: re-enable, currently ouchy broken...
-observeEvent(input$do_mummi, {
-  
-  peak_tbl <- if(mSet$dataSet$cls.num == 2){
-    if("tt" %in% names(mSet$analSet)){
-      continue = T
-      data.table::data.table(
-        `p.value` = mSet$analSet$tt$sig.mat[,"p.value"],
-        `m.z` = rownames(mSet$analSet$tt$sig.mat),
-        `t.score` = mSet$analSet$tt$sig.mat[,if("V" %in% colnames(mSet$analSet$tt$sig.mat)) "V" else "t.stat"]
-      )
-    }else{continue=F;
-    NULL}
-  }else{
-    if("aov" %in% names(mSet$analSet)){
-      continue = T
-      data.table::data.table(
-        `p.value` = mSet$analSet$aov$sig.mat[,"p.value"],
-        `m.z` = rownames(mSet$analSet$aov$sig.mat),
-        `t.score` = mSet$analSet$aov$sig.mat[,"F.stat"]
-      )
-    }else{continue=F;
-    NULL}
-  }
-  
-  if(!continue) NULL
-  
-  # seperate in pos and neg peaks..
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb)
-  pospeaks <- DBI::dbGetQuery(conn, "SELECT DISTINCT mzmed FROM mzvals WHERE foundinmode = 'positive'")
-  negpeaks <- DBI::dbGetQuery(conn, "SELECT DISTINCT mzmed FROM mzvals WHERE foundinmode = 'negative'")
-  peak_tbl_pos <- peak_tbl[`m.z` %in% unlist(pospeaks)]
-  peak_tbl_neg <- peak_tbl[`m.z` %in% unlist(negpeaks)]
-  DBI::dbDisconnect(conn)
-  
-  for(mode in c("positive", "negative")){
-    
-    path <- tempfile()
-    fwrite(x = peak_tbl, file = path, sep = "\t")
-    mummi <- MetaboAnalystR::InitDataObjects("mass_all", "mummichog", FALSE)
-    mummi <- MetaboAnalystR::Read.PeakListData(mSetObj = mummi, filename = path);
-    mummi <- MetaboAnalystR::UpdateMummichogParameters(mummi, as.character(input$mummi_ppm), mode, input$mummi_sigmin);
-    mummi <- MetaboAnalystR::SanityCheckMummichogData(mummi)
-    mummi <- MetaboAnalystR::PerformMummichog(mummi, input$mummi_org, "fisher", "gamma")
-    
-    lcl$vectors[[paste0("mummi_", substr(mode, 1, 3))]] <<- list(sig = mummi$mummi.resmat,
-                                                                 pw2cpd = {
-                                                                   lst = mummi$pathways$cpds
-                                                                   names(lst) <- mummi$pathways$name
-                                                                   # - - -
-                                                                   lst
-                                                                 },
-                                                                 cpd2mz = mummi$cpd2mz_dict)
-    lcl$tables$mummichog <<- mummi$mummi.resmat
-    output[[paste0("mummi_", substr(mode, 1, 3), "_tab")]] <- DT::renderDataTable({
-      DT::datatable(mummi$mummi.resmat,selection = "single")
-    })
-  }
-  output[[paste0("mummi_detail_tab")]] <- DT::renderDataTable({
-    DT::datatable(data.table("no pathway selected"="Please select a pathway!"))
   })
 })

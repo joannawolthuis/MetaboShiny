@@ -61,8 +61,7 @@ lapply(c("tt",
                      cols = lcl$aes$mycols,
                      cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
                      plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                     font = lcl$aes$font
-                     )
+                     font = lcl$aes$font)
         }else if(table %in% c('aov2', 'asca')){ # asca needs a split by time
           MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, 
                         cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]], mode = "multi",
@@ -82,42 +81,15 @@ lapply(c("tt",
   })
 })
 
-# mummichog enrichment
-lapply(c("pos", "neg"), function(mode){
-  shiny::observeEvent(input[[paste0("mummi_", mode, "_tab_rows_selected")]],{
-    curr_row <- input[[paste0("mummi_", mode, "_tab_rows_selected")]] # get current row
-    if (is.null(curr_row)) return()
-    curr_pw <- rownames(lcl$vectors[[paste0("mummi_", mode)]]$sig)[curr_row]
-    cpds <- lcl$vectors[[paste0("mummi_", mode)]]$pw2cpd[[curr_pw]]
-    mzs <- lcl$vectors[[paste0("mummi_", mode)]]$cpd2mz[cpds]
-    keep <- sapply(mzs, function(x) !is.null(x))
-    mzs <- mzs[keep]
-    mzs <- unique(unlist(mzs))
-    # - - - - - - - -
-    tbl = data.frame("p-value" = if(mSet$dataSet$cls.num == 2){
-      mSet$analSet$tt$sig.mat[match(mzs, rownames(mSet$analSet$tt$sig.mat)),"p.value"]
-    }else{
-      mSet$analSet$aov$sig.mat[match(mzs, rownames(mSet$analSet$tt$sig.mat)),"p.value"]
-    })
-    rownames(tbl) <- mzs
-    # - - - - - - - -
-    lcl$tables$mummi_detail <<- tbl
-    # - - - - - - - -
-    output$mummi_detail_tab <- DT::renderDataTable({
-      DT::datatable(tbl, selection = 'single')
-    })
-  })
-})
-
 # triggers on clicking a row in the match results table
 shiny::observeEvent(input$match_tab_rows_selected,{
   curr_row <- input$match_tab_rows_selected # get current row
   if (is.null(curr_row)) return()
   # - - - - - - - - - - - - - - - - - - - - - -
   my_selection$name <- shown_matches$forward_unique[curr_row,'name'][[1]] # get current structure
-  updateTextInput(session,
-                  "pm_query",
-                   value = my_selection$name)
+  shiny::updateTextInput(session,
+                         "pm_query",
+                         value = my_selection$name)
   my_selection$form <- unlist(shown_matches$forward_unique[curr_row,'baseformula']) # get current formula
   my_selection$struct <- unlist(shown_matches$forward_unique[curr_row,'structure']) # get current formula
 })
