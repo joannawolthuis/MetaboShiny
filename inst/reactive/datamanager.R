@@ -342,7 +342,7 @@ shiny::observe({
                                                    pcy = input$pca_y, 
                                                    mode = mode,
                                                    type = "pca",
-                                                   col.fac = "country",#input$col_var,
+                                                   col.fac = input$col_var,
                                                    shape.fac = input$shape_var,
                                                    plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                                    plotlyfy=TRUE,
