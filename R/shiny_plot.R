@@ -858,15 +858,18 @@ plotPCA.3d <- function(mSet,
                        cols,
                        shape.fac="label",
                        pcx, pcy, pcz,
-                       mode="pca",font,cf){
+                       type="pca",
+                       col.fac = "label",
+                       mode="normal",font,cf){
   
-  switch(mode,
+  switch(type,
+         tsne = {
+           df = mSet$analSet$tsne$x
+           x.var = ""
+           y.var = ""
+           z.var = ""
+         },
          pca = {
-           df <- mSet$analSet$pca$x
-           x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
-           y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
-           z.var <- round(mSet$analSet$pca$variance[pcz] * 100.00, digits=1)
-         }, ipca = {
            df <- mSet$analSet$pca$x
            x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
            y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
@@ -893,7 +896,7 @@ plotPCA.3d <- function(mSet,
   df <- as.data.frame(df)
   rownames(df) <- rownames(mSet$dataSet$norm)
   
-  if(mode == "ipca"){
+  if(mode != "normal"){
     fac.lvls <- length(levels(mSet$dataSet$facA))
     classes = mSet$dataSet$facA
     df_list <- split(df, mSet$dataSet$facB)
@@ -932,11 +935,19 @@ plotPCA.3d <- function(mSet,
     as.factor(mSet$dataSet$covars[, ..shape.fac][[1]])
   }
   
+  col.vec <- if(is.null(col.fac)){
+   classes
+  }else if(shape.fac == "label"){
+    classes
+  }else{
+    as.factor(mSet$dataSet$covars[, ..col.fac][[1]])
+  }
+  
   plots_facet <- lapply(1:length(df_list), function(i){
     
     df = df_list[[i]]
 
-    orig_idx = which(rownames(df) %in% rownames(mSet$dataSet$norm))
+    orig_idx = match(rownames(df), rownames(mSet$dataSet$norm))
     
     plots <- plotly::plot_ly(showlegend = F, 
                              scene = paste0("scene", if(i > 1) i else ""))
@@ -968,11 +979,11 @@ plotPCA.3d <- function(mSet,
         mesh <- c(list(x = o$vb[1, o$ib]/o$vb[4, o$ib],
                        y = o$vb[2, o$ib]/o$vb[4, o$ib],
                        z = o$vb[3, o$ib]/o$vb[4, o$ib]))
-        plots = plots %>% add_trace(
+        plots = plots %>% add_mesh(
           x=mesh$x,
           y=mesh$y,
           z=mesh$z,
-          type='mesh3d',
+          #type='mesh3d',
           alphahull = 0,
           opacity=0.1,
           hoverinfo="none"
@@ -1008,20 +1019,24 @@ plotPCA.3d <- function(mSet,
       z = df[,pcz],
       visible = rep(T, times=fac.lvls),
       type = "scatter3d",
-      opacity = 1,
       color = classes[orig_idx],
       colors = cols,
-      symbol = symbol.vec[orig_idx],
-      symbols = c('circle',
-                  'diamond',
-                  'square',
-                  'x',
-                  'o')
+      opacity = 0.7,
+      marker = list(
+        line = list(#color = col.vec[orig_idx],
+                    #colors = cols,
+                    width = 2),
+        symbol = symbol.vec[orig_idx],
+        symbols = c('circle',
+                    'diamond',
+                    'square',
+                    'x',
+                    'o')  
+      )
     ) 
     # --- return ---
     pca_plot
   })
-  
   
   basic_scene = list(
     aspectmode="cube",
@@ -1031,15 +1046,15 @@ plotPCA.3d <- function(mSet,
     ),
     xaxis = list(
       titlefont = list(size = font$ax.txt.size * 1.5),
-      title = gsubfn::fn$paste("$pcx ($x.var%)")),
+      title = if(type != "tsne") gsubfn::fn$paste("$pcx ($x.var%)") else "t-sne dimension 1"),
     yaxis = list(
       titlefont = list(size = font$ax.txt.size * 1.5),
-      title = gsubfn::fn$paste("$pcy ($y.var%)")),
+      title = if(type != "tsne") gsubfn::fn$paste("$pcy ($y.var%)") else "t-sne dimension 2"),
     zaxis = list(
       titlefont = list(size = font$ax.txt.size * 1.5),
-      title = gsubfn::fn$paste("$pcz ($z.var%)")))
+      title = if(type != "tsne") gsubfn::fn$paste("$pcz ($z.var%)") else "t-sne dimension 3"))
   
-  if(mode != "ipca"){
+  if(mode == "normal"){
     plots_facet[[1]] %>% layout(font = t, 
                                 #title = toupper(mode), 
                                 scene = basic_scene)
@@ -1090,15 +1105,19 @@ plotPCA.3d <- function(mSet,
   }
 }
 
-plotPCA.2d <- function(mSet, shape.fac = "label", cols,
-                       pcx, pcy, mode="pca", plot.theme,
+plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",
+                       pcx, pcy, mode="normal", plot.theme,type="pca",
                        plotlyfy = "T", font, cf = rainbow){
   
-  classes <- switch(mode,
-                    ipca = mSet$dataSet$facA,
-                    pca = mSet$dataSet$cls,
-                    plsda = mSet$dataSet$cls)
-  
+  classes <- if(mode == "ipca"){
+    mSet$dataSet$facA
+  }else{
+    switch(type,
+           pca = mSet$dataSet$cls,
+           plsda = mSet$dataSet$cls,
+           tsne = mSet$dataSet$cls)
+  }
+
   symbols = c("16",#'circle',
               "18",#'diamond',
               "15",#'square',
@@ -1106,8 +1125,21 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
               "1"#'o'
   )
   
-  
-  switch(mode,
+  switch(type,
+         tsne={
+           df <- mSet$analSet$tsne$x
+           x.var <- ""
+           y.var <- ""
+           fac.lvls <- length(levels(mSet$dataSet$cls))
+           
+           xc=mSet$analSet$tsne$x[, pcx]
+           yc=mSet$analSet$tsne$x[, pcy]
+           
+           dat_long <- data.table(variable = rownames(mSet$dataSet$norm),
+                                  group = classes,
+                                  x = xc,
+                                  y = yc)
+         },
          pca={
            df <- mSet$analSet$pca$x
            x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
@@ -1121,22 +1153,6 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
                                   group = classes,
                                   x = xc,
                                   y = yc)
-         },
-         ipca = {
-           df <- mSet$analSet$pca$x
-           x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
-           y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
-           fac.lvls <- length(levels(mSet$dataSet$facA))
-           
-           xc=mSet$analSet$pca$x[, pcx]
-           yc=mSet$analSet$pca$x[, pcy]
-          
-           dat_long <- data.table(variable = names(xc),
-                                  group = classes,
-                                  groupB = mSet$dataSet$facB,
-                                  x = xc,
-                                  y = yc)
-           
          },
          plsda = {
            plsda.table <- data.table::as.data.table(round(mSet$analSet$plsr$Xvar
@@ -1163,7 +1179,20 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
                                   x = xc,
                                   y = yc)
          })
+  
+  if(mode == "ipca"){
+    fac.lvls <- length(levels(mSet$dataSet$facA))
+    dat_long$groupB <- mSet$dataSet$facB
+  }
+  
   # - - - - - - - - -
+  dat_long$color <- if(is.null(col.fac)){
+    factor(1) # all same shape...
+  } else if(col.fac == "label"){
+    dat_long$group
+  }else{
+    as.factor(mSet$dataSet$covars[,..col.fac][[1]])
+  }
   
   dat_long$shape <- if(is.null(shape.fac)){
     factor(1) # all same shape...
@@ -1184,7 +1213,7 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
     ggplot2::geom_point(size=5, aes(shape=shape,
                                     text=variable,
                                     fill=group,
-                                    color=group), alpha=0.7)+
+                                    color=color), alpha=0.7)+
     ggplot2::stat_ellipse(geom = "polygon", aes(fill=group), alpha = 0.3,level = .95) +
     plot.theme() +
     ggplot2::theme(legend.position="none",
@@ -1193,8 +1222,8 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
                    plot.title = ggplot2::element_text(hjust = 0.5),
                    axis.line = ggplot2::element_line(colour = 'black', size = .5),
                    text = ggplot2::element_text(family = font$family))+
-    ggplot2::scale_x_continuous(name=gsubfn::fn$paste("$pcx ($x.var%)")) +
-    ggplot2::scale_y_continuous(name=gsubfn::fn$paste("$pcy ($y.var%)")) +
+    ggplot2::scale_x_continuous(name=gsubfn::fn$paste(if(type != "tsne") "$pcx ($x.var%)" else "t-sne dimension 1")) +
+    ggplot2::scale_y_continuous(name=gsubfn::fn$paste(if(type != "tsne") "$pcy ($y.var%)" else "t-sne dimension 2")) +
     ggplot2::scale_fill_manual(values=cols) +
     ggplot2::scale_color_manual(values = cols)
   
@@ -1204,7 +1233,7 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
   }
   
   if(plotlyfy){
-    plotly::ggplotly(p, tooltip="group")
+    plotly::ggplotly(p)
   }else{
     p
   }

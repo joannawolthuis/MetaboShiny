@@ -7,6 +7,10 @@ shiny::observeEvent(input$plsda_2d3d, {
   datamanager$reload <- "plsda"
 }, ignoreNULL = T)
 
+shiny::observeEvent(input$tsne_2d3d, {
+  datamanager$reload <- "tsne"
+}, ignoreNULL = T)
+
 shiny::observeEvent(input$tt_nonpar, {
   if(!is.null(input$permz)){
     if(input$permz == "tt"){

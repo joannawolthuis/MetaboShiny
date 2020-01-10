@@ -275,7 +275,9 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                             )
                                                                                                                                             ),
                                                                                                                                             shiny::tabPanel("t-sne", value = "tsne",
-                                                                                                                                                            shiny::helpText("working on it")
+                                                                                                                                                            shiny::fluidRow(align="center",shiny::column(12,plotly::plotlyOutput("plot_tsne",height = "600px", width="600px"))),#%>% shinycssloaders::withSpinner())),
+                                                                                                                                                            shiny::fluidRow(align="center",shiny::column(12,
+                                                                                                                                                                                                         MetaboShiny::switchButton("tsne_2d3d", label = "", col = "BW", type = "2d3d", value=T)))
                                                                                                                                             )
                                                                                                                           )),
                                                                                                           shiny::tabPanel("per m/z", value = "permz", icon=shiny::icon("fingerprint"),

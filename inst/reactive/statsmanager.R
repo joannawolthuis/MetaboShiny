@@ -26,6 +26,13 @@ shiny::observe({
                  # pearson kendall spearman
                  NULL
                },
+               tsne = {
+                 shiny::withProgress({
+                   coords = tsne::tsne(mSet$dataSet$norm, k = 3)
+                   colnames(coords) <- paste("t-SNE dimension", 1:3)
+                   mSet$analSet$tsne <- list(x = coords)
+                 })
+               },
                pca = {
                  shiny::withProgress({
                    mSet <- MetaboAnalystR::PCA.Anal(mSet) # perform PCA analysis

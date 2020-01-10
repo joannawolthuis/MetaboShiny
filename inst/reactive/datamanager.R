@@ -252,6 +252,49 @@ shiny::observe({
                                      options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
                      })
                    },
+                   tsne = {
+                     mode <- if(mSet$dataSet$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
+                       "ipca" # interactive PCA (old name, i like tpca more :P )
+                     }else{
+                       "normal" # normal pca
+                     }
+                     
+                     if("tsne" %in% names(mSet$analSet)){
+                       if(input$tsne_2d3d){ # check if switch button is in 2d or 3d mode
+                         # render 2d plot
+                         output$plot_tsne <- plotly::renderPlotly({
+                           MetaboShiny::plotPCA.2d(mSet, 
+                                                   cols = lcl$aes$mycols,
+                                                   pcx = 1,
+                                                   pcy = 2, 
+                                                   type = "tsne",
+                                                   mode = mode,
+                                                   shape.fac = input$shape_var,
+                                                   plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                                                   plotlyfy=TRUE,
+                                                   col.fac = input$col_var,
+                                                   font = lcl$aes$font
+                                                   #,cf = gbl$functions$color.functions[[lcl$aes$spectrum]]
+                           )
+                         })
+                       }else{
+                         # render 3d plot
+                         output$plot_tsne <- plotly::renderPlotly({
+                           MetaboShiny::plotPCA.3d(mSet, 
+                                                   lcl$aes$mycols,
+                                                   pcx = 1,
+                                                   pcy = 2,
+                                                   pcz = 3,
+                                                   type = "tsne",
+                                                   mode = mode,
+                                                   shape.fac = input$shape_var,
+                                                   font = lcl$aes$font,
+                                                   col.fac = input$col_var,
+                                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                         })
+                       }
+                     }
+                   },
                    pca = {
                      if("pca" %in% names(mSet$analSet)){
                        # render PCA variance per PC table for UI
@@ -287,7 +330,7 @@ shiny::observe({
                        mode <- if(mSet$dataSet$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
                          "ipca" # interactive PCA (old name, i like tpca more :P )
                        }else{
-                         "pca" # normal pca
+                         "normal" # normal pca
                        }
                        
                        if(input$pca_2d3d){ # check if switch button is in 2d or 3d mode
@@ -298,6 +341,8 @@ shiny::observe({
                                                    pcx = input$pca_x,
                                                    pcy = input$pca_y, 
                                                    mode = mode,
+                                                   type = "pca",
+                                                   col.fac = "country",#input$col_var,
                                                    shape.fac = input$shape_var,
                                                    plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                                    plotlyfy=TRUE,
@@ -312,7 +357,10 @@ shiny::observe({
                                                    lcl$aes$mycols,
                                                    pcx = input$pca_x,
                                                    pcy = input$pca_y,
-                                                   pcz = input$pca_z, mode = mode,
+                                                   pcz = input$pca_z, 
+                                                   type = "pca",
+                                                   col.fac = input$col_var,
+                                                   mode = mode,
                                                    shape.fac = input$shape_var,
                                                    font = lcl$aes$font,
                                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
@@ -325,6 +373,12 @@ shiny::observe({
                    plsda = {
                      
                      if("plsda" %in% names(mSet$analSet)){ # if plsda has been performed...
+                       
+                       mode <- if(mSet$dataSet$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
+                         "ipca" # interactive PCA (old name, i like tpca more :P )
+                       }else{
+                         "normal" # normal pca
+                       }
                        
                        # render cross validation plot
                        output$plsda_cv_plot <- renderPlot({
@@ -371,8 +425,10 @@ shiny::observe({
                            plotPCA.2d(mSet, lcl$aes$mycols,
                                       pcx = input$plsda_x,
                                       pcy = input$plsda_y, 
-                                      mode = "plsda",
-                                      shape.fac = input$second_var,
+                                      type = "plsda",
+                                      mode = mode,
+                                      col.fac = input$col_var,
+                                      shape.fac = input$shape_var,
                                       plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                       font = lcl$aes$font,
                                       cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
@@ -384,8 +440,10 @@ shiny::observe({
                                       pcx = input$plsda_x,
                                       pcy = input$plsda_y,
                                       pcz = input$plsda_z, 
-                                      mode = "plsda",
-                                      shape.fac = input$second_var,
+                                      type = "plsda",
+                                      mode = mode,
+                                      col.fac = input$col_var,
+                                      shape.fac = input$shape_var,
                                       font = lcl$aes$font, 
                                       cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                          })
