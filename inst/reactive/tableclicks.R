@@ -9,7 +9,7 @@ shiny::observe({
 lapply(c("tt",
          "fc",
          "aov",
-         "rf",
+         "volc",
          "asca",
          "meba",
          "pca_load",
@@ -19,68 +19,65 @@ lapply(c("tt",
          "pattern",
          "mummi_detail",
          "venn"), FUN=function(table){
-  shiny::observeEvent(input[[paste0(table, "_tab_rows_selected")]], {
-    curr_row = input[[paste0(table, "_tab_rows_selected")]]
-    # do nothing if not clicked yet, or the clicked cell is not in the 1st column
-
-    if (is.null(curr_row)) return()
-
-    which_aov = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
-    
-    res_tbl <- data.table::as.data.table(switch(table,
-                                                pattern = mSet$analSet$corr$cor.mat,
-                                                tt = mSet$analSet$tt$sig.mat,
-                                                fc = mSet$analSet$fc$sig.mat,
-                                                pca_load = mSet$analSet$pca$rotation,
-                                                plsda_load = mSet$analSet$plsda$vip.mat,
-                                                ml = lcl$tables$ml_roc, #TODO: fix this, now in global
-                                                asca = mSet$analSet$asca$sig.list$Model.ab,
-                                                aov = mSet$analSet[[which_aov]]$sig.mat,
-                                                rf = vip.score,
-                                                enrich_pw = enrich_overview_tab,
-                                                meba = mSet$analSet$MB$stats,
-                                                plsda_vip = plsda_tab,
-                                                mummi_detail = lcl$tables$mummi_detail,
-                                                venn = lcl$tables$venn_overlap), keep.rownames = T)
-    if(nrow(res_tbl) > 0){
-
-      # get current selected compound from the original table (needs to be available in global env)
-      my_selection$mz <- res_tbl[curr_row, rn]
-      
-      outplot_name <- paste0(table, "_specific_plot")
-
-      if(table == "aov"){
-        table <- which_aov
-      }
-      # send plot to relevant spot in UI
-      output[[outplot_name]] <- plotly::renderPlotly({
-        # --- ggplot ---
-        if(table == 'meba'){ # meba needs a split by time
-          MetaboShiny::ggplotMeba(mSet, my_selection$mz,
-                     draw.average = T,
-                     cols = lcl$aes$mycols,
-                     cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
-                     plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                     font = lcl$aes$font
-                     )
-        }else if(table %in% c('aov2', 'asca')){ # asca needs a split by time
-          MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, 
-                        cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]], mode = "multi",
-                        styles = input$ggplot_sum_style,
-                        add_stats = input$ggplot_sum_stats, color.fac = input$col_var, text.fac = input$txt_var,
-                        plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                        font = lcl$aes$font)
-        }else{
-            MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
-                          styles = input$ggplot_sum_style,
-                          add_stats = input$ggplot_sum_stats, color.fac = input$col_var, text.fac = input$txt_var,
-                          plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                          font = lcl$aes$font)
-          }
-      })
-    }
-  })
-})
+           shiny::observeEvent(input[[paste0(table, "_tab_rows_selected")]], {
+             curr_row = input[[paste0(table, "_tab_rows_selected")]]
+             
+             # do nothing if not clicked yet, or the clicked cell is not in the 1st column
+             if (is.null(curr_row)) return()
+             
+             which_aov = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
+             
+             res_tbl <- data.table::as.data.table(switch(table,
+                                                         pattern = mSet$analSet$corr$cor.mat,
+                                                         tt = mSet$analSet$tt$sig.mat,
+                                                         fc = mSet$analSet$fc$sig.mat,
+                                                         pca_load = mSet$analSet$pca$rotation,
+                                                         volc = mSet$analSet$volcano$sig.mat,
+                                                         plsda_load = mSet$analSet$plsda$vip.mat,
+                                                         ml = lcl$tables$ml_roc, #TODO: fix this, now in global
+                                                         asca = mSet$analSet$asca$sig.list$Model.ab,
+                                                         aov = mSet$analSet[[which_aov]]$sig.mat,
+                                                         meba = mSet$analSet$MB$stats,
+                                                         mummi_detail = lcl$tables$mummi_detail,
+                                                         venn = lcl$tables$venn_overlap), keep.rownames = T)
+             if(nrow(res_tbl) > 0){
+               
+               # get current selected compound from the original table (needs to be available in global env)
+               my_selection$mz <- res_tbl[curr_row, rn]
+               
+               outplot_name <- paste0(table, "_specific_plot")
+               
+               if(table == "aov"){
+                 table <- which_aov
+               }
+               # send plot to relevant spot in UI
+               output[[outplot_name]] <- plotly::renderPlotly({
+                 # --- ggplot ---
+                 if(table == 'meba'){ # meba needs a split by time
+                   MetaboShiny::ggplotMeba(mSet, my_selection$mz,
+                                           draw.average = T,
+                                           cols = lcl$aes$mycols,
+                                           cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                           plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                                           font = lcl$aes$font)
+                 }else if(table %in% c('aov2', 'asca')){ # asca needs a split by time
+                   MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, 
+                                              cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]], mode = "multi",
+                                              styles = input$ggplot_sum_style,
+                                              add_stats = input$ggplot_sum_stats, color.fac = input$col_var, text.fac = input$txt_var,
+                                              plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                                              font = lcl$aes$font)
+                 }else{
+                   MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                              styles = input$ggplot_sum_style,
+                                              add_stats = input$ggplot_sum_stats, color.fac = input$col_var, text.fac = input$txt_var,
+                                              plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                                              font = lcl$aes$font)
+                 }
+               })
+             }
+           })
+         })
 
 # mummichog enrichment
 lapply(c("pos", "neg"), function(mode){
@@ -117,7 +114,7 @@ shiny::observeEvent(input$match_tab_rows_selected,{
   my_selection$name <- shown_matches$forward_unique[curr_row,'name'][[1]] # get current structure
   updateTextInput(session,
                   "pm_query",
-                   value = my_selection$name)
+                  value = my_selection$name)
   my_selection$form <- unlist(shown_matches$forward_unique[curr_row,'baseformula']) # get current formula
   my_selection$struct <- unlist(shown_matches$forward_unique[curr_row,'structure']) # get current formula
 })

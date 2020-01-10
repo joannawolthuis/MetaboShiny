@@ -311,12 +311,14 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                                                                                                                 y = Abundance,
                                                                                                                 color = Group,
                                                                                                                 fill = Color)),
-                           beeswarm = p + ggbeeswarm::geom_beeswarm(data = prof, alpha=0.7, size = 2, position = position_dodge(width=.3), aes(x = Group,
-                                                                                                                                               y = Abundance,
-                                                                                                                                               text = Text,
-                                                                                                                                               shape = Shape,
-                                                                                                                                               color = Group,
-                                                                                                                                               fill = Color)),
+                           beeswarm = p + ggbeeswarm::geom_beeswarm(data = prof, alpha=0.7, size = 2, 
+                                                                    #position = position_dodge(width=.3), 
+                                                                    aes(x = Group,
+                                                                        y = Abundance,
+                                                                        text = Text,
+                                                                        shape = Shape,
+                                                                        color = Group,
+                                                                        fill = Color)),
                            scatter = p + ggplot2::geom_point(data = prof, alpha=0.7, size = 2, aes(x = Group,
                                                                                                    y = Abundance,
                                                                                                    text=Text,
@@ -970,7 +972,7 @@ plotPCA.3d <- function(mSet,
           y=mesh$y,
           z=mesh$z,
           type='mesh3d',
-          alphahull=0,
+          alphahull = 0,
           opacity=0.1,
           hoverinfo="none"
         )
@@ -1202,7 +1204,7 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols,
   }
   
   if(plotlyfy){
-    plotly::ggplotly(p)
+    plotly::ggplotly(p, tooltip="group")
   }else{
     p
   }

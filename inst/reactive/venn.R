@@ -58,7 +58,7 @@ shiny::observeEvent(input$venn_build, {
       
     }else{
       
-      p <- ggPlotVenn(mSet = mSet,
+      p <- MetaboShiny::ggPlotVenn(mSet = mSet,
                       venn_yes = isolate({as.list(venn_yes)}),
                       top = input$venn_tophits,
                       cols = lcl$aes$mycols,
