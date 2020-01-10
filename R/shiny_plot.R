@@ -1021,7 +1021,7 @@ plotPCA.3d <- function(mSet,
       type = "scatter3d",
       color = classes[orig_idx],
       colors = cols,
-      opacity = 0.7,
+      #opacity = 0.7,
       marker = list(
         line = list(#color = col.vec[orig_idx],
                     #colors = cols,
