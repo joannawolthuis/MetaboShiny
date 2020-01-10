@@ -1,3 +1,24 @@
+shiny::observeEvent(input$do_pattern, {
+  mSet <- MetaboAnalystR::Match.Pattern(mSet, input$pattern_corr, input$pattern_seq)
+  datamanager$reload <- "pattern"
+})
+
+shiny::observeEvent(input$do_power, {
+  shiny::withProgress({
+    pwr.analyses = lapply(input$power_comps, function(combi){
+      mSet.temp <- MetaboAnalystR::InitPowerAnal(mSet, combi)
+      mSet.temp <- MetaboAnalystR::PerformPowerProfiling(mSet.temp, 
+                                                         fdr.lvl = input$power_fdr, 
+                                                         smplSize = input$power_nsamp)  
+      shiny::incProgress(amount = 1 / length(input$power_comps))
+      mSet.temp$analSet$power
+    })   
+  }, max = length(input$power_comps))
+  names(pwr.analyses) <- input$power_comps
+  mSet$analSet$power <- pwr.analyses
+  datamanager$reload <- "power"
+})
+
 # triggers when the 'go' button is pressed on the PLS-DA tab
 observeEvent(input$do_plsda, {
   

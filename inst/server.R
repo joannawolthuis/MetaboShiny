@@ -91,7 +91,6 @@ function(input, output, session) {
   
   search = shiny::reactiveValues(go = F)
   
-  ####### !!!!!!!!!!! #########
   shiny::observe({
     shiny::showNotification("Loading user settings.")
     
@@ -302,15 +301,9 @@ apikey = ')
         colourpicker::updateColourInput(session=session,
                                         inputId = paste0("bar.col.", i),
                                         value = opts[[paste0("col", i)]])
-      })
-      
-      lapply(1:4, function(i){
         shiny::updateTextInput(session=session,
                                inputId = paste0("font.", i),
                                value = opts[[paste0("font", i)]])
-      })
-      
-      lapply(1:4, function(i){
         shiny::updateSliderInput(session=session,
                                  inputId = paste0("size.", i),
                                  value = opts[[paste0("size", i)]])
@@ -1058,32 +1051,6 @@ apikey = ')
       success=T
     })
     if(!success) MetaboShiny::metshiAlert("Orca isn't working, please check your installation. If on Mac, please try starting Rstudio from the command line with the command 'open -a Rstudio'", session=session)
-  })
-  
-  shiny::observeEvent(input$do_pattern, {
-    try({
-      shiny::withProgress({
-        mSet <<- MetaboAnalystR::Match.Pattern(mSet, input$pattern_corr, input$pattern_seq)
-      })
-      datamanager$reload <- "pattern"
-    })
-  })
-  
-  shiny::observeEvent(input$do_power, {
-    shiny::withProgress({
-      pwr.analyses = lapply(input$power_comps, function(combi){
-        mSet.temp <- MetaboAnalystR::InitPowerAnal(mSet, combi)
-        mSet.temp <- MetaboAnalystR::PerformPowerProfiling(mSet.temp, 
-                                                           fdr.lvl = input$power_fdr, 
-                                                           smplSize = input$power_nsamp)  
-        shiny::incProgress(amount = 1 / length(input$power_comps))
-        mSet.temp$analSet$power
-      })
-      names(pwr.analyses) <- input$power_comps
-    }, max = length(input$power_comps))
-    mSet$analSet$power <- pwr.analyses
-    mSet <<- mSet
-    datamanager$reload <- "power"
   })
   
   # ==== LOAD LOGIN UI ====

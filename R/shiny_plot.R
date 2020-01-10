@@ -294,10 +294,10 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
   
   i = 1
   
+  suppressWarnings({
   for(prof in profiles){
     
     for(style in styles){
-      
       switch(mode,
              nm = {
                p <- switch(style,
@@ -427,11 +427,12 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
     p <- p + ggplot2::xlab(Hmisc::capitalize(gsub(x=mSet$dataSet$cls.name, pattern = ":.*$", replacement="")))
   }
   # ---------------
-  if(plotlyfy){
-    plotly::ggplotly(p, tooltip = "Text")#, originalData=T)
-  }else{
-    p
-  }
+    if(plotlyfy){
+      plotly::ggplotly(p, tooltip = "Text")#, originalData=T)
+    }else{
+      p
+    }  
+  })
 }
 
 ggPlotAOV <- function(mSet, cf, n=20,
@@ -1091,13 +1092,12 @@ plotPCA.3d <- function(mSet,
 
 plotPCA.2d <- function(mSet, shape.fac = "label", cols,
                        pcx, pcy, mode="pca", plot.theme,
-                       plotlyfy = "T", font){
+                       plotlyfy = "T", font, cf = rainbow){
   
   classes <- switch(mode,
                     ipca = mSet$dataSet$facA,
                     pca = mSet$dataSet$cls,
-                    plsda = mSet$dataSet$cls,
-                    cf = rainbow)
+                    plsda = mSet$dataSet$cls)
   
   symbols = c("16",#'circle',
               "18",#'diamond',
