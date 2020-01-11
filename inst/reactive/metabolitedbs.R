@@ -90,7 +90,20 @@ shiny::observe({
                           if(!(db %in% gbl$vectors$db_no_build)){
                             list(actionButton(paste0("check_", db), "Check", icon = shiny::icon("check")),
                                  actionButton(paste0("build_", db), "Build", icon = shiny::icon("wrench")),
-                                 checkboxInput(paste0("favorite_", db), "Favorite?"),
+                                 shinyWidgets::prettyToggle(
+                                   status_off  = "default", 
+                                   status_on = "danger",
+                                   inline=T,bigger=T,
+                                   animation="pulse",
+                                   inputId = paste0("favorite_", db),
+                                   label_on = "", 
+                                   label_off = "",
+                                   outline = TRUE,
+                                   plain = TRUE,
+                                   value = db %in% gbl$vectors$db_categories$favorites,
+                                   icon_on = icon("heart",lib ="glyphicon"), 
+                                   icon_off = icon("heart-empty",lib ="glyphicon")
+                                 ),
                                  shiny::br(),shiny::br(),
                                  shiny::imageOutput(paste0(db, "_check"),inline = T))
                           }else{
@@ -154,7 +167,7 @@ shiny::observe({
             chemical = "flask",
             online = "globe",
             predictive = "magic",
-            favorite = "heart")  
+            favorites = "heart")  
           
           iconWrap <- sapply(iconPicks, function(ic){
             gsubfn::fn$paste("<i class='fa fa-$ic'></i>")
@@ -179,7 +192,14 @@ shiny::observe({
     lapply(db_button_prefixes, function(prefix){
       shiny::observeEvent(input[[paste0(prefix,"_db_categories")]], {
         output[[paste0(prefix,"_db_categ")]] <- shiny::renderUI({
+          
           considered_all = gbl$vectors$db_list[which(gbl$vectors$db_list != "custom" & gbl$vectors$db_list %in% lcl$vectors$built_dbs)]
+          
+          lapply(considered_all, function(db){
+            tag = paste0(prefix, "_", db)
+            shinyjs::runjs('Shiny.onInputChange("$tag, null)')
+          })
+          
           dbs_categ <- intersect(considered_all, unlist(gbl$vectors$db_categories[input[[paste0(prefix,"_db_categories")]]]))
           display = intersect(dbs_categ, considered_all)
           shiny::fluidRow(
@@ -213,6 +233,7 @@ shiny::observe({
         lcl$vectors[[paste0("db_", prefix, "_list")]] <<- db_path_list[!is.na(db_path_list)]
       })
     })
+    
     # create checkcmarks if database is present
     lapply(gbl$vectors$db_list, FUN=function(db){
       # creates listener for if the 'check db' button is pressed
@@ -261,9 +282,21 @@ shiny::observeEvent(input$build_custom_db, {
   save(dbinfo, file = file.path(cust_dir, "info.RData"))
   # print OK message and ask to restart
   shiny::showNotification("Import OK! Please restart MetaboShiny to view and build your database.")
-  
   shiny::removeModal()
-  
+})
+
+
+# these listeners trigger when build_'db' is clicked (loops through dblist in global)
+lapply(c(gbl$vectors$db_list), FUN=function(db){
+  shiny::observeEvent(input[[paste0("favorite_", db)]], {
+    favorites = names(which(unlist(sapply(gbl$vectors$db_list, function(db) input[[paste0("favorite_", db)]]))))
+    if(!is.null(favorites)){
+      if(length(favorites) > 0 ){
+        MetaboShiny::setOption(lcl$paths$opt.loc, "dbfavs", paste0(favorites, collapse=","))
+        gbl$vectors$db_categories$favorites <<- favorites     
+      }
+    }
+  })
 })
 
 # these listeners trigger when build_'db' is clicked (loops through dblist in global)

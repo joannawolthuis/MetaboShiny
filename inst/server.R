@@ -199,6 +199,15 @@ apikey = ')
         })
       }
       
+      if(!("dbfavs" %in% names(opts))){
+        MetaboShiny::setOption(lcl$paths$opt.loc, "dbfavs", " ")
+        opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
+      }else{
+        if(opts$dbfavs != " "){
+          gbl$vectors$db_categories$favorites <<- strsplit(opts$dbfavs,split = ",")[[1]]
+        }
+      }
+      
       if(!("apikey" %in% names(opts))){
         MetaboShiny::setOption(lcl$paths$opt.loc, "apikey", " ")
         opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
