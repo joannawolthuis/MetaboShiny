@@ -121,8 +121,8 @@ function(input, output, session) {
       
       last_db = length(gbl$vectors$db_list) - 2
       
-      files_db_folder = list.files(lcl$paths$db_dir)
-      all_dbs = unique(gsub(files_db_folder, pattern = "_source|\\.db", replacement=""))
+      files_db_folder = list.files(lcl$paths$db_dir,pattern = "_source|\\.db$")
+      all_dbs = unique(gsub(files_db_folder, pattern = "_source|\\.db$", replacement=""))
       which.custom = which(!((all_dbs %in% gbl$vectors$db_list)|grepl(all_dbs,pattern="^ext.*$")))
       
       gbl$vectors$db_list <<- append(gbl$vectors$db_list, 

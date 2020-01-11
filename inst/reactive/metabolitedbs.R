@@ -4,6 +4,7 @@
 
 # ==== DATABASES UI ====
 
+
 shiny::observe({
   if(db_section$load){
     
@@ -89,10 +90,11 @@ shiny::observe({
                           if(!(db %in% gbl$vectors$db_no_build)){
                             list(actionButton(paste0("check_", db), "Check", icon = shiny::icon("check")),
                                  actionButton(paste0("build_", db), "Build", icon = shiny::icon("wrench")),
+                                 checkboxInput(paste0("favorite_", db), "Favorite?"),
                                  shiny::br(),shiny::br(),
                                  shiny::imageOutput(paste0(db, "_check"),inline = T))
                           }else{
-                            shiny::helpText("")
+                            list()
                           }
             )
           })),
@@ -138,17 +140,59 @@ shiny::observe({
                           helpText("No databases built..."),
                           br())
         }else{
-          shiny::fluidRow(
-            lapply(gbl$vectors$db_list[-which(gbl$vectors$db_list == "custom" | !(gbl$vectors$db_list %in% lcl$vectors$built_dbs))], function(db){
-              which_idx = grep(sapply(gbl$constants$images, function(x) x$name), pattern = db) # find the matching image (NAME MUST HAVE DB NAME IN IT COMPLETELY)
-              MetaboShiny::sardine(MetaboShiny::fadeImageButton(inputId = paste0(prefix, "_", db), img.path = gbl$constants$images[[which_idx]]$path)) # generate fitting html
-            })
+          iconPicks = list(
+            all = "cart-plus",
+            versatile = "map-signs",
+            verbose = "book",
+            livestock = "kiwi-bird", #
+            human = "male",
+            microbial = "splotch",
+            pathways = "road",
+            food = "utensil-spoon",
+            plant = "seedling",
+            massspec = "fingerprint",
+            chemical = "flask",
+            online = "globe",
+            predictive = "magic",
+            favorite = "heart")  
+          
+          iconWrap <- sapply(iconPicks, function(ic){
+            gsubfn::fn$paste("<i class='fa fa-$ic'></i>")
+          })
+          choices = names(iconPicks)
+          names(choices) <- iconWrap
+          list(
+            shiny::fluidRow(align="center",
+                            shinyWidgets::checkboxGroupButtons(
+                              inputId = paste0(prefix, "_db_categories"),
+                              label = "", 
+                              choices = choices,selected = "all",
+                              justified = TRUE,size = "sm"
+                            )
+                            ),
+            uiOutput(paste0(prefix,"_db_categ"))
           )
         }
       })
     })
+
+    lapply(db_button_prefixes, function(prefix){
+      shiny::observeEvent(input[[paste0(prefix,"_db_categories")]], {
+        output[[paste0(prefix,"_db_categ")]] <- shiny::renderUI({
+          considered_all = gbl$vectors$db_list[which(gbl$vectors$db_list != "custom" & gbl$vectors$db_list %in% lcl$vectors$built_dbs)]
+          dbs_categ <- intersect(considered_all, unlist(gbl$vectors$db_categories[input[[paste0(prefix,"_db_categories")]]]))
+          display = intersect(dbs_categ, considered_all)
+          shiny::fluidRow(
+            lapply(display, function(db){
+              which_idx = grep(sapply(gbl$constants$images, function(x) x$name), pattern = db) # find the matching image (NAME MUST HAVE DB NAME IN IT COMPLETELY)
+              MetaboShiny::sardine(MetaboShiny::fadeImageButton(inputId = paste0(prefix, "_", db), img.path = gbl$constants$images[[which_idx]]$path)) # generate fitting html
+            })
+          )
+        })
+      })
+    })
     
-    # check if these buttons are selected or not
+    # check if these buttons are selected or notr
     lapply(db_button_prefixes, function(prefix){
       shiny::observe({
         # ---------------------------------

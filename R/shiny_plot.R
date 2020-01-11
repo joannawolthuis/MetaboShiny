@@ -1056,7 +1056,6 @@ plotPCA.3d <- function(mSet,
   
   if(mode == "normal"){
     plots_facet[[1]] %>% layout(font = t, 
-                                #title = toupper(mode), 
                                 scene = basic_scene)
   }else{
     # X sequence:
