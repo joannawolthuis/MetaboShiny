@@ -195,6 +195,9 @@ filterPatDB <- function(patdb){
 prepDatabase <- function(conn){
   cat("Checking for mismatches between peak tables and metadata... \n")
   
+  fn_meta <- MetaboShiny::allSampInMeta(conn)
+  fn_int <- MetaboShiny::allSampInPeaktable(conn)
+  
   cat(paste0("-- in peaklist, not in metadata: --- \n", 
              paste0(setdiff(fn_int,
                             fn_meta), 
@@ -255,14 +258,14 @@ getSampMeta <- function(conn, filename, query){
   
   if(nrow(z.meta)==0) return(NA) else return(z.meta)
 }
+
 getSampInt <- function(conn, filename, all_mz){
   query_add = gsubfn::fn$paste(" WHERE i.filename = '$filename'")
   z.int = data.table::as.data.table(RSQLite::dbGetQuery(conn, 
                                                         paste0("SELECT DISTINCT
-                                                i.mzmed as identifier,
-                                                i.intensity
-                                                FROM mzintensities i", query_add)))
-  
+                                                                i.mzmed as identifier,
+                                                                i.intensity
+                                                                FROM mzintensities i", query_add)))
   if(nrow(z.int)==0) return(NA)
   
   missing_mz <- setdiff(all_mz, z.int$identifier)
@@ -272,9 +275,9 @@ getSampInt <- function(conn, filename, all_mz){
                                           formula = ... ~ identifier,
                                           fun.aggregate = sum,
                                           value.var = "intensity")
-  
-  complete = as.numeric(cast.dt[1,-1])
-  names(complete) = colnames(cast.dt)[-1]
+
+  complete = as.numeric(cast.dt[1,])
+  names(complete) = colnames(cast.dt)
   
   missing = rep(NA, length(missing_mz))
   names(missing) <- missing_mz
@@ -282,7 +285,7 @@ getSampInt <- function(conn, filename, all_mz){
   complete.row = c(complete[-1], missing)
   reordered <- order(as.numeric(names(complete.row)))
   complete.row <- complete.row[reordered]
-  #complete.row.dt <- data.table::as.data.table(t(data.table::as.data.table(complete.row)))
-  #colnames(complete.row.dt) <- names(complete.row)  
-  complete.row
+  complete.row.dt <- data.table::as.data.table(t(data.table::as.data.table(complete.row)))
+  colnames(complete.row.dt) <- names(complete.row)  
+  complete.row.dt
 }

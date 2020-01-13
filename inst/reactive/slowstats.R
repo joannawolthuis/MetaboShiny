@@ -227,7 +227,15 @@ observeEvent(input$do_ml, {
       shiny::withProgress(message = "Running...", {
         repeats <- pbapply::pblapply(1:goes,
                                      cl = session_cl,
-                                     function(i){
+                                     function(i, train_vec,
+                                              test_vec,
+                                              configCols,
+                                              ml_method,
+                                              ml_perf_metr,
+                                              ml_folds,
+                                              ml_preproc,
+                                              tuneGrid,
+                                              ml_train_perc){
                                        MetaboShiny::runML(curr,
                                                           train_vec = train_vec,
                                                           test_vec = test_vec,

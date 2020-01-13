@@ -100,13 +100,14 @@ shiny::observeEvent(input$create_csv, {
 
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(lcl$paths$patdb))
       
-    MetaboShiny::prepDatabase(conn)
+    #MetaboShiny::
+    prepDatabase(conn)
     
     query <- MetaboShiny::getCSVquery(conn)
     
     all_mz <- MetaboShiny::allMZ(conn)
     
-    lcl$paths$csv_loc <<- gsub(lcl$paths$patdb, 
+    lcl$paths$csv_loc <- gsub(lcl$paths$patdb, 
                           pattern = "\\.db", 
                           replacement = ".csv")
     if(file.exists(lcl$paths$csv_loc)) file.remove(lcl$paths$csv_loc)
@@ -120,17 +121,24 @@ shiny::observeEvent(input$create_csv, {
              #cl = session_cl, 
              function(filename){
                
+               conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(lcl$paths$patdb))
+               
                z.meta <- MetaboShiny::getSampMeta(conn, filename, query)
                complete.row <- MetaboShiny::getSampInt(conn, filename, all_mz)
-                 
+               
+               try({
+                 if(ncol(complete.row) == length(all_mz)){
+                   row = data.table::as.data.table(cbind(z.meta, complete.row))
+                   # write
+                   data.table::fwrite(row, 
+                                      file = lcl$paths$csv_loc,
+                                      append = T)
+                 }
+               })
+               
                RSQLite::dbDisconnect(conn)
                
-               # write
-               data.table::fwrite(c(z.meta, complete.row), 
-                      file = lcl$paths$csv_loc,
-                      append = T)
-               
-               shiny::incProgress(amount = 1/length(fn_meta))
+              #shiny::incProgress(amount = 1/length(fn_meta))
              })      
     })
     

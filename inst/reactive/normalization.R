@@ -14,16 +14,17 @@ shiny::observeEvent(input$initialize, {
     mSet <- MetaboAnalystR::InitDataObjects("pktable",
                             "stat",
                             FALSE)
+    
     # set default time series mode'
     mSet$dataSet$paired = F
     mSet$dataSet$subset = c()
     
-    mz.meta <- MetaboShiny::getColDistribution(csv)
-    exp.vals = mz.meta$meta
-    mz.vals = mz.meta$mz
+    mz.meta <- MetaboShiny::getColDistribution(csv_orig)
+    exp.vars = mz.meta$meta
+    mz.vars = mz.meta$mz
     
     csv_orig <- MetaboShiny::cleanCSV(csv_orig, 
-                                      exp.vals = exp.vals, mz.vals = mz.vals, 
+                                      exp.vars = exp.vars, mz.vars = mz.vars, 
                                       miss.meta = "unknown", miss.mz = NA)
     
     # load batch variable chosen by user
@@ -33,8 +34,9 @@ shiny::observeEvent(input$initialize, {
     qc.rows <- which(grepl("QC", csv_orig$sample))
     
     # for the non-qc samples, check experimental variables. Which have at least 2 different factors, but as little as possible?
-    condition <- MetaboShiny::getDefaultCondition(csv, excl.rows = qc.rows, 
-                                                  exp.vars = exp.vals, 
+    condition <- MetaboShiny::getDefaultCondition(csv_orig, 
+                                                  excl.rows = qc.rows, 
+                                                  exp.vars = exp.vars, 
                                                   excl.cond = c("batch", "injection", "sample"), 
                                                   min.lev = 2)
 
@@ -51,6 +53,10 @@ shiny::observeEvent(input$initialize, {
     if("batch" %in% batches & "injection" %in% colnames(csv_orig)){
       batches = c(batches, "injection")
     }
+    
+    mz.meta <- MetaboShiny::getColDistribution(csv_orig)
+    exp.vars = mz.meta$meta
+    mz.vars = mz.meta$mz
     
     # get the part of csv with only the experimental variables
     first_part <- csv_orig[,..exp.vars, with=FALSE]
@@ -75,6 +81,10 @@ shiny::observeEvent(input$initialize, {
     if(any(grepl("QC", csv$sample))){
       csv <- MetaboShiny::removeUnusedQC(csv, covar_table)
     }
+    
+    mz.meta <- MetaboShiny::getColDistribution(csv)
+    exp.vars = mz.meta$meta
+    mz.vars = mz.meta$mz
     
     csv <- MetaboShiny::asMetaboAnalyst(csv, exp.vars)
     
@@ -186,7 +196,7 @@ shiny::observeEvent(input$initialize, {
       
       if("batch" %in% req(input$batch_var ) & has.qc){
         # save to mSet
-        mSet$dataSet$norm <- MetaboShiny::batchCorrQC(mSet)
+        mSet$dataSet$norm <- MetaboShiny::batchCorrQC(mSet, qc_rows)
       }
       
       # remove QC samples if user doesn't use batch as condition

@@ -24,17 +24,17 @@ make.metshi.csv <-
     
     if(DBI::dbExistsTable(conn, "setup")){
       query <- strwrap(gsubfn::fn$paste("select distinct d.*, s.*
-                                      from mzintensities i
-                                      join individual_data d
-                                      on i.filename = d.sample
-                                      join setup s on d.[group] = s.[group]"),
+                                         from mzintensities i
+                                         join individual_data d
+                                         on i.filename = d.sample
+                                         join setup s on d.[group] = s.[group]"),
                        width=10000,
                        simplify=TRUE)  
     }else{
       query <- strwrap(gsubfn::fn$paste("select distinct d.*
-                                      from mzintensities i
-                                      join individual_data d
-                                      on i.filename = d.sample"),
+                                        from mzintensities i
+                                        join individual_data d
+                                        on i.filename = d.sample"),
                        width=10000,
                        simplify=TRUE)
     }
@@ -46,6 +46,7 @@ make.metshi.csv <-
     RSQLite::dbDisconnect(conn)
     
     if(file.exists(csv)) file.remove(csv)
+    
     # write rows to csv
     pbapply::pblapply(fn_meta, 
                       #cl = session_cl, 
@@ -74,9 +75,9 @@ make.metshi.csv <-
       
       # cast to wide
       cast.dt <- data.table::dcast.data.table(z.int,
-                                  formula = ... ~ identifier,
-                                  fun.aggregate = sum,
-                                  value.var = "intensity")
+                                              formula = ... ~ identifier,
+                                              fun.aggregate = sum,
+                                              value.var = "intensity")
       
       complete = as.numeric(cast.dt[1,])
       names(complete) = colnames(cast.dt)
@@ -96,10 +97,10 @@ make.metshi.csv <-
     })
     
     # - - measure file size - -
-    
     disk_size = file.info(csv)$size
     size <- utils:::format.object_size(disk_size, "Mb")
     cat(paste("... Resulting file is approximately"),size,"...")
+    
     }
 
 calcHeatMap <- function(mSet, signif.only, 
@@ -302,8 +303,7 @@ runML <- function(curr,
 getMultiMLperformance <- function(model){
   roc = pROC::multiclass.roc(model$labels, model$prediction)
   data.table::rbindlist(lapply(roc$rocs, function(roc.pair){
-    data.table(attempt = c(i),
-               FPR = sapply(roc.pair$specificities, function(x) 1-x),
+    data.table(FPR = sapply(roc.pair$specificities, function(x) 1-x),
                TPR = roc.pair$sensitivities,
                AUC = as.numeric(roc$auc),
                comparison = paste0(roc.pair$levels,collapse=" vs. "))
@@ -311,30 +311,33 @@ getMultiMLperformance <- function(model){
 }
 
 getColDistribution <- function(csv){
-  as.numi <- as.numeric(colnames(csv))
-  exp.vars <- which(is.na(as.numi))
-  mz.vars <- which(!is.na(as.numi))
+  suppressWarnings({
+    as.numi <- as.numeric(colnames(csv))
+    exp.vars <- which(is.na(as.numi))
+    mz.vars <- which(!is.na(as.numi))  
+  })
   list(meta = exp.vars, mz = mz.vars)
 }
 
-cleanCSV <- function(csv, regex=" |\\(|\\)|\\+",exp.vars, mz.vals, miss.meta, miss.mz){
+cleanCSV <- function(csv, regex=" |\\(|\\)|\\+",exp.vars, mz.vars, miss.meta, miss.mz){
   # remove whitespace
   csv$sample <- gsub(csv$sample, pattern=regex, replacement="")
-  suppressWarnings({
-    csv <- csv[,-"label"]
-  })
+  
   # convert all 0's to NA so metaboanalystR will recognize them
   csv[,(exp.vars) := lapply(.SD,function(x){ ifelse(x == "" | is.na(x) | x == "Unknown", miss.meta, x)}), .SDcols = exp.vars]
   csv[,(mz.vars) := lapply(.SD,function(x){ ifelse(x == 0, miss.mz, x)}), .SDcols = mz.vars]
   csv <- csv[,which(unlist(lapply(csv, function(x)!all(is.na(x))))),with=F]
   colnames(csv)[which(colnames(csv) == "time")] <- "Time"
   csv$sample <- gsub("[^[:alnum:]./_-]", "", csv$sample)
+  suppressWarnings({
+    csv <- csv[,-"label"]
+  })
   # - - - 
   csv
 }
 
 getDefaultCondition <- function(csv, exp.vars, excl.rows, excl.cond, min.lev){
-  unique.levels <- apply(csv_orig[!excl.rows,..exp.vars, with=F], MARGIN=2, function(col){
+  unique.levels <- apply(csv[!excl.rows,..exp.vars, with=F], MARGIN=2, function(col){
     lvls <- levels(as.factor(col))
     # - - - - - -
     length(lvls)
@@ -430,7 +433,10 @@ replRF <- function(mSet, parallelMode, ntree, cl){
   imp$ximp
 }
 
-batchCorrQC <- function(mSet){
+batchCorrQC <- function(mSet, qc_rows){
+  smps <- rownames(mSet$dataSet$norm)
+  # get which rows are QC samples
+  qc_rows <- which(grepl(pattern = "QC", x = smps))
   # get batch for each sample
   batch.idx = as.numeric(as.factor(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"batch"][[1]]))
   
@@ -460,6 +466,9 @@ batchCorrQC <- function(mSet){
 }
 
 hideQC <- function(mSet){
+  smps <- rownames(mSet$dataSet$norm)
+  # get which rows are QC samples
+  qc_rows <- which(grepl(pattern = "QC", x = smps))
   mSet$dataSet$norm <- mSet$dataSet$norm[-qc_rows,]
   mSet$dataSet$cls <- mSet$dataSet$cls[-qc_rows, drop = TRUE]
   mSet$dataSet$covars <- mSet$dataSet$covars[-grep("QC", mSet$dataSet$covars$sample),]
