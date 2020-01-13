@@ -99,54 +99,20 @@ shiny::observeEvent(input$import_csv, {
 shiny::observeEvent(input$create_csv, {
 
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(lcl$paths$patdb))
+      
+    MetaboShiny::prepDatabase(conn)
     
-    cat("Checking for mismatches between peak tables and metadata... \n")
+    query <- MetaboShiny::getCSVquery(conn)
     
-    fn_meta <- RSQLite::dbGetQuery(conn, "SELECT DISTINCT sample FROM individual_data")[,1]
-    fn_int <- RSQLite::dbGetQuery(conn, "SELECT DISTINCT filename FROM mzintensities")[,1]
-    
-    cat(paste0("-- in peaklist, not in metadata: --- \n", 
-               paste0(setdiff(fn_int,
-                              fn_meta), 
-                      collapse=", "), 
-               "\n"))
-    cat(paste0("-- in metadata, not in peaklist: --- \n", 
-               paste0(setdiff(fn_meta,
-                              fn_int), 
-                      collapse=", "), 
-               "\n\n"))
-    
-    if(DBI::dbExistsTable(conn, "setup")){
-      query <- strwrap(gsubfn::fn$paste("select distinct d.sample as sample, d.*, s.*
-                                        from mzintensities i
-                                        join individual_data d
-                                        on i.filename = d.sample
-                                        join setup s on d.[Group] = s.[Group]"),
-                       width=10000,
-                       simplify=TRUE)   
-    }else{
-      query <- strwrap(gsubfn::fn$paste("select distinct d.sample as sample, d.*
-                                        from mzintensities i
-                                        join individual_data d
-                                        on i.filename = d.sample"),
-                       width=10000,
-                       simplify=TRUE)
-    }
-   
-    RSQLite::dbExecute(conn, "PRAGMA journal_mode=WAL;")
-    RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS filenames ON mzintensities(filename)")
-    
-    all_mz = RSQLite::dbGetQuery(conn, "select distinct i.mzmed
-                                        from mzintensities i
-                                        join individual_data d
-                                        on i.filename = d.sample")[,1]
-    
-    RSQLite::dbDisconnect(conn)
+    all_mz <- MetaboShiny::allMZ(conn)
     
     lcl$paths$csv_loc <<- gsub(lcl$paths$patdb, 
                           pattern = "\\.db", 
                           replacement = ".csv")
     if(file.exists(lcl$paths$csv_loc)) file.remove(lcl$paths$csv_loc)
+    
+    fn_meta <- MetaboShiny::allSampInMeta(conn)
+    fn_int <- MetaboShiny::allSampInPeaktable(conn)
     
     shiny::withProgress(min = 0, max = 1, {
       # write rows to csv
@@ -154,51 +120,10 @@ shiny::observeEvent(input$create_csv, {
              #cl = session_cl, 
              function(filename){
                
-                # connect
-               conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(lcl$paths$patdb))
-               
-               # adjust query
-               query_add = gsubfn::fn$paste(" WHERE i.filename = '$filename'")
-               
-               # get results for sample
-               z.meta = data.table::as.data.table(RSQLite::dbGetQuery(conn, paste0(query, query_add)))
-               
-               if(nrow(z.meta)==0) return(NA)
-               
-               #z.meta = z.meta[,-c("sample", "sampling_date")]
-               
-               colnames(z.meta) <- tolower(colnames(z.meta))
-               z.int = data.table::as.data.table(RSQLite::dbGetQuery(conn, 
-                                        paste0("SELECT DISTINCT
-                                                i.mzmed as identifier,
-                                                i.intensity
-                                                FROM mzintensities i", query_add)))
-               
-               if(nrow(z.int)==0) return(NA)
-               
-               missing_mz <- setdiff(all_mz, z.int$identifier)
-               
-               # cast to wide
-               cast.dt <- data.table::dcast.data.table(z.int,
-                                           formula = ... ~ identifier,
-                                           fun.aggregate = sum,
-                                           value.var = "intensity")
-               
-               complete = as.numeric(cast.dt[1,-1])
-               names(complete) = colnames(cast.dt)[-1]
-               
-               missing = rep(NA, length(missing_mz))
-               names(missing) <- missing_mz
-               
-               complete.row = c(complete[-1], missing)
-               reordered <- order(as.numeric(names(complete.row)))
-               complete.row <- complete.row[reordered]
-               complete.row.dt <- data.table::as.data.table(t(data.table::as.data.table(complete.row)))
-               colnames(complete.row.dt) <- names(complete.row)
-               
+               z.meta <- MetaboShiny::getSampMeta(conn, filename, query)
+               complete.row <- MetaboShiny::getSampInt(conn, filename, all_mz)
+                 
                RSQLite::dbDisconnect(conn)
-               
-               z.meta$sample <- gsub(z.meta$sample, pattern=" |\\(|\\)|\\+", replacement="")
                
                # write
                data.table::fwrite(c(z.meta, complete.row), 
@@ -246,11 +171,10 @@ shiny::observeEvent(input$metadata_new_add, {
     missing <- which(!(new_meta$sample %in% mSet$storage$orig$data$covars$sample))
     
     if(length(missing) == nrow(new_meta)){
+      # TODO: allow new info added for only a few samples
       MetaboShiny::metshiAlert("Sample name mismatch! Please check your new metadata...")
     }else{
-      
       new_meta <- new_meta[-missing,]
-      
       # removed_variables?
       missing_variables <- setdiff(colnames(mSet$storage$orig$data$covars), colnames(new_meta))
       if(length(missing_variables)>1){

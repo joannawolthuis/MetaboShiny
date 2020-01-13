@@ -46,121 +46,19 @@ shiny::observe({
                asca = {
                  # perform asca analysis
                  shiny::withProgress({
-                   mSet <-  MetaboAnalystR::Perform.ASCA(mSet, 1, 1, 2, 2)
-                   mSet <-  MetaboAnalystR::CalculateImpVarCutoff(mSet, 0.05, 0.9)
+                   mSet <- MetaboAnalystR::Perform.ASCA(mSet, 1, 1, 2, 2)
+                   mSet <- MetaboAnalystR::CalculateImpVarCutoff(mSet, 0.05, 0.9)
                  })
                },
                heatmap = {
                  # reset
-                 
                  mSet$analSet$heatmap <-  NULL
-                 
-                 if(input$heattable %in% names(mSet$analSet)){
-                   
-                   sigvals = NULL
-                   
-                   try({
-                     switch(input$heattable,
-                            tt={
-                              decreasing <- F
-                              if(input$heatsign){
-                                tbl=as.data.frame(mSet$analSet$tt$sig.mat)
-                                sigvals = tbl$p.value
-                              }else{
-                                tbl = as.data.frame(mSet$analSet$tt$p.value)
-                                sigvals = tbl[,1]
-                              }
-                            },
-                            fc={
-                              decreasing <- T
-                              if(input$heatsign){
-                                tbl <- as.data.frame(mSet$analSet$fc$sig.mat)
-                                sigvals=abs(tbl$`log2(FC)`)
-                              }else{
-                                tbl = as.data.frame(abs(mSet$analSet$fc$fc.log))
-                                sigvals = tbl[,1]
-                              }
-                            },
-                            aov= {
-                              decreasing=F
-                              tbl=as.data.frame(mSet$analSet$aov$sig.mat)
-                              sigvals = tbl$p.value
-                            },
-                            aov2={
-                              decreasing=F
-                              tbl = as.data.frame(mSet$analSet$aov2$sig.mat)
-                              sigvals = tbl$`Interaction(adj.p)`
-                            },
-                            asca={
-                              decreasing=T
-                              tbl = as.data.frame(mSet$analSet$asca$sig.list$Model.ab)
-                              sigvals = tbl$Leverage
-                            },
-                            meba={
-                              decreasing=T
-                              tbl = as.data.frame(mSet$analSet$MB$stats)
-                              sigvals = tbl$`Hotelling-T2`
-                            })
-                   })
-                   
-                   # change top hits used in heatmap depending on time series / bivariate / multivariate mode
-                   # reordering of hits according to most significant at the top
-                   
-                   if(!is.null(sigvals)){
-                     #check top x used (slider bar in UI), if more than total matches use total matches
-                     topn = if(length(sigvals) < input$heatmap_topn) length(sigvals) else input$heatmap_topn
-                     mzorder <- order(sigvals, decreasing = decreasing)
-                     mzsel <- rownames(tbl)[mzorder]#[1:topn]
-                     
-                     # reorder matrix used
-                     x <- mSet$dataSet$norm[,mzsel]
-                     final_matrix <- t(x) # transpose so samples are in columns
-                     
-                     # check if the sample order is correct - mSet$..$ norm needs to match the matrix
-                     sample_order <- match(colnames(final_matrix), rownames(mSet$dataSet$norm))
-                     
-                     if(mSet$dataSet$exp.type %in% c("2f", "t1f", "t")){
-                       
-                       # create convenient table with the ncessary info
-                       translator <- data.table::data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],GroupA=mSet$dataSet$facA[sample_order], GroupB=mSet$dataSet$facB[sample_order])
-                       hmap.lvls <- c(levels(mSet$dataSet$facA), levels(mSet$dataSet$facB))
-                       
-                       # reorder first by time, then by sample
-                       split.translator <- split(translator, by = c("GroupB"))
-                       split.translator.ordered <- lapply(split.translator, function(tbl) tbl[order(tbl$GroupA)])
-                       translator <- data.table::rbindlist(split.translator.ordered)
-                       
-                       # ensure correct sample order
-                       final_matrix <- final_matrix[,match(translator$Sample, colnames(final_matrix))]
-                       
-                       # disable automatic ordering of samples through clustering
-                       my_order=F
-                       
-                     }else{
-                       # no complicated reordering necessary
-                       translator <- data.table::data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],
-                                                            Group=mSet$dataSet$cls[sample_order])
-                       hmap.lvls <- levels(mSet$dataSet$cls)
-                       my_order = T # enable sorting through dendrogram
-                     }
-                     
-                     # create name - to - color mapping vector for the plotting functions
-                     color.mapper <- {
-                       classes <- hmap.lvls
-                       cols <- sapply(1:length(classes), function(i) lcl$aes$mycols[i]) # use user-defined colours
-                       names(cols) <- classes
-                       # - - -
-                       cols
-                     }
-                     
-                     # write to mSet
-                     mSet$analSet$heatmap <- list(
-                       matrix = final_matrix,
-                       translator = translator,
-                       colors = color.mapper,
-                       my_order = my_order)
-                   }
-                 }
+                
+                 mSet <- MetaboShiny::calcHeatMap(mSet, 
+                                                  signif.only = input$heatsign,
+                                                  source.tbl = input$heattable,
+                                                  top.hits = input$heatmap_topn,
+                                                  cols = lcl$aes$mycols)
                },
                tt = {
                  withProgress({
@@ -252,7 +150,6 @@ shiny::observe({
                  })
                },
                match_wordcloud = {
-                 
                  if(nrow(shown_matches$forward_full) > 0){
                    
                    # remove unwanted words (defined in global) from description

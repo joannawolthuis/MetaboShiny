@@ -59,13 +59,13 @@ shiny::observeEvent(input$venn_build, {
     }else{
       
       p <- MetaboShiny::ggPlotVenn(mSet = mSet,
-                      venn_yes = isolate({as.list(venn_yes)}),
-                      top = input$venn_tophits,
-                      cols = lcl$aes$mycols,
-                      cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                      font = lcl$aes$font,
-                      plotlyfy = F)
-      
+                                   venn_yes = isolate({as.list(venn_yes)}),
+                                   top = input$venn_tophits,
+                                   cols = lcl$aes$mycols,
+                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                   font = lcl$aes$font,
+                                   plotlyfy = F)
+
       lcl$vectors$venn_lists <<- p$info
       
       # render plot in UI
@@ -74,7 +74,7 @@ shiny::observeEvent(input$venn_build, {
       })
       # update the selectize input that the user can use to find which hits are intersecting
       # TODO: ideally, this happens on click but its hard...
-      updateSelectizeInput(session, "intersect_venn", choices = names(lcl$vectors$venn_lists))
+      shiny::updateSelectizeInput(session, "intersect_venn", choices = names(lcl$vectors$venn_lists))
     }
 })
 
@@ -87,16 +87,14 @@ shiny::observeEvent(input$intersect_venn, {
 
     l = lcl$vectors$venn_lists
     # Get the combinations of names of list elements
-    nms <- combn( names(l) , 2 , FUN = paste0 , collapse = "  ~ " , simplify = FALSE )
+    nms <- combn(names(l) , 2 , FUN = paste0 , collapse = "  ~ " , simplify = FALSE)
 
     # Make the combinations of list elements
     ll <- combn( l , 2 , simplify = FALSE )
 
     # Intersect the list elements
     out <- lapply(ll , function(x) (intersect(x[[1]],
-                                              x[[2]])
-                                    ))
-
+                                              x[[2]])))
     # Output with names
     intersecties <- unique(unlist(out))
 
