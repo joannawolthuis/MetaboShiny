@@ -422,7 +422,7 @@ shiny::observe({
                        if(input$plsda_2d3d){
                          # 2d
                          output$plot_plsda <- plotly::renderPlotly({
-                           plotPCA.2d(mSet, lcl$aes$mycols,
+                           MetaboShiny::plotPCA.2d(mSet, lcl$aes$mycols,
                                       pcx = input$plsda_x,
                                       pcy = input$plsda_y, 
                                       type = "plsda",
@@ -436,7 +436,7 @@ shiny::observe({
                        }else{
                          # 3d
                          output$plot_plsda <- plotly::renderPlotly({
-                           plotPCA.3d(mSet, lcl$aes$mycols,
+                           MetaboShiny::plotPCA.3d(mSet, lcl$aes$mycols,
                                       pcx = input$plsda_x,
                                       pcy = input$plsda_y,
                                       pcz = input$plsda_z, 
