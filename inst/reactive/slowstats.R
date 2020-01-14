@@ -1,5 +1,5 @@
 shiny::observeEvent(input$do_pattern, {
-  mSet <- MetaboAnalystR::Match.Pattern(mSet, input$pattern_corr, input$pattern_seq)
+  mSet <<- MetaboAnalystR::Match.Pattern(mSet, input$pattern_corr, input$pattern_seq)
   datamanager$reload <- "pattern"
 })
 
@@ -15,7 +15,7 @@ shiny::observeEvent(input$do_power, {
     })   
   }, max = length(input$power_comps))
   names(pwr.analyses) <- input$power_comps
-  mSet$analSet$power <- pwr.analyses
+  mSet$analSet$power <<- pwr.analyses
   datamanager$reload <- "power"
 })
 
