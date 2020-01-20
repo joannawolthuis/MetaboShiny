@@ -3,15 +3,10 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                  shinyalert::useShinyalert(), 
                  shinyjs::useShinyjs(),
                  shiny::navbarPage(windowTitle='MetaboShiny',
-                                   header=shiny::tagList(shiny::tags$script(src="spinnytitle.js"),
-                                                         shiny::tags$script(src="rbeix.js"),
-                                                         shiny::tags$script(src="index.js"),
-                                                         #shiny::tags$script(src="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css"
-                                                         #shiny::tags$script(src="http://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"),
-                                                         shiny::tags$script(src="sparkle.js")),
+                                   header=shiny::tagList(shiny::tags$script(src="spinnytitle.js")),
                                    # use this for title
                                    # https://codepen.io/maxspeicher/pen/zrVKLE
-                                   title=shiny::div(shiny::h1("MetaboShiny"), 
+                                   title=shiny::div(shiny::h1("MetaboShiny"),
                                                     class="outlined", 
                                                     id="sparkley"
                                                     ), # make it use the sparkle.js for unnecessary sparkle effects ;)

@@ -241,15 +241,23 @@ apikey = ')
       
       # $("head").append('<style type="text/css"></style>');
       jq = paste0('$("head")',
-                  ".append('", '<style type="text/css">', 
+                  ".append('", 
+                  '<style type="text/css">', 
                   font.css, bar.css, foot.css,
-                  "</style>');")
+                  "</style>",
+                  "');")
       
       shinyjs::runjs(jq)
       
-      shinyjs::removeClass(class="hidden",
+      shinyjs::removeClass(class = "hidden",
                            id = "metshi")
       
+      jq = paste0('$("head")',
+                  ".append('", 
+                  '<script src="sparkle.js"></script>"',
+                  "');")
+      
+      shinyjs::runjs(jq)
       # load in custom databases
       has.customs <- dir.exists(file.path(lcl$paths$db_dir, 
                                           "custom"))

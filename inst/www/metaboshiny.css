@@ -402,8 +402,7 @@
   text-align: center;
 }
 
-/* sparkle stuff */
-
+/* sparkle stuff https://codepen.io/maxspeicher/details/zrVKLE */
 @-moz-keyframes my-sparkle {
   0%   {
     opacity: 0;

@@ -48,15 +48,20 @@
     
     const cssAnimationAttr = "my-sparkle " + settings.duration + "ms infinite linear";
 
-    const $star = $('<svg class="my-sparkle" version="1.1" viewBox="0.0 0.0 50.0 50.0" fill="none" stroke="none" stroke-linecap="square" stroke-miterlimit="10" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><clipPath id="p.0"><path d="m0 0l50.0 0l0 50.0l-50.0 0l0 -50.0z" clip-rule="nonzero"></path></clipPath><g clip-path="url(#p.0)"><path fill="' + settings.stroke + '" fill-opacity="0.0" d="m0 0l50.0 0l0 50.0l-50.0 0z" fill-rule="nonzero"></path><path fill="' + settings.fill + '" d="m0.62204725 25.0l20.068499 -4.323374l4.309454 -20.13332l4.309454 20.13332l20.068499 4.323374l-20.068499 4.323374l-4.309454 20.133318l-4.309454 -20.133318z" fill-rule="nonzero"></path><path stroke="' + settings.stroke + '" stroke-width="0.5" stroke-linejoin="round" stroke-linecap="butt" d="m0.62204725 25.0l20.068499 -4.323374l4.309454 -20.13332l4.309454 20.13332l20.068499 4.323374l-20.068499 4.323374l-4.309454 20.133318l-4.309454 -20.133318z" fill-rule="nonzero"></path></g></svg>').css({
+    const $star = $('<svg class="my-sparkle" version="1.1" viewBox="0.0 0.0 50.0 50.0" fill="none" stroke="none" stroke-linecap="square" stroke-miterlimit="10" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><clipPath id="p.0"><path d="m0 0l50.0 0l0 50.0l-50.0 0l0 -50.0z" clip-rule="nonzero"></path></clipPath><g clip-path="url(#p.0)"><path fill="' + settings.stroke + '" fill-opacity="0.0" d="m0 0l50.0 0l0 50.0l-50.0 0z" fill-rule="nonzero"></path><path fill="' + settings.fill + '" d="m0.62204725 25.0l20.068499 -4.323374l4.309454 -20.13332l4.309454 20.13332l20.068499 4.323374l-20.068499 4.323374l-4.309454 20.133318l-4.309454 -20.133318z" fill-rule="nonzero"></path><path stroke="' + settings.stroke + '" stroke-width="1.0" stroke-linejoin="round" stroke-linecap="butt" d="m0.62204725 25.0l20.068499 -4.323374l4.309454 -20.13332l4.309454 20.13332l20.068499 4.323374l-20.068499 4.323374l-4.309454 20.133318l-4.309454 -20.133318z" fill-rule="nonzero"></path></g></svg>').css({
         position: "absolute",
         width: settings.size,
         height: settings.size,
         zIndex: 9999
     });
 
-    const w = this.width();
-    const h = this.height();
+    /*const w = $('.sparkley').width();
+    const h = $('.sparkley').height();*/
+    w = 300;
+    h = 25;
+    
+    alert(w);
+    alert(h);
 
     const getCoordinates = function() {
       return {
@@ -107,6 +112,7 @@
       window.setTimeout(function() {
         placeStar(true);
       }, settings.delay);
+
       this.data("sparkle-id", id);
     }
 
@@ -114,20 +120,12 @@
   };
   
   $("#sparkley").sparkle({
-    size: 15,
+    size: 25,
   }).sparkle({
     delay: 1000,
-    pause: 350,
-    size: 5
+    pause: 750,
+    size: 10
   });
-  $("#sparkley").sparkle({
-    size: 10,
-  }).sparkle({
-    delay: 500,
-    pause: 150,
-    size: 1
-  });
-  
 
   /*window.setTimeout(function() {
     $("#sparkley").sparkle("destroy");
