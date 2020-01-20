@@ -3,7 +3,7 @@ is.ordered.mSet <- function(mSet){
   mSet$dataSet$exp.type <- gsub("^1f.",  "1f", mSet$dataSet$exp.type)
   expVarsMatch <- switch(mSet$dataSet$exp.type,
                          "1f"={
-                           all(mSet$dataSet$cls == mSet$dataSet$covars[,mSet$dataSet$exp.lbl, with=F][[1]])
+                           all(mSet$dataSet$cls == mSet$dataSet$covars[,mSet$dataSet$exp.var, with=F][[1]])
                          },
                          "2f"={
                            all(mSet$dataSet$facA == mSet$dataSet$covars[,mSet$dataSet$facA.lbl, with=F][[1]] && mSet$dataSet$facB == mSet$dataSet$covars[,mSet$dataSet$facB.lbl, with=F][[1]])

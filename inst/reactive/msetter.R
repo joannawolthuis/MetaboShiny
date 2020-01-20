@@ -17,7 +17,7 @@ shiny::observe({
       success = F
       
       try({
-        if(mSetter$do != "unsubset"){
+        if(!(mSetter$do %in% c("unsubset","load"))){
           if(length(mSet.old$dataSet$subset) > 0){
             subs = mSet.old$dataSet$subset
             subs = subs[names(subs) != "sample"]
@@ -36,6 +36,9 @@ shiny::observe({
         # should be fixed in #CHANGE.MSET
         
         mSet <- switch(mSetter$do,
+                       load = {
+                         mSet <- MetaboShiny::load.mSet(mSet, input$storage_choice)
+                       },
                        change = {
                          mSet <- MetaboShiny::change.mSet(mSet, 
                                                           stats_var = input$stats_var, 
@@ -74,51 +77,50 @@ shiny::observe({
                        }
         ) 
         
-        if(mSet$dataSet$paired){
-          mSet <- pair.mSet(mSet)
+        if(mSetter$do != "load"){
+          if(mSet$dataSet$paired){
+            mSet <- pair.mSet(mSet)
+          }
+          if(grepl(mSet$dataSet$exp.type, pattern = "^1f")){
+            if(mSet$dataSet$cls.num == 2){
+              mSet$dataSet$exp.type <- "1fb"
+            }else{
+              mSet$dataSet$exp.type <- "1fm"
+            }  
+          }
+          new.name = MetaboShiny::name.mSet(mSet)
+          
+          if(new.name %in% names(mSet$storage)){
+            mSet <- MetaboShiny::load.mSet(mSet, new.name)
+          }else{
+            mSet$analSet <- list()
+          }
+          mSet$dataSet$cls.name <- new.name
+          if(typeof(mSet) != "double"){
+            #===== FILTERING ======
+            if(mSet$metshiParams$filt_type != "none"){
+              shiny::showNotification("Filtering dataset...")
+              mSet$analSet <- mSet$storage$orig$analysis
+              # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
+              mSet <- MetaboAnalystR::FilterVariable(mSet,
+                                                     filter = mSet$metshiParams$filt_type,
+                                                     qcFilter = "F",
+                                                     rsd = 25)
+              keep.mz <- colnames(mSet$dataSet$filt)
+              mSet <- MetaboShiny::filt.mSet(mSet, keep.mz)
+            }
+          }
         }
-        
+       
         shiny::updateCheckboxInput(session, 
                                    "paired", 
                                    value = mSet$dataSet$paired) 
         
-        if(grepl(mSet$dataSet$exp.type, pattern = "^1f")){
-          if(mSet$dataSet$cls.num == 2){
-            mSet$dataSet$exp.type <- "1fb"
-          }else{
-            mSet$dataSet$exp.type <- "1fm"
-          }  
-        }
-        
-        new.name = MetaboShiny::name.mSet(mSet)
-        
-        if(new.name %in% names(mSet$storage)){
-          mSet <- MetaboShiny::load.mSet(mSet, new.name)
-        }else{
-          mSet$analSet <- list()
-        }
-        
-        mSet$dataSet$cls.name <- new.name
-        lcl$last_mset <- mSet$dataSet$cls.name
-        shiny::showNotification("Changed mSet...")
-        
-        if(typeof(mSet) != "double"){
-          success = T
-          #===== FILTERING ======
-          if(mSet$metshiParams$filt_type != "none"){
-            shiny::showNotification("Filtering dataset...")
-            mSet$analSet <- mSet$storage$orig$analysis
-            # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
-            mSet <- MetaboAnalystR::FilterVariable(mSet,
-                                                   filter = mSet$metshiParams$filt_type,
-                                                   qcFilter = "F",
-                                                   rsd = 25)
-            keep.mz <- colnames(mSet$dataSet$filt)
-            mSet <- MetaboShiny::filt.mSet(mSet, keep.mz)
-          }
-          # =======================
-        }
-        
+       lcl$last_mset <- mSet$dataSet$cls.name
+       
+       success = T
+       
+       shiny::showNotification("Changed mSet...")
       })
       
       if(success){

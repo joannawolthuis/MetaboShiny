@@ -4,12 +4,17 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                  shinyjs::useShinyjs(),
                  shiny::navbarPage(windowTitle='MetaboShiny',
                                    header=shiny::tagList(shiny::tags$script(src="spinnytitle.js"),
+                                                         shiny::tags$script(src="rbeix.js"),
+                                                         shiny::tags$script(src="index.js"),
+                                                         #shiny::tags$script(src="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css"
+                                                         #shiny::tags$script(src="http://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"),
                                                          shiny::tags$script(src="sparkle.js")),
                                    # use this for title
                                    # https://codepen.io/maxspeicher/pen/zrVKLE
                                    title=shiny::div(shiny::h1("MetaboShiny"), 
                                                     class="outlined", 
-                                                    id="sparkley"), # make it use the sparkle.js for unnecessary sparkle effects ;)
+                                                    id="sparkley"
+                                                    ), # make it use the sparkle.js for unnecessary sparkle effects ;)
                                    id="nav_general",
                                    # this tab shows the available databases, if they are installed, and buttons to install them. generated as output$db_build_ui in 'server'
                                    shiny::tabPanel("database", icon = shiny::icon("database",class = "outlined"), value="database",
@@ -453,6 +458,8 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                                   choices = c("center", "scale"),
                                                                                                                                                                                                   selected = c("center", "scale"), multiple=T),
                                                                                                                                                                             MetaboShiny::switchButton("downsample", label = "Downsample?",col = "BW", value = F, type = "YN"),
+                                                                                                                                                                            MetaboShiny::switchButton("ml_random_split", label = "Randomize train/test split each repeat?",
+                                                                                                                                                                                                      col = "BW", value = F, type = "YN"),
                                                                                                                                                                             shinyWidgets::circleButton("do_ml",
                                                                                                                                                                                                        icon = shiny::h3(paste("Go"),
                                                                                                                                                                                                                         shiny::icon("hand-pointer-o", "fa-lg")),
@@ -753,6 +760,8 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                     ,shiny::selectInput("subset_var", label="Subset data based on:", choices = c("label"),width = "80%")
                                                                                                                                     ,shiny::selectizeInput("subset_group", label="Group(s) in subset:", choices = c(), multiple=TRUE,width = "80%")
                                                                                                                                     ,shinyWidgets::circleButton("change_subset", icon = shiny::icon("hand-pointer-o"), size = "sm")
+                                                                                                                                    ,shiny::selectInput("storage_choice", label="Load existing subset:", choices = c("label"),width = "80%")
+                                                                                                                                    ,shinyWidgets::circleButton("load_storage", icon = shiny::icon("folder-open"), size = "sm")
                                                                                                                                     ,helpText("Reset to non-subsetted or paired dataset")
                                                                                                                                     ,shinyWidgets::circleButton("reset_subset", icon = shiny::icon("undo"), size = "sm"))
                                                                                                                    

@@ -242,7 +242,7 @@ apikey = ')
       # $("head").append('<style type="text/css"></style>');
       jq = paste0('$("head")',
                   ".append('", '<style type="text/css">', 
-                  bar.css, font.css, foot.css,
+                  font.css, bar.css, foot.css,
                   "</style>');")
       
       shinyjs::runjs(jq)

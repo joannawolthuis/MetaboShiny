@@ -34,6 +34,8 @@ shiny::observe({
                                 if(nrow(mSet$dataSet$norm) == origcount) "" else paste0("/",as.character(origcount)))
                          
                        })
+                       shiny::updateSelectInput(session, "storage_choice", 
+                                                choices = names(mSet$storage))
                      }
                      
                      shiny::updateSelectInput(session, "stats_type", 
@@ -146,6 +148,12 @@ shiny::observe({
                        venn_no$start <- rbindlist(lapply(analyses, function(name){
                          analysis = mSet$storage[[name]]$analysis
                          analysis_names = names(analysis)
+                         # - - -
+                         exclude = c("tsne", "heatmap", "type")
+                         analysis_names <- setdiff(analysis_names, exclude)
+                         if(length(analysis_names) == 0){
+                           return(data.table::data.table())
+                         }
                          # - - -
                          with.subgroups <- intersect(analysis_names, c("ml", "plsr", "pca"))
                          if(length(with.subgroups) > 0){

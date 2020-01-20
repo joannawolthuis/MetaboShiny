@@ -1,47 +1,78 @@
 shiny::observeEvent(input$do_pattern, {
-  mSet <<- MetaboAnalystR::Match.Pattern(mSet, input$pattern_corr, input$pattern_seq)
-  datamanager$reload <- "pattern"
+  mSet.old <- mSet
+  success = F
+  try({
+    mSet <- MetaboAnalystR::Match.Pattern(mSet, input$pattern_corr, input$pattern_seq)
+  })
+  if(success){
+    mSet <<- mSet
+    datamanager$reload <- "pattern"
+  }else{
+    MetaboShiny::metshiAlert("Analysis failed!")
+    mSet <<- mSet.old
+  }
 })
 
 shiny::observeEvent(input$do_power, {
-  shiny::withProgress({
-    pwr.analyses = lapply(input$power_comps, function(combi){
-      mSet.temp <- MetaboAnalystR::InitPowerAnal(mSet, combi)
-      mSet.temp <- MetaboAnalystR::PerformPowerProfiling(mSet.temp, 
-                                                         fdr.lvl = input$power_fdr, 
-                                                         smplSize = input$power_nsamp)  
-      shiny::incProgress(amount = 1 / length(input$power_comps))
-      mSet.temp$analSet$power
-    })   
-  }, max = length(input$power_comps))
-  names(pwr.analyses) <- input$power_comps
-  mSet$analSet$power <<- pwr.analyses
-  datamanager$reload <- "power"
+  mSet.old <- mSet
+  success = F
+  try({
+    shiny::withProgress({
+      pwr.analyses = lapply(input$power_comps, function(combi){
+        mSet.temp <- MetaboAnalystR::InitPowerAnal(mSet, combi)
+        mSet.temp <- MetaboAnalystR::PerformPowerProfiling(mSet.temp, 
+                                                           fdr.lvl = input$power_fdr, 
+                                                           smplSize = input$power_nsamp)  
+        shiny::incProgress(amount = 1 / length(input$power_comps))
+        mSet.temp$analSet$power
+      })   
+    }, max = length(input$power_comps))
+    names(pwr.analyses) <- input$power_comps
+    mSet$analSet$power <- pwr.analyses  
+    success = T
+  })
+  if(success){
+    mSet <<- mSet
+    datamanager$reload <- "power"
+  }else{
+    MetaboShiny::metshiAlert("Analysis failed!")
+    mSet <<- mSet.old
+  }
 })
 
 # triggers when the 'go' button is pressed on the PLS-DA tab
 observeEvent(input$do_plsda, {
-  
-  library(e1071)
-  library(pls)
-  # depending on type, do something else
-  # TODO: enable sparse and orthogonal PLS-DA
-  switch(input$plsda_type,
-         normal={
-           require(caret)
-           withProgress({
-             mSet <<- MetaboAnalystR::PLSR.Anal(mSet) # perform pls regression
-             setProgress(0.3)
-             mSet <<- MetaboAnalystR::PLSDA.CV(mSet, methodName=if(nrow(mSet$dataSet$norm) < 50) "L" else "T",compNum = 3) # cross validate
-             setProgress(0.6)
-             mSet <<- MetaboAnalystR::PLSDA.Permut(mSet,num = 300, type = "accu") # permute
+  mSet.old <- mSet
+  success = F
+  try({
+    library(e1071)
+    library(pls)
+    # depending on type, do something else
+    # TODO: enable sparse and orthogonal PLS-DA
+    switch(input$plsda_type,
+           normal={
+             require(caret)
+             withProgress({
+               mSet <- MetaboAnalystR::PLSR.Anal(mSet) # perform pls regression
+               setProgress(0.3)
+               mSet <- MetaboAnalystR::PLSDA.CV(mSet, methodName=if(nrow(mSet$dataSet$norm) < 50) "L" else "T",compNum = 3) # cross validate
+               setProgress(0.6)
+               mSet <- MetaboAnalystR::PLSDA.Permut(mSet,num = 300, type = "accu") # permute
+             })
+           },
+           sparse ={
+             mSet <- MetaboAnalystR::SPLSR.Anal(mSet, comp.num = 3)
            })
-         },
-         sparse ={
-           mSet <<- MetaboAnalystR::SPLSR.Anal(mSet, comp.num = 3)
-         })
+    success = T
+  })
+  if(success){
+    mSet <<- mSet
+    datamanager$reload <- "plsda"
+  }else{
+    MetaboShiny::metshiAlert("Analysis failed!")
+    mSet <<- mSet.old
+  }
   # reload pls-da plots
-  datamanager$reload <- "plsda"
 })
 
 # triggers if 'go' is pressed in the machine learning tab
@@ -93,6 +124,34 @@ observeEvent(input$do_ml, {
                           label=mSet$dataSet$cls) # add current experimental condition
         }
       }
+      
+      if(!input$ml_random_split){
+        shiny::showNotification("Using same train/test split for all repeats...")
+        # make split for all repeats
+        train_idx = caret::createDataPartition(y = config$label, p = input$ml_train_perc/100, list = FALSE) # partition data in a balanced way (uses labels)
+        # add column to config for this split
+        config$split <- c("train")
+        config$split[train_idx] <- "test"
+        # set test_vec and train_vec c(split, train), c(split, test)
+        lcl$vectors$ml_train <<- c("split", "train")
+        lcl$vectors$ml_test <<- c("split", "test")
+      }else{
+        if(is.null(lcl$vectors$ml_train)){
+          lcl$vectors$ml_train <<- c("all", "all")
+        }
+        if(is.null(lcl$vectors$ml_test)){
+          lcl$vectors$ml_test <<- c("all", "all")
+        }
+        if(all(lcl$vectors$ml_test == lcl$vectors$ml_train)){
+          if(unique(lcl$vectors$ml_test) == "all"){
+            shiny::showNotification("No subset selected... continuing in normal non-subset mode")
+          }else{
+            MetaboShiny::metshiAlert("Cannot test on the training set!")
+            return(NULL)
+          }
+        }
+      }
+      
       config <- data.table::as.data.table(config)
       config <- config[,apply(!is.na(config), 2, any), with=FALSE]
       
@@ -125,7 +184,6 @@ observeEvent(input$do_ml, {
       config <- config[,..keep_configs,with=F]
       
       # rename the variable of interest to 0-1-2 etc.
-      
       char.lbl <- as.character(config$label)
       uniques <- unique(char.lbl)
       uniques_new_name <- c(1:length(uniques))
@@ -133,30 +191,12 @@ observeEvent(input$do_ml, {
       
       remapped.lbl <- uniques_new_name[char.lbl]
       
-      # - - - - - - - - - - - - - - - - - - - - - - -
-      
       # join halves together, user variables and metabolite data
       curr <- cbind(config, curr)
       curr <- data.table::as.data.table(curr)
       
       # how many models will be built? user input
       goes = as.numeric(input$ml_attempts)
-      
-      if(is.null(lcl$vectors$ml_train)){
-        lcl$vectors$ml_train <<- c("all", "all")
-      }
-      if(is.null(lcl$vectors$ml_test)){
-        lcl$vectors$ml_test <<- c("all", "all")
-      }
-      
-      if(all(lcl$vectors$ml_test == lcl$vectors$ml_train)){
-        if(unique(lcl$vectors$ml_test) == "all"){
-          shiny::showNotification("No subset selected... continuing in normal non-subset mode")
-        }else{
-          MetaboShiny::metshiAlert("Cannot test on the training set!")
-          return(NULL)
-        }
-      }
       
       # identify which columns are metabolites and which are config/covars
       configCols <- which(!(gsub(x = colnames(curr), pattern = "_T\\d", replacement="") %in% colnames(mSet$dataSet$norm)))
@@ -167,7 +207,6 @@ observeEvent(input$do_ml, {
       configCols <- setdiff(configCols, nums)
       
       curr[,(configCols):= lapply(.SD, function(x) as.factor(x)), .SDcols = configCols]
-      
       curr[,(mzCols):= lapply(.SD, function(x) as.numeric(x)), .SDcols = mzCols]
       
       # = tuning = 
@@ -213,6 +252,7 @@ observeEvent(input$do_ml, {
           lst
         })
       
+      
       # ============ DOWNSAMPLE ===========
       if(input$downsample){
         keepers = caret::downSample(1:nrow(curr), curr$label)$x
@@ -220,15 +260,15 @@ observeEvent(input$do_ml, {
       }
       # ============ LOOP HERE ============
       
-      print(dim(curr))
-      
       # get results for the amount of attempts chosen
       
       shiny::withProgress(message = "Running...", {
         repeats <- pbapply::pblapply(1:goes,
                                      cl = session_cl,
-                                     function(i, train_vec,
+                                     function(i, 
+                                              train_vec,
                                               test_vec,
+                                              config,
                                               configCols,
                                               ml_method,
                                               ml_perf_metr,
@@ -239,6 +279,7 @@ observeEvent(input$do_ml, {
                                        MetaboShiny::runML(curr,
                                                           train_vec = train_vec,
                                                           test_vec = test_vec,
+                                                          config = config,
                                                           configCols = configCols,
                                                           ml_method = ml_method,
                                                           ml_perf_metr = ml_perf_metr,
@@ -249,13 +290,14 @@ observeEvent(input$do_ml, {
                                      },
                                      train_vec = lcl$vectors$ml_train,
                                      test_vec = lcl$vectors$ml_test,
+                                     config = config,
                                      configCols = configCols,
                                      ml_method = input$ml_method,
                                      ml_perf_metr = input$ml_perf_metr,
                                      ml_folds = input$ml_folds,
                                      ml_preproc = input$ml_preproc,
                                      tuneGrid = tuneGrid,
-                                     ml_train_perc <- input$ml_train_perc
+                                     ml_train_perc = input$ml_train_perc
         )
       })
       # check if a storage list for machine learning results already exists

@@ -15,3 +15,8 @@ shiny::observeEvent(input$reset_subset, {
   mSetter$do <- "unsubset"
   datamanager$reload <- "general"
 })
+
+shiny::observeEvent(input$load_storage, {
+  mSetter$do <- "load"
+  datamanager$reload <- "general"
+})

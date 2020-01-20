@@ -736,11 +736,13 @@ ggPlotROC <- function(data,
   }
   
   cols = cf(attempts)
+  print(head(perf.long))
   
   p <- ggplot(perf.long, aes(FPR,TPR)) +
     ggplot2::geom_path(alpha=.5,
-                       cex=.5,
-                       aes(color = comparison, group = attempt)) +
+                       cex=.7,
+                       aes(color = if(class_type == "m") comparison else as.factor(attempt), 
+                           group = attempt)) +
     ggplot2::annotate("text",
                       label = paste0("Average AUC: ",
                                      format(mean.auc,
@@ -763,7 +765,8 @@ ggPlotROC <- function(data,
       fun.y=mean, geom="line", 
       cex = 1.2) +
     ggplot2::stat_summary_bin(aes(FPR, TPR), 
-                              fun.y=mean, color="black", 
+                              fun.y=mean, 
+                              color="black", 
                               geom="line", cex = 2) +
     
     #ggplot2::scale_color_gradientn(colors = cols) +
@@ -778,7 +781,7 @@ ggPlotROC <- function(data,
     ggplot2::coord_cartesian(xlim = c(.04,.96), ylim = c(.04,.96))
   
   if(plotlyfy){
-    plotly::ggplotly(p)
+    plotly::ggplotly(p, tooltip=c("comparison","attempt"))
   }else{
     p
   }

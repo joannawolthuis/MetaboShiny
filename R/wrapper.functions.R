@@ -214,6 +214,7 @@ calcHeatMap <- function(mSet, signif.only,
 }
 
 runML <- function(curr,
+                  config,
                   train_vec,
                   test_vec,
                   configCols,
@@ -235,15 +236,19 @@ runML <- function(curr,
   }else if(unique(train_vec)[1] != "all"){ #ONLY TRAIN IS DEFINED
     train_idx <- which(config[,train_vec[1], with=F][[1]] == train_vec[2])
     test_idx = setdiff(1:nrow(curr), train_idx) # use the other rows for testing
-    reTrain <- caret::createDataPartition(y = config[train_idx, label], p = ml_train_perc) # take a user-defined percentage of the regexed training set
+    reTrain <- caret::createDataPartition(y = curr[train_idx, label], p = ml_train_perc) # take a user-defined percentage of the regexed training set
     inTrain <- train_idx[reTrain$Resample1]
     inTest = test_idx
   }else{ # ONLY TEST IS DEFINED
     test_idx = which(config[,test_vec[1], with=F][[1]] == test_vec[2])
     train_idx = setdiff(1:nrow(curr), test_idx) # use the other rows for testing
-    reTrain <- caret::createDataPartition(y = config[train_idx, label], p = ml_train_perc) # take a user-defined percentage of the regexed training set
+    reTrain <- caret::createDataPartition(y = curr[train_idx, label], p = ml_train_perc) # take a user-defined percentage of the regexed training set
     inTrain <- train_idx[reTrain$Resample1]
     inTest <- test_idx
+  }
+  
+  if("split" %in% colnames(curr)){
+    curr <- curr[,-"split"]
   }
   
   # choose predictor "label" (some others are also included but cross validation will be done on this)
@@ -270,8 +275,8 @@ runML <- function(curr,
   }else{
     trainCtrl <- caret::trainControl(verboseIter = T,
                                      allowParallel = F,
-                                     method=as.character(ml_perf_metr),
-                                     number=as.numeric(ml_folds),
+                                     method = as.character(ml_perf_metr),
+                                     number = as.numeric(ml_folds),
                                      repeats=3,
                                      trim=TRUE, 
                                      returnData = FALSE) # need something here...

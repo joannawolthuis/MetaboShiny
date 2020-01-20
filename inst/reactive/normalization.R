@@ -221,7 +221,7 @@ shiny::observeEvent(input$initialize, {
         if(length(left_batch_vars) == 1){
           # create a model table
           csv_pheno <- data.frame(sample = 1:nrow(csv),
-                                  batch1 = mSet$dataSet$covars[match(smp, 
+                                  batch1 = mSet$dataSet$covars[match(smps, 
                                                                      mSet$dataSet$covars$sample),
                                                                left_batch_vars[1], with=FALSE][[1]]
                                   #,batch2 = c(0),

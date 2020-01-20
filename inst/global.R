@@ -83,7 +83,7 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                            list(name = 'ecmdb_logo', path = 'www/ecmdb_logo.png', dimensions = c(250, 80)),
                                            list(name = 'bmdb_logo', path = 'www/hmp_logo.png', dimensions = c(150, 150)),
                                            list(name = 'rmdb_logo', path = 'www/hmp_logo.png', dimensions = c(150, 150)),
-                                           list(name = 'mvoc_logo', path = 'www/mvoc_logo.png', dimensions = c(130, 60)),
+                                           list(name = 'mvoc_logo', path = 'www/mvoc_logo.png', dimensions = c(230, 60)),
                                            list(name = 'mcdb_logo', path = 'www/mcdb_logo.png', dimensions = c(250, 80)),
                                            list(name = 'pamdb_logo', path = 'www/pamdb_logo.png', dimensions = c(150, 150)),
                                            list(name = 'ymdb_logo', path = 'www/ymdb_logo.png', dimensions = c(330, 90)),
