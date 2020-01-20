@@ -3,7 +3,8 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                  shinyalert::useShinyalert(), 
                  shinyjs::useShinyjs(),
                  shiny::navbarPage(windowTitle='MetaboShiny',
-                                   header=shiny::tagList(shiny::tags$script(src="spinnytitle.js")),
+                                   header=shiny::tagList(shiny::tags$script(src="spinnytitle.js"),
+                                                         shiny::tags$script(src="sparkle.js")),
                                    # use this for title
                                    # https://codepen.io/maxspeicher/pen/zrVKLE
                                    title=shiny::div(shiny::h1("MetaboShiny"),
@@ -959,7 +960,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                    shiny::div(class="spinnylocation1",
                                               shiny::div(class="plus", img(class="imagetop", 
                                                                            src="gemmy_rainbow.png", 
-                                                                           width="80px", height="80px"))
+                                                                           width="100px", height="100px"))
                                    ),
                                    shiny::div(class="line")
                                    ,footer=shiny::fluidRow(

@@ -277,10 +277,10 @@
   animation:spin 1s infinite ease-in-out;
   -webkit-animation:spin 1s infinite ease-in-out;
   -moz-animation:spin 1s infinite ease-in-out;
-  -webkit-filter: drop-shadow(2px 1px 0 black)
-                  drop-shadow(-1px -1px 0 black);
-  filter: drop-shadow(2px 1px 0 black) 
-          drop-shadow(-1px -1px 0 black);
+  -webkit-filter: drop-shadow(6px 6px 0 black)
+                  drop-shadow(0px 0px 0 white);
+  filter: drop-shadow(6px 6px 0 black)
+  drop-shadow(0px 0px 0 white);
 }
 
 
@@ -288,7 +288,7 @@
 .spinnylocation1
 {
   position: absolute;
-  top: 20px;
+  top: 10px;
   right: -70px;
   animation-fill-mode: forwards;
   z-index:99998 !important;
@@ -299,11 +299,10 @@
   -webkit-animation:spin 30s linear infinite;
   -moz-animation:spin 30s linear infinite;
   animation:spin 30s linear infinite;
-  -webkit-filter: drop-shadow(1px 1px 0 black)
-                  drop-shadow(-1px -1px 0 black);
-  filter: drop-shadow(1px 1px 0 black) 
-          drop-shadow(-1px -1px 0 black);
-          outline: 1px solid transparent;
+  -webkit-filter: drop-shadow(6px 6px 0 black)
+                  drop-shadow(0px 0px 0 white);
+  filter: drop-shadow(6px 6px 0 black)
+  drop-shadow(0px 0px 0 white);
 }
 
 .plus
@@ -312,7 +311,7 @@
     padding : 0;
     height: 80px;
     width : 180px;
-    overflow : hidden;
+    overflow : visible;
 }
 
 .minus

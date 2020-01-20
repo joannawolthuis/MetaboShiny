@@ -166,7 +166,7 @@ size1 = 40
 size2 = 20
 size3 = 15
 size4 = 11
-taskbar_image = gemmy_rainbow.png
+taskbar_image = metshi_logo.png
 gtheme = classic
 gcols = #1C1400&#FFE552&#D49C1A&#EBC173&#8A00ED&#00E0C2&#95C200&#FF6BE4&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF
 gspec = RdBu
@@ -252,12 +252,6 @@ apikey = ')
       shinyjs::removeClass(class = "hidden",
                            id = "metshi")
       
-      jq = paste0('$("head")',
-                  ".append('", 
-                  '<script src="sparkle.js"></script>"',
-                  "');")
-      
-      shinyjs::runjs(jq)
       # load in custom databases
       has.customs <- dir.exists(file.path(lcl$paths$db_dir, 
                                           "custom"))

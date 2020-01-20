@@ -59,9 +59,6 @@
     const h = $('.sparkley').height();*/
     w = 300;
     h = 25;
-    
-    alert(w);
-    alert(h);
 
     const getCoordinates = function() {
       return {
