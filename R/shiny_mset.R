@@ -12,8 +12,8 @@ is.ordered.mSet <- function(mSet){
                            all(mSet$dataSet$exp.fac == mSet$dataSet$covars$individual && mSet$dataSet$time.fac == mSet$dataSet$covars[,mSet$dataSet$facA.lbl, with=F] && mSet$dataSet$facA == mSet$dataSet$time.fac)
                          },
                          "t1f"={
-                           all(mSet$dataSet$exp.fac == mSet$dataSet$covars$individual && mSet$dataSet$time.fac == mSet$dataSet$covars[ ,mSet$dataSet$facA.lbl, with=F][[1]]
-                               && mSet$dataSet$facA == mSet$dataSet$time.fac && mSet$dataSet$facA == mSet$dataSet$covars[,mSet$dataSet$facA.lbl,with=F][[1]]
+                           all(mSet$dataSet$exp.fac == mSet$dataSet$covars[,mSet$dataSet$facA.lbl, with=F][[1]] && mSet$dataSet$time.fac == mSet$dataSet$covars[ ,mSet$dataSet$facB.lbl, with=F][[1]]
+                               && mSet$dataSet$facB == mSet$dataSet$time.fac && mSet$dataSet$facA == mSet$dataSet$covars[,mSet$dataSet$facA.lbl,with=F][[1]]
                                && mSet$dataSet$facB == mSet$dataSet$covars[,mSet$dataSet$facB.lbl, with=F][[1]])
                          })
   return(covarsMatch & expVarsMatch)
@@ -315,8 +315,7 @@ pair.mSet <- function(mSet){
       if(length(ind.times) == length(times)){
         samps = indiv.samp[individual == indiv]$sample
       }else{
-        print("nah")
-        c()
+        samps = c()
       }
     }else{
       has.all.groups = all(req.groups %in% overv$variable)
@@ -332,14 +331,17 @@ pair.mSet <- function(mSet){
     unlist(samps)
   })
   
+  names(keep.samp) <- keep.indiv
+  keep.samp = keep.samp[sapply(keep.samp, function(x) !is.null(x))]
+
   if(mSet$dataSet$exp.type == c("t1f")){
-    indiv.final = unique(overview.tbl[sample %in% as.character(keep.samp), c("individual", "variable")])
+    indiv.final = unique(overview.tbl[sample %in% unlist(keep.samp), c("individual", "variable")])
     downsampled = caret::downSample(indiv.final$individual, as.factor(indiv.final$variable))
     keep.indiv = downsampled$x
-    keep.samp <- as.character(keep.samp[,which(colnames(keep.samp) %in% keep.indiv)])
+    keep.samp <- as.character(unlist(keep.samp[which(names(keep.samp) %in% keep.indiv)]))
   }
   
-  final.tbl = mSet$dataSet$covars[sample %in% keep.samp]
+  #final.tbl = mSet$dataSet$covars[sample %in% keep.samp]
   
   if(length(keep.samp)> 2){
     mSet <- MetaboShiny::subset.mSet(mSet, 
