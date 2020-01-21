@@ -143,16 +143,17 @@ shiny::observeEvent(input$initialize, {
       }
     }
     
+    #mSet <- MetaboAnalystR::replaceMin(mSet)
+    
     shiny::setProgress(session=session, value= .2)
     
     # if normalizing by a factor, do the below
     if(req(input$norm_type) == "SpecNorm"){
-      norm.vec <- mSet$dataSet$covars[match(rownames(mSet$dataSet$preproc),
+      norm.vec <<- mSet$dataSet$covars[match(rownames(mSet$dataSet$preproc),
                                             mSet$dataSet$covars$sample),][[input$samp_var]]
-      norm.vec <- scale(x = norm.vec, center = 1) # normalize scaling factor
-      
+      norm.vec <<- scale(x = norm.vec, center = 1)[,1] # normalize scaling factor
     }else{
-      norm.vec <- rep(1, length(mSet$dataSet$cls)) # empty
+      norm.vec <<- rep(1, length(mSet$dataSet$cls)) # empty
     }
     
     # write these to mset!!!
@@ -268,6 +269,7 @@ shiny::observeEvent(input$initialize, {
     
     # set name of variable of interest
     mSet$dataSet$cls.name <- condition
+    mSet$dataSet$exp.fac <- condition
     
     shiny::setProgress(session=session, value= .6)
     
@@ -313,8 +315,16 @@ shiny::observeEvent(input$initialize, {
       mSet$dataSet$exp.type <- "1fm"
     }
     
+    mSet$settings <- list(subset = mSet$dataSet$subset,
+                          exp.var = mSet$dataSet$exp.var,
+                          exp.fac = mSet$dataSet$exp.fac,
+                          time.var = mSet$dataSet$time.var,
+                          exp.type = mSet$dataSet$exp.type,
+                          paired = mSet$paired)
+    
     mSet$storage <- list(orig = list(data = mSet$dataSet,
-                                     analysis = mSet$analSet))
+                                     analysis = mSet$analSet,
+                                     settings = mSet$settings))
 
     
     if(req(input$filt_type ) != "none"){

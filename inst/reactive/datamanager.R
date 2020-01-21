@@ -35,7 +35,7 @@ shiny::observe({
                          
                        })
                        shiny::updateSelectInput(session, "storage_choice", 
-                                                choices = names(mSet$storage))
+                                                choices = setdiff(names(mSet$storage), "orig"))
                      }
                      
                      shiny::updateSelectInput(session, "stats_type", 

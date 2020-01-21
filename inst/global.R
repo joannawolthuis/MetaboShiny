@@ -542,7 +542,7 @@ try({
   success=F
   orca_server <- plotly::orca_serve()
   success=T
-})
+},silent=T)
 if(!success) print("Orca isn't working, please check your installation. If on Mac, please try starting Rstudio from the command line with the command 'open -a Rstudio'", session=session)
 
 msg.vec <- c()

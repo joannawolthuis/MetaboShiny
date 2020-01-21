@@ -176,7 +176,7 @@ observeEvent(input$do_ml, {
       
       keep_configs <- which(!(colnames(config) %in% remove))
       
-    try({
+      try({
         shiny::showNotification(paste0("Keeping non-mz variables after NA/unique filtering: ",
                                        paste0(names(config)[keep_configs],collapse = ", ")))
       })

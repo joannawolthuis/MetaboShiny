@@ -3,7 +3,7 @@ is.ordered.mSet <- function(mSet){
   mSet$dataSet$exp.type <- gsub("^1f.",  "1f", mSet$dataSet$exp.type)
   expVarsMatch <- switch(mSet$dataSet$exp.type,
                          "1f"={
-                           all(mSet$dataSet$cls == mSet$dataSet$covars[,mSet$dataSet$exp.var, with=F][[1]])
+                           all(mSet$dataSet$cls == mSet$dataSet$covars[,mSet$dataSet$exp.fac, with=F][[1]])
                          },
                          "2f"={
                            all(mSet$dataSet$facA == mSet$dataSet$covars[,mSet$dataSet$facA.lbl, with=F][[1]] && mSet$dataSet$facB == mSet$dataSet$covars[,mSet$dataSet$facB.lbl, with=F][[1]])
@@ -53,7 +53,6 @@ name.mSet <- function(mSet){
   }else if(mSet$dataSet$paired){
     info_vec = c(info_vec, "paired")
   }
-  
   if(length(mSet$dataSet$subset) > 0){
     subsetgroups = sapply(1:length(mSet$dataSet$subset), function(i){
       if(names(mSet$dataSet$subset)[i] == "sample"){
@@ -112,17 +111,20 @@ name.mSet <- function(mSet){
 reset.mSet <- function(mSet){
   mSet$dataSet <- mSet$storage$orig$data
   mSet$analSet <- mSet$storage$orig$analysis
+  mSet$settings <- mSet$storage$orig$settings
   return(mSet)
 }
 
 load.mSet <- function(mSet, name){
   #mSet$dataSet <- mSet$storage[[name]]$data
   mSet$analSet <- mSet$storage[[name]]$analysis
+  mSet$settings <- mSet$storage[[name]]$settings
   return(mSet)
 }
 
 store.mSet <- function(mSet, name=mSet$dataSet$cls.name){
-  mSet$storage[[name]] <- list(analysis = mSet$analSet)
+  mSet$storage[[name]] <- list(analysis = mSet$analSet,
+                               settings = mSet$settings)
   return(mSet)
 }
 
@@ -130,6 +132,7 @@ change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
   
   mSet$dataSet$exp.type <- stats_type
   mSet$dataSet$exp.var <- stats_var
+  mSet$dataSet$exp.fac <- stats_var
   mSet$dataSet$time.var <- time_var
   
   if(grepl(mSet$dataSet$exp.type, pattern = "^1f")){
@@ -206,8 +209,11 @@ change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
                      # - - - 
                      mSet
                    })
+  mSet$settings$exp.type = mSet$dataSet$exp.type 
+  mSet$settings$exp.var = mSet$dataSet$exp.var
+  mSet$settings$exp.fac = mSet$dataSet$exp.fac
+  mSet$settings$time.var = mSet$dataSet$time.var
   mSet$analSet <- NULL
-  if(is.null(mSet)) mSet <- mSet.orig 
   return(mSet)
 }
 
@@ -223,6 +229,10 @@ subset.mSet <- function(mSet, subset_var, subset_group){
     clss = c("cls", "proc.cls", "prenorm.cls", "filt.cls", "orig.cls")
     combi.tbl = data.table::data.table(tbl = tables,
                                        cls = clss)
+    
+    if(!("subset" %in% names(mSet$settings))){
+      mSet$settings$subset <- list()
+    }
     
     for(i in 1:nrow(combi.tbl)){
       try({
@@ -246,6 +256,7 @@ subset.mSet <- function(mSet, subset_var, subset_group){
       }, silent = T)
     }
     mSet$dataSet$subset[[subset_var]] <- subset_group
+    mSet$settings$subset[[subset_var]] <- subset_group
   }
   mSet
 }
@@ -334,6 +345,7 @@ pair.mSet <- function(mSet){
     mSet <- MetaboShiny::subset.mSet(mSet, 
                                       subset_var = "sample", 
                                       subset_group = keep.samp)
+    mSet$settings$paired <- TRUE
     mSet$dataSet$paired <- TRUE  
   }else{
     MetaboShiny::metshiAlert("Not enough samples for paired analysis!")

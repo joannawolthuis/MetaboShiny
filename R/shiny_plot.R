@@ -736,8 +736,7 @@ ggPlotROC <- function(data,
   }
   
   cols = cf(attempts)
-  print(head(perf.long))
-  
+
   p <- ggplot(perf.long, aes(FPR,TPR)) +
     ggplot2::geom_path(alpha=.5,
                        cex=.7,

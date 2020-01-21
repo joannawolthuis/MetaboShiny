@@ -9,17 +9,16 @@ shiny::observe({
     if(!is.null(mSet)){
       
       mSet <- MetaboShiny::store.mSet(mSet) # save analyses
-      
       mSet.old <- mSet
-      
       mSet <- MetaboShiny::reset.mSet(mSet) # reset dataset
       
       success = F
       
       try({
-        if(!(mSetter$do %in% c("unsubset","load"))){
-          if(length(mSet.old$dataSet$subset) > 0){
-            subs = mSet.old$dataSet$subset
+        if(!(mSetter$do %in% c("unsubset"))){
+          mSet.check <- if(mSetter$do == "load") mSet$storage[[input$storage_choice]] else mSet.old
+          if(length(mSet.check$settings$subset) > 0){
+            subs = mSet.check$settings$subset
             subs = subs[names(subs) != "sample"]
             if(length(subs) > 0){
               for(i in 1:length(subs)){
@@ -34,10 +33,14 @@ shiny::observe({
         # TODO: fix mismatch between cls order, covars order and table sample order
         # use match() somehow?
         # should be fixed in #CHANGE.MSET
-        
         mSet <- switch(mSetter$do,
                        load = {
-                         mSet <- MetaboShiny::load.mSet(mSet, input$storage_choice)
+                         mSet <- MetaboShiny::change.mSet(mSet, 
+                                                          stats_var = mSet.check$settings$exp.var, 
+                                                          time_var =  mSet.check$settings$time.var,
+                                                          stats_type = mSet.check$settings$exp.type)
+                         mSet$dataSet$paired <- mSet.check$settings$paired
+                         mSet
                        },
                        change = {
                          mSet <- MetaboShiny::change.mSet(mSet, 
@@ -45,7 +48,7 @@ shiny::observe({
                                                           stats_type = input$stats_type, 
                                                           time_var = input$time_var)
                          mSet$dataSet$paired <- if(input$stats_type %in% c("t", "t1f") | input$paired) TRUE else FALSE
-                         if(input$omit_unknown & grepl("^1f",input$stats_type)){
+                         if(input$omit_unknown & grepl("^1f", input$stats_type)){
                            shiny::showNotification("omitting 'unknown' labeled samples...")
                            knowns = mSet$dataSet$covars$sample[which(mSet$dataSet$covars[ , input$stats_var, with=F][[1]] != "unknown")]
                            if(length(knowns) > 0){
@@ -58,74 +61,74 @@ shiny::observe({
                        },
                        subset = {
                          mSet <- MetaboShiny::change.mSet(mSet, 
-                                                          stats_var = mSet.old$dataSet$exp.var, 
-                                                          time_var =  mSet.old$dataSet$time.var,
-                                                          stats_type = mSet.old$dataSet$exp.type)
+                                                          stats_var = mSet.check$settings$exp.var, 
+                                                          time_var =  mSet.check$settings$time.var,
+                                                          stats_type = mSet.check$settings$exp.type)
                          mSet <- MetaboShiny::subset.mSet(mSet,
                                                           subset_var = input$subset_var, 
                                                           subset_group = input$subset_group)
-                         mSet$dataSet$paired <- mSet.old$dataSet$paired
+                         mSet$dataSet$paired <- mSet.check$settings$paired
                          mSet
                        },
                        unsubset = {
                          mSet <- MetaboShiny::change.mSet(mSet, 
-                                                          stats_var = mSet.old$dataSet$exp.var, 
-                                                          time_var =  mSet.old$dataSet$time.var,
-                                                          stats_type = mSet.old$dataSet$exp.type)
-                         mSet$dataSet$paired <- mSet.old$dataSet$paired
+                                                          stats_var = mSet.check$settings$exp.var, 
+                                                          time_var =  mSet.check$settings$time.var,
+                                                          stats_type = mSet.check$settings$exp.type)
+                         mSet$dataSet$paired <- mSet.check$settings$paired
                          mSet
                        }
         ) 
         
-        if(mSetter$do != "load"){
-          if(mSet$dataSet$paired){
-            mSet <- pair.mSet(mSet)
-          }
-          if(grepl(mSet$dataSet$exp.type, pattern = "^1f")){
-            if(mSet$dataSet$cls.num == 2){
-              mSet$dataSet$exp.type <- "1fb"
-            }else{
-              mSet$dataSet$exp.type <- "1fm"
-            }  
-          }
-          new.name = MetaboShiny::name.mSet(mSet)
-          
-          if(new.name %in% names(mSet$storage)){
-            mSet <- MetaboShiny::load.mSet(mSet, new.name)
+        if(mSet$dataSet$paired){
+          mSet$settings$paired <- TRUE
+          mSet <- MetaboShiny::pair.mSet(mSet)
+        }
+        if(grepl(mSet$dataSet$exp.type, pattern = "^1f")){
+          if(mSet$dataSet$cls.num == 2){
+            mSet$dataSet$exp.type <- "1fb"
           }else{
-            mSet$analSet <- list()
-          }
-          mSet$dataSet$cls.name <- new.name
-          if(typeof(mSet) != "double"){
-            #===== FILTERING ======
-            if(mSet$metshiParams$filt_type != "none"){
-              shiny::showNotification("Filtering dataset...")
-              mSet$analSet <- mSet$storage$orig$analysis
-              # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
-              mSet <- MetaboAnalystR::FilterVariable(mSet,
-                                                     filter = mSet$metshiParams$filt_type,
-                                                     qcFilter = "F",
-                                                     rsd = 25)
-              keep.mz <- colnames(mSet$dataSet$filt)
-              mSet <- MetaboShiny::filt.mSet(mSet, keep.mz)
-            }
+            mSet$dataSet$exp.type <- "1fm"
+          }  
+        }
+        
+        mSet$settings$exp.type = mSet$dataSet$exp.type 
+        new.name = if(mSetter$do == "load") input$storage_choice else MetaboShiny::name.mSet(mSet)
+        
+        if(new.name %in% names(mSet$storage)){
+          mSet <- MetaboShiny::load.mSet(mSet, new.name)
+        }else{
+          mSet$analSet <- list()
+        }
+        
+        mSet$dataSet$cls.name <- new.name
+        
+        if(typeof(mSet) != "double"){
+          #===== FILTERING ======
+          if(mSet$metshiParams$filt_type != "none" & length(mSet$analSet) == 0){
+            shiny::showNotification("Filtering dataset...")
+            #mSet$analSet <- mSet$storage$orig$analysis
+            # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
+            mSet <- MetaboAnalystR::FilterVariable(mSet,
+                                                   filter = mSet$metshiParams$filt_type,
+                                                   qcFilter = "F",
+                                                   rsd = 25)
+            keep.mz <- colnames(mSet$dataSet$filt)
+            mSet <- MetaboShiny::filt.mSet(mSet, keep.mz)
           }
         }
-       
+        
         shiny::updateCheckboxInput(session, 
                                    "paired", 
                                    value = mSet$dataSet$paired) 
-        
-       lcl$last_mset <- mSet$dataSet$cls.name
-       
-       success = T
-       
-       shiny::showNotification("Changed mSet...")
+        lcl$last_mset <- mSet$dataSet$cls.name
+        success = T
+        shiny::showNotification("Changed mSet...")
       })
       
       if(success){
         mSet.backup <<- mSet
-        if(MetaboShiny::is.ordered.mSet(mSet)){
+        if(is.ordered.mSet(mSet)){
           msg = "mSet class label order still correct! :)"
           try({
             shiny::showNotification(msg) 

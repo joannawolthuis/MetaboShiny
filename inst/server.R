@@ -1007,6 +1007,15 @@ apikey = ')
       fn <- paste0(tools::file_path_sans_ext(lcl$paths$patdb), ".metshi")
       if(file.exists(fn)){
         load(fn)
+        if(!("settings" %in% names(mSet))){
+          mSet$orig$settings <- list(subset = mSet$storage$orig$data$subset,
+                                exp.var = mSet$storage$orig$data$exp.var,
+                                time.var = mSet$storage$orig$data$time.var,
+                                exp.type = mSet$storage$orig$data$exp.type,
+                                paired = mSet$storage$orig$data$paired)
+          mSet <- MetaboShiny::reset.mSet(mSet)
+          MetaboShiny::metshiAlert("Due to a version change you cannot directly switch to sub-experiments from the switch/subset tab, please manually go there with switch + subset first!")
+        }
         mSet <<- mSet
         opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
         if("ml" %in% names(mSet$analSet)){
