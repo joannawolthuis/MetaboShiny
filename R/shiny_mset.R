@@ -328,12 +328,12 @@ pair.mSet <- function(mSet){
         }))
       }
     } 
-    unlist(samps)
+    list(samps)
   })
   
   names(keep.samp) <- keep.indiv
   keep.samp = keep.samp[sapply(keep.samp, function(x) !is.null(x))]
-
+  
   if(mSet$dataSet$exp.type == c("t1f")){
     indiv.final = unique(overview.tbl[sample %in% unlist(keep.samp), c("individual", "variable")])
     downsampled = caret::downSample(indiv.final$individual, as.factor(indiv.final$variable))

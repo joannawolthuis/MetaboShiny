@@ -28,6 +28,8 @@ shiny::observe({
               }  
             }
           }
+        }else{
+          mSet.check <- mSet.old
         }
         
         # TODO: fix mismatch between cls order, covars order and table sample order
@@ -98,14 +100,14 @@ shiny::observe({
         if(new.name %in% names(mSet$storage)){
           mSet <- MetaboShiny::load.mSet(mSet, new.name)
         }else{
-          mSet$analSet <- list()
+          mSet$analSet <- list(type = "stat")
         }
         
         mSet$dataSet$cls.name <- new.name
         
         if(typeof(mSet) != "double"){
           #===== FILTERING ======
-          if(mSet$metshiParams$filt_type != "none" & length(mSet$analSet) == 0){
+          if(mSet$metshiParams$filt_type != "none" & length(mSet$analSet) == 1){
             shiny::showNotification("Filtering dataset...")
             #mSet$analSet <- mSet$storage$orig$analysis
             # TODO; add option to only keep columns that are also in QC ('qcfilter'?)

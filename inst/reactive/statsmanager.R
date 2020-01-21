@@ -197,7 +197,9 @@ shiny::observe({
                    
                  }
                }) 
-        success <- T
+        if(typeof(mSet) != "double"){
+          success <- T
+        }
       })
       if(success){
         mSet <<- mSet
