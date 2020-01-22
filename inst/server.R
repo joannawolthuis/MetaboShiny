@@ -1008,6 +1008,11 @@ apikey = ')
       if(file.exists(fn)){
         load(fn)
         if(!("settings" %in% names(mSet))){
+          # mSet$settings <- list(subset = mSet$dataSet$subset,
+          #                       exp.var = mSet$dataSet$exp.var,
+          #                       time.var = mSet$dataSet$time.var,
+          #                       exp.type = mSet$dataSet$exp.type,
+          #                       paired = mSet$dataSet$paired)
           mSet$orig$settings <- list(subset = mSet$storage$orig$data$subset,
                                 exp.var = mSet$storage$orig$data$exp.var,
                                 time.var = mSet$storage$orig$data$time.var,

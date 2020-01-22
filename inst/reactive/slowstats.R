@@ -3,6 +3,7 @@ shiny::observeEvent(input$do_pattern, {
   success = F
   try({
     mSet <- MetaboAnalystR::Match.Pattern(mSet, input$pattern_corr, input$pattern_seq)
+    success = T
   })
   if(success){
     mSet <<- mSet
