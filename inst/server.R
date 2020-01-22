@@ -1019,7 +1019,7 @@ apikey = ')
                                 exp.type = mSet$storage$orig$data$exp.type,
                                 paired = mSet$storage$orig$data$paired)
           mSet <- MetaboShiny::reset.mSet(mSet)
-          MetaboShiny::metshiAlert("Due to a version change you cannot directly switch to sub-experiments from the switch/subset tab, please manually go there with switch + subset first!")
+          #MetaboShiny::metshiAlert("Due to a version change you cannot directly switch to sub-experiments from the switch/subset tab, please manually go there with switch + subset first!")
         }
         mSet <<- mSet
         opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)

@@ -35,7 +35,8 @@ shiny::observe({
                          
                        })
                        shiny::updateSelectInput(session, "storage_choice", 
-                                                choices = setdiff(names(mSet$storage), "orig"))
+                                                choices = setdiff(names(mSet$storage)[sapply(mSet$storage, function(x) "settings" %in% names(x))], 'orig')
+                                                )
                      }
                      
                      shiny::updateSelectInput(session, "stats_type", 
@@ -101,16 +102,16 @@ shiny::observe({
                      }
                      
                      switch(mSet$dataSet$exp.type,
-                            "1fb"=shiny::updateSelectInput(session, "heattable", choices = list("T-test"="tt", 
+                            "1fb"=shinyWidgets::updateRadioGroupButtons(session, "heattable", choices = list("T-test"="tt", 
                                                                                                 "Fold-change analysis"="fc"), 
                                                            selected = "tt"),
-                            "1fm"=shiny::updateSelectInput(session, "heattable", choices = c("aov"), selected = "aov"),
-                            "2f"=shiny::updateSelectInput(session, "heattable", choices = list(ANOVA="aov2", 
+                            "1fm"=shinyWidgets::updateRadioGroupButtons(session, "heattable", choices = c(ANOVA="aov"), selected = "aov"),
+                            "2f"=shinyWidgets::updateRadioGroupButtons(session, "heattable", choices = list(ANOVA="aov2", 
                                                                                                ASCA="asca"), selected = "aov2"),
-                            "t1f"=shiny::updateSelectInput(session, "heattable", choices = list(ANOVA="aov2", 
+                            "t1f"=shinyWidgets::updateRadioGroupButtons(session, "heattable", choices = list(ANOVA="aov2", 
                                                                                                 ASCA="asca",
                                                                                                 MEBA="meba"), selected = "aov2"),
-                            "t"=shiny::updateSelectInput(session, "heattable", choices = list(ANOVA="aov2",
+                            "t"=shinyWidgets::updateRadioGroupButtons(session, "heattable", choices = list(ANOVA="aov2",
                                                                                               MEBA="meba"), selected = "aov2"))
                    },
                    statspicker = {

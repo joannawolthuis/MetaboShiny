@@ -352,8 +352,16 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                             ),
                                                                                                                                                             shiny::fluidRow(shiny::column(align="center",
                                                                                                                                                                                           width=12,
-                                                                                                                                                                                          #shiny::uiOutput("heatbutton"),
-                                                                                                                                                                                          shiny::selectInput(width = "80%","heattable", label = "Use statistics from:", choices = c(), selected = c()),
+                                                                                                                                                                                          shinyWidgets::radioGroupButtons(
+                                                                                                                                                                                            inputId = "heattable",
+                                                                                                                                                                                            label = "Use which analysis?",
+                                                                                                                                                                                            choices = c("placeholder"),
+                                                                                                                                                                                            justified = TRUE,
+                                                                                                                                                                                            checkIcon = list(
+                                                                                                                                                                                              yes = icon("ok", 
+                                                                                                                                                                                                         lib = "glyphicon"))
+                                                                                                                                                                                          ),
+                                                                                                                                                                                          #shiny::selectInput(width = "80%","heattable", label = "Use statistics from:", choices = c(), selected = c()),
                                                                                                                                                                                           MetaboShiny::switchButton("heatsign", label = "Only significant hits?", col = "GB", type = "YN"),
                                                                                                                                                                                           MetaboShiny::switchButton("heatlimits", label = "Color based on -all- metabolites?", col = "GB", type = "YN")
                                                                                                                                                             ))
@@ -868,9 +876,16 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                      #                           value = F,
                                                                                      #                           col = "BW", type = "YN")
                                                                                      shiny::sliderInput("ncores", "How many cores can MetShi use?", value=2, min=1, max = parallel::detectCores() - 1),
-                                                                                     MetaboShiny::switchButton(inputId = "omit_unknown",
-                                                                                                               label = "Omit samples that are zero/empty in metadata?",
-                                                                                                               value = TRUE, col = "BW", type = "YN")
+                                                                                     br(),
+                                                                                     helpText("How to handle samples with missing metadata? (re-checked each subset/switch step)?"),
+                                                                                     shinyWidgets::switchInput(
+                                                                                       inputId = "omit_unknown",
+                                                                                       onLabel = "omit",
+                                                                                       offLabel = "keep",
+                                                                                       offStatus = "success", 
+                                                                                       onStatus = "danger",
+                                                                                       value = T
+                                                                                     )
                                                                      ),
                                                                      shiny::tabPanel("Project", icon=shiny::icon("gift"),
                                                                                      #shiny::textInput(inputId="proj_name", label="Project name", value = ''),

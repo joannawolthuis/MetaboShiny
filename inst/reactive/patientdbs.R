@@ -193,8 +193,9 @@ shiny::observeEvent(input$metadata_new_add, {
       }
       
       # reorder to match old order
-      reordered_new_meta <- new_meta[match(new_meta$sample, mSet$storage$orig$data$covars$sample),]
-      merged_new_meta <- cbind(reordered_new_meta, meta_base)
+      reordered_new_meta <- new_meta[match(mSet$storage$orig$data$covars$sample, new_meta$sample),]
+      merged_new_meta <- cbind(reordered_new_meta, 
+                               meta_base)
       
       mSet <- MetaboShiny::store.mSet(mSet)
       mSet$storage$orig$data$covars <- merged_new_meta
