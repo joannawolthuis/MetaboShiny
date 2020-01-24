@@ -19,6 +19,7 @@ function(input, output, session) {
   # Rshiny app to analyse untargeted metabolomics data! BASH INSTRUCTIONS: STEP 1: mydir=~"/MetaboShiny" #or another of your choice | STEP 2: mkdir $mydir | STEP 3: docker run -p 8080:8080 -v $mydir:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny /start.sh
   
   # rjava.so error.. or rdb corrupt.. 'sudo R CMD javareconf'
+  require(tidytext)
   
   runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
   
@@ -830,7 +831,6 @@ apikey = ')
   output$ref_select <- shiny::renderUI({ref.selector()})
   
   # triggered when user enters the statistics tab
-  
   shiny::observeEvent(input$statistics, {
     if(!is.null(mSet)){
       # check if an mset is present, otherwise abort
@@ -1008,18 +1008,16 @@ apikey = ')
       if(file.exists(fn)){
         load(fn)
         if(!("settings" %in% names(mSet))){
-          # mSet$settings <- list(subset = mSet$dataSet$subset,
-          #                       exp.var = mSet$dataSet$exp.var,
-          #                       time.var = mSet$dataSet$time.var,
-          #                       exp.type = mSet$dataSet$exp.type,
-          #                       paired = mSet$dataSet$paired)
+          mSet$settings <- list(subset = mSet$dataSet$subset,
+                                exp.var = mSet$dataSet$exp.var,
+                                time.var = mSet$dataSet$time.var,
+                                exp.type = mSet$dataSet$exp.type,
+                                paired = mSet$dataSet$paired)
           mSet$orig$settings <- list(subset = mSet$storage$orig$data$subset,
                                 exp.var = mSet$storage$orig$data$exp.var,
                                 time.var = mSet$storage$orig$data$time.var,
                                 exp.type = mSet$storage$orig$data$exp.type,
                                 paired = mSet$storage$orig$data$paired)
-          mSet <- MetaboShiny::reset.mSet(mSet)
-          #MetaboShiny::metshiAlert("Due to a version change you cannot directly switch to sub-experiments from the switch/subset tab, please manually go there with switch + subset first!")
         }
         mSet <<- mSet
         opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
@@ -1076,6 +1074,11 @@ apikey = ')
       success=T
     })
     if(!success) MetaboShiny::metshiAlert("Orca isn't working, please check your installation. If on Mac, please try starting Rstudio from the command line with the command 'open -a Rstudio'", session=session)
+  })
+  
+  shiny::observeEvent(input$wordcloud_go, {
+    statsmanager$calculate <- "wordcloud"
+    datamanager$reload <- "wordcloud"
   })
   
   # ==== LOAD LOGIN UI ====

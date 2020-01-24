@@ -1,6 +1,7 @@
 # create listener for what mode we're currently working in (bivariate, multivariate, time series...)
 datamanager <- shiny::reactiveValues()
 
+
 # preload pca/plsda
 shiny::observe({
   if(is.null(datamanager$reload)){
@@ -20,9 +21,28 @@ shiny::observe({
                      if(is.null(mSet)){
                        interface$mode <- NULL
                      }else{
+                       varNormPlots <- MetaboShiny::ggplotNormSummary(mSet = mSet,
+                                                                      plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                                                                      font = lcl$aes$font,
+                                                                      cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       
+                       output$var1 <- shiny::renderPlot(varNormPlots$tl)
+                       output$var2 <- shiny::renderPlot(varNormPlots$bl)
+                       output$var3 <- shiny::renderPlot(varNormPlots$tr)
+                       output$var4 <- shiny::renderPlot(varNormPlots$br)
+                       sampNormPlots <- MetaboShiny::ggplotSampleNormSummary(mSet,
+                                                                             plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                                                                             font = lcl$aes$font,
+                                                                             cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       output$samp1 <- shiny::renderPlot(sampNormPlots$tl)
+                       output$samp2 <- shiny::renderPlot(sampNormPlots$bl)
+                       output$samp3 <- shiny::renderPlot(sampNormPlots$tr)
+                       output$samp4 <- shiny::renderPlot(sampNormPlots$br)
+                       
                        if(is.null(mSet$dataSet$exp.type)){
                          mSet$dataSet$exp.type <- "1f" # one factor, binary class
                        }  
+                       
                        shiny::showNotification("Updating interface...")
                        datamanager$reload <- "statspicker"
                        interface$mode <<- mSet$dataSet$exp.type
@@ -78,6 +98,20 @@ shiny::observe({
                                               choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]))
                      shiny::updateSelectInput(session, "ml_include_covars", 
                                               choices = c(colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "individual"))]))
+                     
+                     wordcloud_filters = file.path(lcl$paths$work_dir, "wordcloud")
+                     if(!dir.exists(wordcloud_filters)){
+                      filter_files = list.files(wordcloud_filters, full.names = T)
+                      items = lapply(filter_files, function(file){
+                        data.table::fread(file)$word
+                      })
+                      itemNames = gsub(pattern = "\\.csv", replacement = "", x = basename(filter_files))
+                      names(items) <- itemNames
+                      gbl$vectors$wordcloud$filters <<- append(gbl$vectors$wordcloud$filters, items)
+                      shiny::updateSelectInput(session, inputId = "wordcloud_filter", choices = c("stopwords","metabolomics", itemNames))
+                     }
+                     
+                     shiny::setProgress(0.7)
                      
                      if(mSet$metshiParams$prematched){
                        search_button$on <- FALSE
@@ -660,67 +694,19 @@ shiny::observe({
                      })
                      
                    },
-                   match_wordcloud_pm = {
-                     
-                     wcdata <- data.frame(word = head(lcl$tables$word_freq_pm, input$wc_topn_pm)$name,
-                                          freq = head(lcl$tables$word_freq_pm, input$wc_topn_pm)$value)
-                     
-                     
-                     if(nrow(wcdata)>0){
-                       output$wordcloud_desc_pm  <- wordcloud2::renderWordcloud2({
-                         wordcloud2::wordcloud2(wcdata,
-                                                size = 0.7,
-                                                shuffle = FALSE,
-                                                fontFamily = MetaboShiny::getOptions(lcl$paths$opt.loc)$font4,
-                                                ellipticity = 1,
-                                                minRotation = -pi/8,
-                                                maxRotation = pi/8,
-                                                shape = 'heart')
-                       })
-                       
-                       output$wordbar_desc_pm <- plotly::renderPlotly({
-                         ggPlotWordBar(wcdata = wcdata,
-                                       cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                       plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                       plotlyfy = TRUE,
-                                       font = lcl$aes$font)})
-                       
-                       tbl <- lcl$tables$pm_absdata
-                       
-                       shiny::setProgress(0.8)
-                     }else{
-                       tbl <- data.table::data.table("no papers found" = "Please try another term!	(｡•́︿•̀｡)")
-                     }
-                     
-                     output$pm_tab <- DT::renderDataTable({
-                       DT::datatable(tbl,
-                                     selection = "single",
-                                     options = list(lengthMenu = c(5, 10, 15),
-                                                    pageLength = 5)
-                       )
+                   wordcloud = {
+                     output$wordcloud <-  wordcloud2::renderWordcloud2({ 
+                       if(nrow(lcl$tables$wordcloud_filt) > 0){
+                         wordcloud2::wordcloud2(lcl$tables$wordcloud_filt[1:input$wordcloud_topWords,], color = "random-light", size=.7, shape = "circle")
+                       }
                      })
-                   },
-                   match_wordcloud = {
-                     if(nrow(shown_matches$forward_full) > 0){
-                       wcdata <- data.frame(word = head(lcl$tables$word_freq, input$wc_topn)$name,
-                                            freq = head(lcl$tables$word_freq, input$wc_topn)$value)
-                       
-                       output$wordcloud_desc <- wordcloud2::renderWordcloud2({
-                         wordcloud2::wordcloud2(wcdata,
-                                                size = 0.7,
-                                                shuffle = FALSE,
-                                                fontFamily = getOptions(lcl$paths$opt.loc)$font4,
-                                                ellipticity = 1,
-                                                minRotation = -pi/8,
-                                                maxRotation = pi/8,
-                                                shape = 'heart')
-                       })
-                       output$wordbar_desc <- renderPlotly({MetaboShiny::ggPlotWordBar(wcdata = wcdata,
-                                                                                       cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                                                                       plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                                                       plotlyfy = TRUE, 
-                                                                                       font = lcl$aes$font)})
-                     }}
+                     # TODO: fix barchart
+                     # output$wordbar_desc <- renderPlotly({MetaboShiny::ggPlotWordBar(wcdata = wcdata,
+                     #                                                                 cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                     #                                                                 plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                     #                                                                 plotlyfy = TRUE, 
+                     #                                                                 font = lcl$aes$font)})
+                   }
             )
           })
         }

@@ -271,29 +271,7 @@ shiny::observeEvent(input$initialize, {
     mSet$dataSet$cls.name <- condition
     mSet$dataSet$exp.fac <- condition
     
-    shiny::setProgress(session=session, value= .6)
-    
-    # generate summary plots and render them in UI
-    
-    varNormPlots <- MetaboShiny::ggplotNormSummary(mSet = mSet,
-                                      plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                      font = lcl$aes$font,
-                                      cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-    
-    output$var1 <- shiny::renderPlot(varNormPlots$tl)
-    output$var2 <- shiny::renderPlot(varNormPlots$bl)
-    output$var3 <- shiny::renderPlot(varNormPlots$tr)
-    output$var4 <- shiny::renderPlot(varNormPlots$br)
-    
-    sampNormPlots <- MetaboShiny::ggplotSampleNormSummary(mSet,
-                                              plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                              font = lcl$aes$font,
-                                              cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-    output$samp1 <- shiny::renderPlot(sampNormPlots$tl)
-    output$samp2 <- shiny::renderPlot(sampNormPlots$bl)
-    output$samp3 <- shiny::renderPlot(sampNormPlots$tr)
-    output$samp4 <- shiny::renderPlot(sampNormPlots$br)
-    shiny::setProgress(session=session, value= .8)
+    shiny::setProgress(session=session, value= .7)
     
     # save the used adducts to mSet
     shiny::setProgress(session=session, value= .9)

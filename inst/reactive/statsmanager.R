@@ -149,52 +149,22 @@ shiny::observe({
                    
                  })
                },
-               match_wordcloud = {
-                 if(nrow(shown_matches$forward_full) > 0){
-                   
-                   # remove unwanted words (defined in global) from description
-                   filtered_descriptions <- sapply(1:length(shown_matches$forward_full$description),
-                                                   function(i){
-                                                     # get description
-                                                     desc <- shown_matches$forward_full$description[[i]]
-                                                     # return
-                                                     desc
-                                                   })
-                   
-                   require(tm)
-                   
-                   docs <- tm::VCorpus(tm::VectorSource(filtered_descriptions))
-                   
-                   # Convert all text to lower case
-                   docs <- tm::tm_map(docs, tm::content_transformer(tolower))
-                   
-                   # Remove punctuations
-                   docs <- tm::tm_map(docs, tm::removePunctuation)
-                   
-                   # Remove numbers
-                   docs <- tm::tm_map(docs, tm::removeNumbers)
-                   
-                   # # stem words
-                   # docs <- tm::tm_map(docs, tm::stemDocument)
-                   
-                   # Remove english common stopwords
-                   docs <- tm::tm_map(docs, 
-                                      tm::removeWords, 
-                                      gbl$vectors$wordcloud$skip)
-                   
-                   # Remove whitespace
-                   docs <- tm::tm_map(docs, tm::stripWhitespace)
-                   
-                   # # Text stemming
-                   
-                   doc_mat <- tm::TermDocumentMatrix(docs)
-                   
-                   m <- as.matrix(doc_mat)
-                   
-                   v <- sort(rowSums(m), decreasing = TRUE)
-                   
-                   lcl$tables$word_freq <-  data.frame(name = names(v), value = v)
-                   
+               wordcloud = {
+                 if(input$wordcloud_manual){
+                   shiny::withProgress({ # progress bar
+                     abstracts = MetaboShiny::getAbstracts(searchTerms = input$wordcloud_searchTerm,
+                                                           mindate = input$wordcloud_dateRange[1],
+                                                           maxdate = input$wordcloud_dateRange[2],
+                                                           retmax = input$wordcloud_absFreq)
+                     shiny::setProgress(0.5)
+                     lcl$tables$wordcloud_orig <- MetaboShiny::getWordFrequency(abstracts$abstract)
+                     lcl$tables$wordcloud_filt <- lcl$tables$wordcloud_orig
+                   }, message = "Searching...", max = 1)
+                 }else{
+                   if(nrow(shown_matches$forward_full) > 0){
+                     lcl$tables$wordcloud_orig <- MetaboShiny::getWordFrequency(shown_matches$forward_full$description)
+                     lcl$tables$wordcloud_filt <- lcl$tables$wordcloud_orig
+                   }
                  }
                }) 
         if(typeof(mSet) != "double"){

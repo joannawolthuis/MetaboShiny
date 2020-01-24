@@ -36,15 +36,6 @@ shiny::observeEvent(input$heatmap_topn, {
   }
 })#,ignoreInit = F, ignoreNULL = T)
 
-shiny::observeEvent(input$wc_topn_pm, {
-  datamanager$reload <- "match_wordcloud_pm"
-})#,ignoreInit = TRUE, ignoreNULL = T)
-
-
-shiny::observeEvent(input$wc_topn, {
-  datamanager$reload <- "match_wordcloud"
-})#,ignoreInit = TRUE, ignoreNULL = T)
-
 shiny::observeEvent(input$db_only, {
   if(input$db_only){
     MetaboShiny::setOption(lcl$paths$opt.loc, "mode", "dbonly")
@@ -54,6 +45,7 @@ shiny::observeEvent(input$db_only, {
     logged$status <- "logged"
   }
 },ignoreInit = F, ignoreNULL = T)
+
 
 
 

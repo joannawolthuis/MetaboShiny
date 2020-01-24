@@ -294,9 +294,52 @@ expand.grid.unique <- function(x, y, include.equals=FALSE)
   g <- function(i)
   {
     z <- setdiff(y, x[seq_len(i-include.equals)])
-    
     if(length(z)) cbind(x[i], z, deparse.level=0)
   }
-  
   do.call(rbind, lapply(seq_along(x), g))
 }
+
+getAbstracts <- function(searchTerms, retmax=500, mindate=2000, maxdate=2019){
+  searchTerms = strsplit(searchTerms, " ")[[1]]
+  # ==== SEARCH A METABOLITE TERM =====
+  SUMMARYx <- RISmed::EUtilsSummary(paste0(searchTerms, collapse="+"),type = "esearch", db = "pubmed",
+                            datetype = "edat",retmax = 500, 
+                            mindate = 2000, maxdate = 2019)
+  Idsx <- RISmed::QueryId(SUMMARYx)
+  # Get Download(Fetch)
+  MyDownloadsx <- RISmed::EUtilsGet(SUMMARYx, type = "efetch", db = "pubmed")
+  #Make Data.frame of MyDownloads
+  abstractsx <- data.frame(title = MyDownloadsx@ArticleTitle,
+                           abstract = MyDownloadsx@AbstractText,
+                           journal = MyDownloadsx@Title,
+                           DOI = MyDownloadsx@PMID,
+                           year = MyDownloadsx@YearPubmed)
+  #Constract a charaterized variable for abstract of abstracts data.frame
+  abstractsx <- abstractsx %>% mutate(abstract = as.character(abstract))
+  #abstractsx$abstract <- as.character(abstractsx$abstract) # alternative for above line
+  return(abstractsx)
+}
+
+#wordfrequency of whole abstract #frequencies = getWordFrequency(abstracts)#it should be # from here
+getWordFrequency <- function(abstractsx){
+  require(dplyr)
+  abstractsx <- data.table(abstract = abstractsx)
+  #Split a column into tokens using the tokenizers package
+  CorpusofMyCloudx <- abstractsx %>% unnest_tokens(word, abstract) %>% count(word, sort = TRUE)
+  CorpusofMyCloudx$word <- gsub("^\\d+$", "", CorpusofMyCloudx$word)
+  return(CorpusofMyCloudx)
+}
+
+# frequencies <- getWordFrequency(abstractsx)#? or abstracts# why is it problem???????????????????
+#filterList are medicalwords
+#filterWords are summerized and uniqued of filterList
+#getFilteredWordFreqency is filterd from medicalwords
+getFilteredWordFreqency <- function(frequencies, filterList){
+  filterWords <- unique(filterList)#$word)
+  filteredWords <- frequencies[!(frequencies$word %in% filterWords),]
+  filteredWords <- filteredWords[]
+  return(filteredWords)
+}
+
+
+

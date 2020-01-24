@@ -1,12 +1,13 @@
 # create checkcmarks if database is present
-lapply(c("merge", "csv"), FUN=function(col){
+lapply(c("merge", "db", "csv"), FUN=function(col){
   # creates listener for if the 'check db' button is pressed
   shiny::observe({
     # see which db files are present in folder
     folder_files <- list.files(lcl$paths$work_dir)
     is.present <- switch(col,
                          merge = is.list(input$metadata) & is.list(input$outlist_pos) & is.list(input$outlist_neg),
-                         csv = paste0(input$proj_name_new, ".csv") %in% folder_files)
+                         csv = paste0(input$proj_name_new, ".csv") %in% folder_files,
+                         db = paste0(input$proj_name_new, ".db") %in% folder_files)
     check_pic <- if(is.present) "yes.png" else "no.png"
     # generate checkmark image objects
     output[[paste0("proj_", col, "_check")]] <- shiny::renderImage({
