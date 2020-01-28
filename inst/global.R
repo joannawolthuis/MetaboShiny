@@ -190,8 +190,8 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                             description = "The PAMDB is an expertly curated database containing extensive metabolomic data and metabolic pathway diagrams about Pseudomonas aeruginosa (reference strain PAO1).",
                                             image_id = "pamdb_logo"),
                                mvoc = list(title = "mVOC",
-                                            description = "The mVOC 2.0 Database is based on extensive literature search for microbial volatile organic compounds (mVOCs)",
-                                            image_id = "mvoc_logo"),
+                                           description = "The mVOC 2.0 Database is based on extensive literature search for microbial volatile organic compounds (mVOCs)",
+                                           image_id = "mvoc_logo"),
                                # - - leave magicball last - -
                                cmmmediator = list(title = "CEU Mass Mediator",
                                                   description = "(ONLINE ONLY) CEU Mass Mediator is a tool for searching metabolites in different databases (Kegg, HMDB, LipidMaps, Metlin, MINE and an in-house library).",
@@ -203,8 +203,8 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                               description = "(VIA MAGICBALL) PubChem is the world's largest collection of freely accessible chemical information.",
                                               image_id = "pubchem_logo"),
                                supernatural2 = list(title = "SUPER NATURAL II",
-                                              description = "(VIA MAGICBALL) A database of natural products. It contains 325,508 natural compounds (NCs), including information about the corresponding 2d structures, physicochemical properties, predicted toxicity class and potential vendors.",
-                                              image_id = "supernatural2_logo"),
+                                                    description = "(VIA MAGICBALL) A database of natural products. It contains 325,508 natural compounds (NCs), including information about the corresponding 2d structures, physicochemical properties, predicted toxicity class and potential vendors.",
+                                                    image_id = "supernatural2_logo"),
                                chemspider = list(title = "ChemSpider",
                                                  description = "(VIA MAGICBALL) A chemical structure database providing fast access to over 77 million structures, properties and associated information.",
                                                  image_id = "chemspider_logo"),
@@ -354,20 +354,16 @@ vectors = list(
 gbl$vectors$db_categories$all <- gbl$vectors$db_list
 
 gbl$vectors$wordcloud$filters <- list(
-    # TODO: load filterlist?
-    #medical = filterList,
-    stopwords = unique(c(tidytext::stop_words$word, 
+  stopwords = unique(c(tidytext::stop_words$word, 
                        qdapDictionaries::Top200Words,
                        tm::stopwords("english"))),
-    metabolomics = c("metabolism", "metabolic", 
-                                                 "metabolomic", "metabolomics",
-                                                 "biochemical", "mass", "spectrometry", 
-                                                 "nmr", "direct", "infusion"),
-    default = c(gbl$vectors$db_list,
-                 "Synonyms", "synonyms"))
-  
-  
-  
+  metabolomics = c("metabolism", "metabolic",
+                   "metabolomic", "metabolomics",
+                   "biochemical", "mass", "spectrometry", 
+                   "nmr", "direct", "infusion","exposome","papers",
+                   "compounds","compound"),
+  default = c(gbl$vectors$db_list, "exposome",
+              "Synonyms", "synonyms"))
 
 #' Squishes HTML elements close together.
 data(isotopes, package = "enviPat")

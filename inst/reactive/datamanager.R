@@ -56,7 +56,7 @@ shiny::observe({
                        })
                        shiny::updateSelectInput(session, "storage_choice", 
                                                 choices = setdiff(names(mSet$storage)[sapply(mSet$storage, function(x) "settings" %in% names(x))], 'orig')
-                                                )
+                       )
                      }
                      
                      shiny::updateSelectInput(session, "stats_type", 
@@ -100,15 +100,15 @@ shiny::observe({
                                               choices = c(colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "individual"))]))
                      
                      wordcloud_filters = file.path(lcl$paths$work_dir, "wordcloud")
-                     if(!dir.exists(wordcloud_filters)){
-                      filter_files = list.files(wordcloud_filters, full.names = T)
-                      items = lapply(filter_files, function(file){
-                        data.table::fread(file)$word
-                      })
-                      itemNames = gsub(pattern = "\\.csv", replacement = "", x = basename(filter_files))
-                      names(items) <- itemNames
-                      gbl$vectors$wordcloud$filters <<- append(gbl$vectors$wordcloud$filters, items)
-                      shiny::updateSelectInput(session, inputId = "wordcloud_filter", choices = c("stopwords","metabolomics", itemNames))
+                     if(dir.exists(wordcloud_filters)){
+                       filter_files = list.files(wordcloud_filters, full.names = T)
+                       items = lapply(filter_files, function(file){
+                         data.table::fread(file)$word
+                       })
+                       itemNames = gsub(pattern = "\\.csv", replacement = "", x = basename(filter_files))
+                       names(items) <- itemNames
+                       gbl$vectors$wordcloud$filters <<- append(gbl$vectors$wordcloud$filters, items)
+                       shiny::updateSelectInput(session, inputId = "wordcloud_filter", choices = c("stopwords","metabolomics","default", itemNames))
                      }
                      
                      shiny::setProgress(0.7)
@@ -137,16 +137,16 @@ shiny::observe({
                      
                      switch(mSet$dataSet$exp.type,
                             "1fb"=shinyWidgets::updateRadioGroupButtons(session, "heattable", choices = list("T-test"="tt", 
-                                                                                                "Fold-change analysis"="fc"), 
-                                                           selected = "tt"),
+                                                                                                             "Fold-change analysis"="fc"), 
+                                                                        selected = "tt"),
                             "1fm"=shinyWidgets::updateRadioGroupButtons(session, "heattable", choices = c(ANOVA="aov"), selected = "aov"),
                             "2f"=shinyWidgets::updateRadioGroupButtons(session, "heattable", choices = list(ANOVA="aov2", 
-                                                                                               ASCA="asca"), selected = "aov2"),
+                                                                                                            ASCA="asca"), selected = "aov2"),
                             "t1f"=shinyWidgets::updateRadioGroupButtons(session, "heattable", choices = list(ANOVA="aov2", 
-                                                                                                ASCA="asca",
-                                                                                                MEBA="meba"), selected = "aov2"),
+                                                                                                             ASCA="asca",
+                                                                                                             MEBA="meba"), selected = "aov2"),
                             "t"=shinyWidgets::updateRadioGroupButtons(session, "heattable", choices = list(ANOVA="aov2",
-                                                                                              MEBA="meba"), selected = "aov2"))
+                                                                                                           MEBA="meba"), selected = "aov2"))
                    },
                    statspicker = {
                      output$stats_picker <- shiny::renderUI({
@@ -466,29 +466,29 @@ shiny::observe({
                          # 2d
                          output$plot_plsda <- plotly::renderPlotly({
                            MetaboShiny::plotPCA.2d(mSet, lcl$aes$mycols,
-                                      pcx = input$plsda_x,
-                                      pcy = input$plsda_y, 
-                                      type = "plsda",
-                                      mode = mode,
-                                      col.fac = input$col_var,
-                                      shape.fac = input$shape_var,
-                                      plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                      font = lcl$aes$font,
-                                      cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                                                   pcx = input$plsda_x,
+                                                   pcy = input$plsda_y, 
+                                                   type = "plsda",
+                                                   mode = mode,
+                                                   col.fac = input$col_var,
+                                                   shape.fac = input$shape_var,
+                                                   plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                                                   font = lcl$aes$font,
+                                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                          })
                        }else{
                          # 3d
                          output$plot_plsda <- plotly::renderPlotly({
                            MetaboShiny::plotPCA.3d(mSet, lcl$aes$mycols,
-                                      pcx = input$plsda_x,
-                                      pcy = input$plsda_y,
-                                      pcz = input$plsda_z, 
-                                      type = "plsda",
-                                      mode = mode,
-                                      col.fac = input$col_var,
-                                      shape.fac = input$shape_var,
-                                      font = lcl$aes$font, 
-                                      cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                                                   pcx = input$plsda_x,
+                                                   pcy = input$plsda_y,
+                                                   pcz = input$plsda_z, 
+                                                   type = "plsda",
+                                                   mode = mode,
+                                                   col.fac = input$col_var,
+                                                   shape.fac = input$shape_var,
+                                                   font = lcl$aes$font, 
+                                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                          })
                        }
                      }else{NULL}
@@ -697,7 +697,8 @@ shiny::observe({
                    wordcloud = {
                      output$wordcloud <-  wordcloud2::renderWordcloud2({ 
                        if(nrow(lcl$tables$wordcloud_filt) > 0){
-                         wordcloud2::wordcloud2(lcl$tables$wordcloud_filt[1:input$wordcloud_topWords,], color = "random-light", size=.7, shape = "circle")
+                         topWords = if(input$wordcloud_topWords > nrow(lcl$tables$wordcloud_filt)) nrow(lcl$tables$wordcloud_filt) else input$wordcloud_topWords
+                         wordcloud2::wordcloud2(lcl$tables$wordcloud_filt[order(n, decreasing = T)][1:topWords,], color = "random-light", size=.7, shape = "circle")
                        }
                      })
                      # TODO: fix barchart

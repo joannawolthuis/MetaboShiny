@@ -41,15 +41,14 @@ observeEvent(input$wordcloud_go, {
 })
 
 observeEvent(input$wordcloud_filter, {
-  if(nrow(lcl$tables$wordcloud_orig) > 0){
-    shiny::showNotification("this is working!")
+  if("wordcloud_orig" %in% names(lcl$tables)){
     # get all the lists of filter words that the user wants, and join them together into a big list
     filterList <- unlist(gbl$vectors$wordcloud$filters[input$wordcloud_filter])
     # remove single character words
     # start= ^ , any character = . , end = $"
     singleChar <- grep(lcl$tables$wordcloud_orig$word, pattern = "^.{1,3}$", value = T) 
     # remove verbs ending on -es and -ed (differentiated, etc.)
-    verbs <- grep(lcl$tables$wordcloud_orig$word, pattern = ".*[ed|es]$", value = T) 
+    #verbs <- grep(lcl$tables$wordcloud_orig$word, pattern = ".*[ed|es]$", value = T) 
     # remove numbers (p-values and the like)
     suppressWarnings({
       numericals = lcl$tables$wordcloud_orig$word[which(!is.na(as.numeric(
@@ -61,13 +60,14 @@ observeEvent(input$wordcloud_filter, {
                                     # dont include the words themselves
                                     split = " ")[[1]],
                            singleChar,
-                           numericals,
-                           verbs)
+                           numericals
+                           #,verbs
+                           )
     # merge into final filter list
     filterList <- c(filterList, additionalFilters, fill = T)
     without_stopwords <- data.table::as.data.table(MetaboShiny::getFilteredWordFreqency(lcl$tables$wordcloud_orig, filterList))
     without_stopwords <- without_stopwords[without_stopwords$word != ""]
-    lcl$tables$wordcloud_filt <- without_stopwords
+    lcl$tables$wordcloud_filt <<- without_stopwords
     datamanager$reload <- "wordcloud"    
   }
 })

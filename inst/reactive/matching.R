@@ -89,7 +89,9 @@ lapply(c("prematch","search_mz"), function(search_type){
               res.predict = MetaDBparse::getPredicted(mz = as.numeric(mz), 
                                                       ppm = as.numeric(mSet$ppm),
                                                       mode = MetaboShiny::getIonMode(mz, 
-                                                                                     lcl$paths$patdb))
+                                                                                     lcl$paths$patdb),
+                                                      rules = input$predict_rules,
+                                                      elements = input$predict_elements)
               if(length(pred_dbs) == 1){
                 if(pred_dbs == "magicball"){
                   search_db = F
