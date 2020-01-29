@@ -1,3 +1,26 @@
+shiny::observeEvent(input$do_tsne, {
+  mSet.old <- mSet
+  success = F
+  try({
+    shiny::withProgress({
+      coords = tsne::tsne(mSet$dataSet$norm, k = 3,
+                          initial_dims = input$tsne_dims,
+                          perplexity = input$tsne_perplex,
+                          max_iter = input$tsne_maxiter)
+      colnames(coords) <- paste("t-SNE dimension", 1:3)
+      mSet$analSet$tsne <- list(x = coords)
+      success = T
+    })
+  })
+  if(success){
+    mSet <<- mSet
+    datamanager$reload <- "tsne"
+  }else{
+    MetaboShiny::metshiAlert("Analysis failed!")
+    mSet <<- mSet.old
+  }
+})
+
 shiny::observeEvent(input$do_pattern, {
   mSet.old <- mSet
   success = F
