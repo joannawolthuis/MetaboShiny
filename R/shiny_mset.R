@@ -213,6 +213,8 @@ change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
   mSet$settings$exp.var = mSet$dataSet$exp.var
   mSet$settings$exp.fac = mSet$dataSet$exp.fac
   mSet$settings$time.var = mSet$dataSet$time.var
+  mSet$settings$paired = mSet$dataSet$paired
+  # - - - - - - - - - - 
   mSet$analSet <- NULL
   return(mSet)
 }
