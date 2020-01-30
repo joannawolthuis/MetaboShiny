@@ -30,40 +30,46 @@ shiny::observeEvent(input$create_db,{
 
   shiny::withProgress({
 
-    shiny::setProgress(session=session, value= .1)
-
-    proj_name = input$proj_name_new
-
-    shiny::updateSelectizeInput(session = session,
-                         inputId = "proj_name",
-                         choices = c(lcl$vectors$project_names, proj_name))
-
-    shiny::updateSelectizeInput(session = session,
-                         inputId = "proj_name",
-                         selected = proj_name)
-
-    lcl$proj_name <<- proj_name
-    lcl$paths$patdb <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name, ".db"))
-    # change project name in user options file
-    MetaboShiny::setOption(lcl$paths$opt.loc, key="proj_name", value=lcl$proj_name)
-    # print the changed name in the UI
-    output$proj_name <<- shiny::renderText(proj_name)
-    # change path CSV should be / is saved to in session
-    #lcl$paths$csv_loc <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name,".csv"))
-    # if loading in .csv files...
-    MetaboShiny::build.pat.db(db.name = lcl$paths$patdb,
-                              ppm = input$ppm,
-                              pospath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath,
-                              negpath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath,
-                              metapath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath,
-                              wipe.regex = input$wipe_regex,
-                              overwrite = T)
-    
-    output$proj_db_check <- shiny::renderImage({
-      filename <- normalizePath(file.path('www', "yes.png"))
-      list(src = filename, width = 70,
-           height = 70)
+    success=F
+    try({
+      shiny::setProgress(session=session, value= .1)
+      
+      proj_name = input$proj_name_new
+      
+      shiny::updateSelectizeInput(session = session,
+                                  inputId = "proj_name",
+                                  choices = c(lcl$vectors$project_names, proj_name))
+      
+      shiny::updateSelectizeInput(session = session,
+                                  inputId = "proj_name",
+                                  selected = proj_name)
+      
+      lcl$proj_name <<- proj_name
+      lcl$paths$patdb <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name, ".db"))
+      # change project name in user options file
+      MetaboShiny::setOption(lcl$paths$opt.loc, key="proj_name", value=lcl$proj_name)
+      # print the changed name in the UI
+      output$proj_name <<- shiny::renderText(proj_name)
+      # change path CSV should be / is saved to in session
+      #lcl$paths$csv_loc <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name,".csv"))
+      # if loading in .csv files...
+      MetaboShiny::build.pat.db(db.name = lcl$paths$patdb,
+                   ppm = input$ppm,
+                   pospath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath,
+                   negpath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath,
+                   metapath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath,
+                   wipe.regex = input$wipe_regex,
+                   overwrite = T, inshiny=F)
+      success=T
+      output$proj_db_check <- shiny::renderImage({
+        filename <- normalizePath(file.path('www', "yes.png"))
+        list(src = filename, width = 70,
+             height = 70)
       },deleteFile = FALSE)
+    })
+    if(!success){
+      MetaboShiny::metshiAlert("Something is wrong with your input data!")
+    }
     })
 })
 
@@ -101,8 +107,7 @@ shiny::observeEvent(input$create_csv, {
 
     conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(lcl$paths$patdb))
       
-    #MetaboShiny::
-    prepDatabase(conn)
+    MetaboShiny::prepDatabase(conn)
     
     query <- MetaboShiny::getCSVquery(conn)
     

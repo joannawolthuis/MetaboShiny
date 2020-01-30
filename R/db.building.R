@@ -30,7 +30,9 @@ build.pat.db <- function(db.name,
 
   keep.cols = sapply(colnames(metadata), function(x) length(unique(metadata[,..x][[1]])) > 1)  
   
-  metadata.filt = metadata[, ..keep.cols]
+  metadata$sample <- gsub(metadata$sample, pattern = wipe.regex, replacement = "", perl=T)
+  
+  metadata.filt = unique(metadata[, ..keep.cols])
   
   if(!("individual" %in% colnames(metadata.filt))) metadata.filt$individual <- metadata.filt$sample
   
@@ -40,8 +42,9 @@ build.pat.db <- function(db.name,
   
   poslist <- data.table::fread(pospath,header = T)
   neglist <- data.table::fread(negpath,header = T) 
-  colnames(poslist) <- gsub(colnames(poslist), pattern = wipe.regex, replacement = "", perl=T)
-  colnames(neglist) <- gsub(colnames(neglist), pattern = wipe.regex, replacement = "", perl=T)
+  adjust = which(colnames(poslist) != "mass_to_charge")
+  colnames(poslist)[adjust] <- gsub(colnames(poslist)[adjust], pattern = wipe.regex, replacement = "", perl=T)
+  colnames(neglist)[adjust] <- gsub(colnames(neglist)[adjust], pattern = wipe.regex, replacement = "", perl=T)
   
   unique.samples = unique(metadata.filt$sample)
   
@@ -50,7 +53,9 @@ build.pat.db <- function(db.name,
   
   missing.samples = setdiff(unique.samples, unique(c(keep.samples.pos, keep.samples.neg)))
   if(length(missing.samples) > 0 ){
-    shiny::showNotification(paste0("Missing samples: ", paste0(missing.samples, collapse = ","), ". Please check your peak table < > metadata for naming mismatches!"))
+    if(inshiny){
+      shiny::showNotification(paste0("Missing samples: ", paste0(missing.samples, collapse = ","), ". Please check your peak table < > metadata for naming mismatches!"))
+    }
   }
   
   setnames(poslist, "mass_to_charge", "mzmed", skip_absent = T)
