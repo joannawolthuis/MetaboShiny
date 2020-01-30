@@ -21,6 +21,49 @@ shiny::observe({
       }, deleteFile = FALSE)
     })
     
+    # - - - load version numbers - - - 
+    db.paths = list.files(lcl$paths$db_dir, pattern = "\\.db$",full.names = T)
+    versions = lapply(db.paths,
+           function(path){
+             ver = "unknown"
+             date = "unknown"
+             try({
+               conn <- RSQLite::dbConnect(RSQLite::SQLite(), path) # change this to proper var later
+               ver = RSQLite::dbGetQuery(conn, "SELECT version FROM metadata")[[1]]
+               suppressWarnings({
+                 numver = as.numeric(ver)
+               })
+               if(!is.na(numver)){
+                 if(numver > 18000){
+                   ver = as.character(as.Date(ver, origin = "1970-01-01"))
+                 }  
+               }
+               date = RSQLite::dbGetQuery(conn, "SELECT date FROM metadata")[[1]]
+               date = as.character(as.Date(date, origin = "1970-01-01"))
+               RSQLite::dbDisconnect(conn)  
+             },silent = T)
+             dbname = gsub(basename(path), 
+                           pattern = "\\.db$", 
+                           replacement="")
+             if(ver != "unknown" & date != "unknown"){
+               if(ver != date){
+                 ver = as.character(gsubfn::fn$paste("Version $ver downloaded on $date")) 
+               }else{
+                 ver = as.character(gsubfn::fn$paste("Downloaded on $date")) 
+               }
+               output[[paste0(dbname, "_version")]] <- renderText({ver})
+             }else{
+               output[[paste0(dbname, "_version")]] <- renderText({""})
+              }
+             
+             ver
+           })
+    names(versions) <- gsub(basename(db.paths), 
+                            pattern = "\\.db$", 
+                            replacement="")
+    
+    lcl$vectors$db.version <<- versions
+                    
     lapply(c("db", "db_prematch"), function(midfix){
       shiny::observeEvent(input[[paste0("select_", midfix, "_all")]], {
         
@@ -50,7 +93,7 @@ shiny::observe({
         }
       })      
     })
-
+    
     # check for the magicball-requiring databases...
     
     # render the database download area
@@ -75,7 +118,12 @@ shiny::observe({
           # row 3: image
           shiny::fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
             if(db != "custom"){
-              shiny::column(width=3,align="center", shiny::imageOutput(gbl$constants$db.build.info[[db]]$image_id, inline=T))
+              shiny::column(width=3,align="center", 
+                            shiny::imageOutput(gbl$constants$db.build.info[[db]]$image_id, inline=T),
+                            br(),br(),
+                            shiny::div(shiny::tags$i(shiny::textOutput(paste0(db, "_version"))),style='font-size:70%; color: grey')
+                            ,br()
+                            )
             }else{
               shiny::column(width=3,align="center", shinyWidgets::circleButton("make_custom_db",
                                                                                size = "lg",
@@ -88,24 +136,35 @@ shiny::observe({
           shiny::fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
             shiny::column(width=3,align="center",
                           if(!(db %in% gbl$vectors$db_no_build)){
-                            list(actionButton(paste0("check_", db), "Check", icon = shiny::icon("check")),
-                                 actionButton(paste0("build_", db), "Build", icon = shiny::icon("wrench")),
-                                 shinyWidgets::prettyToggle(
-                                   status_off  = "default", 
-                                   status_on = "danger",
-                                   inline=T,bigger=T,
-                                   animation="pulse",
-                                   inputId = paste0("favorite_", db),
-                                   label_on = "", 
-                                   label_off = "",
-                                   outline = TRUE,
-                                   plain = TRUE,
-                                   value = db %in% gbl$vectors$db_categories$favorites,
-                                   icon_on = icon("heart",lib ="glyphicon"), 
-                                   icon_off = icon("heart-empty",lib ="glyphicon")
-                                 ),
-                                 shiny::br(),shiny::br(),
-                                 shiny::imageOutput(paste0(db, "_check"),inline = T))
+                            list(shinyWidgets::actionBttn(
+                              inputId = paste0("check", db),
+                              label = NULL,size = "sm",
+                              style = "material-circle", 
+                              color = "success",
+                              icon = icon("check")
+                            ),shinyWidgets::actionBttn(
+                              inputId = paste0("build_", db),
+                              label = NULL,size = "sm",
+                              style = "material-circle", 
+                              color = "danger",
+                              icon = icon("wrench")
+                            ),
+                            shinyWidgets::prettyToggle(
+                              status_off  = "default", 
+                              status_on = "danger",
+                              inline=T,bigger=T,
+                              animation="pulse",
+                              inputId = paste0("favorite_", db),
+                              label_on = "", 
+                              label_off = "",
+                              outline = TRUE,
+                              plain = TRUE,
+                              value = db %in% gbl$vectors$db_categories$favorites,
+                              icon_on = icon("heart",lib ="glyphicon"), 
+                              icon_off = icon("heart-empty",lib ="glyphicon")
+                            ),
+                            shiny::br(),shiny::br(),
+                            shiny::imageOutput(paste0(db, "_check"),inline = T))
                           }else{
                             list()
                           }
@@ -135,7 +194,7 @@ shiny::observe({
         })
         really.built.dbs <- db.paths[really.built.dbs]
         really.built.dbs <- gsub(x = basename(really.built.dbs), 
-                            pattern = "\\.db", replacement = "")
+                                 pattern = "\\.db", replacement = "")
         
         no.need.build = c("cmmmediator", "pubchem","chemspider","supernatural2","knapsack","magicball")
         if(length(really.built.dbs) > 0){
@@ -182,13 +241,13 @@ shiny::observe({
                               choices = choices,selected = "all",
                               justified = TRUE,size = "sm"
                             )
-                            ),
+            ),
             uiOutput(paste0(prefix,"_db_categ"))
           )
         }
       })
     })
-
+    
     lapply(db_button_prefixes, function(prefix){
       shiny::observeEvent(input[[paste0(prefix,"_db_categories")]], {
         output[[paste0(prefix,"_db_categ")]] <- shiny::renderUI({
@@ -261,7 +320,7 @@ shiny::observe({
 })
 
 shiny::observeEvent(input$build_custom_db, {
-
+  
   cust_dir = file.path(lcl$paths$db_dir, paste0(input$my_db_short, 
                                                 "_source"))
   # make folder for this db
@@ -274,7 +333,7 @@ shiny::observeEvent(input$build_custom_db, {
   
   csv_path <- shinyFiles::parseFilePaths(gbl$paths$volumes, input$custom_db)$datapath
   file.copy(csv_path, file.path(cust_dir, "base.csv"))
-
+  
   dbinfo = list(title = input$my_db_name,
                 description = input$my_db_description,
                 image_id = paste0(input$my_db_short, "_logo"))
@@ -318,7 +377,7 @@ lapply(c(gbl$vectors$db_list), FUN=function(db){
       }, pkgs = pkgs)
       
       shiny::setProgress(session = session, 0.1)
-
+      
       if(input$db_build_mode %in% c("base", "both")){
         # check if custom
         if(!(db %in% gbl$vectors$db_list)){
@@ -336,27 +395,27 @@ lapply(c(gbl$vectors$db_list), FUN=function(db){
       
       # build base db (differs per db, parsers for downloaded data)
       shiny::setProgress(session = session, 0.5)
-
+      
       if(input$db_build_mode %in% c("extended", "both")){
-
-      if(!grepl(db, pattern = "maconda")){
-        if(file.exists(file.path(lcl$paths$db_dir, paste0(db, ".db")))){
-          my_range <- input$db_mz_range
-          outfolder <- lcl$paths$db_dir
-          MetaDBparse::buildExtDB(base.dbname = db,
-                                  outfolder = outfolder,
-                                  cl = session_cl,
-                                  blocksize = 500,
-                                  mzrange = my_range,
-                                  adduct_table = adducts,
-                                  adduct_rules = adduct_rules, 
-                                  silent = T,
-                                  ext.dbname = "extended") #TODO: figure out the optimal fetch limit... seems 200 for now
-        }else{
-          MetaboShiny::metshiAlert("Please build base DB first! (can be changed in settings)")
+        
+        if(!grepl(db, pattern = "maconda")){
+          if(file.exists(file.path(lcl$paths$db_dir, paste0(db, ".db")))){
+            my_range <- input$db_mz_range
+            outfolder <- lcl$paths$db_dir
+            MetaDBparse::buildExtDB(base.dbname = db,
+                                    outfolder = outfolder,
+                                    cl = session_cl,
+                                    blocksize = 500,
+                                    mzrange = my_range,
+                                    adduct_table = adducts,
+                                    adduct_rules = adduct_rules, 
+                                    silent = T,
+                                    ext.dbname = "extended") #TODO: figure out the optimal fetch limit... seems 200 for now
+          }else{
+            MetaboShiny::metshiAlert("Please build base DB first! (can be changed in settings)")
+          }
         }
-      }
-        } 
+      } 
     })
   })
 })

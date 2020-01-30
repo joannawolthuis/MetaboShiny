@@ -39,6 +39,7 @@ function(input, output, session) {
     last_mset="",
     load_ui = F,
     last_dir = c(),
+    lists = list(),
     tables=list(last_matches=data.table::data.table(query_mz = "none")),
     aes = list(font = list(),
                mycols = c(),
