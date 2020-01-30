@@ -5,6 +5,17 @@ For example input files (positive and negative peaklists + metadata) please see 
 
 http://biorxiv.org/cgi/content/short/734236v1
 
+# Manual #
+
+![Database Tab](inst/www/database_panel_a.png?raw=true "Database tab")
+![File Import](inst/www/file_import.png?raw=true "File import")
+![Normalization](inst/www/normalization.png?raw=true "Normalization")
+![Prematching](inst/www/prematching.png?raw=true "Prematching")
+![Statistics panel start](inst/www/stats.png?raw=true "Statistics Panel Start")
+![Dimension reduction and plot export](inst/www/dimred_export.png?raw=true "Dimension reduction and plot export")
+![Volcano plot and search bar](inst/www/stats2.png?raw=true "Volcano plot and search bar")
+
+
 Please report any issues and feedback on the Issues page here, along with suggestions! =)
 ## R PATH ##
 # STEP 1: requirements (these may require admin rights)
