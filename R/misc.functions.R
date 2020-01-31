@@ -101,6 +101,9 @@ joanna_debugger <- function(){
   input <<- debug_input
   shown_matches <<- shiny::isolate({shiny::reactiveValuesToList(debug_matches)})
   my_selection <<- shiny::isolate({shiny::reactiveValuesToList(debug_selection)})
+  browse_content <<- shiny::isolate({shiny::reactiveValuesToList(debug_browse_content)})
+  pieinfo <<- shiny::isolate({shiny::reactiveValuesToList(debug_pieinfo)})
+  result_filters <<- shiny::isolate({shiny::reactiveValuesToList(debug_result_filters)})
 }
 
 # @export

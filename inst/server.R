@@ -431,97 +431,118 @@ apikey = ')
   
   showtext::showtext_auto() ## Automatically use showtext to render text for future devices
   
+
+  
   shiny::observe({
     # - - filters - -
     if(search$go){
       shiny::withProgress({
-        matches = data.table::as.data.table(MetaboShiny::get_prematches(who = my_selection$mz,
-                                                                        what = "map.query_mz",
-                                                                        patdb = lcl$paths$patdb,
-                                                                        showadd = result_filters$add,
-                                                                        showdb = result_filters$db,
-                                                                        showiso = result_filters$iso))
-        if(nrow(matches)>0){
-          pieinfo$db <- reshape::melt(table(matches$source))
-          
-          shiny::setProgress(0.2)
-          
-          # =====
-          
-          matches$name[matches$source != "magicball"] <- tolower(matches$name[matches$source != "magicball"])
-          
-          # =====
-          
-          uniques = data.table::as.data.table(unique(data.table::as.data.table(matches)[, -c("source", 
-                                                                                             "description"),
-                                                                                        with=F]))
-          shiny::setProgress(0.6)
-          
-          # === aggregate ===
-          
-          info_only = unique(matches[,c("name", 
-                                        "source", 
-                                        "structure", 
-                                        "description"),with=F])
-          
-          info_no_na <- info_only[!is.na(info_only$structure)]
-          info_na <- info_only[is.na(info_only$structure)]
-          
-          info_aggr <- aggregate(info_no_na, by = list(info_no_na$name), FUN = function(x) paste0(x, collapse = "SEPERATOR"))
-          info_aggr <- aggregate(info_aggr, by = list(info_aggr$structure), FUN = function(x) paste0(x, collapse = "SEPERATOR"))
-          
-          info_aggr <- rbind(info_aggr, info_na, fill=T)
-          
-          # fix structures
-          split_structs <- strsplit(info_aggr$structure, split = "SEPERATOR")
-          main_structs <- unlist(lapply(split_structs, function(x) x[[1]]))
-          info_aggr$structure <- main_structs
-          
-          # move extra names to descriptions
-          split_names <- strsplit(info_aggr$name, split = "SEPERATOR")
-          main_names <- unlist(lapply(split_names, function(x) x[[1]]))
-          
-          synonyms <- unlist(lapply(split_names, function(x){
-            if(length(x)>1){
-              paste0("SYNONYMS: ", paste0(x[2:length(x)], collapse=", "),".SEPERATOR") 
-            }else NA
-          }))
-          
-          info_aggr$name <- main_names
-          has.syn <- which(!is.na(synonyms))
-          info_aggr$description[has.syn] <- paste0(synonyms[has.syn], info_aggr$description[has.syn])
-          info_aggr <- as.data.table(info_aggr)
-          
-          # =================
-          
-          uniques = uniques[structure %in% info_aggr$structure]
-          
-          is.no.na.uniq <- which(!is.na(uniques$structure))
-          is.no.na.info <- which(!is.na(info_aggr$structure))
-          
-          uniq.to.aggr <- match(uniques[is.no.na.uniq]$structure, 
-                                info_aggr[is.no.na.info]$structure)
-          
-          uniques$name[is.no.na.uniq] <- info_aggr$name[is.no.na.info][uniq.to.aggr]
-          uniques$structure[is.no.na.uniq] <- info_aggr$structure[is.no.na.info][uniq.to.aggr]
-          
-          uniques <- unique(uniques)
-          
-          shown_matches$forward_unique <- uniques[,-grepl(colnames(uniques), pattern = "Group\\.\\d"),with=F]
-          shown_matches$forward_full <- info_aggr[,-grepl(colnames(info_aggr), pattern = "Group\\.\\d"),with=F]
-          
-          if(nrow(shown_matches$forward_unique)>0){
-            pieinfo$add <- reshape::melt(table(shown_matches$forward_unique$adduct))
-            pieinfo$iso <- reshape::melt(table(shown_matches$forward_unique$isocat))
+        if(input$tab_iden_2 == "mzmol"){
+          matches = data.table::as.data.table(MetaboShiny::get_prematches(who = my_selection$mz,
+                                                                          what = "map.query_mz",
+                                                                          patdb = lcl$paths$patdb,
+                                                                          showadd = result_filters$add,
+                                                                          showdb = result_filters$db,
+                                                                          showiso = result_filters$iso))
+          if(nrow(matches)>0){
+            pieinfo$db <- reshape::melt(table(matches$source))
+            
+            shiny::setProgress(0.2)
+            
+            # =====
+            
+            matches$name[matches$source != "magicball"] <- tolower(matches$name[matches$source != "magicball"])
+            
+            # =====
+            
+            uniques = data.table::as.data.table(unique(data.table::as.data.table(matches)[, -c("source", 
+                                                                                               "description"),
+                                                                                          with=F]))
+            shiny::setProgress(0.6)
+            
+            # === aggregate ===
+            
+            info_only = unique(matches[,c("name", 
+                                          "source", 
+                                          "structure", 
+                                          "description"),with=F])
+            
+            info_no_na <- info_only[!is.na(info_only$structure)]
+            info_na <- info_only[is.na(info_only$structure)]
+            
+            info_aggr <- aggregate(info_no_na, by = list(info_no_na$name), FUN = function(x) paste0(x, collapse = "SEPERATOR"))
+            info_aggr <- aggregate(info_aggr, by = list(info_aggr$structure), FUN = function(x) paste0(x, collapse = "SEPERATOR"))
+            
+            info_aggr <- rbind(info_aggr, info_na, fill=T)
+            
+            # fix structures
+            split_structs <- strsplit(info_aggr$structure, split = "SEPERATOR")
+            main_structs <- unlist(lapply(split_structs, function(x) x[[1]]))
+            info_aggr$structure <- main_structs
+            
+            # move extra names to descriptions
+            split_names <- strsplit(info_aggr$name, split = "SEPERATOR")
+            main_names <- unlist(lapply(split_names, function(x) x[[1]]))
+            
+            synonyms <- unlist(lapply(split_names, function(x){
+              if(length(x)>1){
+                paste0("SYNONYMS: ", paste0(x[2:length(x)], collapse=", "),".SEPERATOR") 
+              }else NA
+            }))
+            
+            info_aggr$name <- main_names
+            has.syn <- which(!is.na(synonyms))
+            info_aggr$description[has.syn] <- paste0(synonyms[has.syn], info_aggr$description[has.syn])
+            info_aggr <- as.data.table(info_aggr)
+            
+            # =================
+            
+            uniques = uniques[structure %in% info_aggr$structure]
+            
+            is.no.na.uniq <- which(!is.na(uniques$structure))
+            is.no.na.info <- which(!is.na(info_aggr$structure))
+            
+            uniq.to.aggr <- match(uniques[is.no.na.uniq]$structure, 
+                                  info_aggr[is.no.na.info]$structure)
+            
+            uniques$name[is.no.na.uniq] <- info_aggr$name[is.no.na.info][uniq.to.aggr]
+            uniques$structure[is.no.na.uniq] <- info_aggr$structure[is.no.na.info][uniq.to.aggr]
+            
+            uniques <- unique(uniques)
+            
+            shown_matches$forward_unique <- uniques[,-grepl(colnames(uniques), pattern = "Group\\.\\d"),with=F]
+            shown_matches$forward_full <- info_aggr[,-grepl(colnames(info_aggr), pattern = "Group\\.\\d"),with=F]
+            
+            if(nrow(shown_matches$forward_unique)>0){
+              pieinfo$add <- reshape::melt(table(shown_matches$forward_unique$adduct))
+              pieinfo$iso <- reshape::melt(table(shown_matches$forward_unique$isocat))
+            }
+          }else{
+            shown_matches$forward_unique <- data.table::data.table()
+            shown_matches$forward_full <- data.table::data.table()
           }
+          
+          my_selection$name <- ""
+          my_selection$form <- ""
+          my_selection$struct <- ""  
         }else{
-          shown_matches$forward_unique <- data.table::data.table()
-          shown_matches$forward_full <- data.table::data.table()
+          rev_matches = MetaboShiny::get_prematches(who = my_selection$revstruct,
+                                                    what = "con.structure",
+                                                    patdb = lcl$paths$patdb,
+                                                    showadd = result_filters$add,
+                                                    showdb = result_filters$db,
+                                                    showiso = result_filters$iso)
+          if(nrow(rev_matches)>0){
+            shown_matches$reverse <- unique(rev_matches[,c("query_mz", "adduct", "%iso", "dppm")])
+            pieinfo$db <- reshape::melt(table(rev_matches$source))
+            pieinfo$add <- reshape::melt(table(rev_matches$adduct))
+            pieinfo$iso <- reshape::melt(table(rev_matches$isocat))
+            my_selection$revform <- ""
+            my_selection$revstruct <- ""
+          }else{
+            shown_matches$reverse <- data.table()
+          }
         }
-        
-        my_selection$name <- ""
-        my_selection$form <- ""
-        my_selection$struct <- ""
         
         shiny::setProgress(0.8)
         
@@ -636,6 +657,7 @@ apikey = ')
         }) # render text of current formula
     }
   })
+
   
   shiny::observe({
     if(my_selection$revstruct != ""){
@@ -647,7 +669,23 @@ apikey = ')
                                      what = "con.structure",
                                      patdb = lcl$paths$patdb)
         if(nrow(rev_matches)>0){
+          width = shiny::reactiveValuesToList(session$clientData)$output_empty_rev_width
+          if(width > 300) width = 300
+          
+          output$curr_struct_rev <- shiny::renderPlot({plot.mol(my_selection$revstruct,
+                                                                style = "cow")},
+                                                      width=width, 
+                                                      height=width) # plot molecular structure WITH CHEMMINER
+          output$curr_formula_rev <- shiny::renderUI({
+            tags$div(
+              HTML(gsub(my_selection$revform,pattern="(\\d+)", replacement="<sub>\\1</sub>",perl = T))
+            )
+          })
+          
           shown_matches$reverse <- unique(rev_matches[,c("query_mz", "adduct", "%iso", "dppm")])
+          #pieinfo$db <- reshape::melt(table(shown_matches$reverse$source))
+          pieinfo$add <- reshape::melt(table(shown_matches$reverse$adduct))
+          pieinfo$iso <- reshape::melt(table(rev_matches$isocat))
         }else{
           shown_matches$reverse <- data.table()
         }
@@ -657,24 +695,27 @@ apikey = ')
   
   # pie charts
   lapply(c("add", "db", "iso"), function(which_pie){
-    output[[paste0("match_pie_", which_pie)]] <- plotly::renderPlotly({
-      pievec = pieinfo[[which_pie]]
-      if(length(pievec)>0){
-        plotly::plot_ly(pievec, labels = ~Var.1, 
-                        values = ~value, size=~value*10, type = 'pie',
-                        textposition = 'inside',
-                        textinfo = 'label+percent',
-                        insidetextfont = list(color = '#FFFFFF'),
-                        hoverinfo = 'text',
-                        text = ~paste0(Var.1, ": ", value, ' matches'),
-                        marker = list(colors = colors,
-                                      line = list(color = '#FFFFFF', width = 1)),
-                        #The 'pull' attribute can also be used to create space between the sectors
-                        showlegend = FALSE) %>%
-          layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-                 yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))  
-      }
-    })
+    for(prefix in c("rev_", "")){
+      output[[paste0(prefix, "match_pie_", which_pie)]] <- plotly::renderPlotly({
+        pievec = pieinfo[[which_pie]]
+        if(length(pievec)>0){
+          plotly::plot_ly(pievec, labels = ~Var.1, 
+                          values = ~value, size=~value*10, type = 'pie',
+                          textposition = 'inside',
+                          textinfo = 'label+percent',
+                          insidetextfont = list(color = '#FFFFFF'),
+                          hoverinfo = 'text',
+                          text = ~paste0(Var.1, ": ", value, ' matches'),
+                          marker = list(colors = colors,
+                                        line = list(color = '#FFFFFF', width = 1)),
+                          #The 'pull' attribute can also be used to create space between the sectors
+                          showlegend = FALSE) %>%
+            layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                   yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))  
+        }
+      })
+    }
+    
   })
   
   # ===== UI SWITCHER ====
@@ -1111,6 +1152,12 @@ apikey = ')
     debug_mSet <<- mSet
     debug_matches <<- shown_matches
     debug_selection <<- my_selection
+    try({
+      debug_browse_content <<- browse_content
+    },silent=T)
+    debug_result_filters <<- result_filters
+    debug_pieinfo <<- pieinfo
+    
     if(!is.null(session_cl)){
       parallel::stopCluster(session_cl)
     }

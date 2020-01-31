@@ -228,7 +228,8 @@ ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
   }
   
   if(plotlyfy){
-    plotly::ggplotly(p, tooltip="Individual", originalData=T)
+    plotly::ggplotly(p, tooltip="Individual", originalData=T) %>%
+      config(toImageButtonOptions = list(format = "svg"))
   }else{
     p
   }
@@ -428,7 +429,8 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
   }
   # ---------------
     if(plotlyfy){
-      plotly::ggplotly(p, tooltip = "Text")#, originalData=T)
+      plotly::ggplotly(p, tooltip = "Text") %>%
+        config(toImageButtonOptions = list(format = "svg"))
     }else{
       p
     }  
@@ -472,7 +474,8 @@ ggPlotAOV <- function(mSet, cf, n=20,
     #ggplot2::scale_y_log10()+
     ggplot2::scale_y_continuous(labels=scaleFUN)
   if(plotlyfy){
-    plotly::ggplotly(p, tooltip="m/z")
+    plotly::ggplotly(p, tooltip="m/z") %>%
+      config(toImageButtonOptions = list(format = "svg"))
   }else{
     p
   }
@@ -510,7 +513,8 @@ ggPlotTT <- function(mSet, cf, n=20,
     #ggplot2::scale_y_log10()+
     ggplot2::scale_y_continuous(labels=scaleFUN)
   if(plotlyfy){
-    plotly::ggplotly(p, tooltip="m/z")
+    plotly::ggplotly(p, tooltip="m/z") %>%
+      config(toImageButtonOptions = list(format = "svg"))
   }else{
     p
   }
@@ -559,7 +563,8 @@ ggPlotPattern <- function(mSet, cf, n=20,
     ggplot2::scale_y_continuous(labels=scaleFUN)
   
   if(plotlyfy){
-    plotly::ggplotly(p, tooltip="text")
+    plotly::ggplotly(p, tooltip="text") %>%
+      config(toImageButtonOptions = list(format = "svg"))
   }else{
     p
   }
@@ -591,7 +596,8 @@ ggPlotFC <- function(mSet, cf, n=20,
     ggplot2::scale_colour_gradientn(colours = cf(n))
   
   if(plotlyfy){
-    plotly::ggplotly(p, tooltip="log2fc")
+    plotly::ggplotly(p, tooltip="log2fc") %>%
+      config(toImageButtonOptions = list(format = "svg"))
   }else{
     p
   }
@@ -630,7 +636,8 @@ ggPlotVolc <- function(mSet,
     ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE)
   
   if(plotlyfy){
-    plotly::ggplotly(p, tooltop="cpd")
+    plotly::ggplotly(p, tooltop="cpd") %>%
+      config(toImageButtonOptions = list(format = "svg"))
   }else{
     p
   }
@@ -662,7 +669,8 @@ ggPlotClass <- function(mSet,
     facet_grid(~Component) +
     ggplot2::scale_fill_manual(values=cf(pcs))
   if(plotlyfy){
-    plotly::ggplotly(p)
+    plotly::ggplotly(p) %>%
+      config(toImageButtonOptions = list(format = "svg"))
   }else{
     p
   }
@@ -706,7 +714,8 @@ ggPlotPerm <- function(mSet,
     ggplot2::geom_text(mapping = aes(x = bw.vec[1], y =  .11*nrow(df), label = pval), color = "black", size = 4)
   
   if(plotlyfy){
-    plotly::ggplotly(p)
+    plotly::ggplotly(p) %>%
+      config(toImageButtonOptions = list(format = "svg"))
   }else{
     p
   }
@@ -780,7 +789,8 @@ ggPlotROC <- function(data,
     ggplot2::coord_cartesian(xlim = c(.04,.96), ylim = c(.04,.96))
   
   if(plotlyfy){
-    plotly::ggplotly(p, tooltip=c("comparison","attempt"))
+    plotly::ggplotly(p, tooltip=c("comparison","attempt")) %>%
+      config(toImageButtonOptions = list(format = "svg"))
   }else{
     p
   }
@@ -850,7 +860,8 @@ ggPlotBar <- function(data,
   mzdata$mz <- gsub(mzdata$mz, pattern = "`|'", replacement="")
   
   if(plotlyfy){
-    list(mzdata = mzdata, plot = plotly::ggplotly(p, tooltip="label"))
+    list(mzdata = mzdata, plot = plotly::ggplotly(p, tooltip="label") %>%
+           config(toImageButtonOptions = list(format = "svg")))
   }else{
     list(mzdata = mzdata, plot = p)
   }
@@ -1058,7 +1069,8 @@ plotPCA.3d <- function(mSet,
   
   if(mode == "normal"){
     plots_facet[[1]] %>% layout(font = t, 
-                                scene = basic_scene)
+                                scene = basic_scene) %>%
+      config(toImageButtonOptions = list(format = "svg"))
   }else{
     # X sequence:
     #   Start: 0, 0.5, 0, 0.5
@@ -1102,7 +1114,8 @@ plotPCA.3d <- function(mSet,
                                     scene9 = append(basic_scene,
                                                     list(domain=domains[[9]])),
                                     scene10 = append(basic_scene,
-                                                     list(domain=domains[[10]])))
+                                                     list(domain=domains[[10]]))) %>%
+      config(toImageButtonOptions = list(format = "svg"))
   }
 }
 
@@ -1234,7 +1247,8 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",
   }
   
   if(plotlyfy){
-    plotly::ggplotly(p)
+    plotly::ggplotly(p) %>%
+      config(toImageButtonOptions = list(format = "svg"))
   }else{
     p
   }
@@ -1482,7 +1496,8 @@ ggPlotVenn <- function(mSet,
     ggplot2::scale_x_continuous(expand = c(.1, .1)) +
     ggplot2::scale_y_continuous(expand = c(.1, .1))
   if(plotlyfy){
-    list(plot = plotly::ggplotly(p), info = flattened)
+    list(plot = plotly::ggplotly(p  %>%
+                                   config(toImageButtonOptions = list(format = "svg"))), info = flattened)
   }else{
     list(plot = p, info = flattened)
   }
@@ -1524,7 +1539,8 @@ ggPlotWordBar <- function(wcdata, plot.theme, cf, font, plotlyfy=T){
                    text = ggplot2::element_text(family = font$family)) +
     labs(x="Word",y="Frequency")
   if(plotlyfy){
-    plotly::ggplotly(g,tooltip = "freq")
+    plotly::ggplotly(g,tooltip = "freq") %>%
+      config(toImageButtonOptions = list(format = "svg"))
   }else{
     g
   }
@@ -1579,7 +1595,8 @@ ggPlotPower <- function(mSet,
       ggplot2::coord_cartesian(xlim = c(0,max_samples), ylim = c(.04,.96))
     
     if(plotlyfy){
-      plotly::ggplotly(p, tooltip="comparison")
+      plotly::ggplotly(p, tooltip="comparison") %>%
+        config(toImageButtonOptions = list(format = "svg"))
     }else{
       p
     } 

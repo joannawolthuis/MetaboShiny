@@ -89,7 +89,7 @@ shiny::observeEvent(input$match_tab_rows_selected,{
   my_selection$name <- shown_matches$forward_unique[curr_row,'name'][[1]] # get current structure
 
   shiny::updateTextInput(session,
-                         "pm_query",
+                         "wordcloud_searchTerm",
                          value = my_selection$name)
   my_selection$form <- unlist(shown_matches$forward_unique[curr_row,'baseformula']) # get current formula
   my_selection$struct <- unlist(shown_matches$forward_unique[curr_row,'structure']) # get current formula
@@ -103,6 +103,7 @@ shiny::observeEvent(input$browse_tab_rows_selected,{
   curr_def <- browse_content$table[curr_row, description]
   output$browse_definition <- shiny::renderText(curr_def)
   my_selection$revstruct <- browse_content$table[curr_row,c('structure')][[1]]
+  my_selection$revform <- unlist(browse_content$table[curr_row,'formula']) # get current formula
 })
 
 # triggers on clicking a row in the reverse hit results table

@@ -27,8 +27,12 @@ output$browse_tab <-DT::renderDataTable({
   DT::datatable(browse_content$table,
                 selection = 'single',
                 autoHideNavigation = T,
-                options = list(lengthMenu = c(5, 10, 15),
-                               pageLength = 5,
+                extensions = 'Scroller',
+                options = list(deferRender = TRUE,
+                               scrollY = 200,
+                               scroller = TRUE,
+                               #lengthMenu = c(5, 10, 15),
+                               #pageLength = 5,
                                columnDefs = list(list(visible=FALSE, 
                                                       targets=which(colnames(browse_content$table) %in% c("description", "structure", "formula", "charge"))))))
 }, server=T)

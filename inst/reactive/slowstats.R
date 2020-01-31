@@ -244,7 +244,6 @@ observeEvent(input$do_ml, {
       
       meth.info <- caret.mdls[[input$ml_method]]
       params = meth.info$parameters
-      
       #grid.def <- meth.info$grid(training, trainY, len = 1)
       
       tuneGrid = expand.grid(
