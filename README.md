@@ -31,11 +31,3 @@ http://biorxiv.org/cgi/content/short/734236v1
 
 
 Please report any issues and feedback on the Issues page here, along with suggestions! =)
-
-
-docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny R -e 'library(MetaboShiny); start.metshi(inBrowser=F);'
-```
-# STEP 4
-navigate to http://localhost:8080 OR if on docker toolbox http://192.168.99.100:8080/
-# STEP 5
-you're in!
