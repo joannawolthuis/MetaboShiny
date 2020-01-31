@@ -1,6 +1,5 @@
 # MetaboShiny
-Welcome to the info page on MetaboShiny! I am still working on a proper readme, please have patience with me :-)
-We are currently on BioRXiv and the paper itself is somewhat of a guide to how to use the software.
+Welcome to the info page on MetaboShiny! We are currently on BioRXiv and the paper itself is somewhat of a guide to how to use the software. Additionally, a visual manual to all the possible actions within the app can be viewed below.
 For example input files (positive and negative peaklists + metadata) please see the `examples` folder.
 
 http://biorxiv.org/cgi/content/short/734236v1
@@ -39,8 +38,11 @@ http://biorxiv.org/cgi/content/short/734236v1
 ### Machine learning
 ![Machine learning settings and metadata bar](inst/www/ml1.png?raw=true "Machine learning settings and metadata bar")
 ![Machine learning results](inst/www/ml2.png?raw=true "Machine learning results")
-### Misc. settings
+### Match isotope scoring and abstract searching
+![Plot customization](inst/www/isoabs.png?raw=true "Plot customization")
+### Plot customization
 ![Plot customization](inst/www/colorbar.png?raw=true "Plot customization")
+
 
 
 Please report any issues and feedback on the Issues page here, along with suggestions! =)
