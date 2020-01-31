@@ -19,16 +19,27 @@ http://biorxiv.org/cgi/content/short/734236v1
 4. Your browser should open automatically for you and you're in! Otherwise browse to the "Listening on x.x.x.x" address noted in terminal in your browser.
 
 # Manual
+
+## Databases
 ![Database Tab](inst/www/database_panel_a.png?raw=true "Database tab")
+## User file import
 ![File Import](inst/www/file_import.png?raw=true "File import")
+## Data normalization
 ![Normalization](inst/www/normalization.png?raw=true "Normalization")
+## Pre-matching all m/z (optional)
 ![Prematching](inst/www/prematching.png?raw=true "Prematching")
+## Statistics panel / side bar
 ![Statistics panel start](inst/www/stats.png?raw=true "Statistics Panel Start")
+### Dimension reduction / plot export
 ![Dimension reduction and plot export](inst/www/dimred_export.png?raw=true "Dimension reduction and plot export")
+### Overview plots / search bar
 ![Volcano plot and search bar](inst/www/stats2.png?raw=true "Volcano plot and search bar")
+### Per m/z analysis / formula prediction
 ![Per m/z analysis and prediction sidebar](inst/www/permz_predict.png?raw=true "Per m/z analysis and prediction sidebar")
+### Machine learning
 ![Machine learning settings and metadata bar](inst/www/ml1.png?raw=true "Machine learning settings and metadata bar")
 ![Machine learning results](inst/www/ml2.png?raw=true "Machine learning results")
+### Misc. settings
 ![Plot customization](inst/www/colorbar.png?raw=true "Plot customization")
 
 
