@@ -14,6 +14,8 @@ http://biorxiv.org/cgi/content/short/734236v1
 ![Statistics panel start](inst/www/stats.png?raw=true "Statistics Panel Start")
 ![Dimension reduction and plot export](inst/www/dimred_export.png?raw=true "Dimension reduction and plot export")
 ![Volcano plot and search bar](inst/www/stats2.png?raw=true "Volcano plot and search bar")
+![Per m/z analysis and prediction sidebar](inst/www/permz_predict.png?raw=true "Per m/z analysis and prediction sidebar")
+![Machine learning settings and metadata bar](inst/www/ml1.png?raw=true "Machine learning settings and metadata bar")
 
 
 Please report any issues and feedback on the Issues page here, along with suggestions! =)
