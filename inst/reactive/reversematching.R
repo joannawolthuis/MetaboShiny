@@ -8,7 +8,6 @@ observeEvent(input$browse_db,{
                                                       replacement=""))
     res
   })
-  
   # join the individual result tables together
   browse_content$table <<- unique(data.table::as.data.table(data.table::rbindlist(cpd_list)))
   # render table for UI

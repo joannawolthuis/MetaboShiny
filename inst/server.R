@@ -644,7 +644,7 @@ apikey = ')
         return(NULL)
       }else{
         rev_matches = MetaboShiny::get_prematches(who = my_selection$revstruct,
-                                     what = "map.structure",
+                                     what = "con.structure",
                                      patdb = lcl$paths$patdb)
         if(nrow(rev_matches)>0){
           shown_matches$reverse <- unique(rev_matches[,c("query_mz", "adduct", "%iso", "dppm")])

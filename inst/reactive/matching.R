@@ -33,6 +33,7 @@ lapply(c("prematch","search_mz"), function(search_type){
       RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS map_mz")
       RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS map_ba")
       RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS cont_ba")
+      RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS cont_str")
       
       blocksize=100
       blocks = switch(search_type,
@@ -185,7 +186,7 @@ lapply(c("prematch","search_mz"), function(search_type){
           if(nrow(res) > 0){
             res[, c("query_mz") := lapply(.SD, as.character), .SDcols="query_mz"]
             list(mapper = unique(res[,c("query_mz", 
-                                        "baseformula", 
+                                        "baseformula",
                                         "adduct", 
                                         "%iso",
                                         "dppm")]),
@@ -220,7 +221,7 @@ lapply(c("prematch","search_mz"), function(search_type){
         RSQLite::dbExecute(conn, "CREATE INDEX map_mz ON match_mapper(query_mz)")
         RSQLite::dbExecute(conn, "CREATE INDEX map_ba ON match_mapper(baseformula, adduct)")
         RSQLite::dbExecute(conn, "CREATE INDEX cont_ba ON match_content(baseformula, adduct)")
-        
+        RSQLite::dbExecute(conn, "CREATE INDEX cont_str ON match_content(structure)")
         if(search_type == "prematch"){
           mSet$metshiParams$prematched<<-T
           search_button$on <- FALSE   
