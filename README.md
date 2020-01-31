@@ -39,7 +39,7 @@ http://biorxiv.org/cgi/content/short/734236v1
 ![Machine learning settings and metadata bar](inst/www/ml1.png?raw=true "Machine learning settings and metadata bar")
 ![Machine learning results](inst/www/ml2.png?raw=true "Machine learning results")
 ### Match isotope scoring and abstract searching
-![Plot customization](inst/www/isoscore_wordcloud.png?raw=true "Plot customization")
+![Isoscoring and abstract searching](inst/www/isoscore_wordcloud.png?raw=true "Isoscoring and abstract searching")
 ### Plot customization
 ![Plot customization](inst/www/colorbar.png?raw=true "Plot customization")
 
