@@ -695,18 +695,21 @@ shiny::observe({
                      
                    },
                    wordcloud = {
-                     output$wordcloud <-  wordcloud2::renderWordcloud2({ 
-                       if(nrow(lcl$tables$wordcloud_filt) > 0){
-                         topWords = if(input$wordcloud_topWords > nrow(lcl$tables$wordcloud_filt)) nrow(lcl$tables$wordcloud_filt) else input$wordcloud_topWords
-                         wordcloud2::wordcloud2(lcl$tables$wordcloud_filt[order(n, decreasing = T)][1:topWords,], color = "random-light", size=.7, shape = "circle")
-                       }
-                     })
-                     # TODO: fix barchart
-                     # output$wordbar_desc <- renderPlotly({MetaboShiny::ggPlotWordBar(wcdata = wcdata,
-                     #                                                                 cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                     #                                                                 plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                     #                                                                 plotlyfy = TRUE, 
-                     #                                                                 font = lcl$aes$font)})
+                     if(nrow(lcl$tables$wordcloud_filt) > 0){
+                       topWords = if(input$wordcloud_topWords > nrow(lcl$tables$wordcloud_filt)) nrow(lcl$tables$wordcloud_filt) else input$wordcloud_topWords
+                       output$wordcloud <-  wordcloud2::renderWordcloud2({ 
+                         wordcloud2::wordcloud2(data.table::as.data.table(lcl$tables$wordcloud_filt)[order(n, decreasing = T)][1:topWords,], color = "random-light", size=.7, shape = "circle")
+                       })
+                       output$wordbar <- renderPlotly({
+                         wcdata = data.table::as.data.table(lcl$tables$wordcloud_filt)[order(n, decreasing = T)][1:topWords,]
+                         colnames(wcdata)[2] <- "freq"
+                         MetaboShiny::ggPlotWordBar(wcdata = wcdata,
+                                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                                    plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                                                    plotlyfy = TRUE,
+                                                    font = lcl$aes$font)
+                       })  
+                     }
                    }
             )
           })

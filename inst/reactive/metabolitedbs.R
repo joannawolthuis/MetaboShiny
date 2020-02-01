@@ -137,7 +137,7 @@ shiny::observe({
             shiny::column(width=3,align="center",
                           if(!(db %in% gbl$vectors$db_no_build)){
                             list(shinyWidgets::actionBttn(
-                              inputId = paste0("check", db),
+                              inputId = paste0("check_", db),
                               label = NULL,size = "sm",
                               style = "material-circle", 
                               color = "success",
