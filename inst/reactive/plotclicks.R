@@ -2,7 +2,7 @@
 shiny::observeEvent(plotly::event_data("plotly_click"), {
   
   d <- plotly::event_data("plotly_click") # get click details (which point, additional included info, etc...
-  
+
   try({
     for(pietype in c("add", "iso", "db")){
       if(input$tab_iden_4 == paste0("pie_",pietype) | input$tab_iden_5 == paste0("pie_",pietype) ){
@@ -36,9 +36,9 @@ shiny::observeEvent(plotly::event_data("plotly_click"), {
     
   }else if(req(curr_tab) == "ml"){ # makes ROC curves and boxplots clickable
     switch(input$ml_results, roc = { # if roc, check the curve numbers of the roc plot
-      attempt = d$curveNumber# - 1
+      attempt = d$curveNumber + 1
       xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
-      if(attempt > 1){
+      if(attempt > 0){
         output$ml_tab <- DT::renderDataTable({
           imp <- data.table::as.data.table(xvals$imp[[attempt]], keep.rownames = T)
           colnames(imp) <- c("mz", "importance")

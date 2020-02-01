@@ -134,37 +134,31 @@ shiny::observe({
           })),
           # row 4: button
           shiny::fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
-            shiny::column(width=3,align="center",
+            shiny::column(width=3, align="center",
                           if(!(db %in% gbl$vectors$db_no_build)){
-                            list(shinyWidgets::actionBttn(
-                              inputId = paste0("check_", db),
-                              label = NULL,size = "sm",
-                              style = "material-circle", 
-                              color = "success",
-                              icon = icon("check")
-                            ),shinyWidgets::actionBttn(
-                              inputId = paste0("build_", db),
-                              label = NULL,size = "sm",
-                              style = "material-circle", 
-                              color = "danger",
-                              icon = icon("wrench")
-                            ),
-                            shinyWidgets::prettyToggle(
-                              status_off  = "default", 
-                              status_on = "danger",
-                              inline=T,bigger=T,
-                              animation="pulse",
-                              inputId = paste0("favorite_", db),
-                              label_on = "", 
-                              label_off = "",
-                              outline = TRUE,
-                              plain = TRUE,
-                              value = db %in% gbl$vectors$db_categories$favorites,
-                              icon_on = icon("heart",lib ="glyphicon"), 
-                              icon_off = icon("heart-empty",lib ="glyphicon")
-                            ),
-                            shiny::br(),shiny::br(),
-                            shiny::imageOutput(paste0(db, "_check"),inline = T))
+                            list(
+                              shiny::actionLink(paste0("check_", db),
+                                                label = "",
+                                                icon = icon("check")),
+                              shiny::actionLink(paste0("build_", db),
+                                                label = "",
+                                                icon = icon("wrench")),
+                              shinyWidgets::prettyToggle(
+                                status_off = "default", 
+                                status_on = "danger",
+                                inline=T,bigger=F,
+                                animation="pulse",
+                                inputId = paste0("favorite_", db),
+                                label_on = "", 
+                                label_off = "",
+                                outline = TRUE,
+                                plain = TRUE,
+                                value = db %in% gbl$vectors$db_categories$favorites,
+                                icon_on = icon("heart",lib ="glyphicon"), 
+                                icon_off = icon("heart-empty",lib ="glyphicon")
+                              ),
+                              shiny::br(),shiny::br(),
+                              shiny::imageOutput(paste0(db, "_check"),inline = T))
                           }else{
                             list()
                           }

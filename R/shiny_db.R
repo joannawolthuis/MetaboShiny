@@ -28,14 +28,14 @@ get_prematches <- function(who = NA,
                                fullformula,
                                finalcharge,
                                dppm,
-               description, con.structure as structure,
-               source
-               FROM match_mapper map
-               JOIN match_content con
-               ON map.baseformula = con.baseformula
-               AND map.adduct = con.adduct
-               AND map.query_mz = con.query_mz", simplify=T, width=1000)
-  
+                               description, con.structure as structure,
+                               source
+                               FROM match_mapper map
+                               JOIN match_content con
+                               ON map.baseformula = con.baseformula
+                               AND map.adduct = con.adduct
+                               AND map.query_mz = con.query_mz", simplify=T, width=1000)
+                  
   dbfrag = if(length(showdb)>0) gsubfn::fn$paste("AND source = '$showdb'") else ""
   addfrag = if(length(showadd)>0) gsubfn::fn$paste("AND map.adduct = '$showadd'") else ""
   isofrag = if(length(showiso)>0) switch(showiso, 

@@ -237,7 +237,10 @@ shiny::observe({
                        DT::datatable(mSet$analSet$corr$cor.mat,
                                      selection = 'single',
                                      autoHideNavigation = T,
-                                     options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+                                     extensions = 'Scroller',
+                                     options = list(deferRender = TRUE,
+                                                    scrollY = 200,
+                                                    scroller = TRUE))
                      })
                    },
                    aov = {
@@ -263,7 +266,10 @@ shiny::observe({
                          },
                          selection = 'single',
                          autoHideNavigation = T,
-                         options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+                         extensions = 'Scroller',
+                         options = list(deferRender = TRUE,
+                                        scrollY = 200,
+                                        scroller = TRUE))
                        })
                        
                        # render manhattan-like plot for UI
@@ -292,7 +298,10 @@ shiny::observe({
                        DT::datatable(mSet$analSet$volc$sig.mat,
                                      selection = 'single',
                                      autoHideNavigation = T,
-                                     options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+                                     extensions = 'Scroller',
+                                     options = list(deferRender = TRUE,
+                                                    scrollY = 200,
+                                                    scroller = TRUE))
                      })
                    },
                    tsne = {
@@ -350,7 +359,10 @@ shiny::observe({
                          DT::datatable(pca.table,
                                        selection = 'single',
                                        autoHideNavigation = T,
-                                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+                                       extensions = 'Scroller',
+                                       options = list(deferRender = TRUE,
+                                                      scrollY = 200,
+                                                      scroller = TRUE))
                        })
                        # render PCA loadings tab for UI
                        output$pca_load_tab <-DT::renderDataTable({
@@ -361,7 +373,10 @@ shiny::observe({
                          DT::datatable(pca.loadings,
                                        selection = 'single',
                                        autoHideNavigation = T,
-                                       options = list(lengthMenu = c(5, 10, 15), pageLength = 10))
+                                       extensions = 'Scroller',
+                                       options = list(deferRender = TRUE,
+                                                      scrollY = 200,
+                                                      scroller = TRUE))
                        })
                        output$pca_scree <- renderPlot({
                          MetaboShiny::ggPlotScree(mSet,
@@ -449,7 +464,10 @@ shiny::observe({
                          DT::datatable(plsda.table,
                                        selection = 'single',
                                        autoHideNavigation = T,
-                                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+                                       extensions = 'Scroller',
+                                       options = list(deferRender = TRUE,
+                                                      scrollY = 200,
+                                                      scroller = TRUE))
                        })
                        # render table with PLS-DA loadings
                        output$plsda_load_tab <-DT::renderDataTable({
@@ -459,7 +477,10 @@ shiny::observe({
                          DT::datatable(plsda.loadings[, c(input$plsda_x, input$plsda_y, input$plsda_z)],
                                        selection = 'single',
                                        autoHideNavigation = T,
-                                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+                                       extensions = 'Scroller',
+                                       options = list(deferRender = TRUE,
+                                                      scrollY = 200,
+                                                      scroller = TRUE))
                        })
                        # see PCA - render 2d or 3d plots, just with plsda as mode instead
                        if(input$plsda_2d3d){
@@ -501,6 +522,16 @@ shiny::observe({
                                       target = "res")
                        
                        roc_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
+                       
+                       output$ml_overview_tab <- DT::renderDataTable({
+                         DT::datatable(unique(roc_data$perf[,c(1,4,5)]),
+                                       selection = 'single',
+                                       autoHideNavigation = T,
+                                       extensions = 'Scroller',
+                                       options = list(deferRender = TRUE,
+                                                      scrollY = 200,
+                                                      scroller = TRUE))
+                       })
                        
                        output$ml_roc <- plotly::renderPlotly({
                          plotly::ggplotly(MetaboShiny::ggPlotROC(roc_data,
@@ -550,7 +581,10 @@ shiny::observe({
                                        selection = 'single',
                                        colnames = c("Compound", "Leverage", "SPE"),
                                        autoHideNavigation = T,
-                                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+                                       extensions = 'Scroller',
+                                       options = list(deferRender = TRUE,
+                                                      scrollY = 200,
+                                                      scroller = TRUE))
                        })
                      }
                    },
@@ -562,7 +596,10 @@ shiny::observe({
                                        selection = 'single',
                                        colnames = c("Compound", "Hotelling/T2 score"),
                                        autoHideNavigation = T,
-                                       options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+                                       extensions = 'Scroller',
+                                       options = list(deferRender = TRUE,
+                                                      scrollY = 200,
+                                                      scroller = TRUE))
                        })
                      }
                    },
@@ -581,7 +618,10 @@ shiny::observe({
                        DT::datatable(res,
                                      selection = 'single',
                                      autoHideNavigation = T,
-                                     options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+                                     extensions = 'Scroller',
+                                     options = list(deferRender = TRUE,
+                                                    scrollY = 200,
+                                                    scroller = TRUE))
                        
                      })
                      # render manhattan-like plot for UI
@@ -604,7 +644,10 @@ shiny::observe({
                        DT::datatable(res,
                                      selection = 'single',
                                      autoHideNavigation = T,
-                                     options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+                                     extensions = 'Scroller',
+                                     options = list(deferRender = TRUE,
+                                                    scrollY = 200,
+                                                    scroller = TRUE))
                        
                      })
                      # render manhattan-like plot for UI

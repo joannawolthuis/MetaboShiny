@@ -1,17 +1,27 @@
 output$match_tab <- DT::renderDataTable({
   # don't show some columns but keep them in the original table, so they can be used
   # for showing molecule descriptions, structure
-  DT::datatable(shown_matches$forward_unique,
+  empty = data.table::data.table(" "=rep("", nrow(shown_matches$forward_unique)))
+  DT::datatable(cbind(shown_matches$forward_unique, empty),
                 selection = 'single',
                 autoHideNavigation = T,
-                #filter = "top",
-                options = list(lengthMenu = c(5, 10, 15),
-                               pageLength = 5,
-                               #searchCols = lcl$default_search_columns,
-                               #search = list(regex = FALSE, caseInsensitive = FALSE, search = lcl$default_search),
-                               columnDefs = list(list(visible=FALSE, 
-                                                      targets=c(which(colnames(shown_matches$forward_unique) %in% gbl$vectors$hide_match_cols),
-                                                                which(colnames(shown_matches$forward_unique)=="isocat"))))
+                class = 'compact', height = "500px",
+                extensions = c("FixedColumns", "Scroller"), 
+                options = list(deferRender = TRUE,
+                               scrollY = 200,
+                               searching = TRUE,
+                               scrollCollapse = FALSE,
+                               rownames = FALSE,
+                               scroller = TRUE,
+                               scrollX = T,
+                               fixedColumns = list(
+                                 rightColumns = 8,
+                                 heightMatch = 'none'
+                               ),
+                               columnDefs = list(
+                                 list(visible = FALSE, 
+                                      targets = c(which(colnames(shown_matches$forward_unique) %in% gbl$vectors$hide_match_cols),
+                                                which(colnames(shown_matches$forward_unique) == "isocat"))))
                 )
   )
 })
@@ -19,8 +29,10 @@ output$match_tab <- DT::renderDataTable({
 output$hits_tab <- DT::renderDataTable({
   DT::datatable(shown_matches$reverse,
                 selection = 'single',
-                autoHideNavigation = T,
-                options = list(lengthMenu = c(5, 10, 20), pageLength = 5))
+                autoHideNavigation = T,extensions = 'Scroller',
+                options = list(deferRender = TRUE,
+                               scrollY = 200,
+                               scroller = TRUE))
 })
 
 output$browse_tab <-DT::renderDataTable({
@@ -34,7 +46,8 @@ output$browse_tab <-DT::renderDataTable({
                                #lengthMenu = c(5, 10, 15),
                                #pageLength = 5,
                                columnDefs = list(list(visible=FALSE, 
-                                                      targets=which(colnames(browse_content$table) %in% c("description", "structure", "formula", "charge"))))))
+                                                      targets=which(colnames(browse_content$table) %in% c("description", "structure", "formula", "charge")))))
+                )
 }, server=T)
 
 # generate positive and negative adduct picker tabs (for csv creation)
@@ -53,6 +66,35 @@ shiny::observe({
 })
 
 # adduct table editing from settings tab
+
+output$ml_tab <- DT::renderDataTable({
+  DT::datatable(data.table::data.table("nothing selected"="Please select a model from ROC plot or left-hand table!"),
+                selection = 'single',
+                autoHideNavigation = T,extensions = 'Scroller',
+                options = list(deferRender = TRUE,
+                               scrollY = 200,
+                               scroller = TRUE))
+})
+
+observeEvent(input$ml_overview_tab_rows_selected, {
+  attempt = unique(mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc$perf[,c(1,4,5)])[input$ml_overview_tab_rows_selected,]$attempt
+  xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
+  output$ml_tab <- DT::renderDataTable({
+    imp <- data.table::as.data.table(xvals$imp[[attempt]], keep.rownames = T)
+    colnames(imp) <- c("mz", "importance")
+    imp <- imp[importance > 0,]
+    lcl$tables$ml_roc <<- data.frame(importance = imp$importance,
+                                     row.names = gsub(imp$mz,
+                                                      pattern = "`|`",
+                                                      replacement=""))
+    DT::datatable(lcl$tables$ml_roc,
+                  selection = 'single',
+                  autoHideNavigation = T,extensions = 'Scroller',
+                  options = list(deferRender = TRUE,
+                                 scrollY = 200,
+                                 scroller = TRUE))
+  })
+})
 
 values = shiny::reactiveValues()
 
@@ -168,7 +210,10 @@ output$magicball_add_tab <- DT::renderDataTable({
     }else{adducts[scanmode %in% Ion_mode]$Name}),
     selection = list(mode = 'multiple',
                      selected = lcl$vectors[[paste0(scanmode, "_selected_add")]], target="row"),
-    options = list(pageLength = 5, dom = 'tp',
+    extensions = 'Scroller',
+    options = list(deferRender = TRUE,
+                   scrollY = 200,
+                   scroller = TRUE, dom = 'tp',
                    columnDefs = list(list(className = 'dt-center', targets = "_all"))),
     rownames = F)  
   }
