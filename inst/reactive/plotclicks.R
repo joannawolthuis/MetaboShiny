@@ -23,7 +23,7 @@ shiny::observeEvent(plotly::event_data("plotly_click"), {
                        input$overview
                      }, ml = "ml")
   
-  if(req(curr_tab ) %in% c("tt", "fc", "rf", "aov", "volc")){ # these cases need the same processing and use similar scoring systems
+  if(req(curr_tab) %in% c("tt", "fc", "rf", "aov", "volc")){ # these cases need the same processing and use similar scoring systems
     if('key' %not in% colnames(d)) return(NULL)
     mzs <- switch(curr_tab,
                   tt = names(mSet$analSet$tt$p.value),

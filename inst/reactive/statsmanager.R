@@ -149,6 +149,7 @@ shiny::observe({
                                                            mindate = input$wordcloud_dateRange[1],
                                                            maxdate = input$wordcloud_dateRange[2],
                                                            retmax = input$wordcloud_absFreq)
+                     lcl$tables$abstracts <- abstracts
                      shiny::setProgress(0.5)
                      lcl$tables$wordcloud_orig <- MetaboShiny::getWordFrequency(abstracts$abstract)
                      lcl$tables$wordcloud_filt <- lcl$tables$wordcloud_orig

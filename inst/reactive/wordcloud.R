@@ -66,5 +66,34 @@ observeEvent(input$wordcloud_make_filter, {
   })
 })
 
-
+observe({
+  if(!is.null(input$wordcloud_selected_word)){
+    selected_word_clean = gsub(pattern= ":\\d+",replacement = "",isolate(input$wordcloud_selected_word))
+    abstracts <- lcl$tables$abstracts
+    JustASelectedbstracts <- abstracts$abstract
+    MachedAbstracts = sapply(JustASelectedbstracts, function(x) grepl(pattern = selected_word_clean, x = x))
+    isWhere=which(MachedAbstracts)
+    # ==========================================
+    ShowAbstracts<-JustASelectedbstracts[isWhere]
+    absTable = lcl$tables$abstracts[isWhere,]
+    # ShowAbstractsandSummaries<-paste(ShowAbstractsandSummaries,
+    #                                  collapse = "\n\n")
+    # ShowAbstractsandSummaries<-sapply(ShowAbstractsandSummaries,FUN = as.character,USE.NAMES = T)
+    # ==========================================
+    output$wordcloud_abstracts <- renderUI({ 
+      lapply(1:nrow(absTable), function(i){
+        row = absTable[i, ]
+        title = row$title#row[1]
+        pmid = row$DOI#row[4]
+        abstract = row[2]
+        shiny::fluidRow(align="center", 
+                 shiny::tags$b(title), 
+                 shiny::a(gsubfn::fn$paste("($pmid)"), href=gsubfn::fn$paste("https://pubmed.ncbi.nlm.nih.gov/$pmid")),
+                 br(),
+                 shiny::tags$i(abstract),
+                 hr())
+        })
+      }) 
+  }
+})
 
