@@ -1,13 +1,12 @@
 Package: MetaboShiny
 Type: Package
-Title: Interactive Untargeted Metabolomics Analysis and Identification
-Version: 0.1.0
+Title: Interactive Direct Infusion Metabolomics Analysis and Annotation
+Version: 1.0.0
 Author: Joanna Wolthuis
 Depends: 
     R (>= 3.5)
 Maintainer: Joanna Wolthuis <J.C.Wolthuis-2@umcutrecht.nl>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Description: MetaboShiny enables rapid and rigorous analysis and interpretation of direct infusion untargeted metabolomics data.
 License: Apache License Version 2.0 + file LICENSE
 Encoding: UTF-8
 LazyData: true
@@ -110,7 +109,10 @@ Imports:
   ggbeeswarm,
   jsonlite,
   plotROC,
-  rcdk
+  rcdk,
+  ROSE,
+  DMwR,
+  tidytext
 Remotes:
   github::UMCUGenetics/MetaDBparse,
   github::xia-lab/MetaboAnalystR,
