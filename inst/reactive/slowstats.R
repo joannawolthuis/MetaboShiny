@@ -277,10 +277,11 @@ observeEvent(input$do_ml, {
       
       
       # ============ DOWNSAMPLE ===========
-      if(input$downsample){
-        keepers = caret::downSample(1:nrow(curr), curr$label)$x
-        curr = curr[keepers,]
-      }
+      # if(input$downsample){
+      #   keepers = caret::downSample(1:nrow(curr), curr$label)$x
+      #   curr = curr[keepers,]
+      # }
+      
       # ============ LOOP HERE ============
       
       # get results for the amount of attempts chosen
@@ -298,7 +299,8 @@ observeEvent(input$do_ml, {
                                               ml_folds,
                                               ml_preproc,
                                               tuneGrid,
-                                              ml_train_perc){
+                                              ml_train_perc,
+                                              sampling){
                                        MetaboShiny::runML(curr,
                                                           train_vec = train_vec,
                                                           test_vec = test_vec,
@@ -309,7 +311,8 @@ observeEvent(input$do_ml, {
                                                           ml_folds = ml_folds,
                                                           ml_preproc = ml_preproc,
                                                           tuneGrid = tuneGrid,
-                                                          ml_train_perc = ml_train_perc)
+                                                          ml_train_perc = ml_train_perc,
+                                                          sampling = sampling)
                                      },
                                      train_vec = lcl$vectors$ml_train,
                                      test_vec = lcl$vectors$ml_test,
@@ -320,7 +323,8 @@ observeEvent(input$do_ml, {
                                      ml_folds = input$ml_folds,
                                      ml_preproc = input$ml_preproc,
                                      tuneGrid = tuneGrid,
-                                     ml_train_perc = input$ml_train_perc
+                                     ml_train_perc = input$ml_train_perc,
+                                     sampling = input$ml_sampling
         )
       })
       # check if a storage list for machine learning results already exists

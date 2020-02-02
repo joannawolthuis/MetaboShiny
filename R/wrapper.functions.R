@@ -223,7 +223,8 @@ runML <- function(curr,
                   ml_folds,
                   ml_preproc,
                   tuneGrid,
-                  ml_train_perc){
+                  ml_train_perc,
+                  sampling = "none"){
   
   # get user training percentage
   ml_train_perc <- ml_train_perc/100
@@ -270,7 +271,8 @@ runML <- function(curr,
                                      allowParallel = F,
                                      method="LOOCV",
                                      trim=TRUE, 
-                                     returnData = FALSE) # need something here...
+                                     returnData = FALSE,
+                                     sampling = sampling) # need something here...
     
   }else{
     trainCtrl <- caret::trainControl(verboseIter = T,
@@ -279,7 +281,8 @@ runML <- function(curr,
                                      number = as.numeric(ml_folds),
                                      repeats=3,
                                      trim=TRUE, 
-                                     returnData = FALSE) # need something here...
+                                     returnData = FALSE,
+                                     sampling = sampling) # need something here...
   }
   
   fit <- caret::train(

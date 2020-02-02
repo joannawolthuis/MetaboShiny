@@ -137,13 +137,14 @@ shiny::observe({
             shiny::column(width=3, align="center",
                           if(!(db %in% gbl$vectors$db_no_build)){
                             list(
-                              shiny::actionLink(paste0("check_", db),
+                              shinyBS::tipify(shiny::actionLink(paste0("check_", db),
                                                 label = "",
                                                 icon = icon("check")),
-                              shiny::actionLink(paste0("build_", db),
+                                              title = "is base database built?"),
+                              shinyBS::tipify(shiny::actionLink(paste0("build_", db),
                                                 label = "",
-                                                icon = icon("wrench")),
-                              shinyWidgets::prettyToggle(
+                                                icon = icon("wrench")),title = "build this database"),
+                              shinyBS::tipify(shinyWidgets::prettyToggle(
                                 status_off = "default", 
                                 status_on = "danger",
                                 inline=T,bigger=F,
@@ -153,10 +154,10 @@ shiny::observe({
                                 label_off = "",
                                 outline = TRUE,
                                 plain = TRUE,
-                                value = db %in% gbl$vectors$db_categories$favorites,
+                                value = db %in% gbl$vectors$db_categories$favorite,
                                 icon_on = icon("heart",lib ="glyphicon"), 
                                 icon_off = icon("heart-empty",lib ="glyphicon")
-                              ),
+                              ), title = "add this database to favorites category"),
                               shiny::br(),shiny::br(),
                               shiny::imageOutput(paste0(db, "_check"),inline = T))
                           }else{
@@ -210,32 +211,44 @@ shiny::observe({
             all = "cart-plus",
             versatile = "map-signs",
             verbose = "book",
-            livestock = "kiwi-bird", #
+            livestock = "piggy-bank",
             human = "male",
             microbial = "splotch",
-            pathways = "road",
+            pathway = "road",
             food = "utensil-spoon",
             plant = "seedling",
             massspec = "fingerprint",
             chemical = "flask",
             online = "globe",
             predictive = "magic",
-            favorites = "heart")  
+            favorite = "heart")  
           
           iconWrap <- sapply(iconPicks, function(ic){
             gsubfn::fn$paste("<i class='fa fa-$ic'></i>")
           })
+          
           choices = names(iconPicks)
           names(choices) <- iconWrap
+          
+          tooltips = lapply(as.character(choices), function(choice){
+            radioTooltip(id = paste0(prefix, "_db_categories"),
+                         choice = choice,
+                         title = paste(choice, "databases"),
+                         trigger = "hover",
+                         placement="right")
+          })
+          
           list(
             shiny::fluidRow(align="center",
                             shinyWidgets::checkboxGroupButtons(
                               inputId = paste0(prefix, "_db_categories"),
                               label = "", 
-                              choices = choices,selected = "all",
+                              choices = choices, selected = "all",
                               justified = TRUE,size = "sm"
                             )
+                            
             ),
+            tooltips,
             uiOutput(paste0(prefix,"_db_categ"))
           )
         }
@@ -258,7 +271,7 @@ shiny::observe({
           shiny::fluidRow(
             lapply(display, function(db){
               which_idx = grep(sapply(gbl$constants$images, function(x) x$name), pattern = db) # find the matching image (NAME MUST HAVE DB NAME IN IT COMPLETELY)
-              MetaboShiny::sardine(MetaboShiny::fadeImageButton(inputId = paste0(prefix, "_", db), img.path = gbl$constants$images[[which_idx]]$path)) # generate fitting html
+              shinyBS::tipify(MetaboShiny::sardine(MetaboShiny::fadeImageButton(inputId = paste0(prefix, "_", db), img.path = gbl$constants$images[[which_idx]]$path)),title = gbl$constants$db.build.info[[db]]$title) # generate fitting html
             })
           )
         })
@@ -346,7 +359,7 @@ lapply(c(gbl$vectors$db_list), FUN=function(db){
     if(!is.null(favorites)){
       if(length(favorites) > 0 ){
         MetaboShiny::setOption(lcl$paths$opt.loc, "dbfavs", paste0(favorites, collapse=","))
-        gbl$vectors$db_categories$favorites <<- favorites     
+        gbl$vectors$db_categories$favorite <<- favorites     
       }
     }
   })

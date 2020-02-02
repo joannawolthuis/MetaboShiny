@@ -292,7 +292,7 @@ vectors = list(
                        livestock = c("lmdb", "rmdb", "bmdb", "metacyc", "mcdb"),
                        human = c("hmdb", "metacyc", "expoexplorer", "t3db", "bloodexposome"),
                        microbial = c("ymdb", "ecmdb", "pamdb", "vmh", "mvoc"),
-                       pathways = c("vmh", "smpdb", "kegg"),
+                       pathway = c("vmh", "smpdb", "kegg"),
                        food = c("foodb", "phenolexplorer"),
                        plant = c("nanpdb", "respect", "metacyc", "supernatural2", "knapsack"),
                        chemical = c("chebi", "massbank", "maconda", "stoff", "lipidmaps", "chemspider"),
@@ -365,8 +365,27 @@ gbl$vectors$wordcloud$filters <- list(
   default = c(gbl$vectors$db_list, "exposome",
               "Synonyms", "synonyms"))
 
-#' Squishes HTML elements close together.
 data(isotopes, package = "enviPat")
+
+radioTooltip <- function(id, choice, title, placement = "bottom", trigger = "hover", options = NULL){
+  
+  options = shinyBS:::buildTooltipOrPopoverOptionsList(title, placement, trigger, options)
+  options = paste0("{'", paste(names(options), options, sep = "': '", collapse = "', '"), "'}")
+  bsTag <- shiny::tags$script(shiny::HTML(paste0("
+    $(document).ready(function() {
+      setTimeout(function() {
+        $('input', $('#", id, "')).each(function(){
+          if(this.getAttribute('value') == '", choice, "') {
+            opts = $.extend(", options, ", {html: true});
+            $(this.parentElement).tooltip('destroy');
+            $(this.parentElement).tooltip(opts);
+          }
+        })
+      }, 500)
+    });
+  ")))
+  htmltools::attachDependencies(bsTag, shinyBS:::shinyBSDep)
+}
 
 # interleave for sorting later ...
 add_idx <- order(c(seq_along(gbl$vectors$pos_adducts$Name), seq_along(gbl$vectors$neg_adducts$Name)))
