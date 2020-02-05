@@ -313,7 +313,8 @@ getMultiMLperformance <- function(model){
   data.table::rbindlist(lapply(roc$rocs, function(roc.pair){
     data.table(FPR = sapply(roc.pair$specificities, function(x) 1-x),
                TPR = roc.pair$sensitivities,
-               AUC = as.numeric(roc$auc),
+               AUC_AVG = as.numeric(roc$auc),
+               AUC_PAIR = as.numeric(pROC::auc(roc.pair)),
                comparison = paste0(roc.pair$levels,collapse=" vs. "))
   })) 
 }
@@ -498,4 +499,31 @@ combatCSV <- function(mSet){
   csv_edata <-t(csv[,!c(1,2)])
   colnames(csv_edata) <- csv$sample
   csv_edata
+}
+
+metshiTable <- function(content, options=NULL){
+  opts = list(deferRender = TRUE,
+              scrollY = 200,
+              searching = TRUE,
+              scrollCollapse = FALSE,
+              rownames = FALSE,
+              scroller = TRUE,
+              scrollX = T,
+              dom = 'Bftip',
+              buttons = 
+                list(list(
+                  extend = 'collection',
+                  buttons = c('csv', 'excel', 'copy'),
+                  text = "<i class='fa fa-save'></i>"
+                )))
+  if(!is.null(options)){
+    opts <- append(opts, options)      
+  }
+  DT::datatable(content,
+                selection = 'single',
+                autoHideNavigation = T,
+                class = 'compact', height = "500px",
+                extensions = c("FixedColumns", "Scroller", "Buttons"), 
+                options = opts
+  )
 }

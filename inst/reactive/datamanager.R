@@ -233,14 +233,7 @@ shiny::observe({
                      })
                      # render results table
                      output$pattern_tab <-DT::renderDataTable({
-                       # -------------
-                       DT::datatable(mSet$analSet$corr$cor.mat,
-                                     selection = 'single',
-                                     autoHideNavigation = T,
-                                     extensions = 'Scroller',
-                                     options = list(deferRender = TRUE,
-                                                    scrollY = 200,
-                                                    scroller = TRUE))
+                       MetaboShiny::metshiTable(content = mSet$analSet$corr$cor.mat)
                      })
                    },
                    aov = {
@@ -252,24 +245,20 @@ shiny::observe({
                                       aov = colnames(mSet$analSet$aov$sig.mat) %in% c("p.value", "FDR", "Fisher's LSD"),
                                       aov2 = grepl("adj\\.p|Adj", colnames(mSet$analSet$aov2$sig.mat)))
                        
-                       output$aov_tab <- DT::renderDataTable({
-                         DT::datatable(if(is.null(mSet$analSet[[which_aov]]$sig.mat)){
-                           data.table::data.table("No significant hits found")
+                       con =if(is.null(mSet$analSet[[which_aov]]$sig.mat)){
+                         data.table::data.table("No significant hits found")
+                       }else{
+                         if(sum(keep) == 1){
+                           tbl = data.table::data.table(rn=rownames(mSet$analSet[[which_aov]]$sig.mat),
+                                                        "adj. p-value"=mSet$analSet[[which_aov]]$sig.mat[,keep])
+                           
                          }else{
-                           if(sum(keep) == 1){
-                             tbl = data.table::data.table(rn=rownames(mSet$analSet[[which_aov]]$sig.mat),
-                                                          "adj. p-value"=mSet$analSet[[which_aov]]$sig.mat[,keep])
-                             
-                           }else{
-                             mSet$analSet[[which_aov]]$sig.mat[,keep]
-                           }
-                         },
-                         selection = 'single',
-                         autoHideNavigation = T,
-                         extensions = 'Scroller',
-                         options = list(deferRender = TRUE,
-                                        scrollY = 200,
-                                        scroller = TRUE))
+                           mSet$analSet[[which_aov]]$sig.mat[,keep]
+                         }
+                       }
+                       
+                       output$aov_tab <- DT::renderDataTable({
+                         MetaboShiny::metshiTable(content = con)
                        })
                        
                        # render manhattan-like plot for UI
@@ -294,14 +283,7 @@ shiny::observe({
                      })
                      # render results table
                      output$volc_tab <-DT::renderDataTable({
-                       # -------------
-                       DT::datatable(mSet$analSet$volc$sig.mat,
-                                     selection = 'single',
-                                     autoHideNavigation = T,
-                                     extensions = 'Scroller',
-                                     options = list(deferRender = TRUE,
-                                                    scrollY = 200,
-                                                    scroller = TRUE))
+                       MetaboShiny::metshiTable(content = mSet$analSet$volc$sig.mat)
                      })
                    },
                    tsne = {
@@ -355,28 +337,14 @@ shiny::observe({
                                                                       digits = 2),
                                                                 keep.rownames = T)
                          colnames(pca.table) <- c("Principal Component", "% variance")
-                         
-                         DT::datatable(pca.table,
-                                       selection = 'single',
-                                       autoHideNavigation = T,
-                                       extensions = 'Scroller',
-                                       options = list(deferRender = TRUE,
-                                                      scrollY = 200,
-                                                      scroller = TRUE))
+                         MetaboShiny::metshiTable(content = pca.table)
                        })
                        # render PCA loadings tab for UI
                        output$pca_load_tab <-DT::renderDataTable({
                          pca.loadings <- mSet$analSet$pca$rotation[,c(input$pca_x,
                                                                       input$pca_y,
                                                                       input$pca_z)]
-                         #colnames(pca.loadings)[1] <- "m/z"
-                         DT::datatable(pca.loadings,
-                                       selection = 'single',
-                                       autoHideNavigation = T,
-                                       extensions = 'Scroller',
-                                       options = list(deferRender = TRUE,
-                                                      scrollY = 200,
-                                                      scroller = TRUE))
+                         MetaboShiny::metshiTable(content = pca.loadings)
                        })
                        output$pca_scree <- renderPlot({
                          MetaboShiny::ggPlotScree(mSet,
@@ -461,26 +429,13 @@ shiny::observe({
                          colnames(plsda.table) <- c("Principal Component", "% variance")
                          plsda.table[, "Principal Component"] <- paste0("PC", 1:nrow(plsda.table))
                          # -------------
-                         DT::datatable(plsda.table,
-                                       selection = 'single',
-                                       autoHideNavigation = T,
-                                       extensions = 'Scroller',
-                                       options = list(deferRender = TRUE,
-                                                      scrollY = 200,
-                                                      scroller = TRUE))
+                         MetaboShiny::metshiTable(content = plsda.table)
                        })
                        # render table with PLS-DA loadings
                        output$plsda_load_tab <-DT::renderDataTable({
                          plsda.loadings <- mSet$analSet$plsda$vip.mat
                          colnames(plsda.loadings) <- paste0("PC", c(1:ncol(plsda.loadings)))
-                         # -------------
-                         DT::datatable(plsda.loadings[, c(input$plsda_x, input$plsda_y, input$plsda_z)],
-                                       selection = 'single',
-                                       autoHideNavigation = T,
-                                       extensions = 'Scroller',
-                                       options = list(deferRender = TRUE,
-                                                      scrollY = 200,
-                                                      scroller = TRUE))
+                         MetaboShiny::metshiTable(content = plsda.loadings[, c(input$plsda_x, input$plsda_y, input$plsda_z)])
                        })
                        # see PCA - render 2d or 3d plots, just with plsda as mode instead
                        if(input$plsda_2d3d){
@@ -524,13 +479,9 @@ shiny::observe({
                        roc_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
                        
                        output$ml_overview_tab <- DT::renderDataTable({
-                         DT::datatable(unique(roc_data$perf[,c(1,4,5)]),
-                                       selection = 'single',
-                                       autoHideNavigation = T,
-                                       extensions = 'Scroller',
-                                       options = list(deferRender = TRUE,
-                                                      scrollY = 200,
-                                                      scroller = TRUE))
+                         tbl = unique(roc_data$perf[,c("AUC_PAIR", "comparison", "attempt")])
+                         colnames(tbl)[1] <- "AUC"
+                         MetaboShiny::metshiTable(content = tbl)
                        })
                        
                        output$ml_roc <- plotly::renderPlotly({
@@ -575,31 +526,19 @@ shiny::observe({
                    },
                    asca = {
                      if("asca" %in% names(mSet$analSet)){
-                       output$asca_tab <-DT::renderDataTable({ # render results table for UI
-                         # -------------
-                         DT::datatable(mSet$analSet$asca$sig.list$Model.ab,
-                                       selection = 'single',
-                                       colnames = c("Compound", "Leverage", "SPE"),
-                                       autoHideNavigation = T,
-                                       extensions = 'Scroller',
-                                       options = list(deferRender = TRUE,
-                                                      scrollY = 200,
-                                                      scroller = TRUE))
+                       output$asca_tab <-DT::renderDataTable({ 
+                         con = mSet$analSet$asca$sig.list$Model.ab
+                         colnames(con) <- c("Compound", "Leverage", "SPE")
+                         MetaboShiny::metshiTable(content = con)
                        })
                      }
                    },
                    meba = {
                      if("MB" %in% names(mSet$analSet)){
                        output$meba_tab <-DT::renderDataTable({
-                         # -------------
-                         DT::datatable(mSet$analSet$MB$stats,
-                                       selection = 'single',
-                                       colnames = c("Compound", "Hotelling/T2 score"),
-                                       autoHideNavigation = T,
-                                       extensions = 'Scroller',
-                                       options = list(deferRender = TRUE,
-                                                      scrollY = 200,
-                                                      scroller = TRUE))
+                         con = mSet$analSet$MB$stats
+                         colnames(con) <- c("Compound", "Hotelling/T2 score")
+                         MetaboShiny::metshiTable(content = con)
                        })
                      }
                    },
@@ -614,15 +553,7 @@ shiny::observe({
                      # set buttons to proper thingy
                      # render results table for UI
                      output$tt_tab <-DT::renderDataTable({
-                       # -------------
-                       DT::datatable(res,
-                                     selection = 'single',
-                                     autoHideNavigation = T,
-                                     extensions = 'Scroller',
-                                     options = list(deferRender = TRUE,
-                                                    scrollY = 200,
-                                                    scroller = TRUE))
-                       
+                       MetaboShiny::metshiTable(content = res)
                      })
                      # render manhattan-like plot for UI
                      output$tt_overview_plot <- plotly::renderPlotly({
@@ -640,14 +571,7 @@ shiny::observe({
                      if(is.null(res)) res <<- data.table::data.table("No significant hits found")
                      # render result table for UI
                      output$fc_tab <-DT::renderDataTable({
-                       # -------------
-                       DT::datatable(res,
-                                     selection = 'single',
-                                     autoHideNavigation = T,
-                                     extensions = 'Scroller',
-                                     options = list(deferRender = TRUE,
-                                                    scrollY = 200,
-                                                    scroller = TRUE))
+                       MetaboShiny::metshiTable(content = res)
                        
                      })
                      # render manhattan-like plot for UI
@@ -731,7 +655,6 @@ shiny::observe({
                                                   font = lcl$aes$font,
                                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                        }else{
-                         
                          NULL
                        }
                      })

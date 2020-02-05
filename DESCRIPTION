@@ -49,6 +49,7 @@ Imports:
   e1071, 
   caTools, 
   igraph, 
+  ggdark,
   Cairo, 
   pls, 
   lattice, 

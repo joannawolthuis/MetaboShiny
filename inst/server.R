@@ -33,14 +33,17 @@ function(input, output, session) {
   mSet <- NULL
   opts <- list()
   showtext::showtext_auto(enable = T)
-
+  
   lcl = list(
     proj_name ="",
     last_mset="",
     load_ui = F,
     last_dir = c(),
     lists = list(),
-    tables=list(last_matches=data.table::data.table(query_mz = "none")),
+    prev_mz = "",
+    prev_revstruct = "",
+    tables=list(last_matches=data.table::data.table(query_mz = "none"),
+                prev_pie=data.table::data.table()),
     aes = list(font = list(),
                mycols = c(),
                spectrum = "rb",
@@ -62,7 +65,7 @@ function(input, output, session) {
   # == REACTIVE VALUES ==
   
   interface <- shiny::reactiveValues()
-
+  
   mSetter <- shiny::reactiveValues(do = NULL)
   
   shown_matches <- shiny::reactiveValues(forward_full = data.table::data.table(),
@@ -185,7 +188,7 @@ apikey = ')
       
       shiny::updateSliderInput(session, "ncores", value = as.numeric(opts$cores))
       # send specific functions/packages to other threads
-
+      
       # === GOOGLE FONT SUPPORT FOR GGPLOT2 ===
       online = MetaboShiny::internetWorks()
       
@@ -362,7 +365,7 @@ apikey = ')
                                     label = paste("Choose colour", i),
                                     value = lcl$aes$mycols[i],
                                     allowTransparent = F)
-          })
+        })
       })
       
       # create color1, color2 etc variables to use in plotting functions
@@ -385,7 +388,7 @@ apikey = ')
       shiny::updateSelectInput(session, "color_ramp", 
                                selected = opts$gspec)
       
-
+      
     }
     
     shiny::removeModal()
@@ -426,18 +429,17 @@ apikey = ')
   # create default text objects in UI
   lapply(gbl$constants$default.text, 
          FUN=function(default){
-    output[[default$name]] = shiny::renderText(default$text)
-  })
+           output[[default$name]] = shiny::renderText(default$text)
+         })
   
   showtext::showtext_auto() ## Automatically use showtext to render text for future devices
-  
-
   
   shiny::observe({
     # - - filters - -
     if(search$go){
       shiny::withProgress({
         if(input$tab_iden_2 == "mzmol"){
+          
           matches = data.table::as.data.table(MetaboShiny::get_prematches(who = my_selection$mz,
                                                                           what = "map.query_mz",
                                                                           patdb = lcl$paths$patdb,
@@ -445,11 +447,19 @@ apikey = ')
                                                                           showdb = result_filters$db,
                                                                           showiso = result_filters$iso))
           if(nrow(matches)>0){
-            pieinfo$db <- reshape::melt(table(matches$source))
             
             shiny::setProgress(0.2)
             
             # =====
+            
+            
+            
+            if(lcl$prev_mz != my_selection$mz){
+              lcl$prev_mz <<- my_selection$mz
+              pieinfo$db <- reshape::melt(table(matches$source))
+              pieinfo$add <- reshape::melt(table(matches$adduct))
+              pieinfo$iso <- reshape::melt(table(matches$isocat))
+            }
             
             matches$name[matches$source != "magicball"] <- tolower(matches$name[matches$source != "magicball"])
             
@@ -513,10 +523,6 @@ apikey = ')
             shown_matches$forward_unique <- uniques[,-grepl(colnames(uniques), pattern = "Group\\.\\d"),with=F]
             shown_matches$forward_full <- info_aggr[,-grepl(colnames(info_aggr), pattern = "Group\\.\\d"),with=F]
             
-            if(nrow(shown_matches$forward_unique)>0){
-              pieinfo$add <- reshape::melt(table(shown_matches$forward_unique$adduct))
-              pieinfo$iso <- reshape::melt(table(shown_matches$forward_unique$isocat))
-            }
           }else{
             shown_matches$forward_unique <- data.table::data.table()
             shown_matches$forward_full <- data.table::data.table()
@@ -526,22 +532,7 @@ apikey = ')
           my_selection$form <- ""
           my_selection$struct <- ""  
         }else{
-          rev_matches = MetaboShiny::get_prematches(who = my_selection$revstruct,
-                                                    what = "con.structure",
-                                                    patdb = lcl$paths$patdb,
-                                                    showadd = result_filters$add,
-                                                    showdb = result_filters$db,
-                                                    showiso = result_filters$iso)
-          if(nrow(rev_matches)>0){
-            shown_matches$reverse <- unique(rev_matches[,c("query_mz", "adduct", "%iso", "dppm")])
-            pieinfo$db <- reshape::melt(table(rev_matches$source))
-            pieinfo$add <- reshape::melt(table(rev_matches$adduct))
-            pieinfo$iso <- reshape::melt(table(rev_matches$isocat))
-            my_selection$revform <- ""
-            my_selection$revstruct <- ""
-          }else{
-            shown_matches$reverse <- data.table()
-          }
+          NULL
         }
         
         shiny::setProgress(0.8)
@@ -577,8 +568,8 @@ apikey = ')
                            source = strsplit(source, split = "SEPERATOR")[[1]], 
                            structure = structure, 
                            description = strsplit(description, split = "SEPERATOR")[[1]]
-                           )
-                       ]
+      )
+      ]
       
       subsec <- aggregate(subsec, by = list(subsec$source), FUN=function(x) paste0(unique(x), collapse="."))
       
@@ -607,16 +598,16 @@ apikey = ')
             
             if(db == "synonym"){
               ui = shiny::fluidRow(align="center", 
-                                        tags$h3("Synonyms:"),
-                                        helpText(desc),
-                                        shiny::br()
+                                   tags$h3("Synonyms:"),
+                                   helpText(desc),
+                                   shiny::br()
               )
             }else{
               id = gbl$constants$db.build.info[[db]]$image_id
               address = unlist(sapply(gbl$constants$images, function(item) if(item$name == id) item$path else NULL))
               
               output_id = paste0("desc_icon_", db)
-
+              
               output[[output_id]] <- shiny::renderImage({
                 list(src = address, height=30)
               }, deleteFile = FALSE)
@@ -653,11 +644,11 @@ apikey = ')
       output$curr_formula <- shiny::renderUI({
         tags$div(
           HTML(gsub(my_selection$form,pattern="(\\d+)", replacement="<sub>\\1</sub>",perl = T))
-          )
-        }) # render text of current formula
+        )
+      }) # render text of current formula
     }
   })
-
+  
   
   shiny::observe({
     if(my_selection$revstruct != ""){
@@ -666,8 +657,8 @@ apikey = ')
         return(NULL)
       }else{
         rev_matches = MetaboShiny::get_prematches(who = my_selection$revstruct,
-                                     what = "con.structure",
-                                     patdb = lcl$paths$patdb)
+                                                  what = "con.structure",
+                                                  patdb = lcl$paths$patdb)
         if(nrow(rev_matches)>0){
           width = shiny::reactiveValuesToList(session$clientData)$output_empty_rev_width
           if(width > 300) width = 300
@@ -683,9 +674,14 @@ apikey = ')
           })
           
           shown_matches$reverse <- unique(rev_matches[,c("query_mz", "adduct", "%iso", "dppm")])
-          #pieinfo$db <- reshape::melt(table(shown_matches$reverse$source))
-          pieinfo$add <- reshape::melt(table(shown_matches$reverse$adduct))
-          pieinfo$iso <- reshape::melt(table(rev_matches$isocat))
+          
+          if(lcl$prev_revstruct != my_selection$revstruct){
+            lcl$prev_revstruct <<- my_selection$revstruct
+            #pieinfo$db <- reshape::melt(table(shown_matches$reverse$source))
+            pieinfo$add <- reshape::melt(table(shown_matches$reverse$adduct))
+            pieinfo$iso <- reshape::melt(table(rev_matches$isocat))
+          }
+          
         }else{
           shown_matches$reverse <- data.table()
         }
@@ -694,28 +690,45 @@ apikey = ')
   })
   
   # pie charts
-  lapply(c("add", "db", "iso"), function(which_pie){
+  lapply(c("add", "iso"), function(which_pie){
     for(prefix in c("rev_", "")){
       output[[paste0(prefix, "match_pie_", which_pie)]] <- plotly::renderPlotly({
+        
         pievec = pieinfo[[which_pie]]
+        
+        m <- list(
+          l = 0,
+          r = 0,
+          b = 30,
+          t = 30
+        )
+        
+        pulls = rep(0, nrow(pievec))
+        if(!is.null(pievec)){
+          targets = result_filters[[which_pie]]
+          pulls[which(as.character(pievec$Var.1) %in% targets)] <- 0.15          
+        }
+        
+        myCols <- gbl$functions$color.functions[[lcl$aes$spectrum]](n = nrow(pievec))
         if(length(pievec)>0){
-          plotly::plot_ly(pievec, labels = ~Var.1, 
-                          values = ~value, size=~value*10, type = 'pie',
-                          textposition = 'inside',
-                          textinfo = 'label+percent',
-                          insidetextfont = list(color = '#FFFFFF'),
-                          hoverinfo = 'text',
-                          text = ~paste0(Var.1, ": ", value, ' matches'),
-                          marker = list(colors = colors,
-                                        line = list(color = '#FFFFFF', width = 1)),
-                          #The 'pull' attribute can also be used to create space between the sectors
-                          showlegend = FALSE) %>%
-            layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+          p = plotly::plot_ly(pievec, labels = ~Var.1, 
+                              values = ~value, size=~value*10, type = 'pie',
+                              textposition = 'inside',
+                              textinfo = 'label+percent',
+                              insidetextfont = list(colors = ggdark::invert_color(myCols)),
+                              hoverinfo = 'text', hole=.3, pull=pulls,
+                              text = ~paste0(Var.1, ": ", value, ' matches'),
+                              marker = list(colors = myCols,
+                                            line = list(color = "gray", width = 1)),
+                              #The 'pull' attribute can also be used to create space between the sectors
+                              showlegend = FALSE) %>%
+            layout(autosize = T, margin = m,
+                   xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
                    yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))  
         }
+        return(p)
       })
     }
-    
   })
   
   # ===== UI SWITCHER ====
@@ -753,43 +766,43 @@ apikey = ')
     # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
     # then show the relevent tabs
     # TODO: enable multivariate time series analysis
-      if(is.null(interface$mode)) {
-        show.tabs <- hide.tabs[1]
-      }else if(interface$mode == '1fb'){
-        show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14,15)]
-        shiny::updateSelectInput(session, "ml_method",
-                                 selected = "rf",
-                                 choices = as.list(gbl$constants$ml.models))
-      }else if(interface$mode == '1fm'){
-        show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,11,14,15)]
-        shiny::updateSelectInput(session, "ml_method",
-                                 selected = "rf",
-                                 choices = as.list(setdiff(gbl$constants$ml.models, gbl$constants$ml.twoonly)))
-      }else if(interface$mode == '2f'){
-        show.tabs <- hide.tabs[c(1,2,4,6,9,11,14)]
-      }else if(interface$mode == 't1f'){
-        show.tabs = hide.tabs[c(1,2,4,5,6,9,11,14)]
-      }else if(interface$mode == 't'){
-        show.tabs = hide.tabs[c(1,2,5,6,7,9,11,14,15)]
-      }else{
-        show.tabs <- hide.tabs[1]
-      }
-      
-      # hide all the tabs to begin with
-      for(tab in hide.tabs){
-        shiny::hideTab(inputId = unlist(tab)[1],
-                       unlist(tab)[2],
-                       session = session)
-      }
-      
-      i = 1
-      # show the relevant tabs
-      for(tab in show.tabs){
-        shiny::showTab(inputId = unlist(tab)[1], 
-                       unlist(tab)[2], session = session, 
-                       select = ifelse(i==1, TRUE, FALSE))
-        i = i + 1
-      }
+    if(is.null(interface$mode)) {
+      show.tabs <- hide.tabs[1]
+    }else if(interface$mode == '1fb'){
+      show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14,15)]
+      shiny::updateSelectInput(session, "ml_method",
+                               selected = "rf",
+                               choices = as.list(gbl$constants$ml.models))
+    }else if(interface$mode == '1fm'){
+      show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,11,14,15)]
+      shiny::updateSelectInput(session, "ml_method",
+                               selected = "rf",
+                               choices = as.list(setdiff(gbl$constants$ml.models, gbl$constants$ml.twoonly)))
+    }else if(interface$mode == '2f'){
+      show.tabs <- hide.tabs[c(1,2,4,6,9,11,14)]
+    }else if(interface$mode == 't1f'){
+      show.tabs = hide.tabs[c(1,2,4,5,6,9,11,14)]
+    }else if(interface$mode == 't'){
+      show.tabs = hide.tabs[c(1,2,5,6,7,9,11,14,15)]
+    }else{
+      show.tabs <- hide.tabs[1]
+    }
+    
+    # hide all the tabs to begin with
+    for(tab in hide.tabs){
+      shiny::hideTab(inputId = unlist(tab)[1],
+                     unlist(tab)[2],
+                     session = session)
+    }
+    
+    i = 1
+    # show the relevant tabs
+    for(tab in show.tabs){
+      shiny::showTab(inputId = unlist(tab)[1], 
+                     unlist(tab)[2], session = session, 
+                     select = ifelse(i==1, TRUE, FALSE))
+      i = i + 1
+    }
   })
   
   # print current compound in sidebar
@@ -862,10 +875,10 @@ apikey = ')
     req(lcl$paths$csv_loc)
     switch(input$norm_type,
            ProbNorm=shiny::updateSelectInput(session, "ref_var",
-                                      choices = get_ref_vars(fac = "label") # please add options for different times later, not difficult
+                                             choices = get_ref_vars(fac = "label") # please add options for different times later, not difficult
            ),
            CompNorm=shiny::updateSelectInput(session, "ref_var",
-                                      choices = get_ref_cpds() # please add options for different times later, not difficult
+                                             choices = get_ref_cpds() # please add options for different times later, not difficult
            ))
   })
   
@@ -1041,7 +1054,7 @@ apikey = ')
     if(!is.null(mSet)){
       datamanager$reload <- "statspicker"
     }
-    })
+  })
   
   shiny::observeEvent(input$load_mset, {
     # load mset
@@ -1056,10 +1069,10 @@ apikey = ')
                                 exp.type = mSet$dataSet$exp.type,
                                 paired = mSet$dataSet$paired)
           mSet$orig$settings <- list(subset = mSet$storage$orig$data$subset,
-                                exp.var = mSet$storage$orig$data$exp.var,
-                                time.var = mSet$storage$orig$data$time.var,
-                                exp.type = mSet$storage$orig$data$exp.type,
-                                paired = FALSE)
+                                     exp.var = mSet$storage$orig$data$exp.var,
+                                     time.var = mSet$storage$orig$data$time.var,
+                                     exp.type = mSet$storage$orig$data$exp.type,
+                                     paired = FALSE)
         }else{
           if("paired" %in% names(mSet$settings)){
             mSet$settings <- list(subset = mSet$dataSet$subset,

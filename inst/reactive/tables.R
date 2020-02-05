@@ -1,53 +1,26 @@
 output$match_tab <- DT::renderDataTable({
   # don't show some columns but keep them in the original table, so they can be used
   # for showing molecule descriptions, structure
-  empty = data.table::data.table(" "=rep("", nrow(shown_matches$forward_unique)))
-  DT::datatable(cbind(shown_matches$forward_unique, empty),
-                selection = 'single',
-                autoHideNavigation = T,
-                class = 'compact', height = "500px",
-                extensions = c("FixedColumns", "Scroller"), 
-                options = list(deferRender = TRUE,
-                               scrollY = 200,
-                               searching = TRUE,
-                               scrollCollapse = FALSE,
-                               rownames = FALSE,
-                               scroller = TRUE,
-                               scrollX = T,
-                               fixedColumns = list(
-                                 rightColumns = 8,
-                                 heightMatch = 'none'
-                               ),
-                               columnDefs = list(
-                                 list(visible = FALSE, 
-                                      targets = c(which(colnames(shown_matches$forward_unique) %in% gbl$vectors$hide_match_cols),
-                                                which(colnames(shown_matches$forward_unique) == "isocat"))))
-                )
-  )
+  empty = data.table::data.table(" " = rep("", nrow(shown_matches$forward_unique)))
+  MetaboShiny::metshiTable(content = cbind(shown_matches$forward_unique, empty),
+              options = list(fixedColumns = list(
+                rightColumns = 8,
+                heightMatch = 'none'
+              ), columnDefs = list(list(visible=FALSE, 
+                                                     targets=c(which(colnames(shown_matches$forward_unique) %in% gbl$vectors$hide_match_cols),
+                                                               which(colnames(shown_matches$forward_unique) == "isocat"))))
+              ))
 })
 
 output$hits_tab <- DT::renderDataTable({
-  DT::datatable(shown_matches$reverse,
-                selection = 'single',
-                autoHideNavigation = T,extensions = 'Scroller',
-                options = list(deferRender = TRUE,
-                               scrollY = 200,
-                               scroller = TRUE))
+  MetaboShiny::metshiTable(content = shown_matches$reverse)
 })
 
 output$browse_tab <-DT::renderDataTable({
-  DT::datatable(browse_content$table,
-                selection = 'single',
-                autoHideNavigation = T,
-                extensions = 'Scroller',
-                options = list(deferRender = TRUE,
-                               scrollY = 200,
-                               scroller = TRUE,
-                               #lengthMenu = c(5, 10, 15),
-                               #pageLength = 5,
-                               columnDefs = list(list(visible=FALSE, 
-                                                      targets=which(colnames(browse_content$table) %in% c("description", "structure", "formula", "charge")))))
-                )
+  MetaboShiny::metshiTable(content = browse_content$table,
+              options = list(columnDefs = list(list(visible=FALSE, 
+                                                    targets=which(colnames(browse_content$table) %in% c("description", "structure", "formula", "charge"))))
+              ))
 }, server=T)
 
 # generate positive and negative adduct picker tabs (for csv creation)
@@ -68,12 +41,7 @@ shiny::observe({
 # adduct table editing from settings tab
 
 output$ml_tab <- DT::renderDataTable({
-  DT::datatable(data.table::data.table("nothing selected"="Please select a model from ROC plot or left-hand table!"),
-                selection = 'single',
-                autoHideNavigation = T,extensions = 'Scroller',
-                options = list(deferRender = TRUE,
-                               scrollY = 200,
-                               scroller = TRUE))
+  MetaboShiny::metshiTable(content = data.table::data.table("nothing selected"="Please select a model from ROC plot or left-hand table!"))
 })
 
 observeEvent(input$ml_overview_tab_rows_selected, {
@@ -87,12 +55,7 @@ observeEvent(input$ml_overview_tab_rows_selected, {
                                      row.names = gsub(imp$mz,
                                                       pattern = "`|`",
                                                       replacement=""))
-    DT::datatable(lcl$tables$ml_roc,
-                  selection = 'single',
-                  autoHideNavigation = T,extensions = 'Scroller',
-                  options = list(deferRender = TRUE,
-                                 scrollY = 200,
-                                 scroller = TRUE))
+    MetaboShiny::metshiTable(content = lcl$tables$ml_roc)
   })
 })
 
@@ -202,19 +165,18 @@ observeEvent(input$save_adducts, {
   fwrite(values$adduct_rules, file = file.path(lcl$paths$work_dir, "adduct_rules.csv"))
 })
 
-
-output$magicball_add_tab <- DT::renderDataTable({
-  if(any(unlist(scanmode))){
-    DT::datatable(data.table::data.table(Adduct = if(all(unlist(scanmode))){
-      adducts$Name
-    }else{adducts[scanmode %in% Ion_mode]$Name}),
-    selection = list(mode = 'multiple',
-                     selected = lcl$vectors[[paste0(scanmode, "_selected_add")]], target="row"),
-    extensions = 'Scroller',
-    options = list(deferRender = TRUE,
-                   scrollY = 200,
-                   scroller = TRUE, dom = 'tp',
-                   columnDefs = list(list(className = 'dt-center', targets = "_all"))),
-    rownames = F)  
-  }
-})
+# output$magicball_add_tab <- DT::renderDataTable({
+#   if(any(unlist(scanmode))){
+#     DT::datatable(data.table::data.table(Adduct = if(all(unlist(scanmode))){
+#       adducts$Name
+#     }else{adducts[scanmode %in% Ion_mode]$Name}),
+#     selection = list(mode = 'multiple',
+#                      selected = lcl$vectors[[paste0(scanmode, "_selected_add")]], target="row"),
+#     extensions = 'Scroller',
+#     options = list(deferRender = TRUE,
+#                    scrollY = 200,
+#                    scroller = TRUE, dom = 'tp',
+#                    columnDefs = list(list(className = 'dt-center', targets = "_all"))),
+#     rownames = F)  
+#   }
+# })

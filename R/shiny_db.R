@@ -36,8 +36,16 @@ get_prematches <- function(who = NA,
                                AND map.adduct = con.adduct
                                AND map.query_mz = con.query_mz", simplify=T, width=1000)
                   
-  dbfrag = if(length(showdb)>0) gsubfn::fn$paste("AND source = '$showdb'") else ""
-  addfrag = if(length(showadd)>0) gsubfn::fn$paste("AND map.adduct = '$showadd'") else ""
+  showadd <- if(is.null(showadd)) c() else if(length(showadd) > 0) paste0(showadd, collapse=" OR map.adduct = '", "'") else c()
+  showdb <- if(is.null(showdb)) c() else if(length(showdb) > 0) paste0(showdb, collapse=" OR source = '", "'") else c()
+  showiso <- if(is.null(showiso)) c() else{
+    if(length(showiso) > 0){
+      if(length(showiso) == 2) c() else showiso
+    } else c()
+  }
+  
+  dbfrag = if(length(showdb)>0) gsubfn::fn$paste("AND (source = '$showdb)") else ""
+  addfrag = if(length(showadd)>0) gsubfn::fn$paste("AND (map.adduct = '$showadd)") else ""
   isofrag = if(length(showiso)>0) switch(showiso, 
                                          main = "AND `%iso` > 99.9999", 
                                          minor = "AND `%iso` < 99.9999") else ""
@@ -275,16 +283,15 @@ getSampInt <- function(conn, filename, all_mz){
                                           formula = ... ~ identifier,
                                           fun.aggregate = sum,
                                           value.var = "intensity")
-
-  complete = as.numeric(cast.dt[1,])
+  suppressWarnings({
+    complete = as.numeric(cast.dt[1,])
+  })
   names(complete) = colnames(cast.dt)
-  
   missing = rep(NA, length(missing_mz))
   names(missing) <- missing_mz
-  
   complete.row = c(complete[-1], missing)
   reordered <- order(as.numeric(names(complete.row)))
-  complete.row <- complete.row[reordered]
+  complete.row <- complete.row[reordered]    
   complete.row.dt <- data.table::as.data.table(t(data.table::as.data.table(complete.row)))
   colnames(complete.row.dt) <- names(complete.row)  
   complete.row.dt

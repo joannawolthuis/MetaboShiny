@@ -345,6 +345,10 @@
   float: left;
 }
 
+pre {
+   padding: 0px;
+}
+
 .brace:before,
 .brace:after
 {

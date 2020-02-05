@@ -735,10 +735,12 @@ ggPlotROC <- function(data,
   
   if(length(unique(means.per.comp$comparison))>2){
     class_type = "m"
-    shiny::showNotification("Calculating AUCs per comparison...")
+    try({
+      shiny::showNotification("Calculating AUCs per comparison...")
+    })
     perf.long$comparison <- pbapply::pbsapply(perf.long$comparison,
                                               function(comp){
-                                                paste0(comp, " || avg. AUC=", round(means.per.comp[comparison == comp]$AUC, digits=3), " ||")
+                                                paste0(comp, " || avg. AUC=", round(means.per.comp[comparison == comp]$AUC_PAIR, digits=3), " ||")
                                               })  
   }else{
     class_type = "b"

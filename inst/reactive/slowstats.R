@@ -26,7 +26,9 @@ shiny::observeEvent(input$do_pattern, {
   success = F
   try({
     mSet <- MetaboAnalystR::Match.Pattern(mSet, input$pattern_corr, input$pattern_seq)
-    success = T
+    if(typeof(mSet) != "double"){
+      success = T
+    }
   })
   if(success){
     mSet <<- mSet
@@ -150,7 +152,9 @@ observeEvent(input$do_ml, {
       }
       
       if(!input$ml_random_split){
-        shiny::showNotification("Using same train/test split for all repeats...")
+        try({
+          shiny::showNotification("Using same train/test split for all repeats...")
+        })
         # make split for all repeats
         train_idx = caret::createDataPartition(y = config$label, p = input$ml_train_perc/100, list = FALSE) # partition data in a balanced way (uses labels)
         # add column to config for this split
@@ -342,7 +346,7 @@ observeEvent(input$do_ml, {
           res
         })
         perf.long <- data.table::rbindlist(perf)
-        mean.auc <- mean(perf.long$AUC)
+        mean.auc <- mean(perf.long$AUC_AVG)
       }else{
         # save the summary of all repeats (will be used in plots) TOO MEMORY HEAVY
         pred <- ROCR::prediction(lapply(repeats, function(x) x$prediction), 
@@ -353,11 +357,11 @@ observeEvent(input$do_ml, {
           xvals <- perf@x.values[[i]]
           yvals <- perf@y.values[[i]]
           aucs <- signif(perf_auc@y.values[[i]][[1]], digits = 2)
-          
           res <- data.table::data.table(attempt = c(i),
                                         FPR = xvals,
                                         TPR = yvals,
-                                        AUC = aucs)
+                                        AUC_AVG = aucs,
+                                        AUC_PAIR = aucs)
           res
         }))
         perf.long$comparison <- paste0(levels(mSet$dataSet$cls),collapse=" vs. ")

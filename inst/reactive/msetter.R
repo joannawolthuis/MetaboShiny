@@ -130,7 +130,7 @@ shiny::observe({
       
       if(success){
         mSet.backup <<- mSet
-        if(is.ordered.mSet(mSet)){
+        if(MetaboShiny::is.ordered.mSet(mSet)){
           msg = "mSet class label order still correct! :)"
           try({
             shiny::showNotification(msg) 
