@@ -445,25 +445,34 @@ apikey = ')
       shiny::withProgress({
         if(input$tab_iden_2 == "mzmol"){
           
+          if(lcl$prev_mz != my_selection$mz){
+            matches = data.table::as.data.table(MetaboShiny::get_prematches(who = my_selection$mz,
+                                                                            what = "map.query_mz",
+                                                                            patdb = lcl$paths$patdb,
+                                                                            showadd = c(),
+                                                                            showdb = c(),
+                                                                            showiso = c()))
+            lcl$prev_mz <<- my_selection$mz
+            pieinfo$db <- reshape::melt(table(matches$source))
+            pieinfo$add <- reshape::melt(table(matches$adduct))
+            pieinfo$iso <- reshape::melt(table(matches$isocat))
+          }
+          
           matches = data.table::as.data.table(MetaboShiny::get_prematches(who = my_selection$mz,
                                                                           what = "map.query_mz",
                                                                           patdb = lcl$paths$patdb,
                                                                           showadd = result_filters$add,
                                                                           showdb = result_filters$db,
-                                                                          showiso = result_filters$iso))
+                                                                          showiso = result_filters$iso))  
+          
           if(nrow(matches)>0){
             
             shiny::setProgress(0.2)
             
             # =====
             
-            
-            
             if(lcl$prev_mz != my_selection$mz){
-              lcl$prev_mz <<- my_selection$mz
-              pieinfo$db <- reshape::melt(table(matches$source))
-              pieinfo$add <- reshape::melt(table(matches$adduct))
-              pieinfo$iso <- reshape::melt(table(matches$isocat))
+              
             }
             
             matches$name[matches$source != "magicball"] <- tolower(matches$name[matches$source != "magicball"])
@@ -536,6 +545,7 @@ apikey = ')
           my_selection$name <- ""
           my_selection$form <- ""
           my_selection$struct <- ""  
+          
         }else{
           NULL
         }
