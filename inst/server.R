@@ -414,8 +414,9 @@ apikey = ')
       trigger="hover")
     }else{
       shiny::fluidRow(align="center", 
-                      MetaboShiny::sardine(shiny::h2("pre-matched")),
-                      shiny::helpText("selected m/z will be searched automatically"))
+                      shinyBS::tipify(img(src = "pawprint.png",
+                          height = "50px"),title="selected m/z will be searched automatically"),
+                      shiny::h2("pre-matched"))
     }
   })
   
