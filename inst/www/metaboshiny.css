@@ -349,6 +349,10 @@ pre {
    padding: 0px;
 }
 
+a {
+    color: darkgray;
+}
+
 .brace:before,
 .brace:after
 {

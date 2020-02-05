@@ -704,9 +704,12 @@ apikey = ')
         )
         
         pulls = rep(0, nrow(pievec))
+        lines = rep(1, nrow(pievec))
+          
         if(!is.null(pievec)){
           targets = result_filters[[which_pie]]
-          pulls[which(as.character(pievec$Var.1) %in% targets)] <- 0.15          
+          pulls[which(as.character(pievec$Var.1) %in% targets)] <- 0.15  
+          lines[which(as.character(pievec$Var.1) %in% targets)] <- 4
         }
         
         myCols <- gbl$functions$color.functions[[lcl$aes$spectrum]](n = nrow(pievec))
@@ -719,7 +722,8 @@ apikey = ')
                               hoverinfo = 'text', hole=.3, pull=pulls,
                               text = ~paste0(Var.1, ": ", value, ' matches'),
                               marker = list(colors = myCols,
-                                            line = list(color = "gray", width = 1)),
+                                            line = list(color = "gray", 
+                                                        width = lines)),
                               #The 'pull' attribute can also be used to create space between the sectors
                               showlegend = FALSE) %>%
             layout(autosize = T, margin = m,
