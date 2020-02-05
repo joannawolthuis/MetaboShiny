@@ -401,17 +401,21 @@ apikey = ')
   
   output$manual_search <- shiny::renderUI({
     if(search_button$on){
-      shiny::tags$button(
+      shinyBS::tipify(shiny::tags$button(
         id = "search_mz",
         class = "btn btn-default action-button",
         img(src = "detective.png",
-            height = "50px")
-      )
+            height = "80px"),
+        style = "color: #333;
+                 background-color: #fff0;
+                 border-color: #fff0;"
+      ),
+      title = "click me to find matches for this m/z!", 
+      trigger="hover")
     }else{
       shiny::fluidRow(align="center", 
-                      shiny::icon("paw","fa-s fa-rotate-90"), 
-                      shiny::br(),
-                      shiny::tags$i("pre-matched"))
+                      MetaboShiny::sardine(shiny::h2("pre-matched")),
+                      shiny::helpText("selected m/z will be searched automatically"))
     }
   })
   

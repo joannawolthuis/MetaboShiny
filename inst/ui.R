@@ -678,8 +678,10 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                      top:25px;")),
                                                                                                                                      MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
                                                                                                                                                                      style="position:relative;
-                                                                                                                     top:10px;")),
-                                                                                                                                     MetaboShiny::sardine(shiny::h2(shiny::textOutput("curr_mz"),style="padding:10px;")),
+                                                                                                                     top:10px;")),MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
+                                                                                                                                                                                          style="position:relative;
+                                                                                                                     top:25px;")),MetaboShiny::sardine(shiny::h2(shiny::textOutput("curr_mz"),
+                                                                                                                                                                                          style="margin-top:15px;")),
                                                                                                                                      MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
                                                                                                                                                                      style="position:relative;
                                                                                                                      top:10px;")),
@@ -689,12 +691,15 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                      MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
                                                                                                                                                                      style="position:relative;
                                                                                                                      top:10px;")),
+                                                                                                                                     MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
+                                                                                                                                                                     style="position:relative;
+                                                                                                                     top:25px;")),
                                                                                                                                      style="background-color:white;
-                                                                                                         height:55px;
-                                                                                                         width:100%;
-                                                                                                         margin: 0 auto;
-                                                                                                         border-top: 1px solid #DFDCDC;
-                                                                                                         border-bottom: 1px solid #DFDCDC;")
+                                                                                                                                            height:55px;
+                                                                                                                                            width:100%;
+                                                                                                                                            margin: 0 auto;
+                                                                                                                                            border-top: 1px solid #DFDCDC;
+                                                                                                                                            border-bottom: 1px solid #DFDCDC;")
                                                                                                                    ),
                                                                                                                    shiny::tabsetPanel(id="tab_iden_2",
                                                                                                                                       # forward searching
@@ -743,10 +748,11 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                                                                           title = NULL, icon = icon("percentage","fa-2x"),value = "pie_iso",
                                                                                                                                                                                                                                           plotly::plotlyOutput("match_pie_iso",width = "100%")
                                                                                                                                                                                                                                         )
-                                                                                                                                                                                                                                      )
+                                                                                                                                                                                                                                      ),br()
                                                                                                                                                                                                                       )
                                                                                                                                                                                                    ),
-                                                                                                                                                                                                   shiny::h3("Undo match filtering"),
+                                                                                                                                                                                                   br(),
+                                                                                                                                                                                                   shiny::helpText("Undo match filtering"),
                                                                                                                                                                                                    shinyWidgets::circleButton("undo_match_filt", icon = shiny::icon("undo-alt"))
                                                                                                                                                                                                    )
                                                                                                                                                                           )
