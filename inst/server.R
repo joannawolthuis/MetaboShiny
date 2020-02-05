@@ -439,6 +439,12 @@ apikey = ')
   
   showtext::showtext_auto() ## Automatically use showtext to render text for future devices
   
+  observe({
+    for(pie in c("add", "iso")){
+      result_filters[[pie]] <- result_filters[[pie]][!is.na(result_filters[[pie]])]
+      }  
+  })
+  
   shiny::observe({
     # - - filters - -
     if(search$go){
