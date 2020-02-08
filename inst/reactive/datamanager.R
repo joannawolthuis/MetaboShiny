@@ -373,7 +373,6 @@ shiny::observe({
                                                    plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                                    plotlyfy=TRUE,
                                                    font = lcl$aes$font
-                                                   #,cf = gbl$functions$color.functions[[lcl$aes$spectrum]]
                            )
                          })
                        }else{

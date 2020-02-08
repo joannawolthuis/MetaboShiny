@@ -41,7 +41,7 @@ function(input, output, session) {
     last_dir = c(),
     lists = list(),
     prev_mz = "",
-    prev_revstruct = "",
+    prev_struct = "",
     tables=list(last_matches=data.table::data.table(query_mz = "none"),
                 prev_pie=data.table::data.table()),
     aes = list(font = list(),
@@ -415,7 +415,8 @@ apikey = ')
     }else{
       shiny::fluidRow(align="center", 
                       shinyBS::tipify(img(src = "pawprint.png",
-                          height = "50px"),title="selected m/z will be searched automatically"),
+                                          height = "50px"),
+                                      title="selected m/z will be searched automatically"),
                       shiny::h2("pre-matched"))
     }
   })
@@ -458,6 +459,11 @@ apikey = ')
                                                                             showadd = c(),
                                                                             showdb = c(),
                                                                             showiso = c()))
+            
+            if(nrow(matches) == 0){
+              return(NULL)
+            }
+            
             lcl$prev_mz <<- my_selection$mz
             pieinfo$db <- reshape::melt(table(matches$source))
             pieinfo$add <- reshape::melt(table(matches$adduct))
@@ -474,12 +480,6 @@ apikey = ')
           if(nrow(matches)>0){
             
             shiny::setProgress(0.2)
-            
-            # =====
-            
-            if(lcl$prev_mz != my_selection$mz){
-              
-            }
             
             matches$name[matches$source != "magicball"] <- tolower(matches$name[matches$source != "magicball"])
             
@@ -516,7 +516,7 @@ apikey = ')
             
             synonyms <- unlist(lapply(split_names, function(x){
               if(length(x)>1){
-                paste0("SYNONYMS: ", paste0(x[2:length(x)], collapse=", "),".SEPERATOR") 
+                paste0("SYNONYMS: ", paste0(unique(x[2:length(x)]), collapse=", "),".SEPERATOR") 
               }else NA
             }))
             
@@ -657,7 +657,6 @@ apikey = ')
     if(!MetaDBparse::is.empty(my_selection$struct)){
       width = shiny::reactiveValuesToList(session$clientData)$output_empty_width
       if(width > 300) width = 300
-      
       output$curr_struct <- shiny::renderPlot({plot.mol(my_selection$struct,
                                                         style = "cow")},
                                               width=width, 
@@ -672,61 +671,62 @@ apikey = ')
   
   
   shiny::observe({
-    if(my_selection$revstruct != ""){
+    if(my_selection$struct != "" & input$tab_iden_2 == "molmz"){
       if(!mSet$metshiParams$prematched){
         MetaboShiny::metshiAlert("Please perform pre-matching first to enable this feature!")
         return(NULL)
       }else{
-        rev_matches = MetaboShiny::get_prematches(who = my_selection$revstruct,
-                                                  what = "con.structure",
-                                                  patdb = lcl$paths$patdb)
-        if(nrow(rev_matches)>0){
-          width = shiny::reactiveValuesToList(session$clientData)$output_empty_rev_width
-          if(width > 300) width = 300
-          
-          output$curr_struct_rev <- shiny::renderPlot({plot.mol(my_selection$revstruct,
-                                                                style = "cow")},
-                                                      width=width, 
-                                                      height=width) # plot molecular structure WITH CHEMMINER
-          output$curr_formula_rev <- shiny::renderUI({
-            tags$div(
-              HTML(gsub(my_selection$revform,pattern="(\\d+)", replacement="<sub>\\1</sub>",perl = T))
-            )
-          })
-          
-          shown_matches$reverse <- unique(rev_matches[,c("query_mz", "adduct", "%iso", "dppm")])
-          
-          if(lcl$prev_revstruct != my_selection$revstruct){
-            lcl$prev_revstruct <<- my_selection$revstruct
+        
+        if(lcl$prev_struct != my_selection$struct){
+          rev_matches = MetaboShiny::get_prematches(who = my_selection$struct,
+                                                    what = "con.structure",
+                                                    patdb = lcl$paths$patdb,
+                                                    showadd = c(),
+                                                    showiso = c(),
+                                                    showdb = c())  
+          lcl$prev_struct <<- my_selection$struct
+          if(nrow(rev_matches) == 0){
+              shown_matches$reverse <- data.table::data.table()
+              return(NULL)
+            }else{
             #pieinfo$db <- reshape::melt(table(shown_matches$reverse$source))
-            pieinfo$add <- reshape::melt(table(shown_matches$reverse$adduct))
+            pieinfo$add <- reshape::melt(table(rev_matches$adduct))
             pieinfo$iso <- reshape::melt(table(rev_matches$isocat))
           }
+        }
           
+        rev_matches = MetaboShiny::get_prematches(who = my_selection$struct,
+                                                  what = "con.structure",
+                                                  patdb = lcl$paths$patdb,
+                                                  showadd = result_filters$add,
+                                                  showiso = result_filters$iso,
+                                                  showdb = result_filters$db)
+        if(nrow(rev_matches)>0){
+          shown_matches$reverse <- unique(rev_matches[,c("query_mz", "adduct", "%iso", "dppm")])
         }else{
-          shown_matches$reverse <- data.table()
+          shown_matches$reverse <- data.table::data.table()
+        }
         }
       } 
-    }
   })
   
   # pie charts
   lapply(c("add", "iso"), function(which_pie){
-    for(prefix in c("rev_", "")){
-      output[[paste0(prefix, "match_pie_", which_pie)]] <- plotly::renderPlotly({
-        
-        pievec = pieinfo[[which_pie]]
+    output[[paste0("match_pie_", which_pie)]] <- plotly::renderPlotly({
+     
+       pievec = pieinfo[[which_pie]]
+      
+      if(nrow(pievec) > 0){
         
         m <- list(
           l = 0,
           r = 0,
           b = 30,
-          t = 30
-        )
+          t = 30)
         
         pulls = rep(0, nrow(pievec))
         lines = rep(1, nrow(pievec))
-          
+        
         if(!is.null(pievec)){
           targets = result_filters[[which_pie]]
           pulls[which(as.character(pievec$Var.1) %in% targets)] <- 0.15  
@@ -740,7 +740,9 @@ apikey = ')
                               textposition = 'inside',
                               textinfo = 'label+percent',
                               insidetextfont = list(colors = ggdark::invert_color(myCols)),
-                              hoverinfo = 'text', hole=.3, pull=pulls,
+                              hoverinfo = 'text', 
+                              #hole=.3, 
+                              pull=pulls,
                               text = ~paste0(Var.1, ": ", value, ' matches'),
                               marker = list(colors = myCols,
                                             line = list(color = "gray", 
@@ -751,9 +753,9 @@ apikey = ')
                    xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
                    yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))  
         }
-        return(p)
-      })
-    }
+        return(p)          
+      }
+    })
   })
   
   # ===== UI SWITCHER ====
@@ -846,7 +848,6 @@ apikey = ')
                                  font = lcl$aes$font)
     }
   })
-  
   
   # -----------------
   shiny::observeEvent(input$undo_match_filt, {

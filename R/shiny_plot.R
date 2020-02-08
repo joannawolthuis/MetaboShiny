@@ -617,23 +617,25 @@ ggPlotVolc <- function(mSet,
     return(NULL)
   }
   
-  dt <- data.table::as.data.table(vcn$sig.mat[,c(2,4)],keep.rownames = T)
-  colnames(dt) <- c("cpd", "log2FC", "-log10P")
-  p <- ggplot2::ggplot() +
-    #ggplot2::geom_point(data=dt[!imp.inx], ggplot2::aes(x=log2FC, y=minlog10P)) +
-    ggplot2::geom_point(data=dt, ggplot2::aes(x=log2FC,
-                                              y=`-log10P`,
-                                              text=cpd,
-                                              color=abs(log2FC*`-log10P`),
-                                              key=cpd)) +
-    plot.theme(base_size = 15) +
-    ggplot2::theme(legend.position="none",
-                   axis.text=ggplot2::element_text(size=font$ax.num.size),
-                   axis.title=ggplot2::element_text(size=font$ax.txt.size),
-                   plot.title = ggplot2::element_text(hjust = 0.5),
-                   axis.line = ggplot2::element_line(colour = 'black', size = .5),
-                   text = ggplot2::element_text(family = font$family))+
-    ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE)
+   dt <- as.data.frame(vcn$sig.mat)[,c(2,4)]
+   dt <- cbind(cpd = rownames(dt), dt)
+    colnames(dt) <- c("cpd", "log2FC", "-log10P")
+    p <- ggplot2::ggplot() +
+      #ggplot2::geom_point(data=dt[!imp.inx], ggplot2::aes(x=log2FC, y=minlog10P)) +
+      ggplot2::geom_point(data=dt, ggplot2::aes(x=log2FC,
+                                                y=`-log10P`,
+                                                text=cpd,
+                                                color=abs(log2FC*`-log10P`),
+                                                key=cpd)) +
+      plot.theme(base_size = 15) +
+      ggplot2::theme(legend.position="none",
+                     axis.text=ggplot2::element_text(size=font$ax.num.size),
+                     axis.title=ggplot2::element_text(size=font$ax.txt.size),
+                     plot.title = ggplot2::element_text(hjust = 0.5),
+                     axis.line = ggplot2::element_line(colour = 'black', size = .5),
+                     text = ggplot2::element_text(family = font$family))+
+      ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE) 
+  
   
   if(plotlyfy){
     plotly::ggplotly(p, tooltop="cpd") %>%
@@ -1121,6 +1123,8 @@ plotPCA.3d <- function(mSet,
   }
 }
 
+
+
 plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",
                        pcx, pcy, mode="normal", plot.theme,type="pca",
                        plotlyfy = "T", font, cf = rainbow){
@@ -1128,10 +1132,7 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",
   classes <- if(mode == "ipca"){
     mSet$dataSet$facA
   }else{
-    switch(type,
-           pca = mSet$dataSet$cls,
-           plsda = mSet$dataSet$cls,
-           tsne = mSet$dataSet$cls)
+    mSet$dataSet$cls
   }
 
   symbols = c("16",#'circle',

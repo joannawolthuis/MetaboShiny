@@ -163,6 +163,8 @@ observeEvent(input$save_adducts, {
   shiny::showNotification("Saving changes to adducts ...")
   fwrite(values$adducts, file = file.path(lcl$paths$work_dir, "adducts.csv"))
   fwrite(values$adduct_rules, file = file.path(lcl$paths$work_dir, "adduct_rules.csv"))
+  adducts <<- fread(file.path(lcl$paths$work_dir, "adducts.csv"))
+  adduct_rules <<- fread(file.path(lcl$paths$work_dir, "adduct_rules.csv"))
 })
 
 # output$magicball_add_tab <- DT::renderDataTable({

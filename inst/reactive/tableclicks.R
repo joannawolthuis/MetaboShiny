@@ -101,9 +101,9 @@ shiny::observeEvent(input$browse_tab_rows_selected,{
   if (is.null(curr_row)) return()
   # -----------------------------
   curr_def <- browse_content$table[curr_row, description]
-  output$browse_definition <- shiny::renderText(curr_def)
-  my_selection$revstruct <- browse_content$table[curr_row,c('structure')][[1]]
-  my_selection$revform <- unlist(browse_content$table[curr_row,'formula']) # get current formula
+  output$desc_ui <- shiny::renderText(curr_def)
+  my_selection$struct <- browse_content$table[curr_row,c('structure')][[1]]
+  my_selection$form <- unlist(browse_content$table[curr_row,'formula']) # get current formula
 })
 
 # triggers on clicking a row in the reverse hit results table

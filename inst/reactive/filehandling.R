@@ -13,8 +13,13 @@ shiny::observe({
 shiny::observe({
   lapply(c("outlist_pos", "outlist_neg", "metadata", "metadata_new"), function(item){
     if(!is.list(input[[item]])) return()
-    path = shinyFiles::parseFilePaths(gbl$paths$volumes, input[[item]])$datapath
+    path = shinyFiles::parseFilePaths(gbl$paths$volumes, 
+                                      input[[item]])$datapath
+    hadRecent <- "Recent" %in% names(gbl$paths$volumes)
     gbl$paths$volumes$Recent <<- dirname(path)
+    if(hadRecent){
+      gbl$paths$volumes <<- rev(gbl$paths$volumes)
+    }
   })
 })
 
