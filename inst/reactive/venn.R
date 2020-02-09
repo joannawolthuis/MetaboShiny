@@ -3,8 +3,9 @@
 venn_yes = shiny::reactiveValues(start = data.frame(),
                           now = data.frame())
 
-venn_no = shiny::reactiveValues(start = data.frame(c("a", "b", "c")),
-                         now = data.frame(c("a", "b", "c")))
+venn_no = shiny::reactiveValues(
+                        start = data.frame(c("a", "b", "c")),
+                        now = data.frame(c("a", "b", "c")))
 
 venn_members <- shiny::reactiveValues(mzvals = list())
 

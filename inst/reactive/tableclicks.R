@@ -37,6 +37,7 @@ lapply(c("tt",
                                                 ml = lcl$tables$ml_roc, #TODO: fix this, now in global
                                                 asca = mSet$analSet$asca$sig.list$Model.ab,
                                                 aov = mSet$analSet[[which_aov]]$sig.mat,
+                                                enrich_pw = enrich$current,
                                                 rf = vip.score,
                                                 meba = mSet$analSet$MB$stats,
                                                 plsda_vip = plsda_tab,
@@ -79,6 +80,27 @@ lapply(c("tt",
       })
     }
   })
+})
+
+
+shiny::observeEvent(input$enrich_tab_rows_selected,{
+  curr_row <- input$enrich_tab_rows_selected
+  if (is.null(curr_row)) return()
+  # -----------------------------
+  curr_pw <- rownames(mSet$analSet$enrich$mummi.resmat)[curr_row]
+  pw_i <- which(mSet$analSet$enrich$path.nms == curr_pw)
+  cpds = mSet$analSet$enrich$path.hits[[pw_i]]
+  hit_tbl = data.table::as.data.table(mSet$analSet$enrich$matches.res)
+  myHits <- hit_tbl[Matched.Compound %in% cpds]
+  myHits$Mass.Diff <- as.numeric(myHits$Mass.Diff)/(as.numeric(myHits$Query.Mass)*1e-6)
+  colnames(myHits) <- c("rn", "identifier", "adduct", "dppm")
+  
+  lcl$tables$enrich <- myHits
+  
+  output$enrich_pw_tab <-DT::renderDataTable({
+    MetaboShiny::metshiTable(content = lcl$tables$enrich)
+  })
+  
 })
 
 # triggers on clicking a row in the match results table

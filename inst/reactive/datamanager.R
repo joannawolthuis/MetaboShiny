@@ -184,7 +184,7 @@ shiny::observe({
                          analysis = mSet$storage[[name]]$analysis
                          analysis_names = names(analysis)
                          # - - -
-                         exclude = c("tsne", "heatmap", "type")
+                         exclude = c("tsne", "heatmap", "type", "enrich")
                          analysis_names <- setdiff(analysis_names, exclude)
                          if(length(analysis_names) == 0){
                            return(data.table::data.table())
@@ -223,6 +223,53 @@ shiny::observe({
                        venn_no$now <- venn_no$start
                      }
                    },
+                   enrich = {
+                       if("storage" %in% names(mSet)){
+                         # save previous mset
+                         mset_name = mSet$dataSet$cls.name
+                         
+                         mSet$storage[[mset_name]] <- list(analysis = mSet$analSet)
+                         # - - - - -
+                         analyses = names(mSet$storage)
+                         analysis_names <- unlist(lapply(analyses, function(name){
+                           analysis = mSet$storage[[name]]$analysis
+                           analysis_names = names(analysis)
+                           # - - -
+                           exclude = c("tsne", "heatmap", "type", "enrich")
+                           analysis_names <- setdiff(analysis_names, exclude)
+                           if(length(analysis_names) == 0){
+                             return(data.table::data.table())
+                           }
+                           # - - -
+                           with.subgroups <- intersect(analysis_names, c("ml", "plsr", "pca"))
+                           if(length(with.subgroups) > 0){
+                             extra_names <- lapply(with.subgroups, function(anal){
+                               switch(anal,
+                                      ml = {
+                                        which.mls <- setdiff(names(analysis$ml),"last")
+                                        ml.names = sapply(which.mls, function(meth){
+                                          if(length(analysis$ml[[meth]]) > 0){
+                                            paste0(meth, " - ", names(analysis$ml[[meth]]))
+                                          }
+                                        })
+                                        unlist(ml.names)
+                                      },
+                                      plsr = {
+                                        c ("plsda - PC1", "plsda - PC2", "plsda - PC3")
+                                      },
+                                      pca = {
+                                        c ("pca - PC1", "pca - PC2", "pca - PC3")
+                                      })
+                             })
+                             analysis_names <- c(setdiff(analysis_names, c("ml", "plsr", "plsda", "pca")), unlist(extra_names))
+                           }
+                           # - - -
+                           paste0(analysis_names, " (", name, ")")
+                         }))
+                         shiny::updateSelectInput(session,
+                                                  "mummi_anal", 
+                                                  choices = analysis_names)
+                     }},
                    pattern = {
                      output$pattern_plot <- plotly::renderPlotly({
                        # --- ggplot ---

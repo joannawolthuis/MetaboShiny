@@ -527,3 +527,149 @@ metshiTable <- function(content, options=NULL){
                 options = opts
   )
 }
+
+getTopHits <- function(mSet, expnames, top){
+  
+  experiments <- stringr::str_match(expnames, 
+                                    pattern = "\\(.*\\)")[,1]
+  
+  experiments <- unique(gsub(experiments, pattern = "\\(\\s*(.+)\\s*\\)", replacement="\\1"))
+  
+  table_list <- lapply(experiments, function(experiment){
+    
+    analysis = mSet$storage[[experiment]]$analysis
+    
+    rgx_exp <- gsub(experiment, pattern = "\\(", replacement = "\\\\(")
+    rgx_exp <- gsub(rgx_exp, pattern = "\\)", replacement = "\\\\)")
+    rgx_exp <- gsub(rgx_exp, pattern = "\\-", replacement = "\\\\-")
+    rgx_exp <- gsub(rgx_exp, pattern = "\\+", replacement = "\\\\+")
+    
+    categories = grep(unlist(expnames),
+                      pattern = paste0("\\(",rgx_exp, "\\)"), value = T)
+    
+    categories = gsub(categories, pattern = " \\(\\s*(.+)\\s*\\)", replacement = "")
+    
+    # go through the to include analyses
+    
+    tables <- lapply(categories, function(name){
+      
+      base_name <- search_name <- gsub(name, pattern = " -.*$| ", replacement="")
+      
+      if(base_name %in% gbl$constants$ml.models){
+        search_name <- "ml"
+      }
+      
+      # fetch involved mz values
+      tbls <- switch(search_name,
+                     ml = {
+                       which.ml <- gsub(name, pattern = "^.*- | ", replacement="")
+                       mzvals = analysis$ml[[base_name]][[which.ml]]$bar[order(analysis$ml[[base_name]][[which.ml]]$bar$importance,
+                                                                               decreasing = T),]$mz
+                       mzvals <- type.convert(gsub(mzvals, pattern = "'|`", replacement=""))
+                       res <- list(mzvals)
+                       names(res) <- paste0(which.ml, " (", base_name, ")")
+                       # - - -
+                       res
+                     },
+                     aov = {
+                       res = list(as.numeric(rownames(analysis$aov$sig.mat[order(analysis$aov$sig.mat[,2],
+                                                                                 decreasing = F),])))
+                       names(res) = base_name
+                       res
+                     },
+                     aov2 = {
+                       res = list(as.numeric(rownames(analysis$aov2$sig.mat[order(analysis$aov2$sig.mat[,"Interaction(adj.p)"],
+                                                                                  decreasing = F),])))
+                       names(res) = base_name
+                       res
+                     },
+                     asca = {
+                       res = list(as.numeric(rownames(analysis$asca$sig.list$Model.ab[order(analysis$asca$sig.list$Model.ab[,1],
+                                                                                            decreasing = T),])))
+                       names(res) = base_name
+                       res
+                     },
+                     MB = {
+                       res = list(as.numeric(rownames(analysis$MB$stats))[order(analysis$MB$stats[,1],
+                                                                                decreasing = T)])
+                       names(res) = base_name
+                       res
+                     },
+                     tt = {
+                       res = list(as.numeric(rownames(analysis$tt$sig.mat[order(analysis$tt$sig.mat[,2],
+                                                                                decreasing = F),])))
+                       names(res) = base_name
+                       res
+                     },
+                     fc = {
+                       res = list(as.numeric(rownames(analysis$fc$sig.mat[order(abs(analysis$fc$sig.mat[,2]),
+                                                                                decreasing = F),])))
+                       names(res) = base_name
+                       res
+                     },
+                     volcano = {
+                       res = list(as.numeric(rownames(analysis$volcano$sig.mat)))
+                       names(res) = base_name
+                       res
+                     },
+                     plsda = {
+                       which.plsda <- gsub(name, pattern = "^.*- | ", replacement="")
+                       
+                       compounds_pc <- data.table::as.data.table(analysis$plsda$vip.mat,keep.rownames = T)
+                       colnames(compounds_pc) <- c("rn", paste0("PC", 1:(ncol(compounds_pc)-1)))
+                       ordered_pc <- setorderv(compounds_pc, which.plsda, -1)
+                       
+                       res <- list(ordered_pc$rn)
+                       names(res) <- paste0(which.plsda, " (PLS-DA)")
+                       # - - -
+                       res
+                     },
+                     pca = {
+                       which.pca <- gsub(name, pattern = "^.*- | ", replacement="")
+                       
+                       compounds_pc <- data.table::as.data.table(analysis$pca$rotation,keep.rownames = T)
+                       ordered_pc <- setorderv(compounds_pc, which.pca, -1)
+                       res <- list(ordered_pc$rn)
+                       names(res) <- paste0(which.pca, " (PCA)")
+                       # - - -
+                       res
+                     },
+                     volc = {
+                       res <- list(rownames(analysis$volcano$sig.mat))
+                       names(res) = base_name
+                       res
+                     },
+                     {MetaboShiny::metshiAlert("Not currently supported...")
+                       return(NULL)})
+      
+      if(is.null(tbls)) return(NULL)
+      
+      # user specified top hits only
+      tbls_top <- lapply(tbls, function(tbl){
+        if(length(tbl) < top){
+          tbl
+        }else{
+          tbl[1:top]
+        }
+      })
+      names(tbls_top) <- paste0(experiment, ": ", names(tbls_top))
+      tbls_top
+    })
+    
+    # unnest the nested lists
+    flattened <- flattenlist(tables)
+    
+    # remove NAs
+    flattened <- lapply(flattened, function(x) x[!is.na(x)])
+    
+    #rename and remove regex-y names
+    names(flattened) <- gsub(x = names(flattened), pattern = "(.*\\.)(.*$)", replacement = "\\2")
+    # return
+    flattened
+  })
+  
+  flattened <- flattenlist(table_list)
+  names(flattened) <- gsub(x = names(flattened), pattern = "(.*\\.)(.*$)", replacement = "\\2")
+  flattened <- lapply(flattened, function(x) x[!is.na(x)])
+  return(flattened)
+}

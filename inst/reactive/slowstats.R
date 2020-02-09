@@ -1,3 +1,228 @@
+shiny::observeEvent(input$do_enrich, {
+  mSet.old <- mSet
+  success = F
+  try({
+    shiny::withProgress({
+      
+      enr_mSet <- MetaboAnalystR::InitDataObjects("mass_all", 
+                                                  "mummichog",
+                                                  FALSE)
+      
+      MetaboAnalystR::SetPeakFormat("rmp")
+      
+      enr_mSet <- MetaboAnalystR::UpdateInstrumentParameters(enr_mSet, 
+                                             mSet$ppm, 
+                                             "mixed");
+      
+      #similarly to venn diagram
+      flattened <- MetaboShiny::getTopHits(mSet, 
+                                           input$mummi_anal,#data.table("plsda - PC2 (disease)"), 
+                                           input$mummi_topn)
+      
+      setProgress(0.1)
+      
+      myFile <- tempfile(fileext = ".csv")
+      tbl = data.table::data.table("m.z" = as.numeric(flattened[[1]]),
+                                   mode = MetaboShiny::getIonMode(flattened[[1]],
+                                                                  patdb = lcl$paths$patdb))
+      
+      tbl[, "p.value"] = c(0)
+      tbl[, "t.score"] = c(0)
+      
+      enr_mSet$dataSet$mummi.orig <- cbind(tbl$p.value,
+                                           tbl$m.z,
+                                           tbl$t.score)
+      colnames(enr_mSet$dataSet$mummi.orig) = c("p.value", 
+                                                "m.z", 
+                                                "t.score")
+      enr_mSet$dataSet$pos_inx <- tbl$mode == "positive"
+      enr_mSet$dataSet$mumType <- "list"
+      
+      mumDataContainsPval <<- 0#if(grepl(input$mummi_anal, pattern = "tt|aov|aov2")) 1 else 0
+      
+      shiny::setProgress(0.2)
+      
+      enr_mSet <- MetaboAnalystR::SanityCheckMummichogData(enr_mSet)
+      enr_mSet <- MetaboAnalystR::Setup.AdductData(enr_mSet, input$mummi_adducts);
+      
+      shiny::setProgress(0.3)
+      
+      require(enviPat)
+      
+      elecMass = 0.000548579909
+      mummi_adducts <- adducts[Name %in% input$mummi_adducts]
+      add_db_custom_rows <- lapply(1:nrow(mummi_adducts), function(i){
+        row = mummi_adducts[i,]
+        if(is.na(row$AddAt)) row$AddAt <- ""
+        if(is.na(row$AddEx)) row$AddEx <- ""
+        if(is.na(row$RemAt)) row$RemAt <- ""
+        if(is.na(row$RemEx)) row$RemEx <- ""
+        addForm <- mergeform(row$AddAt, row$AddEx)
+        remForm <- mergeform(row$RemAt, row$RemEx)
+        addMass <- enviPat::check_chemform(isotopes, addForm)$monoisotopic_mass
+        remMass <- enviPat::check_chemform(isotopes, remForm)$monoisotopic_mass
+        if(addMass < 0) addMass <- 0
+        if(remMass < 0) remMass <- 0
+        netChange = (addMass - remMass + (row$Charge * -elecMass)) / abs(row$Charge)
+        mzSpec <- if(row$xM > 1) paste0("(",row$xM,"*mw)") else if(abs(row$Charge)>1) paste0("mw/",abs(row$Charge)) else "mw"
+        addOn <- if(netChange < 0){
+          paste("-", abs(netChange))
+        }else{
+          paste("+", abs(netChange))
+        }
+        data.table::data.table(Ion_Name = row$Name, Ion_Mass = paste(mzSpec, addOn))
+      })
+      add_db_cust <- data.table::rbindlist(add_db_custom_rows)
+      
+      shiny::setProgress(0.4)
+      
+      # === PerformAdductMapping ===
+      myAdds <- enr_mSet$dataSet$adduct.list
+      hit.inx <- match(tolower(myAdds), tolower(add_db_cust$Ion_Name))
+      match.values <- add_db_cust[hit.inx, ]
+      sel.add <- nrow(match.values)
+      if (sel.add > 0) {
+        shiny::showNotification(paste("A total of ", sel.add, 
+                                        " adducts were successfully selected!", sep = ""))
+      }else{
+        shiny::showNotification("No adducts were selected!")
+        }
+      
+      enr_mSet$add.map <- match.values
+      
+      shiny::setProgress(0.5)
+      
+      # === GETLIB ===
+      lib = input$mummi_org
+      libVersion <- "current"#input$mummi_db_ver
+      
+      filenm <- paste(lib, ".rds", sep = "")
+      biocyc <- grepl("biocyc", lib)
+      
+      if (!is.null(enr_mSet$curr.cust)) {
+        if (biocyc) {
+          user.curr <- enr_mSet$curr.map$BioCyc
+        }else {
+          user.curr <- enr_mSet$curr.map$KEGG
+        }
+        currency <<- user.curr
+        if (length(currency) > 0) {
+          shiny::showNotification("Currency metabolites were successfully uploaded!")
+        }else {
+          shiny::showNotification("Errors in currency metabolites uploading!")
+        }
+      }
+      if (!file.exists(filenm)) {
+        if (libVersion == "old" && end.with(lib, "kegg")) {
+          mum.url <- paste("https://www.metaboanalyst.ca/resources/libs/mummichog/kegg_2018/", 
+                           filenm, sep = "")
+        }else {
+          mum.url <- paste("https://www.metaboanalyst.ca/resources/libs/mummichog/", 
+                           filenm, sep = "")
+        }
+        download.file(mum.url, destfile = filenm, method = "libcurl", 
+                      mode = "wb")
+        mummichog.lib <- readRDS(filenm)
+      }
+      
+      shiny::setProgress(0.6)
+      
+      prematchies <- MetaboShiny::get_prematches(if(biocyc) "metacyc" else "kegg", 
+                                                 "source", 
+                                                 lcl$paths$patdb)
+      
+      iden.vs.add <- unique(prematchies[,c("identifier", "adduct")])
+      iden.vs.add$i <- match(iden.vs.add$identifier,mummichog.lib$cpd.lib$id)
+      iden.vs.add <- data.table::as.data.table(iden.vs.add[complete.cases(iden.vs.add),])
+      iden.vs.add <- iden.vs.add[adduct %in% mummi_adducts$Name]
+      
+      shiny::setProgress(0.7)
+      
+      # ==== NEW_ADDUCT_MZLIST ===
+      
+      use.rules <<- input$mummi_rules
+      
+      new_adduct_mzlist <- function (mSetObj = NA, mw){
+        
+        mode <- mSetObj$dataSet$mode
+        ion.name <- mSetObj$add.map$Ion_Name
+        ion.mass <- mSetObj$add.map$Ion_Mass
+        mw_modified <- NULL
+        neg.ions <- mummi_adducts[Ion_mode == "negative"]$Name
+        ion.name.neg <- intersect(ion.name, neg.ions)
+        ion.mass.neg <- ion.mass[which(ion.name %in% neg.ions)]
+        ion.name.pos <- setdiff(ion.name, neg.ions)
+        ion.mass.pos <- ion.mass[which(ion.name %in% ion.name.pos)]
+        mass.list.neg <- as.list(ion.mass.neg)
+        mass.user.neg <- lapply(mass.list.neg, function(x) eval(parse(text = paste(gsub("PROTON", 
+                                                                                        1.007825, x)))))
+        mw_modified.neg <- do.call(cbind, mass.user.neg)
+        colnames(mw_modified.neg) <- ion.name.neg
+        mass.list.pos <- as.list(ion.mass.pos)
+        mass.user.pos <- lapply(mass.list.pos, function(x) eval(parse(text = paste(gsub("PROTON", 
+                                                                                        1.007825, x)))))
+        mw_modified.pos <- do.call(cbind, mass.user.pos)
+        colnames(mw_modified.pos) <- ion.name.pos
+        mw_modified <- list(mw_modified.neg, mw_modified.pos)
+        
+        if(use.rules){
+          print("rules")
+          mw_modified <- lapply(mw_modified, function(mw_adds){
+            for(i in 1:nrow(mw_adds)){
+              ok.adducts <- iden.vs.add[i,]$adduct
+              mw_adds[i, !(colnames(mw_adds) %in% ok.adducts)] <- 0
+            }
+            mw_adds
+          }) 
+        }
+        names(mw_modified) <- c("neg", "pos")
+        return(mw_modified)}
+      
+      shiny::setProgress(0.8)
+      
+      #unlockBinding("new_adduct_mzlist", as.environment("package:MetaboAnalystR"))
+      assignInNamespace("new_adduct_mzlist", new_adduct_mzlist, ns="MetaboAnalystR", 
+                        envir=as.environment("package:MetaboAnalystR"))
+      
+      enr_mSet <- MetaboAnalystR::SetPeakEnrichMethod(enr_mSet, if(input$mummi_enr_method) "mummichog" else "gsea")
+      
+      shiny::setProgress(0.9)
+      
+      enr_mSet <- MetaboAnalystR::SetMummichogPval(enr_mSet, 0.0)#input$mummi_pval)
+      
+      enr_mSet <- MetaboAnalystR::PerformPSEA(enr_mSet, 
+                              lib, 
+                              libVersion, 
+                              100)#input$mummi_perm)
+      mSet$analSet$enrich <- enr_mSet
+      
+      # === PLOT ====
+      
+      output$enrich_plot <- plotly::renderPlotly({
+        # --- ggplot ---
+        MetaboShiny::ggPlotMummi(mSet$analSet$enrich, 
+                    if(input$mummi_enr_method) "mummichog" else "gsea",
+                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                    plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
+                    plotlyfy=TRUE,font = lcl$aes$font)
+      })
+      # render results table
+      enrich$overview <- mSet$analSet$enrich$mummi.resmat
+      
+      success = T
+      
+      })
+  })
+  if(success){
+    mSet <<- mSet
+    datamanager$reload <- "enrich"
+  }else{
+    MetaboShiny::metshiAlert("Analysis failed!")
+    mSet <<- mSet.old
+  }
+})
+
+
 shiny::observeEvent(input$do_tsne, {
   mSet.old <- mSet
   success = F

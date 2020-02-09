@@ -72,5 +72,18 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
       }
     }else if(curr_tab == "pattern"){
       my_selection$mz <- rownames(mSet$analSet$corr$cor.mat)[d$curveNumber + 1]
+    }else if(curr_tab == "enrich"){
+      
+      # TODO: make non-redundant..
+      curr_pw <- rownames(mSet$analSet$enrich$mummi.resmat)[d$pointNumber + 1]
+      pw_i <- which(mSet$analSet$enrich$path.nms == curr_pw)
+      cpds = mSet$analSet$enrich$path.hits[[pw_i]]
+      hit_tbl = data.table::as.data.table(mSet$analSet$enrich$matches.res)
+      myHits <- hit_tbl[Matched.Compound %in% cpds]
+      myHits$Mass.Diff <- as.numeric(myHits$Mass.Diff)/(as.numeric(myHits$Query.Mass)*1e-6)
+      colnames(myHits) <- c("rn", "identifier", "adduct", "dppm")
+      
+      enrich$current <- myHits
+      
     }
 })

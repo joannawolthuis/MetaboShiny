@@ -22,6 +22,12 @@ shiny::observe({
                  # TODO: use this in venn diagram creation
                  mSet$storage[[mset_name]] <-  list(analysis = mSet$analSet)
                },
+               enrich = {
+                 # save previous mset
+                 mset_name = mSet$dataSet$cls.name
+                 # TODO: use this in venn diagram creation
+                 mSet$storage[[mset_name]] <-  list(analysis = mSet$analSet)
+               },
                pattern = {
                  # pearson kendall spearman
                  NULL

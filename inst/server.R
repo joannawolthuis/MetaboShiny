@@ -72,6 +72,9 @@ function(input, output, session) {
                                          forward_unique = data.table::data.table(),
                                          reverse = data.table::data.table())
   
+  enrich <- shiny::reactiveValues(overview =data.table::data.table("not run" = "run enrichment in sidebar :)"),
+                                  current = data.table::data.table("nothing selected" = "please select a pathway to see selected m/z!"))
+  
   browse_content <- shiny::reactiveValues(table = data.table::data.table())
   
   result_filters <- shiny::reactiveValues(add = c(), 
@@ -486,7 +489,8 @@ apikey = ')
             # =====
             
             uniques = data.table::as.data.table(unique(data.table::as.data.table(matches)[, -c("source", 
-                                                                                               "description"),
+                                                                                               "description",
+                                                                                               "identifier"),
                                                                                           with=F]))
             shiny::setProgress(0.6)
             
@@ -495,7 +499,10 @@ apikey = ')
             info_only = unique(matches[,c("name", 
                                           "source", 
                                           "structure", 
-                                          "description"),with=F])
+                                          "description",
+                                          "identifier"),with=F])
+            info_only$description <- paste0("Database ID: ", info_only$identifier, ". ", info_only$description)
+            info_only <- unique(info_only[,-"identifier"])
             
             info_no_na <- info_only[!is.na(info_only$structure)]
             info_na <- info_only[is.na(info_only$structure)]
@@ -522,6 +529,7 @@ apikey = ')
             
             info_aggr$name <- main_names
             has.syn <- which(!is.na(synonyms))
+            
             info_aggr$description[has.syn] <- paste0(synonyms[has.syn], info_aggr$description[has.syn])
             info_aggr <- as.data.table(info_aggr)
             
@@ -787,7 +795,8 @@ apikey = ')
       list("permz", "tt"),#12
       list("permz", "fc"),#13
       list("dimred", "tsne"),#14
-      list("permz", "pattern")#15
+      list("permz", "pattern"),#15
+      list("overview", "enrich")#16
     )
     
     # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
@@ -796,21 +805,21 @@ apikey = ')
     if(is.null(interface$mode)) {
       show.tabs <- hide.tabs[1]
     }else if(interface$mode == '1fb'){
-      show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14,15)]
+      show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14,15,16)]
       shiny::updateSelectInput(session, "ml_method",
                                selected = "rf",
                                choices = as.list(gbl$constants$ml.models))
     }else if(interface$mode == '1fm'){
-      show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,11,14,15)]
+      show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,11,14,15,16)]
       shiny::updateSelectInput(session, "ml_method",
                                selected = "rf",
                                choices = as.list(setdiff(gbl$constants$ml.models, gbl$constants$ml.twoonly)))
     }else if(interface$mode == '2f'){
-      show.tabs <- hide.tabs[c(1,2,4,6,9,11,14)]
+      show.tabs <- hide.tabs[c(1,2,4,6,9,11,14,16)]
     }else if(interface$mode == 't1f'){
-      show.tabs = hide.tabs[c(1,2,4,5,6,9,11,14)]
+      show.tabs = hide.tabs[c(1,2,4,5,6,9,11,14,16)]
     }else if(interface$mode == 't'){
-      show.tabs = hide.tabs[c(1,2,5,6,7,9,11,14,15)]
+      show.tabs = hide.tabs[c(1,2,5,6,7,9,11,14,15,16)]
     }else{
       show.tabs <- hide.tabs[1]
     }
@@ -932,7 +941,7 @@ apikey = ')
                }
              },overview = {
                if(!is.null(input$overview)){
-                 if(input$overview %not in% names(mSet$analSet) | input$overview ==  "venn"){
+                 if(input$overview %not in% names(mSet$analSet) | input$overview %in%  c("venn", "enrich")){
                    statsmanager$calculate <- input$overview
                  }
                  datamanager$reload <- input$overview
@@ -1203,5 +1212,6 @@ apikey = ')
     session_cl <<- NULL
     rmv <- list.files(".", pattern = ".csv|.log", full.names = T)
     if(all(file.remove(rmv))) NULL
+    print("Done..")
   })
 }

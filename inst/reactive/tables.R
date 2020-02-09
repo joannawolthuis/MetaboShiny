@@ -4,12 +4,20 @@ output$match_tab <- DT::renderDataTable({
   empty = data.table::data.table(" " = rep("", nrow(shown_matches$forward_unique)))
   MetaboShiny::metshiTable(content = cbind(shown_matches$forward_unique, empty),
               options = list(fixedColumns = list(
-                rightColumns = 8,
+                rightColumns = 9,
                 heightMatch = 'none'
               ), columnDefs = list(list(visible=FALSE, 
                                                      targets=c(which(colnames(shown_matches$forward_unique) %in% gbl$vectors$hide_match_cols),
                                                                which(colnames(shown_matches$forward_unique) == "isocat"))))
               ))
+})
+
+output$enrich_tab <-DT::renderDataTable({
+  MetaboShiny::metshiTable(content = enrich$overview)
+})
+
+output$enrich_pw_tab <-DT::renderDataTable({
+  MetaboShiny::metshiTable(content = enrich$current)
 })
 
 output$hits_tab <- DT::renderDataTable({
