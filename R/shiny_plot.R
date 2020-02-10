@@ -1510,8 +1510,10 @@ ggPlotMummi <- function(mum_mSet, anal.type = "mummichog", plotlyfy=T, plot.them
                                    color = `radi.vec`,
                                    text = pathway)) +
     plot.theme(base_size = 10) + ggtitle("Enrichment Results") +
-    ggplot2::ylab(switch(anal.type, mummichog = "-log10(FET)", gsea = "-log10(p.value)")) + 
-    ggplot2::xlab("significant/expected") +
+    ggplot2::ylab(switch(anal.type, 
+                         mummichog = "-log10(FET)", 
+                         gsea = "-log10(p.value)")) + 
+    ggplot2::xlab("significant hits / all pathway hits") +
     ggplot2::scale_colour_gradientn(colours = cf(20)) +
     ggplot2::theme(legend.position="none",
                    axis.text=ggplot2::element_text(size=font$ax.num.size),

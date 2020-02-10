@@ -112,18 +112,16 @@ shiny::observeEvent(input$do_enrich, {
           shiny::showNotification("Errors in currency metabolites uploading!")
         }
       }
-      if (!file.exists(filenm)) {
-        if (libVersion == "old" && end.with(lib, "kegg")) {
-          mum.url <- paste("https://www.metaboanalyst.ca/resources/libs/mummichog/kegg_2018/", 
-                           filenm, sep = "")
-        }else {
-          mum.url <- paste("https://www.metaboanalyst.ca/resources/libs/mummichog/", 
-                           filenm, sep = "")
-        }
-        download.file(mum.url, destfile = filenm, method = "libcurl", 
-                      mode = "wb")
-        mummichog.lib <- readRDS(filenm)
+      if (libVersion == "old" && end.with(lib, "kegg")) {
+        mum.url <- paste("https://www.metaboanalyst.ca/resources/libs/mummichog/kegg_2018/", 
+                         filenm, sep = "")
+      }else {
+        mum.url <- paste("https://www.metaboanalyst.ca/resources/libs/mummichog/", 
+                         filenm, sep = "")
       }
+      download.file(mum.url, destfile = filenm, method = "libcurl", 
+                    mode = "wb")
+      mummichog.lib <- readRDS(filenm)
       
       shiny::setProgress(0.6)
       
@@ -208,7 +206,8 @@ shiny::observeEvent(input$do_enrich, {
       })
       # render results table
       enrich$overview <- mSet$analSet$enrich$mummi.resmat
-      
+                     
+      #TODO: re-enable database filtering!! just base numbers on descriptions
       success = T
       
       })

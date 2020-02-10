@@ -3,7 +3,7 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
   
   d <- plotly::event_data("plotly_click", priority = "event") # get click details (which point, additional included info, etc...
 
-  for(pietype in c("add", "iso")){
+  for(pietype in c("add", "iso", "db")){
     try({
       if(input$match_filters == paste0("pie_",pietype)){
         i = d$pointNumber + 1

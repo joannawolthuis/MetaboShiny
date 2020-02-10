@@ -95,11 +95,7 @@ shiny::observeEvent(input$enrich_tab_rows_selected,{
   myHits$Mass.Diff <- as.numeric(myHits$Mass.Diff)/(as.numeric(myHits$Query.Mass)*1e-6)
   colnames(myHits) <- c("rn", "identifier", "adduct", "dppm")
   
-  lcl$tables$enrich <- myHits
-  
-  output$enrich_pw_tab <-DT::renderDataTable({
-    MetaboShiny::metshiTable(content = lcl$tables$enrich)
-  })
+  enrich$current <- myHits
   
 })
 

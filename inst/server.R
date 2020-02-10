@@ -444,7 +444,7 @@ apikey = ')
   showtext::showtext_auto() ## Automatically use showtext to render text for future devices
   
   observe({
-    for(pie in c("add", "iso")){
+    for(pie in c("add", "iso","db")){
       result_filters[[pie]] <- result_filters[[pie]][!is.na(result_filters[[pie]])]
       }  
   })
@@ -697,7 +697,7 @@ apikey = ')
               shown_matches$reverse <- data.table::data.table()
               return(NULL)
             }else{
-            #pieinfo$db <- reshape::melt(table(shown_matches$reverse$source))
+            pieinfo$db <- reshape::melt(table(rev_matches$source))
             pieinfo$add <- reshape::melt(table(rev_matches$adduct))
             pieinfo$iso <- reshape::melt(table(rev_matches$isocat))
           }
@@ -719,7 +719,7 @@ apikey = ')
   })
   
   # pie charts
-  lapply(c("add", "iso"), function(which_pie){
+  lapply(c("add", "iso", "db"), function(which_pie){
     output[[paste0("match_pie_", which_pie)]] <- plotly::renderPlotly({
      
        pievec = pieinfo[[which_pie]]
@@ -1144,6 +1144,7 @@ apikey = ')
     debug_input <<- shiny::isolate(shiny::reactiveValuesToList(input))
     debug_lcl <<- lcl
     debug_mSet <<- mSet
+    debug_enrich <<- enrich
     debug_matches <<- shown_matches
     debug_selection <<- my_selection
   })
@@ -1199,6 +1200,7 @@ apikey = ')
     debug_lcl <<- lcl
     debug_mSet <<- mSet
     debug_matches <<- shown_matches
+    debug_enrich <<- enrich
     debug_selection <<- my_selection
     try({
       debug_browse_content <<- browse_content

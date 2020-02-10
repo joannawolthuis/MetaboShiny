@@ -99,6 +99,7 @@ joanna_debugger <- function(){
   lcl <<- debug_lcl
   mSet <<- debug_mSet
   input <<- debug_input
+  enrich <<- debug_enrich 
   shown_matches <<- shiny::isolate({shiny::reactiveValuesToList(debug_matches)})
   my_selection <<- shiny::isolate({shiny::reactiveValuesToList(debug_selection)})
   browse_content <<- shiny::isolate({shiny::reactiveValuesToList(debug_browse_content)})
