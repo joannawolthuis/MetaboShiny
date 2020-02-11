@@ -54,6 +54,21 @@ shiny::observe({
                                 if(nrow(mSet$dataSet$norm) == origcount) "" else paste0("/",as.character(origcount)))
                          
                        })
+                       
+                       output$jqui_ui <- shiny::renderUI(shinyjqui::orderInput(inputId = 'pattern_seq',
+                                                                               label = 'Drag panels to select pattern for correlation (low-high)', 
+                                                                               items = {
+                                                                                 lvls = levels(mSet$dataSet$cls)
+                                                                                 numconv = as.numeric(as.character(lvls))
+                                                                                 if(all(!is.na(numconv))){
+                                                                                   order = order(numconv)
+                                                                                 }else{
+                                                                                   order = order(as.character(lvls))
+                                                                                 }
+                                                                                 as.character(lvls)[order]
+                                                                               })
+                                                         )
+                                              
                        shiny::updateSelectInput(session, "storage_choice", 
                                                 choices = setdiff(names(mSet$storage)[sapply(mSet$storage, function(x) "settings" %in% names(x))], 'orig')
                        )

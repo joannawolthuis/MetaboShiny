@@ -249,7 +249,11 @@ shiny::observeEvent(input$do_pattern, {
   mSet.old <- mSet
   success = F
   try({
-    mSet <- MetaboAnalystR::Match.Pattern(mSet, input$pattern_corr, input$pattern_seq)
+    lvls = levels(mSet$dataSet$cls)
+    pat = input$pattern_seq_order
+    pat_order = match(lvls,pat)
+    pattern = paste0(pat_order-1, collapse="-")
+    mSet <- MetaboAnalystR::Match.Pattern(mSet, input$pattern_corr, pattern)
     if(typeof(mSet) != "double"){
       success = T
     }

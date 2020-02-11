@@ -330,15 +330,18 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                             ),
                                                                                                                                             shiny::tabPanel("pattern", value="pattern",
                                                                                                                                                             shiny::fluidRow(align="center",
-                                                                                                                                                                            shiny::textInput("pattern_seq", "Which pattern do you want to hunt for? KO-WT, or 1-2-3-4 (more than two groups indicates metabolites that increase in that pattern)"),
-                                                                                                                                                                            shiny::selectInput("pattern_corr", "Correlation metric:", choices = c("pearson", "spearman", "kendall"), selected = "pearson")
+                                                                                                                                                                            uiOutput('jqui_ui'), br(),
+                                                                                                                                                                            shiny::selectInput("pattern_corr", 
+                                                                                                                                                                                               "Correlation metric:", 
+                                                                                                                                                                                               choices = c("pearson", "spearman", "kendall"), 
+                                                                                                                                                                                               selected = "pearson")
                                                                                                                                                             ),
                                                                                                                                                             shiny::fluidRow(align="center", 
                                                                                                                                                                             shinyWidgets::circleButton("do_pattern", 
-                                                                                                                                                                                                       icon = icon("arrow-right"))),
-                                                                                                                                                            shiny::fluidRow(plotly::plotlyOutput('pattern_plot', height="600px")),
-                                                                                                                                                            shiny::fluidRow(shiny::sliderInput('pattern_topn',label = "Show top:",min = 5,max=200,value = 25)),
-                                                                                                                                                            shiny::fluidRow(shiny::div(DT::dataTableOutput('pattern_tab',width="100%"),style='font-size:80%'))
+                                                                                                                                                                                                       icon = icon("arrow-right")),
+                                                                                                                                                                            plotly::plotlyOutput('pattern_plot', height="600px"),
+                                                                                                                                                                            shiny::sliderInput('pattern_topn',label = "Show top:",min = 5,max=200,value = 25),
+                                                                                                                                                                            shiny::div(DT::dataTableOutput('pattern_tab',width="100%"),style='font-size:80%'))
                                                                                                                                             )
                                                                                                                           )
                                                                                                           ),
@@ -787,7 +790,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                             border-bottom: 1px solid #DFDCDC;")
                                                                                                                    ),
                                                                                                                    br(),
-                                                                                                                   shiny::tabsetPanel(shiny::tabPanel(title = shinyBS::tipify(shiny::icon("paw"), 
+                                                                                                                   shiny::tabsetPanel(id = "tab_search", shiny::tabPanel(title = shinyBS::tipify(shiny::icon("paw"), 
                                                                                                                                                                               "mz <> molecule matches"),
                                                                                                                                                       shinyBS::bsCollapse(shinyBS::bsCollapsePanel(title=shiny::h2("Compound info"), 
                                                                                                                                                                                                    value="panel2",

@@ -258,22 +258,24 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
     mode = "multi"
   }
   
-  profile <- MetaboShiny::getProfile(mSet, cpd, mode=if(mode == "nm") "stat" else "multi")
+  profile <- MetaboShiny::getProfile(mSet, 
+                                     cpd, 
+                                     mode=if(mode == "nm") "stat" else "multi")
 
   df_line <- data.table::data.table(x = c(1,2),
                                     y = rep(min(profile$Abundance - 0.1), 2))
   stars = ""
   
-  try({
-    pval <- if(mode == "nm"){
-      mSet$analSet$tt$sig.mat[which(rownames(mSet$analSet$tt$sig.mat) == cpd), "p.value"]
-    }else{
-      int.col <- grep("adj|Adj", colnames(mSet$analSet$aov2$sig.mat),value=T)
-      int.col <- grep("int|Int", int.col, value=T)
-      mSet$analSet$aov2$sig.mat[which(rownames(mSet$analSet$aov2$sig.mat) == cpd), int.col]
-    }
-    stars <- p2stars(pval)
-  })
+  # try({
+  #   pval <- if(mode == "nm"){
+  #     mSet$analSet$tt$sig.mat[which(rownames(mSet$analSet$tt$sig.mat) == cpd), "p.value"]
+  #   }else{
+  #     int.col <- grep("adj|Adj", colnames(mSet$analSet$aov2$sig.mat),value=T)
+  #     int.col <- grep("int|Int", int.col, value=T)
+  #     mSet$analSet$aov2$sig.mat[which(rownames(mSet$analSet$aov2$sig.mat) == cpd), int.col]
+  #   }
+  #   stars <- p2stars(pval)
+  # })
   
   p <- ggplot2::ggplot() + plot.theme(base_size = 15)
   
@@ -288,7 +290,7 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
   profiles <- switch(mode,
                      multi = split(profile, f = profile$GroupA),
                      nm = list(x = data.table::data.table(profile)))
-
+  
   if(length(cols) < length(levels(profile$Color))){
     cols <- cf(length(levels(profile$Color)))
   }
@@ -298,6 +300,19 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
   suppressWarnings({
   for(prof in profiles){
     
+    groupCols <- grep(x=colnames(prof), pattern="Group", value=T)
+    
+    prof[, (groupCols) := factor(get(groupCols), levels = {
+      lvls = levels(get(groupCols))
+      numconv = as.numeric(as.character(lvls))
+      if(all(!is.na(numconv))){
+          order = order(numconv)
+        }else{
+          order = order(as.character(lvls))
+        }
+      lvls[order]
+    })]
+
     for(style in styles){
       switch(mode,
              nm = {
@@ -543,8 +558,7 @@ ggPlotPattern <- function(mSet, cf, n=20,
                                     text = reorder(cpd, -`p-value`),
                                     fill = `p-value`), 
                       stat = "identity", alpha=0.5) + 
-    ggplot2::ggtitle(paste("Associated with pattern", 
-                           mSet$analSet$corr$pattern)) +
+    ggplot2::ggtitle("Correlated m/z values") +
     ggplot2::coord_flip() +
     ggplot2::ylab("correlation") + 
     ggplot2::xlab("m/z") + 

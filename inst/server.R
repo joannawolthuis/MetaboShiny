@@ -77,7 +77,8 @@ function(input, output, session) {
   
   browse_content <- shiny::reactiveValues(table = data.table::data.table())
   
-  result_filters <- shiny::reactiveValues(add = c(), 
+  result_filters <- shiny::reactiveValues(add = list(positive = c(),
+                                                     negative = c()), 
                                           db = c(), 
                                           iso = c())
   
@@ -444,9 +445,16 @@ apikey = ')
   showtext::showtext_auto() ## Automatically use showtext to render text for future devices
   
   observe({
-    for(pie in c("add", "iso","db")){
-      result_filters[[pie]] <- result_filters[[pie]][!is.na(result_filters[[pie]])]
-      }  
+    if(my_selection$mz != ""){
+      for(pie in c("add", "iso","db")){
+        if(pie == "add"){
+          mzMode = MetaboShiny::getIonMode(my_selection$mz, lcl$paths$patdb)
+          result_filters$add[[mzMode]] <- result_filters$add[[mzMode]][!is.na(result_filters$add[[mzMode]])]
+        }else{
+          result_filters[[pie]] <- result_filters[[pie]][!is.na(result_filters[[pie]])]
+        }
+      }   
+    }
   })
   
   shiny::observe({
@@ -473,10 +481,12 @@ apikey = ')
             pieinfo$iso <- reshape::melt(table(matches$isocat))
           }
           
+          mzMode = MetaboShiny::getIonMode(my_selection$mz, lcl$paths$patdb)
+
           matches = data.table::as.data.table(MetaboShiny::get_prematches(who = my_selection$mz,
                                                                           what = "map.query_mz",
                                                                           patdb = lcl$paths$patdb,
-                                                                          showadd = result_filters$add,
+                                                                          showadd = result_filters$add[[mzMode]],
                                                                           showdb = result_filters$db,
                                                                           showiso = result_filters$iso))  
           
@@ -703,10 +713,12 @@ apikey = ')
           }
         }
           
+        mzMode = MetaboShiny::getIonMode(my_selection$mz, lcl$paths$patdb)
+        
         rev_matches = MetaboShiny::get_prematches(who = my_selection$struct,
                                                   what = "con.structure",
                                                   patdb = lcl$paths$patdb,
-                                                  showadd = result_filters$add,
+                                                  showadd = result_filters$add[[mzMode]],
                                                   showiso = result_filters$iso,
                                                   showdb = result_filters$db)
         if(nrow(rev_matches)>0){
@@ -736,7 +748,12 @@ apikey = ')
         lines = rep(1, nrow(pievec))
         
         if(!is.null(pievec)){
-          targets = result_filters[[which_pie]]
+          if(which_pie == "add"){
+            mzMode = MetaboShiny::getIonMode(my_selection$mz, lcl$paths$patdb)
+            targets = result_filters$add[[mzMode]]
+          }else{
+            targets = result_filters[[which_pie]]
+          }
           pulls[which(as.character(pievec$Var.1) %in% targets)] <- 0.15  
           lines[which(as.character(pievec$Var.1) %in% targets)] <- 4
         }
@@ -860,14 +877,14 @@ apikey = ')
   
   # -----------------
   shiny::observeEvent(input$undo_match_filt, {
-    result_filters$add <- c()
+    result_filters$add <- list(positive = c(), negative = c())
     result_filters$db <- c()
     result_filters$iso <- c()
     search$go <- T
   }) 
   
   output$curr_add <- shiny::renderText({
-    paste0(result_filters$add, collapse=", ")
+    paste0(unlist(result_filters$add), collapse=", ")
   })
   output$curr_iso <- shiny::renderText({
     paste0(result_filters$iso, collapse=", ")
@@ -1193,7 +1210,6 @@ apikey = ')
   }  
   
   # ==== ON EXIT ====
-  
   onStop(function() {
     print("Closing metaboShiny ~ヾ(＾∇＾)")
     debug_input <<- shiny::isolate(shiny::reactiveValuesToList(input))

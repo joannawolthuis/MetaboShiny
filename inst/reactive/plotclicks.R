@@ -5,17 +5,27 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
 
   for(pietype in c("add", "iso", "db")){
     try({
-      if(input$match_filters == paste0("pie_",pietype)){
+      if(input$tab_search == "match_filters_tab" & input$match_filters == paste0("pie_",pietype)){
         i = d$pointNumber + 1
         showsubset = as.character(pieinfo[[pietype]]$Var.1[i])
+        mzMode = MetaboShiny::getIonMode(my_selection$mz, lcl$paths$patdb)
         if(!(showsubset %in% result_filters[[pietype]])){
-          result_filters[[pietype]] <- c(result_filters[[pietype]], showsubset)
+          if(pietype == "add"){
+            result_filters$add[[mzMode]] <- c(result_filters$add[[mzMode]], showsubset)
+          }else{
+            result_filters[[pietype]] <- c(result_filters[[pietype]], showsubset)
+          }
         }else{
-          curr_filt = result_filters[[pietype]]
-          result_filters[[pietype]] <- curr_filt[curr_filt != showsubset]
+          if(pietype == "add"){
+            curr_filt = result_filters$add[[mzMode]]
+            result_filters$add[[mzMode]] <- curr_filt[curr_filt != showsubset]
+          }else{
+            curr_filt = result_filters[[pietype]]
+            result_filters[[pietype]] <- curr_filt[curr_filt != showsubset]  
+          }
         }
         search$go <- T
-      }  
+      }
     }, silent = F)
   }
   
