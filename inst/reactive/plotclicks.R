@@ -9,16 +9,16 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
         i = d$pointNumber + 1
         showsubset = as.character(pieinfo[[pietype]]$Var.1[i])
         mzMode = MetaboShiny::getIonMode(my_selection$mz, lcl$paths$patdb)
-        if(!(showsubset %in% result_filters[[pietype]])){
-          if(pietype == "add"){
+        if(pietype == "add"){
+          if(!(showsubset %in% result_filters$add[[mzMode]])){
             result_filters$add[[mzMode]] <- c(result_filters$add[[mzMode]], showsubset)
           }else{
-            result_filters[[pietype]] <- c(result_filters[[pietype]], showsubset)
-          }
-        }else{
-          if(pietype == "add"){
             curr_filt = result_filters$add[[mzMode]]
             result_filters$add[[mzMode]] <- curr_filt[curr_filt != showsubset]
+            }
+        }else{
+          if(!(showsubset %in% result_filters[[pietype]])){
+            result_filters[[pietype]] <- c(result_filters[[pietype]], showsubset)
           }else{
             curr_filt = result_filters[[pietype]]
             result_filters[[pietype]] <- curr_filt[curr_filt != showsubset]  
