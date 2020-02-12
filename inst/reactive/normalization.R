@@ -12,6 +12,7 @@ shiny::observeEvent(input$initialize, {
                                     data.table = TRUE,
                                     header = T)
       
+      
       # create empty mSet with 'stat' as default mode
       mSet <- MetaboAnalystR::InitDataObjects("pktable",
                                               "stat",
@@ -62,10 +63,31 @@ shiny::observeEvent(input$initialize, {
       
       # get the part of csv with only the experimental variables
       first_part <- csv_orig[,..exp.vars, with=FALSE]
+      second_part <- csv_orig[,..mz.vars, with=FALSE]
+      
+      # get ppm
+      conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb)
+      ppm <- sprintf("%.1f",RSQLite::dbGetQuery(conn, "select ppm from params"))
+      RSQLite::dbDisconnect(conn)
+      
+      zeros_after_period <- function(x) {
+        if (isTRUE(all.equal(round(x),x))) return (0) # y would be -Inf for integer values
+        y <- log10(abs(x)-floor(abs(x)))   
+        ifelse(isTRUE(all.equal(round(y),y)), -y-1, -ceiling(y))} # corrects case ending with ..01
+      
+      # - - fix errors in rounding m/z - -
+      colnames(second_part) <- pbapply::pbsapply(colnames(second_part), function(mz){
+        ppmRange <- as.numeric(mz)/1e6 * as.numeric(ppm)
+        zeros = sapply(ppmRange,zeros_after_period)
+        decSpots = zeros + 1 # todo: verify this formula?
+        roundedMz <- formatC(as.numeric(mz), digits = decSpots, format = "f")
+        return(roundedMz)
+      })
+      
       # re-make csv with the corrected data
       csv <- cbind(first_part, # if 'label' is in excel file remove it, it will clash with the metaboanalystR 'label'
-                   "label" = first_part[,..condition][[1]], # set label as the initial variable of interest
-                   csv_orig[,-..exp.vars,with=FALSE])
+                   "label" = first_part[, ..condition][[1]], # set label as the initial variable of interest
+                   second_part)
       
       # remove outliers by making a boxplot and going from there
       if(input$remove_outliers){
@@ -278,13 +300,7 @@ shiny::observeEvent(input$initialize, {
       # save the used adducts to mSet
       shiny::setProgress(session=session, value= .9)
       
-      # get ppm
-      conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb)
-      
-      mSet$ppm <- sprintf("%.1f",RSQLite::dbGetQuery(conn, "select ppm from params"))
-      
-      RSQLite::dbDisconnect(conn)
-      
+      mSet$ppm <- ppm
       mSet$paired <- F
       mSet$dataSet$subset <- list()
       mSet$dataSet$exp.var <- condition

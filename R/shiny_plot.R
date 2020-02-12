@@ -885,6 +885,158 @@ ggPlotBar <- function(data,
   }
 }
 
+plotPCAloadings.2d <- function(mSet,
+                              cf,
+                              pcx,
+                              pcy,
+                              type = "pca",
+                              font,
+                              plot.theme,
+                              plotlyfy=T){
+  switch(type,
+         pca = {
+           df <- mSet$analSet$pca$rotation
+           x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
+           y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
+         }, plsda = {
+           plsda.table <- data.table::as.data.table(round(mSet$analSet$plsr$Xvar
+                                                          / mSet$analSet$plsr$Xtotvar
+                                                          * 100.0,
+                                                          digits = 2),
+                                                    keep.rownames = T)
+           colnames(plsda.table) <- c("PC", "var")
+           plsda.table[, "PC"] <- paste0("PC", 1:nrow(plsda.table))
+           
+           x.var <- plsda.table[PC == pcx]$var
+           y.var <- plsda.table[PC == pcy]$var
+
+           # --- coordinates ---
+           df <- mSet$analSet$plsr$loadings
+           class(df) <- "matrix"
+           colnames(df) <- paste0("PC", 1:ncol(df))
+         })
+  
+  df = as.data.frame(df)
+  df$extremity <- apply(df, 1, function(row) max(abs(c(row[[pcx]], 
+                                                       row[[pcy]]))))
+  
+  #df <- df[order(df$extremity, decreasing=T),]#[1:2000,]
+  
+  scaleFUN <- function(x) sprintf("%.4s", x)
+  
+  p <- ggplot(df, aes(df[[pcx]], df[[pcy]])) +
+    ggplot2::geom_point(aes(color = extremity,
+                            size = extremity,
+                            text = rownames(df),
+                            key = rownames(df)),
+                        #pch=21, size = 2, stroke = 2,
+                        #fill="white", 
+                        alpha=0.7)+
+    plot.theme() +
+    scale_size_area(max_size = 15) +
+    ggplot2::theme(legend.position="none",
+                   axis.text=ggplot2::element_text(size=font$ax.num.size),
+                   axis.title=ggplot2::element_text(size=font$ax.txt.size),
+                   plot.title = ggplot2::element_text(hjust = 0.5),
+                   axis.line = ggplot2::element_line(colour = 'black', size = .5),
+                   text = ggplot2::element_text(family = font$family))+
+    ggplot2::scale_x_continuous(labels=scaleFUN,name=gsubfn::fn$paste(if(type != "tsne") "$pcx ($x.var%)" else "t-sne dimension 1")) +
+    ggplot2::scale_y_continuous(labels=scaleFUN,name=gsubfn::fn$paste(if(type != "tsne") "$pcy ($y.var%)" else "t-sne dimension 2")) +
+    ggplot2::scale_colour_gradientn(colors=cf(20))
+    #scale_y_discrete(labels=scaleFUN) +
+    #scale_x_discrete(labels=scaleFUN)
+  if(plotlyfy){
+    ggplotly(p, tooltip = "text")
+  }else{
+    p
+  }  
+}
+
+plotPCAloadings.3d <- function(mSet,
+                              cf,
+                              pcx,
+                              pcy,
+                              pcz,
+                              type = "pca",
+                              font){
+  
+  switch(type,
+         pca = {
+           df <- mSet$analSet$pca$rotation
+           x.var <- round(mSet$analSet$pca$variance[pcx] * 100.00, digits=1)
+           y.var <- round(mSet$analSet$pca$variance[pcy] * 100.00, digits=1)
+           z.var <- round(mSet$analSet$pca$variance[pcz] * 100.00, digits=1)
+         }, plsda = {
+           plsda.table <- data.table::as.data.table(round(mSet$analSet$plsr$Xvar
+                                                          / mSet$analSet$plsr$Xtotvar
+                                                          * 100.0,
+                                                          digits = 2),
+                                                    keep.rownames = T)
+           colnames(plsda.table) <- c("PC", "var")
+           plsda.table[, "PC"] <- paste0("PC", 1:nrow(plsda.table))
+           
+           x.var <- plsda.table[PC == pcx]$var
+           y.var <- plsda.table[PC == pcy]$var
+           
+           # --- coordinates ---
+           df <- mSet$analSet$plsr$loadings
+           class(df) <- "matrix"
+           colnames(df) <- paste0("PC", 1:ncol(df))
+         })
+  
+  df <- as.data.frame(df)
+  
+  df$extremity <- apply(df, 1, function(row) max(abs(c(row[[pcx]], 
+                                                       row[[pcy]],
+                                                       row[[pcz]]))))
+  
+  basic_scene = list(
+    aspectmode="cube",
+    aspectratio=list(x=1,y=1,z=1),
+    hoverlabel = list(bgcolor = ~extremity),
+    camera = list(
+      eye = list(x=0, y=0, z= 2)
+    ),
+    xaxis = list(
+      titlefont = list(size = font$ax.txt.size * 1.5),
+      title = gsubfn::fn$paste("$pcx ($x.var%)")),
+    yaxis = list(
+      titlefont = list(size = font$ax.txt.size * 1.5),
+      title = gsubfn::fn$paste("$pcy ($y.var%)")),
+    zaxis = list(
+      titlefont = list(size = font$ax.txt.size * 1.5),
+      title = gsubfn::fn$paste("$pcz ($z.var%)"))) 
+  
+  cols = cf(8)
+  bins = seq(0, max(df$extremity), length.out = 8)
+  bins = bins/max(bins)
+  colscale <- lapply(1:8, function(i) c(bins[i], cols[i]))
+  
+  p <- plot_ly(df, 
+               x = df[,pcx], 
+               y = df[,pcy], 
+               z = df[,pcz],
+               key = rownames(df),
+               text = rownames(df),
+               hoverinfo = "text", 
+               marker = list(size = ~extremity * 800,
+                             sizemode = "diameter",
+                             sizes = c(5, 100),
+                             symbol = "circle",
+                             opacity = 1,
+                             color = ~extremity,
+                             colorscale = list(bins, cols),
+                             line = list(width = 0.1,
+                                         color = "white"),
+                             showscale = FALSE,
+                             showlegend = FALSE)
+               ) %>%
+    add_markers() %>%
+    layout(scene = basic_scene)
+  p
+}
+
+
 plotPCA.3d <- function(mSet,
                        cols,
                        shape.fac="label",
@@ -1037,9 +1189,7 @@ plotPCA.3d <- function(mSet,
       show.orbs <- c(show.orbs, worked)
     }
     
-    t <- list(
-      family = font$family
-    )
+    t <- list(family = font$family)
     
     # --- return ---
     pca_plot <- adj_plot %>% add_trace(
@@ -1050,7 +1200,7 @@ plotPCA.3d <- function(mSet,
       z = df[,pcz],
       visible = rep(T, times=fac.lvls),
       type = "scatter3d",
-      color = classes[orig_idx],
+      color = classes,
       colors = cols,
       opacity = 1,
       marker = list(
@@ -1068,6 +1218,7 @@ plotPCA.3d <- function(mSet,
     # --- return ---
     pca_plot
   })
+  
   
   basic_scene = list(
     aspectmode="cube",

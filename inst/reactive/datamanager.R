@@ -437,11 +437,20 @@ shiny::observe({
                                                    font = lcl$aes$font
                            )
                          })
+                         output$plot_pca_loadings <- plotly::renderPlotly({
+                           plotPCAloadings.2d(mSet,pcx = input$pca_x,
+                                              pcy = input$pca_y, 
+                                              type = "pca",
+                                              plotlyfy=TRUE,
+                                              font = lcl$aes$font,
+                                              cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                              plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]]
+                           )
+                         })
                        }else{
                          # render 3d plot
                          output$plot_pca <- plotly::renderPlotly({
                            MetaboShiny::plotPCA.3d(mSet, 
-                                                   lcl$aes$mycols,
                                                    pcx = input$pca_x,
                                                    pcy = input$pca_y,
                                                    pcz = input$pca_z, 
@@ -451,6 +460,15 @@ shiny::observe({
                                                    shape.fac = input$shape_var,
                                                    font = lcl$aes$font,
                                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                         })
+                         output$plot_pca_loadings <- plotly::renderPlotly({
+                           plotPCAloadings.3d(mSet,
+                                              pcx = input$pca_x,
+                                              pcy = input$pca_y,
+                                              pcz = input$pca_z, 
+                                              type = "pca",
+                                              font = lcl$aes$font,
+                                              cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                          })
                        }
                      }else{
@@ -512,6 +530,18 @@ shiny::observe({
                                                    plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                                    font = lcl$aes$font,
                                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                           
+                         })
+                         output$plot_plsda_loadings <- plotly::renderPlotly({
+                           plotPCAloadings.2d(mSet,pcx = input$plsda_x,
+                                              pcy = input$plsda_y, 
+                                              type = "plsda",
+                                              plotlyfy=TRUE,
+                                              font = lcl$aes$font,
+                                              cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                              plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]]
+                           )
+                           
                          })
                        }else{
                          # 3d
@@ -526,6 +556,15 @@ shiny::observe({
                                                    shape.fac = input$shape_var,
                                                    font = lcl$aes$font, 
                                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                         })
+                         output$plot_plsda_loadings <- plotly::renderPlotly({
+                           plotPCAloadings.3d(mSet,
+                                              pcx = input$plsda_x,
+                                              pcy = input$plsda_y,
+                                              pcz = input$plsda_z, 
+                                              type = "plsda",
+                                              font = lcl$aes$font,
+                                              cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                          })
                        }
                      }else{NULL}

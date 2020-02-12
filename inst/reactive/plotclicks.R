@@ -1,8 +1,9 @@
 # triggers when a plotly plot is clicked by user
 shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
   
-  d <- plotly::event_data("plotly_click", priority = "event") # get click details (which point, additional included info, etc...
-
+  d <<- plotly::event_data("plotly_click", priority = "event") # get click details (which point, additional included info, etc...
+  print(d)
+  
   for(pietype in c("add", "iso", "db")){
     try({
       if(input$tab_search == "match_filters_tab" & input$match_filters == paste0("pie_",pietype)){
@@ -38,11 +39,13 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                        input$overview
                      }, ml = "ml")
   
-  if(req(curr_tab) %in% c("tt", "fc", "rf", "aov", "volc")){ # these cases need the same processing and use similar scoring systems
+  if(req(curr_tab) %in% c("tt", "pca","plsda", "fc", "rf", "aov", "volc")){ # these cases need the same processing and use similar scoring systems
     if('key' %not in% colnames(d)) return(NULL)
     mzs <- switch(curr_tab,
                   tt = names(mSet$analSet$tt$p.value),
                   fc = names(mSet$analSet$fc$fc.log),
+                  plsda = rownames(mSet$analSet$plsr$loadings),
+                  pca = rownames(mSet$analSet$pca$rotation),
                   aov = if(mSet$timeseries)rownames(mSet$analSet$aov2$sig.mat) else names(mSet$analSet$aov$p.value),
                   volc = rownames(mSet$analSet$volcano$sig.mat)
     )

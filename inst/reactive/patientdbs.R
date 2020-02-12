@@ -53,7 +53,7 @@ shiny::observeEvent(input$create_db,{
       # change path CSV should be / is saved to in session
       #lcl$paths$csv_loc <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name,".csv"))
       # if loading in .csv files...
-      MetaboShiny::build.pat.db(db.name = lcl$paths$patdb,
+      build.pat.db(db.name = lcl$paths$patdb,
                    ppm = input$ppm,
                    pospath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath,
                    negpath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath,
@@ -120,10 +120,10 @@ shiny::observeEvent(input$create_csv, {
     
     fn_meta <- MetaboShiny::allSampInMeta(conn)
     fn_int <- MetaboShiny::allSampInPeaktable(conn)
-    
+  
     shiny::withProgress(min = 0, max = 1, {
       # write rows to csv
-      lapply(fn_meta, 
+      pbapply::pblapply(fn_meta, 
              #cl = session_cl, 
              function(filename){
                
@@ -140,7 +140,7 @@ shiny::observeEvent(input$create_csv, {
                                       file = lcl$paths$csv_loc,
                                       append = T)
                  }
-               })
+               }, silent = T)
                
                RSQLite::dbDisconnect(conn)
                
