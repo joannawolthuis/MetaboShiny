@@ -7,19 +7,7 @@
 
 shiny::observe({
   if(db_section$load){
-    
     shiny::showNotification("Loading database screen...")
-    
-    # create image objects in UI
-    lapply(gbl$constants$images, FUN=function(image){
-      output[[image$name]] <- shiny::renderImage({
-        filename <- image$path
-        # Return a list containing the filename and alt text
-        list(src = filename,
-             width = image$dimensions[1],
-             height = image$dimensions[2])
-      }, deleteFile = FALSE)
-    })
     
     # - - - load version numbers - - - 
     db.paths = list.files(lcl$paths$db_dir, pattern = "\\.db$",full.names = T)
@@ -322,7 +310,77 @@ shiny::observe({
         }, deleteFile = FALSE)
       })
     })
+    # these listeners trigger when build_'db' is clicked (loops through dblist in global)
+    lapply(c(gbl$vectors$db_list), FUN=function(db){
+      shiny::observeEvent(input[[paste0("favorite_", db)]], {
+        favorites = names(which(unlist(sapply(gbl$vectors$db_list, function(db) input[[paste0("favorite_", db)]]))))
+        if(!is.null(favorites)){
+          if(length(favorites) > 0 ){
+            MetaboShiny::setOption(lcl$paths$opt.loc, "dbfavs", paste0(favorites, collapse=","))
+            gbl$vectors$db_categories$favorite <<- favorites     
+          }
+        }
+      })
+    })
     
+    # these listeners trigger when build_'db' is clicked (loops through dblist in global)
+    lapply(c(gbl$vectors$db_list), FUN=function(db){
+      shiny::observeEvent(input[[paste0("build_", db)]], {
+        withProgress({
+          # send necessary functions and libraries to parallel threads
+          parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
+            "isotopes"
+          )) 
+          pkgs = c("data.table", "enviPat", 
+                   "KEGGREST", "XML", 
+                   "SPARQL", "RCurl", 
+                   "MetaDBparse")
+          parallel::clusterCall(session_cl, function(pkgs) {
+            for (req in pkgs) {
+              library(req, character.only = TRUE)
+            }
+          }, pkgs = pkgs)
+          
+          shiny::setProgress(session = session, 0.1)
+          
+          if(input$db_build_mode %in% c("base", "both")){
+            # check if custom
+            custom_csv = file.path(lcl$paths$db_dir, paste0(db,"_source"), "base.csv")
+            custom = file.exists(custom_csv)
+            # - - - - - - - -
+            MetaDBparse::buildBaseDB(dbname = db,
+                                     outfolder = normalizePath(lcl$paths$db_dir), 
+                                     cl = 0,#session_cl,
+                                     custom_csv_path = if(!custom) NULL else custom_csv,
+                                     silent = F)
+          }
+          
+          # build base db (differs per db, parsers for downloaded data)
+          shiny::setProgress(session = session, 0.5)
+          
+          if(input$db_build_mode %in% c("extended", "both")){
+            
+            if(!grepl(db, pattern = "maconda")){
+              if(file.exists(file.path(lcl$paths$db_dir, paste0(db, ".db")))){
+                my_range <- input$db_mz_range
+                outfolder <- lcl$paths$db_dir
+                buildExtDB(base.dbname = db,
+                                        outfolder = outfolder,
+                                        cl = session_cl,
+                                        blocksize = 500,
+                                        mzrange = my_range,
+                                        adduct_table = adducts,
+                                        adduct_rules = adduct_rules, 
+                                        silent = T,
+                                        ext.dbname = "extended") #TODO: figure out the optimal fetch limit... seems 200 for now
+              }else{
+                MetaboShiny::metshiAlert("Please build base DB first! (can be changed in settings)")
+              }
+            }
+          } 
+        })
+      })
+    })
   }
 })
 
@@ -352,80 +410,6 @@ shiny::observeEvent(input$build_custom_db, {
 })
 
 
-# these listeners trigger when build_'db' is clicked (loops through dblist in global)
-lapply(c(gbl$vectors$db_list), FUN=function(db){
-  shiny::observeEvent(input[[paste0("favorite_", db)]], {
-    favorites = names(which(unlist(sapply(gbl$vectors$db_list, function(db) input[[paste0("favorite_", db)]]))))
-    if(!is.null(favorites)){
-      if(length(favorites) > 0 ){
-        MetaboShiny::setOption(lcl$paths$opt.loc, "dbfavs", paste0(favorites, collapse=","))
-        gbl$vectors$db_categories$favorite <<- favorites     
-      }
-    }
-  })
-})
-
-# these listeners trigger when build_'db' is clicked (loops through dblist in global)
-lapply(c(gbl$vectors$db_list), FUN=function(db){
-  shiny::observeEvent(input[[paste0("build_", db)]], {
-    withProgress({
-      # send necessary functions and libraries to parallel threads
-      parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
-        "isotopes"
-      )) 
-      pkgs = c("data.table", "enviPat", 
-               "KEGGREST", "XML", 
-               "SPARQL", "RCurl", 
-               "MetaDBparse")
-      parallel::clusterCall(session_cl, function(pkgs) {
-        for (req in pkgs) {
-          library(req, character.only = TRUE)
-        }
-      }, pkgs = pkgs)
-      
-      shiny::setProgress(session = session, 0.1)
-      
-      if(input$db_build_mode %in% c("base", "both")){
-        # check if custom
-        if(!(db %in% gbl$vectors$db_list)){
-          custom = TRUE
-        }else{
-          custom = FALSE
-        }
-        # - - - - - - - -
-        MetaDBparse::buildBaseDB(dbname = db,
-                                 outfolder = normalizePath(lcl$paths$db_dir), 
-                                 cl = session_cl,
-                                 custom_csv_path = if(!custom) NULL else file.path(lcl$paths$db_dir, paste0(db,"_source"), "base.csv"),
-                                 silent = F)
-      }
-      
-      # build base db (differs per db, parsers for downloaded data)
-      shiny::setProgress(session = session, 0.5)
-      
-      if(input$db_build_mode %in% c("extended", "both")){
-        
-        if(!grepl(db, pattern = "maconda")){
-          if(file.exists(file.path(lcl$paths$db_dir, paste0(db, ".db")))){
-            my_range <- input$db_mz_range
-            outfolder <- lcl$paths$db_dir
-            MetaDBparse::buildExtDB(base.dbname = db,
-                                    outfolder = outfolder,
-                                    cl = session_cl,
-                                    blocksize = 500,
-                                    mzrange = my_range,
-                                    adduct_table = adducts,
-                                    adduct_rules = adduct_rules, 
-                                    silent = T,
-                                    ext.dbname = "extended") #TODO: figure out the optimal fetch limit... seems 200 for now
-          }else{
-            MetaboShiny::metshiAlert("Please build base DB first! (can be changed in settings)")
-          }
-        }
-      } 
-    })
-  })
-})
 
 output$db_example <- DT::renderDataTable({
   DT::datatable(data = data.table::data.table(

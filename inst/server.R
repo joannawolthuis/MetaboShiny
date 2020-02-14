@@ -23,13 +23,6 @@ function(input, output, session) {
   
   runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
   
-  options('unzip.unzip' = getOption("unzip"),
-          'download.file.extra' = switch(runmode, 
-                                         docker="--insecure",
-                                         local=""),  # bad but only way to have internet in docker...
-          'download.file.method' = 'curl',
-          width = 1200, height=800)
-  
   mSet <- NULL
   opts <- list()
   showtext::showtext_auto(enable = T)
@@ -140,19 +133,31 @@ function(input, output, session) {
       
       for(db in all_dbs[which.custom]){
         dbfolder = paste0(db, "_source")
-        shiny::addResourcePath(prefix = db,
-                               directoryPath = normalizePath(file.path(lcl$paths$db_dir, dbfolder)))
-        
+        imgpath = normalizePath(file.path(lcl$paths$db_dir, dbfolder, "logo.png"))
+
         # add image to gbl images
+        imgname = paste0(paste0(db, '_logo'), ".png")
+        file.copy(imgpath, file.path(system.file('www', package = 'MetaboShiny'), imgname))
         gbl$constants$images <<- append(gbl$constants$images, values = 
                                           list(list(name = paste0(db, '_logo'), 
-                                                    path = file.path(db, "logo.png"),
-                                                    dimensions = c(150, 150))))
+                                               path = file.path("www", imgname),
+                                               dimensions = c(150, 150))))
         
         # add db info
         load(file = file.path(lcl$paths$db_dir, dbfolder, "info.RData"))
         gbl$constants$db.build.info[[db]] <<- dbinfo
       }
+      
+      # create image objects in UI
+      lapply(gbl$constants$images, FUN=function(image){
+        output[[image$name]] <- shiny::renderImage({
+          filename <- image$path
+          # Return a list containing the filename and alt text
+          list(src = filename,
+               width = image$dimensions[1],
+               height = image$dimensions[2])
+        }, deleteFile = FALSE)
+      })
       
       db_section$load <- TRUE
       
@@ -181,7 +186,7 @@ gcols = #1C1400&#FFE552&#D49C1A&#EBC173&#8A00ED&#00E0C2&#95C200&#FF6BE4&#FFFFFF&
 gspec = RdBu
 mode = complete
 cores = 1
-apikey = ')
+apikey =  ')
         writeLines(contents, lcl$paths$opt.loc)
       }
       
@@ -189,6 +194,13 @@ apikey = ')
       
       shiny::showNotification("Loading interface...")
       opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
+      
+      options('unzip.unzip' = getOption("unzip"),
+              'download.file.extra' = switch(runmode, 
+                                             docker="--insecure",
+                                             local=""),  # bad but only way to have internet in docker...
+              'download.file.method' = 'curl',
+              width = 1200, height=800)
       
       shiny::updateSliderInput(session, "ncores", value = as.numeric(opts$cores))
       # send specific functions/packages to other threads
@@ -229,9 +241,9 @@ apikey = ')
       
       shiny::updateCheckboxInput(session, "omit_unknown", switch(opts$omit_unknown, yes=TRUE, no=FALSE))
       
-      if(opts$apikey != " "){
-        output$api_set <- shiny::renderText("key saved!")
-      }
+      #if(opts$apikey != " "){
+      #  output$api_set <- shiny::renderText("key saved!")
+      #}
       
       # parse color opts
       lcl$aes$mycols <<- MetaboShiny::get.col.map(lcl$paths$opt.loc) # colours for discrete sets, like group A vs group B etc.
@@ -336,11 +348,7 @@ apikey = ')
       shiny::updateSelectInput(session, 
                                "color_ramp", 
                                selected = opts$gspec)
-      
-      #TODO: set these
-      #shiny::div(class="plus", img(class="imagetop", src=opts$taskbar_image, width="100px", height="100px")),
-      #shiny::div(class="minus", img(class="imagebottom", src=opts$taskbar_image, width="100px", height="100px"))
-      
+  
       shiny::updateCheckboxInput(session, "db_only", 
                                  value=switch(opts$mode, 
                                               dbonly=T, 
@@ -687,7 +695,6 @@ apikey = ')
     }
   })
   
-  
   shiny::observe({
     if(my_selection$struct != "" & input$tab_iden_2 == "molmz"){
       if(!mSet$metshiParams$prematched){
@@ -886,9 +893,11 @@ apikey = ')
   output$curr_add <- shiny::renderText({
     paste0(unlist(result_filters$add), collapse=", ")
   })
+  
   output$curr_iso <- shiny::renderText({
     paste0(result_filters$iso, collapse=", ")
   })
+  
   output$curr_db <- shiny::renderText({
     paste0(result_filters$db, collapse=", ")
   })

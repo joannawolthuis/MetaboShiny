@@ -554,6 +554,7 @@ ggPlotPattern <- function(mSet, cf, n=20,
   p <- ggplot2::ggplot(data=profile) +
     ggplot2::geom_bar(mapping = aes(x = reorder(cpd, -`p-value`), 
                                     y = correlation, 
+                                    key = reorder(cpd, -`p-value`),
                                     color = `p-value`, 
                                     text = reorder(cpd, -`p-value`),
                                     fill = `p-value`), 
@@ -764,7 +765,7 @@ ggPlotROC <- function(data,
   
   cols = cf(attempts)
 
-  p <- ggplot(perf.long, aes(FPR,TPR)) +
+  p <- ggplot(perf.long, aes(FPR,TPR,key=attempt)) +
     ggplot2::geom_path(alpha=.5,
                        cex=.7,
                        aes(color = if(class_type == "m") comparison else as.factor(attempt), 
@@ -844,7 +845,7 @@ ggPlotBar <- function(data,
   
   p <- ggplot(data.subset, aes(x = reorder(mz,-importance.mean),
                                y = importance.mean,
-                               label = mz)) +
+                               key = reorder(mz,-importance.mean))) +
     ggplot2::geom_bar(stat = "identity",
                       aes(fill = importance.mean)) +
     ggplot2::scale_fill_gradientn(colors=cf(20)) +
@@ -878,7 +879,7 @@ ggPlotBar <- function(data,
   mzdata$mz <- gsub(mzdata$mz, pattern = "`|'", replacement="")
   
   if(plotlyfy){
-    list(mzdata = mzdata, plot = plotly::ggplotly(p, tooltip="label") %>%
+    list(mzdata = mzdata, plot = plotly::ggplotly(p, tooltip="key") %>%
            config(toImageButtonOptions = list(format = "svg")))
   }else{
     list(mzdata = mzdata, plot = p)

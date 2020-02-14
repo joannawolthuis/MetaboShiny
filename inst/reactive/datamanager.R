@@ -438,7 +438,7 @@ shiny::observe({
                            )
                          })
                          output$plot_pca_loadings <- plotly::renderPlotly({
-                           plotPCAloadings.2d(mSet,pcx = input$pca_x,
+                           MetaboShiny::plotPCAloadings.2d(mSet,pcx = input$pca_x,
                                               pcy = input$pca_y, 
                                               type = "pca",
                                               plotlyfy=TRUE,
@@ -462,7 +462,7 @@ shiny::observe({
                                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                          })
                          output$plot_pca_loadings <- plotly::renderPlotly({
-                           plotPCAloadings.3d(mSet,
+                           MetaboShiny::plotPCAloadings.3d(mSet,
                                               pcx = input$pca_x,
                                               pcy = input$pca_y,
                                               pcz = input$pca_z, 
@@ -533,7 +533,7 @@ shiny::observe({
                            
                          })
                          output$plot_plsda_loadings <- plotly::renderPlotly({
-                           plotPCAloadings.2d(mSet,pcx = input$plsda_x,
+                           MetaboShiny::plotPCAloadings.2d(mSet,pcx = input$plsda_x,
                                               pcy = input$plsda_y, 
                                               type = "plsda",
                                               plotlyfy=TRUE,
@@ -558,7 +558,7 @@ shiny::observe({
                                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                          })
                          output$plot_plsda_loadings <- plotly::renderPlotly({
-                           plotPCAloadings.3d(mSet,
+                           MetaboShiny::plotPCAloadings.3d(mSet,
                                               pcx = input$plsda_x,
                                               pcy = input$plsda_y,
                                               pcz = input$plsda_z, 
@@ -577,13 +577,13 @@ shiny::observe({
                                       target = "res")
                        
                        roc_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
+                       tbl = unique(roc_data$perf[,c("AUC", "comparison", "attempt")])
                        
                        output$ml_overview_tab <- DT::renderDataTable({
-                         tbl = unique(roc_data$perf[,c("AUC_PAIR", "comparison", "attempt")])
-                         colnames(tbl)[1] <- "AUC"
                          MetaboShiny::metshiTable(content = tbl)
                        })
                        
+                       roc_data$perf <- data.table::as.data.table(roc_data$perf)
                        output$ml_roc <- plotly::renderPlotly({
                          plotly::ggplotly(MetaboShiny::ggPlotROC(roc_data,
                                                                  input$ml_attempts,

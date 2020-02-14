@@ -2,8 +2,7 @@
 shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
   
   d <<- plotly::event_data("plotly_click", priority = "event") # get click details (which point, additional included info, etc...
-  print(d)
-  
+
   for(pietype in c("add", "iso", "db")){
     try({
       if(input$tab_search == "match_filters_tab" & input$match_filters == paste0("pie_",pietype)){
@@ -39,21 +38,25 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                        input$overview
                      }, ml = "ml")
   
-  if(req(curr_tab) %in% c("tt", "pca","plsda", "fc", "rf", "aov", "volc")){ # these cases need the same processing and use similar scoring systems
-    if('key' %not in% colnames(d)) return(NULL)
-    mzs <- switch(curr_tab,
-                  tt = names(mSet$analSet$tt$p.value),
-                  fc = names(mSet$analSet$fc$fc.log),
-                  plsda = rownames(mSet$analSet$plsr$loadings),
-                  pca = rownames(mSet$analSet$pca$rotation),
-                  aov = if(mSet$timeseries)rownames(mSet$analSet$aov2$sig.mat) else names(mSet$analSet$aov$p.value),
-                  volc = rownames(mSet$analSet$volcano$sig.mat)
-    )
-    if(d$key %not in% mzs) return(NULL)
-    my_selection$mz <- d$key
-    
-  }else if(req(curr_tab) == "ml"){ # makes ROC curves and boxplots clickable
-    switch(input$ml_results, roc = { # if roc, check the curve numbers of the roc plot
+  if(req(curr_tab) %in% c("tt", 
+                          "pca",
+                          "ml",
+                          "plsda", 
+                          "fc", 
+                          "rf", 
+                          "aov", 
+                          "pattern",
+                          #"heatmap", #TODO:possible?
+                          "volc")){ # these cases need the same processing and use similar scoring systems
+    # mzs <- switch(curr_tab,
+    #               tt = names(mSet$analSet$tt$p.value),
+    #               fc = names(mSet$analSet$fc$fc.log),
+    #               plsda = rownames(mSet$analSet$plsr$loadings),
+    #               pca = rownames(mSet$analSet$pca$rotation),
+    #               aov = if(mSet$timeseries)rownames(mSet$analSet$aov2$sig.mat) else names(mSet$analSet$aov$p.value),
+    #               volc = rownames(mSet$analSet$volcano$sig.mat)
+    # )
+    if(curr_tab == "ml" & input$ml_results == "roc"){
       attempt = d$curveNumber + 1
       xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
       if(attempt > 0){
@@ -65,28 +68,21 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                                            row.names = gsub(imp$mz,
                                                             pattern = "`|`",
                                                             replacement=""))
-          DT::datatable(lcl$tables$ml_roc,
-                        selection = 'single',
-                        autoHideNavigation = T,
-                        options = list(lengthMenu = c(5, 10, 15), pageLength = 5))
+         MetaboShiny:: metshiTable(lcl$tables$ml_roc)
         })
       }
-    }, bar = { # for bar plot just grab the # bar clicked
-      try({
-        supposed_mz <- as.character(lcl$tables$ml_bar[d$x,"mz"][[1]])
-        if(supposed_mz %in% colnames(mSet$dataSet$preproc)){
-          my_selection$mz <- supposed_mz
-        }
-      })
-    })}else if(req(curr_tab) == "heatmap"){#grepl(pattern = "heatmap", x = curr_tab)){ # heatmap requires the table used to make it saved to global (hmap_mzs)
+    }else{
+      if('key' %not in% colnames(d)) return(NULL)
+      if(gsub(d$key[[1]],pattern="`",replacement="") %not in% colnames(mSet$dataSet$orig)) return(NULL)
+      my_selection$mz <- gsub(d$key[[1]],pattern="`",replacement="")
+    }
+    # TODO: ADD 'KEY' TO THE OTHERS, WAY EASIER TO PROCESS
+  }else if(req(curr_tab) == "heatmap"){
       if(!is.null(d$y)){
         if(d$y > length(lcl$vectors$heatmap)) return(NULL)
         my_selection$mz <- lcl$vectors$heatmap[d$y]  
       }
-    }else if(curr_tab == "pattern"){
-      my_selection$mz <- rownames(mSet$analSet$corr$cor.mat)[d$curveNumber + 1]
     }else if(curr_tab == "enrich"){
-      
       # TODO: make non-redundant..
       curr_pw <- rownames(mSet$analSet$enrich$mummi.resmat)[d$pointNumber + 1]
       pw_i <- which(mSet$analSet$enrich$path.nms == curr_pw)
@@ -95,8 +91,6 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
       myHits <- hit_tbl[Matched.Compound %in% cpds]
       myHits$Mass.Diff <- as.numeric(myHits$Mass.Diff)/(as.numeric(myHits$Query.Mass)*1e-6)
       colnames(myHits) <- c("rn", "identifier", "adduct", "dppm")
-      
       enrich$current <- myHits
-      
     }
 })
