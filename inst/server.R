@@ -2,6 +2,8 @@
 
 function(input, output, session) {
   
+  require(shinyjs)
+  
   shiny::showModal(MetaboShiny::loadModal())
   
   shiny::showNotification("Starting server process...")
@@ -1219,6 +1221,41 @@ apikey =  ')
   }  
   
   # ==== ON EXIT ====
+  
+  observeEvent(input$quit_metshi, {
+    if(!is.null(mSet)){
+      shinyWidgets::confirmSweetAlert(
+        session = session,
+        inputId = "save_exit",
+        text = tags$div(
+          shiny::img(#class = "rotategem", 
+            src = "gemmy_rainbow.png", 
+            width = "70px", height = "70px"),
+          br()
+        ),
+        btn_labels = c("No", "Yes"),
+        title = "Save before exiting?",
+        html = TRUE
+      )
+    }else{
+      js$closeWindow()
+      shiny::stopApp()
+    }
+  })
+  
+  observeEvent(input$save_exit,{
+    if(input$save_exit){
+      shiny::withProgress({
+        fn <- paste0(tools::file_path_sans_ext(lcl$paths$patdb), ".metshi")
+        if(exists("mSet")){
+          save(mSet, file = fn)
+        }
+      })  
+      js$closeWindow()   
+      shiny::stopApp()
+    }
+  },ignoreNULL = T)
+  
   onStop(function() {
     print("Closing metaboShiny ~ヾ(＾∇＾)")
     debug_input <<- shiny::isolate(shiny::reactiveValuesToList(input))
@@ -1239,6 +1276,5 @@ apikey =  ')
     session_cl <<- NULL
     rmv <- list.files(".", pattern = ".csv|.log", full.names = T)
     if(all(file.remove(rmv))) NULL
-    print("Done..")
   })
 }

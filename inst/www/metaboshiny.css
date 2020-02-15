@@ -454,3 +454,7 @@ a {
     transform: rotate(720deg) scale(0);
   }
 }
+
+.swal2-icon.swal2-question {
+    display: none !important;
+}
