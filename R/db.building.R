@@ -11,12 +11,6 @@ build.pat.db <- function(db.name,
                          wipe.regex = ".*_(?>POS|NEG)_[0+]*"){
 
   ppm = as.numeric(ppm)
-
-  # ==== TESTING ====
-  
-  #metapath = "~/Documents/Documents/code/metshi_paper/MTBLS28_20181107_105647/s_mtbls28_v2.txt"
-  #pospath = "~/Documents/Documents/code/metshi_paper/MTBLS28_20181107_105647/m_mtbls28_POS_v2_maf.tsv"
-  #negpath = "~/Documents/Documents/code/metshi_paper/MTBLS28_20181107_105647/m_mtbls28_NEG_v2_maf.tsv"
   
   # =================
   
@@ -46,6 +40,11 @@ build.pat.db <- function(db.name,
   colnames(poslist)[adjust] <- gsub(colnames(poslist)[adjust], pattern = wipe.regex, replacement = "", perl=T)
   colnames(neglist)[adjust] <- gsub(colnames(neglist)[adjust], pattern = wipe.regex, replacement = "", perl=T)
   
+  zeros_after_period <- function(x) {
+    if (isTRUE(all.equal(round(x),x))) return (0) # y would be -Inf for integer values
+    y <- log10(abs(x)-floor(abs(x)))   
+    ifelse(isTRUE(all.equal(round(y),y)), -y-1, -ceiling(y))} # corrects case ending with ..01
+  
   unique.samples = unique(metadata.filt$sample)
   
   keep.samples.pos <- intersect(colnames(poslist), unique.samples)
@@ -61,6 +60,23 @@ build.pat.db <- function(db.name,
   setnames(poslist, "mass_to_charge", "mzmed", skip_absent = T)
   setnames(neglist, "mass_to_charge", "mzmed", skip_absent = T)
   
+  # - - fix errors in rounding m/z - -
+  poslist$mzmed <- pbapply::pbsapply(poslist$mzmed, function(mz){
+    ppmRange <- as.numeric(mz)/1e6 * as.numeric(ppm)
+    zeros = sapply(ppmRange,zeros_after_period)
+    decSpots = zeros + 1 # todo: verify this formula?
+    roundedMz <- formatC(as.numeric(mz), digits = decSpots, format = "f")
+    return(paste0(roundedMz, "+"))
+  })
+  
+  neglist$mzmed <- pbapply::pbsapply(neglist$mzmed, function(mz){
+    ppmRange <- as.numeric(mz)/1e6 * as.numeric(ppm)
+    zeros = sapply(ppmRange,zeros_after_period)
+    decSpots = zeros + 1 # todo: verify this formula?
+    roundedMz <- formatC(as.numeric(mz), digits = decSpots, format = "f")
+    return(paste0(roundedMz, "-"))
+  })
+  
   keepcols.pos <- c("mzmed", keep.samples.pos)
   keepcols.neg <- c("mzmed", keep.samples.neg)
   
@@ -73,7 +89,7 @@ build.pat.db <- function(db.name,
   
  if(inshiny) setProgress(.20)
   
-  mzvals <- data.table::data.table(mzmed = c(as.numeric(poslist$mzmed), as.numeric(neglist$mzmed)),
+  mzvals <- data.table::data.table(mzmed = c(poslist$mzmed, neglist$mzmed),
                                    foundinmode = c(rep("positive", nrow(poslist)), rep("negative", nrow(neglist))))
   
   if(inshiny) setProgress(.30)

@@ -458,7 +458,7 @@ apikey =  ')
     if(my_selection$mz != ""){
       for(pie in c("add", "iso","db")){
         if(pie == "add"){
-          mzMode = MetaboShiny::getIonMode(my_selection$mz, lcl$paths$patdb)
+          mzMode =if(grepl(my_selection$mz, pattern = "-")) "negative" else "positive"
           result_filters$add[[mzMode]] <- result_filters$add[[mzMode]][!is.na(result_filters$add[[mzMode]])]
         }else{
           result_filters[[pie]] <- result_filters[[pie]][!is.na(result_filters[[pie]])]
@@ -472,14 +472,13 @@ apikey =  ')
     if(search$go){
       shiny::withProgress({
         if(input$tab_iden_2 == "mzmol"){
-          
           if(lcl$prev_mz != my_selection$mz){
             matches = data.table::as.data.table(MetaboShiny::get_prematches(who = my_selection$mz,
-                                                                            what = "map.query_mz",
-                                                                            patdb = lcl$paths$patdb,
-                                                                            showadd = c(),
-                                                                            showdb = c(),
-                                                                            showiso = c()))
+                                                               what = "map.query_mz",
+                                                               patdb = lcl$paths$patdb,
+                                                               showadd = c(),
+                                                               showdb = c(),
+                                                               showiso = c()))
             
             if(nrow(matches) == 0){
               return(NULL)
@@ -491,14 +490,14 @@ apikey =  ')
             pieinfo$iso <- reshape::melt(table(matches$isocat))
           }
           
-          mzMode = MetaboShiny::getIonMode(my_selection$mz, lcl$paths$patdb)
-
+          mzMode = if(grepl(my_selection$mz, pattern="\\-")) "negative" else "positive"
+          
           matches = data.table::as.data.table(MetaboShiny::get_prematches(who = my_selection$mz,
-                                                                          what = "map.query_mz",
-                                                                          patdb = lcl$paths$patdb,
-                                                                          showadd = result_filters$add[[mzMode]],
-                                                                          showdb = result_filters$db,
-                                                                          showiso = result_filters$iso))  
+                                                             what = "map.query_mz",
+                                                             patdb = lcl$paths$patdb,
+                                                             showadd = result_filters$add[[mzMode]],
+                                                             showdb = result_filters$db,
+                                                             showiso = result_filters$iso))  
           
           if(nrow(matches)>0){
             
@@ -602,81 +601,82 @@ apikey =  ')
   
   shiny::observe({
     if(my_selection$name != ""){
-      
-      subsec = data.table::as.data.table(shown_matches$forward_full)[name == my_selection$name]
-      
-      if(grepl("SYNONYMS:", x = subsec$description)){
-        has_syn = T
-        subsec$source <- paste0("synonymSEPERATOR", subsec$source)
-        subsec$description <- gsub(subsec$description, pattern = "SYNONYMS: ", replacement="")
-      }else{
-        has_syn = F
-      }
-      
-      subsec <- subsec[, .(name, 
-                           source = strsplit(source, split = "SEPERATOR")[[1]], 
-                           structure = structure, 
-                           description = strsplit(description, split = "SEPERATOR")[[1]]
-      )
-      ]
-      
-      subsec <- aggregate(subsec, by = list(subsec$source), FUN=function(x) paste0(unique(x), collapse="."))
-      
-      keep <- which(trimws(subsec$description) %not in% c("","Unknown","unknown", " ",
-                                                          "Involved in pathways: . More specifically: . Also associated with compound classes:"))
-      subsec <- subsec[keep,]
-      
-      if(has_syn){
-        subsec <- subsec[order(as.numeric(grepl(subsec$source, pattern = "synonym")), decreasing = T),]
-      }
-      
-      if(nrow(subsec) > 0){
+      if(nrow(shown_matches$forward_full) > 0 ){
+        subsec = data.table::as.data.table(shown_matches$forward_full)[name == my_selection$name]
         
-        # render descriptions seperately
-        output$desc_ui <- shiny::renderUI({
+        if(grepl("SYNONYMS:", x = subsec$description)){
+          has_syn = T
+          subsec$source <- paste0("synonymSEPERATOR", subsec$source)
+          subsec$description <- gsub(subsec$description, pattern = "SYNONYMS: ", replacement="")
+        }else{
+          has_syn = F
+        }
+        
+        subsec <- subsec[, .(name, 
+                             source = strsplit(source, split = "SEPERATOR")[[1]], 
+                             structure = structure, 
+                             description = strsplit(description, split = "SEPERATOR")[[1]]
+        )
+        ]
+        
+        subsec <- aggregate(subsec, by = list(subsec$source), FUN=function(x) paste0(unique(x), collapse="."))
+        
+        keep <- which(trimws(subsec$description) %not in% c("","Unknown","unknown", " ",
+                                                            "Involved in pathways: . More specifically: . Also associated with compound classes:"))
+        subsec <- subsec[keep,]
+        
+        if(has_syn){
+          subsec <- subsec[order(as.numeric(grepl(subsec$source, pattern = "synonym")), decreasing = T),]
+        }
+        
+        if(nrow(subsec) > 0){
           
-          lapply(1:nrow(subsec), function(i){
+          # render descriptions seperately
+          output$desc_ui <- shiny::renderUI({
             
-            row = subsec[i,]
-            
-            # icon(s) in one row
-            db = row$source
-            desc_id = paste0("curr_desc_", db)
-            desc = row$description
-            #output[[desc_id]] <- shiny::renderText({desc})
-            
-            if(db == "synonym"){
-              ui = shiny::fluidRow(align="center", 
-                                   tags$h3("Synonyms:"),
-                                   helpText(desc),
-                                   shiny::br()
-              )
-            }else{
-              id = gbl$constants$db.build.info[[db]]$image_id
-              address = unlist(sapply(gbl$constants$images, function(item) if(item$name == id) item$path else NULL))
+            lapply(1:nrow(subsec), function(i){
               
-              output_id = paste0("desc_icon_", db)
+              row = subsec[i,]
               
-              output[[output_id]] <- shiny::renderImage({
-                list(src = address, height=30)
-              }, deleteFile = FALSE)
+              # icon(s) in one row
+              db = row$source
+              desc_id = paste0("curr_desc_", db)
+              desc = row$description
+              #output[[desc_id]] <- shiny::renderText({desc})
               
-              ui = shiny::fluidRow(align="center", 
-                                   shiny::imageOutput(output_id,inline = T),
-                                   shiny::br(),
-                                   helpText(desc),
-                                   shiny::br()
-              )
-            }
-            # text cloud underneath https://codepen.io/rikschennink/pen/mjywQb
-            return(ui)
+              if(db == "synonym"){
+                ui = shiny::fluidRow(align="center", 
+                                     tags$h3("Synonyms:"),
+                                     helpText(desc),
+                                     shiny::br()
+                )
+              }else{
+                id = gbl$constants$db.build.info[[db]]$image_id
+                address = unlist(sapply(gbl$constants$images, function(item) if(item$name == id) item$path else NULL))
+                
+                output_id = paste0("desc_icon_", db)
+                
+                output[[output_id]] <- shiny::renderImage({
+                  list(src = address, height=30)
+                }, deleteFile = FALSE)
+                
+                ui = shiny::fluidRow(align="center", 
+                                     shiny::imageOutput(output_id,inline = T),
+                                     shiny::br(),
+                                     helpText(desc),
+                                     shiny::br()
+                )
+              }
+              # text cloud underneath https://codepen.io/rikschennink/pen/mjywQb
+              return(ui)
+            })
+          })  
+          
+        }else{
+          output$desc_ui <- shiny::renderUI({
+            helpText("No additional info available!")
           })
-        })  
-        
-      }else{
-        output$desc_ui <- shiny::renderUI({
-          helpText("No additional info available!")
-        })
+        }
       }
     }
   })
@@ -721,9 +721,7 @@ apikey =  ')
             pieinfo$iso <- reshape::melt(table(rev_matches$isocat))
           }
         }
-          
-        mzMode = MetaboShiny::getIonMode(my_selection$mz, lcl$paths$patdb)
-        
+        mzMode =if(grepl(my_selection$mz, pattern = "-")) "negative" else "positive"
         rev_matches = MetaboShiny::get_prematches(who = my_selection$struct,
                                                   what = "con.structure",
                                                   patdb = lcl$paths$patdb,
@@ -758,7 +756,7 @@ apikey =  ')
         
         if(!is.null(pievec)){
           if(which_pie == "add"){
-            mzMode = MetaboShiny::getIonMode(my_selection$mz, lcl$paths$patdb)
+            mzMode =if(grepl(my_selection$mz, pattern = "-")) "negative" else "positive"
             targets = result_filters$add[[mzMode]]
           }else{
             targets = result_filters[[which_pie]]
@@ -868,7 +866,7 @@ apikey =  ')
   })
   
   # print current compound in sidebar
-  output$curr_mz <- shiny::renderText(my_selection$mz)
+  output$curr_mz <- shiny::renderText(stringr::str_match(my_selection$mz, "(\\d+\\.\\d+)")[,2])
   
   # make miniplot for sidebar with current compound
   output$curr_plot <- plotly::renderPlotly({
@@ -908,8 +906,8 @@ apikey =  ')
     if(my_selection$mz != ""){
       scanmode$positive <- F
       scanmode$negative <- F
-      ion_mode <- MetaboShiny::getIonMode(my_selection$mz, lcl$paths$patdb)
-      for(mode in ion_mode){
+      mzMode =if(grepl(my_selection$mz, pattern = "-")) "negative" else "positive"
+      for(mode in mzMode){
         scanmode[[mode]] <- TRUE
       }
     }
@@ -1250,10 +1248,10 @@ apikey =  ')
         if(exists("mSet")){
           save(mSet, file = fn)
         }
-      })  
-      js$closeWindow()   
-      shiny::stopApp()
+      }) 
     }
+    js$closeWindow()   
+    shiny::stopApp()
   },ignoreNULL = T)
   
   onStop(function() {

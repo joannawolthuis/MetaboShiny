@@ -9,10 +9,11 @@ shiny::observeEvent(input$clear_prematch,{
   RSQLite::dbExecute(conn, "VACUUM")
   mSet$metshiParams$prematched <<- FALSE
   search_button$go <- TRUE
-  RSQLite::dbDisconnect(conn)
+  #RSQLite::dbDisconnect(conn)
 })
   
 lapply(c("prematch","search_mz"), function(search_type){
+  
   shiny::observeEvent(input[[search_type]],{
     if(is.null(mSet)){
       MetaboShiny::metshiAlert("Requires mSet!")
@@ -43,9 +44,12 @@ lapply(c("prematch","search_mz"), function(search_type){
         i = 0
         matches = pbapply::pblapply(blocks, function(mzs){
           if("cmmmediator" %in% db_list){
+            
+            mzs = stringr::str_match(mzs, "(\\d+\\.\\d+)")[,2]
+            ionmode = sapply(mzs, function(mz) if(grepl(mz, pattern="\\-")) "negative" else "positive")
+            
             res.online <- MetaDBparse::searchMZonline(mz = mzs, 
-                                                      mode = MetaboShiny::getIonMode(mzs, 
-                                                                        lcl$paths$patdb),
+                                                      mode = ionmode,
                                                       ppm = as.numeric(mSet$ppm),
                                                       which_db = "cmmr")
             if(nrow(res.online) > 0 ){
@@ -87,10 +91,13 @@ lapply(c("prematch","search_mz"), function(search_type){
           
           if(predict){
             res.rows.predict = pbapply::pblapply(mzs, function(mz){
+              
+              mz = stringr::str_match(mz, "(\\d+\\.\\d+)")[,2]
+              ionmode = if(stringr::str_match(mz, "([+|-])")[,2] == "+") "positive" else "negative"
+              
               res.predict = MetaDBparse::getPredicted(mz = as.numeric(mz), 
                                                       ppm = as.numeric(mSet$ppm),
-                                                      mode = MetaboShiny::getIonMode(mz, 
-                                                                                     lcl$paths$patdb),
+                                                      mode = ionmode,
                                                       rules = input$predict_rules,
                                                       elements = input$predict_elements)
               if(length(pred_dbs) == 1){
@@ -173,8 +180,11 @@ lapply(c("prematch","search_mz"), function(search_type){
                                    replacement = "", 
                                    perl=T), gbl$vectors$db_no_build)
           if(length(dbs.local)>0){
+            ionmode = sapply(mzs, function(mz) if(grepl(mz, pattern="\\-")) "negative" else "positive")
+            mzs = stringr::str_match(mzs, "(\\d+\\.\\d+)")[,2]
+            
             res.local = MetaDBparse::searchMZ(mzs = mzs,
-                                              ionmodes = MetaboShiny::getIonMode(mzs, lcl$paths$patdb),
+                                              ionmodes = ionmode,
                                               base.dbname = dbs.local,
                                               ppm = as.numeric(mSet$ppm),
                                               append = F,
@@ -185,6 +195,10 @@ lapply(c("prematch","search_mz"), function(search_type){
           res <- data.table::rbindlist(list(res.local, res.online, res.predict), use.names = T, fill=T)
           if(nrow(res) > 0){
             res[, c("query_mz") := lapply(.SD, as.character), .SDcols="query_mz"]
+            ionmapper <- rep("", nrow(res))
+            isneg <- grepl(res$adduct, pattern = "\\]\\d\\-")
+            ionmapper[isneg] <- "-"
+            res$query_mz <- paste0(res$query_mz, ionmapper)
             list(mapper = unique(res[,c("query_mz", 
                                         "baseformula",
                                         "adduct", 
@@ -222,6 +236,7 @@ lapply(c("prematch","search_mz"), function(search_type){
         RSQLite::dbExecute(conn, "CREATE INDEX map_ba ON match_mapper(baseformula, adduct)")
         RSQLite::dbExecute(conn, "CREATE INDEX cont_ba ON match_content(baseformula, adduct)")
         RSQLite::dbExecute(conn, "CREATE INDEX cont_str ON match_content(structure)")
+        RSQLite::dbDisconnect(conn)
         if(search_type == "prematch"){
           mSet$metshiParams$prematched<<-T
           search_button$on <- FALSE   
@@ -231,6 +246,8 @@ lapply(c("prematch","search_mz"), function(search_type){
         RSQLite::dbDisconnect(conn)
       }else{
         shiny::showNotification("No matches found!")
+        shown_matches$forward_unique <- data.table::data.table()
+        shown_matches$forward_full <- data.table::data.table()
       }
     }else{
       MetaboShiny::metshiAlert("Please build at least one database to enable this feature!")

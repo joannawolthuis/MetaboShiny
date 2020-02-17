@@ -11,18 +11,15 @@ shiny::observeEvent(input$initialize, {
       csv_orig <- data.table::fread(lcl$paths$csv_loc,
                                     data.table = TRUE,
                                     header = T)
-      
-      
       # create empty mSet with 'stat' as default mode
       mSet <- MetaboAnalystR::InitDataObjects("pktable",
                                               "stat",
                                               FALSE)
-      
       # set default time series mode'
       mSet$dataSet$paired = F
       mSet$dataSet$subset = c()
       
-      mz.meta <- MetaboShiny::getColDistribution(csv_orig)
+      mz.meta <- getColDistribution(csv_orig)
       exp.vars = mz.meta$meta
       mz.vars = mz.meta$mz
       
@@ -57,7 +54,7 @@ shiny::observeEvent(input$initialize, {
         batches = c(batches, "injection")
       }
       
-      mz.meta <- MetaboShiny::getColDistribution(csv_orig)
+      mz.meta <- getColDistribution(csv_orig)
       exp.vars = mz.meta$meta
       mz.vars = mz.meta$mz
       
@@ -69,20 +66,6 @@ shiny::observeEvent(input$initialize, {
       conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb)
       ppm <- sprintf("%.1f",RSQLite::dbGetQuery(conn, "select ppm from params"))
       RSQLite::dbDisconnect(conn)
-      
-      zeros_after_period <- function(x) {
-        if (isTRUE(all.equal(round(x),x))) return (0) # y would be -Inf for integer values
-        y <- log10(abs(x)-floor(abs(x)))   
-        ifelse(isTRUE(all.equal(round(y),y)), -y-1, -ceiling(y))} # corrects case ending with ..01
-      
-      # - - fix errors in rounding m/z - -
-      colnames(second_part) <- pbapply::pbsapply(colnames(second_part), function(mz){
-        ppmRange <- as.numeric(mz)/1e6 * as.numeric(ppm)
-        zeros = sapply(ppmRange,zeros_after_period)
-        decSpots = zeros + 1 # todo: verify this formula?
-        roundedMz <- formatC(as.numeric(mz), digits = decSpots, format = "f")
-        return(roundedMz)
-      })
       
       # re-make csv with the corrected data
       csv <- cbind(first_part, # if 'label' is in excel file remove it, it will clash with the metaboanalystR 'label'
@@ -106,7 +89,7 @@ shiny::observeEvent(input$initialize, {
         csv <- MetaboShiny::removeUnusedQC(csv, covar_table)
       }
       
-      mz.meta <- MetaboShiny::getColDistribution(csv)
+      mz.meta <- getColDistribution(csv)
       exp.vars = mz.meta$meta
       mz.vars = mz.meta$mz
       
@@ -114,10 +97,13 @@ shiny::observeEvent(input$initialize, {
       
       # define location to write processed csv to
       csv_loc_final <- gsub(pattern = "\\.csv", replacement = "_no_out.csv", x = lcl$paths$csv_loc)
+      
       # remove file if it already exists
       if(file.exists(csv_loc_final)) file.remove(csv_loc_final)
+      
       # write new csv to new location
-      data.table::fwrite(csv, file = csv_loc_final)
+      data.table::fwrite(csv, 
+                         file = csv_loc_final)
       
       # rename row names of covariant table to the sample names
       rownames(covar_table) <- covar_table$sample
@@ -173,8 +159,9 @@ shiny::observeEvent(input$initialize, {
       
       # if normalizing by a factor, do the below
       if(req(input$norm_type) == "SpecNorm"){
-        norm.vec <<- mSet$dataSet$covars[match(rownames(mSet$dataSet$preproc),
-                                               mSet$dataSet$covars$sample),][[input$samp_var]]
+        norm.vec <<- mSet$dataSet$covars[match(mSet$dataSet$covars$sample,
+                                               rownames(mSet$dataSet$preproc)
+                                               ),][[input$samp_var]]
         norm.vec <<- scale(x = norm.vec, center = 1)[,1] # normalize scaling factor
       }else{
         norm.vec <<- rep(1, length(mSet$dataSet$cls)) # empty
@@ -246,8 +233,7 @@ shiny::observeEvent(input$initialize, {
           if(length(left_batch_vars) == 1){
             # create a model table
             csv_pheno <- data.frame(sample = 1:nrow(csv),
-                                    batch1 = mSet$dataSet$covars[match(smps, 
-                                                                       mSet$dataSet$covars$sample),
+                                    batch1 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample),
                                                                  left_batch_vars[1], with=FALSE][[1]]
                                     #,batch2 = c(0),
                                     #outcome = as.factor(mSet$dataSet$cls)
@@ -263,8 +249,8 @@ shiny::observeEvent(input$initialize, {
           }else{
             # create a model table
             csv_pheno <- data.frame(sample = 1:nrow(csv),
-                                    batch1 = mSet$dataSet$covars[smps, match(mSet$dataSet$covars$sample), left_batch_vars[1], with=FALSE][[1]],
-                                    batch2 = mSet$dataSet$covars[smps, match(mSet$dataSet$covars$sample), left_batch_vars[2], with=FALSE][[1]],
+                                    batch1 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample), left_batch_vars[1], with=FALSE][[1]],
+                                    batch2 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample), left_batch_vars[2], with=FALSE][[1]],
                                     outcome = as.factor(exp_lbl))
             # batch correct with limma and two batches
             batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
@@ -288,8 +274,9 @@ shiny::observeEvent(input$initialize, {
       shiny::setProgress(session=session, value= .5)
       
       # make sure covars order is consistent with mset$..$norm order
-      mSet$dataSet$covars <- mSet$dataSet$covars[match(rownames(mSet$dataSet$norm),
-                                                       mSet$dataSet$covars$sample),]
+      rematch = match(rownames(mSet$dataSet$norm),
+                      mSet$dataSet$covars$sample)
+      mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
       
       # set name of variable of interest
       mSet$dataSet$cls.name <- condition

@@ -1,5 +1,7 @@
 # create checkcmarks if database is present
-lapply(c("merge", "db", "csv"), FUN=function(col){
+lapply(c("merge", 
+         "db", 
+         "csv"), FUN=function(col){
   # creates listener for if the 'check db' button is pressed
   shiny::observe({
     # see which db files are present in folder
@@ -111,11 +113,12 @@ shiny::observeEvent(input$create_csv, {
     
     query <- MetaboShiny::getCSVquery(conn)
     
-    all_mz <- MetaboShiny::allMZ(conn)
+    all_mz <- allMZ(conn)
     
     lcl$paths$csv_loc <- gsub(lcl$paths$patdb, 
                           pattern = "\\.db", 
                           replacement = ".csv")
+    
     if(file.exists(lcl$paths$csv_loc)) file.remove(lcl$paths$csv_loc)
     
     fn_meta <- MetaboShiny::allSampInMeta(conn)

@@ -86,7 +86,7 @@ shiny::observe({
           mSet$settings$paired <- TRUE
           mSet <- MetaboShiny::pair.mSet(mSet)
         }
-        if(grepl(mSet$dataSet$exp.type, pattern = "^1f")){
+        if(grepl(mSet$settings$exp.type, pattern = "^1f")){
           if(mSet$dataSet$cls.num == 2){
             mSet$dataSet$exp.type <- "1fb"
           }else{

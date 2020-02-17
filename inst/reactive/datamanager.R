@@ -628,7 +628,7 @@ shiny::observe({
                      if("asca" %in% names(mSet$analSet)){
                        output$asca_tab <-DT::renderDataTable({ 
                          con = mSet$analSet$asca$sig.list$Model.ab
-                         colnames(con) <- c("Compound", "Leverage", "SPE")
+                         colnames(con) <- c("Leverage", "SPE")
                          MetaboShiny::metshiTable(content = con)
                        })
                      }
@@ -637,7 +637,7 @@ shiny::observe({
                      if("MB" %in% names(mSet$analSet)){
                        output$meba_tab <-DT::renderDataTable({
                          con = mSet$analSet$MB$stats
-                         colnames(con) <- c("Compound", "Hotelling/T2 score")
+                         colnames(con) <- c("Hotelling/T2 score")
                          MetaboShiny::metshiTable(content = con)
                        })
                      }

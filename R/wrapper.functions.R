@@ -216,7 +216,8 @@ getMultiMLperformance <- function(model){
 
 getColDistribution <- function(csv){
   suppressWarnings({
-    as.numi <- as.numeric(colnames(csv))
+    gsubbed = gsub(colnames(csv),pattern="[+|\\-]",replacement="")
+    as.numi <- as.numeric(gsubbed)
     exp.vars <- which(is.na(as.numi))
     mz.vars <- which(!is.na(as.numi))  
   })
@@ -241,7 +242,7 @@ cleanCSV <- function(csv, regex=" |\\(|\\)|\\+",exp.vars, mz.vars, miss.meta, mi
 }
 
 getDefaultCondition <- function(csv, exp.vars, excl.rows, excl.cond, min.lev){
-  unique.levels <- apply(csv[!excl.rows,..exp.vars, with=F], MARGIN=2, function(col){
+  unique.levels <- apply(csv[!excl.rows, ..exp.vars, with=F], MARGIN=2, function(col){
     lvls <- levels(as.factor(col))
     # - - - - - -
     length(lvls)
@@ -295,24 +296,30 @@ tooEmptySamps <- function(mSet, max.missing.per.samp){
 }
 
 replRowMin <- function(mSet){
+  samples <- rownames(mSet$dataSet$preproc)
   w.missing <- mSet$dataSet$preproc
-  w.missing <- apply(w.missing, 2, as.numeric)
-  new.mat <- apply(w.missing, 1, function(x) {
-    if(all(is.na(x))){
-      x = c(0)
+  pb = pbapply::startpb(min=0,max=length(samples))
+  i=0
+  for(sample in samples){
+    ri = rownames(w.missing) == sample
+    x = w.missing[ri,]
+    nas = is.na(x)
+    if(all(nas)){
+      w.missing[ri,] = c(0)
     }else{
-      if (sum(is.na(x)) > 0) {
-        x[is.na(x)] <- c(min(x[!is.na(x)], na.rm = T)/2)
+      w.missing[ri,] = as.numeric(x)
+      if (sum(nas) > 0) {
+        w.missing[ri,][nas] <- c(min(x[!nas], na.rm = T)/2)
       }  
     }
-    x
-  })
-  t(new.mat)
+    i=i+1
+    pbapply::setpb(pb, i)
+  }
+  return(w.missing)
 }
 
 replRF <- function(mSet, parallelMode, ntree, cl){
   samples <- rownames(mSet$dataSet$preproc)
-  
   # convert all to as numeric
   # TODO: remove, should be automatic
   w.missing <- mSet$dataSet$preproc
@@ -397,7 +404,7 @@ combatCSV <- function(mSet){
 }
 
 metshiTable <- function(content, options=NULL){
-  opts = list(deferRender = TRUE,
+  opts = list(deferRender = TRUE, 
               scrollY = 200,
               searching = TRUE,
               scrollCollapse = FALSE,
@@ -413,6 +420,10 @@ metshiTable <- function(content, options=NULL){
                 )))
   if(!is.null(options)){
     opts <- append(opts, options)      
+  }
+  mz_rownames = stringr::str_match(rownames(content), "(\\d+\\.\\d+)")[,2]
+  if(!is.na(mz_rownames[1])){
+    rownames(content) <- paste0(rownames(content), sapply(rownames(content), function(mz) if(grepl("\\-", mz)) "" else "+"))
   }
   DT::datatable(content,
                 selection = 'single',

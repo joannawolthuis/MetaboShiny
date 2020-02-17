@@ -36,7 +36,7 @@ get_prematches <- function(who = NA,
                                ON map.baseformula = con.baseformula
                                AND map.adduct = con.adduct
                                AND map.query_mz = con.query_mz", simplify=T, width=1000)
-                  
+  
   showadd <- if(is.null(showadd)) c() else if(length(showadd) > 0) paste0(showadd, collapse=" OR map.adduct = '", "'") else c()
   showdb <- if(is.null(showdb)) c() else if(length(showdb) > 0) paste0(showdb, collapse=" OR source = '", "'") else c()
   showiso <- if(is.null(showiso)) c() else{
@@ -165,23 +165,6 @@ get_user_role <- function(username, password){
   RSQLite::dbDisconnect(conn)
 }
 
-getIonMode = function(mzs, patdb){
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(patdb))
-  if(length(mzs) == 1){
-    mode = RSQLite::dbGetQuery(conn, gsubfn::fn$paste("SELECT foundinmode FROM mzvals WHERE mzmed LIKE $mzs"))[,1]
-  }else{
-    temp.tbl = data.table::data.table(mzmed = mzs)
-    RSQLite::dbExecute(conn, "CREATE TEMP TABLE search_query(mzmed INT)")
-    RSQLite::dbWriteTable(conn, "search_query", temp.tbl, append=T)
-    mode_tbl = RSQLite::dbGetQuery(conn, gsubfn::fn$paste("SELECT sq.mzmed, foundinmode FROM mzvals
-                                                            JOIN search_query sq
-                                                            ON mzvals.mzmed LIKE sq.mzmed"))
-    mode = mode_tbl$foundinmode[match(mzs, mode_tbl$mzmed)]
-    RSQLite::dbDisconnect(conn)
-  }
-  mode
-}
-
 filterPatDB <- function(patdb){
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(patdb))
   # which samples to remove?
@@ -243,9 +226,9 @@ getCSVquery <- function(conn){
 
 allMZ <- function(conn){
   RSQLite::dbGetQuery(conn, "select distinct i.mzmed
-                                        from mzintensities i
-                                        join individual_data d
-                                        on i.filename = d.sample")[,1]  
+                             from mzintensities i
+                             join individual_data d
+                             on i.filename = d.sample")[,1]  
 }
 
 allSampInMeta <- function(conn){
@@ -272,7 +255,7 @@ getSampInt <- function(conn, filename, all_mz){
   query_add = gsubfn::fn$paste(" WHERE i.filename = '$filename'")
   z.int = data.table::as.data.table(RSQLite::dbGetQuery(conn, 
                                                         paste0("SELECT DISTINCT
-                                                                i.mzmed as identifier,
+                                                                i.mzmed,
                                                                 i.intensity
                                                                 FROM mzintensities i", query_add)))
   if(nrow(z.int)==0) return(NA)
@@ -285,13 +268,13 @@ getSampInt <- function(conn, filename, all_mz){
                                           fun.aggregate = sum,
                                           value.var = "intensity")
   suppressWarnings({
-    complete = as.numeric(cast.dt[1,])
+    complete = cast.dt[1,]
   })
   names(complete) = colnames(cast.dt)
   missing = rep(NA, length(missing_mz))
   names(missing) <- missing_mz
   complete.row = c(complete[-1], missing)
-  reordered <- order(as.numeric(names(complete.row)))
+  reordered <- order(names(complete.row))
   complete.row <- complete.row[reordered]    
   complete.row.dt <- data.table::as.data.table(t(data.table::as.data.table(complete.row)))
   colnames(complete.row.dt) <- names(complete.row)  
