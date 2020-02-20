@@ -9,16 +9,15 @@ shiny::observe({
     if(!is.null(mSet)){
       
       mSet <- MetaboShiny::store.mSet(mSet) # save analyses
-      mSet.old <- mSet
       mSet <- MetaboShiny::reset.mSet(mSet) # reset dataset
       
       success = F
       
       try({
         if(!(mSetter$do %in% c("unsubset"))){
-          mSet.check <- if(mSetter$do == "load") mSet$storage[[input$storage_choice]] else mSet.old
-          if(length(mSet.check$settings$subset) > 0){
-            subs = mSet.check$settings$subset
+          mSet.settings <- if(mSetter$do == "load") mSet$storage[[input$storage_choice]]$settings else mSet$settings
+          if(length(mSet.settings$subset) > 0){
+            subs = mSet.settings$subset
             subs = subs[names(subs) != "sample"]
             if(length(subs) > 0){
               for(i in 1:length(subs)){
@@ -29,7 +28,7 @@ shiny::observe({
             }
           }
         }else{
-          mSet.check <- mSet.old
+          mSet.settings <- mSet$settings
         }
         
         # TODO: fix mismatch between cls order, covars order and table sample order
@@ -41,7 +40,7 @@ shiny::observe({
                                                           stats_var = mSet.check$settings$exp.var, 
                                                           time_var =  mSet.check$settings$time.var,
                                                           stats_type = mSet.check$settings$exp.type)
-                         mSet$dataSet$paired <- mSet.check$settings$paired
+                         mSet$dataSet$paired <- mSet.settings$paired
                          mSet
                        },
                        change = {
@@ -69,7 +68,7 @@ shiny::observe({
                          mSet <- MetaboShiny::subset.mSet(mSet,
                                                           subset_var = input$subset_var, 
                                                           subset_group = input$subset_group)
-                         mSet$dataSet$paired <- mSet.check$settings$paired
+                         mSet$dataSet$paired <- mSet.settings$paired
                          mSet
                        },
                        unsubset = {
@@ -77,7 +76,7 @@ shiny::observe({
                                                           stats_var = mSet.check$settings$exp.var, 
                                                           time_var =  mSet.check$settings$time.var,
                                                           stats_type = mSet.check$settings$exp.type)
-                         mSet$dataSet$paired <- mSet.check$settings$paired
+                         mSet$dataSet$paired <- mSet.settings$paired
                          mSet
                        }
         ) 
@@ -114,7 +113,6 @@ shiny::observe({
       })
       
       if(success){
-        mSet.backup <<- mSet
         if(MetaboShiny::is.ordered.mSet(mSet)){
           msg = "mSet class label order still correct! :)"
           try({
@@ -130,11 +128,11 @@ shiny::observe({
         }
         mSet <<- mSet
       }else{
-        mSet.debug <<- mSet
         MetaboShiny::metshiAlert("Failed! Restoring old mSet...")
-        mSet <<- mSet.old
       }
+      
       mSetter$do <- NULL
-    }
+    
+      }
   }
 })

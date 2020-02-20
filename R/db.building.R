@@ -1,15 +1,16 @@
 #' @export
 import.pat.csvs <- function(db.name,
-                             metapath,
-                             pospath,
-                             negpath,
-                             overwrite=FALSE,
-                             rtree=TRUE,
-                             make.full = TRUE,
-                             ppm=2,
-                             inshiny=F,
-                             csvpath=lcl$paths$csv_loc,
-                             wipe.regex = ".*_(?>POS|NEG)_[0+]*"){
+                            metapath,
+                            pospath,
+                            negpath,
+                            overwrite=FALSE,
+                            rtree=TRUE,
+                            make.full = TRUE,
+                            ppm=2,
+                            inshiny=F,
+                            csvpath=lcl$paths$csv_loc,
+                            wipe.regex = ".*_(?>POS|NEG)_[0+]*",
+                            missperc=99){
   ppm = as.numeric(ppm)
 
   # METADATA
@@ -24,23 +25,34 @@ import.pat.csvs <- function(db.name,
   poslist <- data.table::fread(pospath, header=T)
   neglist <- data.table::fread(negpath, header=T)
   
-  if("label" %in% colnames(poslist)[1:5]){
-    poslist[,label:=NULL]
-    neglist[,label:=NULL]
-  }
-  
   # PIVOT IF WRONG SIDE AROUND - METABOLIGHTS DATA
   if(any(grepl("mzmed|mass_to_charge", colnames(poslist)))){
     setnames(poslist, "mass_to_charge", "mzmed", skip_absent = T)
     setnames(neglist, "mass_to_charge", "mzmed", skip_absent = T)
-    poslist_melty <- data.table::melt(poslist_melty[,-"label"], id.vars=c("sample"), variable.name = "mzmed", value.name="into")  
+    poslist_melty <- data.table::melt(poslist_melty, id.vars=c("sample"), variable.name = "mzmed", value.name="into")  
     poslist <- data.table::dcast(poslist, mzmed ~ sample, value.var = "into")
-    neglist_melty <- data.table::melt(neglist_melty[,-"label"], id.vars=c("sample"), variable.name = "mzmed", value.name="into")  
+    neglist_melty <- data.table::melt(neglist_melty, id.vars=c("sample"), variable.name = "mzmed", value.name="into")  
     neglist <- data.table::dcast(neglist, mzmed ~ sample, value.var = "into")
     # REQUIREMENTS: "sample" - mz1 mz2 mz3 mz3 ... 
     # TODO: check for metabolights samples!
   }
+  
+  if("label" %in% colnames(poslist)[1:5]){
+    poslist[,label:=NULL]
+    neglist[,label:=NULL]
+  }
 
+  # replace 0 with NA  
+  if(!any(is.na(unlist(poslist[1:5,10:20])))){
+    poslist[,(2:ncol(poslist)) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)}), .SDcols = 2:ncol(poslist)]
+    neglist[,(2:ncol(neglist)) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)}), .SDcols = 2:ncol(neglist)]
+  }
+  
+  # miss values
+  miss_threshold = ceiling(missperc/100 * nrow(poslist))
+  poslist <- poslist[,which(colSums(!is.na(poslist)) > miss_threshold),with=F] # at least one sample with non-na
+  neglist <- neglist[,which(colSums(!is.na(neglist)) > miss_threshold),with=F] # at least one sample with non-na
+  
   # REGEX SAMPLE NAMES if applicable
   if(wipe.regex != ""){
     poslist[, sample := gsub(wipe.regex, replacement = "", sample)]
@@ -107,19 +119,13 @@ import.pat.csvs <- function(db.name,
 
   mz.meta <- getColDistribution(mzlist)
   exp.vars = mz.meta$meta
-  mz.vars = mz.meta$mz
   mzlist[,(exp.vars) := lapply(.SD,function(x){ ifelse(x == "" | is.na(x) | x == "Unknown", "unknown", x)}), .SDcols = exp.vars]
- 
-   if(!any(is.na(unlist(poslist[1:5,10:20])))){
-    mzlist[,(mz.vars) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)}), .SDcols = mz.vars]
-  }
   
   colnames(mzlist)[which(colnames(mzlist) == "time")] <- "Time"
   mzlist$sample <- gsub("[^[:alnum:]./_-]", "", mzlist$sample)
   # - - - - - - - - - - - - - - - - - - 
   data.table::fwrite(mzlist, csvpath)
-  params = data.table(missing_filler="unknown",
-                      ppm=ppm)
+  params = data.table(ppm=ppm)
   data.table::fwrite(params, gsub(csvpath, pattern="\\.csv", replacement="_params.csv"))
 }
 

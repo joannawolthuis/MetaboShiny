@@ -23,8 +23,9 @@ shiny::observeEvent(input$do_enrich, {
       
       myFile <- tempfile(fileext = ".csv")
       tbl = data.table::data.table("m.z" = as.numeric(flattened[[1]]),
-                                   mode = MetaboShiny::getIonMode(flattened[[1]],
-                                                                  patdb = lcl$paths$patdb))
+                                   mode = sapply(flattened[[1]], function(mz){
+                                     if(grepl(pattern="-",x=mz)) "negative" else "positive"
+                                   }))
       
       tbl[, "p.value"] = c(0)
       tbl[, "t.score"] = c(0)
@@ -338,14 +339,14 @@ observeEvent(input$do_ml, {
       shiny::setProgress(value = 0)
       
       # get base table to use for process
-      curr <- data.table::as.data.table(mSet$dataSet$preproc) # the filtered BUT NOT IMPUTED table, ML should be able to deal w/ missing values
+      curr <- data.table::as.data.table(mSet$dataSet$proc)
       
       # replace NA's with zero
       curr <- curr[,(1:ncol(curr)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
       
       # conv to data frame
       curr <- as.data.frame(curr)
-      rownames(curr) <- rownames(mSet$dataSet$preproc)
+      rownames(curr) <- rownames(mSet$dataSet$proc)
       
       # find the qc rows and remove them
       is.qc <- grepl("QC|qc", rownames(curr))
@@ -556,7 +557,7 @@ observeEvent(input$do_ml, {
                                      ml_preproc = input$ml_preproc,
                                      tuneGrid = tuneGrid,
                                      ml_train_perc = input$ml_train_perc,
-                                     sampling = input$ml_sampling
+                                     sampling = if(input$ml_sampling == "none") NULL else input$ml_sampling
         )
       })
       # check if a storage list for machine learning results already exists

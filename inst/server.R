@@ -1148,6 +1148,7 @@ apikey =  ')
                                        paired = FALSE)
           }
         }
+
         mSet <<- mSet
         opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
         if("ml" %in% names(mSet$analSet)){
@@ -1166,7 +1167,7 @@ apikey =  ')
     shiny::updateNavbarPage(session, "statistics", selected = "inf")
   })
   
-  shiny::observeEvent(input$debug, {
+  shiny::observeEvent(input$debug_metshi, {
     debug_input <<- shiny::isolate(shiny::reactiveValuesToList(input))
     debug_lcl <<- lcl
     debug_mSet <<- mSet

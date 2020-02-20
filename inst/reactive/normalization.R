@@ -19,7 +19,6 @@ shiny::observeEvent(input$initialize, {
       exp.vars = mz.meta$meta
       mz.vars = mz.meta$mz
       
-
       # load batch variable chosen by user
       batches <- input$batch_var
       
@@ -50,7 +49,6 @@ shiny::observeEvent(input$initialize, {
       
       shiny::setProgress(session=session, value= .3)
       
-      
       # get ppm
       params = gsub(lcl$paths$csv_loc, pattern="\\.csv", replacement="_params.csv")
       ppm <- fread(params)$ppm
@@ -66,15 +64,14 @@ shiny::observeEvent(input$initialize, {
                                                  exp.vars)
       }
       
-      # if the experimental condition is batch, make sure QC samples are not removed at the end for analysis
-      # TODO: this is broken with the new system, move this to the variable switching segment of code
-      batchview = if(condition == "batch") TRUE else FALSE
-      
       # if QC present, only keep QCs that share batches with the other samples (may occur when subsetting data/only loading part of the samples)
       if(any(grepl("QC", metshiCSV$sample))){
         metshiCSV <- MetaboShiny::removeUnusedQC(metshiCSV,
                                                  metshiCSV[,..exp.vars, with=FALSE])
       }
+      
+      metshiCSV$batch
+      
       shiny::setProgress(session=session, value= .4)
       
       
@@ -126,11 +123,11 @@ shiny::observeEvent(input$initialize, {
       
       # remove metabolites with more than user defined perc missing
       mSet <- MetaboAnalystR::RemoveMissingPercent(mSet,
-                                                   percent = input$perc_limit/100)
+                                                   percent = 1)#input$perc_limit/100)
       
       # remove samples with now no one...
-      rmv = MetaboShiny::tooEmptySamps(mSet, 
-                                       max.missing.per.samp = input$perc_limit)
+      #rmv = MetaboShiny::tooEmptySamps(mSet, 
+      #                                 max.missing.per.samp = input$perc_limit)
       
       # missing value imputation
       if(req(input$miss_type ) != "none"){
@@ -217,9 +214,9 @@ shiny::observeEvent(input$initialize, {
         }
         
         # remove QC samples if user doesn't use batch as condition
-        if(!batchview & has.qc){
-          mSet <- MetaboShiny::hideQC(mSet)
-        }
+        #if(!batchview & has.qc){
+        mSet <- MetaboShiny::hideQC(mSet)
+        #}
         
         # check which batch values are left after initial correction
         left_batch_vars <- grep(input$batch_var,
@@ -311,7 +308,6 @@ shiny::observeEvent(input$initialize, {
       mSet$storage <- list(orig = list(data = mSet$dataSet,
                                        analysis = mSet$analSet,
                                        settings = mSet$settings))
-      
       
       if(req(input$filt_type ) != "none"){
         shiny::showNotification("Filtering dataset...")

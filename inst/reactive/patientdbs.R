@@ -59,6 +59,8 @@ shiny::observeEvent(input$create_csv,{
                       negpath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath,
                       metapath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath,
                       wipe.regex = input$wipe_regex,
+                      missperc = input$perc_limit,
+                      csvpath = lcl$paths$csv_loc,
                       overwrite = T, inshiny=F)
       
       success=T

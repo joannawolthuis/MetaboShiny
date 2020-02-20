@@ -17,7 +17,7 @@ shiny::observe({
                                       input[[item]])$datapath
     hadRecent <- "Recent" %in% names(gbl$paths$volumes)
     gbl$paths$volumes$Recent <<- dirname(path)
-    if(hadRecent){
+    if(!hadRecent){
       gbl$paths$volumes <<- rev(gbl$paths$volumes)
     }
   })

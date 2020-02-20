@@ -264,11 +264,11 @@ removeOutliers <- function(csv, exp.vals){
 }
 
 removeUnusedQC <- function(csv, covar_table){
-  samps <- which(!grepl(csv$sample, pattern = "QC"))
-  batchnum <- unique(csv[samps, "batch"][[1]])
+  samps <- which(!grepl(covar_table$sample, pattern = "QC"))
+  batchnum <- unique(covar_table[samps, "batch"][[1]])
   keep_samps_post_qc <- covar_table[which(covar_table$batch %in% batchnum),"sample"][[1]]
   covar_table <- covar_table[which(covar_table$batch %in% batchnum),]
-  csv[which(csv$sample %in% keep_samps_post_qc),-"batch"]  
+  csv[which(csv$sample %in% keep_samps_post_qc),]  
 }
 
 asMetaboAnalyst <- function(csv, exp.vars){
