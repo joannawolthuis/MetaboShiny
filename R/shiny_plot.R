@@ -773,6 +773,7 @@ ggPlotROC <- function(data,
   
   cols = cf(attempts)
   
+  
   p <- ggplot(perf.long, aes(FPR,TPR,key=attempt)) +
     ggplot2::geom_path(alpha=.5,
                        cex=.7,
@@ -787,6 +788,7 @@ ggPlotROC <- function(data,
                       size = 8,
                       x = 0.77,
                       y = 0.03) +
+    labs(color =if(class_type == "m") "Comparison" else "Attempt") +
     plot.theme(base_size = 10) +
     ggplot2::stat_summary_bin(#alpha=.6,
       aes(FPR, TPR, 

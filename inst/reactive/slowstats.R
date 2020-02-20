@@ -15,14 +15,14 @@ shiny::observeEvent(input$do_enrich, {
                                              "mixed");
       
       #similarly to venn diagram
-      flattened <- MetaboShiny::getTopHits(mSet, 
-                                           input$mummi_anal,#data.table("plsda - PC2 (disease)"), 
-                                           input$mummi_topn)
+      flattened <- getTopHits(mSet, 
+                              input$mummi_anal,
+                              input$mummi_topn)
       
       setProgress(0.1)
       
       myFile <- tempfile(fileext = ".csv")
-      tbl = data.table::data.table("m.z" = as.numeric(flattened[[1]]),
+      tbl = data.table::data.table("m.z" = as.numeric(gsub(flattened[[1]], pattern="+|-", replacement="")),
                                    mode = sapply(flattened[[1]], function(mz){
                                      if(grepl(pattern="-",x=mz)) "negative" else "positive"
                                    }))

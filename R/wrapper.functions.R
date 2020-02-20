@@ -467,43 +467,43 @@ getTopHits <- function(mSet, expnames, top){
                        res
                      },
                      aov = {
-                       res = list(as.numeric(rownames(analysis$aov$sig.mat[order(analysis$aov$sig.mat[,2],
-                                                                                 decreasing = F),])))
+                       res = list(rownames(analysis$aov$sig.mat[order(analysis$aov$sig.mat[,2],
+                                                                                 decreasing = F),]))
                        names(res) = base_name
                        res
                      },
                      aov2 = {
-                       res = list(as.numeric(rownames(analysis$aov2$sig.mat[order(analysis$aov2$sig.mat[,"Interaction(adj.p)"],
-                                                                                  decreasing = F),])))
+                       res = list(rownames(analysis$aov2$sig.mat[order(analysis$aov2$sig.mat[,"Interaction(adj.p)"],
+                                                                                  decreasing = F),]))
                        names(res) = base_name
                        res
                      },
                      asca = {
-                       res = list(as.numeric(rownames(analysis$asca$sig.list$Model.ab[order(analysis$asca$sig.list$Model.ab[,1],
-                                                                                            decreasing = T),])))
+                       res = list(rownames(analysis$asca$sig.list$Model.ab[order(analysis$asca$sig.list$Model.ab[,1],
+                                                                                            decreasing = T),]))
                        names(res) = base_name
                        res
                      },
                      MB = {
-                       res = list(as.numeric(rownames(analysis$MB$stats))[order(analysis$MB$stats[,1],
+                       res = list(rownames(analysis$MB$stats)[order(analysis$MB$stats[,1],
                                                                                 decreasing = T)])
                        names(res) = base_name
                        res
                      },
                      tt = {
-                       res = list(as.numeric(rownames(analysis$tt$sig.mat[order(analysis$tt$sig.mat[,2],
-                                                                                decreasing = F),])))
+                       res = list(rownames(analysis$tt$sig.mat[order(analysis$tt$sig.mat[,2],
+                                                                                decreasing = F),]))
                        names(res) = base_name
                        res
                      },
                      fc = {
-                       res = list(as.numeric(rownames(analysis$fc$sig.mat[order(abs(analysis$fc$sig.mat[,2]),
-                                                                                decreasing = F),])))
+                       res = list(rownames(analysis$fc$sig.mat[order(abs(analysis$fc$sig.mat[,2]),
+                                                                                decreasing = F),]))
                        names(res) = base_name
                        res
                      },
                      volcano = {
-                       res = list(as.numeric(rownames(analysis$volcano$sig.mat)))
+                       res = list(rownames(analysis$volcano$sig.mat))
                        names(res) = base_name
                        res
                      },
