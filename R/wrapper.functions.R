@@ -216,7 +216,9 @@ getMultiMLperformance <- function(model){
 
 getColDistribution <- function(csv){
   suppressWarnings({
-    gsubbed = gsub(colnames(csv),pattern="[+|\\-]",replacement="")
+    gsubbed = gsub(x = colnames(csv),
+                   pattern="[+|\\-]",
+                   replacement="")
     as.numi <- as.numeric(gsubbed)
     exp.vars <- which(is.na(as.numi))
     mz.vars <- which(!is.na(as.numi))  
@@ -297,26 +299,14 @@ tooEmptySamps <- function(mSet, max.missing.per.samp){
 
 replRowMin <- function(mSet){
   samples <- rownames(mSet$dataSet$preproc)
-  w.missing <- mSet$dataSet$preproc
-  pb = pbapply::startpb(min=0,max=length(samples))
+  w.missing <- data.table::as.data.table(mSet$dataSet$preproc)
+  pb <- pbapply::startpb(0, ncol(w.missing))
   i=0
-  for(sample in samples){
-    ri = rownames(w.missing) == sample
-    x = w.missing[ri,]
-    nas = is.na(x)
-    if(all(nas)){
-      w.missing[ri,] = c(0)
-    }else{
-      w.missing[ri,] = as.numeric(x)
-      if (sum(nas) > 0) {
-        w.missing[ri,][nas] <- c(min(x[!nas], na.rm = T)/2)
-      }  
-    }
-    i=i+1
-    pbapply::setpb(pb, i)
-  }
+  w.missing = w.missing[,as.data.table(apply(.SD, 2, function(x) {i<<-i+1; pbapply::setpb(pb, i); x[is.na(x)] <- mean(x, na.rm=T)/2; x}))]
+  w.missing <- as.data.frame(w.missing)
+  rownames(w.missing) <- samples
   return(w.missing)
-}
+  }
 
 replRF <- function(mSet, parallelMode, ntree, cl){
   samples <- rownames(mSet$dataSet$preproc)
@@ -344,16 +334,15 @@ replRF <- function(mSet, parallelMode, ntree, cl){
   imp$ximp
 }
 
-batchCorrQC <- function(mSet, qc_rows){
+batchCorrQC <- function(mSet){
   smps <- rownames(mSet$dataSet$norm)
   # get which rows are QC samples
   qc_rows <- which(grepl(pattern = "QC", x = smps))
   # get batch for each sample
   batch.idx = as.numeric(as.factor(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"batch"][[1]]))
-  
+  if(length(batch.idx) == 0) return(mSet$dataSet$norm)
   # get injection order for samples
   seq.idx = as.numeric(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"injection"][[1]])
-  
   # go through all the metabolite columns
   corr_cols <- pbapply::pblapply(1:ncol(mSet$dataSet$norm), function(i){
     # fetch non-corrected values

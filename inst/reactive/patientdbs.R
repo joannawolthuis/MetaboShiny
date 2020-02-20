@@ -21,15 +21,13 @@ lapply(c("merge",
 })
 
 # triggers when user wants to create database from .db and excel or 2 csv files and excel
-shiny::observeEvent(input$create_db,{
+shiny::observeEvent(input$create_csv,{
 
   files.present = is.list(input$metadata) & is.list(input$outlist_pos) & is.list(input$outlist_neg)
 
   if(!files.present) return(NULL)
   
-  # update the path to patient db
-  lcl$paths$patdb <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name, ".db"))
-
+  # update the path to patient csv
   shiny::withProgress({
 
     success=F
@@ -47,7 +45,7 @@ shiny::observeEvent(input$create_db,{
                                   selected = proj_name)
       
       lcl$proj_name <<- proj_name
-      lcl$paths$patdb <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name, ".db"))
+      lcl$paths$csv_loc <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name, ".csv"))
       # change project name in user options file
       MetaboShiny::setOption(lcl$paths$opt.loc, key="proj_name", value=lcl$proj_name)
       # print the changed name in the UI
@@ -55,15 +53,16 @@ shiny::observeEvent(input$create_db,{
       # change path CSV should be / is saved to in session
       #lcl$paths$csv_loc <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name,".csv"))
       # if loading in .csv files...
-      build.pat.db(db.name = lcl$paths$patdb,
-                   ppm = input$ppm,
-                   pospath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath,
-                   negpath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath,
-                   metapath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath,
-                   wipe.regex = input$wipe_regex,
-                   overwrite = T, inshiny=F)
+      import.pat.csvs(db.name = lcl$paths$patdb,
+                      ppm = input$ppm,
+                      pospath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath,
+                      negpath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath,
+                      metapath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath,
+                      wipe.regex = input$wipe_regex,
+                      overwrite = T, inshiny=F)
+      
       success=T
-      output$proj_db_check <- shiny::renderImage({
+      output$proj_csv_check <- shiny::renderImage({
         filename <- normalizePath(file.path('www', "yes.png"))
         list(src = filename, width = 70,
              height = 70)
@@ -101,78 +100,6 @@ shiny::observeEvent(input$import_csv, {
     list(src = filename, width = 20,
          height = 20)
   }, deleteFile = FALSE)
-})
-
-
-# is triggered when the create csv button is clicked
-shiny::observeEvent(input$create_csv, {
-
-    conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(lcl$paths$patdb))
-      
-    MetaboShiny::prepDatabase(conn)
-    
-    query <- MetaboShiny::getCSVquery(conn)
-    
-    all_mz <- allMZ(conn)
-    
-    lcl$paths$csv_loc <- gsub(lcl$paths$patdb, 
-                          pattern = "\\.db", 
-                          replacement = ".csv")
-    
-    if(file.exists(lcl$paths$csv_loc)) file.remove(lcl$paths$csv_loc)
-    
-    fn_meta <- MetaboShiny::allSampInMeta(conn)
-    fn_int <- MetaboShiny::allSampInPeaktable(conn)
-  
-    shiny::withProgress(min = 0, max = 1, {
-      # write rows to csv
-      pbapply::pblapply(fn_meta, 
-             #cl = session_cl, 
-             function(filename){
-               
-               conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(lcl$paths$patdb))
-               
-               z.meta <- MetaboShiny::getSampMeta(conn, filename, query)
-               complete.row <- MetaboShiny::getSampInt(conn, filename, all_mz)
-               
-               try({
-                 if(ncol(complete.row) == length(all_mz)){
-                   row = data.table::as.data.table(cbind(z.meta, complete.row))
-                   # write
-                   data.table::fwrite(row, 
-                                      file = lcl$paths$csv_loc,
-                                      append = T)
-                 }
-               }, silent = T)
-               
-               RSQLite::dbDisconnect(conn)
-               
-              #shiny::incProgress(amount = 1/length(fn_meta))
-             })      
-    })
-    
-    # - - measure file size - -
-    
-    disk_size = file.info(lcl$paths$csv_loc)$size
-    size <- utils:::format.object_size(disk_size, "Mb")
-    cat(paste("... Resulting file is approximately"),size,"...")
-
-    # render overview table
-    output$csv_tab <-DT::renderDataTable({
-      overview_tab <- t(data.table::data.table(keep.rownames = F,
-                                   Identifiers = length(all_mz),
-                                   Samples = length(fn_meta)))
-      colnames(overview_tab) <- "#"
-      DT::datatable(overview_tab,
-                    selection = 'single',
-                    autoHideNavigation = T,
-                    options = list(lengthMenu = c(10, 30, 50), pageLength = 30,scrollX=TRUE, scrollY=TRUE))
-    })
-    output$proj_csv_check <- shiny::renderImage({
-      filename <- normalizePath(file.path('www', "yes.png"))
-      list(src = filename, width = 70,
-           height = 70)
-    },deleteFile = FALSE)
 })
 
 
@@ -223,29 +150,20 @@ shiny::observeEvent(input$metadata_new_add, {
 shiny::observeEvent(input$check_csv, {
   # ----------------------
 
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(lcl$paths$patdb))
-  
-  metadata <- data.table::as.data.table(RSQLite::dbGetQuery(conn, "SELECT * FROM individual_data"))
-  
-  exp.vars = colnames(metadata)
-  
   # get the names of those experimental variables
-  opts <<- colnames(metadata)
-
-  bvars <- if(RSQLite::dbExistsTable(conn, "batchinfo")){
-    c("batch", "injection")
-  }else{
-    c()
-  }
+  header = data.table::fread(lcl$paths$csv_loc, nrows = 2, header=T)
+  met.cols = getColDistribution(header)$meta
+  opts = colnames(header)[met.cols]
+  metadata = data.table::fread(lcl$paths$csv_loc, header=T, select=colnames(header)[met.cols])
   
   # get columns that can be used for batch correction (need to be non-unique)
-  batch <<- which(sapply(exp.vars, function(x) length(unique(metadata[,..x][[1]])) < nrow(metadata)))
+  batch <<- which(sapply(opts, function(x) length(unique(metadata[,..x][[1]])) < nrow(metadata)))
 
   # update the possible options in the UI
   shiny::updateSelectInput(session, "samp_var",
                     choices = opts)
   shiny::updateSelectizeInput(session, "batch_var",
-                       choices = c(bvars, opts[batch]),
+                       choices = opts[batch],
                        options = list(maxItems = 3L - (length(input$batch_var)))
   )
 })

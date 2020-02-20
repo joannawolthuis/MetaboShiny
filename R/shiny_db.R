@@ -1,6 +1,6 @@
-get_exp_vars <- function(from, patdb){
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb) # change this to proper var later
-  RSQLite::dbGetQuery(conn, gsubfn::fn$paste("PRAGMA table_info($from)"))$name
+get_exp_vars <- function(from, patcsv){
+  header = data.table::fread(patcsv, nrows = 5, header=T)
+  return(header[getColDistribution(header)$meta])
 }
 
 #' @export

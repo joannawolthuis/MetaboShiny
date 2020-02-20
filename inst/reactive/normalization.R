@@ -8,33 +8,26 @@ shiny::observeEvent(input$initialize, {
     success = F
     try({
       # read in original CSV file
-      csv_orig <- data.table::fread(lcl$paths$csv_loc,
+      metshiCSV <- data.table::fread(lcl$paths$csv_loc,
                                     data.table = TRUE,
                                     header = T)
       # create empty mSet with 'stat' as default mode
-      mSet <- MetaboAnalystR::InitDataObjects("pktable",
-                                              "stat",
-                                              FALSE)
-      # set default time series mode'
-      mSet$dataSet$paired = F
-      mSet$dataSet$subset = c()
       
-      mz.meta <- getColDistribution(csv_orig)
+      shiny::setProgress(session=session, value= .2)
+      
+      mz.meta <- getColDistribution(metshiCSV)
       exp.vars = mz.meta$meta
       mz.vars = mz.meta$mz
       
-      csv_orig <- MetaboShiny::cleanCSV(csv_orig, 
-                                        exp.vars = exp.vars, mz.vars = mz.vars, 
-                                        miss.meta = "unknown", miss.mz = NA)
-      
+
       # load batch variable chosen by user
       batches <- input$batch_var
       
       # locate qc containing rows in csv
-      qc.rows <- which(grepl("QC", csv_orig$sample))
+      qc.rows <- which(grepl("QC", metshiCSV$sample))
       
       # for the non-qc samples, check experimental variables. Which have at least 2 different factors, but as little as possible?
-      condition <- MetaboShiny::getDefaultCondition(csv_orig, 
+      condition <- MetaboShiny::getDefaultCondition(metshiCSV, 
                                                     excl.rows = qc.rows, 
                                                     exp.vars = exp.vars, 
                                                     excl.cond = c("batch", "injection", "sample"), 
@@ -42,6 +35,7 @@ shiny::observeEvent(input$initialize, {
       
       # =================================|
       
+
       # if nothing is selected for batch, give empty
       if(is.null(batches)) batches <- ""
       
@@ -50,88 +44,98 @@ shiny::observeEvent(input$initialize, {
       
       # if 'batch' is selected, 'injection' is often also present
       # TODO: i can imagine this doesn't work for all  users, please disable this...
-      if("batch" %in% batches & "injection" %in% colnames(csv_orig)){
+      if("batch" %in% batches & "injection" %in% colnames(metshiCSV)){
         batches = c(batches, "injection")
       }
       
-      mz.meta <- getColDistribution(csv_orig)
-      exp.vars = mz.meta$meta
-      mz.vars = mz.meta$mz
+      shiny::setProgress(session=session, value= .3)
       
-      # get the part of csv with only the experimental variables
-      first_part <- csv_orig[,..exp.vars, with=FALSE]
-      second_part <- csv_orig[,..mz.vars, with=FALSE]
       
       # get ppm
-      conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb)
-      ppm <- sprintf("%.1f",RSQLite::dbGetQuery(conn, "select ppm from params"))
-      RSQLite::dbDisconnect(conn)
-      
+      params = gsub(lcl$paths$csv_loc, pattern="\\.csv", replacement="_params.csv")
+      ppm <- fread(params)$ppm
+
       # re-make csv with the corrected data
-      csv <- cbind(first_part, # if 'label' is in excel file remove it, it will clash with the metaboanalystR 'label'
-                   "label" = first_part[, ..condition][[1]], # set label as the initial variable of interest
-                   second_part)
+      metshiCSV <- cbind(metshiCSV[,..exp.vars, with=FALSE], # if 'label' is in excel file remove it, it will clash with the metaboanalystR 'label'
+                         "label" = metshiCSV[, ..condition][[1]], # set label as the initial variable of interest
+                         metshiCSV[,..mz.vars, with=FALSE])
       
       # remove outliers by making a boxplot and going from there
       if(input$remove_outliers){
-        csv <- MetaboShiny::removeOutliers(csv, exp.vars)
+        metshiCSV <- MetaboShiny::removeOutliers(metshiCSV, 
+                                                 exp.vars)
       }
-      
-      # also remove them in the table with covariates
-      covar_table <- first_part #[sample %in% keep_samps,]
       
       # if the experimental condition is batch, make sure QC samples are not removed at the end for analysis
       # TODO: this is broken with the new system, move this to the variable switching segment of code
       batchview = if(condition == "batch") TRUE else FALSE
       
       # if QC present, only keep QCs that share batches with the other samples (may occur when subsetting data/only loading part of the samples)
-      if(any(grepl("QC", csv$sample))){
-        csv <- MetaboShiny::removeUnusedQC(csv, covar_table)
+      if(any(grepl("QC", metshiCSV$sample))){
+        metshiCSV <- MetaboShiny::removeUnusedQC(metshiCSV,
+                                                 metshiCSV[,..exp.vars, with=FALSE])
       }
+      shiny::setProgress(session=session, value= .4)
       
-      mz.meta <- getColDistribution(csv)
+      
+      mz.meta <- getColDistribution(metshiCSV)
       exp.vars = mz.meta$meta
       mz.vars = mz.meta$mz
+      covar_table <- as.data.frame(metshiCSV[,..exp.vars, with=FALSE])
       
-      csv <- MetaboShiny::asMetaboAnalyst(csv, exp.vars)
+      metshiCSV <- MetaboShiny::asMetaboAnalyst(metshiCSV, 
+                                                exp.vars)
       
       # define location to write processed csv to
-      csv_loc_final <- gsub(pattern = "\\.csv", replacement = "_no_out.csv", x = lcl$paths$csv_loc)
-      
-      # remove file if it already exists
-      if(file.exists(csv_loc_final)) file.remove(csv_loc_final)
+      csv_loc_final <- tempfile()
       
       # write new csv to new location
-      data.table::fwrite(csv, 
+      data.table::fwrite(metshiCSV, 
                          file = csv_loc_final)
       
-      # rename row names of covariant table to the sample names
-      rownames(covar_table) <- covar_table$sample
+      shiny::setProgress(session=session, value= .5)
+      
+      # = = = = = = = = = = = = = = =
+      
+      mSet <- MetaboAnalystR::InitDataObjects("pktable",
+                                              "stat",
+                                              FALSE)
       
       # load new csv into empty mSet!
       mSet <- MetaboAnalystR::Read.TextData(mSet,
                                             filePath = csv_loc_final,
                                             "rowu")  # rows contain samples
       
+      # set default time series mode'
+      mSet$dataSet$paired = F
+      mSet$dataSet$subset = c()
+      
       # add covars to the mSet for later switching and machine learning
-      mSet$dataSet$covars <- covar_table
+      mSet$dataSet$covars <- data.table::as.data.table(covar_table)
+      #rownames(mSet$dataSet$covars) <- mSet$dataSet$covars$sample
       
       # sanity check data
       mSet <- MetaboAnalystR::SanityCheckData(mSet)
       
-      MetaboShiny::mzLeftPostFilt(mSet, input$perc_limit)
+      mSet$dataSet$orig <- NULL
+      gc()
+      
+      #print(paste0("Left after missing value check: ", MetaboShiny::mzLeftPostFilt(mSet, input$perc_limit))
+      
+      shiny::setProgress(session=session, value= .6)
       
       # remove metabolites with more than user defined perc missing
       mSet <- MetaboAnalystR::RemoveMissingPercent(mSet,
                                                    percent = input$perc_limit/100)
       
       # remove samples with now no one...
-      rmv = MetaboShiny::tooEmptySamps(mSet, max.missing.per.samp = input$perc_limit)
+      rmv = MetaboShiny::tooEmptySamps(mSet, 
+                                       max.missing.per.samp = input$perc_limit)
       
       # missing value imputation
       if(req(input$miss_type ) != "none"){
         if(req(input$miss_type ) == "rowmin"){ # use sample minimum
-          mSet$dataSet$proc <- MetaboShiny::replRowMin(mSet)
+          mSet$dataSet$proc <- replRowMin(mSet)
         }
         else if(req(input$miss_type ) == "pmm"){ # use predictive mean matching
           # TODO: re-enable, it's very slow
@@ -153,9 +157,10 @@ shiny::observeEvent(input$initialize, {
         }
       }
       
-      #mSet <- MetaboAnalystR::replaceMin(mSet)
+      mSet$dataSet$preproc <- NULL
+      gc()
       
-      shiny::setProgress(session=session, value= .2)
+      shiny::setProgress(session=session, value= .7)
       
       # if normalizing by a factor, do the below
       if(req(input$norm_type) == "SpecNorm"){
@@ -188,7 +193,7 @@ shiny::observeEvent(input$initialize, {
                                             scaleNorm = input$scale_type,
                                             ref = input$ref_var)
       
-      shiny::setProgress(session=session, value= .4)
+      shiny::setProgress(session=session, value= .8)
       
       # get sample names
       smps <- rownames(mSet$dataSet$norm)
@@ -208,7 +213,7 @@ shiny::observeEvent(input$initialize, {
         
         if("batch" %in% req(input$batch_var ) & has.qc){
           # save to mSet
-          mSet$dataSet$norm <- MetaboShiny::batchCorrQC(mSet, qc_rows)
+          mSet$dataSet$norm <- batchCorrQC(mSet)
         }
         
         # remove QC samples if user doesn't use batch as condition
@@ -269,10 +274,11 @@ shiny::observeEvent(input$initialize, {
           }
         }
       
+      shiny::setProgress(session=session, value= .9)
+      
       mSet$dataSet$cls.num <- length(levels(mSet$dataSet$cls))
       
-      shiny::setProgress(session=session, value= .5)
-      
+
       # make sure covars order is consistent with mset$..$norm order
       rematch = match(rownames(mSet$dataSet$norm),
                       mSet$dataSet$covars$sample)
@@ -282,11 +288,8 @@ shiny::observeEvent(input$initialize, {
       mSet$dataSet$cls.name <- condition
       mSet$dataSet$exp.fac <- condition
       
-      shiny::setProgress(session=session, value= .7)
-      
+
       # save the used adducts to mSet
-      shiny::setProgress(session=session, value= .9)
-      
       mSet$ppm <- ppm
       mSet$paired <- F
       mSet$dataSet$subset <- list()

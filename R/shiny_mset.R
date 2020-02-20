@@ -144,7 +144,7 @@ change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
                      change_var <- if(length(stats_var) > 1) stats_var[1] else stats_var
                      mSet$dataSet$exp.lbl <- change_var
                      # change current variable of interest to user pick from covars table
-                     mSet$dataSet$cls <- as.factor(mSet$dataSet$covars[,change_var, with=F][[1]])
+                     mSet$dataSet$cls <- as.factor(mSet$dataSet$covars[, ..change_var, with=F][[1]])
                      # adjust bivariate/multivariate (2, >2)...
                      mSet$dataSet$cls.num <- length(levels(mSet$dataSet$cls))
                      # - - - 
@@ -196,8 +196,8 @@ change.mSet <- function(mSet, stats_type, stats_var=NULL, time_var=NULL){
                      change_var <- if(length(stats_var)>1) stats_var[1] else stats_var
                      print(time_var)
                      
-                     mSet$dataSet$facA <- as.factor(mSet$dataSet$covars[,change_var, with=F][[1]])
-                     mSet$dataSet$facB <- as.factor(mSet$dataSet$covars[,time_var, with=F][[1]])
+                     mSet$dataSet$facA <- as.factor(mSet$dataSet$covars[, ..change_var, with=F][[1]])
+                     mSet$dataSet$facB <- as.factor(mSet$dataSet$covars[, ..time_var, with=F][[1]])
                      mSet$dataSet$facA.lbl <- change_var
                      mSet$dataSet$facB.lbl <- time_var
                      mSet$dataSet$exp.fac <- mSet$dataSet$facA

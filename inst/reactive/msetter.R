@@ -104,22 +104,7 @@ shiny::observe({
         }
         
         mSet$dataSet$cls.name <- new.name
-        
-        if(typeof(mSet) != "double"){
-          #===== FILTERING ======
-          if(mSet$metshiParams$filt_type != "none" & length(mSet$analSet) == 1){
-            shiny::showNotification("Filtering dataset...")
-            #mSet$analSet <- mSet$storage$orig$analysis
-            # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
-            mSet <- MetaboAnalystR::FilterVariable(mSet,
-                                                   filter = mSet$metshiParams$filt_type,
-                                                   qcFilter = "F",
-                                                   rsd = 25)
-            keep.mz <- colnames(mSet$dataSet$filt)
-            mSet <- MetaboShiny::filt.mSet(mSet, keep.mz)
-          }
-        }
-        
+
         shiny::updateCheckboxInput(session, 
                                    "paired", 
                                    value = mSet$dataSet$paired) 

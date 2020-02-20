@@ -34,7 +34,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                  shiny::textInput("proj_name_new", label = "STEP 1: What is your project name?", value = ""),
                                                                                  shiny::sliderInput("ppm", "STEP 2: What level accuracy does your mass spectrometer have?",min = 0.01,max = 50,value = 5,step = .01))),
                                                    shiny::hr(),
-                                                   shiny::fluidRow(shiny::column(3, align="center",
+                                                   shiny::fluidRow(shiny::column(5, align="center",
                                                                                  shiny::imageOutput("merge_icon",inline = T),br(),
                                                                                  shiny::tags$b("STEP 3: Click buttons to load data."),
                                                                                  br(),br(),
@@ -48,33 +48,25 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                  shinyFiles::shinyFilesButton('outlist_pos', '+ peaks', 'Select + mode peaks', FALSE),
                                                                                  shinyFiles::shinyFilesButton('outlist_neg', '- peaks', 'Select - mode peaks', FALSE)
                                                                                  
-                                                   )
-                                                   ,shiny::column(2, align="center", #ok
-                                                                  shiny::tags$b("STEP 4: Merge data and metadata"),shiny::br(),shiny::br(),
-                                                                  shinyWidgets::circleButton("create_db", icon = shiny::icon("long-arrow-alt-right", class = "fa-2x"), size = "lg"))
-                                                   ,shiny::column(2, align="center", # issue lol
-                                                                  shiny::imageOutput("db_icon")
-                                                   )
-                                                   ,shiny::column(2, align="center",
-                                                                  shiny::tags$b("STEP 5: Convert to input-ready format"),
+                                                   ),shiny::column(2, align="center",
+                                                                  shiny::tags$b("STEP 4: Convert to input-ready format"),
                                                                   shiny::br(),shiny::br(),
                                                                   shinyWidgets::circleButton("create_csv", icon = shiny::icon("long-arrow-alt-right", class = "fa-2x"), size = "lg"))
-                                                   ,shiny::column(3, align="center",
+                                                   ,shiny::column(5, align="center",
                                                                   shiny::imageOutput("laptop_icon", inline=T),shiny::br(),shiny::br(),
                                                                   shiny::div(DT::dataTableOutput('csv_tab'),style='font-size:80%')
                                                    )
                                                    ),
-                                                   shiny::fluidRow(shiny::column(3, align="center",
+                                                   shiny::fluidRow(shiny::column(5, align="center",
                                                                                  shiny::tags$i("Input files chosen?"),shiny::br(),shiny::br(),
                                                                                  shiny::imageOutput("proj_merge_check")
                                                    ),
                                                    shiny::column(2, align="center",
-                                                                 shiny::tags$i("Database present?"),shiny::br(),shiny::br(),
-                                                                 shiny::imageOutput("proj_db_check"),offset = 2),
-                                                   shiny::column(3, align="center",
+                                                                 br()),
+                                                   shiny::column(5, align="center",
                                                                  shiny::tags$i("Final table present?"),shiny::br(),shiny::br(),
                                                                  shiny::imageOutput("proj_csv_check", inline=T),shiny::br(),shiny::br(),
-                                                                 shiny::tags$b("STEP 6: If "), shiny::icon("check-circle"), shiny::tags$b(" continue to normalization"),
+                                                                 shiny::tags$b("STEP 5: If "), shiny::icon("check-circle"), shiny::tags$b(" continue to normalization"),
                                                                  offset = 2))
                                    ),
                                    # this tab is used to perform normalization of your data. settings are processed as input$filt_type etc. in 'server'.

@@ -9,7 +9,7 @@ ggplotNormSummary <- function(mSet,
                               cf){
   
   # load in original data (pre-normalization, post-filter)
-  orig_data <- as.data.frame(mSet$dataSet$preproc)
+  orig_data <- as.data.frame(mSet$dataSet$proc)
   # load in normalized data
   norm_data <- as.data.frame(mSet$dataSet$norm)
   
@@ -94,7 +94,7 @@ ggplotSampleNormSummary <- function(mSet,
                                     font,
                                     cf){
   # 4 by 4 plot, based on random 20-30 picked
-  orig_data <- as.data.frame(mSet$dataSet$preproc)
+  orig_data <- as.data.frame(mSet$dataSet$proc)
   norm_data <- as.data.frame(mSet$dataSet$norm)
   
   candidate.samps <- intersect(rownames(orig_data), rownames(norm_data))

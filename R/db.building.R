@@ -1,4 +1,129 @@
 #' @export
+import.pat.csvs <- function(db.name,
+                             metapath,
+                             pospath,
+                             negpath,
+                             overwrite=FALSE,
+                             rtree=TRUE,
+                             make.full = TRUE,
+                             ppm=2,
+                             inshiny=F,
+                             csvpath=lcl$paths$csv_loc,
+                             wipe.regex = ".*_(?>POS|NEG)_[0+]*"){
+  ppm = as.numeric(ppm)
+
+  # METADATA
+  metadata <- data.table::fread(metapath)
+  metadata <- MetaboShiny::reformat.metadata(metadata)
+  keep.cols = sapply(colnames(metadata), function(x) length(unique(metadata[,..x][[1]])) > 1) 
+  metadata$sample <- gsub(metadata$sample, pattern = wipe.regex, replacement = "", perl=T)
+  metadata.filt = unique(metadata[, ..keep.cols])
+  if(!("individual" %in% colnames(metadata.filt))) metadata.filt$individual <- metadata.filt$sample
+  #/METADATA
+  
+  poslist <- data.table::fread(pospath, header=T)
+  neglist <- data.table::fread(negpath, header=T)
+  
+  if("label" %in% colnames(poslist)[1:5]){
+    poslist[,label:=NULL]
+    neglist[,label:=NULL]
+  }
+  
+  # PIVOT IF WRONG SIDE AROUND - METABOLIGHTS DATA
+  if(any(grepl("mzmed|mass_to_charge", colnames(poslist)))){
+    setnames(poslist, "mass_to_charge", "mzmed", skip_absent = T)
+    setnames(neglist, "mass_to_charge", "mzmed", skip_absent = T)
+    poslist_melty <- data.table::melt(poslist_melty[,-"label"], id.vars=c("sample"), variable.name = "mzmed", value.name="into")  
+    poslist <- data.table::dcast(poslist, mzmed ~ sample, value.var = "into")
+    neglist_melty <- data.table::melt(neglist_melty[,-"label"], id.vars=c("sample"), variable.name = "mzmed", value.name="into")  
+    neglist <- data.table::dcast(neglist, mzmed ~ sample, value.var = "into")
+    # REQUIREMENTS: "sample" - mz1 mz2 mz3 mz3 ... 
+    # TODO: check for metabolights samples!
+  }
+
+  # REGEX SAMPLE NAMES if applicable
+  if(wipe.regex != ""){
+    poslist[, sample := gsub(wipe.regex, replacement = "", sample)]
+    neglist[, sample := gsub(wipe.regex, replacement = "", sample)]
+  } 
+  
+  # REMOVE EXTRA DECIMALS THAT ARE NOT WITHIN PPM MARGIN
+  zeros_after_period <- function(x) {
+    if (isTRUE(all.equal(round(x),x))) return (0) # y would be -Inf for integer values
+    y <- log10(abs(x)-floor(abs(x)))   
+    ifelse(isTRUE(all.equal(round(y),y)), -y-1, -ceiling(y))}
+  unique.samples = unique(metadata.filt$sample)
+  
+  # CHECK SAMPLES THAT ARE IN METADATA
+  keep.samples.pos <- intersect(poslist$sample, unique.samples)
+  keep.samples.neg <- intersect(neglist$sample, unique.samples)
+  missing.samples = setdiff(unique.samples, unique(c(keep.samples.pos, keep.samples.neg)))
+  if(length(missing.samples) > 0 ){
+    if(inshiny){
+      shiny::showNotification(paste0("Missing samples: ", paste0(missing.samples, collapse = ","), ". Please check your peak table < > metadata for naming mismatches!"))
+    }else{
+      print(paste0("Missing samples: ", paste0(missing.samples, collapse = ","), ". Please check your peak table < > metadata for naming mismatches!"))
+    }
+  }
+  
+  # ROUND MZ VALUES
+  ismz <- suppressWarnings(which(!is.na(as.numeric(colnames(poslist)))))
+  colnames(poslist)[ismz] <- pbapply::pbsapply(colnames(poslist)[ismz], function(mz){
+      ppmRange <- as.numeric(mz)/1e6 * as.numeric(ppm)
+      zeros = sapply(ppmRange,zeros_after_period)
+      decSpots = zeros + 1 # todo: verify this formula?
+      roundedMz <- formatC(as.numeric(mz), digits = decSpots, format = "f")
+      return(paste0(roundedMz, "+"))
+    })
+  ismz <- suppressWarnings(which(!is.na(as.numeric(colnames(neglist)))))
+  colnames(neglist)[ismz] <- pbapply::pbsapply(colnames(neglist)[ismz], function(mz){
+    ppmRange <- as.numeric(mz)/1e6 * as.numeric(ppm)
+    zeros = sapply(ppmRange,zeros_after_period)
+    decSpots = zeros + 1 # todo: verify this formula?
+    roundedMz <- formatC(as.numeric(mz), digits = decSpots, format = "f")
+    return(paste0(roundedMz, "-"))
+  })
+  
+  poslist <- poslist[sample %in% keep.samples.pos,]
+  neglist <- neglist[sample %in% keep.samples.neg,]
+  
+  # replace commas with dots
+  if(any(grepl(unlist(poslist[1:5,10:20]), pattern = ","))){
+    for(j in seq_along(poslist)){
+      set(poslist, i=which(grepl(pattern=",",poslist[[j]])), j=j, value=gsub(",",".",poslist[[j]]))
+    }
+    for(j in seq_along(neglist)){
+      set(neglist, i=which(grepl(pattern=",",neglist[[j]])), j=j, value=gsub(",",".",neglist[[j]]))
+    }
+  }
+    
+  # merge metadata with peaks
+  setkey(poslist, sample)
+  setkey(neglist, sample)
+  setkey(metadata, sample)
+  
+  mzlist <- merge(poslist, neglist, by = "sample")
+  mzlist <- merge(metadata, mzlist, by = "sample")
+
+  mz.meta <- getColDistribution(mzlist)
+  exp.vars = mz.meta$meta
+  mz.vars = mz.meta$mz
+  mzlist[,(exp.vars) := lapply(.SD,function(x){ ifelse(x == "" | is.na(x) | x == "Unknown", "unknown", x)}), .SDcols = exp.vars]
+ 
+   if(!any(is.na(unlist(poslist[1:5,10:20])))){
+    mzlist[,(mz.vars) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)}), .SDcols = mz.vars]
+  }
+  
+  colnames(mzlist)[which(colnames(mzlist) == "time")] <- "Time"
+  mzlist$sample <- gsub("[^[:alnum:]./_-]", "", mzlist$sample)
+  # - - - - - - - - - - - - - - - - - - 
+  data.table::fwrite(mzlist, csvpath)
+  params = data.table(missing_filler="unknown",
+                      ppm=ppm)
+  data.table::fwrite(params, gsub(csvpath, pattern="\\.csv", replacement="_params.csv"))
+}
+
+#' @export
 build.pat.db <- function(db.name,
                          metapath,
                          pospath,
@@ -32,11 +157,15 @@ build.pat.db <- function(db.name,
   
   RSQLite::dbWriteTable(conn, "individual_data", metadata.filt, overwrite=TRUE) # insert into
   
-  # =================
+  if("sample" %in% colnames(poslist)){
+    # reshape
+    poslist_melty <- data.table::melt(poslist[,-"label"], id.vars=c("sample"), variable.name = "mzmed", value.name="into")  
+    neglist_melty <- data.table::melt(neglist[,-"label"], id.vars=c("sample"),variable.name = "mzmed", value.name="into")
+    poslist <- data.table::dcast(poslist_melty, mzmed ~ sample, value.var = "into")
+    neglist <- data.table::dcast(neglist_melty, mzmed ~ sample, value.var = "into")
+  }
   
-  poslist <- data.table::fread(pospath,header = T)
-  neglist <- data.table::fread(negpath,header = T) 
-  adjust = which(colnames(poslist) != "mass_to_charge")
+  adjust = which(!(colnames(poslist) %in% c("mzmed", "mass_to_charge")))
   colnames(poslist)[adjust] <- gsub(colnames(poslist)[adjust], pattern = wipe.regex, replacement = "", perl=T)
   colnames(neglist)[adjust] <- gsub(colnames(neglist)[adjust], pattern = wipe.regex, replacement = "", perl=T)
   
@@ -54,6 +183,8 @@ build.pat.db <- function(db.name,
   if(length(missing.samples) > 0 ){
     if(inshiny){
       shiny::showNotification(paste0("Missing samples: ", paste0(missing.samples, collapse = ","), ". Please check your peak table < > metadata for naming mismatches!"))
+    }else{
+      print(paste0("Missing samples: ", paste0(missing.samples, collapse = ","), ". Please check your peak table < > metadata for naming mismatches!"))
     }
   }
   

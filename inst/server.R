@@ -1103,7 +1103,7 @@ apikey =  ')
     # save mset
     if(!is.null(mSet)){
       shiny::withProgress({
-        fn <- paste0(tools::file_path_sans_ext(lcl$paths$patdb), ".metshi")
+        fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
         if(exists("mSet")){
           save(mSet, file = fn)
         }
@@ -1170,9 +1170,14 @@ apikey =  ')
     debug_input <<- shiny::isolate(shiny::reactiveValuesToList(input))
     debug_lcl <<- lcl
     debug_mSet <<- mSet
-    debug_enrich <<- enrich
     debug_matches <<- shown_matches
+    debug_enrich <<- enrich
     debug_selection <<- my_selection
+    try({
+      debug_browse_content <<- browse_content
+    },silent=T)
+    debug_result_filters <<- result_filters
+    debug_pieinfo <<- pieinfo
   })
   
   shiny::observeEvent(input$ml_train_ss, {
@@ -1256,17 +1261,6 @@ apikey =  ')
   
   onStop(function() {
     print("Closing metaboShiny ~ヾ(＾∇＾)")
-    debug_input <<- shiny::isolate(shiny::reactiveValuesToList(input))
-    debug_lcl <<- lcl
-    debug_mSet <<- mSet
-    debug_matches <<- shown_matches
-    debug_enrich <<- enrich
-    debug_selection <<- my_selection
-    try({
-      debug_browse_content <<- browse_content
-    },silent=T)
-    debug_result_filters <<- result_filters
-    debug_pieinfo <<- pieinfo
     
     if(!is.null(session_cl)){
       parallel::stopCluster(session_cl)
