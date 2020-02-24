@@ -22,6 +22,10 @@ import.pat.csvs <- function(db.name,
   if(!("individual" %in% colnames(metadata.filt))) metadata.filt$individual <- metadata.filt$sample
   #/METADATA
   
+  print(pospath)
+  print(negpath)
+  print(metapath)
+  
   poslist <- data.table::fread(pospath, header=T)
   neglist <- data.table::fread(negpath, header=T)
   
@@ -50,8 +54,12 @@ import.pat.csvs <- function(db.name,
   
   # miss values
   miss_threshold = ceiling(missperc/100 * nrow(poslist))
-  poslist <- poslist[,which(colSums(!is.na(poslist)) > miss_threshold),with=F] # at least one sample with non-na
-  neglist <- neglist[,which(colSums(!is.na(neglist)) > miss_threshold),with=F] # at least one sample with non-na
+
+  poslist <- poslist[,which(colSums(is.na(poslist)) <= miss_threshold),with=F] # at least one sample with non-na
+  neglist <- neglist[,which(colSums(is.na(neglist)) <= miss_threshold),with=F] # at least one sample with non-na
+  
+  print(paste0("Remaining m/z values for positive mode:", ncol(poslist)))
+  print(paste0("Remaining m/z values for negative mode:", ncol(neglist)))
   
   # REGEX SAMPLE NAMES if applicable
   if(wipe.regex != ""){
@@ -64,6 +72,12 @@ import.pat.csvs <- function(db.name,
     if (isTRUE(all.equal(round(x),x))) return (0) # y would be -Inf for integer values
     y <- log10(abs(x)-floor(abs(x)))   
     ifelse(isTRUE(all.equal(round(y),y)), -y-1, -ceiling(y))}
+  
+  
+  poslist$sample <- as.character(poslist$sample)
+  neglist$sample <- as.character(neglist$sample)
+  metadata.filt$sample <- as.character(metadata.filt$sample)
+  
   unique.samples = unique(metadata.filt$sample)
   
   # CHECK SAMPLES THAT ARE IN METADATA
@@ -78,23 +92,40 @@ import.pat.csvs <- function(db.name,
     }
   }
   
+  # CHECK IF CUSTOM PPMVALUE
+  hasPPM = any(grepl(colnames(poslist), pattern = "\\|"))
+
   # ROUND MZ VALUES
-  ismz <- suppressWarnings(which(!is.na(as.numeric(colnames(poslist)))))
+  ismz <- suppressWarnings(which(!is.na(as.numeric(gsub(colnames(poslist), pattern="\\|.*$", replacement="")))))
   colnames(poslist)[ismz] <- pbapply::pbsapply(colnames(poslist)[ismz], function(mz){
+      if(hasPPM){
+        split.mz <- stringr::str_split(mz, "\\|")[[1]]
+        mz = split.mz[1]
+        ppm = split.mz[2]
+      }
       ppmRange <- as.numeric(mz)/1e6 * as.numeric(ppm)
       zeros = sapply(ppmRange,zeros_after_period)
       decSpots = zeros + 1 # todo: verify this formula?
       roundedMz <- formatC(as.numeric(mz), digits = decSpots, format = "f")
-      return(paste0(roundedMz, "+"))
+      newName = paste0(roundedMz, "+", if(hasPPM) paste0("|", ppm) else "") 
+      print(newName)
+      return(newName)
     })
-  ismz <- suppressWarnings(which(!is.na(as.numeric(colnames(neglist)))))
+  ismz <- suppressWarnings(which(!is.na(as.numeric(gsub(colnames(neglist), pattern="\\|.*$", replacement="")))))
   colnames(neglist)[ismz] <- pbapply::pbsapply(colnames(neglist)[ismz], function(mz){
+    if(hasPPM){
+      split.mz <- stringr::str_split(mz, "\\|")[[1]]
+      mz = split.mz[1]
+      ppm = split.mz[2]
+    }
     ppmRange <- as.numeric(mz)/1e6 * as.numeric(ppm)
     zeros = sapply(ppmRange,zeros_after_period)
     decSpots = zeros + 1 # todo: verify this formula?
     roundedMz <- formatC(as.numeric(mz), digits = decSpots, format = "f")
-    return(paste0(roundedMz, "-"))
-  })
+    newName = paste0(roundedMz, "-", if(hasPPM) paste0("|", ppm) else "") 
+    print(newName)
+    return(newName)
+    })
   
   poslist <- poslist[sample %in% keep.samples.pos,]
   neglist <- neglist[sample %in% keep.samples.neg,]
@@ -125,7 +156,8 @@ import.pat.csvs <- function(db.name,
   mzlist$sample <- gsub("[^[:alnum:]./_-]", "", mzlist$sample)
   # - - - - - - - - - - - - - - - - - - 
   data.table::fwrite(mzlist, csvpath)
-  params = data.table(ppm=ppm)
+  params = data.table(ppm=ppm,
+                      ppmpermz = if(hasPPM) "yes" else "no")
   data.table::fwrite(params, gsub(csvpath, pattern="\\.csv", replacement="_params.csv"))
 }
 

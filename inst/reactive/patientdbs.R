@@ -5,7 +5,7 @@ lapply(c("merge",
   # creates listener for if the 'check db' button is pressed
   shiny::observe({
     # see which db files are present in folder
-    folder_files <- list.files(lcl$paths$work_dir)
+    folder_files <- list.files(lcl$paths$proj_dir)
     is.present <- switch(col,
                          merge = is.list(input$metadata) & is.list(input$outlist_pos) & is.list(input$outlist_neg),
                          csv = paste0(input$proj_name_new, ".csv") %in% folder_files,
@@ -45,7 +45,13 @@ shiny::observeEvent(input$create_csv,{
                                   selected = proj_name)
       
       lcl$proj_name <<- proj_name
-      lcl$paths$csv_loc <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name, ".csv"))
+      lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, lcl$proj_name)
+      
+      if(dir.exists(lcl$paths$proj_dir)) unlink(lcl$paths$proj_dir)
+      dir.create(lcl$paths$proj_dir,showWarnings = F)
+      
+      lcl$paths$csv_loc <- file.path(lcl$paths$proj_dir, paste0(lcl$proj_name, ".csv"))
+      
       # change project name in user options file
       MetaboShiny::setOption(lcl$paths$opt.loc, key="proj_name", value=lcl$proj_name)
       # print the changed name in the UI
@@ -61,7 +67,8 @@ shiny::observeEvent(input$create_csv,{
                       wipe.regex = input$wipe_regex,
                       missperc = input$perc_limit,
                       csvpath = lcl$paths$csv_loc,
-                      overwrite = T, inshiny=F)
+                      overwrite = T,
+                      inshiny=F)
       
       success=T
       output$proj_csv_check <- shiny::renderImage({

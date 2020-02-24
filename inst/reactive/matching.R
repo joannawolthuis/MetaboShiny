@@ -225,30 +225,28 @@ lapply(c("prematch","search_mz"), function(search_type){
       mapper = unique(data.table::rbindlist(lapply(matches, function(x) x$mapper)))
       content = unique(data.table::rbindlist(lapply(matches, function(x) x$content)))
       
-      if(nrow(mapper)>0){
-        RSQLite::dbWriteTable(conn, 
-                              "match_mapper", 
-                              mapper, overwrite=T, use.names = T)
-        RSQLite::dbWriteTable(conn, 
-                              "match_content", 
-                              content, overwrite=T, use.names = T)
-        RSQLite::dbExecute(conn, "CREATE INDEX map_mz ON match_mapper(query_mz)")
-        RSQLite::dbExecute(conn, "CREATE INDEX map_ba ON match_mapper(baseformula, adduct)")
-        RSQLite::dbExecute(conn, "CREATE INDEX cont_ba ON match_content(baseformula, adduct)")
-        RSQLite::dbExecute(conn, "CREATE INDEX cont_str ON match_content(structure)")
-        RSQLite::dbDisconnect(conn)
-        if(search_type == "prematch"){
-          mSet$metshiParams$prematched<<-T
-          search_button$on <- FALSE   
-        }else{
-          search$go <- TRUE
-        }
-        RSQLite::dbDisconnect(conn)
+      #if(nrow(mapper)>0){
+      RSQLite::dbWriteTable(conn, 
+                            "match_mapper", 
+                            mapper, overwrite=T, use.names = T)
+      RSQLite::dbWriteTable(conn, 
+                            "match_content", 
+                            content, overwrite=T, use.names = T)
+      RSQLite::dbExecute(conn, "CREATE INDEX map_mz ON match_mapper(query_mz)")
+      RSQLite::dbExecute(conn, "CREATE INDEX map_ba ON match_mapper(baseformula, adduct)")
+      RSQLite::dbExecute(conn, "CREATE INDEX cont_ba ON match_content(baseformula, adduct)")
+      RSQLite::dbExecute(conn, "CREATE INDEX cont_str ON match_content(structure)")
+      if(search_type == "prematch"){
+        mSet$metshiParams$prematched<<-T
+        search_button$on <- FALSE   
       }else{
-        shiny::showNotification("No matches found!")
-        shown_matches$forward_unique <- data.table::data.table()
-        shown_matches$forward_full <- data.table::data.table()
+        search$go <- TRUE
       }
+      RSQLite::dbDisconnect(conn)
+      #}else{
+      #shiny::showNotification("No matches found!")  
+      #}
+      
     }else{
       MetaboShiny::metshiAlert("Please build at least one database to enable this feature!")
       return(NULL)

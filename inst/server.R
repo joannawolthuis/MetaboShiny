@@ -32,7 +32,8 @@ function(input, output, session) {
   lcl = list(
     proj_name ="",
     last_mset="",
-    load_ui = F,
+    hasChanged = FALSE,
+    load_ui = FALSE,
     last_dir = c(),
     lists = list(),
     prev_mz = "",
@@ -309,12 +310,11 @@ apikey =  ')
       }
       
       # init stuff that depends on opts file
-      
       lcl$proj_name <<- opts$proj_name
-      lcl$paths$patdb <<- file.path(opts$work_dir,
-                                    paste0(opts$proj_name, ".db"))
-      lcl$paths$csv_loc <<- file.path(opts$work_dir,
-                                      paste0(opts$proj_name, ".csv"))
+      lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, lcl$proj_name)
+      lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".db"))
+      lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".csv"))
+      
       lcl$texts <<- list(
         list(name='curr_exp_dir', 
              text=lcl$paths$work_dir),
@@ -326,10 +326,7 @@ apikey =  ')
              text=opts$proj_name)
       )
       
-      lcl$vectors$project_names <<- unique(gsub(list.files(opts$work_dir,
-                                                           pattern = "\\.csv"),
-                                                pattern = "(_no_out\\.csv)|(\\.csv)",
-                                                replacement=""))
+      lcl$vectors$project_names <<- setdiff(basename(list.dirs(lcl$paths$work_dir)),"admin")
       
       lapply(1:4, function(i){
         colourpicker::updateColourInput(session=session,
@@ -1120,43 +1117,18 @@ apikey =  ')
   shiny::observeEvent(input$load_mset, {
     # load mset
     shiny::withProgress({
-      fn <- paste0(tools::file_path_sans_ext(lcl$paths$patdb), ".metshi")
+      fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
       if(file.exists(fn)){
         load(fn)
-        if(!("settings" %in% names(mSet))){
-          mSet$settings <- list(subset = mSet$dataSet$subset,
-                                exp.var = mSet$dataSet$exp.var,
-                                time.var = mSet$dataSet$time.var,
-                                exp.type = mSet$dataSet$exp.type,
-                                paired = mSet$dataSet$paired)
-          mSet$orig$settings <- list(subset = mSet$storage$orig$data$subset,
-                                     exp.var = mSet$storage$orig$data$exp.var,
-                                     time.var = mSet$storage$orig$data$time.var,
-                                     exp.type = mSet$storage$orig$data$exp.type,
-                                     paired = FALSE)
-        }else{
-          if("paired" %in% names(mSet$settings)){
-            mSet$settings <- list(subset = mSet$dataSet$subset,
-                                  exp.var = mSet$dataSet$exp.var,
-                                  time.var = mSet$dataSet$time.var,
-                                  exp.type = mSet$dataSet$exp.type,
-                                  paired = mSet$dataSet$paired)
-            mSet$orig$settings <- list(subset = mSet$storage$orig$data$subset,
-                                       exp.var = mSet$storage$orig$data$exp.var,
-                                       time.var = mSet$storage$orig$data$time.var,
-                                       exp.type = mSet$storage$orig$data$exp.type,
-                                       paired = FALSE)
-          }
-        }
-
         mSet <<- mSet
         opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
         if("ml" %in% names(mSet$analSet)){
           datamanager$reload <- "ml"
         }
         lcl$proj_name <<- opts$proj_name
-        lcl$paths$patdb <<- file.path(opts$work_dir, paste0(opts$proj_name, ".db"))
-        lcl$paths$csv_loc <<- file.path(opts$work_dir, paste0(opts$proj_name, ".csv"))
+        lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, lcl$proj_name)
+        lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".db"))
+        lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".csv"))
         shiny::updateCheckboxInput(session,
                                    "paired",
                                    value = mSet$dataSet$paired)
@@ -1204,8 +1176,7 @@ apikey =  ')
   shiny::observeEvent(input$export_plot,{
     success=F
     try({
-      orca_server$export(plotly::last_plot(), file.path(lcl$paths$work_dir,paste0(lcl$proj_name, "_",
-                                                                                  basename(tempfile()), 
+      orca_server$export(plotly::last_plot(), file.path(lcl$paths$proj_dir,paste0(basename(tempfile()), 
                                                                                   input$export_format)))
       success=T
     })
@@ -1250,7 +1221,7 @@ apikey =  ')
   observeEvent(input$save_exit,{
     if(input$save_exit){
       shiny::withProgress({
-        fn <- paste0(tools::file_path_sans_ext(lcl$paths$patdb), ".metshi")
+        fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
         if(exists("mSet")){
           save(mSet, file = fn)
         }

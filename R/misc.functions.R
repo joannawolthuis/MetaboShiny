@@ -345,5 +345,13 @@ getFilteredWordFreqency <- function(frequencies, filterList){
   return(filteredWords)
 }
 
+escape = function(str){
+  str_adj = gsub(str, pattern = "( )", replacement = "\\\\\\1")
+  str_adj = gsub(str_adj, pattern = "(\\))", replacement = "\\\\\\1")
+  str_adj = gsub(str_adj, pattern = "(\\()", replacement = "\\\\\\1")
+  str_adj = gsub(str_adj, pattern = "(&)", replacement = "\\\\\\1")
+  # - - - - - 
+  cat(str_adj)
+}
 
 

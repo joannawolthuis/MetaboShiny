@@ -8,14 +8,25 @@ shiny::observe({
     
     if(!is.null(mSet)){
       
-      mSet <- MetaboShiny::store.mSet(mSet) # save analyses
-      mSet <- MetaboShiny::reset.mSet(mSet) # reset dataset
+      if(lcl$hasChanged ){
+        mSet <- MetaboShiny::store.mSet(mSet) # save analyses
+      }
+      
+      oldSettings <- mSet$settings
+      
+      # reset dataset
+      mSet <- MetaboShiny::reset.mSet(mSet,
+                                      fn = file.path(lcl$paths$proj_dir, 
+                                                     paste0(lcl$proj_name,
+                                                            "_ORIG.metshi")))
+      
+      orig.count <- mSet$settings$orig.count
       
       success = F
       
       try({
         if(!(mSetter$do %in% c("unsubset"))){
-          mSet.settings <- if(mSetter$do == "load") mSet$storage[[input$storage_choice]]$settings else mSet$settings
+          mSet.settings <- if(mSetter$do == "load") mSet$storage[[input$storage_choice]]$settings else oldSettings
           if(length(mSet.settings$subset) > 0){
             subs = mSet.settings$subset
             subs = subs[names(subs) != "sample"]
@@ -28,7 +39,7 @@ shiny::observe({
             }
           }
         }else{
-          mSet.settings <- mSet$settings
+          mSet.settings <- oldSettings
         }
         
         # TODO: fix mismatch between cls order, covars order and table sample order
@@ -37,9 +48,9 @@ shiny::observe({
         mSet <- switch(mSetter$do,
                        load = {
                          mSet <- MetaboShiny::change.mSet(mSet, 
-                                                          stats_var = mSet.check$settings$exp.var, 
-                                                          time_var =  mSet.check$settings$time.var,
-                                                          stats_type = mSet.check$settings$exp.type)
+                                                          stats_var = mSet.settings$exp.var, 
+                                                          time_var =  mSet.settings$time.var,
+                                                          stats_type = mSet.settings$exp.type)
                          mSet$dataSet$paired <- mSet.settings$paired
                          mSet
                        },
@@ -62,9 +73,9 @@ shiny::observe({
                        },
                        subset = {
                          mSet <- MetaboShiny::change.mSet(mSet, 
-                                                          stats_var = mSet.check$settings$exp.var, 
-                                                          time_var =  mSet.check$settings$time.var,
-                                                          stats_type = mSet.check$settings$exp.type)
+                                                          stats_var = mSet.settings$exp.var, 
+                                                          time_var =  mSet.settings$time.var,
+                                                          stats_type = mSet.settings$exp.type)
                          mSet <- MetaboShiny::subset.mSet(mSet,
                                                           subset_var = input$subset_var, 
                                                           subset_group = input$subset_group)
@@ -73,9 +84,9 @@ shiny::observe({
                        },
                        unsubset = {
                          mSet <- MetaboShiny::change.mSet(mSet, 
-                                                          stats_var = mSet.check$settings$exp.var, 
-                                                          time_var =  mSet.check$settings$time.var,
-                                                          stats_type = mSet.check$settings$exp.type)
+                                                          stats_var = mSet.settings$exp.var, 
+                                                          time_var =  mSet.settings$time.var,
+                                                          stats_type = mSet.settings$exp.type)
                          mSet$dataSet$paired <- mSet.settings$paired
                          mSet
                        }
@@ -103,7 +114,7 @@ shiny::observe({
         }
         
         mSet$dataSet$cls.name <- new.name
-
+        mSet$settings$orig.count <- orig.count
         shiny::updateCheckboxInput(session, 
                                    "paired", 
                                    value = mSet$dataSet$paired) 
@@ -127,6 +138,7 @@ shiny::observe({
           print(msg)
         }
         mSet <<- mSet
+        lcl$hasChanged <<- FALSE
       }else{
         MetaboShiny::metshiAlert("Failed! Restoring old mSet...")
       }

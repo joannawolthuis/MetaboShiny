@@ -48,7 +48,7 @@ shiny::observe({
                        interface$mode <<- mSet$dataSet$exp.type
                        output$curr_name <- shiny::renderText({mSet$dataSet$cls.name})
                        shiny::updateNavbarPage(session, "statistics", selected = "inf")
-                       origcount = nrow(mSet$storage$orig$data$norm)
+                       origcount = mSet$settings$orig.count 
                        output$samp_count <- shiny::renderText({
                          paste0(as.character(nrow(mSet$dataSet$norm)),
                                 if(nrow(mSet$dataSet$norm) == origcount) "" else paste0("/",as.character(origcount)))
@@ -68,10 +68,11 @@ shiny::observe({
                                                                                  as.character(lvls)[order]
                                                                                })
                                                          )
-                                              
+                       storeNames = c(names(mSet$storage)[sapply(mSet$storage, function(x) "settings" %in% names(x))])
                        shiny::updateSelectInput(session, "storage_choice", 
-                                                choices = setdiff(names(mSet$storage)[sapply(mSet$storage, function(x) "settings" %in% names(x))], 'orig')
-                       )
+                                                choices = if(!is.null(storeNames[[1]])) storeNames else c()
+                       )  
+                         
                      }
                      
                      shiny::updateSelectInput(session, "stats_type", 
@@ -337,7 +338,7 @@ shiny::observe({
                      # render volcano plot with user defined colours
                      output$volc_plot <- plotly::renderPlotly({
                        # --- ggplot ---
-                       MetaboShiny::ggPlotVolc(mSet,
+                       ggPlotVolc(mSet,
                                                cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
                                                20,
                                                plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
@@ -577,7 +578,7 @@ shiny::observe({
                                       target = "res")
                        
                        roc_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
-                       tbl = unique(roc_data$perf[,c("AUC", "comparison", "attempt")])
+                       tbl = unique(roc_data$perf[,c("AUC_PAIR", "comparison", "attempt")])
                        
                        output$ml_overview_tab <- DT::renderDataTable({
                          MetaboShiny::metshiTable(content = tbl)

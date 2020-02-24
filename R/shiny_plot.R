@@ -9,7 +9,7 @@ ggplotNormSummary <- function(mSet,
                               cf){
   
   # load in original data (pre-normalization, post-filter)
-  orig_data <- as.data.frame(mSet$dataSet$proc)
+  orig_data <- as.data.frame(mSet$dataSet$prenorm)
   # load in normalized data
   norm_data <- as.data.frame(mSet$dataSet$norm)
   
@@ -81,7 +81,8 @@ ggplotNormSummary <- function(mSet,
   
   # - - - - - - - - - - - - - - - - - - -
   
-  list(tl=RES1, bl=RES2, tr=RES3, br=RES4)
+  list(tl=RES1, bl=RES2, 
+       tr=RES3, br=RES4)
 }
 
 #' @export
@@ -94,7 +95,7 @@ ggplotSampleNormSummary <- function(mSet,
                                     font,
                                     cf){
   # 4 by 4 plot, based on random 20-30 picked
-  orig_data <- as.data.frame(mSet$dataSet$proc)
+  orig_data <- as.data.frame(mSet$dataSet$prenorm)
   norm_data <- as.data.frame(mSet$dataSet$norm)
   
   candidate.samps <- intersect(rownames(orig_data), rownames(norm_data))
@@ -473,7 +474,6 @@ ggPlotAOV <- function(mSet, cf, n=20,
     return(NULL)
   }
   
-  colnames(profile) <- c("cpd", "-logp")
   profile[,2] <- round(profile[,2], digits = 2)
   profile$Peak <- c(1:nrow(profile))
   colnames(profile)[1:2] <- c("m/z", "-log(p)")
@@ -497,12 +497,13 @@ ggPlotAOV <- function(mSet, cf, n=20,
     #ggplot2::scale_y_log10()+
     ggplot2::scale_y_continuous(labels=scaleFUN)
   if(plotlyfy){
-    plotly::ggplotly(p, tooltip="m/z") %>%
+    plotly::ggplotly(p, tooltip="key") %>%
       config(toImageButtonOptions = list(format = "svg"))
   }else{
     p
   }
 }
+
 ggPlotTT <- function(mSet, cf, n=20,
                      plot.theme, plotlyfy=TRUE,font){
   profile <- data.table::as.data.table(mSet$analSet$tt$p.log[mSet$analSet$tt$inx.imp],keep.rownames = T)
@@ -512,7 +513,6 @@ ggPlotTT <- function(mSet, cf, n=20,
     return(NULL)
   }
   
-  colnames(profile) <- c("cpd", "-logp")
   profile[,2] <- round(profile[,2], digits = 2)
   profile$Peak <- c(1:nrow(profile))
   colnames(profile)[1:2] <- c("m/z", "-log(p)")
@@ -536,7 +536,7 @@ ggPlotTT <- function(mSet, cf, n=20,
     #ggplot2::scale_y_log10()+
     ggplot2::scale_y_continuous(labels=scaleFUN)
   if(plotlyfy){
-    plotly::ggplotly(p, tooltip="m/z") %>%
+    plotly::ggplotly(p, tooltip="key") %>%
       config(toImageButtonOptions = list(format = "svg"))
   }else{
     p
@@ -554,17 +554,18 @@ ggPlotPattern <- function(mSet, cf, n=20,
     return(NULL)
   }
   
-  colnames(profile)[1] <- c("cpd")
+  colnames(profile)[1] <- c("m/z")
   #profile$Peak <- c(1:nrow(profile))
   scaleFUN <- function(x) sprintf("%.2f", x)
   
+  profile$`m/z` <- reorder(x = profile$`m/z`, X = -profile$`p-value`)
+  
   # ---------------------------
   p <- ggplot2::ggplot(data=profile) +
-    ggplot2::geom_bar(mapping = aes(x = reorder(cpd, -`p-value`), 
+    ggplot2::geom_bar(mapping = aes(x = `m/z`, 
                                     y = correlation, 
-                                    key = reorder(cpd, -`p-value`),
+                                    key = `m/z`, 
                                     color = `p-value`, 
-                                    text = reorder(cpd, -`p-value`),
                                     fill = `p-value`), 
                       stat = "identity", alpha=0.5) + 
     ggplot2::ggtitle("Correlated m/z values") +
@@ -586,7 +587,7 @@ ggPlotPattern <- function(mSet, cf, n=20,
     ggplot2::scale_y_continuous(labels=scaleFUN)
   
   if(plotlyfy){
-    plotly::ggplotly(p, tooltip="text") %>%
+    plotly::ggplotly(p, tooltip="key") %>%
       config(toImageButtonOptions = list(format = "svg"))
   }else{
     p
@@ -603,11 +604,11 @@ ggPlotFC <- function(mSet, cf, n=20,
     return(NULL)
   }
   
-  colnames(profile) <- c("cpd", "log2fc")
+  colnames(profile) <- c("m/z", "log2fc")
   profile$Peak <- c(1:nrow(profile))
   # ---------------------------
   p <- ggplot2::ggplot(data=profile) +
-    ggplot2::geom_point(ggplot2::aes(x=Peak, y=log2fc, text=log2fc, color=log2fc, key=cpd)) +
+    ggplot2::geom_point(ggplot2::aes(x=Peak, y=log2fc, text=log2fc, color=log2fc, key=`m/z`)) +
     ggplot2::geom_abline(ggplot2::aes(intercept = 0, slope = 0)) +
     plot.theme(base_size = 15) +
     ggplot2::theme(legend.position="none",
@@ -619,7 +620,7 @@ ggPlotFC <- function(mSet, cf, n=20,
     ggplot2::scale_colour_gradientn(colours = cf(n))
   
   if(plotlyfy){
-    plotly::ggplotly(p, tooltip="log2fc") %>%
+    plotly::ggplotly(p, tooltip="key") %>%
       config(toImageButtonOptions = list(format = "svg"))
   }else{
     p
@@ -642,14 +643,14 @@ ggPlotVolc <- function(mSet,
   
   dt <- as.data.frame(vcn$sig.mat)[,c(2,4)]
   dt <- cbind(cpd = rownames(dt), dt)
-  colnames(dt) <- c("cpd", "log2FC", "-log10P")
+  colnames(dt) <- c("m/z", "log2FC", "-log10P")
+  dt$col <- with(dt, abs(log2FC*`-log10P`))
+  
   p <- ggplot2::ggplot() +
-    #ggplot2::geom_point(data=dt[!imp.inx], ggplot2::aes(x=log2FC, y=minlog10P)) +
     ggplot2::geom_point(data=dt, ggplot2::aes(x=log2FC,
                                               y=`-log10P`,
-                                              text=cpd,
-                                              color=abs(log2FC*`-log10P`),
-                                              key=cpd)) +
+                                              color=col,
+                                              key=`m/z`)) +
     plot.theme(base_size = 15) +
     ggplot2::theme(legend.position="none",
                    axis.text=ggplot2::element_text(size=font$ax.num.size),
@@ -659,9 +660,8 @@ ggPlotVolc <- function(mSet,
                    text = ggplot2::element_text(family = font$family))+
     ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE) 
   
-  
   if(plotlyfy){
-    plotly::ggplotly(p, tooltop="cpd") %>%
+    plotly::ggplotly(p, tooltip="key") %>%
       config(toImageButtonOptions = list(format = "svg"))
   }else{
     p
@@ -842,20 +842,21 @@ ggPlotBar <- function(data,
   }
   
   if(ml_type == "glmnet"){
-    colnames(data) = c("mz", "importance.mean", "dummy")
+    colnames(data) = c("m/z", "importance.mean", "dummy")
     data.ordered <- data[order(data$importance, decreasing=T),1:2]
   }else{
     data.norep <- data[,-3]
-    data.ci = Rmisc::group.CI(importance ~ mz, data.norep)
+    data.ci = Rmisc::group.CI(importance ~ `m/z`, data.norep)
     
     data.ordered <- data.ci[order(data.ci$importance.mean, decreasing = T),]
   }
   
   data.subset <- data.ordered[1:topn,]    
+  data.subset$`m/z` <- reorder(x = data.subset$`m/z`, X = -data.subset$importance.mean)
   
-  p <- ggplot(data.subset, aes(x = reorder(mz,-importance.mean),
+  p <- ggplot(data.subset, aes(x = `m/z`,
                                y = importance.mean,
-                               key = reorder(mz,-importance.mean))) +
+                               key = `m/z`)) +
     ggplot2::geom_bar(stat = "identity",
                       aes(fill = importance.mean)) +
     ggplot2::scale_fill_gradientn(colors=cf(20)) +
@@ -871,7 +872,7 @@ ggPlotBar <- function(data,
     labs(x="Top hits (m/z)",y=if(ml_type == "glmnet") "Times included in final model" else "Relative importance (%)")
   
   if(topn <= 15){
-    p <- p + ggplot2::geom_text(aes(x=mz, y=importance.mean, label=sapply(mz, function(x){
+    p <- p + ggplot2::geom_text(aes(x=`m/z`, y=importance.mean, label=sapply(`m/z`, function(x){
       if(is.na(as.numeric(as.character(x)))){
         if(grepl(x, pattern = "_")){
           as.character(gsub(x, pattern = "_", replacement = "\n"))

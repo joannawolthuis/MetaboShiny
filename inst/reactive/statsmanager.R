@@ -173,6 +173,7 @@ shiny::observe({
       })
       if(success){
         mSet <<- mSet
+        lcl$hasChanged <<- TRUE
       }else{
         MetaboShiny::metshiAlert("Analysis failed!")
         mSet <<- mSet.old

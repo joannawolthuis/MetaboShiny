@@ -59,26 +59,20 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
     # )
     if(curr_tab == "ml" & input$ml_results == "roc"){
       attempt = d$curveNumber + 1
-      xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
-      if(attempt > 0){
-        output$ml_tab <- DT::renderDataTable({
-          imp <- data.table::as.data.table(xvals$imp[[attempt]], keep.rownames = T)
-          colnames(imp) <- c("mz", "importance")
-          imp <- imp[importance > 0,]
-          lcl$tables$ml_roc <<- data.frame(importance = imp$importance,
-                                           row.names = gsub(imp$mz,
-                                                            pattern = "`|`",
-                                                            replacement=""))
-         MetaboShiny:: metshiTable(lcl$tables$ml_roc)
-        })
-      }
-    }else{
-      if('key' %not in% colnames(d)) return(NULL)
-      if(gsub(d$key[[1]],pattern="`",replacement="") %not in% colnames(mSet$dataSet$orig)) return(NULL)
-      my_selection$mz <- gsub(d$key[[1]],pattern="`",replacement="")
-    }
-    # TODO: ADD 'KEY' TO THE OTHERS, WAY EASIER TO PROCESS
-  }else if(req(curr_tab) == "heatmap"){
+        xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
+        if(attempt > 0){
+          output$ml_tab <- DT::renderDataTable({
+            imp <- data.table::as.data.table(xvals$imp[[attempt]], keep.rownames = T)
+            colnames(imp) <- c("mz", "importance")
+            imp <- imp[importance > 0,]
+            lcl$tables$ml_roc <<- data.frame(importance = imp$importance,
+                                             row.names = gsub(imp$mz,
+                                                              pattern = "`|`",
+                                                              replacement=""))
+            MetaboShiny:: metshiTable(lcl$tables$ml_roc)
+          })
+        }
+    }else if(req(curr_tab) == "heatmap"){
       if(!is.null(d$y)){
         if(d$y > length(lcl$vectors$heatmap)) return(NULL)
         my_selection$mz <- lcl$vectors$heatmap[d$y]  
@@ -93,5 +87,10 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
       myHits$Mass.Diff <- as.numeric(myHits$Mass.Diff)/(as.numeric(myHits$Query.Mass)*1e-6)
       colnames(myHits) <- c("rn", "identifier", "adduct", "dppm")
       enrich$current <- myHits
+    }else{
+      if('key' %not in% colnames(d)) return(NULL)
+      if(gsub(d$key[[1]],pattern="`",replacement="") %not in% colnames(mSet$dataSet$prenorm)) return(NULL)
+      my_selection$mz <- gsub(d$key[[1]],pattern="`",replacement="")
     }
+  }
 })

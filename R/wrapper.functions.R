@@ -217,7 +217,7 @@ getMultiMLperformance <- function(model){
 getColDistribution <- function(csv){
   suppressWarnings({
     gsubbed = gsub(x = colnames(csv),
-                   pattern="[+|\\-]",
+                   pattern="[+|\\-].*$",
                    replacement="")
     as.numi <- as.numeric(gsubbed)
     exp.vars <- which(is.na(as.numi))

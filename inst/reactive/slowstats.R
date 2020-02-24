@@ -339,14 +339,14 @@ observeEvent(input$do_ml, {
       shiny::setProgress(value = 0)
       
       # get base table to use for process
-      curr <- data.table::as.data.table(mSet$dataSet$proc)
+      curr <- data.table::as.data.table(mSet$dataSet$prenorm)
       
       # replace NA's with zero
       curr <- curr[,(1:ncol(curr)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
       
       # conv to data frame
       curr <- as.data.frame(curr)
-      rownames(curr) <- rownames(mSet$dataSet$proc)
+      rownames(curr) <- rownames(mSet$dataSet$prenorm)
       
       # find the qc rows and remove them
       is.qc <- grepl("QC|qc", rownames(curr))
