@@ -189,7 +189,10 @@ gcols = #1C1400&#FFE552&#D49C1A&#EBC173&#8A00ED&#00E0C2&#95C200&#FF6BE4&#FFFFFF&
 gspec = RdBu
 mode = complete
 cores = 1
-apikey =  ')
+apikey =  
+dbfavs =  
+omit_unknown = yes
+')
         writeLines(contents, lcl$paths$opt.loc)
       }
       
