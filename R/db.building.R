@@ -93,10 +93,10 @@ import.pat.csvs <- function(db.name,
   }
   
   # CHECK IF CUSTOM PPMVALUE
-  hasPPM = any(grepl(colnames(poslist), pattern = "\\|"))
+  hasPPM = any(grepl(colnames(poslist), pattern = "/"))
 
   # ROUND MZ VALUES
-  ismz <- suppressWarnings(which(!is.na(as.numeric(gsub(colnames(poslist), pattern="\\|.*$", replacement="")))))
+  ismz <- suppressWarnings(which(!is.na(as.numeric(gsub(colnames(poslist), pattern="/.*$", replacement="")))))
   colnames(poslist)[ismz] <- pbapply::pbsapply(colnames(poslist)[ismz], function(mz){
       if(hasPPM){
         split.mz <- stringr::str_split(mz, "/")[[1]]
@@ -111,7 +111,7 @@ import.pat.csvs <- function(db.name,
       newName = paste0(roundedMz, "+", if(hasPPM) paste0("/", roundedPpm) else "") 
       return(newName)
     })
-  ismz <- suppressWarnings(which(!is.na(as.numeric(gsub(colnames(neglist), pattern="\\|.*$", replacement="")))))
+  ismz <- suppressWarnings(which(!is.na(as.numeric(gsub(colnames(neglist), pattern="/.*$", replacement="")))))
   colnames(neglist)[ismz] <- pbapply::pbsapply(colnames(neglist)[ismz], function(mz){
     if(hasPPM){
       split.mz <- stringr::str_split(mz, "/")[[1]]
