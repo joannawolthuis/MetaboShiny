@@ -11,8 +11,10 @@ shiny::observeEvent(input$initialize, {
       metshiCSV <- data.table::fread(lcl$paths$csv_loc,
                                     data.table = TRUE,
                                     header = T)
-      # create empty mSet with 'stat' as default mode
       
+      colnames(metshiCSV) <- gsub(colnames(metshiCSV), pattern="\\|", replacement="/")
+      
+      # create empty mSet with 'stat' as default mode
       shiny::setProgress(session=session, value= .2)
       
       mz.meta <- getColDistribution(metshiCSV)
@@ -326,16 +328,23 @@ shiny::observeEvent(input$initialize, {
       # set name of variable of interest
       mSet$dataSet$cls.name <- condition
       mSet$dataSet$exp.fac <- condition
-      mzs = colnames(metshiCSV)[300:400]
-      if(detPPM == "yes"){
-        splitMZ = stringr::str_split(mzs, pattern = "\\|")
-        mSet$unique_ppm <- cbind(mzs, data.table::rbindlist(lapply(stringr::str_split(mzs, pattern = "\\|"), as.list)))
-        colnames(mSet$unique_ppm) <- c("mzname", "mz", "ppm")
-      }else{
-        mSet$unique_ppm <- data.table::data.table(mzname = colnames(mSet$dataSet$norm),
-                                                  mz = colnames(mSet$dataSet$norm),
-                                                  ppm = c(ppm))
-      }
+      mzs = colnames(mSet$dataSet$norm)
+      
+      # if(detPPM == "yes"){
+      #   colnames(mSet$dataSet$norm) <- gsub(colnames(mSet$dataSet$norm), 
+      #                                       pattern = "/.*$", 
+      #                                       replacement = "")
+      #   colnames(mSet$dataSet$prenorm) <- gsub(colnames(mSet$dataSet$prenorm), 
+      #                                          pattern = "/.*$", 
+      #                                          replacement = "")
+      #   splitMZ = stringr::str_split(mzs, pattern = "/")
+      #   mSet$unique_ppm <- cbind(mzs, data.table::rbindlist(lapply(stringr::str_split(mzs, pattern = "/"), as.list)))
+      #   colnames(mSet$unique_ppm) <- c("mzname", "mz", "ppm")
+      # }else{
+      #   mSet$unique_ppm <- data.table::data.table(mzname = colnames(mSet$dataSet$norm),
+      #                                             mz = colnames(mSet$dataSet$norm),
+      #                                             ppm = c(ppm))
+      # }
   
       # save the used adducts to mSet
       mSet$ppm <- ppm

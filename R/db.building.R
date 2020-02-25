@@ -99,7 +99,7 @@ import.pat.csvs <- function(db.name,
   ismz <- suppressWarnings(which(!is.na(as.numeric(gsub(colnames(poslist), pattern="\\|.*$", replacement="")))))
   colnames(poslist)[ismz] <- pbapply::pbsapply(colnames(poslist)[ismz], function(mz){
       if(hasPPM){
-        split.mz <- stringr::str_split(mz, "\\|")[[1]]
+        split.mz <- stringr::str_split(mz, "/")[[1]]
         mz = split.mz[1]
         ppm = split.mz[2]
       }
@@ -107,14 +107,14 @@ import.pat.csvs <- function(db.name,
       zeros = sapply(ppmRange,zeros_after_period)
       decSpots = zeros + 1 # todo: verify this formula?
       roundedMz <- formatC(as.numeric(mz), digits = decSpots, format = "f")
-      newName = paste0(roundedMz, "+", if(hasPPM) paste0("|", ppm) else "") 
-      print(newName)
+      roundedPpm <-formatC(as.numeric(ppm), digits = 6, format = "f")
+      newName = paste0(roundedMz, "+", if(hasPPM) paste0("/", roundedPpm) else "") 
       return(newName)
     })
   ismz <- suppressWarnings(which(!is.na(as.numeric(gsub(colnames(neglist), pattern="\\|.*$", replacement="")))))
   colnames(neglist)[ismz] <- pbapply::pbsapply(colnames(neglist)[ismz], function(mz){
     if(hasPPM){
-      split.mz <- stringr::str_split(mz, "\\|")[[1]]
+      split.mz <- stringr::str_split(mz, "/")[[1]]
       mz = split.mz[1]
       ppm = split.mz[2]
     }
@@ -122,8 +122,8 @@ import.pat.csvs <- function(db.name,
     zeros = sapply(ppmRange,zeros_after_period)
     decSpots = zeros + 1 # todo: verify this formula?
     roundedMz <- formatC(as.numeric(mz), digits = decSpots, format = "f")
-    newName = paste0(roundedMz, "-", if(hasPPM) paste0("|", ppm) else "") 
-    print(newName)
+    roundedPpm <-formatC(as.numeric(ppm), digits = 6, format = "f")
+    newName = paste0(roundedMz, "-", if(hasPPM) paste0("/", roundedPpm) else "") 
     return(newName)
     })
   

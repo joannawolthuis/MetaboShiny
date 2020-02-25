@@ -470,12 +470,12 @@ apikey =  ')
       shiny::withProgress({
         if(input$tab_iden_2 == "mzmol"){
           if(lcl$prev_mz != my_selection$mz){
-            matches = data.table::as.data.table(MetaboShiny::get_prematches(who = my_selection$mz,
-                                                               what = "map.query_mz",
-                                                               patdb = lcl$paths$patdb,
-                                                               showadd = c(),
-                                                               showdb = c(),
-                                                               showiso = c()))
+            matches = data.table::as.data.table(MetaboShiny::get_prematches(who = gsub(my_selection$mz, pattern="/.*$", replacement=""),
+                                                                            what = "map.query_mz",
+                                                                            patdb = lcl$paths$patdb,
+                                                                            showadd = c(),
+                                                                            showdb = c(),
+                                                                            showiso = c()))
             
             if(nrow(matches) == 0){
               return(NULL)
@@ -489,7 +489,7 @@ apikey =  ')
           
           mzMode = if(grepl(my_selection$mz, pattern="\\-")) "negative" else "positive"
           
-          matches = data.table::as.data.table(MetaboShiny::get_prematches(who = my_selection$mz,
+          matches = data.table::as.data.table(MetaboShiny::get_prematches(who = gsub(my_selection$mz, pattern="/.*$", replacement=""),
                                                              what = "map.query_mz",
                                                              patdb = lcl$paths$patdb,
                                                              showadd = result_filters$add[[mzMode]],

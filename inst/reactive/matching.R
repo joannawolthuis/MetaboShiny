@@ -43,14 +43,23 @@ lapply(c("prematch","search_mz"), function(search_type){
       shiny::withProgress({
         i = 0
         matches = pbapply::pblapply(blocks, function(mzs){
+          
+          if(any(grepl(mzs, pattern="/"))){
+            eachPPM = T
+            ppm = ceiling(as.numeric(gsub(mzs, pattern="^.*/", replacement="")))
+            mzs = gsub(mzs, pattern="/.*$", replacement="")
+          }else{
+            eachPPM = F
+            ppm = as.numeric(mSet$ppm)
+          }
+          
           if("cmmmediator" %in% db_list){
             
             mzs = stringr::str_match(mzs, "(\\d+\\.\\d+)")[,2]
             ionmode = sapply(mzs, function(mz) if(grepl(mz, pattern="\\-")) "negative" else "positive")
-            
             res.online <- MetaDBparse::searchMZonline(mz = mzs, 
                                                       mode = ionmode,
-                                                      ppm = as.numeric(mSet$ppm),
+                                                      ppm = ppm,
                                                       which_db = "cmmr")
             if(nrow(res.online) > 0 ){
               if(!("structure" %in% colnames(res.online))){
@@ -90,13 +99,20 @@ lapply(c("prematch","search_mz"), function(search_type){
           predict = length(pred_dbs) > 0
           
           if(predict){
-            res.rows.predict = pbapply::pblapply(mzs, function(mz){
+            res.rows.predict = pbapply::pblapply(1:length(mzs), function(i){
+              
+              mz = mzs[i]
+              if(eachPPM){
+                ppm <- ppm[i]
+              }else{
+                ppm <- as.numeric(mSet$ppm)
+              }
               
               mz = stringr::str_match(mz, "(\\d+\\.\\d+)")[,2]
               ionmode = if(stringr::str_match(mz, "([+|-])")[,2] == "+") "positive" else "negative"
               
               res.predict = MetaDBparse::getPredicted(mz = as.numeric(mz), 
-                                                      ppm = as.numeric(mSet$ppm),
+                                                      ppm = ppm,
                                                       mode = ionmode,
                                                       rules = input$predict_rules,
                                                       elements = input$predict_elements)
@@ -186,7 +202,7 @@ lapply(c("prematch","search_mz"), function(search_type){
             res.local = MetaDBparse::searchMZ(mzs = mzs,
                                               ionmodes = ionmode,
                                               base.dbname = dbs.local,
-                                              ppm = as.numeric(mSet$ppm),
+                                              ppm = ppm,
                                               append = F,
                                               outfolder = normalizePath(lcl$paths$db_dir))
           }else{
@@ -269,11 +285,11 @@ shiny::observeEvent(input$score_iso, {
   # as input, takes user method for doing this scoring
   shiny::withProgress({
     score_table <- MetaboShiny::score.isos(table = shown_matches$forward_unique, 
-                              mSet = mSet, 
-                              ppm = as.numeric(mSet$ppm),
-                              patdb = lcl$paths$patdb, 
-                              method = input$iso_score_method, 
-                              inshiny = T, intprec = intprec)
+                                            mSet = mSet, 
+                                            ppm = as.numeric(mSet$ppm),
+                                            patdb = lcl$paths$patdb, 
+                                            method = input$iso_score_method, 
+                                            inshiny = T, intprec = intprec)
     })
   shown_matches$forward_unique <- shown_matches$forward_unique[score_table, on = c("fullformula")]
 })
