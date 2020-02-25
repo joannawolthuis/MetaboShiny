@@ -33,9 +33,7 @@ shiny::observe({
                  NULL
                },
                pca = {
-                 shiny::withProgress({
-                   mSet <- MetaboAnalystR::PCA.Anal(mSet) # perform PCA analysis
-                 })
+                 NULL
                },
                meba = {
                  shiny::withProgress({

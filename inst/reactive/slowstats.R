@@ -330,6 +330,26 @@ observeEvent(input$do_plsda, {
   # reload pls-da plots
 })
 
+observeEvent(input$do_pca, {
+  mSet.old <- mSet
+  success = F
+  try({
+    shiny::withProgress({
+      mSet <- MetaboAnalystR::PCA.Anal(mSet) # perform PCA analysis
+    })
+    success = T
+  })
+  if(success){
+    mSet <<- mSet
+    datamanager$reload <- "pca"
+  }else{
+    MetaboShiny::metshiAlert("Analysis failed!")
+    mSet <<- mSet.old
+  }
+  # reload pls-da plots
+})
+
+
 # triggers if 'go' is pressed in the machine learning tab
 observeEvent(input$do_ml, {
   shiny::withProgress({
