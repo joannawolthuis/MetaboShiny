@@ -346,10 +346,12 @@ shiny::observe({
                      })
                      # render results table
                      output$volc_tab <-DT::renderDataTable({
-                       con = mSet$analSet$volc$sig.mat
-                       rownames(con) <- gsub(rownames(con), pattern = "^X", replacement = "")
-                       rownames(con) <- gsub(rownames(con), pattern = "(\\d+\\.\\d+)(\\.+)", replacement = "\\1/")
-                       MetaboShiny::metshiTable(content = con)
+                       res <- if(is.null(mSet$analSet$volc$sig.mat)) data.table::data.table("No significant hits found") else{
+                         rownames(mSet$analSet$volc$sig.mat) <<- gsub(rownames(mSet$analSet$volc$sig.mat), pattern = "^X", replacement = "")
+                         rownames(mSet$analSet$volc$sig.mat) <<- gsub(rownames(mSet$analSet$volc$sig.mat), pattern = "(\\d+\\.\\d+)(\\.+)", replacement = "\\1/")
+                         res = mSet$analSet$volc$sig.mat
+                       }
+                       MetaboShiny::metshiTable(content = res)
                      })
                    },
                    tsne = {
@@ -669,14 +671,16 @@ shiny::observe({
                      })
                    },
                    fc = {
-                     # save results table
-                     res <<- mSet$analSet$fc$sig.mat
                      # if none found, give the below table...
-                     if(is.null(res)) res <<- data.table::data.table("No significant hits found")
+                     res <- if(is.null(mSet$analSet$fc$sig.mat)) data.table::data.table("No significant hits found") else{
+                       rownames(mSet$analSet$fc$sig.mat) <<- gsub(rownames(mSet$analSet$fc$sig.mat), pattern = "^X", replacement = "")
+                       rownames(mSet$analSet$fc$sig.mat) <<- gsub(rownames(mSet$analSet$fc$sig.mat), pattern = "(\\d+\\.\\d+)(\\.+)", replacement = "\\1/")
+                       res = mSet$analSet$fc$sig.mat
+                     }
+                     
+                     
                      # render result table for UI
                      output$fc_tab <-DT::renderDataTable({
-                       rownames(res) <- gsub(rownames(res), pattern = "^X", replacement = "")
-                       rownames(res) <- gsub(rownames(res), pattern = "(\\d+\\.\\d+)(\\.+)", replacement = "\\1/")
                        MetaboShiny::metshiTable(content = res)
                      })
                      # render manhattan-like plot for UI
