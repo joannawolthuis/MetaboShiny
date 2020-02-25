@@ -166,6 +166,7 @@ function(input, output, session) {
       
       # look for existing source folder that DOESN'T MATCH the files
       if(!file.exists(lcl$paths$opt.loc)){
+        shiny::showNotification("Welcome! Creating new user options file...")
         contents = gsubfn::fn$paste('db_dir = $dbdir
 work_dir = $userfolder
 proj_name = MY_METSHI
