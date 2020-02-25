@@ -346,7 +346,10 @@ shiny::observe({
                      })
                      # render results table
                      output$volc_tab <-DT::renderDataTable({
-                       MetaboShiny::metshiTable(content = mSet$analSet$volc$sig.mat)
+                       con = mSet$analSet$volc$sig.mat
+                       rownames(con) <- gsub(rownames(con), pattern = "^X", replacement = "")
+                       rownames(con) <- gsub(rownames(con), pattern = "(\\d+\\.\\d+)(\\.+)", replacement = "\\1/")
+                       MetaboShiny::metshiTable(content = con)
                      })
                    },
                    tsne = {
@@ -672,8 +675,9 @@ shiny::observe({
                      if(is.null(res)) res <<- data.table::data.table("No significant hits found")
                      # render result table for UI
                      output$fc_tab <-DT::renderDataTable({
+                       rownames(res) <- gsub(rownames(res), pattern = "^X", replacement = "")
+                       rownames(res) <- gsub(rownames(res), pattern = "(\\d+\\.\\d+)(\\.+)", replacement = "\\1/")
                        MetaboShiny::metshiTable(content = res)
-                       
                      })
                      # render manhattan-like plot for UI
                      output$fc_overview_plot <- plotly::renderPlotly({
