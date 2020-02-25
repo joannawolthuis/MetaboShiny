@@ -59,16 +59,16 @@ shiny::observeEvent(input$create_csv,{
       # change path CSV should be / is saved to in session
       #lcl$paths$csv_loc <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name,".csv"))
       # if loading in .csv files...
-      import.pat.csvs(db.name = lcl$paths$patdb,
-                      ppm = input$ppm,
-                      pospath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath,
-                      negpath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath,
-                      metapath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath,
-                      wipe.regex = input$wipe_regex,
-                      missperc = input$perc_limit,
-                      csvpath = lcl$paths$csv_loc,
-                      overwrite = T,
-                      inshiny=F)
+      MetaboShiny::import.pat.csvs(db.name = lcl$paths$patdb,
+                                   ppm = input$ppm,
+                                   pospath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath,
+                                   negpath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath,
+                                   metapath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath,
+                                   wipe.regex = input$wipe_regex,
+                                   missperc = input$perc_limit,
+                                   csvpath = lcl$paths$csv_loc,
+                                   overwrite = T,
+                                   inshiny=F)
       
       success=T
       output$proj_csv_check <- shiny::renderImage({
