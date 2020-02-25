@@ -758,7 +758,9 @@ ggPlotROC <- function(data,
   
   means.per.comp=perf.long[, lapply(.SD, mean), by = .(comparison)]
   
-  if(length(unique(means.per.comp$comparison))>2){
+  ncomp = length(unique(means.per.comp$comparison))
+  if(ncomp > 2){
+    cols = cf(ncomp)
     class_type = "m"
     try({
       shiny::showNotification("Calculating AUCs per comparison...")
@@ -768,12 +770,11 @@ ggPlotROC <- function(data,
                                                 paste0(comp, " || avg. AUC=", round(means.per.comp[comparison == comp]$AUC_PAIR, digits=3), " ||")
                                               })  
   }else{
+    cols = cf(attempts)
     class_type = "b"
   }
   
-  cols = cf(attempts)
-  
-  
+   
   p <- ggplot(perf.long, aes(FPR,TPR,key=attempt)) +
     ggplot2::geom_path(alpha=.5,
                        cex=.7,
@@ -792,7 +793,7 @@ ggPlotROC <- function(data,
     plot.theme(base_size = 10) +
     ggplot2::stat_summary_bin(#alpha=.6,
       aes(FPR, TPR, 
-          group=comparison), 
+          group = comparison), 
       fun.y=mean, geom="line", 
       cex = 2.3,color="black")+
     ggplot2::stat_summary_bin(#alpha=.6,
@@ -805,8 +806,7 @@ ggPlotROC <- function(data,
                               fun.y=mean, 
                               color="black", 
                               geom="line", cex = 2) +
-    
-    #ggplot2::scale_color_gradientn(colors = cols) +
+    ggplot2::scale_color_manual(values = cols) +
     ggplot2::theme(legend.position= if(class_type == "b") "none" else "right",
                    axis.text=ggplot2::element_text(size=font$ax.num.size),
                    axis.title=ggplot2::element_text(size=font$ax.txt.size),
@@ -846,8 +846,8 @@ ggPlotBar <- function(data,
     data.ordered <- data[order(data$importance, decreasing=T),1:2]
   }else{
     data.norep <- data[,-3]
+    colnames(data.norep)[1] <- "m/z"
     data.ci = Rmisc::group.CI(importance ~ `m/z`, data.norep)
-    
     data.ordered <- data.ci[order(data.ci$importance.mean, decreasing = T),]
   }
   
@@ -887,7 +887,7 @@ ggPlotBar <- function(data,
   }
   
   mzdata <- p$data
-  mzdata$mz <- gsub(mzdata$mz, pattern = "`|'", replacement="")
+  mzdata$`m/z` <- gsub(mzdata$`m/z`, pattern = "`|'", replacement="")
   
   if(plotlyfy){
     list(mzdata = mzdata, plot = plotly::ggplotly(p, tooltip="key") %>%

@@ -53,7 +53,7 @@ output$ml_tab <- DT::renderDataTable({
 })
 
 observeEvent(input$ml_overview_tab_rows_selected, {
-  attempt = unique(mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc$perf[,c(1,4,5)])[input$ml_overview_tab_rows_selected,]$attempt
+  attempt = unique(mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc$perf)[input$ml_overview_tab_rows_selected,]$attempt
   xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
   output$ml_tab <- DT::renderDataTable({
     imp <- data.table::as.data.table(xvals$imp[[attempt]], keep.rownames = T)
