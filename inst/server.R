@@ -191,8 +191,7 @@ mode = complete
 cores = 1
 apikey =  
 dbfavs =  
-omit_unknown = yes
-')
+omit_unknown = yes')
         writeLines(contents, lcl$paths$opt.loc)
       }
       
@@ -224,25 +223,6 @@ omit_unknown = yes
                                       bold.wt = 700)
           })
         })
-      }
-      
-      if(!("dbfavs" %in% names(opts))){
-        MetaboShiny::setOption(lcl$paths$opt.loc, "dbfavs", " ")
-        opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
-      }else{
-        if(opts$dbfavs != " "){
-          gbl$vectors$db_categories$favorites <<- strsplit(opts$dbfavs,split = ",")[[1]]
-        }
-      }
-      
-      if(!("apikey" %in% names(opts))){
-        MetaboShiny::setOption(lcl$paths$opt.loc, "apikey", " ")
-        opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
-      }
-      
-      if(!("omit_unknown" %in% names(opts))){
-        MetaboShiny::setOption(lcl$paths$opt.loc, "omit_unknown", "yes")
-        opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
       }
       
       shiny::updateCheckboxInput(session, "omit_unknown", switch(opts$omit_unknown, yes=TRUE, no=FALSE))
