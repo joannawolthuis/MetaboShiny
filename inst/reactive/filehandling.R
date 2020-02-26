@@ -129,6 +129,7 @@ observeEvent(input$set_proj_name, {
   # print the changed name in the UI
   output$proj_name <<- shiny::renderText(proj_name)
   # change path CSV should be / is saved to in session
+  lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, lcl$proj_name)
   lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(lcl$proj_name,".db"))
   lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(lcl$proj_name,".csv"))
 })
