@@ -454,7 +454,7 @@ omit_unknown = yes')
       shiny::withProgress({
         if(input$tab_iden_2 == "mzmol"){
           if(lcl$prev_mz != my_selection$mz){
-            matches = data.table::as.data.table(MetaboShiny::get_prematches(who = gsub(my_selection$mz, pattern="/.*$", replacement=""),
+            matches = data.table::as.data.table(MetaboShiny::get_prematches(who = gsub(my_selection$mz, pattern="/.*$|RT.*$", replacement=""),
                                                                             what = "map.query_mz",
                                                                             patdb = lcl$paths$patdb,
                                                                             showadd = c(),
@@ -847,7 +847,7 @@ omit_unknown = yes')
   })
   
   # print current compound in sidebar
-  output$curr_mz <- shiny::renderText(stringr::str_match(my_selection$mz, "(\\d+\\.\\d+)")[,2])
+  output$curr_mz <- shiny::renderText(stringr::str_match(my_selection$mz, "(^\\d+\\.\\d+)")[,2])
   
   # make miniplot for sidebar with current compound
   output$curr_plot <- plotly::renderPlotly({

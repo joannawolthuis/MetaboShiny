@@ -50,12 +50,12 @@ lapply(c("prematch","search_mz"), function(search_type){
             mzs = gsub(mzs, pattern="/.*$", replacement="")
           }else{
             eachPPM = F
-            ppm = as.numeric(mSet$ppm)
+            ppm = as.numeric(gsub(mSet$ppm, pattern = "RT.*$", replacement = ""))
           }
           
           if("cmmmediator" %in% db_list){
             
-            mzs = stringr::str_match(mzs, "(\\d+\\.\\d+)")[,2]
+            mzs = stringr::str_match(mzs, "(^\\d+\\.\\d+)")[,2]
             ionmode = sapply(mzs, function(mz) if(grepl(mz, pattern="\\-")) "negative" else "positive")
             res.online <- MetaDBparse::searchMZonline(mz = mzs, 
                                                       mode = ionmode,
@@ -108,7 +108,7 @@ lapply(c("prematch","search_mz"), function(search_type){
                 ppm <- as.numeric(mSet$ppm)
               }
               
-              mz = stringr::str_match(mz, "(\\d+\\.\\d+)")[,2]
+              mz = stringr::str_match(mz, "(^\\d+\\.\\d+)")[,2]
               ionmode = if(stringr::str_match(mz, "([+|-])")[,2] == "+") "positive" else "negative"
               
               res.predict = MetaDBparse::getPredicted(mz = as.numeric(mz), 
@@ -196,8 +196,9 @@ lapply(c("prematch","search_mz"), function(search_type){
                                    replacement = "", 
                                    perl=T), gbl$vectors$db_no_build)
           if(length(dbs.local)>0){
+            
             ionmode = sapply(mzs, function(mz) if(grepl(mz, pattern="\\-")) "negative" else "positive")
-            mzs = stringr::str_match(mzs, "(\\d+\\.\\d+)")[,2]
+            mzs = stringr::str_match(mzs, "(^\\d+\\.\\d+)")[,2]
             
             res.local = MetaDBparse::searchMZ(mzs = mzs,
                                               ionmodes = ionmode,

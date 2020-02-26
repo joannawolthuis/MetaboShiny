@@ -16,7 +16,7 @@ import.pat.csvs <- function(db.name,
   # METADATA
   metadata <- data.table::fread(metapath)
   metadata <- MetaboShiny::reformat.metadata(metadata)
-  keep.cols = sapply(colnames(metadata), function(x) length(unique(metadata[,..x][[1]])) > 1) 
+  keep.cols = colSums(is.na(metadata)) < nrow(metadata) & sapply(colnames(metadata), function(x) length(unique(metadata[,..x][[1]])) > 1) 
   metadata$sample <- gsub(metadata$sample, pattern = wipe.regex, replacement = "", perl=T)
   metadata.filt = unique(metadata[, ..keep.cols])
   if(!("individual" %in% colnames(metadata.filt))) metadata.filt$individual <- metadata.filt$sample
@@ -29,14 +29,26 @@ import.pat.csvs <- function(db.name,
   poslist <- data.table::fread(pospath, header=T)
   neglist <- data.table::fread(negpath, header=T)
   
+  hasRT=F
   # PIVOT IF WRONG SIDE AROUND - METABOLIGHTS DATA
-  if(any(grepl("mzmed|mass_to_charge", colnames(poslist)))){
+  if(any(grepl("mass_to_charge", colnames(poslist)))){
     setnames(poslist, "mass_to_charge", "mzmed", skip_absent = T)
     setnames(neglist, "mass_to_charge", "mzmed", skip_absent = T)
-    poslist_melty <- data.table::melt(poslist_melty, id.vars=c("sample"), variable.name = "mzmed", value.name="into")  
-    poslist <- data.table::dcast(poslist, mzmed ~ sample, value.var = "into")
-    neglist_melty <- data.table::melt(neglist_melty, id.vars=c("sample"), variable.name = "mzmed", value.name="into")  
-    neglist <- data.table::dcast(neglist, mzmed ~ sample, value.var = "into")
+    if(!is.na(poslist$retention_time[1])){
+      hasRT = TRUE
+      poslist$mzmed <- paste0(poslist$mzmed,"RT", poslist$retention_time)
+      neglist$mzmed <- paste0(neglist$mzmed,"RT", neglist$retention_time)
+    }
+    rmcols = c("database_identifier", "chemical_formula", "smiles", "inchi", 
+               "metabolite_identification", "fragmentation", "modifications", 
+               "charge", "retention_time", "taxid", "species", "database", "database_version", 
+               "reliability", "uri", "search_engine", "search_engine_score", 
+               "smallmolecule_abundance_sub", "smallmolecule_abundance_stdev_sub", 
+               "smallmolecule_abundance_std_error_sub")
+    poslist_melty <- data.table::melt(poslist[,-..rmcols], id.vars=c("mzmed"), variable.name = "sample", value.name="into")  
+    poslist <- data.table::dcast(poslist_melty, sample ~ mzmed, value.var = "into")
+    neglist_melty <- data.table::melt(neglist[,-..rmcols], id.vars=c("mzmed"), variable.name = "sample", value.name="into")  
+    neglist <- data.table::dcast(neglist_melty, sample ~ mzmed, value.var = "into")
     # REQUIREMENTS: "sample" - mz1 mz2 mz3 mz3 ... 
     # TODO: check for metabolights samples!
   }
@@ -63,8 +75,8 @@ import.pat.csvs <- function(db.name,
   
   # REGEX SAMPLE NAMES if applicable
   if(wipe.regex != ""){
-    poslist[, sample := gsub(wipe.regex, replacement = "", sample)]
-    neglist[, sample := gsub(wipe.regex, replacement = "", sample)]
+    poslist[, sample := gsub(wipe.regex, replacement = "", sample, perl=T)]
+    neglist[, sample := gsub(wipe.regex, replacement = "", sample, perl=T)]
   } 
   
   # REMOVE EXTRA DECIMALS THAT ARE NOT WITHIN PPM MARGIN
@@ -96,10 +108,10 @@ import.pat.csvs <- function(db.name,
   hasPPM = any(grepl(colnames(poslist), pattern = "/"))
 
   # ROUND MZ VALUES
-  ismz <- suppressWarnings(which(!is.na(as.numeric(gsub(colnames(poslist), pattern="/.*$", replacement="")))))
+  ismz <- suppressWarnings(which(!is.na(as.numeric(gsub(colnames(poslist), pattern="/.*$|RT.*$", replacement="")))))
   colnames(poslist)[ismz] <- pbapply::pbsapply(colnames(poslist)[ismz], function(mz){
-      if(hasPPM){
-        split.mz <- stringr::str_split(mz, "/")[[1]]
+      if(hasPPM | hasRT){
+        split.mz <- stringr::str_split(mz, "/|RT")[[1]]
         mz = split.mz[1]
         ppm = split.mz[2]
       }
@@ -108,13 +120,13 @@ import.pat.csvs <- function(db.name,
       decSpots = zeros + 1 # todo: verify this formula?
       roundedMz <- formatC(as.numeric(mz), digits = decSpots, format = "f")
       roundedPpm <-formatC(as.numeric(ppm), digits = 6, format = "f")
-      newName = paste0(roundedMz, "+", if(hasPPM) paste0("/", roundedPpm) else "") 
+      newName = paste0(roundedMz, "+", if(hasPPM|hasRT) paste0(if(hasPPM)"/"else"RT", roundedPpm) else "") 
       return(newName)
     })
-  ismz <- suppressWarnings(which(!is.na(as.numeric(gsub(colnames(neglist), pattern="/.*$", replacement="")))))
+  ismz <- suppressWarnings(which(!is.na(as.numeric(gsub(colnames(neglist), pattern="/.*$|RT.*$", replacement="")))))
   colnames(neglist)[ismz] <- pbapply::pbsapply(colnames(neglist)[ismz], function(mz){
-    if(hasPPM){
-      split.mz <- stringr::str_split(mz, "/")[[1]]
+    if(hasPPM|hasRT){
+      split.mz <- stringr::str_split(mz, "/|RT")[[1]]
       mz = split.mz[1]
       ppm = split.mz[2]
     }
@@ -123,7 +135,7 @@ import.pat.csvs <- function(db.name,
     decSpots = zeros + 1 # todo: verify this formula?
     roundedMz <- formatC(as.numeric(mz), digits = decSpots, format = "f")
     roundedPpm <-formatC(as.numeric(ppm), digits = 6, format = "f")
-    newName = paste0(roundedMz, "-", if(hasPPM) paste0("/", roundedPpm) else "") 
+    newName = paste0(roundedMz, "-",  if(hasPPM|hasRT) paste0(if(hasPPM)"/"else"RT", roundedPpm) else "") 
     return(newName)
     })
   
@@ -146,7 +158,7 @@ import.pat.csvs <- function(db.name,
   setkey(metadata, sample)
   
   mzlist <- merge(poslist, neglist, by = "sample")
-  mzlist <- merge(metadata, mzlist, by = "sample")
+  mzlist <- merge(metadata.filt, mzlist, by = "sample")
 
   mz.meta <- getColDistribution(mzlist)
   exp.vars = mz.meta$meta
