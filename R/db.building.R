@@ -11,6 +11,7 @@ import.pat.csvs <- function(db.name,
                             csvpath=lcl$paths$csv_loc,
                             wipe.regex = ".*_(?>POS|NEG)_[0+]*",
                             missperc=99){
+  
   ppm = as.numeric(ppm)
 
   # METADATA
@@ -30,6 +31,7 @@ import.pat.csvs <- function(db.name,
   neglist <- data.table::fread(negpath, header=T)
   
   hasRT=F
+  
   # PIVOT IF WRONG SIDE AROUND - METABOLIGHTS DATA
   if(any(grepl("mass_to_charge", colnames(poslist)))){
     setnames(poslist, "mass_to_charge", "mzmed", skip_absent = T)

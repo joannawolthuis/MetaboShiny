@@ -50,7 +50,8 @@ shiny::observeEvent(input$create_csv,{
       if(dir.exists(lcl$paths$proj_dir)) unlink(lcl$paths$proj_dir)
       dir.create(lcl$paths$proj_dir,showWarnings = F)
       
-      lcl$paths$csv_loc <- file.path(lcl$paths$proj_dir, paste0(lcl$proj_name, ".csv"))
+      lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(lcl$proj_name, ".csv"))
+      lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(lcl$proj_name, ".db"))
       
       # change project name in user options file
       MetaboShiny::setOption(lcl$paths$opt.loc, key="proj_name", value=lcl$proj_name)
