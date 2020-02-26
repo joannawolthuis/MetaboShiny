@@ -1102,6 +1102,7 @@ omit_unknown = yes')
     # load mset
     shiny::withProgress({
       fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
+      print(fn)
       if(file.exists(fn)){
         load(fn)
         mSet <<- mSet
