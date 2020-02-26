@@ -169,6 +169,7 @@ shiny::observe({
           success <- T
         }
       })
+      
       if(success){
         mSet <<- mSet
         lcl$hasChanged <<- TRUE

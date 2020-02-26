@@ -1102,7 +1102,7 @@ omit_unknown = yes')
     # load mset
     shiny::withProgress({
       fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
-      print(fn)
+      shiny::showNotification(paste0("Loading existing file: ", fn))
       if(file.exists(fn)){
         load(fn)
         mSet <<- mSet
@@ -1194,7 +1194,8 @@ omit_unknown = yes')
           br()
         ),
         btn_labels = c("No", "Yes"),
-        title = "Save before exiting?",
+        title = "Save before exiting? Click upper right button to keep working.",
+        showCloseButton = T,
         html = TRUE
       )
     }else{
