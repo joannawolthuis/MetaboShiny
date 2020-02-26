@@ -51,6 +51,7 @@ lapply(c("prematch","search_mz"), function(search_type){
           }else{
             eachPPM = F
             ppm = as.numeric(gsub(mSet$ppm, pattern = "RT.*$", replacement = ""))
+            mzs = gsub(mzs, pattern="RT.*$", replacement="")
           }
           
           if("cmmmediator" %in% db_list){

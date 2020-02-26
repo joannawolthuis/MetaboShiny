@@ -473,7 +473,7 @@ omit_unknown = yes')
           
           mzMode = if(grepl(my_selection$mz, pattern="\\-")) "negative" else "positive"
           
-          matches = data.table::as.data.table(MetaboShiny::get_prematches(who = gsub(my_selection$mz, pattern="/.*$", replacement=""),
+          matches = data.table::as.data.table(MetaboShiny::get_prematches(who = gsub(my_selection$mz, pattern="/.*$|RT.*$", replacement=""),
                                                              what = "map.query_mz",
                                                              patdb = lcl$paths$patdb,
                                                              showadd = result_filters$add[[mzMode]],
