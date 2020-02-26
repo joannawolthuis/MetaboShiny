@@ -45,20 +45,19 @@ shiny::observeEvent(input$create_csv,{
                                   selected = proj_name)
       
       lcl$proj_name <<- proj_name
-      lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, lcl$proj_name)
+      lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, proj_name)
       
       if(dir.exists(lcl$paths$proj_dir)) unlink(lcl$paths$proj_dir)
       dir.create(lcl$paths$proj_dir,showWarnings = F)
       
-      lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(lcl$proj_name, ".csv"))
-      lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(lcl$proj_name, ".db"))
+      lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(proj_name, ".csv"))
+      lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(proj_name, ".db"))
       
       # change project name in user options file
-      MetaboShiny::setOption(lcl$paths$opt.loc, key="proj_name", value=lcl$proj_name)
+      MetaboShiny::setOption(lcl$paths$opt.loc, key="proj_name", value=proj_name)
       # print the changed name in the UI
       output$proj_name <<- shiny::renderText(proj_name)
-      # change path CSV should be / is saved to in session
-      #lcl$paths$csv_loc <<- file.path(lcl$paths$work_dir, paste0(lcl$proj_name,".csv"))
+      
       # if loading in .csv files...
       MetaboShiny::import.pat.csvs(db.name = lcl$paths$patdb,
                                    ppm = input$ppm,
@@ -89,21 +88,6 @@ shiny::observeEvent(input$create_csv,{
 shiny::observeEvent(input$import_db, {
   lcl$paths$patdb <<- input$pat_db$datapath
   output$db_upload_check <- shiny::renderImage({
-    # When input$n is 3, filename is ./images/image3.jpeg
-    filename <- normalizePath('www/yes.png')
-    # Return a list containing the filename and alt text
-    list(src = filename, width = 20,
-         height = 20)
-  }, deleteFile = FALSE)
-})
-
-# imports existing csv file
-shiny::observeEvent(input$import_csv, {
-  # change path to current csv file to user given path
-  lcl$paths$csv_loc <<- input$pat_csv$datapath
-
-  # show checkmark underneath select csv button
-  output$csv_upload_check <- shiny::renderImage({
     # When input$n is 3, filename is ./images/image3.jpeg
     filename <- normalizePath('www/yes.png')
     # Return a list containing the filename and alt text

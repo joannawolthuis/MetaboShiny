@@ -265,8 +265,8 @@ subset.mSet <- function(mSet, subset_var, subset_group) {
     mSet$dataSet$covars <-
       mSet$dataSet$covars[sample %in% keep.samples, ]
     
-    tables = c("norm", "proc", "preproc", "filt", "orig", "prenorm")
-    clss = c("cls", "proc.cls", "prenorm.cls", "filt.cls", "orig.cls")
+    tables = c("norm","prenorm")
+    clss = c("cls", "prenorm.cls")
     combi.tbl = data.table::data.table(tbl = tables,
                                        cls = clss)
     

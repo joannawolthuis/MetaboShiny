@@ -44,19 +44,23 @@ lapply(c("prematch","search_mz"), function(search_type){
         i = 0
         matches = pbapply::pblapply(blocks, function(mzs){
           
+          i = i + 1
+          try({
+            shiny::setProgress(i)
+          })
+          
           if(any(grepl(mzs, pattern="/"))){
             eachPPM = T
             ppm = ceiling(as.numeric(gsub(mzs, pattern="^.*/", replacement="")))
             mzs = gsub(mzs, pattern="/.*$", replacement="")
           }else{
             eachPPM = F
-            ppm = as.numeric(gsub(mSet$ppm, pattern = "RT.*$", replacement = ""))
+            ppm = mSet$ppm
             mzs = gsub(mzs, pattern="RT.*$", replacement="")
           }
           
           if("cmmmediator" %in% db_list){
             
-            mzs = stringr::str_match(mzs, "(^\\d+\\.\\d+)")[,2]
             ionmode = sapply(mzs, function(mz) if(grepl(mz, pattern="\\-")) "negative" else "positive")
             res.online <- MetaDBparse::searchMZonline(mz = mzs, 
                                                       mode = ionmode,
@@ -100,16 +104,17 @@ lapply(c("prematch","search_mz"), function(search_type){
           predict = length(pred_dbs) > 0
           
           if(predict){
+            
             res.rows.predict = pbapply::pblapply(1:length(mzs), function(i){
               
               mz = mzs[i]
+              
               if(eachPPM){
                 ppm <- ppm[i]
               }else{
                 ppm <- as.numeric(mSet$ppm)
               }
               
-              mz = stringr::str_match(mz, "(^\\d+\\.\\d+)")[,2]
               ionmode = if(stringr::str_match(mz, "([+|-])")[,2] == "+") "positive" else "negative"
               
               res.predict = MetaDBparse::getPredicted(mz = as.numeric(mz), 
@@ -236,7 +241,6 @@ lapply(c("prematch","search_mz"), function(search_type){
             list(mapper = data.table::data.table(),
                  content = data.table::data.table())
           }
-          
         })
       }, min=0, max=length(blocks))
       
