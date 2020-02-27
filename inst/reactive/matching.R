@@ -45,6 +45,7 @@ lapply(c("prematch","search_mz"), function(search_type){
         matches = pbapply::pblapply(blocks, function(mzs){
           
           i = i + 1
+          
           try({
             shiny::setProgress(i)
           })
@@ -60,7 +61,6 @@ lapply(c("prematch","search_mz"), function(search_type){
           }
           
           if("cmmmediator" %in% db_list){
-            
             ionmode = sapply(mzs, function(mz) if(grepl(mz, pattern="\\-")) "negative" else "positive")
             res.online <- MetaDBparse::searchMZonline(mz = mzs, 
                                                       mode = ionmode,

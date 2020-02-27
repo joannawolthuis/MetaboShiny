@@ -14,19 +14,13 @@ import.pat.csvs <- function(db.name,
   
   ppm = as.numeric(ppm)
 
-  # METADATA
   metadata <- data.table::fread(metapath)
   metadata <- MetaboShiny::reformat.metadata(metadata)
   keep.cols = colSums(is.na(metadata)) < nrow(metadata) & sapply(colnames(metadata), function(x) length(unique(metadata[,..x][[1]])) > 1) 
   metadata$sample <- gsub(metadata$sample, pattern = wipe.regex, replacement = "", perl=T)
   metadata.filt = unique(metadata[, ..keep.cols])
   if(!("individual" %in% colnames(metadata.filt))) metadata.filt$individual <- metadata.filt$sample
-  #/METADATA
-  
-  print(pospath)
-  print(negpath)
-  print(metapath)
-  
+
   poslist <- data.table::fread(pospath, header=T)
   neglist <- data.table::fread(negpath, header=T)
   

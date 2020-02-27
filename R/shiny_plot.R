@@ -6,7 +6,8 @@
 ggplotNormSummary <- function(mSet,
                               plot.theme,
                               font,
-                              cf){
+                              cf,
+                              plotlyfy = T){
   
   # load in original data (pre-normalization, post-filter)
   orig_data <- as.data.frame(mSet$dataSet$prenorm)
@@ -80,9 +81,19 @@ ggplotNormSummary <- function(mSet,
                    text = ggplot2::element_text(family = font$family))
   
   # - - - - - - - - - - - - - - - - - - -
-  
-  list(tl=RES1, bl=RES2, 
-       tr=RES3, br=RES4)
+  if(plotlyfy){
+    list(tl=plotly::ggplotly(RES1) %>%
+           config(toImageButtonOptions = list(format = "svg")),
+         bl=plotly::ggplotly(RES2) %>%
+           config(toImageButtonOptions = list(format = "svg")), 
+         tr=plotly::ggplotly(RES3) %>%
+           config(toImageButtonOptions = list(format = "svg")),
+         br=plotly::ggplotly(RES4)) %>%
+           config(toImageButtonOptions = list(format = "svg"))
+  }else{
+    list(tl=RES1, bl=RES2, 
+         tr=RES3, br=RES4)
+  }
 }
 
 #' @export
@@ -93,7 +104,8 @@ ggplotNormSummary <- function(mSet,
 ggplotSampleNormSummary <- function(mSet,
                                     plot.theme,
                                     font,
-                                    cf){
+                                    cf,
+                                    plotlyfy=T){
   # 4 by 4 plot, based on random 20-30 picked
   orig_data <- as.data.frame(mSet$dataSet$prenorm)
   norm_data <- as.data.frame(mSet$dataSet$norm)
@@ -165,7 +177,19 @@ ggplotSampleNormSummary <- function(mSet,
                    axis.line = ggplot2::element_line(colour = 'black', size = .5),
                    text = ggplot2::element_text(family = font$family))
   
-  list(tl=RES1, bl=RES2, tr=RES3, br=RES4)
+  if(plotlyfy){
+    list(tl=plotly::ggplotly(RES1) %>%
+           config(toImageButtonOptions = list(format = "svg")),
+         bl=plotly::ggplotly(RES2) %>%
+           config(toImageButtonOptions = list(format = "svg")), 
+         tr=plotly::ggplotly(RES3) %>%
+           config(toImageButtonOptions = list(format = "svg")),
+         br=plotly::ggplotly(RES4)) %>%
+      config(toImageButtonOptions = list(format = "svg"))
+  }else{
+    list(tl=RES1, bl=RES2, 
+         tr=RES3, br=RES4)
+  }
 }
 
 

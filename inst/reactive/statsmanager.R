@@ -49,8 +49,6 @@ shiny::observe({
                },
                heatmap = {
                  # reset
-                 mSet$analSet$heatmap <-  NULL
-                
                  mSet <- MetaboShiny::calcHeatMap(mSet, 
                                                   signif.only = input$heatsign,
                                                   source.tbl = input$heattable,
@@ -78,7 +76,8 @@ shiny::observe({
                                                                1.5, # TODO: make this threshold user defined
                                                                1) 
                    }
-                   
+                   rownames(mSet$analSet$fc$sig.mat) <<- gsub(rownames(mSet$analSet$fc$sig.mat), pattern = "^X", replacement = "")
+                   rownames(mSet$analSet$fc$sig.mat) <<- gsub(rownames(mSet$analSet$fc$sig.mat), pattern = "(\\d+\\.\\d+)(\\.+)", replacement = "\\1/")
                  })
                },
                aov = {

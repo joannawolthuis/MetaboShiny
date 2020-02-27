@@ -40,6 +40,7 @@ function(input, output, session) {
     prev_struct = "",
     tables=list(last_matches=data.table::data.table(query_mz = "none"),
                 prev_pie=data.table::data.table()),
+    functions = list(),
     aes = list(font = list(),
                mycols = c(),
                spectrum = "rb",
@@ -298,7 +299,7 @@ omit_unknown = yes')
       lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, lcl$proj_name)
       lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".db"))
       lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".csv"))
-      
+
       lcl$texts <<- list(
         list(name='curr_exp_dir', 
              text=lcl$paths$work_dir),
@@ -777,7 +778,8 @@ omit_unknown = yes')
     if(!is.null(input$overview)){
       if(input$overview == "heatmap"){
         statsmanager$calculate <- "heatmap"
-        datamanager$reload <- "heatmap"
+        plotmanager$make <- "heatmap"
+        uimanager$refresh <- "heatmap"
       }  
     }
   })
@@ -930,68 +932,17 @@ omit_unknown = yes')
   # triggered when user enters the statistics tab
   shiny::observeEvent(input$statistics, {
     if(!is.null(mSet)){
-      # check if an mset is present, otherwise abort
-      switch(input$statistics,
-             dimred = {
-               if(!is.null(input$dimred)){
-                 if(input$dimred %not in% names(mSet$analSet)){
-                   statsmanager$calculate <- input$dimred
-                 }
-                 datamanager$reload <- input$dimred
-               }
-             },permz = {
-               if(!is.null(input$permz)){
-                 if(input$permz %not in% names(mSet$analSet)){
-                   statsmanager$calculate <- input$permz
-                 }
-                 datamanager$reload <- input$permz
-               }
-             },overview = {
-               if(!is.null(input$overview)){
-                 if(input$overview %not in% names(mSet$analSet) | input$overview %in%  c("venn", "enrich")){
-                   statsmanager$calculate <- input$overview
-                 }
-                 datamanager$reload <- input$overview
-               }
-             }, ml = {
-               datamanager$reload <- "ml"
-             })
-    }
-  })
-  
-  shiny::observeEvent(input$dimred, {
-    # check if an mset is present, otherwise abort
-    if(!is.null(mSet)){
-      # depending on the present tab, perform analyses accordingly
-      if(input$dimred %not in% names(mSet$analSet)){
-        statsmanager$calculate <- input$dimred
+      if(!is.null(input[[input$statistics]])){
+        if(input[[input$statistics]] %not in% names(mSet$analSet) | input[[input$statistics]] %in% c("venn", "enrich")){
+          uimanager$refresh <- input[[input$statistics]]
+          statsmanager$calculate <- input[[input$statistics]]
+          tablemanager$make <- input[[input$statistics]]
+          plotmanager$make <- input[[input$statistics]]
+        }
       }
-      datamanager$reload <- input$dimred
     }
   })
-  
-  shiny::observeEvent(input$permz, {
-    # check if an mset is present, otherwise abort
-    if(!is.null(mSet)){
-      # depending on the present tab, perform analyses accordingly
-      if(input$permz %not in% names(mSet$analSet)){
-        statsmanager$calculate <- input$permz
-      }
-      datamanager$reload <- input$permz
-    }
-  })
-  
-  shiny::observeEvent(input$overview, {
-    # check if an mset is present, otherwise abort
-    if(!is.null(mSet)){
-      # depending on the present tab, perform analyses accordingly
-      if(input$overview %not in% names(mSet$analSet) | input$overview == "venn"){
-        statsmanager$calculate <- input$overview
-      }
-      datamanager$reload <- input$overview
-    }
-  })
-  
+
   shiny::observeEvent(input$ncores, {
     if(!is.null(session_cl)){
       
@@ -1017,30 +968,9 @@ omit_unknown = yes')
     MetaboShiny::setOption(lcl$paths$opt.loc, "omit_unknown", new.val)
   })
   
-  shiny::observeEvent(input$ml, {
-    # check if an mset is present, otherwise abort
-    if(!is.null(mSet)){
-      # depending on the present tab, perform analyses accordingly
-      datamanager$reload <- input$overview
-    }
-  })
-  
-  shiny::observeEvent(input$tab_iden_4, {
-    # check if an mset is present, otherwise abort
-    if(!is.null(mSet)){
-      # depending on the present tab, perform analyses accordingly
-      if(input$tab_iden_4 == "word_cloud"){
-        if(nrow(shown_matches$forward_full) > 0){
-          statsmanager$calculate <- "match_wordcloud"
-          datamanager$reload <- "match_wordcloud"
-        }
-      }
-    }
-  })
-  
   shiny::observeEvent(input$ml_top_x, {
     if(!is.null(mSet)){
-      datamanager$reload <- "ml"
+      plotmanager$make <- "ml"
     }
   },ignoreInit = T, ignoreNULL = T)
   
@@ -1076,7 +1006,8 @@ omit_unknown = yes')
       split.name = strsplit(input$show_which_ml, split = " - ")[[1]]
       mSet$analSet$ml$last$method <<- split.name[[1]]
       mSet$analSet$ml$last$name <<- split.name[[2]]
-      datamanager$reload <- "ml"
+      tablemanager$make <- "ml"
+      plotmanager$make <- "ml"
     }
   },ignoreNULL = T, ignoreInit = T)
   
@@ -1094,7 +1025,7 @@ omit_unknown = yes')
   
   shiny::observeEvent(input$stats_type,{
     if(!is.null(mSet)){
-      datamanager$reload <- "statspicker"
+      uimanager$reload <- "statspicker"
     }
   })
   
@@ -1107,9 +1038,6 @@ omit_unknown = yes')
         load(fn)
         mSet <<- mSet
         opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
-        if("ml" %in% names(mSet$analSet)){
-          datamanager$reload <- "ml"
-        }
         lcl$proj_name <<- opts$proj_name
         lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, lcl$proj_name)
         lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".db"))
@@ -1118,7 +1046,7 @@ omit_unknown = yes')
                                    "paired",
                                    value = mSet$dataSet$paired)
       }
-      datamanager$reload <- c("general","statspicker")
+      uimanager$reload <- c("general","statspicker")
     })
     # reload current plot
     shiny::updateNavbarPage(session, "statistics", selected = "inf")
@@ -1168,10 +1096,19 @@ omit_unknown = yes')
     if(!success) MetaboShiny::metshiAlert("Orca isn't working, please check your installation. If on Mac, please try starting Rstudio from the command line with the command 'open -a Rstudio'", session=session)
   })
   
-  shiny::observeEvent(input$wordcloud_go, {
-    statsmanager$calculate <- "wordcloud"
-    datamanager$reload <- "wordcloud"
-  })
+  slowAnalyses <- c("ml", "wordcloud", "plsda", "pca", "tsne"){
+    lapply(slowAnalyses, function(an){
+      shiny::observeEvent(input[[paste0("do_", an)]], {
+        try({
+          statsmanager$calculate <- an
+          tablemanager$make <- an
+          plotmanager$make <- an
+          uimanager$make <- an  
+        })
+      })    
+    })
+  }
+  
   
   # ==== LOAD LOGIN UI ====
   
@@ -1204,6 +1141,7 @@ omit_unknown = yes')
     }
   })
   
+  print("hereeee")
   observeEvent(input$save_exit,{
     if(input$save_exit){
       shiny::withProgress({

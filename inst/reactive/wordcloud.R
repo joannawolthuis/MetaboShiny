@@ -1,10 +1,3 @@
-# normal wordcloud
-
-observeEvent(input$wordcloud_go, {
-  statsmanager$calculate <- "wordcloud"
-  #datamanager$reload <- "wordcloud"
-})
-
 observeEvent(input$wordcloud_topWords, {
   #statsmanager$calculate <- "wordcloud"
   datamanager$reload <- "wordcloud"

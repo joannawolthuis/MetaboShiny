@@ -33,6 +33,6 @@ setInterval(function() {
           $("link[rel='icon']").remove();
     $("link[rel='shortcut icon']").remove();
     $("head").append('<link rel="icon" href="' + favicon_images[0] + '" type="image/png">');
-        }}, 200);
+        }}, 700);
 
        

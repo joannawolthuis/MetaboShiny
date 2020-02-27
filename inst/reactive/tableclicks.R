@@ -50,36 +50,16 @@ lapply(c("tt",
       # get current selected compound from the original table (needs to be available in global env)
       my_selection$mz <- res_tbl[curr_row, rn]
       
-      outplot_name <- paste0(table, "_specific_plot")
-
-      if(table == "aov"){
-        table <- which_aov
-      }
-      
       # send plot to relevant spot in UI
       output[[outplot_name]] <- plotly::renderPlotly({
         # --- ggplot ---
         if(table == 'meba'){ # meba needs a split by time
-          MetaboShiny::ggplotMeba(mSet, my_selection$mz,
-                                  draw.average = T,
-                                  cols = lcl$aes$mycols,
-                                  cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                  plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                  font = lcl$aes$font)
+          plotmanager$make <- "meba"
         }else if(table %in% c('aov2', 'asca')){ # asca needs a split by time
-          MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, 
-                                     cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]], mode = "multi",
-                                     styles = input$ggplot_sum_style,
-                                     add_stats = input$ggplot_sum_stats, color.fac = input$col_var, text.fac = input$txt_var,
-                                     plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                     font = lcl$aes$font)
+          plotmanager$make <- "multigroup"
         }else{
-          MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                     styles = input$ggplot_sum_style,
-                                     add_stats = input$ggplot_sum_stats, color.fac = input$col_var, text.fac = input$txt_var,
-                                     plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                     font = lcl$aes$font)
-          }
+          plotmanager$make <- "summary"
+         }
       })
     }
   })

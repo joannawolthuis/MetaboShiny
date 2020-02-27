@@ -20,6 +20,3 @@ observeEvent(input$revsearch_mz, {
     my_selection$structure <- browse_content$table[curr_row,c('structure')][[1]]
   }
 })
-
-
-
