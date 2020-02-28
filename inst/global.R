@@ -1,6 +1,7 @@
 # === GENERAL OPTIONS ===
 
 options(stringsAsFactors = FALSE,"java.parameters" = c("-Xmx8G")) # give java enough memory for smiles parsing
+
 if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
 library(ggplot2)

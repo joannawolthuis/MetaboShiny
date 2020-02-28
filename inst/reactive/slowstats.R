@@ -215,13 +215,13 @@ shiny::observeEvent(input$do_enrich, {
   })
   if(success){
     mSet <<- mSet
-    datamanager$reload <- "enrich"
+    tablemanager$make <- "enrich"
+    plotmanager$make <- "enrich"
   }else{
     MetaboShiny::metshiAlert("Analysis failed!")
     mSet <<- mSet.old
   }
 })
-
 
 shiny::observeEvent(input$do_tsne, {
   mSet.old <- mSet
@@ -239,7 +239,8 @@ shiny::observeEvent(input$do_tsne, {
   })
   if(success){
     mSet <<- mSet
-    datamanager$reload <- "tsne"
+    tablemanager$make <- "tsne"
+    plotmanager$make <- "tsne"
   }else{
     MetaboShiny::metshiAlert("Analysis failed!")
     mSet <<- mSet.old
@@ -261,7 +262,8 @@ shiny::observeEvent(input$do_pattern, {
   })
   if(success){
     mSet <<- mSet
-    datamanager$reload <- "pattern"
+    tablemanager$make <- "pattern"
+    plotmanager$make <- "pattern"
   }else{
     MetaboShiny::metshiAlert("Analysis failed!")
     mSet <<- mSet.old
@@ -288,7 +290,8 @@ shiny::observeEvent(input$do_power, {
   })
   if(success){
     mSet <<- mSet
-    datamanager$reload <- "power"
+    tablemanager$make <- "power"
+    plotmanager$make <- "power"
   }else{
     MetaboShiny::metshiAlert("Analysis failed!")
     mSet <<- mSet.old
@@ -322,7 +325,8 @@ observeEvent(input$do_plsda, {
   })
   if(success){
     mSet <<- mSet
-    datamanager$reload <- "plsda"
+    tablemanager$make <- "plsda"
+    plotmanager$make <- "plsda"
   }else{
     MetaboShiny::metshiAlert("Analysis failed!")
     mSet <<- mSet.old
@@ -341,7 +345,8 @@ observeEvent(input$do_pca, {
   })
   if(success){
     mSet <<- mSet
-    datamanager$reload <- "pca"
+    tablemanager$make <- "pca"
+    plotmanager$make <- "pca"
   }else{
     MetaboShiny::metshiAlert("Analysis failed!")
     mSet <<- mSet.old
@@ -650,7 +655,8 @@ observeEvent(input$do_ml, {
     })
     if(success){
       mSet <<- mSet
-      datamanager$reload <- "ml"
+      tablemanager$make <- "ml"
+      plotmanager$make <- "ml"
     }else{
       MetaboShiny::metshiAlert("Machine learning failed! Is one of your groups too small? Please retry with other settings.")
       NULL

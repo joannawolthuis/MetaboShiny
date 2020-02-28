@@ -6,8 +6,7 @@
 ggplotNormSummary <- function(mSet,
                               plot.theme,
                               font,
-                              cf,
-                              plotlyfy = T){
+                              cf){
   
   # load in original data (pre-normalization, post-filter)
   orig_data <- as.data.frame(mSet$dataSet$prenorm)
@@ -81,19 +80,10 @@ ggplotNormSummary <- function(mSet,
                    text = ggplot2::element_text(family = font$family))
   
   # - - - - - - - - - - - - - - - - - - -
-  if(plotlyfy){
-    list(tl=plotly::ggplotly(RES1) %>%
-           config(toImageButtonOptions = list(format = "svg")),
-         bl=plotly::ggplotly(RES2) %>%
-           config(toImageButtonOptions = list(format = "svg")), 
-         tr=plotly::ggplotly(RES3) %>%
-           config(toImageButtonOptions = list(format = "svg")),
-         br=plotly::ggplotly(RES4)) %>%
-           config(toImageButtonOptions = list(format = "svg"))
-  }else{
+
     list(tl=RES1, bl=RES2, 
          tr=RES3, br=RES4)
-  }
+  
 }
 
 #' @export
@@ -104,8 +94,7 @@ ggplotNormSummary <- function(mSet,
 ggplotSampleNormSummary <- function(mSet,
                                     plot.theme,
                                     font,
-                                    cf,
-                                    plotlyfy=T){
+                                    cf){
   # 4 by 4 plot, based on random 20-30 picked
   orig_data <- as.data.frame(mSet$dataSet$prenorm)
   norm_data <- as.data.frame(mSet$dataSet$norm)
@@ -177,19 +166,9 @@ ggplotSampleNormSummary <- function(mSet,
                    axis.line = ggplot2::element_line(colour = 'black', size = .5),
                    text = ggplot2::element_text(family = font$family))
   
-  if(plotlyfy){
-    list(tl=plotly::ggplotly(RES1) %>%
-           config(toImageButtonOptions = list(format = "svg")),
-         bl=plotly::ggplotly(RES2) %>%
-           config(toImageButtonOptions = list(format = "svg")), 
-         tr=plotly::ggplotly(RES3) %>%
-           config(toImageButtonOptions = list(format = "svg")),
-         br=plotly::ggplotly(RES4)) %>%
-      config(toImageButtonOptions = list(format = "svg"))
-  }else{
     list(tl=RES1, bl=RES2, 
          tr=RES3, br=RES4)
-  }
+  
 }
 
 
@@ -197,7 +176,7 @@ ggplotSampleNormSummary <- function(mSet,
 ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
                        cf,
                        plot.theme,
-                       plotlyfy=TRUE,font){
+                       font){
   
   time.mode = mSet$dataSet$exp.type
   classes = unique(switch(time.mode, 
@@ -253,13 +232,7 @@ ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
                                                                             t=c(1),
                                                                             t1f=Color)))
   }
-  
-  if(plotlyfy){
-    plotly::ggplotly(p, tooltip="Individual", originalData=T) %>%
-      config(toImageButtonOptions = list(format = "svg"))
-  }else{
-    p
-  }
+  p
 }
 
 blackwhite.colors <- function(n){
@@ -269,7 +242,7 @@ blackwhite.colors <- function(n){
 #' @export
 ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pink"),
                           cf = rainbow, plot.theme,
-                          mode = "nm", plotlyfy = TRUE,
+                          mode = "nm", 
                           styles=c("box", "beeswarm"), add_stats = "mean",
                           color.fac = "label",
                           text.fac = "label",font){
@@ -476,17 +449,12 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
       p <- p + ggplot2::xlab(Hmisc::capitalize(gsub(x=mSet$dataSet$cls.name, pattern = ":.*$", replacement="")))
     }
     # ---------------
-    if(plotlyfy){
-      plotly::ggplotly(p, tooltip = "Text") %>%
-        config(toImageButtonOptions = list(format = "svg"))
-    }else{
-      p
-    }  
+    p  
   })
 }
 
 ggPlotAOV <- function(mSet, cf, n=20,
-                      plot.theme, plotlyfy=TRUE,font){
+                      plot.theme, font){
   
   which_aov = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
   
@@ -520,16 +488,11 @@ ggPlotAOV <- function(mSet, cf, n=20,
     ggplot2::scale_colour_gradientn(colours = cf(n)) +
     #ggplot2::scale_y_log10()+
     ggplot2::scale_y_continuous(labels=scaleFUN)
-  if(plotlyfy){
-    plotly::ggplotly(p, tooltip="key") %>%
-      config(toImageButtonOptions = list(format = "svg"))
-  }else{
-    p
-  }
+  p
 }
 
 ggPlotTT <- function(mSet, cf, n=20,
-                     plot.theme, plotlyfy=TRUE,font){
+                     plot.theme, font){
   profile <- data.table::as.data.table(mSet$analSet$tt$p.log[mSet$analSet$tt$inx.imp],keep.rownames = T)
   
   if(nrow(profile)==0){
@@ -559,17 +522,12 @@ ggPlotTT <- function(mSet, cf, n=20,
     ggplot2::scale_colour_gradientn(colours = cf(n)) +
     #ggplot2::scale_y_log10()+
     ggplot2::scale_y_continuous(labels=scaleFUN)
-  if(plotlyfy){
-    plotly::ggplotly(p, tooltip="key") %>%
-      config(toImageButtonOptions = list(format = "svg"))
-  }else{
-    p
-  }
+  p
 }
 
 ggPlotPattern <- function(mSet, cf, n=20,
                           plot.theme,
-                          plotlyfy=TRUE,font){
+                          font){
   profile <- data.table::as.data.table(mSet$analSet$corr$cor.mat,keep.rownames = T)
   profile <- profile[1:n]
   
@@ -589,6 +547,7 @@ ggPlotPattern <- function(mSet, cf, n=20,
     ggplot2::geom_bar(mapping = aes(x = `m/z`, 
                                     y = correlation, 
                                     key = `m/z`, 
+                                    text = `m/z`, 
                                     color = `p-value`, 
                                     fill = `p-value`), 
                       stat = "identity", alpha=0.5) + 
@@ -610,17 +569,12 @@ ggPlotPattern <- function(mSet, cf, n=20,
     ggplot2::scale_fill_gradientn(colours = cf(n)) +
     ggplot2::scale_y_continuous(labels=scaleFUN)
   
-  if(plotlyfy){
-    plotly::ggplotly(p, tooltip="key") %>%
-      config(toImageButtonOptions = list(format = "svg"))
-  }else{
-    p
-  }
+  p
 }
 
 ggPlotFC <- function(mSet, cf, n=20,
                      plot.theme,
-                     plotlyfy=TRUE,font){
+                     font){
   profile <- data.table::as.data.table(mSet$analSet$fc$fc.log[mSet$analSet$fc$inx.imp],keep.rownames = T)
   
   if(nrow(profile)==0){
@@ -632,7 +586,7 @@ ggPlotFC <- function(mSet, cf, n=20,
   profile$Peak <- c(1:nrow(profile))
   # ---------------------------
   p <- ggplot2::ggplot(data=profile) +
-    ggplot2::geom_point(ggplot2::aes(x=Peak, y=log2fc, text=log2fc, color=log2fc, key=`m/z`)) +
+    ggplot2::geom_point(ggplot2::aes(x=Peak, y=log2fc, text=log2fc, color=log2fc, key=`m/z`, text=`m/z`)) +
     ggplot2::geom_abline(ggplot2::aes(intercept = 0, slope = 0)) +
     plot.theme(base_size = 15) +
     ggplot2::theme(legend.position="none",
@@ -643,19 +597,14 @@ ggPlotFC <- function(mSet, cf, n=20,
                    text = ggplot2::element_text(family = font$family))+
     ggplot2::scale_colour_gradientn(colours = cf(n))
   
-  if(plotlyfy){
-    plotly::ggplotly(p, tooltip="key") %>%
-      config(toImageButtonOptions = list(format = "svg"))
-  }else{
-    p
-  }
+  p
 }
 
 ggPlotVolc <- function(mSet,
                        cf,
                        n=20,
                        plot.theme,
-                       plotlyfy=TRUE,
+                       
                        font ){
   
   vcn<-mSet$analSet$volcano;
@@ -674,6 +623,7 @@ ggPlotVolc <- function(mSet,
     ggplot2::geom_point(data=dt, ggplot2::aes(x=log2FC,
                                               y=`-log10P`,
                                               color=col,
+                                              text=`m/z`,
                                               key=`m/z`)) +
     plot.theme(base_size = 15) +
     ggplot2::theme(legend.position="none",
@@ -684,12 +634,7 @@ ggPlotVolc <- function(mSet,
                    text = ggplot2::element_text(family = font$family))+
     ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE) 
   
-  if(plotlyfy){
-    plotly::ggplotly(p, tooltip="key") %>%
-      config(toImageButtonOptions = list(format = "svg"))
-  }else{
-    p
-  }
+  p
 }
 
 ggPlotClass <- function(mSet,
@@ -697,7 +642,7 @@ ggPlotClass <- function(mSet,
                         cf,
                         pcs = 3,
                         plot.theme,
-                        plotlyfy=TRUE,font){
+                        font){
   res <- mSet$analSet$plsda$fit.info
   colnames(res) <- 1:ncol(res)
   # best.num <- mSet$analSet$plsda$best.num
@@ -717,12 +662,7 @@ ggPlotClass <- function(mSet,
                    text = ggplot2::element_text(family = font$family))+
     facet_grid(~Component) +
     ggplot2::scale_fill_manual(values=cf(pcs))
-  if(plotlyfy){
-    plotly::ggplotly(p) %>%
-      config(toImageButtonOptions = list(format = "svg"))
-  }else{
-    p
-  }
+  p
 }
 
 ggPlotPerm <- function(mSet,
@@ -730,7 +670,7 @@ ggPlotPerm <- function(mSet,
                        cf,
                        pcs = 3,
                        plot.theme,
-                       plotlyfy=TRUE,font){
+                       font){
   bw.vec <- mSet$analSet$plsda$permut
   len <- length(bw.vec)
   df <- melt(bw.vec)
@@ -762,19 +702,14 @@ ggPlotPerm <- function(mSet,
                           linetype=8) +
     ggplot2::geom_text(mapping = aes(x = bw.vec[1], y =  .11*nrow(df), label = pval), color = "black", size = 4)
   
-  if(plotlyfy){
-    plotly::ggplotly(p) %>%
-      config(toImageButtonOptions = list(format = "svg"))
-  }else{
-    p
-  }
+  p
 }
 
 ggPlotROC <- function(data,
                       attempts = 50,
                       cf,
                       plot.theme,
-                      plotlyfy=TRUE,font,
+                      font,
                       class_type="b"){
   
   mean.auc <- data$m_auc
@@ -799,10 +734,12 @@ ggPlotROC <- function(data,
   }
   
    
-  p <- ggplot(perf.long, aes(FPR,TPR,key=attempt)) +
+  p <- ggplot(perf.long, aes(FPR,TPR,key=attempt,text=attempt)) +
     ggplot2::geom_path(alpha=.5,
                        cex=.7,
-                       aes(color = if(class_type == "m") comparison else as.factor(attempt), 
+                       aes(color = if(class_type == "m") comparison else as.factor(attempt),
+                           text = if(class_type == "m") comparison else as.factor(attempt),
+                           key = if(class_type == "m") comparison else as.factor(attempt),
                            group = attempt)) +
     ggplot2::annotate("text",
                       label = paste0("Average AUC: ",
@@ -813,7 +750,9 @@ ggPlotROC <- function(data,
                       size = 8,
                       x = 0.77,
                       y = 0.03) +
-    labs(color =if(class_type == "m") "Comparison" else "Attempt") +
+    labs(color = if(class_type == "m") "Comparison" else "Attempt",
+         text = if(class_type == "m") "Comparison" else "Attempt",
+         key = if(class_type == "m") "Comparison" else "Attempt") +
     plot.theme(base_size = 10) +
     ggplot2::stat_summary_bin(#alpha=.6,
       aes(FPR, TPR, 
@@ -841,12 +780,7 @@ ggPlotROC <- function(data,
     ggplot2::coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE) +
     ggplot2::coord_cartesian(xlim = c(.04,.96), ylim = c(.04,.96))
   
-  if(plotlyfy){
-    plotly::ggplotly(p, tooltip=c("comparison","attempt")) %>%
-      config(toImageButtonOptions = list(format = "svg"))
-  }else{
-    p
-  }
+  p
 }
 
 ggPlotBar <- function(data,
@@ -856,7 +790,7 @@ ggPlotBar <- function(data,
                       plot.theme,
                       ml_name,
                       ml_type,
-                      plotlyfy=TRUE,
+                      
                       font){
   
   if(ml_name != ""){
@@ -880,6 +814,7 @@ ggPlotBar <- function(data,
   
   p <- ggplot(data.subset, aes(x = `m/z`,
                                y = importance.mean,
+                               text = `m/z`,
                                key = `m/z`)) +
     ggplot2::geom_bar(stat = "identity",
                       aes(fill = importance.mean)) +
@@ -907,18 +842,13 @@ ggPlotBar <- function(data,
         round(as.numeric(as.character(x)),digits=1)
       }
     })), size = 4, vjust = -.5, lineheight = .6)
-    plotlyfy=F
   }
   
   mzdata <- p$data
   mzdata$`m/z` <- gsub(mzdata$`m/z`, pattern = "`|'", replacement="")
+
+  list(mzdata = mzdata, plot = p)
   
-  if(plotlyfy){
-    list(mzdata = mzdata, plot = plotly::ggplotly(p, tooltip="key") %>%
-           config(toImageButtonOptions = list(format = "svg")))
-  }else{
-    list(mzdata = mzdata, plot = p)
-  }
 }
 
 plotPCAloadings.2d <- function(mSet,
@@ -927,8 +857,7 @@ plotPCAloadings.2d <- function(mSet,
                                pcy,
                                type = "pca",
                                font,
-                               plot.theme,
-                               plotlyfy=T){
+                               plot.theme){
   switch(type,
          pca = {
            df <- mSet$analSet$pca$rotation
@@ -981,11 +910,7 @@ plotPCAloadings.2d <- function(mSet,
     ggplot2::scale_colour_gradientn(colors=cf(20))
   #scale_y_discrete(labels=scaleFUN) +
   #scale_x_discrete(labels=scaleFUN)
-  if(plotlyfy){
-    ggplotly(p, tooltip = "text")
-  }else{
-    p
-  }  
+  p 
 }
 
 plotPCAloadings.3d <- function(mSet,
@@ -1319,7 +1244,7 @@ plotPCA.3d <- function(mSet,
 
 plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",
                        pcx, pcy, mode="normal", plot.theme,type="pca",
-                       plotlyfy = "T", font, cf = rainbow){
+                        font, cf = rainbow){
   
   classes <- if(mode == "ipca"){
     mSet$dataSet$facA
@@ -1440,14 +1365,7 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",
     p <- p + facet_wrap(~groupB,ncol = 2)
     p <- p + ggplot2::ggtitle(Hmisc::capitalize(mSet$dataSet$facB.lbl))
   }
-  
-  if(plotlyfy){
-    plotly::ggplotly(p) %>%
-      config(toImageButtonOptions = list(format = "svg"))
-  }else{
-    p
-  }
-  
+  p
 }
 
 ggPlotVenn <- function(mSet,
@@ -1455,7 +1373,7 @@ ggPlotVenn <- function(mSet,
                        top = 100,
                        cols,
                        cf,
-                       plotlyfy=TRUE,font){
+                       font){
   
   
   flattened <- getTopHits(mSet, unlist(venn_yes$now), top)
@@ -1549,12 +1467,9 @@ ggPlotVenn <- function(mSet,
                                        fontface = 2) +
     ggplot2::scale_x_continuous(expand = c(.1, .1)) +
     ggplot2::scale_y_continuous(expand = c(.1, .1))
-  if(plotlyfy){
-    list(plot = plotly::ggplotly(p  %>%
-                                   config(toImageButtonOptions = list(format = "svg"))), info = flattened)
-  }else{
-    list(plot = p, info = flattened)
-  }
+  
+  list(plot = p, info = flattened)
+  
 }
 
 ggPlotScree <- function(mSet, plot.theme, cf, font, pcs=20){
@@ -1592,18 +1507,13 @@ ggPlotWordBar <- function(wcdata, plot.theme, cf, font, plotlyfy=T){
                    axis.ticks.x=ggplot2::element_blank(),
                    text = ggplot2::element_text(family = font$family)) +
     labs(x="Word",y="Frequency")
-  if(plotlyfy){
-    plotly::ggplotly(g,tooltip = "freq") %>%
-      config(toImageButtonOptions = list(format = "svg"))
-  }else{
-    g
-  }
+  g
 }
 
 ggPlotPower <- function(mSet,
                         cf,
                         plot.theme,
-                        plotlyfy = TRUE,
+                        
                         font,
                         comparisons,
                         max_samples){
@@ -1648,16 +1558,11 @@ ggPlotPower <- function(mSet,
                      text = ggplot2::element_text(family = font$family, size = 15)) +
       ggplot2::coord_cartesian(xlim = c(0,max_samples), ylim = c(.04,.96))
     
-    if(plotlyfy){
-      plotly::ggplotly(p, tooltip="comparison") %>%
-        config(toImageButtonOptions = list(format = "svg"))
-    }else{
-      p
-    } 
+    p 
   }
 }
 
-ggPlotMummi <- function(mum_mSet, anal.type = "mummichog", plotlyfy=T, plot.theme, cf, font){
+ggPlotMummi <- function(mum_mSet, anal.type = "mummichog",  plot.theme, cf, font){
   if (anal.type == "mummichog") {
     mummi.mat <- mum_mSet$mummi.resmat
     y <- -log10(mummi.mat[, 5])
@@ -1714,9 +1619,5 @@ ggPlotMummi <- function(mum_mSet, anal.type = "mummichog", plotlyfy=T, plot.them
     scale_y_discrete(labels=scaleFUN) +
     scale_x_discrete(labels=scaleFUN)
   
-  if(plotlyfy){
-    plotly::ggplotly(p, tooltip="text")
-  }else{
-    p
-  }
+  p
 }

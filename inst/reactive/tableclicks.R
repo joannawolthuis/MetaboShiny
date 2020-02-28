@@ -23,7 +23,9 @@ lapply(c("tt",
   shiny::observeEvent(input[[paste0(table, "_tab_rows_selected")]], {
     curr_row = input[[paste0(table, "_tab_rows_selected")]]
     # do nothing if not clicked yet, or the clicked cell is not in the 1st column
-
+    
+    lcl$curr_table <<- table
+    
     if (is.null(curr_row)) return()
 
     which_aov = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
@@ -50,17 +52,14 @@ lapply(c("tt",
       # get current selected compound from the original table (needs to be available in global env)
       my_selection$mz <- res_tbl[curr_row, rn]
       
-      # send plot to relevant spot in UI
-      output[[outplot_name]] <- plotly::renderPlotly({
-        # --- ggplot ---
-        if(table == 'meba'){ # meba needs a split by time
-          plotmanager$make <- "meba"
-        }else if(table %in% c('aov2', 'asca')){ # asca needs a split by time
-          plotmanager$make <- "multigroup"
-        }else{
-          plotmanager$make <- "summary"
-         }
-      })
+      # --- ggplot ---
+      if(table == 'meba'){ # meba needs a split by time
+        plotmanager$make <- "meba"
+      }else if(table %in% c('aov2', 'asca')){ # asca needs a split by time
+        plotmanager$make <- "multigroup"
+      }else{
+        plotmanager$make <- "summary"
+      }
     }
   })
 })

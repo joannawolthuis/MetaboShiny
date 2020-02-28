@@ -65,6 +65,8 @@ function(input, output, session) {
   
   mSetter <- shiny::reactiveValues(do = NULL)
   
+  ggplotly <- shiny::reactiveValues(fancy = T)
+  
   shown_matches <- shiny::reactiveValues(forward_full = data.table::data.table(),
                                          forward_unique = data.table::data.table(),
                                          reverse = data.table::data.table())
@@ -138,14 +140,14 @@ function(input, output, session) {
       for(db in all_dbs[which.custom]){
         dbfolder = paste0(db, "_source")
         imgpath = normalizePath(file.path(lcl$paths$db_dir, dbfolder, "logo.png"))
-
+        
         # add image to gbl images
         imgname = paste0(paste0(db, '_logo'), ".png")
         file.copy(imgpath, file.path(system.file('www', package = 'MetaboShiny'), imgname))
         gbl$constants$images <<- append(gbl$constants$images, values = 
                                           list(list(name = paste0(db, '_logo'), 
-                                               path = file.path("www", imgname),
-                                               dimensions = c(150, 150))))
+                                                    path = file.path("www", imgname),
+                                                    dimensions = c(150, 150))))
         
         # add db info
         load(file = file.path(lcl$paths$db_dir, dbfolder, "info.RData"))
@@ -299,7 +301,7 @@ omit_unknown = yes')
       lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, lcl$proj_name)
       lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".db"))
       lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".csv"))
-
+      
       lcl$texts <<- list(
         list(name='curr_exp_dir', 
              text=lcl$paths$work_dir),
@@ -332,7 +334,7 @@ omit_unknown = yes')
       shiny::updateSelectInput(session, 
                                "color_ramp", 
                                selected = opts$gspec)
-  
+      
       shiny::updateCheckboxInput(session, "db_only", 
                                  value=switch(opts$mode, 
                                               dbonly=T, 
@@ -475,11 +477,11 @@ omit_unknown = yes')
           mzMode = if(grepl(my_selection$mz, pattern="\\-")) "negative" else "positive"
           
           matches = data.table::as.data.table(MetaboShiny::get_prematches(who = gsub(my_selection$mz, pattern="/.*$|RT.*$", replacement=""),
-                                                             what = "map.query_mz",
-                                                             patdb = lcl$paths$patdb,
-                                                             showadd = result_filters$add[[mzMode]],
-                                                             showdb = result_filters$db,
-                                                             showiso = result_filters$iso))  
+                                                                          what = "map.query_mz",
+                                                                          patdb = lcl$paths$patdb,
+                                                                          showadd = result_filters$add[[mzMode]],
+                                                                          showdb = result_filters$db,
+                                                                          showiso = result_filters$iso))  
           
           if(nrow(matches)>0){
             
@@ -695,9 +697,9 @@ omit_unknown = yes')
                                                     showdb = c())  
           lcl$prev_struct <<- my_selection$struct
           if(nrow(rev_matches) == 0){
-              shown_matches$reverse <- data.table::data.table()
-              return(NULL)
-            }else{
+            shown_matches$reverse <- data.table::data.table()
+            return(NULL)
+          }else{
             pieinfo$db <- reshape::melt(table(rev_matches$source))
             pieinfo$add <- reshape::melt(table(rev_matches$adduct))
             pieinfo$iso <- reshape::melt(table(rev_matches$isocat))
@@ -715,15 +717,15 @@ omit_unknown = yes')
         }else{
           shown_matches$reverse <- data.table::data.table()
         }
-        }
-      } 
+      }
+    } 
   })
   
   # pie charts
   lapply(c("add", "iso", "db"), function(which_pie){
     output[[paste0("match_pie_", which_pie)]] <- plotly::renderPlotly({
-     
-       pievec = pieinfo[[which_pie]]
+      
+      pievec = pieinfo[[which_pie]]
       
       if(nrow(pievec) > 0){
         
@@ -930,19 +932,27 @@ omit_unknown = yes')
   output$ref_select <- shiny::renderUI({ref.selector()})
   
   # triggered when user enters the statistics tab
-  shiny::observeEvent(input$statistics, {
+  observeEvent(c( 
+    input$statistics,
+    input$overview,
+    input$dimred,
+    input$ml,
+    input$permz
+  ), { 
     if(!is.null(mSet)){
-      if(!is.null(input[[input$statistics]])){
-        if(input[[input$statistics]] %not in% names(mSet$analSet) | input[[input$statistics]] %in% c("venn", "enrich")){
+      if(!is.null(input$statistics)){
+        if(!is.null(input[[input$statistics]])){
           uimanager$refresh <- input[[input$statistics]]
-          statsmanager$calculate <- input[[input$statistics]]
+          if(input[[input$statistics]] %not in% names(mSet$analSet) | input[[input$statistics]] %in% c("venn", "enrich")){
+            statsmanager$calculate <- input[[input$statistics]]
+          }
           tablemanager$make <- input[[input$statistics]]
           plotmanager$make <- input[[input$statistics]]
-        }
+        }  
       }
-    }
-  })
-
+    } })
+  
+  
   shiny::observeEvent(input$ncores, {
     if(!is.null(session_cl)){
       
@@ -1046,10 +1056,9 @@ omit_unknown = yes')
                                    "paired",
                                    value = mSet$dataSet$paired)
       }
-      uimanager$reload <- c("general","statspicker")
+      uimanager$refresh <- c("general","statspicker")
+      plotmanager$make <- "general"
     })
-    # reload current plot
-    shiny::updateNavbarPage(session, "statistics", selected = "inf")
   })
   
   shiny::observeEvent(input$debug_metshi, {
@@ -1096,19 +1105,17 @@ omit_unknown = yes')
     if(!success) MetaboShiny::metshiAlert("Orca isn't working, please check your installation. If on Mac, please try starting Rstudio from the command line with the command 'open -a Rstudio'", session=session)
   })
   
-  slowAnalyses <- c("ml", "wordcloud", "plsda", "pca", "tsne"){
-    lapply(slowAnalyses, function(an){
-      shiny::observeEvent(input[[paste0("do_", an)]], {
-        try({
-          statsmanager$calculate <- an
-          tablemanager$make <- an
-          plotmanager$make <- an
-          uimanager$make <- an  
-        })
-      })    
-    })
-  }
-  
+  slowAnalyses <- c("ml", "wordcloud", "plsda", "pca", "tsne")
+  lapply(slowAnalyses, function(an){
+    shiny::observeEvent(input[[paste0("do_", an)]], {
+      try({
+        statsmanager$calculate <- an
+        tablemanager$make <- an
+        plotmanager$make <- an
+        uimanager$make <- an  
+      })
+    })    
+  })
   
   # ==== LOAD LOGIN UI ====
   
@@ -1141,7 +1148,6 @@ omit_unknown = yes')
     }
   })
   
-  print("hereeee")
   observeEvent(input$save_exit,{
     if(input$save_exit){
       shiny::withProgress({

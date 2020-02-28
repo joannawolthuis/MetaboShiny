@@ -1,6 +1,6 @@
 observeEvent(input$wordcloud_topWords, {
   #statsmanager$calculate <- "wordcloud"
-  datamanager$reload <- "wordcloud"
+  plotmanager$make <- "wordcloud"
 })
 
 observeEvent(input$wordcloud_filter, {
@@ -35,7 +35,7 @@ observeEvent(input$wordcloud_filter, {
     without_stopwords <- data.table::as.data.table(MetaboShiny::getFilteredWordFreqency(lcl$tables$wordcloud_orig, filterList))
     without_stopwords <- without_stopwords[without_stopwords$word != ""]
     lcl$tables$wordcloud_filt <<- without_stopwords
-    datamanager$reload <- "wordcloud"    
+    plotmanager$make <- "wordcloud"    
   }
 })
 
@@ -55,7 +55,7 @@ observeEvent(input$wordcloud_make_filter, {
     filterList <- topWords[order(topWords$n, decreasing = TRUE)[1:input$wordcloud_filterTopN],]
     data.table::fwrite(x = filterList,
                        file = file.path(filterFolder, paste0(input$wordcloud_filterTerm, ".csv")))    
-    datamanager$reload <- "general"
+    plotmanager$make <- "general"
   })
 })
 

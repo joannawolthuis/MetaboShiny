@@ -65,6 +65,7 @@ shiny::observe({
                      }else{
                        search_button$on <- TRUE}
                      
+                     shiny::updateNavbarPage(session, "statistics", selected = "inf")
                    },
                    wordcloud = {
                      wordcloud_filters = file.path(lcl$paths$work_dir, "wordcloud")
@@ -133,21 +134,6 @@ shiny::observe({
                                               choices = if(!is.null(storeNames[[1]])) storeNames else c()
                      ) 
                    },
-                   aov = {
-                     NULL
-                   },
-                   volc = {
-                     NULL
-                   },
-                   tsne = {
-                     NULL
-                   },
-                   pca = {
-                     NULL
-                   },
-                   plsda = {
-                     NULL
-                   },
                    ml = {
                      shiny::updateSelectInput(session, "ml_include_covars", 
                                               choices = c(colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "individual"))]))
@@ -170,23 +156,12 @@ shiny::observe({
                        shiny::hideTab(session = session, inputId = "ml2", target = "res")
                      }
                    },
-                   asca = {
-                     NULL
-                   },
-                   meba = {
-                     NULL
-                   },
                    tt = {
                      if("V" %in% colnames(mSet$analSet$tt$sig.mat)){
                        shiny::updateCheckboxInput(session, "tt_nonpar", value = T)
                      }else{
                        shiny::updateCheckboxInput(session, "tt_nonpar", value = F)
                      }
-                   }else{
-                     shiny::updateCheckboxInput(session, "tt_nonpar", value = F)
-                   },
-                   fc = {
-                     NULL
                    },
                    heatmap = {
                      switch(mSet$dataSet$exp.type,

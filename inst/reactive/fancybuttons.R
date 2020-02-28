@@ -1,38 +1,38 @@
 # reload plots (pca/plsda) if the 2d/3d button is triggered
 shiny::observeEvent(input$pca_2d3d, {
-  datamanager$reload <- "pca"
+  plotmanager$make <- "pca"
 }, ignoreNULL = T)
 
 shiny::observeEvent(input$plsda_2d3d, {
-  datamanager$reload <- "plsda"
+  plotmanager$make <- "plsda"
 }, ignoreNULL = T)
 
 shiny::observeEvent(input$tsne_2d3d, {
-  datamanager$reload <- "tsne"
+  plotmanager$make <- "tsne"
 }, ignoreNULL = T)
 
 shiny::observeEvent(input$tt_nonpar, {
   if(!is.null(input$permz)){
     if(input$permz == "tt"){
       statsmanager$calculate <- "tt"
-      datamanager$reload <- "tt" 
+      plotmanager$make <- "tt" 
     }  
   }
 },ignoreInit = TRUE)
 
 shiny::observeEvent(input$tt_eqvar, {
   statsmanager$calculate <- "tt"
-  datamanager$reload <- "tt"
+  plotmanager$make <- "tt"
 },ignoreInit = TRUE)
 
 shiny::observeEvent(input$heatsign, {
   statsmanager$calculate <- "heatmap"
-  datamanager$reload <- "heatmap"
+  plotmanager$make <- "heatmap"
 })#,ignoreInit = F, ignoreNULL = T)
 
 shiny::observeEvent(input$heatmap_topn, {
   if(!is.null(mSet$analSet$heatmap)){
-    datamanager$reload <- "heatmap" # just reload
+    plotmanager$make <- "heatmap" # just reload
   }
 })#,ignoreInit = F, ignoreNULL = T)
 
