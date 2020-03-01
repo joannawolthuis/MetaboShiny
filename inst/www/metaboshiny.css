@@ -7,6 +7,70 @@
   backdrop: true;
   }
 
+.panel-heading {
+    padding: 3px 3px;
+}
+
+.panel-info>.panel-heading {
+    color: black;
+    background-color: #fff;
+}
+
+.dropdown-menu {
+    align-content: center;
+    z-index: 2000;
+    float: left;
+    text-align: center;
+    min-width: 0px;
+    margin-top: -1px;
+    left: 50% !important;
+    right: auto !important;
+    text-align: center !important;
+    transform: translate(-50%, 0) !important;
+}
+
+.bttn-bordered.bttn-default {
+    border-color: black;
+    color: black;
+}
+
+.nav>li>a {
+  padding: 9px 15px;  
+}
+
+.nav {
+    text-align: center;
+}
+
+.nav-tabs>li {
+    float: none;
+    margin-bottom: -1px;
+    display: inline-block;
+    margin-top: 5px;
+}
+
+.caret {
+    position: absolute;
+    top: 90%;
+    left: 49%;
+    margin-left: 0px;
+}
+
+.fa-fw {
+    width: 100%;
+}
+
+.panel-info>.panel-heading+.panel-collapse>.panel-body {
+    border-top-color: white;
+}
+
+.panel {
+    margin-top: 0px;
+    margin-bottom: 0px;
+    background-color: #fff;
+    border: 0px solid transparent;
+}
+
 .modal-backdrop.in
 {
     opacity:0.99 !important;
@@ -24,23 +88,16 @@
              }
 */
 
+.progress-text {
+	display:none;
+}
+
 .progress-bar {
-  height: 5px;
+  height: 15px;
   position: absolute;
   left: 15px;
   background: linear-gradient(to right, transparent 50%, white 50%), linear-gradient(to right, orange, yellow, green, cyan, blue, violet) !important;
   background-size: 5px 2px, 100% 1px !important;
-}
-
-.line {
-  height: 4px;
-  width: calc(100% - 130px);
-  position: absolute;
-  top: 56px;
-  left: 15px;
-  background: linear-gradient(to right, transparent 50%, white 50%), linear-gradient(to right, orange, yellow, green, cyan, blue, violet);
-  background-size: 5px 2px, 100% 1px !important;
-  /*z-index:99998 !important;*/
 }
 
 /*

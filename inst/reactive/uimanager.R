@@ -24,6 +24,7 @@ shiny::observe({
                        }  
                        
                        shiny::showNotification("Updating interface...")
+                       
                        interface$mode <<- mSet$dataSet$exp.type
                        output$curr_name <- shiny::renderText({mSet$dataSet$cls.name})
                        shiny::updateNavbarPage(session, "statistics", selected = "inf")

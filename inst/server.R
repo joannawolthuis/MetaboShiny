@@ -11,6 +11,7 @@ function(input, output, session) {
   # detach("package:MetaboShiny", unload=T)
   # used to be in startshiny.R
   options("download.file.method" = "libcurl")
+  
   # make metaboshiny_storage dir in home first..
   # docker run -p 8080:8080 -v ~/MetaboShiny/:/userfiles/:cached --rm -it metaboshiny/master /bin/bash
   # with autorun
@@ -62,6 +63,7 @@ function(input, output, session) {
   # == REACTIVE VALUES ==
   
   interface <- shiny::reactiveValues()
+  interface$mode <- NULL
   
   mSetter <- shiny::reactiveValues(do = NULL)
   
@@ -811,7 +813,7 @@ omit_unknown = yes')
     # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
     # then show the relevent tabs
     # TODO: enable multivariate time series analysis
-    if(is.null(interface$mode)) {
+    if(is.null(interface$mode)){
       show.tabs <- hide.tabs[1]
     }else if(interface$mode == '1fb'){
       show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14,15,16)]
@@ -835,7 +837,7 @@ omit_unknown = yes')
     
     # hide all the tabs to begin with
     for(tab in hide.tabs){
-      shiny::hideTab(inputId = unlist(tab)[1],
+      shiny::hideTab(inputId = "statistics",#unlist(tab)[1],
                      unlist(tab)[2],
                      session = session)
     }
@@ -843,7 +845,7 @@ omit_unknown = yes')
     i = 1
     # show the relevant tabs
     for(tab in show.tabs){
-      shiny::showTab(inputId = unlist(tab)[1], 
+      shiny::showTab(inputId = "statistics",#unlist(tab)[1], 
                      unlist(tab)[2], session = session, 
                      select = ifelse(i==1, TRUE, FALSE))
       i = i + 1
@@ -930,28 +932,6 @@ omit_unknown = yes')
   
   # render the created UI
   output$ref_select <- shiny::renderUI({ref.selector()})
-  
-  # triggered when user enters the statistics tab
-  observeEvent(c( 
-    input$statistics,
-    input$overview,
-    input$dimred,
-    input$ml,
-    input$permz
-  ), { 
-    if(!is.null(mSet)){
-      if(!is.null(input$statistics)){
-        if(!is.null(input[[input$statistics]])){
-          uimanager$refresh <- input[[input$statistics]]
-          if(input[[input$statistics]] %not in% names(mSet$analSet) | input[[input$statistics]] %in% c("venn", "enrich")){
-            statsmanager$calculate <- input[[input$statistics]]
-          }
-          tablemanager$make <- input[[input$statistics]]
-          plotmanager$make <- input[[input$statistics]]
-        }  
-      }
-    } })
-  
   
   shiny::observeEvent(input$ncores, {
     if(!is.null(session_cl)){
@@ -1105,8 +1085,29 @@ omit_unknown = yes')
     if(!success) MetaboShiny::metshiAlert("Orca isn't working, please check your installation. If on Mac, please try starting Rstudio from the command line with the command 'open -a Rstudio'", session=session)
   })
   
-  slowAnalyses <- c("ml", "wordcloud", "plsda", "pca", "tsne")
-  lapply(slowAnalyses, function(an){
+  # triggered when user enters the statistics tab
+  observeEvent(input$statistics, { 
+    if(!is.null(mSet)){
+      if(!is.null(input$statistics)){
+        uimanager$refresh <- input$statistics
+        if(input$statistics %in% c("venn", "enrich")){
+          statsmanager$calculate <- input$statistics
+          tablemanager$make <- an
+        }
+        if(input$statistics %in% names(mSet$analSet)){
+          tablemanager$make <- input$statistics
+          plotmanager$make <- input$statistics
+        }
+      }  
+    }
+  })
+  
+  analyses <- c("ml", "wordcloud", "plsda", 
+                "pca", "tsne", "tt", 
+                "fc", "volc", "heatmap", 
+                "meba", "asca", "pattern", 
+                "enrich")
+  lapply(analyses, function(an){
     shiny::observeEvent(input[[paste0("do_", an)]], {
       try({
         statsmanager$calculate <- an

@@ -475,7 +475,8 @@ ggPlotAOV <- function(mSet, cf, n=20,
   # ---------------------------
   p <- ggplot2::ggplot(data=profile) +
     ggplot2::geom_point(ggplot2::aes(x=`m/z`, y=`-log(p)`,
-                                     text=`m/z`, color=`-log(p)`, 
+                                     text=`m/z`, 
+                                     color=`-log(p)`, 
                                      key=`m/z`)) +
     plot.theme(base_size = 15) +
     ggplot2::scale_x_discrete(breaks = xaxis, labels=as.character(xaxis)) + 
@@ -509,7 +510,8 @@ ggPlotTT <- function(mSet, cf, n=20,
   # ---------------------------
   p <- ggplot2::ggplot(data=profile) +
     ggplot2::geom_point(ggplot2::aes(x=`m/z`, y=`-log(p)`,
-                                     text=`m/z`, color=`-log(p)`, 
+                                     text=`m/z`,
+                                     color=`-log(p)`, 
                                      key=`m/z`)) +
     plot.theme(base_size = 15) +
     ggplot2::scale_x_discrete(breaks = xaxis, labels=as.character(xaxis)) + 
@@ -734,7 +736,9 @@ ggPlotROC <- function(data,
   }
   
    
-  p <- ggplot(perf.long, aes(FPR,TPR,key=attempt,text=attempt)) +
+  p <- ggplot(perf.long, aes(FPR,TPR,
+                             key = attempt,
+                             text = attempt)) +
     ggplot2::geom_path(alpha=.5,
                        cex=.7,
                        aes(color = if(class_type == "m") comparison else as.factor(attempt),

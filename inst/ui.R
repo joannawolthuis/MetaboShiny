@@ -4,6 +4,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                  shinyjs::useShinyjs(),
                  shinyjs::extendShinyjs(text = "shinyjs.closeWindow = function() { window.close(); }", 
                                         functions = c("closeWindow")),
+                 shinybusy::add_busy_spinner(spin = "atom", position = "full-page",height = "200px", width="200px", timeout = 1000),
                  shiny::navbarPage(windowTitle='MetaboShiny',
                                    header=shiny::tagList(shiny::tags$script(src="spinnytitle.js"),
                                                          shiny::tags$script(src="sparkle.js")),
@@ -138,83 +139,82 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                          shiny::actionButton("initialize", "Go", icon=shiny::icon("hand-o-right"))
                                             ), shiny::column(9,
                                                              # show the summary plots post-normalization
-                                                             navbarPage(inverse=F,shiny::h3("explore"),
-                                                                        tabPanel("m/z values",# icon=shiny::icon("braille"),
-                                                                                 shiny::fluidRow(shiny::column(6,
-                                                                                                               conditionalPanel(
-                                                                                                                 condition = 'input.ggplotly == true',
-                                                                                                                 plotlyOutput('var1_interactive')
-                                                                                                               ),
-                                                                                                               conditionalPanel(
-                                                                                                                 condition = 'input.ggplotly == false',
-                                                                                                                 plotOutput('var1')
-                                                                                                               )),
-                                                                                                 shiny::column(6,
-                                                                                                               conditionalPanel(
-                                                                                                                 condition = 'input.ggplotly == true',
-                                                                                                                 plotlyOutput('var3_interactive')
-                                                                                                               ),
-                                                                                                               conditionalPanel(
-                                                                                                                 condition = 'input.ggplotly == false',
-                                                                                                                 plotOutput('var3')
-                                                                                                               ))),
-                                                                                 shiny::fluidRow(shiny::column(6,
-                                                                                                               conditionalPanel(
-                                                                                                                 condition = 'input.ggplotly == true',
-                                                                                                                 plotlyOutput('var2_interactive')
-                                                                                                               ),
-                                                                                                               conditionalPanel(
-                                                                                                                 condition = 'input.ggplotly == false',
-                                                                                                                 plotOutput('var2')
-                                                                                                               )),
-                                                                                                 shiny::column(6,
-                                                                                                               conditionalPanel(
-                                                                                                                 condition = 'input.ggplotly == true',
-                                                                                                                 plotlyOutput('var4_interactive')
-                                                                                                               ),
-                                                                                                               conditionalPanel(
-                                                                                                                 condition = 'input.ggplotly == false',
-                                                                                                                 plotOutput('var4')
-                                                                                                               )))
-                                                                        ),
-                                                                        shiny::tabPanel("samples",# icon=shiny::icon("tint"),
-                                                                                        shiny::fluidRow(shiny::column(6,
-                                                                                                                      conditionalPanel(
-                                                                                                                        condition = 'input.ggplotly == true',
-                                                                                                                        plotlyOutput('samp1_interactive')
-                                                                                                                      ),
-                                                                                                                      conditionalPanel(
-                                                                                                                        condition = 'input.ggplotly == false',
-                                                                                                                        plotOutput('samp1')
-                                                                                                                      )),
-                                                                                                        shiny::column(6,
-                                                                                                                      conditionalPanel(
-                                                                                                                        condition = 'input.ggplotly == true',
-                                                                                                                        plotlyOutput('samp3_interactive')
-                                                                                                                      ),
-                                                                                                                      conditionalPanel(
-                                                                                                                        condition = 'input.ggplotly == false',
-                                                                                                                        plotOutput('samp3')
-                                                                                                                      ))),
-                                                                                        shiny::fluidRow(shiny::column(6,
-                                                                                                                      conditionalPanel(
-                                                                                                                        condition = 'input.ggplotly == true',
-                                                                                                                        plotlyOutput('samp2_interactive')
-                                                                                                                      ),
-                                                                                                                      conditionalPanel(
-                                                                                                                        condition = 'input.ggplotly == false',
-                                                                                                                        plotOutput('samp2')
-                                                                                                                      )),
-                                                                                                        shiny::column(6,
-                                                                                                                      conditionalPanel(
-                                                                                                                        condition = 'input.ggplotly == true',
-                                                                                                                        plotlyOutput('samp4_interactive')
-                                                                                                                      ),
-                                                                                                                      conditionalPanel(
-                                                                                                                        condition = 'input.ggplotly == false',
-                                                                                                                        plotOutput('samp4')
-                                                                                                                      )))
-                                                                                        )
+                                                             shiny::tabsetPanel(tabPanel("m/z values",# icon=shiny::icon("braille"),
+                                                                                         shiny::fluidRow(shiny::column(6,
+                                                                                                                       conditionalPanel(
+                                                                                                                         condition = 'input.ggplotly == true',
+                                                                                                                         plotlyOutput('var1_interactive')
+                                                                                                                       ),
+                                                                                                                       conditionalPanel(
+                                                                                                                         condition = 'input.ggplotly == false',
+                                                                                                                         plotOutput('var1')
+                                                                                                                       )),
+                                                                                                         shiny::column(6,
+                                                                                                                       conditionalPanel(
+                                                                                                                         condition = 'input.ggplotly == true',
+                                                                                                                         plotlyOutput('var3_interactive')
+                                                                                                                       ),
+                                                                                                                       conditionalPanel(
+                                                                                                                         condition = 'input.ggplotly == false',
+                                                                                                                         plotOutput('var3')
+                                                                                                                       ))),
+                                                                                         shiny::fluidRow(shiny::column(6,
+                                                                                                                       conditionalPanel(
+                                                                                                                         condition = 'input.ggplotly == true',
+                                                                                                                         plotlyOutput('var2_interactive')
+                                                                                                                       ),
+                                                                                                                       conditionalPanel(
+                                                                                                                         condition = 'input.ggplotly == false',
+                                                                                                                         plotOutput('var2')
+                                                                                                                       )),
+                                                                                                         shiny::column(6,
+                                                                                                                       conditionalPanel(
+                                                                                                                         condition = 'input.ggplotly == true',
+                                                                                                                         plotlyOutput('var4_interactive')
+                                                                                                                       ),
+                                                                                                                       conditionalPanel(
+                                                                                                                         condition = 'input.ggplotly == false',
+                                                                                                                         plotOutput('var4')
+                                                                                                                       )))
+                                                             ),
+                                                             shiny::tabPanel("samples",# icon=shiny::icon("tint"),
+                                                                             shiny::fluidRow(shiny::column(6,
+                                                                                                           conditionalPanel(
+                                                                                                             condition = 'input.ggplotly == true',
+                                                                                                             plotlyOutput('samp1_interactive')
+                                                                                                           ),
+                                                                                                           conditionalPanel(
+                                                                                                             condition = 'input.ggplotly == false',
+                                                                                                             plotOutput('samp1')
+                                                                                                           )),
+                                                                                             shiny::column(6,
+                                                                                                           conditionalPanel(
+                                                                                                             condition = 'input.ggplotly == true',
+                                                                                                             plotlyOutput('samp3_interactive')
+                                                                                                           ),
+                                                                                                           conditionalPanel(
+                                                                                                             condition = 'input.ggplotly == false',
+                                                                                                             plotOutput('samp3')
+                                                                                                           ))),
+                                                                             shiny::fluidRow(shiny::column(6,
+                                                                                                           conditionalPanel(
+                                                                                                             condition = 'input.ggplotly == true',
+                                                                                                             plotlyOutput('samp2_interactive')
+                                                                                                           ),
+                                                                                                           conditionalPanel(
+                                                                                                             condition = 'input.ggplotly == false',
+                                                                                                             plotOutput('samp2')
+                                                                                                           )),
+                                                                                             shiny::column(6,
+                                                                                                           conditionalPanel(
+                                                                                                             condition = 'input.ggplotly == true',
+                                                                                                             plotlyOutput('samp4_interactive')
+                                                                                                           ),
+                                                                                                           conditionalPanel(
+                                                                                                             condition = 'input.ggplotly == false',
+                                                                                                             plotOutput('samp4')
+                                                                                                           )))
+                                                             )
                                                              )
                                             )
                                             )),
@@ -251,7 +251,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                    sidebarLayout(position="right",
                                                                  mainPanel = mainPanel(width = 8,
                                                                                        shiny::fluidRow(align="center",
-                                                                                                       shinyBS::bsCollapse(shinyBS::bsCollapsePanel(title = "Click to plot current m/z abundance",
+                                                                                                       shinyBS::bsCollapse(shinyBS::bsCollapsePanel(title = tags$b(icon("caret-down"), "show/hide selected m/z abundance", icon("caret-down")),
                                                                                                                                                     style = "info",
                                                                                                                                                     conditionalPanel(
                                                                                                                                                       condition = 'input.ggplotly == true',
@@ -266,7 +266,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                           #shiny::navbarPage(inverse=F, "", id="statistics", selected = "pca", collapsible = T,
                                                                                                           # TODO: T-SNE
                                                                                                           # this tab shows general information, mostly a message with 'please give me some data' :-)
-                                                                                                          shiny::tabPanel(shiny::icon("star"), value = "inf",
+                                                                                                          shiny::tabPanel("start", icon = shiny::icon("star", "fa-2x"), value = "inf",
                                                                                                                           shiny::fluidRow(align="center", shiny::column(width=12,
                                                                                                                                                                         shiny::br(),shiny::br(),shiny::br(),shiny::br(),
                                                                                                                                                                         #shiny::hr(),
@@ -274,1072 +274,1185 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                         shiny::br(),shiny::br(),
                                                                                                                                                                         shiny::h2("Please select a variable of interest in the sidebar!"),shiny::br(),
                                                                                                                                                                         shiny::icon("exchange", "fa-4x"),
+                                                                                                                                                                        shiny::h2("Alternatively, load an existing dataset from the bottom toolbar."),shiny::br(),
+                                                                                                                                                                        shiny::icon("folder-open", "fa-4x"),
                                                                                                                                                                         shiny::br(),shiny::br(),shiny::br()
                                                                                                                                                                         #shiny::hr()
                                                                                                                                                                         #shiny::icon("arrow-right","fa-lg"), shiny::icon("arrow-right","fa-lg"), shiny::icon("arrow-right","fa-lg")
                                                                                                                           ))),
-                                                                                                          shiny::tabPanel("dimension reduction", value = "dimred",  icon=shiny::icon("cube"),
-                                                                                                                          shiny::navbarPage(inverse=T, shiny::icon("cube"), id = "dimred",
-                                                                                                                                            # loading this tab performs PCA. summary and loading tables, alongside a 2d/3d PCA plot, are available here.
-                                                                                                                                            shiny::tabPanel("pca", value = "pca", #icon=shiny::icon("cube"),
-                                                                                                                                                            shiny::tabsetPanel(shiny::tabPanel("samples",
-                                                                                                                                                                                               shiny::fluidRow(align="center",shiny::column(12, 
-                                                                                                                                                                                                                                            conditionalPanel(
-                                                                                                                                                                                                                                              condition = 'input.ggplotly == true',
-                                                                                                                                                                                                                                              plotlyOutput('plot_pca_interactive')
-                                                                                                                                                                                                                                            ),
-                                                                                                                                                                                                                                            conditionalPanel(
-                                                                                                                                                                                                                                              condition = 'input.ggplotly == false',
-                                                                                                                                                                                                                                              plotOutput('plot_pca')
-                                                                                                                                                                                                                                            )
-                                                                                                                                                                                               ))),
-                                                                                                                                                                               shiny::tabPanel("loadings", 
-                                                                                                                                                                                               shiny::fluidRow(align="center",shiny::column(12,
-                                                                                                                                                                                                                                            conditionalPanel(
-                                                                                                                                                                                                                                              condition = 'input.ggplotly == true',
-                                                                                                                                                                                                                                              plotlyOutput('plot_pca_loadings_interactive')
-                                                                                                                                                                                                                                            ),
-                                                                                                                                                                                                                                            conditionalPanel(
-                                                                                                                                                                                                                                              condition = 'input.ggplotly == false',
-                                                                                                                                                                                                                                              plotOutput('plot_pca_loadings')
-                                                                                                                                                                                                                                            ))
-                                                                                                                                                                                               ))),
-                                                                                                                                                            shiny::fluidRow(align="center",shiny::column(12,
-                                                                                                                                                                                                         shinyWidgets::circleButton("do_pca", icon = shiny::icon("hand-pointer-o"), size = "sm"),
-                                                                                                                                                                                                         shiny::conditionalPanel("input.ggplotly == true",
-                                                                                                                                                                                                                                 MetaboShiny::switchButton("pca_2d3d", label = "", col = "BW", type = "2d3d", value=T))
-                                                                                                                                                                                                         
-                                                                                                                                                            )),
-                                                                                                                                                            shiny::hr(),
-                                                                                                                                                            shiny::fluidRow(shiny::column(3,
-                                                                                                                                                                                          shiny::selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:20),selected = "PC1",width="80%"),
-                                                                                                                                                                                          shiny::selectInput("pca_y", label = "Y axis:", choices = paste0("PC",1:20),selected = "PC2",width="80%"),
-                                                                                                                                                                                          shiny::selectInput("pca_z", label = "Z axis:", choices = paste0("PC",1:20),selected = "PC3",width="80%")),
-                                                                                                                                                                            shiny::column(9,
-                                                                                                                                                                                          shiny::tabsetPanel(id="pca_2",
-                                                                                                                                                                                                             shiny::tabPanel(title="Table",
-                                                                                                                                                                                                                             shiny::div(DT::dataTableOutput('pca_tab',width="100%"),style='font-size:80%')),
-                                                                                                                                                                                                             shiny::tabPanel(title="Scree",
-                                                                                                                                                                                                                             conditionalPanel(
-                                                                                                                                                                                                                               condition = 'input.ggplotly == true',
-                                                                                                                                                                                                                               plotlyOutput('pca_scree_interactive')
-                                                                                                                                                                                                                             ),
-                                                                                                                                                                                                                             conditionalPanel(
-                                                                                                                                                                                                                               condition = 'input.ggplotly == false',
-                                                                                                                                                                                                                               plotOutput('pca_scree')
-                                                                                                                                                                                                                             )
-                                                                                                                                                                                                             ),
-                                                                                                                                                                                                             shiny::tabPanel(title="Loadings",
-                                                                                                                                                                                                                             shiny::div(DT::dataTableOutput('pca_load_tab',width="100%"),style='font-size:80%'))
-                                                                                                                                                                                          ))
-                                                                                                                                                            )
-                                                                                                                                            ),
-                                                                                                                                            # TODO: enable the sparse and orthogonal PLS-DA options in metaboanalystR
-                                                                                                                                            # this tab is used to perform pls-da. it triggers on 'go' button as it is a time costly analysis.
-                                                                                                                                            shiny::tabPanel("pls-da", value = "plsda",
-                                                                                                                                                            shiny::tabsetPanel(shiny::tabPanel("samples",
-                                                                                                                                                                                               shiny::fluidRow(align="center",shiny::column(12,
-                                                                                                                                                                                                                                            conditionalPanel(
-                                                                                                                                                                                                                                              condition = 'input.ggplotly == true',
-                                                                                                                                                                                                                                              plotlyOutput('plot_plsda_interactive')
-                                                                                                                                                                                                                                            ),
-                                                                                                                                                                                                                                            conditionalPanel(
-                                                                                                                                                                                                                                              condition = 'input.ggplotly == false',
-                                                                                                                                                                                                                                              plotOutput('plot_plsda')
-                                                                                                                                                                                                                                            )))),
-                                                                                                                                                                               shiny::tabPanel("loadings", 
-                                                                                                                                                                                               shiny::fluidRow(align="center",shiny::column(12,
-                                                                                                                                                                                                                                            conditionalPanel(
-                                                                                                                                                                                                                                              condition = 'input.ggplotly == true',
-                                                                                                                                                                                                                                              plotlyOutput('plot_plsda_loadings_interactive')
-                                                                                                                                                                                                                                            ),
-                                                                                                                                                                                                                                            conditionalPanel(
-                                                                                                                                                                                                                                              condition = 'input.ggplotly == false',
-                                                                                                                                                                                                                                              plotOutput('plot_plsda_loadings')
-                                                                                                                                                                                                                                            )
-                                                                                                                                                                                               )))),
-                                                                                                                                                            shiny::conditionalPanel("input.ggplotly == true",
-                                                                                                                                                                                    MetaboShiny::switchButton("plsda_2d3d", label = "", col = "BW", type = "2d3d", value=T)),
-                                                                                                                                                            shiny::hr(),
-                                                                                                                                                            shiny::fluidRow(shiny::column(3,
-                                                                                                                                                                                          shiny::div(style="display:inline-block",
-                                                                                                                                                                                                     shiny::selectInput("plsda_type",
-                                                                                                                                                                                                                        label="Type:",
-                                                                                                                                                                                                                        choices=list("Normal"="normal")
-                                                                                                                                                                                                                        #,
-                                                                                                                                                                                                                        #             "Orthogonal"="ortho",
-                                                                                                                                                                                                                        #             "Sparse"="sparse")
-                                                                                                                                                                                                                        ,width = '100px',
-                                                                                                                                                                                                                        selected=1)),
-                                                                                                                                                                                          shiny::div(style="display:inline-block",
-                                                                                                                                                                                                     shinyWidgets::circleButton("do_plsda", icon = shiny::icon("hand-pointer-o"), size = "sm")
-                                                                                                                                                                                          ),
-                                                                                                                                                                                          shiny::selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:8),selected = "PC1",width="80%"),
-                                                                                                                                                                                          shiny::selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:8),selected = "PC2",width="80%"),
-                                                                                                                                                                                          shiny::selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:8),selected = "PC3",width="80%")),
-                                                                                                                                                                            shiny::column(9,
-                                                                                                                                                                                          shiny::tabsetPanel(id="plsda_2",
-                                                                                                                                                                                                             shiny::tabPanel(title="Cross-validation",
-                                                                                                                                                                                                                             conditionalPanel(
-                                                                                                                                                                                                                               condition = 'input.ggplotly == true',
-                                                                                                                                                                                                                               plotlyOutput('plsda_cv_plot_interactive')
-                                                                                                                                                                                                                             ),
-                                                                                                                                                                                                                             conditionalPanel(
-                                                                                                                                                                                                                               condition = 'input.ggplotly == false',
-                                                                                                                                                                                                                               plotOutput('plsda_cv_plot')
-                                                                                                                                                                                                                             )),
-                                                                                                                                                                                                             shiny::tabPanel(title="Permutation",
-                                                                                                                                                                                                                             conditionalPanel(
-                                                                                                                                                                                                                               condition = 'input.ggplotly == true',
-                                                                                                                                                                                                                               plotlyOutput('plsda_perm_plot_interactive')
-                                                                                                                                                                                                                             ),
-                                                                                                                                                                                                                             conditionalPanel(
-                                                                                                                                                                                                                               condition = 'input.ggplotly == false',
-                                                                                                                                                                                                                               plotOutput('plsda_perm_plot')
-                                                                                                                                                                                                                             )),
-                                                                                                                                                                                                             shiny::tabPanel(title="Table",
-                                                                                                                                                                                                                             shiny::div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')),
-                                                                                                                                                                                                             shiny::tabPanel(title="Loadings",
-                                                                                                                                                                                                                             shiny::div(DT::dataTableOutput('plsda_load_tab',width="100%"),style='font-size:80%'))
-                                                                                                                                                                                          ))
-                                                                                                                                                            )
-                                                                                                                                            ),
-                                                                                                                                            shiny::tabPanel("t-sne", value = "tsne",
-                                                                                                                                                            shiny::fluidRow(align="center",shiny::column(12,
-                                                                                                                                                                                                         conditionalPanel(
-                                                                                                                                                                                                           condition = 'input.ggplotly == true',
-                                                                                                                                                                                                           plotlyOutput('tsne_plot_interactive')
-                                                                                                                                                                                                         ),
-                                                                                                                                                                                                         conditionalPanel(
-                                                                                                                                                                                                           condition = 'input.ggplotly == false',
-                                                                                                                                                                                                           plotOutput('tsne_plot')
-                                                                                                                                                                                                         )),
-                                                                                                                                                                            shiny::fluidRow(align="center",shiny::column(12,
-                                                                                                                                                                                                                         shiny::conditionalPanel("input.ggplotly == true",
-                                                                                                                                                                                                                                                 MetaboShiny::switchButton("tsne_2d3d", label = "", col = "BW", type = "2d3d", value=T)),
-                                                                                                                                                                                                                         sliderInput("tsne_dims", "Initial dimensions:", min = 5, max = 100, step = 1, value = 30),
-                                                                                                                                                                                                                         sliderInput("tsne_perplex", "Perplexity:", min = 5, max = 50, value = 30),
-                                                                                                                                                                                                                         numericInput("tsne_maxiter", "Max iterations:", min = 10, value = 1000),
-                                                                                                                                                                                                                         shinyWidgets::circleButton("do_tsne", icon = shiny::icon("hand-pointer-o"), size = "lg")
-                                                                                                                                                                            ))
-                                                                                                                                                            )
-                                                                                                                                            ))),
-                                                                                                          shiny::tabPanel("per m/z", value = "permz", icon=shiny::icon("fingerprint"),
-                                                                                                                          shiny::navbarPage(inverse=T, shiny::icon("fingerprint"), id = "permz",
-                                                                                                                                            shiny::tabPanel("t-test", value="tt",
-                                                                                                                                                            shiny::fluidRow(align="center",
-                                                                                                                                                                            MetaboShiny::sardine(MetaboShiny::switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = T)),
-                                                                                                                                                                            #MetaboShiny::sardine(shiny::uiOutput("tt_parbutton")),
-                                                                                                                                                                            MetaboShiny::sardine(MetaboShiny::switchButton("tt_eqvar", "Equal variance?", col="BW", type="YN", value = T))
+                                                                                                          shiny::navbarMenu("dimension reduction", icon=icon("cube", "fa-2x"),menuName = "dimred",
+                                                                                                                            shiny::tabPanel("pca", value = "pca",
+                                                                                                                                            shiny::fluidRow(align="center",
+                                                                                                                                                            shinyBS::bsCollapse(shinyBS::bsCollapsePanel(title = h2("settings"),
+                                                                                                                                                                                                         shinyWidgets::actionBttn(
+                                                                                                                                                                                                           inputId = "do_pca",
+                                                                                                                                                                                                           label = "click to start PCA", 
+                                                                                                                                                                                                           style = "bordered",
+                                                                                                                                                                                                           icon = icon("terminal"),
+                                                                                                                                                                                                           size = "sm"
+                                                                                                                                                                                                         )
                                                                                                                                                             ),
-                                                                                                                                                            shiny::navbarPage(inverse=F,"",
-                                                                                                                                                                              shiny::tabPanel("", icon=shiny::icon("table"),
-                                                                                                                                                                                              shiny::div(DT::dataTableOutput('tt_tab',width="100%"),style='font-size:80%'))
-                                                                                                                                                                              ,shiny::tabPanel("", icon=shiny::icon("area-chart"),
-                                                                                                                                                                                               conditionalPanel(
-                                                                                                                                                                                                 condition = 'input.ggplotly == true',
-                                                                                                                                                                                                 plotlyOutput('tt_overview_plot_interactive')
-                                                                                                                                                                                               ),
-                                                                                                                                                                                               conditionalPanel(
-                                                                                                                                                                                                 condition = 'input.ggplotly == false',
-                                                                                                                                                                                                 plotOutput('tt_overview_plot')
-                                                                                                                                                                                               )
-                                                                                                                                                                              )
-                                                                                                                                                            )),
-                                                                                                                                            shiny::tabPanel("anova", value="aov",
-                                                                                                                                                            shiny::navbarPage(inverse=F,"",
-                                                                                                                                                                              shiny::tabPanel("", icon=shiny::icon("table"),
-                                                                                                                                                                                              shiny::div(DT::dataTableOutput('aov_tab',width="100%"),style='font-size:80%'))
-                                                                                                                                                                              ,shiny::tabPanel("", icon=shiny::icon("area-chart"),
-                                                                                                                                                                                               conditionalPanel(
-                                                                                                                                                                                                 condition = 'input.ggplotly == true',
-                                                                                                                                                                                                 plotlyOutput('aov_overview_plot_interactive')
-                                                                                                                                                                                               ),
-                                                                                                                                                                                               conditionalPanel(
-                                                                                                                                                                                                 condition = 'input.ggplotly == false',
-                                                                                                                                                                                                 plotOutput('aov_overview_plot')
-                                                                                                                                                                                               )
-                                                                                                                                                                              )
-                                                                                                                                                            )),
-                                                                                                                                            shiny::tabPanel("fold-change", value="fc",
-                                                                                                                                                            shiny::navbarPage(inverse=F,"",
-                                                                                                                                                                              shiny::tabPanel("", icon=shiny::icon("table"),
-                                                                                                                                                                                              shiny::div(DT::dataTableOutput('fc_tab',width="100%"),style='font-size:80%'))
-                                                                                                                                                                              ,shiny::tabPanel("", icon=shiny::icon("area-chart"),
-                                                                                                                                                                                               conditionalPanel(
-                                                                                                                                                                                                 condition = 'input.ggplotly == true',
-                                                                                                                                                                                                 plotlyOutput('fc_overview_plot_interactive')
-                                                                                                                                                                                               ),
-                                                                                                                                                                                               conditionalPanel(
-                                                                                                                                                                                                 condition = 'input.ggplotly == false',
-                                                                                                                                                                                                 plotOutput('fc_overview_plot')
-                                                                                                                                                                                               )
-                                                                                                                                                                              ))
-                                                                                                                                            ),
-                                                                                                                                            shiny::tabPanel("meba", value="meba",
-                                                                                                                                                            #shiny::fluidRow(shiny::uiOutput('summary_plot_wrap',height="600px")),
-                                                                                                                                                            shiny::fluidRow(shiny::div(DT::dataTableOutput('meba_tab', width="100%"),style='font-size:80%'))
-                                                                                                                                            ),
-                                                                                                                                            shiny::tabPanel("asca", value="asca",
-                                                                                                                                                            #shiny::fluidRow(shiny::uiOutput('summary_plot_wrap', height="600px")),
-                                                                                                                                                            shiny::fluidRow(shiny::div(DT::dataTableOutput('asca_tab',width="100%"),style='font-size:80%'))
-                                                                                                                                            ),
-                                                                                                                                            shiny::tabPanel("pattern", value="pattern",
-                                                                                                                                                            shiny::fluidRow(align="center",
-                                                                                                                                                                            uiOutput('jqui_ui'), br(),
-                                                                                                                                                                            shiny::selectInput("pattern_corr", 
-                                                                                                                                                                                               "Correlation metric:", 
-                                                                                                                                                                                               choices = c("pearson", "spearman", "kendall"), 
-                                                                                                                                                                                               selected = "pearson")
-                                                                                                                                                            ),
-                                                                                                                                                            shiny::fluidRow(align="center", 
-                                                                                                                                                                            shinyWidgets::circleButton("do_pattern", 
-                                                                                                                                                                                                       icon = icon("arrow-right")),
-                                                                                                                                                                            conditionalPanel(
-                                                                                                                                                                              condition = 'input.ggplotly == true',
-                                                                                                                                                                              plotlyOutput('pattern_plot_interactive')
-                                                                                                                                                                            ),
-                                                                                                                                                                            conditionalPanel(
-                                                                                                                                                                              condition = 'input.ggplotly == false',
-                                                                                                                                                                              plotOutput('pattern_plot')
-                                                                                                                                                                            ),
-                                                                                                                                                                            shiny::sliderInput('pattern_topn',label = "Show top:",min = 5,max=200,value = 25),
-                                                                                                                                                                            shiny::div(DT::dataTableOutput('pattern_tab',width="100%"),style='font-size:80%'))
+                                                                                                                                                            shinyBS::bsCollapsePanel(title = h2("plots"),
+                                                                                                                                                                                     shiny::tabsetPanel(shiny::tabPanel("samples",
+                                                                                                                                                                                                                        shiny::fluidRow(align="center",shiny::column(12, 
+                                                                                                                                                                                                                                                                     conditionalPanel(
+                                                                                                                                                                                                                                                                       condition = 'input.ggplotly == true',
+                                                                                                                                                                                                                                                                       plotlyOutput('plot_pca_interactive')
+                                                                                                                                                                                                                                                                     ),
+                                                                                                                                                                                                                                                                     conditionalPanel(
+                                                                                                                                                                                                                                                                       condition = 'input.ggplotly == false',
+                                                                                                                                                                                                                                                                       plotOutput('plot_pca')
+                                                                                                                                                                                                                                                                     )
+                                                                                                                                                                                                                        ))),
+                                                                                                                                                                                                        shiny::tabPanel("loadings", 
+                                                                                                                                                                                                                        shiny::fluidRow(align="center",shiny::column(12,
+                                                                                                                                                                                                                                                                     conditionalPanel(
+                                                                                                                                                                                                                                                                       condition = 'input.ggplotly == true',
+                                                                                                                                                                                                                                                                       plotlyOutput('plot_pca_loadings_interactive')
+                                                                                                                                                                                                                                                                     ),
+                                                                                                                                                                                                                                                                     conditionalPanel(
+                                                                                                                                                                                                                                                                       condition = 'input.ggplotly == false',
+                                                                                                                                                                                                                                                                       plotOutput('plot_pca_loadings')
+                                                                                                                                                                                                                                                                     ))
+                                                                                                                                                                                                                        ))),
+                                                                                                                                                                                     fluidRow(align="center",
+                                                                                                                                                                                              shiny::conditionalPanel("input.ggplotly == true",
+                                                                                                                                                                                                                      MetaboShiny::switchButton("pca_2d3d", label = "", col = "BW", type = "2d3d", value=T)),
+                                                                                                                                                                                              fluidRow(column(4,shiny::selectInput("pca_x", label = "X axis:", choices = paste0("PC",1:20),selected = "PC1",width="80%")),
+                                                                                                                                                                                                       column(4,shiny::selectInput("pca_y", label = "Y axis:", choices = paste0("PC",1:20),selected = "PC2",width="80%")),
+                                                                                                                                                                                                       column(4,shiny::selectInput("pca_z", label = "Z axis:", choices = paste0("PC",1:20),selected = "PC3",width="80%")))
+                                                                                                                                                                                     )),
+                                                                                                                                                            shinyBS::bsCollapsePanel(title = h2("tables"),shiny::tabsetPanel(id="pca_2",
+                                                                                                                                                                                                                             shiny::tabPanel(title="table",
+                                                                                                                                                                                                                                             shiny::div(DT::dataTableOutput('pca_tab',width="100%"),style='font-size:80%')),
+                                                                                                                                                                                                                             shiny::tabPanel(title="scree",
+                                                                                                                                                                                                                                             conditionalPanel(
+                                                                                                                                                                                                                                               condition = 'input.ggplotly == true',
+                                                                                                                                                                                                                                               plotlyOutput('pca_scree_interactive')
+                                                                                                                                                                                                                                             ),
+                                                                                                                                                                                                                                             conditionalPanel(
+                                                                                                                                                                                                                                               condition = 'input.ggplotly == false',
+                                                                                                                                                                                                                                               plotOutput('pca_scree')
+                                                                                                                                                                                                                                             )
+                                                                                                                                                                                                                             ),
+                                                                                                                                                                                                                             shiny::tabPanel(title="loadings",
+                                                                                                                                                                                                                                             shiny::div(DT::dataTableOutput('pca_load_tab',width="100%"),style='font-size:80%'))
+                                                                                                                                                            )), multiple = T,open = 1,id = "pca_collapse")
                                                                                                                                             )
-                                                                                                                          )
+                                                                                                                            ),
+                                                                                                                            shiny::tabPanel("pls-da", value = "plsda",
+                                                                                                                                            shiny::fluidRow(align="center",
+                                                                                                                                                            shinyBS::bsCollapse(shinyBS::bsCollapsePanel(title = h2("settings"),
+                                                                                                                                                                                                         shiny::fluidRow(align = "center",
+                                                                                                                                                                                                                         shiny::div(style="display:inline-block",
+                                                                                                                                                                                                                                    shiny::selectInput("plsda_type",
+                                                                                                                                                                                                                                                       label="Type:",
+                                                                                                                                                                                                                                                       choices=list("Normal"="normal")
+                                                                                                                                                                                                                                                       #,
+                                                                                                                                                                                                                                                       #             "Orthogonal"="ortho",
+                                                                                                                                                                                                                                                       #             "Sparse"="sparse")
+                                                                                                                                                                                                                                                       ,width = '100px',
+                                                                                                                                                                                                                                                       selected=1)),br(),
+                                                                                                                                                                                                                         shinyWidgets::actionBttn(
+                                                                                                                                                                                                                           inputId = "do_plsda",
+                                                                                                                                                                                                                           label = "click to start PLS-DA", 
+                                                                                                                                                                                                                           style = "bordered",
+                                                                                                                                                                                                                           icon = icon("terminal"),
+                                                                                                                                                                                                                           size = "sm"
+                                                                                                                                                                                                                         ))
+                                                                                                                                                            ),
+                                                                                                                                                            shinyBS::bsCollapsePanel(title = h2("plots"),
+                                                                                                                                                                                     shiny::tabsetPanel(shiny::tabPanel("samples",
+                                                                                                                                                                                                                        shiny::fluidRow(align="center",shiny::column(12,
+                                                                                                                                                                                                                                                                     conditionalPanel(
+                                                                                                                                                                                                                                                                       condition = 'input.ggplotly == true',
+                                                                                                                                                                                                                                                                       plotlyOutput('plot_plsda_interactive')
+                                                                                                                                                                                                                                                                     ),
+                                                                                                                                                                                                                                                                     conditionalPanel(
+                                                                                                                                                                                                                                                                       condition = 'input.ggplotly == false',
+                                                                                                                                                                                                                                                                       plotOutput('plot_plsda')
+                                                                                                                                                                                                                                                                     )))),
+                                                                                                                                                                                                        shiny::tabPanel("loadings", 
+                                                                                                                                                                                                                        shiny::fluidRow(align="center",shiny::column(12,
+                                                                                                                                                                                                                                                                     conditionalPanel(
+                                                                                                                                                                                                                                                                       condition = 'input.ggplotly == true',
+                                                                                                                                                                                                                                                                       plotlyOutput('plot_plsda_loadings_interactive')
+                                                                                                                                                                                                                                                                     ),
+                                                                                                                                                                                                                                                                     conditionalPanel(
+                                                                                                                                                                                                                                                                       condition = 'input.ggplotly == false',
+                                                                                                                                                                                                                                                                       plotOutput('plot_plsda_loadings')
+                                                                                                                                                                                                                                                                     )
+                                                                                                                                                                                                                        ))),
+                                                                                                                                                                                                        shiny::tabPanel("performance",
+                                                                                                                                                                                                                        shiny::tabsetPanel(id="plsda_2",
+                                                                                                                                                                                                                                           shiny::tabPanel(title="cross-validation",
+                                                                                                                                                                                                                                                           conditionalPanel(
+                                                                                                                                                                                                                                                             condition = 'input.ggplotly == true',
+                                                                                                                                                                                                                                                             plotlyOutput('plsda_cv_plot_interactive')
+                                                                                                                                                                                                                                                           ),
+                                                                                                                                                                                                                                                           conditionalPanel(
+                                                                                                                                                                                                                                                             condition = 'input.ggplotly == false',
+                                                                                                                                                                                                                                                             plotOutput('plsda_cv_plot')
+                                                                                                                                                                                                                                                           )),
+                                                                                                                                                                                                                                           shiny::tabPanel(title="permutation",
+                                                                                                                                                                                                                                                           conditionalPanel(
+                                                                                                                                                                                                                                                             condition = 'input.ggplotly == true',
+                                                                                                                                                                                                                                                             plotlyOutput('plsda_perm_plot_interactive')
+                                                                                                                                                                                                                                                           ),
+                                                                                                                                                                                                                                                           conditionalPanel(
+                                                                                                                                                                                                                                                             condition = 'input.ggplotly == false',
+                                                                                                                                                                                                                                                             plotOutput('plsda_perm_plot')
+                                                                                                                                                                                                                                                           )))
+                                                                                                                                                                                                        )),
+                                                                                                                                                                                     fluidRow(align="center",
+                                                                                                                                                                                              shiny::conditionalPanel("input.ggplotly == true",
+                                                                                                                                                                                                                      MetaboShiny::switchButton("plsda_2d3d", label = "", col = "BW", type = "2d3d", value=T)),
+                                                                                                                                                                                              fluidRow(column(4,shiny::selectInput("plsda_x", label = "X axis:", choices = paste0("PC",1:20),selected = "PC1",width="80%")),
+                                                                                                                                                                                                       column(4,shiny::selectInput("plsda_y", label = "Y axis:", choices = paste0("PC",1:20),selected = "PC2",width="80%")),
+                                                                                                                                                                                                       column(4,shiny::selectInput("plsda_z", label = "Z axis:", choices = paste0("PC",1:20),selected = "PC3",width="80%")))
+                                                                                                                                                                                     )),
+                                                                                                                                                            shinyBS::bsCollapsePanel(title = h2("tables"),
+                                                                                                                                                                                     shiny::tabPanel(title="scree",
+                                                                                                                                                                                                     shiny::div(DT::dataTableOutput('plsda_tab',width="100%"),style='font-size:80%')),
+                                                                                                                                                                                     shiny::tabPanel(title="loadings",
+                                                                                                                                                                                                     shiny::div(DT::dataTableOutput('plsda_load_tab',width="100%"),style='font-size:80%')))
+                                                                                                                                                            ))
+                                                                                                                            ),
+                                                                                                                            shiny::tabPanel("t-sne", value = "tsne",
+                                                                                                                                            shiny::fluidRow(align="center",
+                                                                                                                                                            shinyBS::bsCollapse(shinyBS::bsCollapsePanel(title = h2("settings"),
+                                                                                                                                                                                                         sliderInput("tsne_dims", "Initial dimensions:", min = 5, max = 100, step = 1, value = 30),
+                                                                                                                                                                                                         sliderInput("tsne_perplex", "Perplexity:", min = 5, max = 50, value = 30),
+                                                                                                                                                                                                         numericInput("tsne_maxiter", "Max iterations:", min = 10, value = 1000),
+                                                                                                                                                                                                         shinyWidgets::actionBttn(
+                                                                                                                                                                                                           inputId = "do_tsne",
+                                                                                                                                                                                                           label = "click to start t-SNE", 
+                                                                                                                                                                                                           style = "bordered",
+                                                                                                                                                                                                           icon = icon("terminal"),
+                                                                                                                                                                                                           size = "sm"
+                                                                                                                                                                                                         ))
+                                                                                                                                                            ),
+                                                                                                                                                            shinyBS::bsCollapsePanel(title = h2("plots"),
+                                                                                                                                                                                     conditionalPanel(
+                                                                                                                                                                                       condition = 'input.ggplotly == true',
+                                                                                                                                                                                       plotlyOutput('tsne_plot_interactive')
+                                                                                                                                                                                     ),
+                                                                                                                                                                                     conditionalPanel(
+                                                                                                                                                                                       condition = 'input.ggplotly == false',
+                                                                                                                                                                                       plotOutput('tsne_plot')
+                                                                                                                                                                                     ),
+                                                                                                                                                                                     shiny::conditionalPanel("input.ggplotly == true",
+                                                                                                                                                                                                             MetaboShiny::switchButton("tsne_2d3d", label = "", col = "BW", type = "2d3d", value=T))
+                                                                                                                                                            ))
+                                                                                                                            )
                                                                                                           ),
-                                                                                                          shiny::tabPanel("overview analyses", value = "overview", icon=shiny::icon("globe"),
-                                                                                                                          shiny::navbarPage(inverse=T, shiny::icon("globe"), id = "overview",
-                                                                                                                                            shiny::tabPanel("volcano plot", value="volc",
+                                                                                       shiny::navbarMenu("per m/z", icon=shiny::icon("fingerprint", "fa-2x"), menuName = "permz",
+                                                                                                         shiny::tabPanel("t-test", value="tt",
+                                                                                                                         shiny::fluidRow(align="center",
+                                                                                                                                         shiny::fluidRow(align="center",
+                                                                                                                                                         shinyBS::bsCollapse(shinyBS::bsCollapsePanel(title = h2("settings"),
+                                                                                                                                                                                                      MetaboShiny::sardine(MetaboShiny::switchButton("tt_nonpar", "Non-parametric?", col="BW", type="YN", value = T)),
+                                                                                                                                                                                                      MetaboShiny::sardine(MetaboShiny::switchButton("tt_eqvar", "Equal variance?", col="BW", type="YN", value = T)),
+                                                                                                                                                                                                      shinyWidgets::actionBttn(
+                                                                                                                                                                                                        inputId = "do_tt",
+                                                                                                                                                                                                        label = "click to start t-test", 
+                                                                                                                                                                                                        style = "bordered",
+                                                                                                                                                                                                        icon = icon("terminal"),
+                                                                                                                                                                                                        size = "sm"
+                                                                                                                                                                                                      )
+                                                                                                                                                         ),
+                                                                                                                                                         shinyBS::bsCollapsePanel(title = h2("plots"),
+                                                                                                                                                                                  conditionalPanel(
+                                                                                                                                                                                    condition = 'input.ggplotly == true',
+                                                                                                                                                                                    plotlyOutput('tt_overview_plot_interactive')
+                                                                                                                                                                                  ),
+                                                                                                                                                                                  conditionalPanel(
+                                                                                                                                                                                    condition = 'input.ggplotly == false',
+                                                                                                                                                                                    plotOutput('tt_overview_plot')
+                                                                                                                                                                                  )
+                                                                                                                                                         ),
+                                                                                                                                                         shinyBS::bsCollapsePanel(title = h2("tables"),
+                                                                                                                                                                                  shiny::div(DT::dataTableOutput('tt_tab',width="100%"),style='font-size:80%')
+                                                                                                                                                                                  
+                                                                                                                                                         ))
+                                                                                                                                         )
+                                                                                                                                         
+                                                                                                                         )),
+                                                                                                         shiny::tabPanel("anova", value="aov",
+                                                                                                                         shiny::fluidRow(align="center",
+                                                                                                                                         shinyBS::bsCollapse(shinyBS::bsCollapsePanel(title = h2("settings"),
+                                                                                                                                                                                      shinyWidgets::actionBttn(
+                                                                                                                                                                                        inputId = "do_anova",
+                                                                                                                                                                                        label = "click to start ANOVA", 
+                                                                                                                                                                                        style = "bordered",
+                                                                                                                                                                                        icon = icon("terminal"),
+                                                                                                                                                                                        size = "sm"
+                                                                                                                                                                                      )
+                                                                                                                                         ),
+                                                                                                                                         shinyBS::bsCollapsePanel(title = h2("plots"),
+                                                                                                                                                                  conditionalPanel(
+                                                                                                                                                                    condition = 'input.ggplotly == true',
+                                                                                                                                                                    plotlyOutput('aov_overview_plot_interactive')
+                                                                                                                                                                  ),
+                                                                                                                                                                  conditionalPanel(
+                                                                                                                                                                    condition = 'input.ggplotly == false',
+                                                                                                                                                                    plotOutput('aov_overview_plot')
+                                                                                                                                                                  )
+                                                                                                                                         ),
+                                                                                                                                         shinyBS::bsCollapsePanel(title = h2("tables"),
+                                                                                                                                                                  shiny::div(DT::dataTableOutput('aov_tab',width="100%"),style='font-size:80%')
+                                                                                                                                                                  
+                                                                                                                                         ))
+                                                                                                                         )
+                                                                                                         ),
+                                                                                                         shiny::tabPanel("fold-change", value="fc",
+                                                                                                                         shiny::fluidRow(align="center",
+                                                                                                                                         shinyBS::bsCollapse(shinyBS::bsCollapsePanel(title = h2("settings"),
+                                                                                                                                                                                      shinyWidgets::actionBttn(
+                                                                                                                                                                                        inputId = "do_fc",
+                                                                                                                                                                                        label = "click to start fold-change analysis", 
+                                                                                                                                                                                        style = "bordered",
+                                                                                                                                                                                        icon = icon("terminal"),
+                                                                                                                                                                                        size = "sm"
+                                                                                                                                                                                      )
+                                                                                                                                         ),
+                                                                                                                                         shinyBS::bsCollapsePanel(title = h2("plots"),
+                                                                                                                                                                  conditionalPanel(
+                                                                                                                                                                    condition = 'input.ggplotly == true',
+                                                                                                                                                                    plotlyOutput('fc_overview_plot_interactive')
+                                                                                                                                                                  ),
+                                                                                                                                                                  conditionalPanel(
+                                                                                                                                                                    condition = 'input.ggplotly == false',
+                                                                                                                                                                    plotOutput('fc_overview_plot')
+                                                                                                                                                                  )
+                                                                                                                                         ),
+                                                                                                                                         shinyBS::bsCollapsePanel(title = h2("tables"),
+                                                                                                                                                                  shiny::div(DT::dataTableOutput('fc_tab',width="100%"),style='font-size:80%')
+                                                                                                                                                                  
+                                                                                                                                         ))
+                                                                                                                         )
+                                                                                                         ),
+                                                                                                         shiny::tabPanel("meba", value="meba",
+                                                                                                                         #shiny::fluidRow(shiny::uiOutput('summary_plot_wrap',height="600px")),
+                                                                                                                         shiny::fluidRow(shiny::div(DT::dataTableOutput('meba_tab', width="100%"),style='font-size:80%'))
+                                                                                                         ),
+                                                                                                         shiny::tabPanel("asca", value="asca",
+                                                                                                                         #shiny::fluidRow(shiny::uiOutput('summary_plot_wrap', height="600px")),
+                                                                                                                         shiny::fluidRow(shiny::div(DT::dataTableOutput('asca_tab',width="100%"),style='font-size:80%'))
+                                                                                                         ),
+                                                                                                         shiny::tabPanel("pattern", value="pattern",
+                                                                                                                         shiny::fluidRow(align="center",
+                                                                                                                                         shinyBS::bsCollapse(shinyBS::bsCollapsePanel(title = h2("settings"),
+                                                                                                                                                                                      uiOutput('jqui_ui'), br(),
+                                                                                                                                                                                      shiny::selectInput("pattern_corr", 
+                                                                                                                                                                                                         "Correlation metric:", 
+                                                                                                                                                                                                         choices = c("pearson", "spearman", "kendall"), 
+                                                                                                                                                                                                         selected = "pearson"),
+                                                                                                                                                                                      shinyWidgets::actionBttn(
+                                                                                                                                                                                        inputId = "do_pattern",
+                                                                                                                                                                                        label = "click to start pattern finding", 
+                                                                                                                                                                                        style = "bordered",
+                                                                                                                                                                                        icon = icon("terminal"),
+                                                                                                                                                                                        size = "sm"
+                                                                                                                                                                                      )
+                                                                                                                                         ),
+                                                                                                                                         shinyBS::bsCollapsePanel(title = h2("plots"),
+                                                                                                                                                                  conditionalPanel(
+                                                                                                                                                                    condition = 'input.ggplotly == true',
+                                                                                                                                                                    plotlyOutput('pattern_plot_interactive')
+                                                                                                                                                                  ),
+                                                                                                                                                                  conditionalPanel(
+                                                                                                                                                                    condition = 'input.ggplotly == false',
+                                                                                                                                                                    plotOutput('pattern_plot')
+                                                                                                                                                                  ),
+                                                                                                                                                                  shiny::sliderInput('pattern_topn',label = "Show top:",min = 5,max=200,value = 25)
+                                                                                                                                         ),
+                                                                                                                                         shinyBS::bsCollapsePanel(title = h2("tables"),
+                                                                                                                                                                  shiny::div(DT::dataTableOutput('pattern_tab',width="100%"),style='font-size:80%')
+                                                                                                                                                                  
+                                                                                                                                         ))
+                                                                                                                         )
+                                                                                                         )
+                                                                                       ),
+                                                                                       shiny::navbarMenu("overview analyses", icon=shiny::icon("globe", "fa-2x"), menuName = "overview",
+                                                                                                         shiny::tabPanel("volcano plot", value="volc",
+                                                                                                                         shiny::fluidRow(align="center",
+                                                                                                                                         shinyBS::bsCollapse(shinyBS::bsCollapsePanel(title = h2("settings"),
+                                                                                                                                                                                      shinyWidgets::actionBttn(
+                                                                                                                                                                                        inputId = "do_volc",
+                                                                                                                                                                                        label = "click to make volcano plot", 
+                                                                                                                                                                                        style = "bordered",
+                                                                                                                                                                                        icon = icon("terminal"),
+                                                                                                                                                                                        size = "sm"
+                                                                                                                                                                                      )
+                                                                                                                                         ),
+                                                                                                                                         shinyBS::bsCollapsePanel(title = h2("plots"),
+                                                                                                                                                                  conditionalPanel(
+                                                                                                                                                                    condition = 'input.ggplotly == true',
+                                                                                                                                                                    plotlyOutput('volc_plot_interactive')
+                                                                                                                                                                  ),
+                                                                                                                                                                  conditionalPanel(
+                                                                                                                                                                    condition = 'input.ggplotly == false',
+                                                                                                                                                                    plotOutput('volc_plot')
+                                                                                                                                                                  )
+                                                                                                                                         ),
+                                                                                                                                         shinyBS::bsCollapsePanel(title = h2("tables"),
+                                                                                                                                                                  shiny::div(DT::dataTableOutput('volc_tab',width="100%"),style='font-size:80%')                
+                                                                                                                                         ))
+                                                                                                                         )
+                                                                                                         ),
+                                                                                                         shiny::tabPanel("heatmap", value="heatmap",
+                                                                                                                         shiny::fluidRow(align="center",
+                                                                                                                                         shinyBS::bsCollapse(shinyBS::bsCollapsePanel(title = h2("settings"),
+                                                                                                                                                                                      shinyWidgets::radioGroupButtons(
+                                                                                                                                                                                        inputId = "heattable",
+                                                                                                                                                                                        label = "Use which analysis?",
+                                                                                                                                                                                        choices = c("placeholder"),
+                                                                                                                                                                                        justified = TRUE,
+                                                                                                                                                                                        checkIcon = list(
+                                                                                                                                                                                          yes = icon("ok", 
+                                                                                                                                                                                                     lib = "glyphicon"))
+                                                                                                                                                                                      ),
+                                                                                                                                                                                      MetaboShiny::switchButton("heatsign", label = "Only significant hits?", col = "GB", type = "YN"),
+                                                                                                                                                                                      MetaboShiny::switchButton("heatlimits", label = "Color based on -all- metabolites?", col = "GB", type = "YN"),
+                                                                                                                                                                                      shinyWidgets::actionBttn(
+                                                                                                                                                                                        inputId = "do_heatmap",
+                                                                                                                                                                                        label = "click to make heatmap", 
+                                                                                                                                                                                        style = "bordered",
+                                                                                                                                                                                        icon = icon("terminal"),
+                                                                                                                                                                                        size = "sm"
+                                                                                                                                                                                      )
+                                                                                                                                         ),
+                                                                                                                                         shinyBS::bsCollapsePanel(title = h2("plots"),
+                                                                                                                                                                  plotly::plotlyOutput('heatmap')
+                                                                                                                                         ))
+                                                                                                                         )
+                                                                                                         ),
+                                                                                                         # this tab is used to find overlapping features of interest between analyses
+                                                                                                         # TODO: enable this with multiple saved mSets in mSet$storage
+                                                                                                         shiny::tabPanel(title="venn", value="venn", #icon=shiny::icon("comments"),
+                                                                                                                         br(),
+                                                                                                                         sidebarLayout(position = "left",
+                                                                                                                                       sidebarPanel = shiny::sidebarPanel(width = 3,
+                                                                                                                                         shiny::fluidRow(shiny::div(DT::dataTableOutput('venn_unselected'),style='font-size:80%'), align="center"),
+                                                                                                                                         shiny::fluidRow(shinyWidgets::circleButton("venn_add", icon=shiny::icon("arrow-down"), size="sm"),
+                                                                                                                                                         shinyWidgets::circleButton("venn_remove", icon=shiny::icon("arrow-up"), size="sm"),
+                                                                                                                                                         align="center"),
+                                                                                                                                         shiny::fluidRow(shiny::div(DT::dataTableOutput('venn_selected'),style='font-size:80%'),align="center"),
+                                                                                                                                         shiny::hr(),
+                                                                                                                                         shiny::fluidRow(
+                                                                                                                                           shiny::sliderInput("venn_tophits", label = "Only include top:", min = 1, max = 200, post = " hits", value=20)
+                                                                                                                                           ,align="center"),
+                                                                                                                                         shiny::fluidRow(
+                                                                                                                                           shinyWidgets::actionBttn(
+                                                                                                                                             inputId = "venn_build",
+                                                                                                                                             label = "click to make venn diagram", 
+                                                                                                                                             style = "bordered",
+                                                                                                                                             icon = icon("terminal"),
+                                                                                                                                             size = "sm"
+                                                                                                                                           ),align="center")
+                                                                                                                                       ),
+                                                                                                                                       mainPanel = mainPanel(
+                                                                                                                                         shiny::hr(),
+                                                                                                                                         conditionalPanel(
+                                                                                                                                           condition = 'input.ggplotly == true',
+                                                                                                                                           plotlyOutput('venn_plot_interactive')
+                                                                                                                                         ),
+                                                                                                                                         conditionalPanel(
+                                                                                                                                           condition = 'input.ggplotly == false',
+                                                                                                                                           plotOutput('venn_plot')
+                                                                                                                                         ),
+                                                                                                                                         # find the overlapping compounds between the groups you want to compare (user select)
+                                                                                                                                         # TODO: enable this with clicking the numbers/areas
+                                                                                                                                         shiny::fluidRow(shiny::selectInput(width = "80%","intersect_venn", label = "Show hits from (only):", selected = 1,choices = "",multiple = T),
+                                                                                                                                                         align="center"),
+                                                                                                                                         shiny::fluidRow(shiny::uiOutput("venn_pval"), align="center"),
+                                                                                                                                         shiny::br(),
+                                                                                                                                         shiny::fluidRow(shiny::div(DT::dataTableOutput('venn_tab'),style='font-size:80%'),
+                                                                                                                                                         align="center")
+                                                                                                                                       ))
+                                                                                                         ),
+                                                                                                         shiny::tabPanel("power calculation", value="power",
+                                                                                                                         shiny::fluidRow(align="center",
+                                                                                                                                         shinyBS::bsCollapse(shinyBS::bsCollapsePanel(title = h2("settings"),
+                                                                                                                                                                                      shiny::sliderInput("power_nsamp",
+                                                                                                                                                                                                         label = "Up to how many samples (per group)?",
+                                                                                                                                                                                                         value = 500,
+                                                                                                                                                                                                         min = 5, 
+                                                                                                                                                                                                         max = 999,
+                                                                                                                                                                                                         step = 1),
+                                                                                                                                                                                      shiny::selectInput("power_comps", "Which comparisons do you want to make?",
+                                                                                                                                                                                                         choices = c(),
+                                                                                                                                                                                                         multiple = T),
+                                                                                                                                                                                      shiny::numericInput("power_fdr", "False discovery rate:", 
+                                                                                                                                                                                                          value = 0.1, 
+                                                                                                                                                                                                          max = 1,
+                                                                                                                                                                                                          min = 0.00001),
+                                                                                                                                                                                      shinyWidgets::actionBttn(
+                                                                                                                                                                                        inputId = "do_power",
+                                                                                                                                                                                        label = "click to start power analysis", 
+                                                                                                                                                                                        style = "bordered",
+                                                                                                                                                                                        icon = icon("terminal"),
+                                                                                                                                                                                        size = "sm"
+                                                                                                                                                                                      )),
+                                                                                                                                                             shinyBS::bsCollapsePanel(title = h2("plots"),
+                                                                                                                                                                                      conditionalPanel(
+                                                                                                                                                                                        condition = 'input.ggplotly == true',
+                                                                                                                                                                                        plotlyOutput('power_plot_interactive')
+                                                                                                                                                                                      ),
+                                                                                                                                                                                      conditionalPanel(
+                                                                                                                                                                                        condition = 'input.ggplotly == false',
+                                                                                                                                                                                        plotOutput('power_plot')
+                                                                                                                                                                                      )
+                                                                                                                                                             )
+                                                                                                                                         ))
+                                                                                                         ),
+                                                                                                         shiny::tabPanel("enrichment", value = "enrich",
+                                                                                                                         sidebarLayout(position = "left",
+                                                                                                                                       sidebarPanel = sidebarPanel(
+                                                                                                                                         shiny::fluidRow(align="center",
+                                                                                                                                                         h3("Enrichment parameters"),
+                                                                                                                                                         shiny::selectInput("mummi_org",label = "Pathway database:",choices = list(
+                                                                                                                                                           "Homo sapiens (human) [MFN]" = "hsa_mfn",
+                                                                                                                                                           "Homo sapiens (human) [BioCyc]" = "hsa_biocyc",
+                                                                                                                                                           "Homo sapiens (human) [KEGG]" = "hsa_kegg",
+                                                                                                                                                           "Mus musculus (mouse) [BioCyc]" = "mmu_biocyc",
+                                                                                                                                                           "Mus musculus (mouse) [KEGG]" = "mmu_kegg",
+                                                                                                                                                           "Rattus norvegicus (rat) [KEGG]" = "rno_kegg",
+                                                                                                                                                           "Bos taurus (cow) [KEGG]" = "bta_kegg",
+                                                                                                                                                           "Gallus gallus (chicken) [KEGG]" = "gga_kegg",
+                                                                                                                                                           "Danio rerio (zebrafish) [KEGG]" = "dre_kegg",
+                                                                                                                                                           "Danio rerio (zebrafish) [MTF]" = "dre_mtf",
+                                                                                                                                                           "Drosophila melanogaster (fruit fly) [KEGG]" = "dme_kegg",
+                                                                                                                                                           "Drosophila melanogaster (fruit fly) [BioCyc]" = "dme_biocyc",
+                                                                                                                                                           "Caenorhabditis elegans (nematode) [KEGG]" = "cel_kegg",
+                                                                                                                                                           "Saccharomyces cerevisiae (yeast) [KEGG]" = "sce_kegg",
+                                                                                                                                                           "Saccharomyces cerevisiae (yeast) [BioCyc]" = "sce_biocyc",
+                                                                                                                                                           "Oryza sativa japonica (Japanese rice) [KEGG]" = "osa_kegg",
+                                                                                                                                                           "Arabidopsis thaliana (thale cress) [KEGG]" = "ath_kegg",
+                                                                                                                                                           "Schistosoma mansoni [KEGG]" = "smm_kegg",
+                                                                                                                                                           "Plasmodium falciparum 3D7 (Malaria) [KEGG]" = "pfa_kegg",
+                                                                                                                                                           "Trypanosoma brucei [KEGG]" = "tbr_kegg",
+                                                                                                                                                           "Escherichia coli K-12 MG1655 [KEGG]" = "eco_kegg",
+                                                                                                                                                           "Bacillus subtilis [KEGG]" = "bsu_kegg",
+                                                                                                                                                           "Pseudomonas putida KT2440 [KEGG]" = "ppu_kegg",
+                                                                                                                                                           "Staphylococcus aureus N315 (MRSA/VSSA) [KEGG]" = "sau_kegg",
+                                                                                                                                                           "Thermotoga maritima [KEGG]" = "tma_kegg",
+                                                                                                                                                           "Synechococcus elongatus PCC7942 [KEGG]" = "syf_kegg",
+                                                                                                                                                           "Mesorhizobium loti [KEGG]" = "mlo_kegg"
+                                                                                                                                                         ), selected = "hsa_kegg"),
+                                                                                                                                                         shinyWidgets::switchInput(
+                                                                                                                                                           inputId = "mummi_enr_method",value = TRUE,
+                                                                                                                                                           onLabel = "mummichog",
+                                                                                                                                                           offLabel = "gsea"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
+                                                                                                                                                         ),
+                                                                                                                                                         shinyWidgets::switchInput(
+                                                                                                                                                           inputId = "mummi_rules",
+                                                                                                                                                           value = FALSE,
+                                                                                                                                                           onLabel = "yes",
+                                                                                                                                                           label = "Apply adduct rules?",
+                                                                                                                                                           offLabel = "no"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
+                                                                                                                                                         ),
+                                                                                                                                                         #shiny::sliderInput("mummi_pval", label = "Required p-value:", min = 0, max = 1e-5, value = 0.05),
+                                                                                                                                                         br(),
+                                                                                                                                                         h3("User data parameters"),
+                                                                                                                                                         shiny::selectInput("mummi_anal", 
+                                                                                                                                                                            "Use analysis:",
+                                                                                                                                                                            choices = c("please do an analysis!"),
+                                                                                                                                                                            selected = 1,
+                                                                                                                                                                            multiple = F),
+                                                                                                                                                         shiny::sliderInput("mummi_topn", 
+                                                                                                                                                                            "Top hits used:",
+                                                                                                                                                                            min = 10, 
+                                                                                                                                                                            max = 5000, 
+                                                                                                                                                                            step = 10,
+                                                                                                                                                                            value = 500),
+                                                                                                                                                         shiny::selectInput("mummi_adducts", label = "Which adducts will be considered?", 
+                                                                                                                                                                            choices = adducts$Name, selected = c("[M+H]1+", 
+                                                                                                                                                                                                                 "[M+Na]1+",
+                                                                                                                                                                                                                 "[M-H]1-",
+                                                                                                                                                                                                                 "[M+Cl]1-"), 
+                                                                                                                                                                            multiple=T),
+                                                                                                                                                         shinyWidgets::actionBttn(
+                                                                                                                                                           inputId = "do_enrich",
+                                                                                                                                                           label = "click to start enrichment analysis", 
+                                                                                                                                                           style = "bordered",
+                                                                                                                                                           icon = icon("terminal"),
+                                                                                                                                                           size = "sm"
+                                                                                                                                                         )
+                                                                                                                                                         
+                                                                                                                                         )),
+                                                                                                                                       mainPanel = mainPanel(fluidRow(align="center",
+                                                                                                                                                                      shinyBS::bsCollapse(shinyBS::bsCollapsePanel(title = h2("plots"),
+                                                                                                                                                                                                                   conditionalPanel(
+                                                                                                                                                                                                                     condition = 'input.ggplotly == true',
+                                                                                                                                                                                                                     plotlyOutput('enrich_plot_interactive')
+                                                                                                                                                                                                                   ),
+                                                                                                                                                                                                                   conditionalPanel(
+                                                                                                                                                                                                                     condition = 'input.ggplotly == false',
+                                                                                                                                                                                                                     plotOutput('enrich_plot')
+                                                                                                                                                                                                                   )),
+                                                                                                                                                                                          shinyBS::bsCollapsePanel(title = h2("tables"),
+                                                                                                                                                                                                                   shiny::div(DT::dataTableOutput("enrich_tab",
+                                                                                                                                                                                                                                                  width="100%"),
+                                                                                                                                                                                                                              style='font-size:80%'),
+                                                                                                                                                                                                                   shiny::div(DT::dataTableOutput("enrich_pw_tab",
+                                                                                                                                                                                                                                                  width="100%"),
+                                                                                                                                                                                                                              style='font-size:80%'))
+                                                                                                                                                                      )
+                                                                                                                                                                      
+                                                                                                                                       ))
+                                                                                                                         )
+                                                                                                         )),
+                                                                                       shiny::tabPanel("machine learning", 
+                                                                                                       value = "ml", icon=shiny::icon("signature", "fa-2x"),
+                                                                                                       shiny::br(),
+                                                                                                       shiny::tabsetPanel(shiny::tabPanel("initialize", value="init",
+                                                                                                                                          shiny::fluidRow(
+                                                                                                                                            shiny::column(width=3,align="center",
+                                                                                                                                                          shiny::selectInput("ml_perf_metr", label=shiny::h2("Performance metric"),
+                                                                                                                                                                             choices = c("boot", "boot632", "optimism_boot",
+                                                                                                                                                                                         "boot_all", "cv", "repeatedcv",
+                                                                                                                                                                                         "LOOCV", "LGOCV", "none", "oob",
+                                                                                                                                                                                         "timeslice", "addaptive_cv", "adaptive_boot",
+                                                                                                                                                                                         "adaptive_LGOCV"),
+                                                                                                                                                                             multiple = F, selected = "repeatedcv"),
+                                                                                                                                                          shiny::sliderInput("ml_train_perc",
+                                                                                                                                                                             label = shiny::h2("Percentage in training"),
+                                                                                                                                                                             min = 1,
+                                                                                                                                                                             max = 100,
+                                                                                                                                                                             step = 1,
+                                                                                                                                                                             value = 60,
+                                                                                                                                                                             post = "%"),
+                                                                                                                                                          shiny::selectInput("ml_folds", label=shiny::h2("Fold CV"),choices = c("5",
+                                                                                                                                                                                                                                "10",
+                                                                                                                                                                                                                                "20",
+                                                                                                                                                                                                                                "50",
+                                                                                                                                                                                                                                "LOOCV"),
+                                                                                                                                                                             multiple = F),
+                                                                                                                                                          shiny::sliderInput("ml_attempts",
+                                                                                                                                                                             label = "Attempts",
+                                                                                                                                                                             min = 1,
+                                                                                                                                                                             max = 100,
+                                                                                                                                                                             step = 1,
+                                                                                                                                                                             value = 20,
+                                                                                                                                                                             post = "x")
+                                                                                                                                            ),
+                                                                                                                                            shiny::column(width=6,align="center",
+                                                                                                                                                          shiny::selectInput("ml_method",
+                                                                                                                                                                             label = shiny::h2("Used algorithm"),
+                                                                                                                                                                             selected = "glmnet",
+                                                                                                                                                                             choices = as.list(gbl$constants$ml.models),
+                                                                                                                                                                             multiple = F),
+                                                                                                                                                          shiny::div(shiny::uiOutput("ml_params"), style = "font-size:60%"),
+                                                                                                                                                          shiny::selectizeInput("ml_preproc", label = shiny::h2("Data reprocessing"),
+                                                                                                                                                                                choices = c("center", "scale"),
+                                                                                                                                                                                selected = c("center", "scale"), multiple=T),
+                                                                                                                                                          shinyWidgets::radioGroupButtons(
+                                                                                                                                                            inputId = "ml_sampling",
+                                                                                                                                                            label = "What if classes are imbalanced?:", 
+                                                                                                                                                            choices = c(`<i class='fa fa-arrow-down'></i> downsample` = "down",
+                                                                                                                                                                        `ROSE` = "rose",
+                                                                                                                                                                        `do nothing` = "none", 
+                                                                                                                                                                        `SMOTE` = "smote",
+                                                                                                                                                                        `upsample <i class='fa fa-arrow-up'></i>` = "up"),
+                                                                                                                                                            justified = FALSE,
+                                                                                                                                                            selected = "none"
+                                                                                                                                                          ),
+                                                                                                                                                          #MetaboShiny::switchButton("downsample", label = "Downsample?",col = "BW", value = F, type = "YN"),
+                                                                                                                                                          MetaboShiny::switchButton("ml_random_split", label = "Randomize train/test split each repeat?",
+                                                                                                                                                                                    col = "BW", value = F, type = "YN"),
+                                                                                                                                                          shinyWidgets::actionBttn(
+                                                                                                                                                            inputId = "do_ml",
+                                                                                                                                                            label = "click to start machine learning", 
+                                                                                                                                                            style = "bordered",
+                                                                                                                                                            icon = icon("terminal"),
+                                                                                                                                                            size = "sm"
+                                                                                                                                                          )
+                                                                                                                                            ),
+                                                                                                                                            shiny::column(width=3,align="center",
+                                                                                                                                                          shiny::selectizeInput("ml_include_covars", label = "Use which non-m/z info for prediction?", choices=c(), multiple=TRUE),
+                                                                                                                                                          shiny::fluidRow(shiny::textOutput("ml_train_ss"),
+                                                                                                                                                                          shiny::actionButton("ml_train_ss", label = "train on:", icon = shiny::icon("arrow-up"))),
+                                                                                                                                                          shiny::fluidRow(shiny::textOutput("ml_test_ss"),
+                                                                                                                                                                          shiny::actionButton("ml_test_ss", label = "test on:", icon = shiny::icon("arrow-up"))),
+                                                                                                                                                          shiny::br(),
+                                                                                                                                                          shiny::textInput("ml_name", label=shiny::h3("Name:"), value = "all"))
+                                                                                                                                          )
+                                                                                                       ),
+                                                                                                       shiny::tabPanel("results", value="res",
+                                                                                                                       shiny::div(shiny::selectInput("show_which_ml", 
+                                                                                                                                                     label = "Plot which model?", 
+                                                                                                                                                     choices = c())),
+                                                                                                                       shiny::tabsetPanel(id="ml_results",
+                                                                                                                                          shiny::tabPanel(title = "roc",value = "roc",icon=shiny::icon("area-chart"),
+                                                                                                                                                          conditionalPanel(
+                                                                                                                                                            condition = 'input.ggplotly == true',
+                                                                                                                                                            plotlyOutput('ml_roc_interactive')
+                                                                                                                                                          ),
+                                                                                                                                                          conditionalPanel(
+                                                                                                                                                            condition = 'input.ggplotly == false',
+                                                                                                                                                            plotOutput('ml_roc')
+                                                                                                                                                          ),
+                                                                                                                                                          fluidRow(
+                                                                                                                                                            column(6,shiny::div(DT::dataTableOutput("ml_overview_tab",
+                                                                                                                                                                                                    width="100%"),
+                                                                                                                                                                                style='font-size:80%')
+                                                                                                                                                            ),column(6,shiny::div(DT::dataTableOutput("ml_tab",
+                                                                                                                                                                                                      width="100%"),
+                                                                                                                                                                                  style='font-size:80%')
+                                                                                                                                                            ))
+                                                                                                                                          ),
+                                                                                                                                          shiny::tabPanel("importance",value= "bar",icon=shiny::icon("star"),
+                                                                                                                                                          shiny::fluidRow(
                                                                                                                                                             conditionalPanel(
                                                                                                                                                               condition = 'input.ggplotly == true',
-                                                                                                                                                              plotlyOutput('volc_plot_interactive')
+                                                                                                                                                              plotlyOutput('ml_bar_interactive')
                                                                                                                                                             ),
                                                                                                                                                             conditionalPanel(
                                                                                                                                                               condition = 'input.ggplotly == false',
-                                                                                                                                                              plotOutput('volc_plot')
-                                                                                                                                                            ),
-                                                                                                                                                            shiny::fluidRow(shiny::div(DT::dataTableOutput('volc_tab',width="100%"),style='font-size:80%'))
-                                                                                                                                            ),
-                                                                                                                                            shiny::tabPanel("heatmap", value="heatmap",
-                                                                                                                                                            # conditionalPanel(
-                                                                                                                                                            #   condition = 'input.ggplotly == true',
-                                                                                                                                                            #   plotlyOutput('heatmap_interactive')
-                                                                                                                                                            # ),
-                                                                                                                                                            conditionalPanel(
-                                                                                                                                                              condition = 'input.ggplotly == false',
-                                                                                                                                                              plotOutput('heatmap')
-                                                                                                                                                            ),
-                                                                                                                                                            shiny::br(),
-                                                                                                                                                            shiny::fluidRow(shiny::column(align="center",
-                                                                                                                                                                                          width=12,
-                                                                                                                                                                                          shiny::sliderInput("heatmap_topn", "Use top ... from table:", value=100, min = 10, max = 200))
-                                                                                                                                                            ),
-                                                                                                                                                            shiny::fluidRow(shiny::column(align="center",
-                                                                                                                                                                                          width=12,
-                                                                                                                                                                                          shinyWidgets::radioGroupButtons(
-                                                                                                                                                                                            inputId = "heattable",
-                                                                                                                                                                                            label = "Use which analysis?",
-                                                                                                                                                                                            choices = c("placeholder"),
-                                                                                                                                                                                            justified = TRUE,
-                                                                                                                                                                                            checkIcon = list(
-                                                                                                                                                                                              yes = icon("ok", 
-                                                                                                                                                                                                         lib = "glyphicon"))
-                                                                                                                                                                                          ),
-                                                                                                                                                                                          #shiny::selectInput(width = "80%","heattable", label = "Use statistics from:", choices = c(), selected = c()),
-                                                                                                                                                                                          MetaboShiny::switchButton("heatsign", label = "Only significant hits?", col = "GB", type = "YN"),
-                                                                                                                                                                                          MetaboShiny::switchButton("heatlimits", label = "Color based on -all- metabolites?", col = "GB", type = "YN")
-                                                                                                                                                            ))
-                                                                                                                                            ),
-                                                                                                                                            # this tab is used to find overlapping features of interest between analyses
-                                                                                                                                            # TODO: enable this with multiple saved mSets in mSet$storage
-                                                                                                                                            shiny::tabPanel(title="venn", value="venn", #icon=shiny::icon("comments"),
-                                                                                                                                                            sidebarLayout(position = "left",
-                                                                                                                                                                          sidebarPanel = sidebarPanel(
-                                                                                                                                                                            shiny::fluidRow(shiny::div(DT::dataTableOutput('venn_unselected'),style='font-size:80%'), align="center"),
-                                                                                                                                                                            shiny::fluidRow(shinyWidgets::circleButton("venn_add", icon=shiny::icon("arrow-down"), size="sm"),
-                                                                                                                                                                                            shinyWidgets::circleButton("venn_remove", icon=shiny::icon("arrow-up"), size="sm"),
-                                                                                                                                                                                            align="center"),
-                                                                                                                                                                            shiny::fluidRow(shiny::div(DT::dataTableOutput('venn_selected'),style='font-size:80%'),align="center"),
-                                                                                                                                                                            shiny::hr(),
-                                                                                                                                                                            shiny::fluidRow(
-                                                                                                                                                                              shiny::sliderInput("venn_tophits", label = "Only include top:", min = 1, max = 200, post = " hits", value=20)
-                                                                                                                                                                              ,align="center"),
-                                                                                                                                                                            shiny::fluidRow(
-                                                                                                                                                                              shinyWidgets::circleButton("venn_build", icon=shiny::icon("hand-pointer-o"),size="default")
-                                                                                                                                                                              ,align="center")
-                                                                                                                                                                          ),
-                                                                                                                                                                          mainPanel = mainPanel(
-                                                                                                                                                                            shiny::hr(),
-                                                                                                                                                                            conditionalPanel(
-                                                                                                                                                                              condition = 'input.ggplotly == true',
-                                                                                                                                                                              plotlyOutput('venn_plot_interactive')
-                                                                                                                                                                            ),
-                                                                                                                                                                            conditionalPanel(
-                                                                                                                                                                              condition = 'input.ggplotly == false',
-                                                                                                                                                                              plotOutput('venn_plot')
-                                                                                                                                                                            ),
-                                                                                                                                                                            # find the overlapping compounds between the groups you want to compare (user select)
-                                                                                                                                                                            # TODO: enable this with clicking the numbers/areas
-                                                                                                                                                                            shiny::fluidRow(shiny::selectInput(width = "80%","intersect_venn", label = "Show hits from (only):", selected = 1,choices = "",multiple = T),
-                                                                                                                                                                                            align="center"),
-                                                                                                                                                                            shiny::fluidRow(shiny::uiOutput("venn_pval"), align="center"),
-                                                                                                                                                                            shiny::br(),
-                                                                                                                                                                            shiny::fluidRow(shiny::div(DT::dataTableOutput('venn_tab'),style='font-size:80%'),
-                                                                                                                                                                                            align="center")
-                                                                                                                                                                          ))
-                                                                                                                                            ),
-                                                                                                                                            shiny::tabPanel("power calculation", value="power",
-                                                                                                                                                            shiny::fluidRow(align="center", 
-                                                                                                                                                                            conditionalPanel(
-                                                                                                                                                                              condition = 'input.ggplotly == true',
-                                                                                                                                                                              plotlyOutput('power_plot_interactive')
-                                                                                                                                                                            ),
-                                                                                                                                                                            conditionalPanel(
-                                                                                                                                                                              condition = 'input.ggplotly == false',
-                                                                                                                                                                              plotOutput('power_plot')
-                                                                                                                                                                            )),
-                                                                                                                                                            shiny::fluidRow(align="center",shiny::sliderInput("power_nsamp",
-                                                                                                                                                                                                              label = "Up to how many samples (per group)?",
-                                                                                                                                                                                                              value = 500,
-                                                                                                                                                                                                              min = 5, 
-                                                                                                                                                                                                              max = 999,
-                                                                                                                                                                                                              step = 1),
-                                                                                                                                                                            shiny::selectInput("power_comps", "Which comparisons do you want to make?",
-                                                                                                                                                                                               choices = c(),
-                                                                                                                                                                                               multiple = T),
-                                                                                                                                                                            shiny::numericInput("power_fdr", "False discovery rate:", 
-                                                                                                                                                                                                value = 0.1, 
-                                                                                                                                                                                                max = 1,
-                                                                                                                                                                                                min = 0.00001)),
-                                                                                                                                                            shiny::fluidRow(align="center",shinyWidgets::circleButton("do_power", size="lg", icon=shiny::icon("arrow-up")))
-                                                                                                                                            ),
-                                                                                                                                            shiny::tabPanel("enrichment", value = "enrich",
-                                                                                                                                                            sidebarLayout(position = "left",
-                                                                                                                                                                          sidebarPanel = sidebarPanel(
-                                                                                                                                                                            shiny::fluidRow(align="center",
-                                                                                                                                                                                            h3("Enrichment parameters"),
-                                                                                                                                                                                            shiny::selectInput("mummi_org",label = "Pathway database:",choices = list(
-                                                                                                                                                                                              "Homo sapiens (human) [MFN]" = "hsa_mfn",
-                                                                                                                                                                                              "Homo sapiens (human) [BioCyc]" = "hsa_biocyc",
-                                                                                                                                                                                              "Homo sapiens (human) [KEGG]" = "hsa_kegg",
-                                                                                                                                                                                              "Mus musculus (mouse) [BioCyc]" = "mmu_biocyc",
-                                                                                                                                                                                              "Mus musculus (mouse) [KEGG]" = "mmu_kegg",
-                                                                                                                                                                                              "Rattus norvegicus (rat) [KEGG]" = "rno_kegg",
-                                                                                                                                                                                              "Bos taurus (cow) [KEGG]" = "bta_kegg",
-                                                                                                                                                                                              "Gallus gallus (chicken) [KEGG]" = "gga_kegg",
-                                                                                                                                                                                              "Danio rerio (zebrafish) [KEGG]" = "dre_kegg",
-                                                                                                                                                                                              "Danio rerio (zebrafish) [MTF]" = "dre_mtf",
-                                                                                                                                                                                              "Drosophila melanogaster (fruit fly) [KEGG]" = "dme_kegg",
-                                                                                                                                                                                              "Drosophila melanogaster (fruit fly) [BioCyc]" = "dme_biocyc",
-                                                                                                                                                                                              "Caenorhabditis elegans (nematode) [KEGG]" = "cel_kegg",
-                                                                                                                                                                                              "Saccharomyces cerevisiae (yeast) [KEGG]" = "sce_kegg",
-                                                                                                                                                                                              "Saccharomyces cerevisiae (yeast) [BioCyc]" = "sce_biocyc",
-                                                                                                                                                                                              "Oryza sativa japonica (Japanese rice) [KEGG]" = "osa_kegg",
-                                                                                                                                                                                              "Arabidopsis thaliana (thale cress) [KEGG]" = "ath_kegg",
-                                                                                                                                                                                              "Schistosoma mansoni [KEGG]" = "smm_kegg",
-                                                                                                                                                                                              "Plasmodium falciparum 3D7 (Malaria) [KEGG]" = "pfa_kegg",
-                                                                                                                                                                                              "Trypanosoma brucei [KEGG]" = "tbr_kegg",
-                                                                                                                                                                                              "Escherichia coli K-12 MG1655 [KEGG]" = "eco_kegg",
-                                                                                                                                                                                              "Bacillus subtilis [KEGG]" = "bsu_kegg",
-                                                                                                                                                                                              "Pseudomonas putida KT2440 [KEGG]" = "ppu_kegg",
-                                                                                                                                                                                              "Staphylococcus aureus N315 (MRSA/VSSA) [KEGG]" = "sau_kegg",
-                                                                                                                                                                                              "Thermotoga maritima [KEGG]" = "tma_kegg",
-                                                                                                                                                                                              "Synechococcus elongatus PCC7942 [KEGG]" = "syf_kegg",
-                                                                                                                                                                                              "Mesorhizobium loti [KEGG]" = "mlo_kegg"
-                                                                                                                                                                                            ), selected = "hsa_kegg"),
-                                                                                                                                                                                            shinyWidgets::switchInput(
-                                                                                                                                                                                              inputId = "mummi_enr_method",value = TRUE,
-                                                                                                                                                                                              onLabel = "mummichog",
-                                                                                                                                                                                              offLabel = "gsea"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
-                                                                                                                                                                                            ),
-                                                                                                                                                                                            shinyWidgets::switchInput(
-                                                                                                                                                                                              inputId = "mummi_rules",
-                                                                                                                                                                                              value = FALSE,
-                                                                                                                                                                                              onLabel = "yes",
-                                                                                                                                                                                              label = "Apply adduct rules?",
-                                                                                                                                                                                              offLabel = "no"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
-                                                                                                                                                                                            ),
-                                                                                                                                                                                            #shiny::sliderInput("mummi_pval", label = "Required p-value:", min = 0, max = 1e-5, value = 0.05),
-                                                                                                                                                                                            br(),
-                                                                                                                                                                                            h3("User data parameters"),
-                                                                                                                                                                                            shiny::selectInput("mummi_anal", 
-                                                                                                                                                                                                               "Use analysis:",
-                                                                                                                                                                                                               choices = c("please do an analysis!"),
-                                                                                                                                                                                                               selected = 1,
-                                                                                                                                                                                                               multiple = F),
-                                                                                                                                                                                            shiny::sliderInput("mummi_topn", 
-                                                                                                                                                                                                               "Top hits used:",
-                                                                                                                                                                                                               min = 10, 
-                                                                                                                                                                                                               max = 5000, 
-                                                                                                                                                                                                               step = 10,
-                                                                                                                                                                                                               value = 500),
-                                                                                                                                                                                            shiny::selectInput("mummi_adducts", label = "Which adducts will be considered?", 
-                                                                                                                                                                                                               choices = adducts$Name, selected = c("[M+H]1+", 
-                                                                                                                                                                                                                                                    "[M+Na]1+",
-                                                                                                                                                                                                                                                    "[M-H]1-",
-                                                                                                                                                                                                                                                    "[M+Cl]1-"), 
-                                                                                                                                                                                                               multiple=T),
-                                                                                                                                                                                            shinyWidgets::circleButton("do_enrich",
-                                                                                                                                                                                                                       icon = shiny::h3(paste("Go"),
-                                                                                                                                                                                                                                        shiny::icon("hand-pointer-o", "fa-lg")),
-                                                                                                                                                                                                                       status = "default",
-                                                                                                                                                                                                                       size = "lg")
-                                                                                                                                                                                            
-                                                                                                                                                                            )),
-                                                                                                                                                                          mainPanel = mainPanel(fluidRow(align="center",
-                                                                                                                                                                                                         conditionalPanel(
-                                                                                                                                                                                                           condition = 'input.ggplotly == true',
-                                                                                                                                                                                                           plotlyOutput('enrich_plot_interactive')
-                                                                                                                                                                                                         ),
-                                                                                                                                                                                                         conditionalPanel(
-                                                                                                                                                                                                           condition = 'input.ggplotly == false',
-                                                                                                                                                                                                           plotOutput('enrich_plot')
-                                                                                                                                                                                                         ),
-                                                                                                                                                                                                         shiny::div(DT::dataTableOutput("enrich_tab",
-                                                                                                                                                                                                                                        width="100%"),
-                                                                                                                                                                                                                    style='font-size:80%'),
-                                                                                                                                                                                                         shiny::div(DT::dataTableOutput("enrich_pw_tab",
-                                                                                                                                                                                                                                        width="100%"),
-                                                                                                                                                                                                                    style='font-size:80%')
-                                                                                                                                                                          ))
+                                                                                                                                                              plotOutput('ml_bar')
                                                                                                                                                             )
-                                                                                                                                            ))),
-                                                                                                          shiny::tabPanel("machine learning", value = "ml", icon=shiny::icon("signature"),
-                                                                                                                          shiny::br(),
-                                                                                                                          shiny::navbarPage(inverse=F, shiny::icon("signature"), id = "ml2",
-                                                                                                                                            shiny::tabPanel("initialize", value="init",
-                                                                                                                                                            shiny::fluidRow(
-                                                                                                                                                              shiny::column(width=3,align="center",
-                                                                                                                                                                            shiny::selectInput("ml_perf_metr", label=shiny::h2("Performance metric"),
-                                                                                                                                                                                               choices = c("boot", "boot632", "optimism_boot",
-                                                                                                                                                                                                           "boot_all", "cv", "repeatedcv",
-                                                                                                                                                                                                           "LOOCV", "LGOCV", "none", "oob",
-                                                                                                                                                                                                           "timeslice", "addaptive_cv", "adaptive_boot",
-                                                                                                                                                                                                           "adaptive_LGOCV"),
-                                                                                                                                                                                               multiple = F, selected = "repeatedcv"),
-                                                                                                                                                                            shiny::sliderInput("ml_train_perc",
-                                                                                                                                                                                               label = shiny::h2("Percentage in training"),
-                                                                                                                                                                                               min = 1,
-                                                                                                                                                                                               max = 100,
-                                                                                                                                                                                               step = 1,
-                                                                                                                                                                                               value = 60,
-                                                                                                                                                                                               post = "%"),
-                                                                                                                                                                            shiny::selectInput("ml_folds", label=shiny::h2("Fold CV"),choices = c("5",
-                                                                                                                                                                                                                                                  "10",
-                                                                                                                                                                                                                                                  "20",
-                                                                                                                                                                                                                                                  "50",
-                                                                                                                                                                                                                                                  "LOOCV"),
-                                                                                                                                                                                               multiple = F),
-                                                                                                                                                                            shiny::sliderInput("ml_attempts",
-                                                                                                                                                                                               label = "Attempts",
-                                                                                                                                                                                               min = 1,
-                                                                                                                                                                                               max = 100,
-                                                                                                                                                                                               step = 1,
-                                                                                                                                                                                               value = 20,
-                                                                                                                                                                                               post = "x")
-                                                                                                                                                              ),
-                                                                                                                                                              shiny::column(width=6,align="center",
-                                                                                                                                                                            shiny::selectInput("ml_method",
-                                                                                                                                                                                               label = shiny::h2("Used algorithm"),
-                                                                                                                                                                                               selected = "glmnet",
-                                                                                                                                                                                               choices = as.list(gbl$constants$ml.models),
-                                                                                                                                                                                               multiple = F),
-                                                                                                                                                                            shiny::div(shiny::uiOutput("ml_params"), style = "font-size:60%"),
-                                                                                                                                                                            shiny::selectizeInput("ml_preproc", label = shiny::h2("Data reprocessing"),
-                                                                                                                                                                                                  choices = c("center", "scale"),
-                                                                                                                                                                                                  selected = c("center", "scale"), multiple=T),
-                                                                                                                                                                            shinyWidgets::radioGroupButtons(
-                                                                                                                                                                              inputId = "ml_sampling",
-                                                                                                                                                                              label = "What if classes are imbalanced?:", 
-                                                                                                                                                                              choices = c(`<i class='fa fa-arrow-down'></i> downsample` = "down",
-                                                                                                                                                                                          `ROSE` = "rose",
-                                                                                                                                                                                          `do nothing` = "none", 
-                                                                                                                                                                                          `SMOTE` = "smote",
-                                                                                                                                                                                          `upsample <i class='fa fa-arrow-up'></i>` = "up"),
-                                                                                                                                                                              justified = FALSE,
-                                                                                                                                                                              selected = "none"
-                                                                                                                                                                            ),
-                                                                                                                                                                            #MetaboShiny::switchButton("downsample", label = "Downsample?",col = "BW", value = F, type = "YN"),
-                                                                                                                                                                            MetaboShiny::switchButton("ml_random_split", label = "Randomize train/test split each repeat?",
-                                                                                                                                                                                                      col = "BW", value = F, type = "YN"),
-                                                                                                                                                                            shinyWidgets::circleButton("do_ml",
-                                                                                                                                                                                                       icon = shiny::h3(paste("Go"),
-                                                                                                                                                                                                                        shiny::icon("hand-pointer-o", "fa-lg")),
-                                                                                                                                                                                                       status = "default",
-                                                                                                                                                                                                       size = "lg")
-                                                                                                                                                              ),
-                                                                                                                                                              shiny::column(width=3,align="center",
-                                                                                                                                                                            shiny::selectizeInput("ml_include_covars", label = "Use which non-m/z info for prediction?", choices=c(), multiple=TRUE),
-                                                                                                                                                                            shiny::fluidRow(shiny::textOutput("ml_train_ss"),
-                                                                                                                                                                                            shiny::actionButton("ml_train_ss", label = "train on:", icon = shiny::icon("arrow-up"))),
-                                                                                                                                                                            shiny::fluidRow(shiny::textOutput("ml_test_ss"),
-                                                                                                                                                                                            shiny::actionButton("ml_test_ss", label = "test on:", icon = shiny::icon("arrow-up"))),
-                                                                                                                                                                            shiny::br(),
-                                                                                                                                                                            shiny::textInput("ml_name", label=shiny::h3("Name:"), value = "all"))
-                                                                                                                                                            )
-                                                                                                                                            ),
-                                                                                                                                            shiny::tabPanel("results", value="res", icon=shiny::icon("poll"),
-                                                                                                                                                            shiny::br(),
-                                                                                                                                                            shiny::div(shiny::selectInput("show_which_ml", 
-                                                                                                                                                                                          label = "Plot which model?", 
-                                                                                                                                                                                          choices = c())),
-                                                                                                                                                            shiny::navbarPage(title=shiny::icon("poll"),id="ml_results",inverse=F,
-                                                                                                                                                                              shiny::tabPanel(title = "roc",value = "roc",icon=shiny::icon("area-chart"),
-                                                                                                                                                                                              conditionalPanel(
-                                                                                                                                                                                                condition = 'input.ggplotly == true',
-                                                                                                                                                                                                plotlyOutput('ml_roc_interactive')
-                                                                                                                                                                                              ),
-                                                                                                                                                                                              conditionalPanel(
-                                                                                                                                                                                                condition = 'input.ggplotly == false',
-                                                                                                                                                                                                plotOutput('ml_roc')
-                                                                                                                                                                                              ),
-                                                                                                                                                                                              fluidRow(
-                                                                                                                                                                                                column(6,shiny::div(DT::dataTableOutput("ml_overview_tab",
-                                                                                                                                                                                                                                        width="100%"),
-                                                                                                                                                                                                                    style='font-size:80%')
-                                                                                                                                                                                                ),column(6,shiny::div(DT::dataTableOutput("ml_tab",
-                                                                                                                                                                                                                                          width="100%"),
-                                                                                                                                                                                                                      style='font-size:80%')
-                                                                                                                                                                                                ))
-                                                                                                                                                                              ),
-                                                                                                                                                                              shiny::tabPanel("importance",value= "bar",icon=shiny::icon("star"),
-                                                                                                                                                                                              shiny::fluidRow(
-                                                                                                                                                                                                conditionalPanel(
-                                                                                                                                                                                                  condition = 'input.ggplotly == true',
-                                                                                                                                                                                                  plotlyOutput('ml_bar_interactive')
-                                                                                                                                                                                                ),
-                                                                                                                                                                                                conditionalPanel(
-                                                                                                                                                                                                  condition = 'input.ggplotly == false',
-                                                                                                                                                                                                  plotOutput('ml_bar')
-                                                                                                                                                                                                )
-                                                                                                                                                                                              ),
-                                                                                                                                                                                              shiny::fluidRow(
-                                                                                                                                                                                                shiny::column(12, shiny::sliderInput("ml_top_x",
-                                                                                                                                                                                                                                     label = "Show top:",
-                                                                                                                                                                                                                                     min = 10,
-                                                                                                                                                                                                                                     max = 200,
-                                                                                                                                                                                                                                     step=10,
-                                                                                                                                                                                                                                     value=20), align="center")
-                                                                                                                                                                                              )
-                                                                                                                                                                              )
-                                                                                                                                                            )
-                                                                                                                                            )
-                                                                                                                          )
-                                                                                                          ))
-                                                                 ),
-                                                                 # this is the sidebar that shows in the analysis tab. contains a lot of settings on the current variable of interest, plot themes and colours, and venn diagrams.
-                                                                 sidebarPanel =
-                                                                   sidebarPanel(align="center",width = 4,
-                                                                                shiny::fluidRow(align="center",
-                                                                                                shiny::tabsetPanel(id = "anal_sidebar", selected="switch/subset",#type = "pills",
-                                                                                                                   shiny::tabPanel(title=shinyBS::tipify(shiny::icon("file"), 
-                                                                                                                                                         title = "export most recent plot as file", 
-                                                                                                                                                         trigger = "hover",options=list(container="body")),
-                                                                                                                                   value="export",
-                                                                                                                                   shiny::radioButtons("export_format", "Which format do you want to export plots to?",
-                                                                                                                                                       choices = list(".svg", ".eps", ".png", ".jpeg", ".pdf")),
-                                                                                                                                   shinyWidgets::circleButton("export_plot", icon=shiny::icon("hand-o-up"))),
-                                                                                                                   shiny::tabPanel(title=shinyBS::tipify(shiny::icon("search"),
-                                                                                                                                                         title = "search m/z > compound or compound > mz", 
-                                                                                                                                                         trigger = "hover",options=list(container="body")),
-                                                                                                                                   value = "search",
-                                                                                                                                   shiny::br(),
-                                                                                                                                   shinyBS::bsCollapse(shinyBS::bsCollapsePanel(title=shiny::h2("Settings"), 
-                                                                                                                                                                                value="panel1",
-                                                                                                                                                                                shiny::tabsetPanel(id="tab_iden_1", selected = "start",
-                                                                                                                                                                                                   # forward searching
-                                                                                                                                                                                                   shiny::tabPanel(title=shiny::icon("database"),
-                                                                                                                                                                                                                   value="start",
-                                                                                                                                                                                                                   shiny::uiOutput("db_search_select"),
-                                                                                                                                                                                                                   br(),
-                                                                                                                                                                                                                   shiny::div(id = "curly-brace", shiny::div(id = "left", class = "brace"),
-                                                                                                                                                                                                                              shiny::div(id = "right", class = "brace")),
-                                                                                                                                                                                                                   br(),br(),
-                                                                                                                                                                                                                   shinyWidgets::circleButton("select_db_all",
-                                                                                                                                                                                                                                              icon = shiny::icon("shopping-cart"),
-                                                                                                                                                                                                                                              size = "default") # shiny::icon("fingerprint"), size = "sm")
-                                                                                                                                                                                                   ), shiny::tabPanel(title=shiny::icon("magic"),
-                                                                                                                                                                                                                      br(),
-                                                                                                                                                                                                                      shiny::h2("Formula prediction + ChemSpider + PubChem settings"),
-                                                                                                                                                                                                                      br(),
-                                                                                                                                                                                                                      shiny::passwordInput("apikey", 
-                                                                                                                                                                                                                                           label = "If you want to use ChemSpider, please register on their website and enter your API key below.",
-                                                                                                                                                                                                                                           value = ""),
-                                                                                                                                                                                                                      sardine(shinyWidgets::circleButton("set_api", icon = icon("save"))),sardine(shiny::textOutput("api_set")),
-                                                                                                                                                                                                                      selectInput("predict_rules", 
-                                                                                                                                                                                                                                  label = "Use which chemical formula rules?", 
-                                                                                                                                                                                                                                  choices = c("senior", "lewis", "hc", "chnops", "nops"), 
-                                                                                                                                                                                                                                  multiple = T, 
-                                                                                                                                                                                                                                  selected = c("senior", "lewis", "hc", "chnops", "nops")),
-                                                                                                                                                                                                                      selectInput("predict_elements", label = "Consider which atoms? (including adducts!)", 
-                                                                                                                                                                                                                                  choices = c("C","H","N","O","P","S"), selected = c("C","H","N","O","P","S"), multiple = T),
-                                                                                                                                                                                                                      MetaboShiny::switchButton(inputId = "predict_details",
-                                                                                                                                                                                                                                                label = "Get detailed PubChem matches? (SLOW, be warned!)",
-                                                                                                                                                                                                                                                col = "BW", type = "YN", value = F),
-                                                                                                                                                                                                                      MetaboShiny::switchButton(inputId = "predict_structure_check",
-                                                                                                                                                                                                                                                label = "Uniformize ChemSpider/PubChem found structures?",
-                                                                                                                                                                                                                                                col = "BW", type = "YN", value = T),
-                                                                                                                                                                                                                      MetaboShiny::switchButton(inputId = "predict_adduct_rules",
-                                                                                                                                                                                                                                                label = "Filter ChemSpider/PubChem hits with available structures using your adduct rules?",
-                                                                                                                                                                                                                                                col = "BW", type = "YN", value = F)),
-                                                                                                                                                                                                   shiny::tabPanel(title=shiny::icon("star-half-alt"),
-                                                                                                                                                                                                                   shiny::selectInput(width = "80%","iso_score_method",
-                                                                                                                                                                                                                                      "Which method used to score compounds of same weight?",
-                                                                                                                                                                                                                                      selected="mscore",
-                                                                                                                                                                                                                                      choices=list("M-score"="mscore"
-                                                                                                                                                                                                                                                   #"Chi-square"="chisq",
-                                                                                                                                                                                                                                                   #"Mean absolute percentage error"="mape",
-                                                                                                                                                                                                                                                   #"SIRIUS"="sirius",
-                                                                                                                                                                                                                                                   #"Network-based"="network"
-                                                                                                                                                                                                                                      )),
-                                                                                                                                                                                                                   shiny::sliderInput("int_prec", label = "Intensity imprecision", min = 1, max = 100, value = 2, post = "%"),
-                                                                                                                                                                                                                   shinyWidgets::circleButton("score_iso", icon = shiny::icon("award"), size = "sm")
-                                                                                                                                                                                                   ),
-                                                                                                                                                                                                   shiny::tabPanel(title=shiny::icon("cloud"),
-                                                                                                                                                                                                                   tabsetPanel(id="wordclouds", selected = "settings", type = "pills",
-                                                                                                                                                                                                                               tabPanel(title="settings",
-                                                                                                                                                                                                                                        br(),
-                                                                                                                                                                                                                                        shinyWidgets::switchInput(
-                                                                                                                                                                                                                                          inputId = "wordcloud_manual",value = TRUE,
-                                                                                                                                                                                                                                          onLabel = "own word",#<i class=\"fas fa-cloud\"></i>",
-                                                                                                                                                                                                                                          offLabel = "from matches"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
-                                                                                                                                                                                                                                        ),
-                                                                                                                                                                                                                                        shiny::conditionalPanel("input.wordcloud_manual == true",
-                                                                                                                                                                                                                                                                helpText("Type a metabolite below and search PubMed to find documents that contain that word in the text."),
-                                                                                                                                                                                                                                                                textInput("wordcloud_searchTerm", label = h3("Enter your search terms"), placeholder = "enter your search terms"),
-                                                                                                                                                                                                                                                                helpText("You can specify the start and end years of your search, use the format YYYY"),
-                                                                                                                                                                                                                                                                sliderInput(inputId = "wordcloud_dateRange", label = "Date range input:",min = 2000, max = 2019,value = c(2010, 2020), sep = ""),
-                                                                                                                                                                                                                                                                sliderInput("wordcloud_absFreq", "Amount of abstracts to use:", min = 1,  max = 4000, value = 500)
-                                                                                                                                                                                                                                        ),
-                                                                                                                                                                                                                                        actionButton("do_wordcloud", "Plot")
-                                                                                                                                                                                                                               ),
-                                                                                                                                                                                                                               tabPanel(title = "filters",
-                                                                                                                                                                                                                                        helpText("Type a search term: a word filter will be created with the resulting top words."),
-                                                                                                                                                                                                                                        textInput("wordcloud_filterTerm", label = h3("Enter your search terms"), placeholder = "enter your search terms"),
-                                                                                                                                                                                                                                        helpText("You can specify the start and end years of your search, use the format YYYY"),
-                                                                                                                                                                                                                                        sliderInput(inputId = "wordcloud_filterDateRange", label = "Date range input:",min = 2000, max = 2019,value = c(2010, 2020), sep = ""),
-                                                                                                                                                                                                                                        sliderInput("wordcloud_filterAbsFreq", "Amount of abstracts to use:", min = 10,  max = 500000, value = 5000),
-                                                                                                                                                                                                                                        sliderInput("wordcloud_filterTopN", "Top words used for filter:", min = 1,  max = 5000, value = 500),
-                                                                                                                                                                                                                                        actionButton("wordcloud_make_filter", "Go! :)")
-                                                                                                                                                                                                                               ),
-                                                                                                                                                                                                                               tabPanel(title = "plot",
-                                                                                                                                                                                                                                        conditionalPanel('input.wordbar == true', 
-                                                                                                                                                                                                                                                         wordcloud2::wordcloud2Output(outputId = "wordcloud"),
-                                                                                                                                                                                                                                                         tags$script(HTML(
-                                                                                                                                                                                                                                                           "$(document).on('click', '#canvas', function() {",
-                                                                                                                                                                                                                                                           'word = document.getElementById("wcSpan").innerHTML;',
-                                                                                                                                                                                                                                                           "Shiny.onInputChange('wordcloud_selected_word', word);",
-                                                                                                                                                                                                                                                           "});"
-                                                                                                                                                                                                                                                         ))
-                                                                                                                                                                                                                                        ),
-                                                                                                                                                                                                                                        conditionalPanel('input.wordbar == false', 
-                                                                                                                                                                                                                                                         shiny::uiOutput("wordbar")
-                                                                                                                                                                                                                                        ),
-                                                                                                                                                                                                                                        shinyWidgets::switchInput(
-                                                                                                                                                                                                                                          inputId = "wordbar",value = TRUE,
-                                                                                                                                                                                                                                          onLabel = "cloud",#<i class=\"fas fa-cloud\"></i>",
-                                                                                                                                                                                                                                          offLabel = "barchart"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
-                                                                                                                                                                                                                                        ),
-                                                                                                                                                                                                                                        br(),
-                                                                                                                                                                                                                                        sliderInput("wordcloud_topWords", "Top words used for plot:", min = 1,  max = 10000, value = 100),
-                                                                                                                                                                                                                                        selectInput("wordcloud_filter",
-                                                                                                                                                                                                                                                    "Filter",
-                                                                                                                                                                                                                                                    choices = c("stopwords"), 
-                                                                                                                                                                                                                                                    selected="stopwords",
-                                                                                                                                                                                                                                                    multiple = T),
-                                                                                                                                                                                                                                        wellPanel(id = "def",style = "overflow-y:scroll; max-height: 400px; font-size: 80%",
-                                                                                                                                                                                                                                                  helpText("Click a word to see abstracts!"),
-                                                                                                                                                                                                                                                  shiny::uiOutput("wordcloud_abstracts")
-                                                                                                                                                                                                                                        )
-                                                                                                                                                                                                                               )
-                                                                                                                                                                                                                   )
-                                                                                                                                                                                                   )
-                                                                                                                                                                                ))),
-                                                                                                                   br(),
-                                                                                                                   shiny::uiOutput("manual_search"),
-                                                                                                                   br(),
-                                                                                                                   shiny::div(
-                                                                                                                     MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
-                                                                                                                                                     style="position:relative;
+                                                                                                                                                          ),
+                                                                                                                                                          shiny::fluidRow(
+                                                                                                                                                            shiny::column(12, shiny::sliderInput("ml_top_x",
+                                                                                                                                                                                                 label = "Show top:",
+                                                                                                                                                                                                 min = 10,
+                                                                                                                                                                                                 max = 200,
+                                                                                                                                                                                                 step=10,
+                                                                                                                                                                                                 value=20), align="center")
+                                                                                                                                                          )
+                                                                                                                                          )
+                                                                                                                       )
+                                                                                                       )
+                                                                                                       )
+                                                                                       ))
+                                                   ),
+                                                   # this is the sidebar that shows in the analysis tab. contains a lot of settings on the current variable of interest, plot themes and colours, and venn diagrams.
+                                                   sidebarPanel =
+                                                     sidebarPanel(align="center",width = 4,
+                                                                  shiny::fluidRow(align="center",
+                                                                                  shiny::tabsetPanel(id = "anal_sidebar", selected="switch/subset",
+                                                                                                     shiny::tabPanel(title=shinyBS::tipify(shiny::icon("file"), 
+                                                                                                                                           title = "export most recent plot as file", 
+                                                                                                                                           trigger = "hover",options=list(container="body")),
+                                                                                                                     value="export",
+                                                                                                                     shiny::radioButtons("export_format", "Which format do you want to export plots to?",
+                                                                                                                                         choices = list(".svg", ".eps", ".png", ".jpeg", ".pdf")),
+                                                                                                                     shinyWidgets::circleButton("export_plot", icon=shiny::icon("hand-o-up"))),
+                                                                                                     shiny::tabPanel(title=shinyBS::tipify(shiny::icon("search"),
+                                                                                                                                           title = "search m/z > compound or compound > mz", 
+                                                                                                                                           trigger = "hover",options=list(container="body")),
+                                                                                                                     value = "search",
+                                                                                                                     shiny::br(),
+                                                                                                                     shinyBS::bsCollapse(shinyBS::bsCollapsePanel(title=shiny::h2("Settings"), 
+                                                                                                                                                                  value="panel1",
+                                                                                                                                                                  shiny::tabsetPanel(id="tab_iden_1", selected = "start",
+                                                                                                                                                                                     # forward searching
+                                                                                                                                                                                     shiny::tabPanel(title=shiny::icon("database"),
+                                                                                                                                                                                                     value="start",
+                                                                                                                                                                                                     shiny::uiOutput("db_search_select"),
+                                                                                                                                                                                                     br(),
+                                                                                                                                                                                                     shiny::div(id = "curly-brace", shiny::div(id = "left", class = "brace"),
+                                                                                                                                                                                                                shiny::div(id = "right", class = "brace")),
+                                                                                                                                                                                                     br(),br(),
+                                                                                                                                                                                                     shinyWidgets::circleButton("select_db_all",
+                                                                                                                                                                                                                                icon = shiny::icon("shopping-cart"),
+                                                                                                                                                                                                                                size = "default") # shiny::icon("fingerprint"), size = "sm")
+                                                                                                                                                                                     ), shiny::tabPanel(title=shiny::icon("magic"),
+                                                                                                                                                                                                        br(),
+                                                                                                                                                                                                        shiny::h2("Formula prediction + ChemSpider + PubChem settings"),
+                                                                                                                                                                                                        br(),
+                                                                                                                                                                                                        shiny::passwordInput("apikey", 
+                                                                                                                                                                                                                             label = "If you want to use ChemSpider, please register on their website and enter your API key below.",
+                                                                                                                                                                                                                             value = ""),
+                                                                                                                                                                                                        sardine(shinyWidgets::circleButton("set_api", icon = icon("save"))),sardine(shiny::textOutput("api_set")),
+                                                                                                                                                                                                        selectInput("predict_rules", 
+                                                                                                                                                                                                                    label = "Use which chemical formula rules?", 
+                                                                                                                                                                                                                    choices = c("senior", "lewis", "hc", "chnops", "nops"), 
+                                                                                                                                                                                                                    multiple = T, 
+                                                                                                                                                                                                                    selected = c("senior", "lewis", "hc", "chnops", "nops")),
+                                                                                                                                                                                                        selectInput("predict_elements", label = "Consider which atoms? (including adducts!)", 
+                                                                                                                                                                                                                    choices = c("C","H","N","O","P","S"), selected = c("C","H","N","O","P","S"), multiple = T),
+                                                                                                                                                                                                        MetaboShiny::switchButton(inputId = "predict_details",
+                                                                                                                                                                                                                                  label = "Get detailed PubChem matches? (SLOW, be warned!)",
+                                                                                                                                                                                                                                  col = "BW", type = "YN", value = F),
+                                                                                                                                                                                                        MetaboShiny::switchButton(inputId = "predict_structure_check",
+                                                                                                                                                                                                                                  label = "Uniformize ChemSpider/PubChem found structures?",
+                                                                                                                                                                                                                                  col = "BW", type = "YN", value = T),
+                                                                                                                                                                                                        MetaboShiny::switchButton(inputId = "predict_adduct_rules",
+                                                                                                                                                                                                                                  label = "Filter ChemSpider/PubChem hits with available structures using your adduct rules?",
+                                                                                                                                                                                                                                  col = "BW", type = "YN", value = F)),
+                                                                                                                                                                                     shiny::tabPanel(title=shiny::icon("star-half-alt"),
+                                                                                                                                                                                                     shiny::selectInput(width = "80%","iso_score_method",
+                                                                                                                                                                                                                        "Which method used to score compounds of same weight?",
+                                                                                                                                                                                                                        selected="mscore",
+                                                                                                                                                                                                                        choices=list("M-score"="mscore"
+                                                                                                                                                                                                                                     #"Chi-square"="chisq",
+                                                                                                                                                                                                                                     #"Mean absolute percentage error"="mape",
+                                                                                                                                                                                                                                     #"SIRIUS"="sirius",
+                                                                                                                                                                                                                                     #"Network-based"="network"
+                                                                                                                                                                                                                        )),
+                                                                                                                                                                                                     shiny::sliderInput("int_prec", label = "Intensity imprecision", min = 1, max = 100, value = 2, post = "%"),
+                                                                                                                                                                                                     shinyWidgets::circleButton("score_iso", icon = shiny::icon("award"), size = "sm")
+                                                                                                                                                                                     ),
+                                                                                                                                                                                     shiny::tabPanel(title=shiny::icon("cloud"),
+                                                                                                                                                                                                     tabsetPanel(id="wordclouds", selected = "settings",
+                                                                                                                                                                                                                 tabPanel(title="settings",
+                                                                                                                                                                                                                          br(),
+                                                                                                                                                                                                                          shinyWidgets::switchInput(
+                                                                                                                                                                                                                            inputId = "wordcloud_manual",value = TRUE,
+                                                                                                                                                                                                                            onLabel = "own word",#<i class=\"fas fa-cloud\"></i>",
+                                                                                                                                                                                                                            offLabel = "from matches"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
+                                                                                                                                                                                                                          ),
+                                                                                                                                                                                                                          shiny::conditionalPanel("input.wordcloud_manual == true",
+                                                                                                                                                                                                                                                  helpText("Type a metabolite below and search PubMed to find documents that contain that word in the text."),
+                                                                                                                                                                                                                                                  textInput("wordcloud_searchTerm", label = h3("Enter your search terms"), placeholder = "enter your search terms"),
+                                                                                                                                                                                                                                                  helpText("You can specify the start and end years of your search, use the format YYYY"),
+                                                                                                                                                                                                                                                  sliderInput(inputId = "wordcloud_dateRange", label = "Date range input:",min = 2000, max = 2019,value = c(2010, 2020), sep = ""),
+                                                                                                                                                                                                                                                  sliderInput("wordcloud_absFreq", "Amount of abstracts to use:", min = 1,  max = 4000, value = 500)
+                                                                                                                                                                                                                          ),
+                                                                                                                                                                                                                          actionButton("do_wordcloud", "Plot")
+                                                                                                                                                                                                                 ),
+                                                                                                                                                                                                                 tabPanel(title = "filters",
+                                                                                                                                                                                                                          helpText("Type a search term: a word filter will be created with the resulting top words."),
+                                                                                                                                                                                                                          textInput("wordcloud_filterTerm", label = h3("Enter your search terms"), placeholder = "enter your search terms"),
+                                                                                                                                                                                                                          helpText("You can specify the start and end years of your search, use the format YYYY"),
+                                                                                                                                                                                                                          sliderInput(inputId = "wordcloud_filterDateRange", label = "Date range input:",min = 2000, max = 2019,value = c(2010, 2020), sep = ""),
+                                                                                                                                                                                                                          sliderInput("wordcloud_filterAbsFreq", "Amount of abstracts to use:", min = 10,  max = 500000, value = 5000),
+                                                                                                                                                                                                                          sliderInput("wordcloud_filterTopN", "Top words used for filter:", min = 1,  max = 5000, value = 500),
+                                                                                                                                                                                                                          actionButton("wordcloud_make_filter", "Go! :)")
+                                                                                                                                                                                                                 ),
+                                                                                                                                                                                                                 tabPanel(title = "plot",
+                                                                                                                                                                                                                          conditionalPanel('input.wordbar == true', 
+                                                                                                                                                                                                                                           wordcloud2::wordcloud2Output(outputId = "wordcloud"),
+                                                                                                                                                                                                                                           tags$script(HTML(
+                                                                                                                                                                                                                                             "$(document).on('click', '#canvas', function() {",
+                                                                                                                                                                                                                                             'word = document.getElementById("wcSpan").innerHTML;',
+                                                                                                                                                                                                                                             "Shiny.onInputChange('wordcloud_selected_word', word);",
+                                                                                                                                                                                                                                             "});"
+                                                                                                                                                                                                                                           ))
+                                                                                                                                                                                                                          ),
+                                                                                                                                                                                                                          conditionalPanel('input.wordbar == false', 
+                                                                                                                                                                                                                                           shiny::uiOutput("wordbar")
+                                                                                                                                                                                                                          ),
+                                                                                                                                                                                                                          shinyWidgets::switchInput(
+                                                                                                                                                                                                                            inputId = "wordbar",value = TRUE,
+                                                                                                                                                                                                                            onLabel = "cloud",#<i class=\"fas fa-cloud\"></i>",
+                                                                                                                                                                                                                            offLabel = "barchart"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
+                                                                                                                                                                                                                          ),
+                                                                                                                                                                                                                          br(),
+                                                                                                                                                                                                                          sliderInput("wordcloud_topWords", "Top words used for plot:", min = 1,  max = 10000, value = 100),
+                                                                                                                                                                                                                          selectInput("wordcloud_filter",
+                                                                                                                                                                                                                                      "Filter",
+                                                                                                                                                                                                                                      choices = c("stopwords"), 
+                                                                                                                                                                                                                                      selected="stopwords",
+                                                                                                                                                                                                                                      multiple = T),
+                                                                                                                                                                                                                          wellPanel(id = "def",style = "overflow-y:scroll; max-height: 400px; font-size: 80%",
+                                                                                                                                                                                                                                    helpText("Click a word to see abstracts!"),
+                                                                                                                                                                                                                                    shiny::uiOutput("wordcloud_abstracts")
+                                                                                                                                                                                                                          )
+                                                                                                                                                                                                                 )
+                                                                                                                                                                                                     )
+                                                                                                                                                                                     )
+                                                                                                                                                                  ))),
+                                                                                                                     br(),
+                                                                                                                     shiny::uiOutput("manual_search"),
+                                                                                                                     br(),
+                                                                                                                     shiny::div(
+                                                                                                                       MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
+                                                                                                                                                       style="position:relative;
                                                                                                                      top:10px;")),
-                                                                                                                     MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
-                                                                                                                                                     style="position:relative;
+                                                                                                                       MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
+                                                                                                                                                       style="position:relative;
                                                                                                                      top:25px;")),
-                                                                                                                     MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
-                                                                                                                                                     style="position:relative;
+                                                                                                                       MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
+                                                                                                                                                       style="position:relative;
                                                                                                                      top:10px;")),MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
                                                                                                                                                                   style="position:relative;
                                                                                                                      top:25px;")),MetaboShiny::sardine(shiny::h2(shiny::textOutput("curr_mz"),
                                                                                                                                                                  style="margin-top:15px;")),
-                                                                                                                     MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
-                                                                                                                                                     style="position:relative;
+                                                                                                                       MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
+                                                                                                                                                       style="position:relative;
                                                                                                                      top:10px;")),
-                                                                                                                     MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
-                                                                                                                                                     style="position:relative;
+                                                                                                                       MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
+                                                                                                                                                       style="position:relative;
                                                                                                                      top:25px;")),
-                                                                                                                     MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
-                                                                                                                                                     style="position:relative;
+                                                                                                                       MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
+                                                                                                                                                       style="position:relative;
                                                                                                                      top:10px;")),
-                                                                                                                     MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
-                                                                                                                                                     style="position:relative;
+                                                                                                                       MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
+                                                                                                                                                       style="position:relative;
                                                                                                                      top:25px;")),
-                                                                                                                     style="background-color:white;
+                                                                                                                       style="background-color:white;
                                                                                                                                             height:55px;
                                                                                                                                             width:100%;
                                                                                                                                             margin: 0 auto;
                                                                                                                                             border-top: 1px solid #DFDCDC;
                                                                                                                                             border-bottom: 1px solid #DFDCDC;"),
-                                                                                                                   br(),
-                                                                                                                   shiny::tabsetPanel(id = "tab_search", shiny::tabPanel(title = shinyBS::tipify(shiny::icon("paw"), 
-                                                                                                                                                                                                 "mz <> molecule matches"),
-                                                                                                                                                                         shinyBS::bsCollapse(shinyBS::bsCollapsePanel(title=shiny::h2("Compound info"), 
-                                                                                                                                                                                                                      value="panel2",
-                                                                                                                                                                                                                      shiny::tabsetPanel(id="tab_iden_3",
-                                                                                                                                                                                                                                         shiny::tabPanel(title=shiny::icon("atlas"),
-                                                                                                                                                                                                                                                         wellPanel(id = "def",style = "overflow-y:scroll; max-height: 200px",
-                                                                                                                                                                                                                                                                   shiny::uiOutput("desc_ui")
-                                                                                                                                                                                                                                                         )
-                                                                                                                                                                                                                                         ),shiny::tabPanel(title=shiny::icon("atom"),
-                                                                                                                                                                                                                                                           shiny::uiOutput("curr_formula"),
-                                                                                                                                                                                                                                                           shiny::uiOutput("curr_struct",inline=T)
-                                                                                                                                                                                                                                         )
-                                                                                                                                                                                                                      ))),
-                                                                                                                                                                         shiny::tabsetPanel(id="tab_iden_2",
-                                                                                                                                                                                            # forward searching
-                                                                                                                                                                                            shiny::tabPanel(title="mz > molecule",value = "mzmol",
-                                                                                                                                                                                                            br(),
-                                                                                                                                                                                                            shiny::tags$i("Found matches for this m/z value:"),
-                                                                                                                                                                                                            br(),
-                                                                                                                                                                                                            shiny::fluidRow(align="left", 
-                                                                                                                                                                                                                            shiny::div(DT::dataTableOutput('match_tab'),
-                                                                                                                                                                                                                                       style='font-size:80%'))
-                                                                                                                                                                                            ),
-                                                                                                                                                                                            # reverse searching
-                                                                                                                                                                                            shiny::tabPanel(title="molecule > mz",value = "molmz",
-                                                                                                                                                                                                            br(),
-                                                                                                                                                                                                            shiny::tags$i("Press the below button to browse compounds of the selected databases."),br(),
-                                                                                                                                                                                                            shiny::actionButton("browse_db", "Browse", icon=shiny::icon("eye")),
-                                                                                                                                                                                                            br(),
-                                                                                                                                                                                                            shiny::div(DT::dataTableOutput('browse_tab'),style='font-size:80%'),
-                                                                                                                                                                                                            br(),
-                                                                                                                                                                                                            shiny::tags$i("M/z values matching adducts or isotopes of this compound:"),br(),
-                                                                                                                                                                                                            shiny::div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
-                                                                                                                                                                                                            
-                                                                                                                                                                                            )),
-                                                                                                                                                                         br(),
-                                                                                                                                                                         shiny::helpText("Current match filtering:"),
-                                                                                                                                                                         shiny::fluidRow(align="center",
-                                                                                                                                                                                         shiny::imageOutput("empty",width="100%",height="1px"),
-                                                                                                                                                                                         MetaboShiny::sardine(shiny::icon("plus-circle")), 
-                                                                                                                                                                                         MetaboShiny::sardine(shiny::div(verbatimTextOutput("curr_add"),style='font-size:60%;padding:2px')), 
-                                                                                                                                                                                         MetaboShiny::sardine(shiny::icon("percentage")), 
-                                                                                                                                                                                         MetaboShiny::sardine(shiny::div(verbatimTextOutput("curr_iso"),style='font-size:60%;padding:2px')),
-                                                                                                                                                                                         MetaboShiny::sardine(shiny::icon("database")), 
-                                                                                                                                                                                         MetaboShiny::sardine(shiny::div(verbatimTextOutput("curr_db"),style='font-size:60%;padding:2px'))   
-                                                                                                                                                                         ),
-                                                                                                                                                                         shiny::helpText("Undo match filtering"),
-                                                                                                                                                                         shinyWidgets::circleButton("undo_match_filt", icon = shiny::icon("undo-alt"))
-                                                                                                                   ),
-                                                                                                                   shiny::tabPanel(title=shinyBS::tipify(shiny::icon("filter"),
-                                                                                                                                                         title = "filter matches on adduct, isotope or database"), 
-                                                                                                                                   value="match_filters_tab",
-                                                                                                                                   shinyWidgets::verticalTabsetPanel(id = "match_filters",
-                                                                                                                                                                     contentWidth = 10,
-                                                                                                                                                                     menuSide = "right",
-                                                                                                                                                                     shinyWidgets::verticalTabPanel(box_height = "80px",
-                                                                                                                                                                                                    title = NULL, icon = icon("plus","fa-2x"),value = "pie_add",
-                                                                                                                                                                                                    plotly::plotlyOutput("match_pie_add")
-                                                                                                                                                                     ),
-                                                                                                                                                                     shinyWidgets::verticalTabPanel(box_height = "80px",
-                                                                                                                                                                                                    title = NULL, icon = icon("percentage","fa-2x"),value = "pie_iso",
-                                                                                                                                                                                                    plotly::plotlyOutput("match_pie_iso")
-                                                                                                                                                                     ),
-                                                                                                                                                                     shinyWidgets::verticalTabPanel(box_height = "80px",
-                                                                                                                                                                                                    title = NULL, icon = icon("database","fa-2x"),value = "pie_db",
-                                                                                                                                                                                                    plotly::plotlyOutput("match_pie_db")
-                                                                                                                                                                     )
-                                                                                                                                   ),br()
-                                                                                                                   ))),
-                                                                                                                   shiny::tabPanel(value="switch/subset", 
-                                                                                                                                   title=shinyBS::tipify(shiny::icon("exchange"),
-                                                                                                                                                         title = "switch to different variable and/or subset based on variable",
-                                                                                                                                                         trigger = "hover",options=list(container="body"))
-                                                                                                                                   , shiny::h2("Current experiment:"),
-                                                                                                                                   shiny::div(
-                                                                                                                                     MetaboShiny::sardine(shiny::h2(shiny::textOutput("curr_name"),style="padding:10px;")),
-                                                                                                                                     style="background-color:white;
+                                                                                                                     br(),
+                                                                                                                     shiny::tabsetPanel(id = "tab_search", shiny::tabPanel(title = shinyBS::tipify(shiny::icon("paw"), 
+                                                                                                                                                                                                   "mz <> molecule matches"),
+                                                                                                                                                                           shinyBS::bsCollapse(shinyBS::bsCollapsePanel(title=shiny::h2("Compound info"), 
+                                                                                                                                                                                                                        value="panel2",
+                                                                                                                                                                                                                        shiny::tabsetPanel(id="tab_iden_3",
+                                                                                                                                                                                                                                           shiny::tabPanel(title=shiny::icon("atlas"),
+                                                                                                                                                                                                                                                           wellPanel(id = "def",style = "overflow-y:scroll; max-height: 200px",
+                                                                                                                                                                                                                                                                     shiny::uiOutput("desc_ui")
+                                                                                                                                                                                                                                                           )
+                                                                                                                                                                                                                                           ),shiny::tabPanel(title=shiny::icon("atom"),
+                                                                                                                                                                                                                                                             shiny::uiOutput("curr_formula"),
+                                                                                                                                                                                                                                                             shiny::uiOutput("curr_struct",inline=T)
+                                                                                                                                                                                                                                           )
+                                                                                                                                                                                                                        ))),
+                                                                                                                                                                           shiny::tabsetPanel(id="tab_iden_2",
+                                                                                                                                                                                              # forward searching
+                                                                                                                                                                                              shiny::tabPanel(title="mz > molecule",value = "mzmol",
+                                                                                                                                                                                                              br(),
+                                                                                                                                                                                                              shiny::tags$i("Found matches for this m/z value:"),
+                                                                                                                                                                                                              br(),
+                                                                                                                                                                                                              shiny::fluidRow(align="left", 
+                                                                                                                                                                                                                              shiny::div(DT::dataTableOutput('match_tab'),
+                                                                                                                                                                                                                                         style='font-size:80%'))
+                                                                                                                                                                                              ),
+                                                                                                                                                                                              # reverse searching
+                                                                                                                                                                                              shiny::tabPanel(title="molecule > mz",value = "molmz",
+                                                                                                                                                                                                              br(),
+                                                                                                                                                                                                              shiny::tags$i("Press the below button to browse compounds of the selected databases."),br(),
+                                                                                                                                                                                                              shiny::actionButton("browse_db", "Browse", icon=shiny::icon("eye")),
+                                                                                                                                                                                                              br(),
+                                                                                                                                                                                                              shiny::div(DT::dataTableOutput('browse_tab'),style='font-size:80%'),
+                                                                                                                                                                                                              br(),
+                                                                                                                                                                                                              shiny::tags$i("M/z values matching adducts or isotopes of this compound:"),br(),
+                                                                                                                                                                                                              shiny::div(DT::dataTableOutput('hits_tab'),style='font-size:80%')
+                                                                                                                                                                                                              
+                                                                                                                                                                                              )),
+                                                                                                                                                                           br(),
+                                                                                                                                                                           shiny::helpText("Current match filtering:"),
+                                                                                                                                                                           shiny::fluidRow(align="center",
+                                                                                                                                                                                           shiny::imageOutput("empty",width="100%",height="1px"),
+                                                                                                                                                                                           MetaboShiny::sardine(shiny::icon("plus-circle")), 
+                                                                                                                                                                                           MetaboShiny::sardine(shiny::div(verbatimTextOutput("curr_add"),style='font-size:60%;padding:2px')), 
+                                                                                                                                                                                           MetaboShiny::sardine(shiny::icon("percentage")), 
+                                                                                                                                                                                           MetaboShiny::sardine(shiny::div(verbatimTextOutput("curr_iso"),style='font-size:60%;padding:2px')),
+                                                                                                                                                                                           MetaboShiny::sardine(shiny::icon("database")), 
+                                                                                                                                                                                           MetaboShiny::sardine(shiny::div(verbatimTextOutput("curr_db"),style='font-size:60%;padding:2px'))   
+                                                                                                                                                                           ),
+                                                                                                                                                                           shiny::helpText("Undo match filtering"),
+                                                                                                                                                                           shinyWidgets::circleButton("undo_match_filt", icon = shiny::icon("undo-alt"))
+                                                                                                                     ),
+                                                                                                                     shiny::tabPanel(title=shinyBS::tipify(shiny::icon("filter"),
+                                                                                                                                                           title = "filter matches on adduct, isotope or database"), 
+                                                                                                                                     value="match_filters_tab",
+                                                                                                                                     shinyWidgets::verticalTabsetPanel(id = "match_filters",
+                                                                                                                                                                       contentWidth = 10,
+                                                                                                                                                                       menuSide = "right",
+                                                                                                                                                                       shinyWidgets::verticalTabPanel(box_height = "80px",
+                                                                                                                                                                                                      title = NULL, icon = icon("plus","fa-2x"),value = "pie_add",
+                                                                                                                                                                                                      plotly::plotlyOutput("match_pie_add")
+                                                                                                                                                                       ),
+                                                                                                                                                                       shinyWidgets::verticalTabPanel(box_height = "80px",
+                                                                                                                                                                                                      title = NULL, icon = icon("percentage","fa-2x"),value = "pie_iso",
+                                                                                                                                                                                                      plotly::plotlyOutput("match_pie_iso")
+                                                                                                                                                                       ),
+                                                                                                                                                                       shinyWidgets::verticalTabPanel(box_height = "80px",
+                                                                                                                                                                                                      title = NULL, icon = icon("database","fa-2x"),value = "pie_db",
+                                                                                                                                                                                                      plotly::plotlyOutput("match_pie_db")
+                                                                                                                                                                       )
+                                                                                                                                     ),br()
+                                                                                                                     ))),
+                                                                                                     shiny::tabPanel(value="switch/subset", 
+                                                                                                                     title=shinyBS::tipify(shiny::icon("exchange"),
+                                                                                                                                           title = "switch to different variable and/or subset based on variable",
+                                                                                                                                           trigger = "hover",options=list(container="body"))
+                                                                                                                     , shiny::h2("Current experiment:"),
+                                                                                                                     shiny::div(
+                                                                                                                       MetaboShiny::sardine(shiny::h2(shiny::textOutput("curr_name"),style="padding:10px;")),
+                                                                                                                       style="background-color:white;
                                                                                                                                       width:100%;
                                                                                                                                       margin: 0 auto;
                                                                                                                                       border-top: 1px solid #DFDCDC;
                                                                                                                                       border-bottom: 1px solid #DFDCDC;")
-                                                                                                                                   ,shiny::hr()
-                                                                                                                                   ,shiny::h2("Change variable of interest")
-                                                                                                                                   ,shiny::selectizeInput("stats_type", 
-                                                                                                                                                          label = "Normal, two-factor or time series?", 
-                                                                                                                                                          choices = list("one factor"="1f", 
-                                                                                                                                                                         "two factors"="2f",
-                                                                                                                                                                         "time series"="t",
-                                                                                                                                                                         "time series + one factor"="t1f"),
-                                                                                                                                                          selected = "1f",width = "80%")
-                                                                                                                                   ,fluidRow(align="center",shiny::uiOutput("stats_picker"))
-                                                                                                                                   ,shiny::conditionalPanel("input.stats_type == '1f'",
-                                                                                                                                                            shiny::checkboxInput("paired", 
-                                                                                                                                                                                 "Matched samples only?",
-                                                                                                                                                                                 value = F))
-                                                                                                                                   ,shiny::conditionalPanel("input.stats_type == 't' || input.stats_type == 't1f'",
-                                                                                                                                                            shiny::selectizeInput("time_var", 
-                                                                                                                                                                                  label="Time series variable:", 
-                                                                                                                                                                                  choices = c("label"),width = "80%"))
-                                                                                                                                   ,shinyWidgets::circleButton("change_cls", 
-                                                                                                                                                               icon = shiny::icon("hand-pointer-o"), 
-                                                                                                                                                               size = "sm")
-                                                                                                                                   ,shiny::hr()
-                                                                                                                                   ,shiny::h2("Subset data")
-                                                                                                                                   ,helpText("Current sample count:")
-                                                                                                                                   ,h2(shiny::textOutput("samp_count"))
-                                                                                                                                   ,br()
-                                                                                                                                   ,shiny::selectInput("subset_var", label="Subset data based on:", choices = c("label"),width = "80%")
-                                                                                                                                   ,shiny::selectizeInput("subset_group", label="Group(s) in subset:", choices = c(), multiple=TRUE,width = "80%")
-                                                                                                                                   ,shinyWidgets::circleButton("change_subset", icon = shiny::icon("hand-pointer-o"), size = "sm")
-                                                                                                                                   ,shiny::selectInput("storage_choice", label="Load existing subset:", choices = c("label"),width = "80%")
-                                                                                                                                   ,shinyWidgets::circleButton("load_storage", icon = shiny::icon("folder-open"), size = "sm")
-                                                                                                                                   ,helpText("Reset to non-subsetted or paired dataset")
-                                                                                                                                   ,shinyWidgets::circleButton("reset_subset", icon = shiny::icon("undo"), size = "sm")
-                                                                                                                                   
-                                                                                                                   ),
-                                                                                                                   # this tab is used to select user plot theme and user colours (discrete and continuous)
-                                                                                                                   shiny::tabPanel(value="plot aesthetics", title=shinyBS::tipify(shiny::icon("paint-brush"), 
-                                                                                                                                                                                  title="change plot style and colours",
-                                                                                                                                                                                  trigger = "hover",options=list(container="body")),
-                                                                                                                                   shiny::h2("Summary plot style"),br(),
-                                                                                                                                   shiny::selectizeInput("ggplot_sum_style", multiple=T, label = "Style(s)", choices = list("Box"="box",
-                                                                                                                                                                                                                            "Violin"="violin",
-                                                                                                                                                                                                                            "Beeswarm"="beeswarm",
-                                                                                                                                                                                                                            "Scatterplot"="scatter"),
-                                                                                                                                                         selected = c("beeswarm"),width = "80%"),
-                                                                                                                                   shiny::selectInput("ggplot_sum_stats", label = "Stats shown", choices = list("median", "mean", "none"),width = "80%"),
-                                                                                                                                   shiny::h2("Shape")
-                                                                                                                                   ,shiny::selectInput("shape_var", label="Marker shape based on:", choices = c("label"),width = "80%")
-                                                                                                                                   ,shiny::h2("Color")
-                                                                                                                                   ,shiny::selectInput("col_var", label="Marker color based on:", choices = c("label"),width = "80%")
-                                                                                                                                   ,shiny::h2("Hover text")
-                                                                                                                                   ,shiny::selectInput("txt_var", label="Marker hover text based on:", choices = c("label"),width = "80%"),
-                                                                                                                                   shiny::h2("Plot theme"),
-                                                                                                                                   shiny::selectInput("ggplot_theme", label = "Theme", choices = list("Grid, white bg"="bw",
-                                                                                                                                                                                                      "No grid, white bg"="classic",
-                                                                                                                                                                                                      "Grid, gray bg"="gray",
-                                                                                                                                                                                                      "Minimal"="min",
-                                                                                                                                                                                                      "Grid, black bg"="dark",
-                                                                                                                                                                                                      "Grid, white bg, gray axes"="light",
-                                                                                                                                                                                                      "Line drawing"="line"),
-                                                                                                                                                      selected = "min",width = "80%"),
-                                                                                                                                   shiny::plotOutput("ggplot_theme_example",inline = F, width="100%"),
-                                                                                                                                   shiny::h2("Continuous data"),
-                                                                                                                                   # the below options need to match with the corresponding function storage in 'global'. if you want to add more it'll go here!
-                                                                                                                                   shiny::selectInput("color_ramp", label = "Color scheme", choices = list("RAINBOW!"="Rainbow",
-                                                                                                                                                                                                           "Yellow - blue"="y2b",
-                                                                                                                                                                                                           "Matlab 1"="ml1",
-                                                                                                                                                                                                           "Matlab 2 "="ml2",
-                                                                                                                                                                                                           "Magenta - Green"="m2g",
-                                                                                                                                                                                                           "Cyan - yellow"="c2y",
-                                                                                                                                                                                                           "Blue - yellow"="b2y",
-                                                                                                                                                                                                           "Green - red"="g2r",
-                                                                                                                                                                                                           "Blue - green"="b2g",
-                                                                                                                                                                                                           "Blue - red"="b2r",
-                                                                                                                                                                                                           "Blue - pink (pastel)"="b2p",
-                                                                                                                                                                                                           "Blue - green - yellow"="bgy",
-                                                                                                                                                                                                           "Green - yellow - white"="gyw",
-                                                                                                                                                                                                           "Red - yellow - white"="ryw",
-                                                                                                                                                                                                           "Grayscale"="bw",
-                                                                                                                                                                                                           "Blues (brew)" = "Blues",
-                                                                                                                                                                                                           "Blue - green (brew)" = "BuGn",
-                                                                                                                                                                                                           "Blue - purple (brew)" = "BuPu",
-                                                                                                                                                                                                           "Green - blue (brew)" = "GnBu",
-                                                                                                                                                                                                           "Greens (brew)" = "Greens",
-                                                                                                                                                                                                           "Grayscale (brew)" = "Greys",
-                                                                                                                                                                                                           "Oranges (brew)" = "Oranges",
-                                                                                                                                                                                                           "Orange - red (brew)" = "OrRd",
-                                                                                                                                                                                                           "Purple - blue (brew)" = "PuBu",
-                                                                                                                                                                                                           "Purple - blue - green (brew)" = "PuBuGn",
-                                                                                                                                                                                                           "Purple - red (brew)" = "PuRd",
-                                                                                                                                                                                                           "Purples (brew)" = "Purples",
-                                                                                                                                                                                                           "Red - purple (brew)" = "RdPu",
-                                                                                                                                                                                                           "Reds (brew)" = "Reds",
-                                                                                                                                                                                                           "Yellow - green (brew)" = "YlGn",
-                                                                                                                                                                                                           "Yellow - green - blue (brew)" = "YlGnBu",
-                                                                                                                                                                                                           "Yellow - orange - brown (brew)" = "YlOrBr",
-                                                                                                                                                                                                           "Yellow - orange - red (brew)"="YlOrRd",
-                                                                                                                                                                                                           "BrBG", "PiYG", "PRGn", "PuOr", "RdBu", #TODO: add descriptions (or remove all?)
-                                                                                                                                                                                                           "RdGy", "RdYlBu", "RdYlGn", "Spectral",
-                                                                                                                                                                                                           "Accent", "Dark2", "Paired", "Pastel1",
-                                                                                                                                                                                                           "Pastel2", "Set1", "Set2", "Set3"),selected = "rainbow",width = "80%"
-                                                                                                                                   ),
-                                                                                                                                   # preview plot
-                                                                                                                                   shiny::plotOutput("ramp_plot_wrap"),
-                                                                                                                                   shiny::h2("Discrete data"),
-                                                                                                                                   shiny::plotOutput("colorPickers")
-                                                                                                                                   
-                                                                                                                   ),
-                                                                                                                   shiny::tabPanel(value="metadata",
-                                                                                                                                   title = shinyBS::tipify(shiny::icon("plus"), 
-                                                                                                                                                           trigger = "hover", 
-                                                                                                                                                           title = "upload new metadata file",options=list(container="body")),
-                                                                                                                                   br(),br(),
-                                                                                                                                   shiny::h2("New metadata"),
-                                                                                                                                   shiny::helpText("If you want to update your metadata, please use the below upload screen! 
+                                                                                                                     ,shiny::hr()
+                                                                                                                     ,shiny::h2("Change variable of interest")
+                                                                                                                     ,shiny::selectizeInput("stats_type", 
+                                                                                                                                            label = "Normal, two-factor or time series?", 
+                                                                                                                                            choices = list("one factor"="1f", 
+                                                                                                                                                           "two factors"="2f",
+                                                                                                                                                           "time series"="t",
+                                                                                                                                                           "time series + one factor"="t1f"),
+                                                                                                                                            selected = "1f",width = "80%")
+                                                                                                                     ,fluidRow(align="center",shiny::uiOutput("stats_picker"))
+                                                                                                                     ,shiny::conditionalPanel("input.stats_type == '1f'",
+                                                                                                                                              shiny::checkboxInput("paired", 
+                                                                                                                                                                   "Matched samples only?",
+                                                                                                                                                                   value = F))
+                                                                                                                     ,shiny::conditionalPanel("input.stats_type == 't' || input.stats_type == 't1f'",
+                                                                                                                                              shiny::selectizeInput("time_var", 
+                                                                                                                                                                    label="Time series variable:", 
+                                                                                                                                                                    choices = c("label"),width = "80%"))
+                                                                                                                     ,shinyWidgets::circleButton("change_cls", 
+                                                                                                                                                 icon = shiny::icon("hand-pointer-o"), 
+                                                                                                                                                 size = "sm")
+                                                                                                                     ,shiny::hr()
+                                                                                                                     ,shiny::h2("Subset data")
+                                                                                                                     ,helpText("Current sample count:")
+                                                                                                                     ,h2(shiny::textOutput("samp_count"))
+                                                                                                                     ,br()
+                                                                                                                     ,shiny::selectInput("subset_var", label="Subset data based on:", choices = c("label"),width = "80%")
+                                                                                                                     ,shiny::selectizeInput("subset_group", label="Group(s) in subset:", choices = c(), multiple=TRUE,width = "80%")
+                                                                                                                     ,shinyWidgets::circleButton("change_subset", icon = shiny::icon("hand-pointer-o"), size = "sm")
+                                                                                                                     ,shiny::selectInput("storage_choice", label="Load existing subset:", choices = c("label"),width = "80%")
+                                                                                                                     ,shinyWidgets::circleButton("load_storage", icon = shiny::icon("folder-open"), size = "sm")
+                                                                                                                     ,helpText("Reset to non-subsetted or paired dataset")
+                                                                                                                     ,shinyWidgets::circleButton("reset_subset", icon = shiny::icon("undo"), size = "sm")
+                                                                                                                     
+                                                                                                     ),
+                                                                                                     # this tab is used to select user plot theme and user colours (discrete and continuous)
+                                                                                                     shiny::tabPanel(value="plot aesthetics", title=shinyBS::tipify(shiny::icon("paint-brush"), 
+                                                                                                                                                                    title="change plot style and colours",
+                                                                                                                                                                    trigger = "hover",options=list(container="body")),
+                                                                                                                     shiny::h2("Summary plot style"),br(),
+                                                                                                                     shiny::selectizeInput("ggplot_sum_style", multiple=T, label = "Style(s)", choices = list("Box"="box",
+                                                                                                                                                                                                              "Violin"="violin",
+                                                                                                                                                                                                              "Beeswarm"="beeswarm",
+                                                                                                                                                                                                              "Scatterplot"="scatter"),
+                                                                                                                                           selected = c("beeswarm"),width = "80%"),
+                                                                                                                     shiny::selectInput("ggplot_sum_stats", label = "Stats shown", choices = list("median", "mean", "none"),width = "80%"),
+                                                                                                                     shiny::h2("Shape")
+                                                                                                                     ,shiny::selectInput("shape_var", label="Marker shape based on:", choices = c("label"),width = "80%")
+                                                                                                                     ,shiny::h2("Color")
+                                                                                                                     ,shiny::selectInput("col_var", label="Marker color based on:", choices = c("label"),width = "80%")
+                                                                                                                     ,shiny::h2("Hover text")
+                                                                                                                     ,shiny::selectInput("txt_var", label="Marker hover text based on:", choices = c("label"),width = "80%"),
+                                                                                                                     shiny::h2("Plot theme"),
+                                                                                                                     shiny::selectInput("ggplot_theme", label = "Theme", choices = list("Grid, white bg"="bw",
+                                                                                                                                                                                        "No grid, white bg"="classic",
+                                                                                                                                                                                        "Grid, gray bg"="gray",
+                                                                                                                                                                                        "Minimal"="min",
+                                                                                                                                                                                        "Grid, black bg"="dark",
+                                                                                                                                                                                        "Grid, white bg, gray axes"="light",
+                                                                                                                                                                                        "Line drawing"="line"),
+                                                                                                                                        selected = "min",width = "80%"),
+                                                                                                                     shiny::plotOutput("ggplot_theme_example",inline = F, width="100%"),
+                                                                                                                     shiny::h2("Continuous data"),
+                                                                                                                     # the below options need to match with the corresponding function storage in 'global'. if you want to add more it'll go here!
+                                                                                                                     shiny::selectInput("color_ramp", label = "Color scheme", choices = list("RAINBOW!"="Rainbow",
+                                                                                                                                                                                             "Yellow - blue"="y2b",
+                                                                                                                                                                                             "Matlab 1"="ml1",
+                                                                                                                                                                                             "Matlab 2 "="ml2",
+                                                                                                                                                                                             "Magenta - Green"="m2g",
+                                                                                                                                                                                             "Cyan - yellow"="c2y",
+                                                                                                                                                                                             "Blue - yellow"="b2y",
+                                                                                                                                                                                             "Green - red"="g2r",
+                                                                                                                                                                                             "Blue - green"="b2g",
+                                                                                                                                                                                             "Blue - red"="b2r",
+                                                                                                                                                                                             "Blue - pink (pastel)"="b2p",
+                                                                                                                                                                                             "Blue - green - yellow"="bgy",
+                                                                                                                                                                                             "Green - yellow - white"="gyw",
+                                                                                                                                                                                             "Red - yellow - white"="ryw",
+                                                                                                                                                                                             "Grayscale"="bw",
+                                                                                                                                                                                             "Blues (brew)" = "Blues",
+                                                                                                                                                                                             "Blue - green (brew)" = "BuGn",
+                                                                                                                                                                                             "Blue - purple (brew)" = "BuPu",
+                                                                                                                                                                                             "Green - blue (brew)" = "GnBu",
+                                                                                                                                                                                             "Greens (brew)" = "Greens",
+                                                                                                                                                                                             "Grayscale (brew)" = "Greys",
+                                                                                                                                                                                             "Oranges (brew)" = "Oranges",
+                                                                                                                                                                                             "Orange - red (brew)" = "OrRd",
+                                                                                                                                                                                             "Purple - blue (brew)" = "PuBu",
+                                                                                                                                                                                             "Purple - blue - green (brew)" = "PuBuGn",
+                                                                                                                                                                                             "Purple - red (brew)" = "PuRd",
+                                                                                                                                                                                             "Purples (brew)" = "Purples",
+                                                                                                                                                                                             "Red - purple (brew)" = "RdPu",
+                                                                                                                                                                                             "Reds (brew)" = "Reds",
+                                                                                                                                                                                             "Yellow - green (brew)" = "YlGn",
+                                                                                                                                                                                             "Yellow - green - blue (brew)" = "YlGnBu",
+                                                                                                                                                                                             "Yellow - orange - brown (brew)" = "YlOrBr",
+                                                                                                                                                                                             "Yellow - orange - red (brew)"="YlOrRd",
+                                                                                                                                                                                             "BrBG", "PiYG", "PRGn", "PuOr", "RdBu", #TODO: add descriptions (or remove all?)
+                                                                                                                                                                                             "RdGy", "RdYlBu", "RdYlGn", "Spectral",
+                                                                                                                                                                                             "Accent", "Dark2", "Paired", "Pastel1",
+                                                                                                                                                                                             "Pastel2", "Set1", "Set2", "Set3"),selected = "rainbow",width = "80%"
+                                                                                                                     ),
+                                                                                                                     # preview plot
+                                                                                                                     shiny::plotOutput("ramp_plot_wrap"),
+                                                                                                                     shiny::h2("Discrete data"),
+                                                                                                                     shiny::plotOutput("colorPickers")
+                                                                                                                     
+                                                                                                     ),
+                                                                                                     shiny::tabPanel(value="metadata",
+                                                                                                                     title = shinyBS::tipify(shiny::icon("plus"), 
+                                                                                                                                             trigger = "hover", 
+                                                                                                                                             title = "upload new metadata file",options=list(container="body")),
+                                                                                                                     br(),br(),
+                                                                                                                     shiny::h2("New metadata"),
+                                                                                                                     shiny::helpText("If you want to update your metadata, please use the below upload screen! 
                                                                                                                                                    Any samples missing in your uploaded csv will be labeled as 'unknown' for new metadata columns."),
-                                                                                                                                   shinyFiles::shinyFilesButton('metadata_new', 'upload', 'Select metadata', FALSE),
-                                                                                                                                   shinyWidgets::circleButton("metadata_new_add", icon = shiny::icon("arrow-right"))
-                                                                                                                   ))))
-                                                   )),
-                                   
-                                   # report tab
-                                   #TODO: update to most recent version using orca and re-enable
-                                   # shiny::tabPanel("report",
-                                   #                 icon = shiny::icon("file-invoice", class = "outlined"),
-                                   #                 value="reportTab",
-                                   #                 shiny::fluidRow(
-                                   #                   shiny::column(width=12, align="center",
-                                   #                                 shiny::h2("Report"),
-                                   #                                 br(),
-                                   #                                 shiny::helpText("Report contents:"),
-                                   #                                 shiny::div(DT::dataTableOutput('report_unselected',  width="100%"))
-                                   #                   )#close column
-                                   #                 )#close fluidrow
-                                   #),#close tabpanel
-                                   # this tab is used to change general settings.
-                                   shiny::tabPanel("settings",  icon = shiny::icon("cog",class = "outlined"), value="options",
-                                                   shiny::tabsetPanel(id="tab_settings",
-                                                                      shiny::tabPanel("Global", icon=shiny::icon("box-open"),
-                                                                                      # MetaboShiny::switchButton(inputId = "db_only", label = "Run in database-only mode?",
-                                                                                      #                           value = F,
-                                                                                      #                           col = "BW", type = "YN")
-                                                                                      shiny::sliderInput("ncores", "How many cores can MetShi use?", value=2, min=1, max = parallel::detectCores() - 1),
-                                                                                      br(),
-                                                                                      helpText("How to handle samples with missing metadata? (re-checked each subset/switch step)?"),
-                                                                                      shinyWidgets::switchInput(
-                                                                                        inputId = "omit_unknown",
-                                                                                        onLabel = "omit",
-                                                                                        offLabel = "keep",
-                                                                                        offStatus = "success", 
-                                                                                        onStatus = "danger",
-                                                                                        value = T
-                                                                                      ),
-                                                                                      helpText("Use ggplot or plotly for plots? (ggplot -> faster, but no interactivity)"),
-                                                                                      shinyWidgets::switchInput(
-                                                                                        inputId = "ggplotly",
-                                                                                        onLabel = "plotly",
-                                                                                        offLabel = "ggplot",
-                                                                                        offStatus = "warning", 
-                                                                                        onStatus = "info",
-                                                                                        value = T
+                                                                                                                     shinyFiles::shinyFilesButton('metadata_new', 'upload', 'Select metadata', FALSE),
+                                                                                                                     shinyWidgets::circleButton("metadata_new_add", icon = shiny::icon("arrow-right"))
+                                                                                                     ))))
+                                   )),
+                 
+                 # report tab
+                 #TODO: update to most recent version using orca and re-enable
+                 # shiny::tabPanel("report",
+                 #                 icon = shiny::icon("file-invoice", class = "outlined"),
+                 #                 value="reportTab",
+                 #                 shiny::fluidRow(
+                 #                   shiny::column(width=12, align="center",
+                 #                                 shiny::h2("Report"),
+                 #                                 br(),
+                 #                                 shiny::helpText("Report contents:"),
+                 #                                 shiny::div(DT::dataTableOutput('report_unselected',  width="100%"))
+                 #                   )#close column
+                 #                 )#close fluidrow
+                 #),#close tabpanel
+                 # this tab is used to change general settings.
+                 shiny::tabPanel("settings",  icon = shiny::icon("cog",class = "outlined"), value="options",
+                                 shiny::tabsetPanel(id="tab_settings",
+                                                    shiny::tabPanel("Global", icon=shiny::icon("box-open"),
+                                                                    # MetaboShiny::switchButton(inputId = "db_only", label = "Run in database-only mode?",
+                                                                    #                           value = F,
+                                                                    #                           col = "BW", type = "YN")
+                                                                    shiny::fluidRow(align="center",
+                                                                                    shiny::sliderInput("ncores", "How many cores can MetShi use?", value=2, min=1, max = parallel::detectCores() - 1),
+                                                                                    br(),
+                                                                                    helpText("How to handle samples with missing metadata? (re-checked each subset/switch step)?"),
+                                                                                    shinyWidgets::switchInput(
+                                                                                      inputId = "omit_unknown",
+                                                                                      onLabel = "omit",
+                                                                                      offLabel = "keep",
+                                                                                      offStatus = "success", 
+                                                                                      onStatus = "danger",
+                                                                                      value = T
+                                                                                    ),
+                                                                                    helpText("Use ggplot or plotly for plots? (ggplot -> faster, but no interactivity)"),
+                                                                                    shinyWidgets::switchInput(
+                                                                                      inputId = "ggplotly",
+                                                                                      onLabel = "plotly",
+                                                                                      offLabel = "ggplot",
+                                                                                      offStatus = "warning", 
+                                                                                      onStatus = "info",
+                                                                                      value = T
+                                                                                    )
+                                                                    )
+                                                    ),
+                                                    shiny::tabPanel("Project", icon=shiny::icon("gift"),
+                                                                    #shiny::textInput(inputId="proj_name", label="Project name", value = ''),
+                                                                    shiny::fluidRow(align="center",
+                                                                                    shiny::selectizeInput(inputId="proj_name",
+                                                                                                          label="Project name",
+                                                                                                          choices=c("..."), # existing projects in user folder (generated in 'global')
+                                                                                                          selected = "...",
+                                                                                                          options=list(create = TRUE)), # let users add new names
+                                                                                    shiny::actionButton("set_proj_name", label="Apply"),
+                                                                                    shiny::helpText("This name will be used in all save files.")
+                                                                    )
+                                                    ),
+                                                    # change list of adducts used, or add your own
+                                                    # TODO: fix, i think this is currently non-functional
+                                                    shiny::tabPanel("Adducts", icon=shiny::icon("plus-square"),
+                                                                    shiny::tabsetPanel(
+                                                                      shiny::tabPanel("Definitions",
+                                                                                      shiny::fluidRow(align="center",shiny::h3("Current adduct table:")),
+                                                                                      
+                                                                                      rhandsontable::rHandsontableOutput("adduct_tab", 
+                                                                                                                         width='100%', 
+                                                                                                                         height='70%'),
+                                                                                      
+                                                                                      shiny::fluidRow(align="center",shiny::fileInput("add_tab", 
+                                                                                                                                      "Import adduct table",
+                                                                                                                                      multiple = F,
+                                                                                                                                      accept = c(".RData", ".csv")),
+                                                                                                      MetaboShiny::sardine(shiny::actionButton("import_adducts", "Import definitions"))
                                                                                       )
                                                                       ),
-                                                                      shiny::tabPanel("Project", icon=shiny::icon("gift"),
-                                                                                      #shiny::textInput(inputId="proj_name", label="Project name", value = ''),
-                                                                                      shiny::selectizeInput(inputId="proj_name",
-                                                                                                            label="Project name",
-                                                                                                            choices=c("..."), # existing projects in user folder (generated in 'global')
-                                                                                                            selected = "...",
-                                                                                                            options=list(create = TRUE)), # let users add new names
-                                                                                      shiny::actionButton("set_proj_name", label="Apply"),
-                                                                                      shiny::helpText("This name will be used in all save files."),
-                                                                                      shiny::textOutput("proj_name")
-                                                                      ),
-                                                                      # change list of adducts used, or add your own
-                                                                      # TODO: fix, i think this is currently non-functional
-                                                                      shiny::tabPanel("Adducts", icon=shiny::icon("plus-square"),
-                                                                                      shiny::tabsetPanel(
-                                                                                        shiny::tabPanel("Definitions",
-                                                                                                        shiny::h3("Current adduct table:"),
-                                                                                                        rhandsontable::rHandsontableOutput("adduct_tab", 
-                                                                                                                                           width='100%', 
-                                                                                                                                           height='70%'),
-                                                                                                        shiny::fileInput("add_tab", 
-                                                                                                                         "Import adduct table",
-                                                                                                                         multiple = F,
-                                                                                                                         accept = c(".RData", ".csv")),
-                                                                                                        MetaboShiny::sardine(shiny::actionButton("import_adducts", "Import definitions"))
-                                                                                        ),
-                                                                                        shiny::tabPanel("Rules",
-                                                                                                        shiny::h3("Current adduct rules:"),
-                                                                                                        rhandsontable::rHandsontableOutput("adduct_rules_tab", 
-                                                                                                                                           width='100%', 
-                                                                                                                                           height='70%'),
-                                                                                                        shiny::fileInput("add_rule_tab", 
-                                                                                                                         "Import adduct rule table",
-                                                                                                                         multiple = F,
-                                                                                                                         accept = c(".RData", ".csv")),
-                                                                                                        MetaboShiny::sardine(shiny::actionButton("import_adduct_rules", "Import rules"))
-                                                                                        )
-                                                                                      ),
-                                                                                      shiny::actionButton("save_adducts","Save changes"),
-                                                                                      shiny::hr()
-                                                                      ),
-                                                                      # change toolbar colour, text font and size
-                                                                      shiny::tabPanel("Aesthetic", icon=shiny::icon("child"),
-                                                                                      shiny::h3("Change app settings"),
-                                                                                      shiny::hr(),
-                                                                                      shiny::h2("Navigation bar colours"),
-                                                                                      colourpicker::colourInput(inputId = "bar.col.1",
-                                                                                                                label = paste("Inactive background"),
-                                                                                                                #value = opts$col1,
-                                                                                                                allowTransparent = FALSE),
-                                                                                      colourpicker::colourInput(inputId = "bar.col.2",
-                                                                                                                label = paste("Active background"),
-                                                                                                                #value = opts$col2,
-                                                                                                                allowTransparent = FALSE),
-                                                                                      colourpicker::colourInput(inputId = "bar.col.3",
-                                                                                                                label = paste("Inactive tab text"),
-                                                                                                                #value = opts$col3,
-                                                                                                                allowTransparent = FALSE),
-                                                                                      colourpicker::colourInput(inputId = "bar.col.4",
-                                                                                                                label = paste("Active tab text"),
-                                                                                                                #value = opts$col4,
-                                                                                                                allowTransparent = FALSE),
-                                                                                      shiny::br(),
-                                                                                      shiny::a(shiny::h2("Fonts (Google fonts)"), href = "https://fonts.google.com/", target="_blank"),
-                                                                                      shiny::textInput(inputId="font.1", label="h1", value = "Leckerli One"),
-                                                                                      shiny::textInput(inputId="font.2", label="h2", value = "Leckerli One"),
-                                                                                      shiny::textInput(inputId="font.3", label="h3", value = "Open Sans"),
-                                                                                      shiny::textInput(inputId="font.4", label="body", value = "Open Sans"),
-                                                                                      shiny::br(), # TODO: font size modifier slider
-                                                                                      shiny::h2("Font size"),
-                                                                                      shiny::sliderInput("size.1", label="h1", value=30,min = 5, max=50),
-                                                                                      shiny::sliderInput("size.2", label="h2", value=20,min = 5, max=50),
-                                                                                      shiny::sliderInput("size.3", label="h3", value=13,min = 5, max=50),
-                                                                                      shiny::sliderInput("size.4", label="body", value=10,min = 5, max=50),
-                                                                                      shiny::br(),
-                                                                                      shiny::h3("Taskbar image"),
-                                                                                      shiny::div(shiny::imageOutput("taskbar_image",inline = T)),
-                                                                                      shinyFiles::shinyFilesButton('taskbar_image_path',
-                                                                                                                   'Select image',
-                                                                                                                   'Please select an image file',
-                                                                                                                   FALSE),
-                                                                                      shiny::hr(),
-                                                                                      shiny::actionButton("change_css", "Save settings (restart to apply)") # need to reload CSS to enable new settings
+                                                                      shiny::tabPanel("Rules",
+                                                                                      shiny::fluidRow(align="center", shiny::h3("Current adduct rules:")),
+                                                                                      rhandsontable::rHandsontableOutput("adduct_rules_tab", 
+                                                                                                                         width='100%', 
+                                                                                                                         height='70%'),
+                                                                                      shiny::fileInput("add_rule_tab", 
+                                                                                                       "Import adduct rule table",
+                                                                                                       multiple = F,
+                                                                                                       accept = c(".RData", ".csv")),
+                                                                                      shiny::fluidRow(align="center",
+                                                                                                      MetaboShiny::sardine(shiny::actionButton("import_adduct_rules", "Import rules"))
+                                                                                      )
                                                                       )
-                                                   )
-                                   ),
-                                   # prompt user on opening the quit tab.
-                                   # TODO: add 'save project?' dialog
-                                   #tabPanel(title = "", value="stop", icon = shiny::icon("times-circle",class = "outlined")),
-                                   shiny::div(class="spinnylocation1",
-                                              shiny::div(class="plus", img(class="imagetop", 
-                                                                           src="gemmy_rainbow.png", 
-                                                                           width="100px", height="100px"))
-                                   ),
-                                   shiny::div(class="line")
-                                   ,footer=shiny::fluidRow(
-                                     br(),br(),br(),br(),
-                                     shiny::div(class = "footer",
-                                                #shiny::actionButton("show_window", label="", icon = shiny::icon("map-marked")),
-                                                shiny::actionButton("load_mset", label="load", icon = shiny::icon("folder-open")),
-                                                shiny::actionButton("save_mset", label="save", icon = shiny::icon("save")),
-                                                shiny::actionButton("debug_metshi", label="debug", icon = shiny::icon("bug")),
-                                                shiny::actionButton("quit_metshi", label="quit", icon = shiny::icon("eraser"))
-                                     ),br(),br(),br(),
-                                     align="center")
-                 )
+                                                                    ),
+                                                                    shiny::fluidRow(align="center",
+                                                                                    shiny::actionButton("save_adducts","Save changes"),
+                                                                                    shiny::hr()
+                                                                    )
+                                                    ),
+                                                    # change toolbar colour, text font and size
+                                                    shiny::tabPanel("Aesthetic", icon=shiny::icon("child"),
+                                                                    shiny::fluidRow(align="center",
+                                                                                    shiny::h3("Change app settings"),
+                                                                                    shiny::hr(),
+                                                                                    shiny::h2("Navigation bar colours"),
+                                                                                    colourpicker::colourInput(inputId = "bar.col.1",
+                                                                                                              label = paste("Inactive background"),
+                                                                                                              #value = opts$col1,
+                                                                                                              allowTransparent = FALSE),
+                                                                                    colourpicker::colourInput(inputId = "bar.col.2",
+                                                                                                              label = paste("Active background"),
+                                                                                                              #value = opts$col2,
+                                                                                                              allowTransparent = FALSE),
+                                                                                    colourpicker::colourInput(inputId = "bar.col.3",
+                                                                                                              label = paste("Inactive tab text"),
+                                                                                                              #value = opts$col3,
+                                                                                                              allowTransparent = FALSE),
+                                                                                    colourpicker::colourInput(inputId = "bar.col.4",
+                                                                                                              label = paste("Active tab text"),
+                                                                                                              #value = opts$col4,
+                                                                                                              allowTransparent = FALSE),
+                                                                                    shiny::br(),
+                                                                                    shiny::a(shiny::h2("Fonts (Google fonts)"), href = "https://fonts.google.com/", target="_blank"),
+                                                                                    shiny::textInput(inputId="font.1", label="h1", value = "Leckerli One"),
+                                                                                    shiny::textInput(inputId="font.2", label="h2", value = "Leckerli One"),
+                                                                                    shiny::textInput(inputId="font.3", label="h3", value = "Open Sans"),
+                                                                                    shiny::textInput(inputId="font.4", label="body", value = "Open Sans"),
+                                                                                    shiny::br(), # TODO: font size modifier slider
+                                                                                    shiny::h2("Font size"),
+                                                                                    shiny::sliderInput("size.1", label="h1", value=30,min = 5, max=50),
+                                                                                    shiny::sliderInput("size.2", label="h2", value=20,min = 5, max=50),
+                                                                                    shiny::sliderInput("size.3", label="h3", value=13,min = 5, max=50),
+                                                                                    shiny::sliderInput("size.4", label="body", value=10,min = 5, max=50),
+                                                                                    shiny::br(),
+                                                                                    shiny::h3("Taskbar image"),
+                                                                                    shiny::div(shiny::imageOutput("taskbar_image",inline = T)),
+                                                                                    shinyFiles::shinyFilesButton('taskbar_image_path',
+                                                                                                                 'Select image',
+                                                                                                                 'Please select an image file',
+                                                                                                                 FALSE),
+                                                                                    shiny::hr(),
+                                                                                    shiny::actionButton("change_css", "Save settings (restart to apply)")
+                                                                    )
+                                                    )
+                                 )
+                 ),
+                 # prompt user on opening the quit tab.
+                 # TODO: add 'save project?' dialog
+                 #tabPanel(title = "", value="stop", icon = shiny::icon("times-circle",class = "outlined")),
+                 shiny::div(class="spinnylocation1",
+                            shiny::div(class="plus", img(class="imagetop", 
+                                                         src="gemmy_rainbow.png", 
+                                                         width="100px", height="100px"))
+                 ),
+                 div(class="scallop-down"),
+                 shiny::div(class="line")
+                 ,footer=shiny::fluidRow(
+                   br(),br(),br(),br(),br(),
+                   shiny::div(class = "footer",
+                              tags$i(icon("map-marker"), shiny::textOutput("proj_name",inline = T), style="vertical-align: middle;"),
+                              #shiny::actionButton("show_window", label="", icon = shiny::icon("map-marked")),
+                              shiny::actionButton("load_mset", label="load", icon = shiny::icon("folder-open")),
+                              shiny::actionButton("save_mset", label="save", icon = shiny::icon("save")),
+                              shiny::actionButton("debug_metshi", label="debug", icon = shiny::icon("bug")),
+                              shiny::actionButton("quit_metshi", label="quit", icon = shiny::icon("eraser"))
+                   ),align="center")
+)
 )

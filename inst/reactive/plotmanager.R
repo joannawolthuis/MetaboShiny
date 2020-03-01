@@ -116,7 +116,7 @@ shiny::observe({
                    },
                    pca = {
                      if("pca" %in% names(mSet$analSet)){
-                       pca_scree = MetaboShiny::ggPlotScree(mSet,
+                       scree = MetaboShiny::ggPlotScree(mSet,
                                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
                                                   plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                                   font = lcl$aes$font)
@@ -154,6 +154,7 @@ shiny::observe({
                                                    type = "pca",
                                                    col.fac = input$col_var,
                                                    mode = mode,
+                                                   cols = lcl$aes$mycols,
                                                    shape.fac = input$shape_var,
                                                    font = lcl$aes$font,
                                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
@@ -165,10 +166,10 @@ shiny::observe({
                                               font = lcl$aes$font,
                                               cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                        }
+                       list(plot_pca = pca, plot_pca_loadings = loadings, pca_scree = scree)
                      }else{
                        NULL
                      }
-                     list(plot_pca = pca, plot_pca_loadings = loadings, pca_scree = scree)
                    },
                    plsda = {
                      
@@ -230,9 +231,9 @@ shiny::observe({
                                               font = lcl$aes$font,
                                               cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                        }
+                       list(plot_plsda = plsda, 
+                            plot_plsda_loadings = loadings)
                      }else{NULL}
-                     list(plot_plsda = plsda, 
-                          plot_plsda_loadings = loadings)
                    },
                    ml = {
                      if("ml" %in% names(mSet$analSet)){
@@ -406,8 +407,10 @@ shiny::observe({
                 }else{
                   paste0(mSet$dataSet$cls.name,"_", plotmanager$make)
                 }
-                id = paste0(id, "_", paste0(unlist(lcl$aes,
-                                                   recursive = T),
+                id = paste0(id, "_", paste0(c(unlist(lcl$aes,
+                                                   recursive = T), 
+                                              input$ggplot_sum_style,input$shape_var,
+                                              input$ggplot_sum_stats,input$col_var,input$txt_var),
                                             collapse = "_"))
                 id
               },cache = "session")

@@ -24,19 +24,31 @@ nav.bar.css <- function(RGB.bg = "#ffc8c2",
                         RGB.col = "#ffffff",
                         RGB.active.col = "#ffffff"){
 
-  base <- ".navbar { background-color: $RGB.bg !important;}
+  base <- ".navbar { background-color: $RGB.bg !important;
+  border: 0px !important;}
   .nav > li[class=active] > a {
   background-color: $RGB.active.bg !important;
   color: $RGB.active.col !important; }
   .nav > li > a {
   background-color: $RGB.bg !important;
-  color: $RGB.col !important;}"
+  color: $RGB.col !important;
+  }
+  .scallop-down{
+      height:30px;
+      width: calc(100% - 30px);
+      position: absolute;
+      top: 48px;
+      left: 15px;
+      z-index: 500;
+      background: -webkit-gradient(radial, 50% 0, 10, 50% 0, 40, from($RGB.bg), color-stop(0.49, $RGB.bg), color-stop(0.51, #fff), to(white));
+    -webkit-background-size: 29px 100%;
+  }"
 
   no.na <- gsub(x = base, pattern = "\\n", replacement = "")
   filled <- gsubfn::fn$paste(no.na)
   # --- return ---
   filled
-  }
+}
 
 app.font.css <- function(font.h1 = "Press Start 2P",
                         font.h2 = "Raleway bold",

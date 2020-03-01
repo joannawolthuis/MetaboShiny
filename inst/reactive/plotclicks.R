@@ -30,14 +30,7 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
     }, silent = F)
   }
   
-  curr_tab <- switch(input$statistics,
-                     dimred = {
-                       input$dimred
-                     }, permz = {
-                       input$permz
-                     }, overview = {
-                       input$overview
-                     }, ml = "ml")
+  curr_tab <- input$statistics
   
   if(req(curr_tab) %in% c("tt", 
                           "pca",
