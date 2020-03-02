@@ -12,8 +12,6 @@ shiny::observeEvent(input$initialize, {
                                     data.table = TRUE,
                                     header = T)
       
-      colnames(metshiCSV) <- gsub(colnames(metshiCSV), pattern="\\|", replacement="/")
-      
       # create empty mSet with 'stat' as default mode
       shiny::setProgress(session=session, value= .2)
       
@@ -46,13 +44,17 @@ shiny::observeEvent(input$initialize, {
       # if 'batch' is selected, 'injection' is often also present
       # TODO: i can imagine this doesn't work for all  users, please disable this...
       if("batch" %in% batches & "injection" %in% colnames(metshiCSV)){
-        batches = c(batches, "injection")
+        batches = c(batches, 
+                    "injection")
       }
       
       shiny::setProgress(session=session, value= .3)
       
       # get ppm
-      params = gsub(lcl$paths$csv_loc, pattern="\\.csv", replacement="_params.csv")
+      params = gsub(lcl$paths$csv_loc, 
+                    pattern="\\.csv",
+                    replacement="_params.csv")
+      
       ppm <- fread(params)$ppm
       detPPM <- fread(params)$ppmpermz
 
@@ -97,14 +99,15 @@ shiny::observeEvent(input$initialize, {
       
       # = = = = = = = = = = = = = = =
       
-      mSet <- MetaboAnalystR::InitDataObjects("pktable",
-                                              "stat",
-                                              FALSE)
+      mSet <- MetaboAnalystR::InitDataObjects(data.type = "pktable",
+                                              anal.type = "stat",
+                                              paired = FALSE)
       
       # load new csv into empty mSet!
       mSet <- MetaboAnalystR::Read.TextData(mSet,
                                             filePath = csv_loc_final,
-                                            "rowu")  # rows contain samples
+                                            "rowu",
+                                            lbl.type = "disc")  # rows contain samples
       
       # set default time series mode'
       mSet$dataSet$paired = F
@@ -375,6 +378,7 @@ shiny::observeEvent(input$initialize, {
       save(mSet, file = fn)
       
       uimanager$refresh <- c("general","statspicker")
+      plotmanager$make <- "general"
     }else{
       MetaboShiny::metshiAlert("Normalization failed!")
     }

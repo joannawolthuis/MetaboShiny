@@ -16,18 +16,6 @@ shiny::observe({
       
       try({
         switch(statsmanager$calculate,
-               venn = {
-                 # save previous mset
-                 mset_name = mSet$dataSet$cls.name
-                 # TODO: use this in venn diagram creation
-                 mSet$storage[[mset_name]] <-  list(analysis = mSet$analSet)
-               },
-               enrich = {
-                 # save previous mset
-                 mset_name = mSet$dataSet$cls.name
-                 # TODO: use this in venn diagram creation
-                 mSet$storage[[mset_name]] <-  list(analysis = mSet$analSet)
-               },
                pattern = {
                  # pearson kendall spearman
                  NULL
@@ -51,7 +39,7 @@ shiny::observe({
                  # reset
                  mSet <- MetaboShiny::calcHeatMap(mSet, 
                                                   signif.only = input$heatsign,
-                                                  source.tbl = input$heattable,
+                                                  source.anal = input$heattable,
                                                   top.hits = input$heatmap_topn,
                                                   cols = lcl$aes$mycols)
                },
@@ -172,6 +160,11 @@ shiny::observe({
       if(success){
         mSet <<- mSet
         lcl$hasChanged <<- TRUE
+        shinyjs::show(selector = paste0("div.panel[value=collapse_", statsmanager$calculate, "_plots]"))
+        shinyjs::show(selector = paste0("div.panel[value=collapse_", statsmanager$calculate, "_tables]"))
+        shinyBS::updateCollapse(session, paste0("collapse_",input$statistics),open = paste0("collapse_", 
+                                                                                            statsmanager$calculate, 
+                                                                                            c("_tables","_plots")))
       }else{
         MetaboShiny::metshiAlert("Analysis failed!")
         mSet <<- mSet.old

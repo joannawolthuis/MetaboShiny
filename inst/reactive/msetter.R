@@ -8,9 +8,9 @@ shiny::observe({
     
     if(!is.null(mSet)){
       
-      if(lcl$hasChanged ){
-        mSet <- MetaboShiny::store.mSet(mSet) # save analyses
-      }
+      #if(lcl$hasChanged){
+      mSet <- MetaboShiny::store.mSet(mSet) # save analyses
+      #}
       
       oldSettings <- mSet$settings
       
@@ -142,9 +142,7 @@ shiny::observe({
       }else{
         MetaboShiny::metshiAlert("Failed! Restoring old mSet...")
       }
-      
       mSetter$do <- NULL
-    
       }
   }
 })

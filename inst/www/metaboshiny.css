@@ -49,6 +49,10 @@
     margin-top: 5px;
 }
 
+.navbar-nav {
+    margin: 7.5px -5px -13px;
+}
+
 .caret {
     position: absolute;
     top: 90%;

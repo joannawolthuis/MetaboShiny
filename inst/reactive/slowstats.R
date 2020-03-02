@@ -533,13 +533,6 @@ observeEvent(input$do_ml, {
           lst
         })
       
-      
-      # ============ DOWNSAMPLE ===========
-      # if(input$downsample){
-      #   keepers = caret::downSample(1:nrow(curr), curr$label)$x
-      #   curr = curr[keepers,]
-      # }
-      
       # ============ LOOP HERE ============
       
       # get results for the amount of attempts chosen
@@ -585,6 +578,7 @@ observeEvent(input$do_ml, {
                                      sampling = if(input$ml_sampling == "none") NULL else input$ml_sampling
         )
       })
+      
       # check if a storage list for machine learning results already exists
       if(!"ml" %in% names(mSet$analSet)){
         mSet$analSet$ml <<- list() # otherwise make it

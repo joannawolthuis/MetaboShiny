@@ -37,6 +37,15 @@ shiny::observe({
                        shiny::updateSelectInput(session, "storage_choice", 
                                                 choices = if(!is.null(storeNames[[1]])) storeNames else c()
                        )
+                       usesCovars <- paste0(c("stats","time","shape","col","txt","subset"), "_var")
+                       lapply(usesCovars, function(inputId){
+                         shiny::updateSelectInput(session, inputId,  
+                                                  choices = c("label", 
+                                                              colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, 
+                                                                                                        MARGIN = 2, 
+                                                                                                        function(col) length(unique(col)) < gbl$constants$max.cols))]))
+                         
+                       })
                      }
                      
                      shiny::updateSelectInput(session, "stats_type", 
@@ -97,27 +106,16 @@ shiny::observe({
                        }
                      }) 
                    },
-                   venn = {
-                     NULL
-                   },
-                   colorbar = {
-                     usesCovars <- paste0(c("stats","time","shape","col","txt","subset"), "_var")
-                     lapply(usesCovars, function(inputId){
-                       shiny::updateSelectInput(session, inputId,  
-                                                choices = c("label", 
-                                                            colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, 
-                                                                                                      MARGIN = 2, 
-                                                                                                      function(col) length(unique(col)) < gbl$constants$max.cols))]))
-                       
-                     })
-                   },
-                   enrich = {
+                   vennrich = {
                      shiny::updateSelectInput(session,
                                               "mummi_anal", 
-                                              choices = lcl$vectors$analyses)
+                                              choices = as.character(lcl$vectors$analyses))
+                     shiny::updateSelectInput(session,
+                                              "heattable", 
+                                              choices = as.character(lcl$vectors$analyses))
                    },
                    pattern = {
-                     output$jqui_ui <- shiny::renderUI(shinyjqui::orderInput(inputId = 'pattern_seq',
+                     output$jqui_ui <- shiny::renderUI(suppressWarnings(shinyjqui::orderInput(inputId = 'pattern_seq',
                                                                              label = 'Drag panels to select pattern for correlation (low-high)', 
                                                                              items = {
                                                                                lvls = levels(mSet$dataSet$cls)
@@ -128,7 +126,7 @@ shiny::observe({
                                                                                  order = order(as.character(lvls))
                                                                                }
                                                                                as.character(lvls)[order]
-                                                                             })
+                                                                             }))
                      )
                      storeNames = c(names(mSet$storage)[sapply(mSet$storage, function(x) "settings" %in% names(x))])
                      shiny::updateSelectInput(session, "storage_choice", 

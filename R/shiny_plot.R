@@ -717,7 +717,7 @@ ggPlotROC <- function(data,
   mean.auc <- data$m_auc
   perf.long <- data$perf
   
-  means.per.comp=perf.long[, lapply(.SD, mean), by = .(comparison)]
+  means.per.comp=perf.long[, lapply(.SD, mean), by = comparison]
   
   ncomp = length(unique(means.per.comp$comparison))
   if(ncomp > 2){
@@ -1517,7 +1517,6 @@ ggPlotWordBar <- function(wcdata, plot.theme, cf, font, plotlyfy=T){
 ggPlotPower <- function(mSet,
                         cf,
                         plot.theme,
-                        
                         font,
                         comparisons,
                         max_samples){
@@ -1546,15 +1545,16 @@ ggPlotPower <- function(mSet,
         cex = 2.3,color="black") +
       ggplot2::stat_summary_bin(#alpha=.6,
         aes(samples, power, 
-            color=comparison, 
-            group=comparison), 
+            color=comparison
+            #,group=comparison
+            ), 
         fun.y=mean, geom="line", 
         cex = 1.2) +
       ggplot2::stat_summary_bin(aes(samples,
                                     power), 
                                 fun.y=mean, color="black", 
                                 geom="line", cex = 2) +
-      ggplot2::theme(legend.position= "none",
+      ggplot2::theme(#legend.position= "none",
                      axis.text=ggplot2::element_text(size=font$ax.num.size),
                      axis.title=ggplot2::element_text(size=font$ax.txt.size),
                      plot.title = ggplot2::element_text(hjust = 0.5),

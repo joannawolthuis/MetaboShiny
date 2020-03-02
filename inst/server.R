@@ -1090,20 +1090,35 @@ omit_unknown = yes')
     if(!is.null(mSet)){
       if(!is.null(input$statistics)){
         uimanager$refresh <- input$statistics
-        if(input$statistics %in% c("venn", "enrich")){
-          statsmanager$calculate <- input$statistics
-          tablemanager$make <- an
+        if(input$statistics %in% c("venn", "enrich", "heatmap")){
+          tablemanager$make <- "vennrich"
+          uimanager$refresh <- "vennrich"
         }
         if(input$statistics %in% names(mSet$analSet)){
           tablemanager$make <- input$statistics
           plotmanager$make <- input$statistics
+          shinyBS::updateCollapse(session, paste0("collapse_",input$statistics),open = paste0("collapse_", 
+                                                                                              input$statistics, 
+                                                                                              c("_tables","_plots")))
+          shinyjs::show(selector = paste0("div.panel[value=collapse_", input$statistics, "_plots]"))
+          shinyjs::show(selector = paste0("div.panel[value=collapse_", input$statistics, "_tables]"))
+            
+        }else{
+          #if(!is.null(input[[paste0("collapse_",input$statistics)]])){
+            shinyBS::updateCollapse(session, paste0("collapse_",input$statistics),open = paste0("collapse_", 
+                                                                                                input$statistics, 
+                                                                                                "_settings")) 
+          #"div.panel[value=collapse_aov_plots]"
+            shinyjs::hide(selector = paste0("div.panel[value=collapse_", input$statistics, "_plots]"))
+            shinyjs::hide(selector = paste0("div.panel[value=collapse_", input$statistics, "_tables]"))
+          #}
         }
       }  
     }
   })
   
   analyses <- c("ml", "wordcloud", "plsda", 
-                "pca", "tsne", "tt", 
+                "pca", "tsne", "tt", "aov",
                 "fc", "volc", "heatmap", 
                 "meba", "asca", "pattern", 
                 "enrich")
@@ -1113,7 +1128,7 @@ omit_unknown = yes')
         statsmanager$calculate <- an
         tablemanager$make <- an
         plotmanager$make <- an
-        uimanager$make <- an  
+        uimanager$make <- an
       })
     })    
   })
@@ -1163,7 +1178,7 @@ omit_unknown = yes')
   },ignoreNULL = T)
   
   onStop(function() {
-    print("Closing metaboShiny ~ヾ(＾∇＾)")
+    print("Closing MetaboShiny ~ヾ(＾∇＾)")
     
     if(!is.null(session_cl)){
       parallel::stopCluster(session_cl)

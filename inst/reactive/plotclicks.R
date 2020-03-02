@@ -30,26 +30,20 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
     }, silent = F)
   }
   
+  dt = data.table::fread("/Users/jwolthuis/MetaboShiny/saves/admin/CATS_CENTROIDED_3PPM/CATS_CENTROIDED_3PPM.csv")
   curr_tab <- input$statistics
   
-  if(req(curr_tab) %in% c("tt", 
-                          "pca",
-                          "ml",
-                          "plsda", 
-                          "fc", 
-                          "rf", 
-                          "aov", 
-                          "pattern",
-                          #"heatmap", #TODO:possible?
-                          "volc")){ # these cases need the same processing and use similar scoring systems
-    # mzs <- switch(curr_tab,
-    #               tt = names(mSet$analSet$tt$p.value),
-    #               fc = names(mSet$analSet$fc$fc.log),
-    #               plsda = rownames(mSet$analSet$plsr$loadings),
-    #               pca = rownames(mSet$analSet$pca$rotation),
-    #               aov = if(mSet$timeseries)rownames(mSet$analSet$aov2$sig.mat) else names(mSet$analSet$aov$p.value),
-    #               volc = rownames(mSet$analSet$volcano$sig.mat)
-    # )
+  if(curr_tab %in% c("tt", 
+                     "pca",
+                     "heatmap",
+                     "ml",
+                     "plsda", 
+                     "fc", 
+                     "rf", 
+                     "aov", 
+                     "pattern",
+                     "volc")){ 
+    
     if(curr_tab == "ml" & input$ml_results == "roc"){
       attempt = d$curveNumber + 1
         xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
@@ -65,10 +59,12 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
             MetaboShiny:: metshiTable(lcl$tables$ml_roc)
           })
         }
-    }else if(req(curr_tab) == "heatmap"){
+    }else if(curr_tab == "heatmap"){
       if(!is.null(d$y)){
         if(d$y > length(lcl$vectors$heatmap)) return(NULL)
-        my_selection$mz <- lcl$vectors$heatmap[d$y]  
+        my_selection$mz <<- lcl$vectors$heatmap[d$y]  
+        print("...")
+        plotmanager$make <- "summary"
       }
     }else if(curr_tab == "enrich"){
       # TODO: make non-redundant..
@@ -83,7 +79,8 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
     }else{
       if('key' %not in% colnames(d)) return(NULL)
       if(gsub(d$key[[1]],pattern="`",replacement="") %not in% colnames(mSet$dataSet$prenorm)) return(NULL)
-      my_selection$mz <- gsub(d$key[[1]],pattern="`",replacement="")
+      my_selection$mz <<- gsub(d$key[[1]],pattern="`",replacement="")
+      plotmanager$make <- "summary"
     }
   }
 })

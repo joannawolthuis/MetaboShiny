@@ -61,8 +61,7 @@ shiny::observeEvent(input$venn_build, {
                                    top = input$venn_tophits,
                                    cols = lcl$aes$mycols,
                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                   font = lcl$aes$font,
-                                   plotlyfy = F)
+                                   font = lcl$aes$font)
 
       lcl$vectors$venn_lists <<- p$info
       

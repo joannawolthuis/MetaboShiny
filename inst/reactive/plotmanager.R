@@ -62,7 +62,7 @@ shiny::observe({
                                                 plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                                 font = lcl$aes$font)
                      
-                       list(aov_overview_plot = p)
+                       list(aov_plot = p)
                    },
                    volc = {
                      # render volcano plot with user defined colours
@@ -237,9 +237,9 @@ shiny::observe({
                    },
                    ml = {
                      if("ml" %in% names(mSet$analSet)){
-                       ml_roc = MetaboShiny::ggPlotROC(lcl$tables$ml_roc,
-                                                input$ml_attempts,
-                                                gbl$functions$color.functions[[lcl$aes$spectrum]],
+                       ml_roc = MetaboShiny::ggPlotROC(data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc,
+                                                attempts = input$ml_attempts,
+                                                cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
                                                 plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                                 font = lcl$aes$font)
                        
@@ -287,7 +287,7 @@ shiny::observe({
                                              plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                              font = lcl$aes$font)
                      
-                     list(tt_overview_plot = p)
+                     list(tt_plot = p)
                    },
                    fc = {
                      # render manhattan-like plot for UI
@@ -296,7 +296,7 @@ shiny::observe({
                                              plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                              font = lcl$aes$font)
                      
-                     list(fc_overview_plot = p)
+                     list(fc_plot = p)
                    },
                    heatmap = {
                      
@@ -364,8 +364,8 @@ shiny::observe({
                      p = {
                        if("power" %in% names(mSet$analSet)){
                          MetaboShiny::ggPlotPower(mSet, 
-                                                  max_samples = input$power_nsamp,
-                                                  comparisons = input$power_comps,
+                                                  max_samples = max(mSet$analSet$power[[1]]$Jpred),
+                                                  comparisons = names(mSet$analSet$power),#input$power_comps,
                                                   plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                                   font = lcl$aes$font,
                                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
@@ -394,6 +394,23 @@ shiny::observe({
                    }
             )
             mapply(function(plot, plotName){
+              isSquare <- grepl("pca|plsda|tsne|roc", plotName) & !grepl("scree", plotName)
+              # === WRAPPER ===
+              
+              empty <- if(grepl(plotName, pattern="var|samp")) "empty2" else "empty3"
+              output[[paste0(plotName, "_wrap")]] <- shiny::renderUI({
+                list(conditionalPanel(
+                  condition = 'input.ggplotly == true',
+                  plotlyOutput(paste0(plotName, "_interactive"),
+                               height = set_shiny_plot_height(session, paste0("output_", empty, "_width"), isSquare))
+                ),
+                conditionalPanel(
+                  condition = 'input.ggplotly == false',
+                  plotOutput(plotName, height = set_shiny_plot_height(session, paste0("output_", empty, "_width"), isSquare))
+                ))
+              })
+              
+              # === PLOTS ===
                output[[plotName]] <- shiny::renderCachedPlot({
                  plot
               }, cacheKeyExpr = {
@@ -417,6 +434,7 @@ shiny::observe({
               output[[paste0(plotName, "_interactive")]] <- plotly::renderPlotly({
                   plotly::ggplotly(plot, tooltip = "text")
               })
+              # ====
             }, toWrap, names(toWrap))
         }
         success = T

@@ -48,10 +48,8 @@ lapply(c("tt",
                                                 venn = lcl$tables$venn_overlap),
                                          keep.rownames = T)
     if(nrow(res_tbl) > 0){
-
       # get current selected compound from the original table (needs to be available in global env)
       my_selection$mz <- res_tbl[curr_row, rn]
-      
       # --- ggplot ---
       if(table == 'meba'){ # meba needs a split by time
         plotmanager$make <- "meba"

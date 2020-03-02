@@ -8,7 +8,10 @@ footer.css <- function(RGB.bg = "#ffc8c2", font.col="white"){
                     background-color:$RGB.bg;
                     border-style:solid; 
                     border-color:black;
-                    border-width:1px; }
+                    border-width:1px; 
+                    border-bottom: black;
+                    border-left: black;
+                    border-right: black;}
             .footer .btn {margin-top:2px; 
                           background-color:$RGB.bg; 
                           color:$font.col; 
@@ -25,7 +28,8 @@ nav.bar.css <- function(RGB.bg = "#ffc8c2",
                         RGB.active.col = "#ffffff"){
 
   base <- ".navbar { background-color: $RGB.bg !important;
-  border: 0px !important;}
+  border: 0px !important;
+  margin-bottom: 5px;}
   .nav > li[class=active] > a {
   background-color: $RGB.active.bg !important;
   color: $RGB.active.col !important; }
@@ -33,13 +37,9 @@ nav.bar.css <- function(RGB.bg = "#ffc8c2",
   background-color: $RGB.bg !important;
   color: $RGB.col !important;
   }
-  .scallop-down{
+  .navbar:after{
       height:30px;
-      width: calc(100% - 30px);
-      position: absolute;
-      top: 48px;
-      left: 15px;
-      z-index: 500;
+      width: 100%;
       background: -webkit-gradient(radial, 50% 0, 10, 50% 0, 40, from($RGB.bg), color-stop(0.49, $RGB.bg), color-stop(0.51, #fff), to(white));
     -webkit-background-size: 29px 100%;
   }"
@@ -123,7 +123,7 @@ app.font.css <- function(font.h1 = "Press Start 2P",
   color: $font.col !important;
   $font.h1.w
   font-size: $size.h1;
-  line-height: 0.5;s
+  line-height: 0.5;
   z-index:99998 !important;
   }
 

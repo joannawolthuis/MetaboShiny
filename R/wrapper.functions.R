@@ -1,61 +1,32 @@
+#' @export
+set_shiny_plot_height = function(session, output_width_name, isSquare){
+  
+  width = session$clientData[[output_width_name]] 
+  
+  # Do something with the width
+  width/if(isSquare) 1 else 1.7
+}
+
+
 calcHeatMap <- function(mSet, signif.only, 
-                        source.tbl, 
-                        top.hits, cols){
+                        source.anal, 
+                        top.hits, 
+                        cols){
   sigvals = NULL
   
-  try({
-    switch(source.tbl,
-           tt={
-             decreasing <- F
-             if(signif.only){
-               tbl = as.data.frame(mSet$analSet$tt$sig.mat)
-               sigvals = tbl$p.value
-             }else{
-               tbl = as.data.frame(mSet$analSet$tt$p.value)
-               sigvals = tbl[,1]
-             }
-           },
-           fc={
-             decreasing <- T
-             if(signif.only){
-               tbl <- as.data.frame(mSet$analSet$fc$sig.mat)
-               sigvals = abs(tbl$`log2(FC)`)
-             }else{
-               tbl = as.data.frame(abs(mSet$analSet$fc$fc.log))
-               sigvals = tbl[,1]
-             }},
-           aov = {
-             decreasing=F
-             tbl=as.data.frame(mSet$analSet$aov$sig.mat)
-             sigvals = tbl$p.value
-           },
-           aov2 = {
-             decreasing=F
-             tbl = as.data.frame(mSet$analSet$aov2$sig.mat)
-             sigvals = tbl$`Interaction(adj.p)`
-           },
-           asca = {
-             decreasing=T
-             tbl = as.data.frame(mSet$analSet$asca$sig.list$Model.ab)
-             sigvals = tbl$Leverage
-           },
-           meba = {
-             decreasing=T
-             tbl = as.data.frame(mSet$analSet$MB$stats)
-             sigvals = tbl$`Hotelling-T2`
-           })
-  })
+  #similarly to venn diagram
+  flattened <- getTopHits(mSet, 
+                          source.anal,
+                          top.hits)
+  
+  sigvals = flattened[[1]]
   
   # change top hits used in heatmap depending on time series / bivariate / multivariate mode
   # reordering of hits according to most significant at the top
   if(!is.null(sigvals)){
-    #check top x used (slider bar in UI), if more than total matches use total matches
-    topn = if(length(sigvals) < top.hits) length(sigvals) else top.hits
-    mzorder <- order(sigvals, decreasing = decreasing)
-    mzsel <- rownames(tbl)[mzorder]#[1:topn]
-    
     # reorder matrix used
-    x <- mSet$dataSet$norm[,mzsel]
+    
+    x <- mSet$dataSet$norm[,sigvals]
     final_matrix <- t(x) # transpose so samples are in columns
     
     # check if the sample order is correct - mSet$..$ norm needs to match the matrix

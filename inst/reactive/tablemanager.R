@@ -58,7 +58,7 @@ shiny::observe({
                          )
                        }))
                        venn_no$now <- venn_no$start
-                       lcl$vectors$analyses <<- analysis_names
+                       lcl$vectors$analyses <<- unlist(venn_no$start[,1])
                      }else{
                        venn_no$start <- data.frame(names(mSet$analSet))
                        venn_no$now <- venn_no$start

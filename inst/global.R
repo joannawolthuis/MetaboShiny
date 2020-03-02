@@ -7,6 +7,8 @@ if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 library(ggplot2)
 library(data.table)
 library(plotly)
+library(shinyBS)
+library(shinyjs)
 library(MetaboShiny)
 
 # set the home path
@@ -42,6 +44,8 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                              max.cols = 20,
                              images = list(list(name = 'load_icon', path = 'www/cute.png', dimensions = c(100, 100)),
                                            list(name = 'empty', path = 'www/empty.png', dimensions = c("100%", 1)),
+                                           list(name = 'empty2', path = 'www/empty.png', dimensions = c("100%", 1)),
+                                           list(name = 'empty3', path = 'www/empty3.png', dimensions = c("100%", 1)),
                                            list(name = 'cute_package', path = 'www/cat.png', dimensions = c(80, 80)),
                                            list(name = 'internal_logo', path = 'www/umcinternal.png', dimensions = c(120, 120)),
                                            list(name = 'login_header', path = 'www/login_icon.png', dimensions = c(300,200)),
@@ -367,7 +371,6 @@ gbl$vectors$wordcloud$filters <- list(
 data(isotopes, package = "enviPat")
 
 radioTooltip <- function(id, choice, title, placement = "bottom", trigger = "hover", options = NULL){
-  
   options = shinyBS:::buildTooltipOrPopoverOptionsList(title, placement, trigger, options)
   options = paste0("{'", paste(names(options), options, sep = "': '", collapse = "', '"), "'}")
   bsTag <- shiny::tags$script(shiny::HTML(paste0("
