@@ -4,7 +4,7 @@ BiocManager::install("org.Hs.eg.db")
 install.packages("pacman")
 library(pacman)
 
-pacman::p_load(ggplot2, data.table, plotly, caret, 
+pacman::p_load(ggplot2, data.table, plotly, caret, shinybusy,
                grDevices, RColorBrewer, colorRamps, tidytext, qdapDictionaries, 
                tm, shinyBS, shiny, htmltools, BiocManager, pacman, 
                devtools, classyfireR, httr, jsonlite, RCurl, shinyjqui, 
