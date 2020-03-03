@@ -301,6 +301,7 @@ vectors = list(
                        chemical = c("chebi", "massbank", "maconda", "stoff", "lipidmaps", "chemspider"),
                        massspec = c("massbank", "respect", "maconda", "dimedb"),
                        online = c("cmmmediator", "chemspider","pubchem","knapsack"),
+                       custom = c(),
                        predictive = c("magicball", "chemspider", "pubchem", "supernatural2", "knapsack")
   ),
   db_list = c( # this determines the show order of dbs in the app

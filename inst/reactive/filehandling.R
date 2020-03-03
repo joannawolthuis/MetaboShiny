@@ -52,8 +52,6 @@ shiny::observe({
   # render taskbar image preview
   output$custom_db_img <- shiny::renderImage({
     list(src = new_path,
-         width = 150,
-         height = 150,
          style = "background-image:linear-gradient(0deg, transparent 50%, #aaa 50%),linear-gradient(90deg, #aaa 50%, #ccc 50%);background-size:10px 10px,10px 10px;")
   }, deleteFile = FALSE)
 })
@@ -71,8 +69,6 @@ shiny::observe({
   # render taskbar image preview
   output$taskbar_image <- shiny::renderImage({
     list(src = new_path,
-         width = 120,
-         height = 120,
          style = "background-image:linear-gradient(0deg, transparent 50%, #aaa 50%),linear-gradient(90deg, #aaa 50%, #ccc 50%);background-size:10px 10px,10px 10px;")
   }, deleteFile = FALSE)
   

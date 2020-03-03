@@ -126,6 +126,8 @@ function(input, output, session) {
       adducts[adducts == ''|adducts == ' '] <<- NA
       
       addResourcePath('www', system.file('www', package = 'MetaboShiny'))
+      tmp = tempdir()
+      addResourcePath('tmp', tmp)
       
       # - - - - check for custom databases - - - - 
       
@@ -140,15 +142,16 @@ function(input, output, session) {
                                      after = last_db)
       
       for(db in all_dbs[which.custom]){
+        
         dbfolder = paste0(db, "_source")
         imgpath = normalizePath(file.path(lcl$paths$db_dir, dbfolder, "logo.png"))
         
         # add image to gbl images
         imgname = paste0(paste0(db, '_logo'), ".png")
-        file.copy(imgpath, file.path(system.file('www', package = 'MetaboShiny'), imgname))
+        file.copy(imgpath, file.path(tmp, imgname))
         gbl$constants$images <<- append(gbl$constants$images, values = 
                                           list(list(name = paste0(db, '_logo'), 
-                                                    path = file.path("www", imgname),
+                                                    path = file.path("tmp", imgname),
                                                     dimensions = c(150, 150))))
         
         # add db info
@@ -156,14 +159,16 @@ function(input, output, session) {
         gbl$constants$db.build.info[[db]] <<- dbinfo
       }
       
+      gbl$vectors$db_categories$custom <<- all_dbs[which.custom]
+      gbl$vectors$db_categories$all <<- gbl$vectors$db_list
+      
       # create image objects in UI
       lapply(gbl$constants$images, FUN=function(image){
         output[[image$name]] <- shiny::renderImage({
-          filename <- image$path
+          image$path <- if(grepl("tmp", image$path)) gsub("tmp", tmp, image$path) else image$path
+          filename <- normalizePath(image$path)
           # Return a list containing the filename and alt text
-          list(src = filename,
-               width = image$dimensions[1],
-               height = image$dimensions[2])
+          list(src = filename)
         }, deleteFile = FALSE)
       })
       
@@ -264,39 +269,6 @@ omit_unknown = yes')
       
       shinyjs::removeClass(class = "hidden",
                            id = "metshi")
-      
-      # load in custom databases
-      has.customs <- dir.exists(file.path(lcl$paths$db_dir, 
-                                          "custom"))
-      
-      if(has.customs){
-        
-        customs = list.files(path = file.path(lcl$paths$db_dir, "custom"),
-                             pattern = "\\.RData")
-        
-        dbnames = unique(tools::file_path_sans_ext(customs))
-        
-        for(db in dbnames){
-          # add name to global
-          dblist <- gbl$vectors$db_list
-          dblist <- dblist[-which(dblist == "custom")]
-          if(!(db %in% dblist)){
-            dblist <- c(dblist, db, "custom")
-            gbl$vectors$db_list <- dblist
-          }
-          metadata.path <- file.path(lcl$paths$db_dir, 
-                                     "custom", 
-                                     paste0(db, ".RData"))
-          load(metadata.path)
-          
-          # add description to global
-          gbl$constants$db.build.info[[db]] <- meta.dbpage
-          
-          # add image to global
-          maxi = length(gbl$constants$images)
-          gbl$constants$images[[maxi + 1]] <- meta.img
-        }
-      }
       
       # init stuff that depends on opts file
       lcl$proj_name <<- opts$proj_name

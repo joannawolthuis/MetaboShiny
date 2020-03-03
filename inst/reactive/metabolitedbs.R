@@ -209,6 +209,7 @@ shiny::observe({
             chemical = "flask",
             online = "globe",
             predictive = "magic",
+            custom = "cart-plus",
             favorite = "heart")  
           
           iconWrap <- sapply(iconPicks, function(ic){
@@ -364,7 +365,7 @@ shiny::observe({
               if(file.exists(file.path(lcl$paths$db_dir, paste0(db, ".db")))){
                 my_range <- input$db_mz_range
                 outfolder <- lcl$paths$db_dir
-                buildExtDB(base.dbname = db,
+                MetaDBparse::buildExtDB(base.dbname = db,
                                         outfolder = outfolder,
                                         cl = session_cl,
                                         blocksize = 500,

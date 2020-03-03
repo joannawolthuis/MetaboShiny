@@ -478,7 +478,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                                          )
                                                                                                                                                                                 ),
                                                                                                                                                                                 shinyBS::bsCollapsePanel(title = h2("plots"),value="collapse_volc_plots",
-                                                                                                                                                                                                         shiny::uiOutput("colc_plot_wrap")
+                                                                                                                                                                                                         shiny::uiOutput("volc_plot_wrap")
                                                                                                                                                                                 ),
                                                                                                                                                                                 shinyBS::bsCollapsePanel(title = h2("tables"),value="collapse_volc_tables",
                                                                                                                                                                                                          shiny::div(DT::dataTableOutput('volc_tab',width="100%"),style='font-size:80%')                
@@ -1294,13 +1294,6 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                       shiny::sliderInput("size.2", label="h2", value=20,min = 5, max=50),
                                                                                                       shiny::sliderInput("size.3", label="h3", value=13,min = 5, max=50),
                                                                                                       shiny::sliderInput("size.4", label="body", value=10,min = 5, max=50),
-                                                                                                      shiny::br(),
-                                                                                                      shiny::h3("Taskbar image"),
-                                                                                                      shiny::div(shiny::imageOutput("taskbar_image",inline = T)),
-                                                                                                      shinyFiles::shinyFilesButton('taskbar_image_path',
-                                                                                                                                   'Select image',
-                                                                                                                                   'Please select an image file',
-                                                                                                                                   FALSE),
                                                                                                       shiny::hr(),
                                                                                                       shiny::actionButton("change_css", "Save settings (restart to apply)")
                                                                                       )
