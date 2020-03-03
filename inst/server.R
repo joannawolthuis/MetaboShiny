@@ -826,11 +826,11 @@ omit_unknown = yes')
                                selected = "rf",
                                choices = as.list(setdiff(gbl$constants$ml.models, gbl$constants$ml.twoonly)))
     }else if(interface$mode == '2f'){
-      show.tabs <- hide.tabs[c(1,2,4,6,9,11,14,16)]
+      show.tabs <- hide.tabs[c(1,2,4,6,9,10,11,14,16)]
     }else if(interface$mode == 't1f'){
-      show.tabs = hide.tabs[c(1,2,4,5,6,9,11,14,16)]
+      show.tabs = hide.tabs[c(1,2,4,5,6,9,10,11,14,16)]
     }else if(interface$mode == 't'){
-      show.tabs = hide.tabs[c(1,2,5,6,7,9,11,14,15,16)]
+      show.tabs = hide.tabs[c(1,2,5,6,7,9,10,11,14,15,16)]
     }else{
       show.tabs <- hide.tabs[1]
     }
@@ -1091,6 +1091,7 @@ omit_unknown = yes')
       if(!is.null(input$statistics)){
         uimanager$refresh <- input$statistics
         if(input$statistics %in% c("venn", "enrich", "heatmap")){
+          statsmanager$calculate <- "vennrich"
           tablemanager$make <- "vennrich"
           uimanager$refresh <- "vennrich"
         }
@@ -1148,13 +1149,14 @@ omit_unknown = yes')
         session = session,
         inputId = "save_exit",
         text = tags$div(
+          tags$b("Click upper right ", icon("times"), " button to cancel."),br(),
           shiny::img(#class = "rotategem", 
             src = "gemmy_rainbow.png", 
             width = "70px", height = "70px"),
           br()
         ),
         btn_labels = c("No", "Yes"),
-        title = "Save before exiting? Click upper right button to keep working.",
+        title = "Save before exiting?",
         showCloseButton = T,
         html = TRUE
       )
@@ -1172,9 +1174,11 @@ omit_unknown = yes')
           save(mSet, file = fn)
         }
       }) 
+      js$closeWindow()   
+      shiny::stopApp()
+    }else{
+      NULL
     }
-    js$closeWindow()   
-    shiny::stopApp()
   },ignoreNULL = T)
   
   onStop(function() {

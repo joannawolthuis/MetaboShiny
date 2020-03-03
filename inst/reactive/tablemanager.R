@@ -13,56 +13,47 @@ shiny::observe({
           suppressWarnings({
             switch(do,
                    vennrich = {
-                     if("storage" %in% names(mSet)){
-                       # save previous mset
-                       mset_name = mSet$dataSet$cls.name
-                       # TODO: use this in venn diagram creation
-                       mSet$storage[[mset_name]] <- list(analysis = mSet$analSet)
-                       # - - - - -
-                       analyses = names(mSet$storage)
-                       venn_no$start <- rbindlist(lapply(analyses, function(name){
-                         analysis = mSet$storage[[name]]$analysis
-                         analysis_names = names(analysis)
-                         # - - -
-                         exclude = c("tsne", "heatmap", "type", "enrich")
-                         analysis_names <- setdiff(analysis_names, exclude)
-                         if(length(analysis_names) == 0){
-                           return(data.table::data.table())
-                         }
-                         # - - -
-                         with.subgroups <- intersect(analysis_names, c("ml", "plsr", "pca"))
-                         if(length(with.subgroups) > 0){
-                           extra_names <- lapply(with.subgroups, function(anal){
-                             switch(anal,
-                                    ml = {
-                                      which.mls <- setdiff(names(analysis$ml),"last")
-                                      ml.names = sapply(which.mls, function(meth){
-                                        if(length(analysis$ml[[meth]]) > 0){
-                                          paste0(meth, " - ", names(analysis$ml[[meth]]))
-                                        }
-                                      })
-                                      unlist(ml.names)
-                                    },
-                                    plsr = {
-                                      c ("plsda - PC1", "plsda - PC2", "plsda - PC3")
-                                    },
-                                    pca = {
-                                      c ("pca - PC1", "pca - PC2", "pca - PC3")
+                     # - - - - -
+                     analyses = names(mSet$storage)
+                     venn_no$start <- rbindlist(lapply(analyses, function(name){
+                       analysis = mSet$storage[[name]]$analysis
+                       analysis_names = names(analysis)
+                       # - - -
+                       exclude = c("tsne", "heatmap", "type", "enrich")
+                       analysis_names <- setdiff(analysis_names, exclude)
+                       if(length(analysis_names) == 0){
+                         return(data.table::data.table())
+                       }
+                       # - - -
+                       with.subgroups <- intersect(analysis_names, c("ml", "plsr", "pca"))
+                       if(length(with.subgroups) > 0){
+                         extra_names <- lapply(with.subgroups, function(anal){
+                           switch(anal,
+                                  ml = {
+                                    which.mls <- setdiff(names(analysis$ml),"last")
+                                    ml.names = sapply(which.mls, function(meth){
+                                      if(length(analysis$ml[[meth]]) > 0){
+                                        paste0(meth, " - ", names(analysis$ml[[meth]]))
+                                      }
                                     })
-                           })
-                           analysis_names <- c(setdiff(analysis_names, c("ml", "plsr", "plsda", "pca")), unlist(extra_names))
-                         }
-                         # - - -
-                         data.frame(
-                           paste0(analysis_names, " (", name, ")")
-                         )
-                       }))
-                       venn_no$now <- venn_no$start
-                       lcl$vectors$analyses <<- unlist(venn_no$start[,1])
-                     }else{
-                       venn_no$start <- data.frame(names(mSet$analSet))
-                       venn_no$now <- venn_no$start
-                     }
+                                    unlist(ml.names)
+                                  },
+                                  plsr = {
+                                    c ("plsda - PC1", "plsda - PC2", "plsda - PC3")
+                                  },
+                                  pca = {
+                                    c ("pca - PC1", "pca - PC2", "pca - PC3")
+                                  })
+                         })
+                         analysis_names <- c(setdiff(analysis_names, c("ml", "plsr", "plsda", "pca")), unlist(extra_names))
+                       }
+                       # - - -
+                       data.frame(
+                         paste0(analysis_names, " (", name, ")")
+                       )
+                     }))
+                     venn_no$now <- venn_no$start
+                     lcl$vectors$analyses <<- unlist(venn_no$start[,1])
                    },
                    pattern = {
                      # render results table
@@ -109,7 +100,7 @@ shiny::observe({
                    },
                    tsne = {
                      NULL
-                     },
+                   },
                    pca = {
                      if("pca" %in% names(mSet$analSet)){
                        # render PCA variance per PC table for UI
@@ -201,10 +192,14 @@ shiny::observe({
                    },
                    fc = {
                      # if none found, give the below table...
-                     res = mSet$analSet$fc$sig.mat
-                     res <- if(is.null(mSet$analSet$fc$sig.mat)) data.table::data.table("No significant hits found")
-                     
-                     # render result table for UI
+                     # save results to table
+                     res <<- mSet$analSet$fc$sig.mat
+                     if(is.null(res)){
+                       res <<- data.table::data.table("No significant hits found")
+                       mSet$analSet$fc <- NULL
+                     }
+                     # set buttons to proper thingy
+                     # render results table for UI
                      output$fc_tab <-DT::renderDataTable({
                        MetaboShiny::metshiTable(content = res)
                      })

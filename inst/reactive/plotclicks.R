@@ -30,7 +30,6 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
     }, silent = F)
   }
   
-  dt = data.table::fread("/Users/jwolthuis/MetaboShiny/saves/admin/CATS_CENTROIDED_3PPM/CATS_CENTROIDED_3PPM.csv")
   curr_tab <- input$statistics
   
   if(curr_tab %in% c("tt", 

@@ -16,6 +16,13 @@ shiny::observe({
       
       try({
         switch(statsmanager$calculate,
+               vennrich = {
+                 if("storage" %not in% names(mSet)){
+                   mSet$storage <- list()
+                 }
+                 # TODO: use this in venn diagram creation
+                 mSet <- MetaboShiny::store.mSet(mSet)
+               },
                pattern = {
                  # pearson kendall spearman
                  NULL
@@ -25,7 +32,7 @@ shiny::observe({
                },
                meba = {
                  shiny::withProgress({
-                   mSet <-  MetaboAnalystR::performMB(mSet, 10) # perform MEBA analysis
+                   mSet <- MetaboAnalystR::performMB(mSet, 10) # perform MEBA analysis
                  })
                },
                asca = {
@@ -56,16 +63,21 @@ shiny::observe({
                fc = {
                  withProgress({
                    if(mSet$dataSet$paired){
-                     mSet <-  MetaboAnalystR::FC.Anal.paired(mSet,
+                     mSet <- MetaboAnalystR::FC.Anal.paired(mSet,
                                                              1.5, # TODO: make this threshold user defined
                                                              1)  
                    }else{
-                     mSet <-  MetaboAnalystR::FC.Anal.unpaired(mSet,
+                     mSet <- MetaboAnalystR::FC.Anal.unpaired(mSet,
                                                                1.5, # TODO: make this threshold user defined
                                                                1) 
                    }
-                   rownames(mSet$analSet$fc$sig.mat) <<- gsub(rownames(mSet$analSet$fc$sig.mat), pattern = "^X", replacement = "")
-                   rownames(mSet$analSet$fc$sig.mat) <<- gsub(rownames(mSet$analSet$fc$sig.mat), pattern = "(\\d+\\.\\d+)(\\.+)", replacement = "\\1/")
+                   if(!is.null(mSet$analSet$fc$sig.mat)){
+                     rownames(mSet$analSet$fc$sig.mat) <- gsub(rownames(mSet$analSet$fc$sig.mat), 
+                                                               pattern = "^X",
+                                                               replacement = "")
+                   }else{
+                     mSet$analSet$fc$sig.mat <- data.frame()
+                   }
                  })
                },
                aov = {

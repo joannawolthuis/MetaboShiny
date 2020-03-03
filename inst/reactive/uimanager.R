@@ -18,6 +18,7 @@ shiny::observe({
                      # update select input bars with current variable and covariables defined in excel
                      if(is.null(mSet)){
                        interface$mode <- NULL
+                       #shinyjs::hide(selector = "div.panel[value^=collapse_]")
                      }else{
                        if(is.null(mSet$dataSet$exp.type)){
                          mSet$dataSet$exp.type <- "1f" # one factor, binary class
@@ -107,12 +108,11 @@ shiny::observe({
                      }) 
                    },
                    vennrich = {
-                     shiny::updateSelectInput(session,
-                                              "mummi_anal", 
-                                              choices = as.character(lcl$vectors$analyses))
-                     shiny::updateSelectInput(session,
-                                              "heattable", 
-                                              choices = as.character(lcl$vectors$analyses))
+                     lapply(c("mummi_anal", "heattable"), function(inputID){
+                       shiny::updateSelectInput(session,
+                                                inputID, 
+                                                choices = as.character(lcl$vectors$analyses))  
+                     })
                    },
                    pattern = {
                      output$jqui_ui <- shiny::renderUI(suppressWarnings(shinyjqui::orderInput(inputId = 'pattern_seq',

@@ -588,7 +588,11 @@ ggPlotFC <- function(mSet, cf, n=20,
   profile$Peak <- c(1:nrow(profile))
   # ---------------------------
   p <- ggplot2::ggplot(data=profile) +
-    ggplot2::geom_point(ggplot2::aes(x=Peak, y=log2fc, text=log2fc, color=log2fc, key=`m/z`, text=`m/z`)) +
+    ggplot2::geom_point(ggplot2::aes(x=Peak, 
+                                     y=log2fc, 
+                                     color=log2fc, 
+                                     key=`m/z`,
+                                     text=`m/z`)) +
     ggplot2::geom_abline(ggplot2::aes(intercept = 0, slope = 0)) +
     plot.theme(base_size = 15) +
     ggplot2::theme(legend.position="none",
