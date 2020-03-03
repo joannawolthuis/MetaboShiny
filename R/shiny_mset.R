@@ -19,8 +19,9 @@ is.ordered.mSet <- function(mSet) {
     "t" = {
       all(
         mSet$dataSet$exp.fac == mSet$dataSet$covars$individual &&
-          mSet$dataSet$time.fac == mSet$dataSet$covars[, mSet$dataSet$facA.lbl, with =
-                                                         F] && mSet$dataSet$facA == mSet$dataSet$time.fac
+        mSet$dataSet$time.fac == mSet$dataSet$covars[, mSet$dataSet$facA.lbl.orig, with = 
+                                                       F][[1]] && 
+        mSet$dataSet$facA == mSet$dataSet$time.fac
       )
     },
     "t1f" = {
@@ -39,7 +40,8 @@ is.ordered.mSet <- function(mSet) {
       )
     }
   )
-  return(covarsMatch & expVarsMatch)
+  isOK <- covarsMatch & expVarsMatch
+  return(isOK)
 }
 
 name.mSet <- function(mSet) {
@@ -206,11 +208,11 @@ change.mSet <-
           return(NULL)
         }
         mSet$dataSet$exp.lbl <- "sample"
-        mSet$dataSet$time.fac <-
-          as.factor(mSet$dataSet$covars[, time_var, with = F][[1]])
+        mSet$dataSet$time.fac <- as.factor(mSet$dataSet$covars[, time_var, with = F][[1]])
         mSet$dataSet$exp.type <- "t"
         mSet$dataSet$facA <- mSet$dataSet$time.fac
         mSet$dataSet$facA.lbl <- "Time"
+        mSet$dataSet$facA.lbl.orig <- time_var
         mSet$dataSet$paired <- TRUE
         # - - -
         mSet
@@ -402,9 +404,9 @@ pair.mSet <- function(mSet) {
     keep.indiv = downsampled$x
     keep.samp <-
       as.character(unlist(keep.samp[which(names(keep.samp) %in% keep.indiv)]))
+  }else{
+    keep.samp <- as.character(unlist(keep.samp))
   }
-  
-  #final.tbl = mSet$dataSet$covars[sample %in% keep.samp]
   
   if (length(keep.samp) > 2) {
     mSet <- MetaboShiny::subset.mSet(mSet,

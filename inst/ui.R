@@ -1313,7 +1313,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                    shiny::div(class="spinnylocation1",
                                               shiny::div(class="plus", img(class="imagetop", 
                                                                            src="gemmy_rainbow.png", 
-                                                                           width="100px", height="100px"))
+                                                                           width="90px", height="90px"))
                                    ),
                                    div(class="scallop-down"),
                                    shiny::div(class="line")
