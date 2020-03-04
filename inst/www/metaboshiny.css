@@ -337,6 +337,11 @@ img {
 }
 
 
+.row {
+  margin-right:-7px;
+  margin-left:-7px;
+}
+
 /* funky code that works */
 
 .fadebox {

@@ -209,9 +209,6 @@ shiny::observe({
                    }, 
                    power = {
                      NULL
-                   },
-                   wordcloud = {
-                     NULL
                    }
             )
           })

@@ -2,14 +2,22 @@ output$match_tab <- DT::renderDataTable({
   # don't show some columns but keep them in the original table, so they can be used
   # for showing molecule descriptions, structure
   empty = data.table::data.table(" " = rep("", nrow(shown_matches$forward_unique)))
-  MetaboShiny::metshiTable(content = cbind(shown_matches$forward_unique, empty),
-              options = list(fixedColumns = list(
+  
+  content = cbind(shown_matches$forward_unique, 
+                  empty)
+  
+  targets = unique(c(which(colnames(content) %in% gbl$vectors$hide_match_cols),
+                     which(colnames(content) == "isocat")))
+  
+  MetaboShiny::metshiTable(
+              content = content,
+              options = list(
+                fixedColumns = list(
                 rightColumns = 9,
-                heightMatch = 'none'
-              ), columnDefs = list(list(visible=FALSE, 
-                                                     targets=c(which(colnames(shown_matches$forward_unique) %in% gbl$vectors$hide_match_cols),
-                                                               which(colnames(shown_matches$forward_unique) == "isocat"))))
-              ))
+                heightMatch = 'none'),
+                columnDefs = list(list(visible = FALSE,
+                                       targets = targets - 1))),
+              rownames = F)
 })
 
 output$enrich_tab <-DT::renderDataTable({

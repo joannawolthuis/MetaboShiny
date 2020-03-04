@@ -4,17 +4,16 @@ observeEvent(input$wordcloud_topWords, {
 })
 
 observeEvent(input$wordcloud_filter, {
-  if("wordcloud_orig" %in% names(lcl$tables)){
+  if("wordcloud_orig" %in% names(lcl$tables) & length(input$wordcloud_filter) > 0){
     # get all the lists of filter words that the user wants, and join them together into a big list
     filterList = c()
     try({
       filterList <- unlist(gbl$vectors$wordcloud$filters[input$wordcloud_filter])
     }, silent = T)
+    
     # remove single character words
-    # start= ^ , any character = . , end = $"
     singleChar <- grep(lcl$tables$wordcloud_orig$word, pattern = "^.{1,3}$", value = T) 
-    # remove verbs ending on -es and -ed (differentiated, etc.)
-    #verbs <- grep(lcl$tables$wordcloud_orig$word, pattern = ".*[ed|es]$", value = T) 
+    
     # remove numbers (p-values and the like)
     suppressWarnings({
       numericals = lcl$tables$wordcloud_orig$word[which(!is.na(as.numeric(
@@ -35,7 +34,7 @@ observeEvent(input$wordcloud_filter, {
     without_stopwords <- data.table::as.data.table(MetaboShiny::getFilteredWordFreqency(lcl$tables$wordcloud_orig, filterList))
     without_stopwords <- without_stopwords[without_stopwords$word != ""]
     lcl$tables$wordcloud_filt <<- without_stopwords
-    plotmanager$make <- "wordcloud"    
+    plotmanager$make <- "wordcloud"  
   }
 })
 
@@ -55,7 +54,7 @@ observeEvent(input$wordcloud_make_filter, {
     filterList <- topWords[order(topWords$n, decreasing = TRUE)[1:input$wordcloud_filterTopN],]
     data.table::fwrite(x = filterList,
                        file = file.path(filterFolder, paste0(input$wordcloud_filterTerm, ".csv")))    
-    plotmanager$make <- "general"
+    uimanager$refresh <- "wordcloud"
   })
 })
 

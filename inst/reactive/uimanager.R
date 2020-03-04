@@ -88,7 +88,11 @@ shiny::observe({
                        itemNames = gsub(pattern = "\\.csv", replacement = "", x = basename(filter_files))
                        names(items) <- itemNames
                        gbl$vectors$wordcloud$filters <<- append(gbl$vectors$wordcloud$filters, items)
-                       shiny::updateSelectInput(session, inputId = "wordcloud_filter", choices = c("stopwords","metabolomics","default", itemNames))
+                       shiny::updateTabsetPanel(session, "wordclouds", selected = "plot")
+                       shiny::updateSelectInput(session, 
+                                                inputId = "wordcloud_filter", 
+                                                #selected="stopwords",
+                                                choices = c("stopwords","metabolomics","default", itemNames))
                      }
                    },
                    statspicker = {
@@ -183,9 +187,6 @@ shiny::observe({
                        pairs = paste(pairs[,1], "vs.", pairs[,2])
                        shiny::updateSelectInput(session, inputId = "power_comps", choices = pairs, selected = pairs[1])
                      }
-                   },
-                   wordcloud = {
-                     NULL
                    }
             )
           })

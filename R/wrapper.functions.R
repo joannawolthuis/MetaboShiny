@@ -363,7 +363,7 @@ combatCSV <- function(mSet){
   csv_edata
 }
 
-metshiTable <- function(content, options=NULL){
+metshiTable <- function(content, options=NULL, rownames= T){
   opts = list(deferRender = TRUE, 
               scrollY = 200,
               searching = TRUE,
@@ -390,7 +390,8 @@ metshiTable <- function(content, options=NULL){
                 autoHideNavigation = T,
                 class = 'compact', height = "500px",
                 extensions = c("FixedColumns", "Scroller", "Buttons"), 
-                options = opts
+                options = opts,
+                rownames = rownames
   )
 }
 

@@ -1101,7 +1101,7 @@ omit_unknown = yes')
         statsmanager$calculate <- an
         tablemanager$make <- an
         plotmanager$make <- an
-        uimanager$make <- an
+        uimanager$refresh <- an
       })
     })    
   })
