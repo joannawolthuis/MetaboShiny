@@ -407,7 +407,8 @@ shiny::observe({
                     plotlyOutput(paste0(plotName, "_interactive"), height = "100%")),
                     conditionalPanel(
                       condition = 'input.ggplotly == false',
-                      plotOutput(plotName, height = "100%")
+                      list(downloadButton(paste0("download_", plotName),label = icon("save")),
+                        plotOutput(plotName, height = session$clientData[[empty]]/if(isSquare) 1.4 else 2))
                     ))
              })
             
@@ -434,13 +435,19 @@ shiny::observe({
                                                  input$ggplot_sum_stats,input$col_var,input$txt_var),
                                                collapse = "_"))
                    id
-                 },cache = "session", sizePolicy = list(height = 
-                                                          session$clientData[[empty]]/if(isSquare) 1 else 2))
+                 },cache = "session")
                  
                  output[[paste0(plotName, "_interactive")]] <- plotly::renderPlotly({
                    plotly::ggplotly(plot, tooltip = "text", height = 
-                                      session$clientData[[empty]]/if(isSquare) 1 else 2)
+                                      session$clientData[[empty]]/if(isSquare) 1.4 else 2)
                  })
+                 
+                 output[[paste0("download_", plotName)]] <- downloadHandler(
+                   filename = function(){paste0(mSet$dataSet$cls.name, plotName,'.png')},
+                   content = function(file){
+                     ggplot2::ggsave(file,plot=plot)
+                   })
+                 
                  }
                })
             # ====

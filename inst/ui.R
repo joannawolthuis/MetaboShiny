@@ -1089,7 +1089,16 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                    shiny::tabPanel(value="plot aesthetics", title=shinyBS::tipify(shiny::icon("paint-brush"), 
                                                                                                                                                                                   title="change plot style and colours",
                                                                                                                                                                                   trigger = "hover",options=list(container="body")),
-                                                                                                                                   shiny::h2("Summary plot style"),br(),
+                                                                                                                                   shiny::h2("Plot style"),br(),
+                                                                                                                                   helpText("Use ggplot or plotly for plots? (ggplot -> faster, but no interactivity)"),
+                                                                                                                                   shinyWidgets::switchInput(
+                                                                                                                                     inputId = "ggplotly",
+                                                                                                                                     onLabel = "plotly",
+                                                                                                                                     offLabel = "ggplot",
+                                                                                                                                     offStatus = "warning", 
+                                                                                                                                     onStatus = "info",
+                                                                                                                                     value = T
+                                                                                                                                   ),
                                                                                                                                    shiny::selectizeInput("ggplot_sum_style", multiple=T, label = "Style(s)", choices = list("Box"="box",
                                                                                                                                                                                                                             "Violin"="violin",
                                                                                                                                                                                                                             "Beeswarm"="beeswarm",
@@ -1202,15 +1211,6 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                         offLabel = "keep",
                                                                                                         offStatus = "success", 
                                                                                                         onStatus = "danger",
-                                                                                                        value = T
-                                                                                                      ),
-                                                                                                      helpText("Use ggplot or plotly for plots? (ggplot -> faster, but no interactivity)"),
-                                                                                                      shinyWidgets::switchInput(
-                                                                                                        inputId = "ggplotly",
-                                                                                                        onLabel = "plotly",
-                                                                                                        offLabel = "ggplot",
-                                                                                                        offStatus = "warning", 
-                                                                                                        onStatus = "info",
                                                                                                         value = T
                                                                                                       )
                                                                                       )
