@@ -17,6 +17,7 @@ Imports:
   BiocManager, 
   mice,
   shinybusy,
+  svglite,
   shiny, 
   shinydashboard, 
   httr, 

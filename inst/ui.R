@@ -1099,6 +1099,15 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                      onStatus = "info",
                                                                                                                                      value = T
                                                                                                                                    ),
+                                                                                                                                   helpText("Export plots as .png or .svg?"),
+                                                                                                                                   shinyWidgets::switchInput(
+                                                                                                                                     inputId = "plotsvg",
+                                                                                                                                     onLabel = "svg",
+                                                                                                                                     offLabel = "png",
+                                                                                                                                     offStatus = "info", 
+                                                                                                                                     onStatus = "warning",
+                                                                                                                                     value = T
+                                                                                                                                   ),
                                                                                                                                    shiny::selectizeInput("ggplot_sum_style", multiple=T, label = "Style(s)", choices = list("Box"="box",
                                                                                                                                                                                                                             "Violin"="violin",
                                                                                                                                                                                                                             "Beeswarm"="beeswarm",

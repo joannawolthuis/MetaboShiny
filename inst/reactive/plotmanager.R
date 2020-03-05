@@ -394,7 +394,7 @@ shiny::observe({
                             list(wordbar = p)
                           }
           )
-          mapply(function(plot, plotName){
+          mapply(function(myplot, plotName){
             
             isSquare <- grepl("pca|plsda|tsne|roc", plotName) & !grepl("scree|cv|perm", plotName)
             # === WRAPPER ===
@@ -407,8 +407,11 @@ shiny::observe({
                     plotlyOutput(paste0(plotName, "_interactive"), height = "100%")),
                     conditionalPanel(
                       condition = 'input.ggplotly == false',
-                      list(downloadButton(paste0("download_", plotName),label = icon("save")),
-                        plotOutput(plotName, height = session$clientData[[empty]]/if(isSquare) 1.4 else 2))
+                      list(fluidRow(align="right",
+                                    downloadButton(outputId = paste0("download_", plotName),
+                                                   label = icon("Click to download"))),
+                        plotOutput(plotName, height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)
+                      )
                     ))
              })
             
@@ -417,7 +420,7 @@ shiny::observe({
              observe({
                if(!is.null(session$clientData[[empty]])){
                  output[[plotName]] <- shiny::renderCachedPlot({
-                   plot
+                   myplot
                  }, cacheKeyExpr = {
                    # if summary plot: mz + cls.name + multigroup y/n combination
                    id = if(grepl("summary", plotName)){
@@ -437,17 +440,27 @@ shiny::observe({
                    id
                  },cache = "session")
                  
+                 plotFn <- paste0(c(gsub(":|,:", "_", mSet$dataSet$cls.name), 
+                                    plotName), collapse="_")
+                 
+                 print(plotFn)
+                 
                  output[[paste0(plotName, "_interactive")]] <- plotly::renderPlotly({
-                   plotly::ggplotly(plot, tooltip = "text", height = 
-                                      session$clientData[[empty]]/if(isSquare) 1.4 else 2)
+                   plotly::ggplotly(myplot, tooltip = "text", height = 
+                                      session$clientData[[empty]]/if(isSquare) 1.4 else 2) %>%
+                     config(
+                       toImageButtonOptions = list(
+                         format = if(input$plotsvg) "svg" else "png",
+                         filename = paste0(plotFn,"_interactive")
+                       ))
                  })
                  
                  output[[paste0("download_", plotName)]] <- downloadHandler(
-                   filename = function(){paste0(mSet$dataSet$cls.name, plotName,'.png')},
+                   filename = function() paste0(plotFn, if(input$plotsvg) ".svg" else ".png"),
                    content = function(file){
-                     ggplot2::ggsave(file,plot=plot)
-                   })
-                 
+                     ggplot2::ggsave(file, plot = myplot)
+                     }
+                   )
                  }
                })
             # ====
