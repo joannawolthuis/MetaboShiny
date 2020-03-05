@@ -18,7 +18,7 @@ shiny::observe({
                      # update select input bars with current variable and covariables defined in excel
                      if(is.null(mSet)){
                        interface$mode <- NULL
-                       #shinyjs::hide(selector = "div.panel[value^=collapse_]")
+                       
                      }else{
                        if(is.null(mSet$dataSet$exp.type)){
                          mSet$dataSet$exp.type <- "1f" # one factor, binary class
