@@ -41,7 +41,7 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                has.importance = if("varImp" %in% names(curr.mdl)) TRUE else FALSE
                                can.classify & has.importance
                              })],
-                             max.cols = 20,
+                             max.cols = 12,
                              images = list(list(name = 'load_icon', path = 'www/cute.png', dimensions = c(100, 100)),
                                            list(name = 'empty', path = 'www/empty.png', dimensions = c("100%", 1)),
                                            list(name = 'empty2', path = 'www/empty.png', dimensions = c("100%", 1)),

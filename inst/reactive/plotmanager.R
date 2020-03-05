@@ -29,8 +29,10 @@ shiny::observe({
                                                                                     font = lcl$aes$font,
                                                                                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                               
-                              list(var1=varNormPlots$tl, var2=varNormPlots$bl, var3=varNormPlots$tr, var4=varNormPlots$br,
-                                   samp1=sampNormPlots$tl, samp2=sampNormPlots$bl, samp3=sampNormPlots$tr, samp4=sampNormPlots$br)
+                              list(var1=varNormPlots$tl, var2=varNormPlots$bl,
+                                   var3=varNormPlots$tr, var4=varNormPlots$br,
+                                   samp1=sampNormPlots$tl, samp2=sampNormPlots$bl, 
+                                   samp3=sampNormPlots$tr, samp4=sampNormPlots$br)
                               
                             }},
                           venn = {

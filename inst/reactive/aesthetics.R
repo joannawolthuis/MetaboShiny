@@ -1,48 +1,43 @@
-# triggers when a new color spectrum is chosen
-shiny::observeEvent(input$color_ramp,{
-  # render preview plot
-  output$ramp_plot <- plotly::renderPlotly({
-
-    # change the current spectrum in global
-    lcl$aes$spectrum <<- input$color_ramp
-    # change the current spectrum in user options file
-    MetaboShiny::setOption(lcl$paths$opt.loc, 
-                           key="gspec", 
-                           value=input$color_ramp)
-
-    # create plot background (no grid, no lines, just color ;) )
-    ax <- list(
-      title = "",
-      zeroline = FALSE,
-      showline = FALSE,
-      showticklabels = FALSE,
-      showgrid = FALSE,
-      titlefont = list(size = 20)
-    )
-
-    # re-render preview plot with the new options (general heatmap using R standard volcano dataset)
-    plotly::plot_ly(z = volcano,
-                    colors = gbl$functions$color.functions[[lcl$aes$spectrum]](100),
-                    type = "heatmap",
-                    showscale=FALSE)  %>%
-      layout(xaxis = ax, yaxis = ax)
-  })
+output$ramp_plot <- plotly::renderPlotly({
+  # change the current spectrum in global
+  lcl$aes$spectrum <- input$color_ramp
+  # change the current spectrum in user options file
+  MetaboShiny::setOption(lcl$paths$opt.loc, 
+                         key="gspec", 
+                         value=input$color_ramp)
+  
+  # create plot background (no grid, no lines, just color ;) )
+  ax <- list(
+    title = "",
+    zeroline = FALSE,
+    showline = FALSE,
+    showticklabels = FALSE,
+    showgrid = FALSE,
+    titlefont = list(size = 20)
+  )
+  
+  # re-render preview plot with the new options (general heatmap using R standard volcano dataset)
+  plotly::plot_ly(z = volcano,
+                  colors = gbl$functions$color.functions[[lcl$aes$spectrum]](100),
+                  type = "heatmap",
+                  showscale=FALSE)  %>%
+    layout(xaxis = ax, yaxis = ax)
 })
 
-# triggers when new plot theme is picked
-shiny::observeEvent(input$ggplot_theme,{
 
-  # change default plot theme in user settings
-  MetaboShiny::setOption(lcl$paths$opt.loc, key="gtheme", value=input$ggplot_theme)
-  lcl$aes$theme <<- input$ggplot_theme
-
-  # change preview plot (uses mtcars default R dataset)
-  output$ggplot_theme_example <- shiny::renderPlot({
-    p <- ggplot(mtcars) + geom_boxplot(aes(x = wt, y = mpg,
-                                           colour = factor(gear)))
-    p + gbl$functions$plot.themes[[lcl$aes$theme]]()
+# change preview plot (uses mtcars default R dataset)
+  output$ggplot_theme_example <- plotly::renderPlotly({
+    MetaboShiny::setOption(lcl$paths$opt.loc, key="gtheme", value=input$ggplot_theme)
+    lcl$aes$theme <<- input$ggplot_theme
+    
+    p <- ggplot2::ggplot(mtcars) + 
+      ggplot2::geom_boxplot(aes(x = wt, y = mpg,
+                       colour = factor(gear))) +
+      gbl$functions$plot.themes[[lcl$aes$theme]]()
+    
+    plotly::ggplotly(p)
   })
-})
+
 
 # triggers when changes in interface aesthetics are applied
 shiny::observeEvent(input$change_css, {

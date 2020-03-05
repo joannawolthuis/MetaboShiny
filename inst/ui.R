@@ -1129,7 +1129,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                                       "Grid, white bg, gray axes"="light",
                                                                                                                                                                                                       "Line drawing"="line"),
                                                                                                                                                       selected = "min",width = "80%"),
-                                                                                                                                   shiny::plotOutput("ggplot_theme_example",inline = F, width="100%"),
+                                                                                                                                   plotly::plotlyOutput("ggplot_theme_example",inline = F),
                                                                                                                                    shiny::h2("Continuous data"),
                                                                                                                                    # the below options need to match with the corresponding function storage in 'global'. if you want to add more it'll go here!
                                                                                                                                    shiny::selectInput("color_ramp", label = "Color scheme", choices = list("RAINBOW!"="Rainbow",
@@ -1171,9 +1171,9 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                                            "Pastel2", "Set1", "Set2", "Set3"),selected = "rainbow",width = "80%"
                                                                                                                                    ),
                                                                                                                                    # preview plot
-                                                                                                                                   shiny::plotOutput("ramp_plot_wrap"),
+                                                                                                                                   plotly::plotlyOutput("ramp_plot"),
                                                                                                                                    shiny::h2("Discrete data"),
-                                                                                                                                   shiny::plotOutput("colorPickers")
+                                                                                                                                   shiny::uiOutput("colorPickers")
                                                                                                                                    
                                                                                                                    ),
                                                                                                                    shiny::tabPanel(value="metadata",

@@ -366,33 +366,6 @@ omit_unknown = yes')
     shiny::removeModal()
     
   })
-  
-  
-  
-  # ================================== LOGIN =====================================
-  
-  output$manual_search <- shiny::renderUI({
-    if(search_button$on){
-      shinyBS::tipify(shiny::tags$button(
-        id = "search_mz",
-        class = "btn btn-default action-button",
-        img(src = "detective.png",
-            height = "80px"),
-        style = "color: #333;
-                 background-color: #fff0;
-                 border-color: #fff0;"
-      ),
-      title = "click me to find matches for this m/z!", 
-      trigger="hover")
-    }else{
-      shiny::fluidRow(align="center", 
-                      shinyBS::tipify(img(src = "pawprint.png",
-                                          height = "50px"),
-                                      title="selected m/z will be searched automatically"),
-                      shiny::h2("pre-matched"))
-    }
-  })
-  
   # ================================= DEFAULTS ===================================
   
   # set progress bar style to 'old' (otherwise it's not movable with CSS)
@@ -1058,7 +1031,6 @@ omit_unknown = yes')
   })
   
   # triggered when user enters the statistics tab
-  
   shinyjs::runjs('$("#mainPanel").resizable({
                                               handles: "e",
                                               resize: function() {
