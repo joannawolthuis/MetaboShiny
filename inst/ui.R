@@ -2,12 +2,13 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                  ECharts2Shiny::loadEChartsLibrary(),
                  shinyalert::useShinyalert(), 
                  shinyjs::useShinyjs(),
+                 shinyjqui::includeJqueryUI(),
+                 tags$head(tags$script(src="sparkle.js"),
+                           tags$script(src="spinnytitle.js")),
                  shinyjs::extendShinyjs(text = "shinyjs.closeWindow = function() { window.close(); }", 
                                         functions = c("closeWindow")),
                  shinybusy::add_busy_spinner(spin = "atom", position = "full-page",height = "200px", width="200px", timeout = 1000),
                  shiny::navbarPage(windowTitle='MetaboShiny',
-                                   header=shiny::tagList(shiny::tags$script(src="spinnytitle.js"),
-                                                         shiny::tags$script(src="sparkle.js")),
                                    # use this for title
                                    # https://codepen.io/maxspeicher/pen/zrVKLE
                                    title=shiny::div(shiny::h1("MetaboShiny"),
@@ -193,8 +194,9 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                    )),
                                    # this tab is the main analysis tab. all tabs for all analyses are listed here, but the visibility is changed depending on the current experiment
                                    shiny::tabPanel("analyse",  icon = shiny::icon("bar-chart",class = "outlined"), value = "analysis",
-                                                   sidebarLayout(position="right",
-                                                                 mainPanel = mainPanel(width = 8,
+                                                   div(id="panelContainer",sidebarLayout(position="right",
+                                                                 mainPanel = #shinyjqui::jqui_resizable(
+                                                                   mainPanel(width = 9, id="mainPanel",
                                                                                        shiny::fluidRow(align="center",
                                                                                                        shiny::imageOutput("empty3",width="100%",height="1px"),
                                                                                                        shinyBS::bsCollapse(id = "collapse_summary",
@@ -782,7 +784,8 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                  ),
                                                                  # this is the sidebar that shows in the analysis tab. contains a lot of settings on the current variable of interest, plot themes and colours, and venn diagrams.
                                                                  sidebarPanel =
-                                                                   sidebarPanel(align="center",width = 4,
+                                                                   #shinyjqui::jqui_resizable(
+                                                                     sidebarPanel(align="center",width = 3,id="sidePanel",
                                                                                 shiny::fluidRow(align="center",
                                                                                                 shiny::tabsetPanel(id = "anal_sidebar", selected="switch/subset",
                                                                                                                    shiny::tabPanel(title=shinyBS::tipify(shiny::icon("file"), 
@@ -886,7 +889,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                                                                                          ))
                                                                                                                                                                                                                                         ),
                                                                                                                                                                                                                                         conditionalPanel('input.wordbar == false', 
-                                                                                                                                                                                                                                                         shiny::uiOutput("wordbar")
+                                                                                                                                                                                                                                                         shiny::uiOutput("wordbar_wrap")
                                                                                                                                                                                                                                         ),
                                                                                                                                                                                                                                         shinyWidgets::switchInput(
                                                                                                                                                                                                                                           inputId = "wordbar",value = TRUE,
@@ -1166,7 +1169,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                    shinyFiles::shinyFilesButton('metadata_new', 'upload', 'Select metadata', FALSE),
                                                                                                                                    shinyWidgets::circleButton("metadata_new_add", icon = shiny::icon("arrow-right"))
                                                                                                                    ))))
-                                                   )),
+                                                   ))),
                                    
                                    # report tab
                                    #TODO: update to most recent version using orca and re-enable

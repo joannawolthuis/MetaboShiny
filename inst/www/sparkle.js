@@ -1,5 +1,5 @@
 (function($, window, document) {
-
+  
   const defaults = {
     fill: "#fff",
     stroke: "#000",
@@ -123,6 +123,7 @@
     pause: 750,
     size: 10
   });
+  
 
   /*window.setTimeout(function() {
     $("#sparkley").sparkle("destroy");

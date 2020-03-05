@@ -293,7 +293,7 @@ shiny::observeEvent(input$score_iso, {
     score_table <- MetaboShiny::score.isos(table = shown_matches$forward_unique, 
                                             mSet = mSet, 
                                             ppm = as.numeric(mSet$ppm),
-                                            patdb = lcl$paths$patdb, 
+                                            dbdir = lcl$paths$db_dir, 
                                             method = input$iso_score_method, 
                                             inshiny = T, intprec = intprec)
     })

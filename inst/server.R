@@ -1058,6 +1058,14 @@ omit_unknown = yes')
   })
   
   # triggered when user enters the statistics tab
+  
+  shinyjs::runjs('$("#mainPanel").resizable({
+                                              handles: "e",
+                                              resize: function() {
+                                                $("#sidePanel").outerWidth($("#panelContainer").innerWidth() - $("#mainPanel").outerWidth());
+                                              }
+                                            });')
+  
   observeEvent(input$statistics, { 
     if(!is.null(mSet)){
       if(!is.null(input$statistics)){
@@ -1112,7 +1120,7 @@ omit_unknown = yes')
   for(fp in list.files("reactive", full.names = T)){
     source(fp, local = T)
   }  
-  
+                         
   # ==== ON EXIT ====
   
   observeEvent(input$quit_metshi, {

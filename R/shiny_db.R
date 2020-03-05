@@ -63,7 +63,7 @@ get_prematches <- function(who = NA,
   return(res)
 }
 
-score.isos <- function(table, mSet, patdb, method="mscore", inshiny=TRUE, session=0, intprec, ppm){
+score.isos <- function(table, mSet, method="mscore", inshiny=TRUE, session=0, intprec, ppm, dbdir){
   
   shiny::showNotification("Scoring isotopes...")
   require(InterpretMSSpectrum)
@@ -80,7 +80,7 @@ score.isos <- function(table, mSet, patdb, method="mscore", inshiny=TRUE, sessio
     smi=mini.table$structure[i]
     add=mini.table$adduct[i]
     form=mini.table$baseformula[i]
-    revres = as.data.table(MetaDBparse::searchRev(smi, "extended", lcl$paths$db_dir))
+    revres = as.data.table(MetaDBparse::searchRev(smi, "extended", dbdir))
     isotopes_to_find = revres[adduct == add]
     isotopes_to_find$form = c(form)
     isotopes_to_find
@@ -94,13 +94,13 @@ score.isos <- function(table, mSet, patdb, method="mscore", inshiny=TRUE, sessio
     formula = unique(l$fullformula)
     
     per_mz_cols = lapply(mzs, function(mz){
-      matches = which(as.numeric(colnames(mSet$dataSet$orig)) %between% MetaboShiny::ppm_range(mz, ppm))
+      matches = which(as.numeric(colnames(mSet$dataSet$norm)) %between% MetaboShiny::ppm_range(mz, ppm))
       if(length(matches) > 0){
-        int = as.data.table(mSet$dataSet$orig)[,..matches]
+        int = as.data.table(mSet$dataSet$norm)[,..matches]
         int[is.na(int)] <- 0
         int = rowMeans(int)
       }else{
-        int = rep(0, nrow(mSet$dataSet$orig))
+        int = rep(0, nrow(mSet$dataSet$norm))
       }
       l = list(values = int)
       names(l) = mz

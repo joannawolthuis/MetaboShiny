@@ -124,6 +124,7 @@ app.font.css <- function(font.h1 = "Press Start 2P",
   $font.h1.w
   font-size: $size.h1;
   line-height: 0.5;
+  margin-top: 8px;
   z-index:99998 !important;
   }
 

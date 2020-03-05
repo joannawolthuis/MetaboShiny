@@ -1,13 +1,3 @@
-#' @export
-set_shiny_plot_height = function(session, output_width_name, isSquare){
-  
-  width = session$clientData[[output_width_name]] 
-  
-  # Do something with the width
-  width/if(isSquare) 1 else 2
-}
-
-
 calcHeatMap <- function(mSet, signif.only, 
                         source.anal, 
                         top.hits, 

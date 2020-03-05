@@ -725,7 +725,7 @@ ggPlotROC <- function(data,
   
   ncomp = length(unique(means.per.comp$comparison))
   if(ncomp > 2){
-    cols = cf(ncomp)
+    cols = cf(ncomp)+1
     class_type = "m"
     try({
       shiny::showNotification("Calculating AUCs per comparison...")
@@ -739,7 +739,6 @@ ggPlotROC <- function(data,
     class_type = "b"
   }
   
-   
   p <- ggplot(perf.long, aes(FPR,TPR,
                              key = attempt,
                              text = attempt)) +
@@ -766,17 +765,7 @@ ggPlotROC <- function(data,
       aes(FPR, TPR, 
           group = comparison), 
       fun.y=mean, geom="line", 
-      cex = 2.3,color="black")+
-    ggplot2::stat_summary_bin(#alpha=.6,
-      aes(FPR, TPR, 
-          color=comparison, 
-          group=comparison), 
-      fun.y=mean, geom="line", 
-      cex = 1.2) +
-    ggplot2::stat_summary_bin(aes(FPR, TPR), 
-                              fun.y=mean, 
-                              color="black", 
-                              geom="line", cex = 2) +
+      cex = 2.3,color="black") +
     ggplot2::scale_color_manual(values = cols) +
     ggplot2::theme(legend.position= if(class_type == "b") "none" else "right",
                    axis.text=ggplot2::element_text(size=font$ax.num.size),
