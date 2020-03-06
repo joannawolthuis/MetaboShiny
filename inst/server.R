@@ -31,16 +31,16 @@ function(input, output, session) {
   showtext::showtext_auto(enable = T)
   
   lcl = list(
-    proj_name ="",
-    last_mset="",
+    proj_name = "",
+    last_mset = "",
     hasChanged = FALSE,
     load_ui = FALSE,
     last_dir = c(),
     lists = list(),
     prev_mz = "",
     prev_struct = "",
-    tables=list(last_matches=data.table::data.table(query_mz = "none"),
-                prev_pie=data.table::data.table()),
+    tables = list(last_matches = data.table::data.table(query_mz = "none"),
+                prev_pie = data.table::data.table()),
     functions = list(),
     aes = list(font = list(),
                mycols = c(),

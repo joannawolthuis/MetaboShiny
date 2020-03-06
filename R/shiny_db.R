@@ -94,7 +94,7 @@ score.isos <- function(table, mSet, method="mscore", inshiny=TRUE, session=0, in
     formula = unique(l$fullformula)
     
     per_mz_cols = lapply(mzs, function(mz){
-      matches = which(as.numeric(colnames(mSet$dataSet$norm)) %between% MetaboShiny::ppm_range(mz, ppm))
+      matches = which(as.numeric(gsub("-","",colnames(mSet$dataSet$norm))) %between% MetaboShiny::ppm_range(mz, ppm))
       if(length(matches) > 0){
         int = as.data.table(mSet$dataSet$norm)[,..matches]
         int[is.na(int)] <- 0
@@ -134,7 +134,7 @@ score.isos <- function(table, mSet, method="mscore", inshiny=TRUE, session=0, in
                score = InterpretMSSpectrum::mScore(obs = obs,
                                                    the = theor,
                                                    dppm = ppm,
-                                                   int_prec = input$int_prec/100)
+                                                   int_prec = intprec/100)
                score
              },
              sirius={NULL},

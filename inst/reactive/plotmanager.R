@@ -445,8 +445,6 @@ shiny::observe({
                  plotFn <- paste0(c(gsub(":|,:", "_", mSet$dataSet$cls.name), 
                                     plotName), collapse="_")
                  
-                 print(plotFn)
-                 
                  output[[paste0(plotName, "_interactive")]] <- plotly::renderPlotly({
                    plotly::ggplotly(myplot, tooltip = "text", height = 
                                       session$clientData[[empty]]/if(isSquare) 1.4 else 2) %>%

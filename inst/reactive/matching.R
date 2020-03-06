@@ -285,17 +285,16 @@ shiny::observeEvent(input$score_iso, {
     shown_matches$forward_unique <<- shown_matches$forward_unique[,-"score"]
   }
 
-  intprec = as.numeric(input$int_prec)/100.00
-
   # get table including isotope scores
   # as input, takes user method for doing this scoring
   shiny::withProgress({
     score_table <- MetaboShiny::score.isos(table = shown_matches$forward_unique, 
-                                            mSet = mSet, 
-                                            ppm = as.numeric(mSet$ppm),
-                                            dbdir = lcl$paths$db_dir, 
-                                            method = input$iso_score_method, 
-                                            inshiny = T, intprec = intprec)
+                                           mSet = mSet, 
+                                           ppm = as.numeric(mSet$ppm),
+                                           dbdir = lcl$paths$db_dir,
+                                           method = input$iso_score_method, 
+                                           inshiny = T, 
+                                           intprec = as.numeric(input$int_prec))
     })
   shown_matches$forward_unique <- shown_matches$forward_unique[score_table, on = c("fullformula")]
 })
