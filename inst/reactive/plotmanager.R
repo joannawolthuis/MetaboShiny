@@ -36,7 +36,23 @@ shiny::observe({
                               
                             }},
                           venn = {
-                            NULL
+                            # get user input for how many top values to use for venn
+                            top = input$venn_tophits
+                            if(nrow(venn_yes$now) > 4 | nrow(venn_yes$now) <= 1){
+                              MetaboShiny::metshiAlert("Can only take more than 2 and less than five analyses!")
+                              list()
+                            }else{
+                              p <- MetaboShiny::ggPlotVenn(mSet = mSet,
+                                                           venn_yes = as.list(venn_yes),
+                                                           top = input$venn_tophits,
+                                                           cols = lcl$aes$mycols,
+                                                           cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                                           font = lcl$aes$font)
+                              
+                              lcl$vectors$venn_lists <<- p$info
+                              shiny::updateSelectizeInput(session, "intersect_venn", choices = names(lcl$vectors$venn_lists))
+                              list(venn_plot = p$plot)
+                            }
                           },
                           enrich = {
                             NULL
@@ -398,7 +414,7 @@ shiny::observe({
           )
           mapply(function(myplot, plotName){
             
-            isSquare <- grepl("pca|plsda|tsne|roc", plotName) & !grepl("scree|cv|perm", plotName)
+            isSquare <- grepl("pca|plsda|tsne|roc", plotName) & !grepl("scree|cv|perm|venn", plotName)
             # === WRAPPER ===
             
             empty <- if(grepl(plotName, pattern="var|samp")) "output_empty2_width" else "output_empty3_width"
@@ -431,6 +447,8 @@ shiny::observe({
                      paste0(input$show_which_ml,"_", input$ml_top_x,"_",mSet$dataSet$cls.name,"_", plotmanager$make)
                    }else if(grepl("pattern", plotName)){
                      paste0(mSet$dataSet$cls.name,"_", input$pattern_topn, "_", plotmanager$make)
+                   }else if(grepl("venn", plotName)){
+                     paste0(mSet$dataSet$cls.name,"_", input$venn_tophits, "_", paste0(names(lcl$vectors$venn_lists), collapse="_"), "_", plotmanager$make)
                    }else{
                      paste0(mSet$dataSet$cls.name,"_", plotmanager$make)
                    }
@@ -445,14 +463,23 @@ shiny::observe({
                  plotFn <- paste0(c(gsub(":|,:", "_", mSet$dataSet$cls.name), 
                                     plotName), collapse="_")
                  
+                 emptyax <- list(
+                   title = "",
+                   zeroline = FALSE,
+                   showline = FALSE,
+                   showticklabels = FALSE,
+                   showgrid = FALSE
+                 )
+                 
                  output[[paste0(plotName, "_interactive")]] <- plotly::renderPlotly({
-                   plotly::ggplotly(myplot, tooltip = "text", height = 
+                   p <- plotly::ggplotly(myplot, tooltip = "text", height = 
                                       session$clientData[[empty]]/if(isSquare) 1.4 else 2) %>%
                      config(
                        toImageButtonOptions = list(
                          format = if(input$plotsvg) "svg" else "png",
-                         filename = paste0(plotFn,"_interactive")
+                         filename = paste0(plotFn, "_interactive")
                        ))
+                   if(grepl("venn", plotName)) p %>% layout(xaxis = emptyax, yaxis = emptyax) else p
                  })
                  
                  output[[paste0("download_", plotName)]] <- downloadHandler(

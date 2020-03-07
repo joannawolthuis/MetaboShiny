@@ -697,15 +697,15 @@ omit_unknown = yes')
         }
         
         myCols <- gbl$functions$color.functions[[lcl$aes$spectrum]](n = nrow(pievec))
+        
         if(length(pievec)>0){
           p = plotly::plot_ly(pievec, labels = ~Var.1, 
                               values = ~value, size=~value*10, type = 'pie',
                               textposition = 'inside',
                               textinfo = 'label+percent',
                               insidetextfont = list(colors = ggdark::invert_color(myCols)),
-                              hoverinfo = 'text', 
-                              #hole=.3, 
-                              pull=pulls,
+                              hoverinfo = 'text',
+                              pull = pulls,
                               text = ~paste0(Var.1, ": ", value, ' matches'),
                               marker = list(colors = myCols,
                                             line = list(color = "gray", 

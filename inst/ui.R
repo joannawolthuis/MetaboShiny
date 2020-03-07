@@ -543,7 +543,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                           ),
                                                                                                                                                           mainPanel = mainPanel(
                                                                                                                                                             shiny::hr(),
-                                                                                                                                                            shiny::plotOutput("venn_plot"),
+                                                                                                                                                            shiny::uiOutput("venn_plot_wrap"),
                                                                                                                                                             # find the overlapping compounds between the groups you want to compare (user select)
                                                                                                                                                             # TODO: enable this with clicking the numbers/areas
                                                                                                                                                             shiny::fluidRow(shiny::selectInput(width = "80%","intersect_venn", label = "Show hits from (only):", selected = 1,choices = "",multiple = T),

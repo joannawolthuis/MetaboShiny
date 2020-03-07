@@ -9,7 +9,6 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
         i = d$pointNumber + 1
         showsubset = as.character(pieinfo[[pietype]]$Var.1[i])
         mzMode =if(grepl(my_selection$mz, pattern = "-")) "negative" else "positive"
-        
         if(pietype == "add"){
           if(!(showsubset %in% result_filters$add[[mzMode]])){
             result_filters$add[[mzMode]] <- c(result_filters$add[[mzMode]], showsubset)
@@ -41,7 +40,8 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                      "rf", 
                      "aov", 
                      "pattern",
-                     "volc")){ 
+                     "volc",
+                     "venn")){ 
     
     if(curr_tab == "ml" & input$ml_results == "roc"){
       attempt = d$curveNumber + 1
@@ -58,28 +58,37 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
             MetaboShiny:: metshiTable(lcl$tables$ml_roc)
           })
         }
-    }else if(curr_tab == "heatmap"){
-      if(!is.null(d$y)){
-        if(d$y > length(lcl$vectors$heatmap)) return(NULL)
-        my_selection$mz <<- lcl$vectors$heatmap[d$y]  
-        print("...")
-        plotmanager$make <- "summary"
-      }
-    }else if(curr_tab == "enrich"){
-      # TODO: make non-redundant..
-      curr_pw <- rownames(mSet$analSet$enrich$mummi.resmat)[d$pointNumber + 1]
-      pw_i <- which(mSet$analSet$enrich$path.nms == curr_pw)
-      cpds = mSet$analSet$enrich$path.hits[[pw_i]]
-      hit_tbl = data.table::as.data.table(mSet$analSet$enrich$matches.res)
-      myHits <- hit_tbl[Matched.Compound %in% cpds]
-      myHits$Mass.Diff <- as.numeric(myHits$Mass.Diff)/(as.numeric(myHits$Query.Mass)*1e-6)
-      colnames(myHits) <- c("rn", "identifier", "adduct", "dppm")
-      enrich$current <- myHits
     }else{
-      if('key' %not in% colnames(d)) return(NULL)
-      if(gsub(d$key[[1]],pattern="`",replacement="") %not in% colnames(mSet$dataSet$prenorm)) return(NULL)
-      my_selection$mz <<- gsub(d$key[[1]],pattern="`",replacement="")
-      plotmanager$make <- "summary"
+      switch(curr_tab,
+             heatmap = {
+               if(!is.null(d$y)){
+                 if(d$y > length(lcl$vectors$heatmap)) return(NULL)
+                 my_selection$mz <<- lcl$vectors$heatmap[d$y]  
+                 print("...")
+                 plotmanager$make <- "summary"
+               }
+             },
+             enrich = {
+               curr_pw <- rownames(mSet$analSet$enrich$mummi.resmat)[d$pointNumber + 1]
+               pw_i <- which(mSet$analSet$enrich$path.nms == curr_pw)
+               cpds = mSet$analSet$enrich$path.hits[[pw_i]]
+               hit_tbl = data.table::as.data.table(mSet$analSet$enrich$matches.res)
+               myHits <- hit_tbl[Matched.Compound %in% cpds]
+               myHits$Mass.Diff <- as.numeric(myHits$Mass.Diff)/(as.numeric(myHits$Query.Mass)*1e-6)
+               colnames(myHits) <- c("rn", "identifier", "adduct", "dppm")
+               enrich$current <- myHits
+             },
+             venn = {
+               picked_intersection = d$key[[1]]
+               groups = stringr::str_split(picked_intersection, "<br />")[[1]]
+               shiny::updateSelectInput(session = session, 
+                                        inputId = "intersect_venn", 
+                                        selected = groups)
+             },
+             {if('key' %not in% colnames(d)) return(NULL)
+               if(gsub(d$key[[1]],pattern="`",replacement="") %not in% colnames(mSet$dataSet$prenorm)) return(NULL)
+               my_selection$mz <<- gsub(d$key[[1]],pattern="`",replacement="")
+               plotmanager$make <- "summary"})
     }
   }
 })

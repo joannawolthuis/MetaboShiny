@@ -18,19 +18,19 @@ output$match_tab <- DT::renderDataTable({
                 columnDefs = list(list(visible = FALSE,
                                        targets = targets - 1))),
               rownames = F)
-})
+}, server = F)
 
 output$enrich_tab <-DT::renderDataTable({
   MetaboShiny::metshiTable(content = enrich$overview)
-})
+}, server = F)
 
 output$enrich_pw_tab <-DT::renderDataTable({
   MetaboShiny::metshiTable(content = enrich$current)
-})
+}, server = F)
 
 output$hits_tab <- DT::renderDataTable({
   MetaboShiny::metshiTable(content = shown_matches$reverse)
-})
+}, server = F)
 
 output$browse_tab <-DT::renderDataTable({
   MetaboShiny::metshiTable(content = browse_content$table,
@@ -58,7 +58,7 @@ shiny::observe({
 
 output$ml_tab <- DT::renderDataTable({
   MetaboShiny::metshiTable(content = data.table::data.table("nothing selected"="Please select a model from ROC plot or left-hand table!"))
-})
+}, server = F)
 
 observeEvent(input$ml_overview_tab_rows_selected, {
   attempt = unique(mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc$perf)[input$ml_overview_tab_rows_selected,]$attempt
@@ -72,7 +72,7 @@ observeEvent(input$ml_overview_tab_rows_selected, {
                                                       pattern = "`|`",
                                                       replacement=""))
     MetaboShiny::metshiTable(content = lcl$tables$ml_roc)
-  })
+  }, server = F)
 })
 
 values = shiny::reactiveValues()

@@ -1375,95 +1375,11 @@ ggPlotVenn <- function(mSet,
   
   flattened <- getTopHits(mSet, unlist(venn_yes$now), top)
   
-  # how many circles need to be plotted? (# of included analysis)
-  circles = length(flattened)
-  
-  # generate the initial plot - the POLYGONS
-  venn.plot <- VennDiagram::venn.diagram(x = flattened,
-                                         filename = NULL)
-  
-  # split the plots into its individual elements
-  items <- strsplit(as.character(venn.plot), split = ",")[[1]]
-  
-  # get which are circles
-  circ_values <- data.frame(
-    id = 1:length(grep(items, pattern="polygon"))
-    #,value = c(3, 3.1, 3.1, 3.2, 3.15, 3.5)
-  )
-  
-  # get which are text
-  txt_values <- data.frame(
-    id = grep(items, pattern="text"),
-    value = unlist(lapply(grep(items, pattern="text"), function(i) venn.plot[[i]]$label))
-  )
-  
-  # TODO: figure out what i did here again...
-  txt_values$value <- gsub(x = txt_values$value, pattern = "(.*\\.)(.*$)", replacement = "\\2")
-  #categories <- c(categories, input$rf_choice, input$ls_choice, input$plsda_choice)
-  
-  # get x and y values for circles
-  x_c = unlist(lapply(grep(items, pattern="polygon"), function(i) venn.plot[[i]]$x))
-  y_c = unlist(lapply(grep(items, pattern="polygon"), function(i) venn.plot[[i]]$y))
-  
-  # get x and y values for text
-  x_t = unlist(lapply(grep(items, pattern="text"), function(i) venn.plot[[i]]$x))
-  y_t = unlist(lapply(grep(items, pattern="text"), function(i)venn.plot[[i]]$y))
-  
-  # table with positions and ids for circles
-  positions_c <- data.frame(
-    id = rep(circ_values$id, each = length(x_c)/length(circ_values$id)),
-    x = x_c,
-    y = y_c
-  )
-  
-  # table with positions and ids for text
-  positions_t <- data.frame(
-    id = rep(txt_values$id, each = length(x_t)/length(txt_values$id)),
-    x = x_t,
-    y = y_t
-  )
-  
-  # merge them together for use in ggplot
-  datapoly <- merge(circ_values, positions_c, by=c("id"))
-  datatxt <- merge(txt_values, positions_t, by=c("id"))
-  
-  # make sure only the wanted analyses are in there
-  numbers <- datatxt[!(datatxt$value %in% names(flattened)),]
-  headers <- datatxt[(datatxt$value %in% names(flattened)),]
-  
-  # move numbers slightly if there are only 2 circles
-  if(circles == 2){
-    occur <- table(numbers$y)
-    newy <- names(occur[occur == max(occur)])
-    # - - -
-    numbers$y <- as.numeric(c(newy))
-  }
-  
-  # generate plot with ggplot
-  p <- ggplot(datapoly,
-              aes(x = x,
-                  y = y)) + ggplot2::geom_polygon(colour="black", alpha=0.5, aes(fill=id, group=id)) +
-    ggplot2::geom_text(mapping = aes(x=x-.02, y=y, label=value), data = numbers, size = 4, hjust = 0) +
-    ggplot2::theme_void() +
-    ggplot2::theme(legend.position="none",
-                   text=ggplot2::element_text(#size=font$ax.num.size,
-                     family = font$family),
-                   panel.grid = ggplot2::element_blank()) +
-    ggplot2::scale_fill_gradientn(colours =
-                                    cf(circles)) +
-    ggplot2::coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE)
-  
-  # - - text with white outline - -
-  p <- p + shadowtext::geom_shadowtext(mapping = aes(x=x, y=y, label=gsub(value,
-                                                                          pattern = ":",
-                                                                          replacement = "\n")),
-                                       color = "black",
-                                       bg.color = "white",
-                                       data = headers,
-                                       size = 5, hjust = 0.5,
-                                       fontface = 2) +
-    ggplot2::scale_x_continuous(expand = c(.1, .1)) +
-    ggplot2::scale_y_continuous(expand = c(.1, .1))
+  p = ggVennDiagram::ggVennDiagram(flattened, 
+                                   label_color="black", 
+                                   label_alpha=1, 
+                                   cf=cf, 
+                                   font=font)
   
   list(plot = p, info = flattened)
   

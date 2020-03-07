@@ -371,7 +371,8 @@ metshiTable <- function(content, options=NULL, rownames= T){
   if(!is.null(options)){
     opts <- append(opts, options)      
   }
-  mz_rownames = stringr::str_match(rownames(content), "(\\d+\\.\\d+)")[,2]
+  mz_rownames = stringr::str_match(rownames(content),
+                                   "(\\d+\\.\\d+)")[,2]
   if(!is.na(mz_rownames[1])){
     rownames(content) <- paste0(rownames(content), sapply(rownames(content), function(mz) if(grepl("\\-", mz)) "" else "+"))
   }

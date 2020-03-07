@@ -48,31 +48,7 @@ output$venn_selected <- DT::renderDataTable({
 
 # triggers on clicking the 'go' button on the venn diagram sidebar panel
 shiny::observeEvent(input$venn_build, {
-
-  # get user input for how many top values to use for venn
-  top = input$venn_tophits
-  
-  if(nrow(venn_yes$now) > 5 | nrow(venn_yes$now) == 0){
-      MetaboShiny::metshiAlert("Can only take more than zero and less than five analyses!")
-      return(NULL)
-    }else{
-      p <- MetaboShiny::ggPlotVenn(mSet = mSet,
-                                   venn_yes = isolate({as.list(venn_yes)}),
-                                   top = input$venn_tophits,
-                                   cols = lcl$aes$mycols,
-                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                   font = lcl$aes$font)
-
-      lcl$vectors$venn_lists <<- p$info
-      
-      # render plot in UI
-      output$venn_plot <- shiny::renderPlot({
-        p$plot
-      })
-      # update the selectize input that the user can use to find which hits are intersecting
-      # TODO: ideally, this happens on click but its hard...
-      shiny::updateSelectizeInput(session, "intersect_venn", choices = names(lcl$vectors$venn_lists))
-    }
+  plotmanager$make <- "venn"
 })
 
 # triggers when users pick which intersecting hits they want

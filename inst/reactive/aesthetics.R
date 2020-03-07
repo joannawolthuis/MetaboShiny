@@ -1,6 +1,6 @@
 output$ramp_plot <- plotly::renderPlotly({
   # change the current spectrum in global
-  lcl$aes$spectrum <- input$color_ramp
+  lcl$aes$spectrum <<- input$color_ramp
   # change the current spectrum in user options file
   MetaboShiny::setOption(lcl$paths$opt.loc, 
                          key="gspec", 

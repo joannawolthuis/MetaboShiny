@@ -11,7 +11,7 @@ shiny::observe({
       try({
         for(do in tablemanager$make){
           suppressWarnings({
-            switch(do,
+            toWrap <- switch(do,
                    vennrich = {
                      # - - - - -
                      analyses = names(mSet$storage)
@@ -54,12 +54,11 @@ shiny::observe({
                      }))
                      venn_no$now <- venn_no$start
                      lcl$vectors$analyses <<- unlist(venn_no$start[,1])
+                     # --- 
+                     list()
                    },
                    pattern = {
-                     # render results table
-                     output$pattern_tab <-DT::renderDataTable({
-                       MetaboShiny::metshiTable(content = mSet$analSet$corr$cor.mat)
-                     })
+                     list(pattern_tab = mSet$analSet$corr$cor.mat)
                    },
                    aov = {
                      which_aov = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
@@ -70,7 +69,7 @@ shiny::observe({
                                       aov = colnames(mSet$analSet$aov$sig.mat) %in% c("p.value", "FDR", "Fisher's LSD"),
                                       aov2 = grepl("adj\\.p|Adj", colnames(mSet$analSet$aov2$sig.mat)))
                        
-                       con =if(is.null(mSet$analSet[[which_aov]]$sig.mat)){
+                       res =if(is.null(mSet$analSet[[which_aov]]$sig.mat)){
                          data.table::data.table("No significant hits found")
                        }else{
                          if(sum(keep) == 1){
@@ -81,22 +80,18 @@ shiny::observe({
                            mSet$analSet[[which_aov]]$sig.mat[,keep]
                          }
                        }
-                       
-                       output$aov_tab <- DT::renderDataTable({
-                         MetaboShiny::metshiTable(content = con)
-                       })
+                       list(aov_tab = res)
+                     }else{
+                       list()
                      }
                    },
                    volc = {
                      # render results table
-                     output$volc_tab <-DT::renderDataTable({
-                       res <- if(is.null(mSet$analSet$volc$sig.mat)) data.table::data.table("No significant hits found") else{
-                         rownames(mSet$analSet$volc$sig.mat) <<- gsub(rownames(mSet$analSet$volc$sig.mat), pattern = "^X", replacement = "")
-                         rownames(mSet$analSet$volc$sig.mat) <<- gsub(rownames(mSet$analSet$volc$sig.mat), pattern = "(\\d+\\.\\d+)(\\.+)", replacement = "\\1/")
-                         res = mSet$analSet$volc$sig.mat
-                       }
-                       MetaboShiny::metshiTable(content = res)
-                     })
+                     res <- if(is.null(mSet$analSet$volc$sig.mat)) data.table::data.table("No significant hits found") else{
+                       rownames(mSet$analSet$volc$sig.mat) <<- gsub(rownames(mSet$analSet$volc$sig.mat), pattern = "^X", replacement = "")
+                       rownames(mSet$analSet$volc$sig.mat) <<- gsub(rownames(mSet$analSet$volc$sig.mat), pattern = "(\\d+\\.\\d+)(\\.+)", replacement = "\\1/")
+                       mSet$analSet$volc$sig.mat}
+                     list(volc_tab = res)
                    },
                    tsne = {
                      NULL
@@ -104,105 +99,88 @@ shiny::observe({
                    pca = {
                      if("pca" %in% names(mSet$analSet)){
                        # render PCA variance per PC table for UI
-                       output$pca_tab <-DT::renderDataTable({
-                         pca.table <- data.table::as.data.table(round(mSet$analSet$pca$variance * 100.00,
-                                                                      digits = 2),
-                                                                keep.rownames = T)
-                         colnames(pca.table) <- c("Principal Component", "% variance")
-                         MetaboShiny::metshiTable(content = pca.table)
-                       })
+                       pca.table <- data.table::as.data.table(round(mSet$analSet$pca$variance * 100.00,
+                                                                    digits = 2),
+                                                              keep.rownames = T)
+                       colnames(pca.table) <- c("Principal Component", "% variance")
+                       
                        # render PCA loadings tab for UI
-                       output$pca_load_tab <-DT::renderDataTable({
-                         pca.loadings <- mSet$analSet$pca$rotation[,c(input$pca_x,
-                                                                      input$pca_y,
-                                                                      input$pca_z)]
-                         MetaboShiny::metshiTable(content = pca.loadings)
-                       })
+                       pca.loadings <- mSet$analSet$pca$rotation[,c(input$pca_x,
+                                                                    input$pca_y,
+                                                                    input$pca_z)]
+                       list(pca_load_tab = pca.loadings,
+                            pca_tab = pca.table)
                      }else{
-                       NULL
+                       list()
                      } # do nothing
                    },
                    plsda = {
-                     
-                     if("plsda" %in% names(mSet$analSet)){ # if plsda has been performed...
-                       
+                     if("plsda" %in% names(mSet$analSet)){
                        # render table with variance per PC
-                       output$plsda_tab <- DT::renderDataTable({
-                         # - - - -
-                         plsda.table <- data.table::as.data.table(round(mSet$analSet$plsr$Xvar
-                                                                        / mSet$analSet$plsr$Xtotvar
-                                                                        * 100.0,
-                                                                        digits = 2),
-                                                                  keep.rownames = T)
-                         colnames(plsda.table) <- c("Principal Component", "% variance")
-                         plsda.table[, "Principal Component"] <- paste0("PC", 1:nrow(plsda.table))
-                         # -------------
-                         MetaboShiny::metshiTable(content = plsda.table)
-                       })
+                       plsda.table <- data.table::as.data.table(round(mSet$analSet$plsr$Xvar
+                                                                      / mSet$analSet$plsr$Xtotvar
+                                                                      * 100.0,
+                                                                      digits = 2),
+                                                                keep.rownames = T)
+                       colnames(plsda.table) <- c("Principal Component", "% variance")
+                       plsda.table[, "Principal Component"] <- paste0("PC", 1:nrow(plsda.table))
                        # render table with PLS-DA loadings
-                       output$plsda_load_tab <-DT::renderDataTable({
-                         plsda.loadings <- mSet$analSet$plsda$vip.mat
-                         colnames(plsda.loadings) <- paste0("PC", c(1:ncol(plsda.loadings)))
-                         MetaboShiny::metshiTable(content = plsda.loadings[, c(input$plsda_x, input$plsda_y, input$plsda_z)])
-                       })
-                     }else{NULL}
+                       plsda.loadings <- mSet$analSet$plsda$vip.mat
+                       colnames(plsda.loadings) <- paste0("PC", c(1:ncol(plsda.loadings)))
+                       plsda.loadings = plsda.loadings[, c(input$plsda_x, input$plsda_y, input$plsda_z)]
+                       list(plsda_tab = plsda.table, 
+                            plsda_load_tab = plsda.loadings)
+                     }else{
+                       list()
+                     }
                    },
                    ml = {
                      if("ml" %in% names(mSet$analSet)){
                        roc_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
                        roc_data$perf <- data.table::as.data.table(roc_data$perf)
-                       
-                       tbl = unique(roc_data$perf[,c("AUC_PAIR", "comparison", "attempt")])
-                       
-                       output$ml_overview_tab <- DT::renderDataTable({
-                         MetaboShiny::metshiTable(content = tbl)
-                       })                  
+                       res = unique(roc_data$perf[,c("AUC_PAIR", "comparison", "attempt")])
+                       list(ml_overview_tab = res)
+                     }else{
+                       list()
                      }
                    },
                    asca = {
                      if("asca" %in% names(mSet$analSet)){
-                       output$asca_tab <-DT::renderDataTable({ 
-                         con = mSet$analSet$asca$sig.list$Model.ab
-                         colnames(con) <- c("Leverage", "SPE")
-                         MetaboShiny::metshiTable(content = con)
-                       })
+                       res = mSet$analSet$asca$sig.list$Model.ab
+                       colnames(res) <- c("Leverage", "SPE")
+                       list(asca_tab = res)
+                     }else{
+                       list()
                      }
                    },
                    meba = {
                      if("MB" %in% names(mSet$analSet)){
-                       output$meba_tab <-DT::renderDataTable({
-                         con = mSet$analSet$MB$stats
-                         colnames(con) <- c("Hotelling/T2 score")
-                         MetaboShiny::metshiTable(content = con)
-                       })
+                       res = mSet$analSet$MB$stats
+                       colnames(res) <- c("Hotelling/T2 score")
+                       list(meba_tab = res)
+                     }else{
+                       list()
                      }
                    },
                    tt = {
                      # save results to table
-                     res <<- mSet$analSet$tt$sig.mat
+                     res <- mSet$analSet$tt$sig.mat
                      if(is.null(res)){
-                       res <<- data.table::data.table("No significant hits found")
+                       res <- data.table::data.table("No significant hits found")
                        mSet$analSet$tt <- NULL
                      }
                      # set buttons to proper thingy
-                     # render results table for UI
-                     output$tt_tab <-DT::renderDataTable({
-                       MetaboShiny::metshiTable(content = res)
-                     })
+                     list(tt_tab = res)
                    },
                    fc = {
                      # if none found, give the below table...
                      # save results to table
-                     res <<- mSet$analSet$fc$sig.mat
+                     res <- mSet$analSet$fc$sig.mat
                      if(is.null(res)){
-                       res <<- data.table::data.table("No significant hits found")
+                       res <- data.table::data.table("No significant hits found")
                        mSet$analSet$fc <- NULL
                      }
-                     # set buttons to proper thingy
-                     # render results table for UI
-                     output$fc_tab <-DT::renderDataTable({
-                       MetaboShiny::metshiTable(content = res)
-                     })
+                     list(fc_tab = res)
                    },
                    heatmap = {
                      NULL
@@ -215,9 +193,17 @@ shiny::observe({
         }
         success = T
       })
+      
       if(!success){
         MetaboShiny::metshiAlert("Table rendering failed!")
       }
+      
+      mapply(function(mytable, tableName){
+        output[[tableName]] <- DT::renderDataTable({
+          MetaboShiny::metshiTable(content = mytable)
+        }, server = FALSE)
+      }, toWrap, names(toWrap))
+      
     }
     tablemanager$make <- NULL # set makeing to 'off'
   }
