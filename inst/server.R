@@ -324,11 +324,11 @@ omit_unknown = yes')
         output[[default$name]] = shiny::renderText(default$text)
       })
       
-      lcl$aes$font <- list(family = opts$font4,
-                           ax.num.size = 11,
-                           ax.txt.size = 15,
-                           ann.size = 20,
-                           title.size = 25)
+      lcl$aes$font <<- list(family = opts$font4,
+                           ax.num.size = as.numeric(opts$size4),
+                           ax.txt.size = as.numeric(opts$size3),
+                           ann.size = as.numeric(opts$size4),
+                           title.size = as.numeric(opts$size2))
       
       # create color pickers based on amount of colours allowed in global
       output$colorPickers <- shiny::renderUI({
@@ -1140,33 +1140,30 @@ omit_unknown = yes')
         ),
         btn_labels = c("No", "Yes"),
         title = "Save before exiting?",
-        showCloseButton = T,
+        #showCloseButton = T,
         html = TRUE
       )
     }else{
-      js$closeWindow()
       shiny::stopApp()
+      js$closeWindow()
     }
   })
   
   observeEvent(input$save_exit,{
-    if(input$save_exit){
+    if(isTRUE(input$save_exit)){
       shiny::withProgress({
         fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
         if(exists("mSet")){
           save(mSet, file = fn)
         }
-      }) 
-      js$closeWindow()   
-      shiny::stopApp()
-    }else{
-      NULL
+      })
     }
+    shiny::stopApp()
+    js$closeWindow()
   },ignoreNULL = T)
   
   onStop(function() {
     print("Closing MetaboShiny ~ヾ(＾∇＾)")
-    
     if(!is.null(session_cl)){
       parallel::stopCluster(session_cl)
     }

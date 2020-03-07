@@ -20,13 +20,9 @@ shiny::observe({
                               interface$mode <- NULL
                             }else{
                               varNormPlots <- MetaboShiny::ggplotNormSummary(mSet = mSet,
-                                                                             plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                                             font = lcl$aes$font,
                                                                              cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                               
                               sampNormPlots <- MetaboShiny::ggplotSampleNormSummary(mSet,
-                                                                                    plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                                                    font = lcl$aes$font,
                                                                                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                               
                               list(var1=varNormPlots$tl, var2=varNormPlots$bl,
@@ -46,8 +42,7 @@ shiny::observe({
                                                            venn_yes = as.list(venn_yes),
                                                            top = input$venn_tophits,
                                                            cols = lcl$aes$mycols,
-                                                           cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                                           font = lcl$aes$font)
+                                                           cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                               
                               lcl$vectors$venn_lists <<- p$info
                               shiny::updateSelectizeInput(session, "intersect_venn", choices = names(lcl$vectors$venn_lists))
@@ -60,25 +55,19 @@ shiny::observe({
                           summary = {
                             p = MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
                                                            styles = input$ggplot_sum_style,
-                                                           add_stats = input$ggplot_sum_stats, color.fac = input$col_var, text.fac = input$txt_var,
-                                                           plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                           font = lcl$aes$font)
+                                                           add_stats = input$ggplot_sum_stats, color.fac = input$col_var, text.fac = input$txt_var)
                             
                             list(summary_plot = p)
                           },
                           pattern = {
                             p = MetaboShiny::ggPlotPattern(mSet,n = input$pattern_topn,
-                                                           cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                                           plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                           font = lcl$aes$font)
+                                                           cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                             
                             list(pattern_plot = p)
                           },
                           aov = { # render manhattan-like plot for UI
                             p = MetaboShiny::ggPlotAOV(mSet,
-                                                       cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 20,
-                                                       plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                       font = lcl$aes$font)
+                                                       cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 20)
                             
                             list(aov_plot = p)
                           },
@@ -86,9 +75,7 @@ shiny::observe({
                             # render volcano plot with user defined colours
                             p = MetaboShiny::ggPlotVolc(mSet,
                                                         cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                                        20,
-                                                        plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                        font = lcl$aes$font)
+                                                        20)
                             
                             list(volc_plot = p)
                           },
@@ -109,10 +96,7 @@ shiny::observe({
                                                             type = "tsne",
                                                             mode = mode,
                                                             shape.fac = input$shape_var,
-                                                            plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                            col.fac = input$col_var,
-                                                            font = lcl$aes$font
-                                                            #,cf = gbl$functions$color.functions[[lcl$aes$spectrum]]
+                                                            col.fac = input$col_var
                                 )
                                 
                               }else{
@@ -135,9 +119,7 @@ shiny::observe({
                           pca = {
                             if("pca" %in% names(mSet$analSet)){
                               scree = MetaboShiny::ggPlotScree(mSet,
-                                                               cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                                               plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                               font = lcl$aes$font)
+                                                               cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                               # chekc which mode we're in
                               mode <- if(mSet$dataSet$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
                                 "ipca" # interactive PCA (old name, i like tpca more :P )
@@ -154,15 +136,11 @@ shiny::observe({
                                                               mode = mode,
                                                               type = "pca",
                                                               col.fac = input$col_var,
-                                                              shape.fac = input$shape_var,
-                                                              plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                              font = lcl$aes$font)
+                                                              shape.fac = input$shape_var)
                                 loadings = MetaboShiny::plotPCAloadings.2d(mSet,pcx = input$pca_x,
                                                                            pcy = input$pca_y, 
                                                                            type = "pca",
-                                                                           font = lcl$aes$font,
-                                                                           cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                                                           plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]])
+                                                                           cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                               }else{
                                 # render 3d plot
                                 pca = MetaboShiny::plotPCA.3d(mSet, 
@@ -200,13 +178,9 @@ shiny::observe({
                               }
                               
                               # render cross validation plot
-                              cv <- MetaboShiny::ggPlotClass(mSet, cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                                             plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                             font = lcl$aes$font)
+                              cv <- MetaboShiny::ggPlotClass(mSet, cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                               # render permutation plot
-                              perm <- MetaboShiny::ggPlotPerm(mSet,cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                                              plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                              font = lcl$aes$font)
+                              perm <- MetaboShiny::ggPlotPerm(mSet,cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                               # see PCA - render 2d or 3d plots, just with plsda as mode instead
                               if(input$plsda_2d3d | !input$ggplotly){
                                 # 2d
@@ -217,17 +191,12 @@ shiny::observe({
                                                                  mode = mode,
                                                                  col.fac = input$col_var,
                                                                  shape.fac = input$shape_var,
-                                                                 plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                                 font = lcl$aes$font,
                                                                  cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                                 
                                 loadings <- MetaboShiny::plotPCAloadings.2d(mSet,pcx = input$plsda_x,
                                                                             pcy = input$plsda_y, 
                                                                             type = "plsda",
-                                                                            font = lcl$aes$font,
-                                                                            cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                                                            plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]]
-                                )
+                                                                            cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                               }else{
                                 # 3d
                                 plsda <- MetaboShiny::plotPCA.3d(mSet, lcl$aes$mycols,
@@ -259,19 +228,14 @@ shiny::observe({
                             if("ml" %in% names(mSet$analSet)){
                               ml_roc = MetaboShiny::ggPlotROC(data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc,
                                                               attempts = input$ml_attempts,
-                                                              cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                                              plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                              font = lcl$aes$font)
+                                                              cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                               
-                              barplot_data <- MetaboShiny::ggPlotBar(mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar,
-                                                                     input$ml_attempts,
-                                                                     gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                                                     input$ml_top_x,
+                              barplot_data <- MetaboShiny::ggPlotBar(data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar,
+                                                                     attempts = input$ml_attempts,
+                                                                     cf =gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                                                     topn = input$ml_top_x,
                                                                      ml_name = mSet$analSet$ml$last$name,
-                                                                     ml_type = mSet$analSet$ml$last$method,
-                                                                     plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                                     font = lcl$aes$font)
-                              
+                                                                     ml_type = mSet$analSet$ml$last$method)
                               
                               ml_barplot <- barplot_data$plot
                               lcl$tables$ml_bar <<- barplot_data$mzdata
@@ -282,44 +246,42 @@ shiny::observe({
                                  ml_bar = ml_barplot)
                           },
                           multigroup = {
-                            p = MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, 
-                                                           cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]], mode = "multi",
+                            p = MetaboShiny::ggplotSummary(mSet, my_selection$mz, 
+                                                           shape.fac = input$shape_var, 
+                                                           cols = lcl$aes$mycols, 
+                                                           cf=gbl$functions$color.functions[[lcl$aes$spectrum]], 
+                                                           mode = "multi",
                                                            styles = input$ggplot_sum_style,
-                                                           add_stats = input$ggplot_sum_stats, color.fac = input$col_var, text.fac = input$txt_var,
-                                                           plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                           font = lcl$aes$font)
+                                                           add_stats = input$ggplot_sum_stats, color.fac = input$col_var, text.fac = input$txt_var)
                             list(summary_plot = p)
                           },
                           meba = {
                             p = MetaboShiny::ggplotMeba(mSet, my_selection$mz,
                                                         draw.average = T,
                                                         cols = lcl$aes$mycols,
-                                                        cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                                        plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                        font = lcl$aes$font)
+                                                        cf=gbl$functions$color.functions[[lcl$aes$spectrum]])
                             list(summary_plot = p)
                           },
                           tt = {
                             # render manhattan-like plot for UI
                             p = MetaboShiny::ggPlotTT(mSet,
-                                                      gbl$functions$color.functions[[lcl$aes$spectrum]], 20,
-                                                      plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                      font = lcl$aes$font)
+                                                      gbl$functions$color.functions[[lcl$aes$spectrum]], 
+                                                      20)
                             
                             list(tt_plot = p)
                           },
                           fc = {
                             # render manhattan-like plot for UI
                             p <- MetaboShiny::ggPlotFC(mSet,
-                                                       gbl$functions$color.functions[[lcl$aes$spectrum]], 20,
-                                                       plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                       font = lcl$aes$font)
+                                                       gbl$functions$color.functions[[lcl$aes$spectrum]], 20)
                             
                             list(fc_plot = p)
                           },
                           heatmap = {
                             
-                            breaks = seq(min(mSet$dataSet$norm), max(mSet$dataSet$norm), length = 256/2)
+                            breaks = seq(min(mSet$dataSet$norm), 
+                                         max(mSet$dataSet$norm), 
+                                         length = 256/2)
                             
                             p = {
                               
@@ -384,9 +346,7 @@ shiny::observe({
                               if("power" %in% names(mSet$analSet)){
                                 MetaboShiny::ggPlotPower(mSet, 
                                                          max_samples = max(mSet$analSet$power[[1]]$Jpred),
-                                                         comparisons = names(mSet$analSet$power),#input$power_comps,
-                                                         plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                         font = lcl$aes$font,
+                                                         comparisons = names(mSet$analSet$power),
                                                          cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                               }else{
                                 NULL
@@ -404,9 +364,7 @@ shiny::observe({
                                 wcdata = data.table::as.data.table(lcl$tables$wordcloud_filt)[order(n, decreasing = T)][1:topWords,]
                                 colnames(wcdata)[2] <- "freq"
                                 MetaboShiny::ggPlotWordBar(wcdata = wcdata,
-                                                           cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                                           plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                                           font = lcl$aes$font)
+                                                           cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                               }
                             }
                             list(wordbar = p)
@@ -435,29 +393,23 @@ shiny::observe({
             # === PLOTS ===
              
              observe({
+               
+               try({
+                 myplot <- myplot + 
+                   gbl$functions$plot.themes[[lcl$aes$theme]](base_size = 15) + 
+                   ggplot2::theme(legend.position="none",
+                                  axis.line = ggplot2::element_line(colour = 'black', size = .5),
+                                  plot.title = ggplot2::element_text(hjust = 0.5,
+                                                                     vjust = 0.1,
+                                                                     size=lcl$aes$font$title.size*1.2,
+                                                                     face="bold"),
+                                  text = ggplot2::element_text(family = lcl$aes$font$family))
+                 
+               })
+               
                if(!is.null(session$clientData[[empty]])){
-                 output[[plotName]] <- shiny::renderCachedPlot({
-                   myplot
-                 }, cacheKeyExpr = {
-                   # if summary plot: mz + cls.name + multigroup y/n combination
-                   id = if(grepl("summary", plotName)){
-                     paste0(as.character(my_selection$mz),"_", mSet$dataSet$cls.name,"_", plotmanager$make)
-                   }else if(grepl("ml", plotName)){
-                     paste0(input$show_which_ml,"_", input$ml_top_x,"_",mSet$dataSet$cls.name,"_", plotmanager$make)
-                   }else if(grepl("pattern", plotName)){
-                     paste0(mSet$dataSet$cls.name,"_", input$pattern_topn, "_", plotmanager$make)
-                   }else if(grepl("venn", plotName)){
-                     paste0(mSet$dataSet$cls.name,"_", input$venn_tophits, "_", paste0(names(lcl$vectors$venn_lists), collapse="_"), "_", plotmanager$make)
-                   }else{
-                     paste0(mSet$dataSet$cls.name,"_", plotmanager$make)
-                   }
-                   id = paste0(id, "_", paste0(c(unlist(lcl$aes,
-                                                        recursive = T), 
-                                                 input$ggplot_sum_style,input$shape_var,
-                                                 input$ggplot_sum_stats,input$col_var,input$txt_var),
-                                               collapse = "_"))
-                   id
-                 },cache = "session")
+                 
+                 output[[plotName]] <- shiny::renderPlot(myplot)
                  
                  plotFn <- paste0(c(gsub(":|,:", "_", mSet$dataSet$cls.name), 
                                     plotName), collapse="_")
@@ -471,8 +423,9 @@ shiny::observe({
                  )
                  
                  output[[paste0(plotName, "_interactive")]] <- plotly::renderPlotly({
-                   p <- plotly::ggplotly(myplot, tooltip = "text", height = 
-                                      session$clientData[[empty]]/if(isSquare) 1.4 else 2) %>%
+                   p <- plotly::ggplotly(myplot,
+                                         tooltip = "text", 
+                                         height = session$clientData[[empty]]/if(isSquare) 1.4 else 2) %>%
                      config(
                        toImageButtonOptions = list(
                          format = if(input$plotsvg) "svg" else "png",
