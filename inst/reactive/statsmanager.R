@@ -49,6 +49,7 @@ shiny::observe({
                                                   source.anal = input$heattable,
                                                   top.hits = input$heatmap_topn,
                                                   cols = lcl$aes$mycols)
+                 output$heatmap_now <- shiny::renderText(input$heattable)
                },
                tt = {
                  withProgress({

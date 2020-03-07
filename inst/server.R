@@ -752,11 +752,11 @@ omit_unknown = yes')
       list("permz", "fc"),#13
       list("dimred", "tsne"),#14
       list("permz", "pattern"),#15
-      list("overview", "enrich"),#16
-      list("main", "dimred"),#17
-      list("main", "overview"),#18
-      list("main", "ml"),#19
-      list("main", "permz")#20
+      list("overview", "enrich")#16
+      # list("main", "dimred"),#17
+      # list("main", "overview"),#18
+      # list("main", "ml"),#19
+      # list("main", "permz")#20
     )
     
     # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
@@ -765,26 +765,37 @@ omit_unknown = yes')
     if(is.null(interface$mode)){
       show.tabs <- hide.tabs[1]
     }else if(interface$mode == '1fb'){
-      show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14,15,16,17:20)]
+      show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14,15,16)]
       shiny::updateSelectInput(session, "ml_method",
                                selected = "rf",
                                choices = as.list(gbl$constants$ml.models))
     }else if(interface$mode == '1fm'){
-      show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,11,14,15,16,17:20)]
+      show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,11,14,15,16)]
       shiny::updateSelectInput(session, "ml_method",
                                selected = "rf",
-                               choices = as.list(setdiff(gbl$constants$ml.models, gbl$constants$ml.twoonly)))
+                               choices = as.list(setdiff(gbl$constants$ml.models,
+                                                         gbl$constants$ml.twoonly)))
     }else if(interface$mode == '2f'){
-      show.tabs <- hide.tabs[c(1,2,4,6,9,10,11,14,16,17:20)]
+      show.tabs <- hide.tabs[c(1,2,4,6,9,10,11,14,16)]
     }else if(interface$mode == 't1f'){
-      show.tabs = hide.tabs[c(1,2,4,5,6,9,10,11,14,16,17:20)]
+      show.tabs = hide.tabs[c(1,2,4,5,6,9,10,11,14,16)]
     }else if(interface$mode == 't'){
-      show.tabs = hide.tabs[c(1,2,5,6,7,9,10,11,14,15,16,17:20)]
+      show.tabs = hide.tabs[c(1,2,5,6,7,9,10,11,14,15,16)]
     }else{
       show.tabs <- hide.tabs[1]
     }
     
     # hide all the tabs to begin with
+    if(length(show.tabs) > 1){
+      for(bigtab in c("dimred", "permz", "overview", "ml")){
+        shiny::showTab("statistics", bigtab)  
+      }
+    }else{
+      for(bigtab in c("dimred", "permz", "overview", "ml")){
+        shiny::hideTab("statistics", bigtab)  
+      }
+    }
+    
     for(tab in hide.tabs){
       shiny::hideTab(inputId = "statistics",#unlist(tab)[1],
                      unlist(tab)[2],
@@ -1042,6 +1053,14 @@ omit_unknown = yes')
                                                 $("#sidePanel").outerWidth($("#panelContainer").innerWidth() - $("#mainPanel").outerWidth());
                                               }
                                             });')
+  
+  observeEvent(c(input$heatsign, input$heatlimits),{
+    if(!is.null(mSet)){
+      if("heatmap" %in% names(mSet$analSet)){
+        plotmanager$make <- "heatmap"  
+      }  
+    }
+  })
   
   observeEvent(input$statistics, { 
     if(!is.null(mSet)){

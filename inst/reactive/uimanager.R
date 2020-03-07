@@ -112,11 +112,7 @@ shiny::observe({
                      }) 
                    },
                    vennrich = {
-                     lapply(c("mummi_anal", "heattable"), function(inputID){
-                       shiny::updateSelectInput(session,
-                                                inputID, 
-                                                choices = as.character(lcl$vectors$analyses))  
-                     })
+                     NULL
                    },
                    pattern = {
                      output$jqui_ui <- shiny::renderUI(suppressWarnings(shinyjqui::orderInput(inputId = 'pattern_seq',
@@ -166,20 +162,10 @@ shiny::observe({
                        shiny::updateCheckboxInput(session, "tt_nonpar", value = F)
                      }
                    },
-                   heatmap = {
-                     switch(mSet$dataSet$exp.type,
-                            "1fb"=shinyWidgets::updateRadioGroupButtons(session, "heattable", choices = list("T-test"="tt", 
-                                                                                                             "Fold-change analysis"="fc"), 
-                                                                        selected = "tt"),
-                            "1fm"=shinyWidgets::updateRadioGroupButtons(session, "heattable", choices = list(ANOVA="aov"), selected = "aov"),
-                            "2f"=shinyWidgets::updateRadioGroupButtons(session, "heattable", choices = list(ANOVA="aov2", 
-                                                                                                            ASCA="asca"), selected = "aov2"),
-                            "t1f"=shinyWidgets::updateRadioGroupButtons(session, "heattable", choices = list(ANOVA="aov2", 
-                                                                                                             ASCA="asca",
-                                                                                                             MEBA="meba"), selected = "aov2"),
-                            "t"=shinyWidgets::updateRadioGroupButtons(session, "heattable", choices = list(ANOVA="aov2",
-                                                                                                           MEBA="meba"), selected = "aov2"))
-                   }, 
+                   heatmap = 
+                     {
+                     NULL
+                     }, 
                    power = {
                      if(grepl(mSet$dataSet$exp.type, pattern = "1f.")){
                        pairs = MetaboShiny::expand.grid.unique(levels(mSet$dataSet$cls), 
