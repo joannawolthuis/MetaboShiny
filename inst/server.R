@@ -790,9 +790,16 @@ omit_unknown = yes')
       for(bigtab in c("dimred", "permz", "overview", "ml")){
         shiny::showTab("statistics", bigtab)  
       }
+      for(bigtab in c("search", "plot_aes", "switchset", "metadata")){
+        shiny::showTab("anal_sidebar", bigtab)  
+      }
+      shiny::hideTab("anal_sidebar", "start")
     }else{
       for(bigtab in c("dimred", "permz", "overview", "ml")){
         shiny::hideTab("statistics", bigtab)  
+      }
+      for(bigtab in c("search", "plot_aes", "switchset", "metadata")){
+        shiny::hideTab("anal_sidebar", bigtab)  
       }
     }
     

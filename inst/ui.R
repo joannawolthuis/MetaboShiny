@@ -523,7 +523,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                             shiny::tabPanel(title="venn", value="venn", #icon=shiny::icon("comments"),
                                                                                                                                             br(),
                                                                                                                                             sidebarLayout(position = "left",
-                                                                                                                                                          sidebarPanel = shiny::sidebarPanel(width = 3,
+                                                                                                                                                          sidebarPanel = shiny::sidebarPanel(width = 4,
                                                                                                                                                                                              shiny::fluidRow(shiny::div(DT::dataTableOutput('venn_unselected'),style='font-size:80%'), align="center"),
                                                                                                                                                                                              shiny::fluidRow(shinyWidgets::circleButton("venn_add", icon=shiny::icon("arrow-down"), size="sm"),
                                                                                                                                                                                                              shinyWidgets::circleButton("venn_remove", icon=shiny::icon("arrow-up"), size="sm"),
@@ -788,18 +788,87 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                    #shinyjqui::jqui_resizable(
                                                                      sidebarPanel(align="center",width = 3,id="sidePanel",
                                                                                 shiny::fluidRow(align="center",
-                                                                                                shiny::tabsetPanel(id = "anal_sidebar", selected="switch/subset",
-                                                                                                                   shiny::tabPanel(title=shinyBS::tipify(shiny::icon("file"), 
-                                                                                                                                                         title = "export most recent plot as file", 
-                                                                                                                                                         trigger = "hover",options=list(container="body")),
-                                                                                                                                   value="export",
-                                                                                                                                   shiny::radioButtons("export_format", "Which format do you want to export plots to?",
-                                                                                                                                                       choices = list(".svg", ".eps", ".png", ".jpeg", ".pdf")),
-                                                                                                                                   shinyWidgets::circleButton("export_plot", icon=shiny::icon("hand-o-up"))),
-                                                                                                                   shiny::tabPanel(title=shinyBS::tipify(shiny::icon("search"),
+                                                                                                shiny::tabsetPanel(id = "anal_sidebar", selected="start",
+                                                                                                                   shiny::tabPanel(title=shiny::icon("star"),value = "start",
+                                                                                                                                   shiny::br(),shiny::br(),shiny::br(),shiny::br(),shiny::br(),
+                                                                                                                                   tags$i("Load a dataset to get started!"),
+                                                                                                                                   br(),
+                                                                                                                                   icon("caret-down", "fa-3x"),
+                                                                                                                                   br(),
+                                                                                                                                   icon("box-open","fa-5x"),
+                                                                                                                                   shiny::br(),shiny::br(),shiny::br(),
+                                                                                                                                   shiny::br(),shiny::br()),
+                                                                                                                   shiny::tabPanel(value="switchset", 
+                                                                                                                                   title=shinyBS::tipify(shiny::icon("exchange"),
+                                                                                                                                                         title = "switch to different variable and/or subset based on variable",
+                                                                                                                                                         trigger = "hover",options=list(container="body"))
+                                                                                                                                   , shiny::h2("Current experiment:"),
+                                                                                                                                   shiny::div(
+                                                                                                                                     MetaboShiny::sardine(shiny::uiOutput("curr_name")),
+                                                                                                                                     style="background-color:white;
+                                                                                                                                      width:100%;
+                                                                                                                                      margin: 0 auto;
+                                                                                                                                      border-top: 1px solid #DFDCDC;
+                                                                                                                                      border-bottom: 1px solid #DFDCDC;")
+                                                                                                                                   ,shiny::hr()
+                                                                                                                                   ,shiny::h2("Change variable of interest")
+                                                                                                                                   ,shiny::selectizeInput("stats_type", 
+                                                                                                                                                          label = "Normal, two-factor or time series?", 
+                                                                                                                                                          choices = list("one factor"="1f", 
+                                                                                                                                                                         "two factors"="2f",
+                                                                                                                                                                         "time series"="t",
+                                                                                                                                                                         "time series + one factor"="t1f"),
+                                                                                                                                                          selected = "1f",width = "80%")
+                                                                                                                                   ,fluidRow(align="center",shiny::uiOutput("stats_picker"))
+                                                                                                                                   ,shiny::conditionalPanel("input.stats_type == '1f'",
+                                                                                                                                                            shiny::checkboxInput("paired", 
+                                                                                                                                                                                 "Matched samples only?",
+                                                                                                                                                                                 value = F))
+                                                                                                                                   ,shiny::conditionalPanel("input.stats_type == 't' || input.stats_type == 't1f'",
+                                                                                                                                                            shiny::selectizeInput("time_var", 
+                                                                                                                                                                                  label="Time series variable:", 
+                                                                                                                                                                                  choices = c("label"),width = "80%"))
+                                                                                                                                   ,shinyWidgets::actionBttn(
+                                                                                                                                     inputId = "change_cls",
+                                                                                                                                     label = "do stats on selected", 
+                                                                                                                                     style = "bordered",
+                                                                                                                                     icon = icon("magic"),
+                                                                                                                                     size = "sm"
+                                                                                                                                   )
+                                                                                                                                   ,shiny::hr()
+                                                                                                                                   ,shiny::h2("Subset data")
+                                                                                                                                   ,helpText("Current sample count:")
+                                                                                                                                   ,h2(shiny::textOutput("samp_count"))
+                                                                                                                                   ,br()
+                                                                                                                                   ,shiny::selectInput("subset_var", label="Subset data based on:", choices = c("label"),width = "80%")
+                                                                                                                                   ,shiny::selectizeInput("subset_group", label="Group(s) in subset:", choices = c(), multiple=TRUE,width = "80%")
+                                                                                                                                   ,shinyWidgets::actionBttn(
+                                                                                                                                     inputId = "change_subset",
+                                                                                                                                     label = "click to subset", 
+                                                                                                                                     style = "bordered",
+                                                                                                                                     icon = icon("filter"),
+                                                                                                                                     size = "sm"
+                                                                                                                                   ),br(),br()
+                                                                                                                                   ,shiny::selectInput("storage_choice", label="Load existing meta-dataset:", choices = c("label"),width = "80%")
+                                                                                                                                   ,shinyWidgets::actionBttn(
+                                                                                                                                     inputId = "load_storage",
+                                                                                                                                     label = "click to load selected", 
+                                                                                                                                     style = "bordered",
+                                                                                                                                     icon = icon("folder-open"),
+                                                                                                                                     size = "sm"
+                                                                                                                                   ),br(),br()
+                                                                                                                                   ,helpText("Reset to non-subsetted or paired dataset")
+                                                                                                                                   ,shinyWidgets::actionBttn(
+                                                                                                                                     inputId = "reset_subset",
+                                                                                                                                     label = "click to un-subset data", 
+                                                                                                                                     style = "bordered",
+                                                                                                                                     icon = icon("undo"),
+                                                                                                                                     size = "sm"
+                                                                                                                                   )
+                                                                                                                   ),
+                                                                                                                   shiny::tabPanel(value="search",title=shinyBS::tipify(shiny::icon("search"),
                                                                                                                                                          title = "search m/z > compound or compound > mz", 
                                                                                                                                                          trigger = "hover",options=list(container="body")),
-                                                                                                                                   value = "search",
                                                                                                                                    shiny::br(),
                                                                                                                                    shinyBS::bsCollapse(shinyBS::bsCollapsePanel(title=shiny::h2("Settings"), 
                                                                                                                                                                                 value="panel1",
@@ -1018,76 +1087,8 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                      )
                                                                                                                                                    ),br()
                                                                                                                                    ))),
-                                                                                                                   shiny::tabPanel(value="switch/subset", 
-                                                                                                                                   title=shinyBS::tipify(shiny::icon("exchange"),
-                                                                                                                                                         title = "switch to different variable and/or subset based on variable",
-                                                                                                                                                         trigger = "hover",options=list(container="body"))
-                                                                                                                                   , shiny::h2("Current experiment:"),
-                                                                                                                                   shiny::div(
-                                                                                                                                     MetaboShiny::sardine(shiny::h2(shiny::textOutput("curr_name"),style="padding:10px;")),
-                                                                                                                                     style="background-color:white;
-                                                                                                                                      width:100%;
-                                                                                                                                      margin: 0 auto;
-                                                                                                                                      border-top: 1px solid #DFDCDC;
-                                                                                                                                      border-bottom: 1px solid #DFDCDC;")
-                                                                                                                                   ,shiny::hr()
-                                                                                                                                   ,shiny::h2("Change variable of interest")
-                                                                                                                                   ,shiny::selectizeInput("stats_type", 
-                                                                                                                                                          label = "Normal, two-factor or time series?", 
-                                                                                                                                                          choices = list("one factor"="1f", 
-                                                                                                                                                                         "two factors"="2f",
-                                                                                                                                                                         "time series"="t",
-                                                                                                                                                                         "time series + one factor"="t1f"),
-                                                                                                                                                          selected = "1f",width = "80%")
-                                                                                                                                   ,fluidRow(align="center",shiny::uiOutput("stats_picker"))
-                                                                                                                                   ,shiny::conditionalPanel("input.stats_type == '1f'",
-                                                                                                                                                            shiny::checkboxInput("paired", 
-                                                                                                                                                                                 "Matched samples only?",
-                                                                                                                                                                                 value = F))
-                                                                                                                                   ,shiny::conditionalPanel("input.stats_type == 't' || input.stats_type == 't1f'",
-                                                                                                                                                            shiny::selectizeInput("time_var", 
-                                                                                                                                                                                  label="Time series variable:", 
-                                                                                                                                                                                  choices = c("label"),width = "80%"))
-                                                                                                                                   ,shinyWidgets::actionBttn(
-                                                                                                                                     inputId = "change_cls",
-                                                                                                                                     label = "do stats on selected", 
-                                                                                                                                     style = "bordered",
-                                                                                                                                     icon = icon("magic"),
-                                                                                                                                     size = "sm"
-                                                                                                                                   )
-                                                                                                                                   ,shiny::hr()
-                                                                                                                                   ,shiny::h2("Subset data")
-                                                                                                                                   ,helpText("Current sample count:")
-                                                                                                                                   ,h2(shiny::textOutput("samp_count"))
-                                                                                                                                   ,br()
-                                                                                                                                   ,shiny::selectInput("subset_var", label="Subset data based on:", choices = c("label"),width = "80%")
-                                                                                                                                   ,shiny::selectizeInput("subset_group", label="Group(s) in subset:", choices = c(), multiple=TRUE,width = "80%")
-                                                                                                                                   ,shinyWidgets::actionBttn(
-                                                                                                                                     inputId = "change_subset",
-                                                                                                                                     label = "click to subset", 
-                                                                                                                                     style = "bordered",
-                                                                                                                                     icon = icon("filter"),
-                                                                                                                                     size = "sm"
-                                                                                                                                   ),br(),br()
-                                                                                                                                   ,shiny::selectInput("storage_choice", label="Load existing meta-dataset:", choices = c("label"),width = "80%")
-                                                                                                                                   ,shinyWidgets::actionBttn(
-                                                                                                                                     inputId = "load_storage",
-                                                                                                                                     label = "click to load selected", 
-                                                                                                                                     style = "bordered",
-                                                                                                                                     icon = icon("folder-open"),
-                                                                                                                                     size = "sm"
-                                                                                                                                   ),br(),br()
-                                                                                                                                   ,helpText("Reset to non-subsetted or paired dataset")
-                                                                                                                                   ,shinyWidgets::actionBttn(
-                                                                                                                                     inputId = "reset_subset",
-                                                                                                                                     label = "click to un-subset data", 
-                                                                                                                                     style = "bordered",
-                                                                                                                                     icon = icon("undo"),
-                                                                                                                                     size = "sm"
-                                                                                                                                   )
-                                                                                                                   ),
                                                                                                                    # this tab is used to select user plot theme and user colours (discrete and continuous)
-                                                                                                                   shiny::tabPanel(value="plot aesthetics", title=shinyBS::tipify(shiny::icon("paint-brush"), 
+                                                                                                                   shiny::tabPanel(value="plot_aes", title=shinyBS::tipify(shiny::icon("paint-brush"), 
                                                                                                                                                                                   title="change plot style and colours",
                                                                                                                                                                                   trigger = "hover",options=list(container="body")),
                                                                                                                                    shiny::h2("Plot style"),br(),

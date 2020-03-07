@@ -27,7 +27,27 @@ shiny::observe({
                        shiny::showNotification("Updating interface...")
                        
                        interface$mode <<- mSet$dataSet$exp.type
-                       output$curr_name <- shiny::renderText({mSet$dataSet$cls.name})
+                       
+                       output$curr_name <- shiny::renderUI(
+                         shiny::HTML({
+                           expname = mSet$dataSet$cls.name
+                           calc = stringr::str_match(expname, pattern = "(^.*?):")
+                           expname = gsub(expname, pattern = "^.*?:", replacement="") 
+                           if(!all(is.na(calc[1,]))){
+                             calc = calc[,2]
+                             subsets = stringr::str_split(expname, ",:")[[1]]
+                             subsetPart = paste0(shiny::icon("filter", "fa-xs"),
+                                                 " ",
+                                                 subsets, collapse="<br>")
+                             statsPart = h2(calc)
+                           }else{
+                             subsetPart = ""
+                             statsPart = h2(expname)
+                           }
+                           paste0(statsPart, subsetPart)
+                         })
+                       )
+                       
                        shiny::updateNavbarPage(session, "statistics", selected = "inf")
                        origcount = mSet$settings$orig.count 
                        output$samp_count <- shiny::renderText({
