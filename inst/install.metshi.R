@@ -23,12 +23,10 @@ pacman::p_load(rJava, ggplot2, data.table, plotly, caret, shinybusy, svglite,
 
 devtools::install_github("xia-lab/MetaboAnalystR")
 devtools::install_github("rwehrens/BatchCorrMetabolomics")
-devtools::install_github("yixuan/showtext")
+#devtools::install_github("yixuan/showtext")
 devtools::install_github("UMCUGenetics/MetaDBparse")
 devtools::install_github("UMCUGenetics/MetaboShiny")
 devtools::install_github("joannawolthuis/ggVennDiagram")
 
 library(MetaboShiny)
 start.metshi(inBrowser=T)
-
-update.packages(ask = F)
