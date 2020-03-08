@@ -163,6 +163,7 @@ shiny::observe({
     
     # generate all the fadebuttons for the database selection
     lapply(db_button_prefixes, function(prefix){
+      
       output[[paste0("db_", prefix, "_select")]] <- renderUI({
         db.paths = list.files(lcl$paths$db_dir, pattern = "\\.db$",full.names = T)
         built.dbs <- c(gsub(x = basename(db.paths), 
@@ -181,7 +182,9 @@ shiny::observe({
         
         no.need.build = c("cmmmediator", "pubchem","chemspider","supernatural2","knapsack","magicball")
         if(length(really.built.dbs) > 0){
-          built.dbs <- unique(c(no.need.build, intersect(really.built.dbs, gbl$vectors$db_list)))
+          built.dbs <- unique(c(no.need.build,
+                                intersect(really.built.dbs,
+                                          gbl$vectors$db_list)))
         }else{
           built.dbs <- list(no.need.build)
         }

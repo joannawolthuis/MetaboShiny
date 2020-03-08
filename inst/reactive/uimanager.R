@@ -44,7 +44,11 @@ shiny::observe({
                              subsetPart = ""
                              statsPart = h2(expname)
                            }
-                           paste0(statsPart, subsetPart)
+                           paste0("<br>", 
+                                  statsPart, 
+                                  subsetPart, 
+                                  "<br>",
+                                  "<br>")
                          })
                        )
                        

@@ -781,6 +781,7 @@ plotPCAloadings.3d <- function(mSet,
            
            x.var <- plsda.table[PC == pcx]$var
            y.var <- plsda.table[PC == pcy]$var
+           z.var <- plsda.table[PC == pcz]$var
            
            # --- coordinates ---
            df <- mSet$analSet$plsr$loadings
@@ -849,6 +850,8 @@ plotPCA.3d <- function(mSet,
                        col.fac = "label",
                        mode="normal",cf){
   
+  print(type)
+  
   switch(type,
          tsne = {
            df = mSet$analSet$tsne$x
@@ -870,9 +873,9 @@ plotPCA.3d <- function(mSet,
            colnames(plsda.table) <- c("PC", "var")
            plsda.table[, "PC"] <- paste0("PC", 1:nrow(plsda.table))
            
-           x.var <- plsda.table[PC == pcx]$var
-           y.var <- plsda.table[PC == pcy]$var
-           z.var <- plsda.table[PC == pcz]$var
+           x.var <- round(plsda.table[PC == pcx]$var, digits=1)
+           y.var <- round(plsda.table[PC == pcy]$var, digits=1)
+           z.var <- round(plsda.table[PC == pcz]$var, digits=1)
            
            # --- coordinates ---
            df <- mSet$analSet$plsr$scores
@@ -999,9 +1002,9 @@ plotPCA.3d <- function(mSet,
     pca_plot <- adj_plot %>% add_trace(
       hoverinfo = 'text',
       text = rownames(df),
-      x = df[,pcx],
-      y = df[,pcy],
-      z = df[,pcz],
+      x = df[, pcx],
+      y = df[, pcy],
+      z = df[, pcz],
       visible = rep(T, times=fac.lvls),
       type = "scatter3d",
       color = classes,
@@ -1213,10 +1216,36 @@ ggPlotVenn <- function(mSet,
   
   flattened <- getTopHits(mSet, unlist(venn_yes$now), top)
   
-  p = ggVennDiagram::ggVennDiagram(flattened,
-                                   label_alpha=1, 
-                                   cf=cf)
+  parseFun = function(labels){
+    sapply(labels, function(label){
+      if(grepl(label, pattern=":")){
+        searched=stringr::str_match(label, "(^.*?):(.*):(.*$)")
+        experiment = trimws(searched[,2])
+        experiment = gsub(pattern = '([[:lower:]])', perl = TRUE, replacement = '\\U\\1', experiment)
+        stats = trimws(searched[,4])
+        stats = gsub(pattern = '([[:lower:]])', perl = TRUE, replacement = '\\U\\1', stats)
+        label = gsub("\\(|\\)","",searched[,3])
+        indented = gsub(label, pattern=":", replacement='\n')
+        indented = gsub(indented, pattern=",", replacement="")
+        indented = gsub(indented, pattern = "(=|\\+)", replacement = " \\1 ")
+        paste0(experiment, "\n", indented,  "\n", paste0(">> ",stats, " <<"))
+      }else{
+        label
+      }
+    })
+  }
   
+  p = ggVennDiagram::ggVennDiagram(flattened,
+                                   label_alpha = 1, 
+                                   cf = cf,
+                                   parseFun = parseFun) + ggplot2::lims(x = switch(as.character(length(flattened)),
+                                                                                   "2"= c(-7,11),
+                                                                                   "3"= c(-5,9),
+                                                                                   "4"= c(-.05,1.13)),
+                                                                        y = switch(as.character(length(flattened)),
+                                                                                   "2"= c(-5.5,7.5),
+                                                                                   "3"= c(-4,10),
+                                                                                   "4"= c(.15,1)))
   list(plot = p, info = flattened)
   
 }

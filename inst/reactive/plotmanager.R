@@ -43,7 +43,6 @@ shiny::observe({
                                                            top = input$venn_tophits,
                                                            cols = lcl$aes$mycols,
                                                            cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-                              
                               lcl$vectors$venn_lists <<- p$info
                               shiny::updateSelectizeInput(session, "intersect_venn", choices = names(lcl$vectors$venn_lists))
                               list(venn_plot = p$plot)
@@ -371,8 +370,10 @@ shiny::observe({
                           }
           )
           mapply(function(myplot, plotName){
+            
             isSquare <- grepl("pca|plsda|tsne|roc|heatmap", plotName) & !grepl("scree|cv|perm|venn", plotName)
-            # === WRAPPER ===
+           
+             # === WRAPPER ===
             
             empty <- if(grepl(plotName, pattern="var|samp")) "output_empty2_width" else "output_empty3_width"
          
@@ -394,22 +395,34 @@ shiny::observe({
              
              observe({
                
-               try({
-                 myplot <- myplot + 
-                   gbl$functions$plot.themes[[lcl$aes$theme]](base_size = 15) + 
-                   ggplot2::theme(legend.position="none",
-                                  axis.line = ggplot2::element_line(colour = 'black', size = .5),
-                                  plot.title = ggplot2::element_text(hjust = 0.5,
-                                                                     vjust = 0.1,
-                                                                     size=lcl$aes$font$title.size*1.2,
-                                                                     face="bold"),
-                                  text = ggplot2::element_text(family = lcl$aes$font$family))
-                 
-               })
+               canBe3D <- grepl("pca|plsda|tsne", plotName) & !grepl("scree|perm|cv", plotName)
+               if(canBe3D){
+                 whichAnal <- stringr::str_match(plotName, "pca|plsda|tsne")[,1]
+                 is3D <- !input[[paste0(whichAnal, "_2d3d")]]
+               }else{
+                 is3D <- F
+               }
                
+                if(!is3D){
+                   myplot <- myplot + 
+                     gbl$functions$plot.themes[[lcl$aes$theme]](base_size = 15) + 
+                     ggplot2::theme(legend.position="none",
+                                    axis.line = ggplot2::element_line(colour = 'black', size = .5),
+                                    plot.title = ggplot2::element_text(hjust = 0.5,
+                                                                       vjust = 0.1,
+                                                                       size=lcl$aes$font$title.size*1.2,
+                                                                       face="bold"),
+                                    text = ggplot2::element_text(family = lcl$aes$font$family))
+                   if(grepl("venn", plotName)) myplot <- myplot + 
+                       ggplot2::theme_void() + 
+                       ggplot2::theme(panel.grid = ggplot2::element_blank())
+                }
+                 
                if(!is.null(session$clientData[[empty]])){
                  
-                 output[[plotName]] <- shiny::renderPlot(myplot)
+                 try({
+                   output[[plotName]] <- shiny::renderPlot(myplot)  
+                 }, silent = T)
                  
                  plotFn <- paste0(c(gsub(":|,:", "_", mSet$dataSet$cls.name), 
                                     plotName), collapse="_")
@@ -423,15 +436,22 @@ shiny::observe({
                  )
                  
                  output[[paste0(plotName, "_interactive")]] <- plotly::renderPlotly({
-                   p <- plotly::ggplotly(myplot,
-                                         tooltip = "text", 
-                                         height = session$clientData[[empty]]/if(isSquare) 1.4 else 2) %>%
+ 
+                   if(!is3D){
+                     myplot <- plotly::ggplotly(myplot,
+                                           tooltip = "text", 
+                                           height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)  
+                   }
+                   
+                   myplot <- myplot %>%
                      config(
                        toImageButtonOptions = list(
                          format = if(input$plotsvg) "svg" else "png",
                          filename = paste0(plotFn, "_interactive")
                        ))
-                   if(grepl("venn", plotName)) p %>% layout(xaxis = emptyax, yaxis = emptyax) else p
+                   if(grepl("venn", plotName)) myplot %>% layout(xaxis = emptyax,
+                                                                 yaxis = emptyax,
+                                                                 showlegend=F) else myplot %>% layout(showlegend=F)
                  })
                  
                  output[[paste0("download_", plotName)]] <- downloadHandler(
