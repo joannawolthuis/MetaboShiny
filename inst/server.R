@@ -1118,6 +1118,22 @@ omit_unknown = yes')
     })    
   })
   
+  output$manual_search <- renderUI({
+    if(search_button$on){
+      tags$button(
+        id = "search_mz",
+        class = "btn btn-default action-button",
+        img(src = "detective.png",
+            height = "50px")
+      )
+    }else{
+      fluidRow(align="center", 
+               shiny::img(src = "pawprint.png",height = "50px"),
+               br(),
+               tags$h2("pre-matched"))
+    }
+  })
+  
   # ==== LOAD LOGIN UI ====
   
   # init all observer

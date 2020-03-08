@@ -30,3 +30,5 @@ devtools::install_github("joannawolthuis/ggVennDiagram")
 
 library(MetaboShiny)
 start.metshi(inBrowser=T)
+
+update.packages(ask = F)
