@@ -371,6 +371,14 @@ shiny::observe({
           )
           mapply(function(myplot, plotName){
             
+            if(grepl("aov|tt|fc|pattern|asca|volc", plotName)){
+              whichAnal <- stringr::str_match(plotName, "aov|tt|fc|pattern|asca|volc")[,1]
+              if(is.null(mSet$analSet[[whichAnal]]$sig.mat)){
+                data = data.frame(text = "No significant hits!")
+                myplot = ggplot(data) + geom_text(aes(label = text), x = 0.5, y = 0.5, size = 10)
+              }
+            }
+            
             isSquare <- grepl("pca|plsda|tsne|roc|heatmap", plotName) & !grepl("scree|cv|perm|venn", plotName)
            
              # === WRAPPER ===

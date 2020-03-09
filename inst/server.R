@@ -1081,20 +1081,13 @@ omit_unknown = yes')
           uimanager$refresh <- "vennrich"
         }
         if(input$statistics %in% names(mSet$analSet)){
+          shinyjs::show(selector = paste0("div.panel[value=collapse_", input$statistics, "_tables]"))
           tablemanager$make <- input$statistics
-          plotMe = T
-          if(input$statistics %in% c("aov", "tt", "fc", "pattern", "asca", "volc")){
-            plotMe = !is.null(mSet$analSet[[input$statistics]]$sig.mat)
-          }
-          if(plotMe){
-            plotmanager$make <- input$statistics
-            shinyBS::updateCollapse(session, paste0("collapse_",input$statistics),open = paste0("collapse_", 
+          shinyjs::show(selector = paste0("div.panel[value=collapse_", input$statistics, "_plots]"))
+          plotmanager$make <- input$statistics
+          shinyBS::updateCollapse(session, paste0("collapse_",input$statistics),open = paste0("collapse_", 
                                                                                                 input$statistics, 
                                                                                                 c("_tables","_plots")))
-            shinyjs::show(selector = paste0("div.panel[value=collapse_", input$statistics, "_plots]"))
-          }
-          shinyjs::show(selector = paste0("div.panel[value=collapse_", input$statistics, "_tables]"))
-            
         }else{
             shinyBS::updateCollapse(session, paste0("collapse_",input$statistics),open = paste0("collapse_", 
                                                                                                 input$statistics, 
@@ -1111,21 +1104,15 @@ omit_unknown = yes')
                 "fc", "volc", "heatmap", 
                 "meba", "asca", "pattern", 
                 "enrich")
+  
   lapply(analyses, function(an){
     shiny::observeEvent(input[[paste0("do_", an)]], {
       try({
         statsmanager$calculate <- an
+        shinyjs::show(selector = paste0("div.panel[value=collapse_", an, "_tables]"))
         tablemanager$make <- an
-        plotMe = T
-        if(an %in% c("aov", "tt", "fc", "pattern", "asca", "volc")){
-          plotMe = !is.null(mSet$analSet[[an]]$sig.mat)
-        }
-        if(plotMe){
-          plotmanager$make <- an
-          shinyjs::show(selector = paste0("div.panel[value=collapse_", an, "_plots]"))
-        }else{
-          shinyjs::hide(selector = paste0("div.panel[value=collapse_", an, "_plots]"))
-        }
+        shinyjs::show(selector = paste0("div.panel[value=collapse_", an, "_plots]"))
+        plotmanager$make <- an
         uimanager$refresh <- an
       })
     })    
