@@ -11,6 +11,7 @@ function(input, output, session) {
   # detach("package:MetaboShiny", unload=T)
   # used to be in startshiny.R
   options("download.file.method" = "libcurl")
+  options(expressions = 5e5)
   
   # make metaboshiny_storage dir in home first..
   # docker run -p 8080:8080 -v ~/MetaboShiny/:/userfiles/:cached --rm -it metaboshiny/master /bin/bash
@@ -1081,22 +1082,25 @@ omit_unknown = yes')
         }
         if(input$statistics %in% names(mSet$analSet)){
           tablemanager$make <- input$statistics
-          plotmanager$make <- input$statistics
-          shinyBS::updateCollapse(session, paste0("collapse_",input$statistics),open = paste0("collapse_", 
-                                                                                              input$statistics, 
-                                                                                              c("_tables","_plots")))
-          shinyjs::show(selector = paste0("div.panel[value=collapse_", input$statistics, "_plots]"))
+          plotMe = T
+          if(input$statistics %in% c("aov", "tt", "fc", "pattern", "asca", "volc")){
+            plotMe = !is.null(mSet$analSet[[input$statistics]]$sig.mat)
+          }
+          if(plotMe){
+            plotmanager$make <- input$statistics
+            shinyBS::updateCollapse(session, paste0("collapse_",input$statistics),open = paste0("collapse_", 
+                                                                                                input$statistics, 
+                                                                                                c("_tables","_plots")))
+            shinyjs::show(selector = paste0("div.panel[value=collapse_", input$statistics, "_plots]"))
+          }
           shinyjs::show(selector = paste0("div.panel[value=collapse_", input$statistics, "_tables]"))
             
         }else{
-          #if(!is.null(input[[paste0("collapse_",input$statistics)]])){
             shinyBS::updateCollapse(session, paste0("collapse_",input$statistics),open = paste0("collapse_", 
                                                                                                 input$statistics, 
                                                                                                 "_settings")) 
-          #"div.panel[value=collapse_aov_plots]"
             shinyjs::hide(selector = paste0("div.panel[value=collapse_", input$statistics, "_plots]"))
             shinyjs::hide(selector = paste0("div.panel[value=collapse_", input$statistics, "_tables]"))
-          #}
         }
       }  
     }
@@ -1112,7 +1116,16 @@ omit_unknown = yes')
       try({
         statsmanager$calculate <- an
         tablemanager$make <- an
-        plotmanager$make <- an
+        plotMe = T
+        if(an %in% c("aov", "tt", "fc", "pattern", "asca", "volc")){
+          plotMe = !is.null(mSet$analSet[[an]]$sig.mat)
+        }
+        if(plotMe){
+          plotmanager$make <- an
+          shinyjs::show(selector = paste0("div.panel[value=collapse_", an, "_plots]"))
+        }else{
+          shinyjs::hide(selector = paste0("div.panel[value=collapse_", an, "_plots]"))
+        }
         uimanager$refresh <- an
       })
     })    

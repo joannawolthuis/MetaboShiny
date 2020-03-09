@@ -71,7 +71,12 @@ shiny::observe({
                      list()
                    },
                    pattern = {
-                     list(pattern_tab = mSet$analSet$corr$cor.mat)
+                     res =if(is.null(mSet$analSet$corr$cor.mat)){
+                       data.table::data.table("No significant hits found")
+                     }else{
+                       res = mSet$analSet$corr$cor.mat
+                     }
+                     list(pattern_tab = res)
                    },
                    aov = {
                      which_aov = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"

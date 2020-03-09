@@ -123,6 +123,7 @@ observeEvent(input$set_proj_name, {
   # change project name in user options file
   MetaboShiny::setOption(lcl$paths$opt.loc, key="proj_name", value=proj_name)
   # print the changed name in the UI
+  lcl$proj_name <<- proj_name
   output$proj_name <<- shiny::renderText(proj_name)
   # change path CSV should be / is saved to in session
   lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, lcl$proj_name)

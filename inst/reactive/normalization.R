@@ -29,7 +29,9 @@ shiny::observeEvent(input$initialize, {
       condition <- MetaboShiny::getDefaultCondition(metshiCSV, 
                                                     excl.rows = qc.rows, 
                                                     exp.vars = exp.vars, 
-                                                    excl.cond = c("batch", "injection", "sample"), 
+                                                    excl.cond = c("batch",
+                                                                  "injection",
+                                                                  "sample"), 
                                                     min.lev = 2)
       
       # =================================|
@@ -59,7 +61,7 @@ shiny::observeEvent(input$initialize, {
       detPPM <- fread(params)$ppmpermz
 
       # re-make csv with the corrected data
-      metshiCSV <- cbind(metshiCSV[,..exp.vars, with=FALSE][, -c("label")], # if 'label' is in excel file remove it, it will clash with the metaboanalystR 'label'
+      metshiCSV <- cbind(metshiCSV[,..exp.vars, with=FALSE], # if 'label' is in excel file remove it, it will clash with the metaboanalystR 'label'
                          "label" = metshiCSV[, ..condition][[1]], # set label as the initial variable of interest
                          metshiCSV[,..mz.vars, with=FALSE])
       
@@ -70,7 +72,7 @@ shiny::observeEvent(input$initialize, {
       }
       
       # if QC present, only keep QCs that share batches with the other samples (may occur when subsetting data/only loading part of the samples)
-      if(any(grepl("QC", metshiCSV$sample))){
+      if(any(grepl("QC", metshiCSV$sample)) & batch_corr){
         metshiCSV <- MetaboShiny::removeUnusedQC(metshiCSV,
                                                  metshiCSV[,..exp.vars, with=FALSE])
       }
@@ -80,6 +82,7 @@ shiny::observeEvent(input$initialize, {
       mz.meta <- getColDistribution(metshiCSV)
       exp.vars = mz.meta$meta
       mz.vars = mz.meta$mz
+      
       covar_table <- as.data.frame(metshiCSV[,..exp.vars, with=FALSE])
       
       metshiCSV <- MetaboShiny::asMetaboAnalyst(metshiCSV, 
@@ -115,25 +118,14 @@ shiny::observeEvent(input$initialize, {
       
       # add covars to the mSet for later switching and machine learning
       mSet$dataSet$covars <- data.table::as.data.table(covar_table)
-      #rownames(mSet$dataSet$covars) <- mSet$dataSet$covars$sample
-      
+
       # sanity check data
       mSet <- MetaboAnalystR::SanityCheckData(mSet)
       
       mSet$dataSet$orig <- NULL
       gc()
       
-      #print(paste0("Left after missing value check: ", MetaboShiny::mzLeftPostFilt(mSet, input$perc_limit))
-      
       shiny::setProgress(session=session, value= .6)
-      
-      # remove metabolites with more than user defined perc missing
-      #mSet <- MetaboAnalystR::RemoveMissingPercent(mSet,
-      #                                             percent = 1)#input$perc_limit/100)
-      
-      # remove samples with now no one...
-      #rmv = MetaboShiny::tooEmptySamps(mSet, 
-      #                                 max.missing.per.samp = input$perc_limit)
       
       # missing value imputation
       if(req(input$miss_type ) != "none"){
@@ -233,7 +225,7 @@ shiny::observeEvent(input$initialize, {
       
       if(batch_corr){
         
-        if("batch" %in% req(input$batch_var ) & has.qc){
+        if("batch" %in% input$batch_var & has.qc){
           # save to mSet
           smps <- rownames(mSet$dataSet$norm)
           # get which rows are QC samples

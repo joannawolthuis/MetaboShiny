@@ -81,7 +81,6 @@ import.pat.csvs <- function(db.name,
     y <- log10(abs(x)-floor(abs(x)))   
     ifelse(isTRUE(all.equal(round(y),y)), -y-1, -ceiling(y))}
   
-  
   poslist$sample <- as.character(poslist$sample)
   neglist$sample <- as.character(neglist$sample)
   metadata.filt$sample <- as.character(metadata.filt$sample)
@@ -113,12 +112,26 @@ import.pat.csvs <- function(db.name,
       }
       ppmRange <- as.numeric(mz)/1e6 * as.numeric(ppm)
       zeros = sapply(ppmRange,zeros_after_period)
-      decSpots = zeros + 1 # todo: verify this formula?
+      decSpots = zeros + 2 # todo: verify this formula?
       roundedMz <- formatC(as.numeric(mz), digits = decSpots, format = "f")
       roundedPpm <-formatC(as.numeric(ppm), digits = 6, format = "f")
-      newName = paste0(roundedMz, "+", if(hasPPM|hasRT) paste0(if(hasPPM)"/"else"RT", roundedPpm) else "") 
+      newName = paste0(roundedMz, "+", if(hasPPM|hasRT) paste0(if(hasPPM) "/" else "RT", roundedPpm) else "") 
       return(newName)
     })
+  
+  # dup_newmz <- unique(c(which(duplicated(newmz), duplicated(newmz, fromLast = T))))
+  # rounded_cols <- pbapply::pblapply(newmz, function(mz){
+  #   origmz = names(newmz)[newmz == mz]
+  #   res = poslist[, ..origmz]
+  #   if(ncol(res) > 1){
+  #     res = rowMeans(res, na.rm=T)
+  #     res[is.nan(res)] <- c(NA)
+  #     res = data.table::data.table(res)
+  #   }
+  #   colnames(res) <- mz
+  #   res
+  # })
+  
   ismz <- suppressWarnings(which(!is.na(as.numeric(gsub(colnames(neglist), pattern="/.*$|RT.*$", replacement="")))))
   colnames(neglist)[ismz] <- pbapply::pbsapply(colnames(neglist)[ismz], function(mz){
     if(hasPPM|hasRT){
@@ -128,10 +141,10 @@ import.pat.csvs <- function(db.name,
     }
     ppmRange <- as.numeric(mz)/1e6 * as.numeric(ppm)
     zeros = sapply(ppmRange,zeros_after_period)
-    decSpots = zeros + 1 # todo: verify this formula?
+    decSpots = zeros + 2 # todo: verify this formula?
     roundedMz <- formatC(as.numeric(mz), digits = decSpots, format = "f")
     roundedPpm <-formatC(as.numeric(ppm), digits = 6, format = "f")
-    newName = paste0(roundedMz, "-",  if(hasPPM|hasRT) paste0(if(hasPPM)"/"else"RT", roundedPpm) else "") 
+    newName = paste0(roundedMz, "-",  if(hasPPM|hasRT) paste0(if(hasPPM) "/" else "RT", roundedPpm) else "") 
     return(newName)
     })
   
