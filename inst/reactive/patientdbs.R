@@ -59,7 +59,7 @@ shiny::observeEvent(input$create_csv,{
       output$proj_name <<- shiny::renderText(proj_name)
       
       # if loading in .csv files...
-      MetaboShiny::import.pat.csvs(db.name = lcl$paths$patdb,
+      import.pat.csvs(db.name = lcl$paths$patdb,
                                    ppm = input$ppm,
                                    pospath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath,
                                    negpath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath,

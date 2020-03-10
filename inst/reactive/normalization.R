@@ -31,7 +31,8 @@ shiny::observeEvent(input$initialize, {
                                                     exp.vars = exp.vars, 
                                                     excl.cond = c("batch",
                                                                   "injection",
-                                                                  "sample"), 
+                                                                  "sample",
+                                                                  "sampling_date"), 
                                                     min.lev = 2)
       
       # =================================|
@@ -106,6 +107,7 @@ shiny::observeEvent(input$initialize, {
                                               anal.type = "stat",
                                               paired = FALSE)
       
+      mSet$dataSet$paired = F
       # load new csv into empty mSet!
       mSet <- MetaboAnalystR::Read.TextData(mSet,
                                             filePath = csv_loc_final,
@@ -113,7 +115,7 @@ shiny::observeEvent(input$initialize, {
                                             lbl.type = "disc")  # rows contain samples
       
       # set default time series mode'
-      mSet$dataSet$paired = F
+      
       mSet$dataSet$subset = c()
       
       # add covars to the mSet for later switching and machine learning

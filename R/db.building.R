@@ -16,6 +16,7 @@ import.pat.csvs <- function(db.name,
 
   metadata <- data.table::fread(metapath)
   metadata <- MetaboShiny::reformat.metadata(metadata)
+  
   keep.cols = colSums(is.na(metadata)) < nrow(metadata) & sapply(colnames(metadata), function(x) length(unique(metadata[,..x][[1]])) > 1) 
   metadata$sample <- gsub(metadata$sample, pattern = wipe.regex, replacement = "", perl=T)
   metadata.filt = unique(metadata[, ..keep.cols])
@@ -90,7 +91,10 @@ import.pat.csvs <- function(db.name,
   # CHECK SAMPLES THAT ARE IN METADATA
   keep.samples.pos <- intersect(poslist$sample, unique.samples)
   keep.samples.neg <- intersect(neglist$sample, unique.samples)
-  missing.samples = setdiff(unique.samples, unique(c(keep.samples.pos, keep.samples.neg)))
+  all.keep = unique(c(keep.samples.pos, keep.samples.neg))
+  
+  missing.samples = unique.samples[which(!(unique.samples %in% all.keep))]
+  
   if(length(missing.samples) > 0 ){
     if(inshiny){
       shiny::showNotification(paste0("Missing samples: ", paste0(missing.samples, collapse = ","), ". Please check your peak table < > metadata for naming mismatches!"))
@@ -164,19 +168,22 @@ import.pat.csvs <- function(db.name,
   # merge metadata with peaks
   setkey(poslist, sample)
   setkey(neglist, sample)
-  setkey(metadata, sample)
+  setkey(metadata.filt, sample)
   
   mzlist <- merge(poslist, neglist, by = "sample")
   mzlist <- merge(metadata.filt, mzlist, by = "sample")
 
   mz.meta <- getColDistribution(mzlist)
   exp.vars = mz.meta$meta
-  mzlist[,(exp.vars) := lapply(.SD,function(x){ ifelse(x == "" | is.na(x) | x == "Unknown", "unknown", x)}), .SDcols = exp.vars]
+  mzlist[,(exp.vars) := lapply(.SD,function(x){ ifelse(x == "" | is.na(x) | x == "Unknown",
+                                                       "unknown",
+                                                       x)}), .SDcols = exp.vars]
   
   colnames(mzlist)[which(colnames(mzlist) == "time")] <- "Time"
   mzlist$sample <- gsub("[^[:alnum:]./_-]", "", mzlist$sample)
   # - - - - - - - - - - - - - - - - - - 
   data.table::fwrite(mzlist, csvpath)
+  print(mzlist[1:5,1:30])
   params = data.table(ppm=ppm,
                       ppmpermz = if(hasPPM) "yes" else "no")
   data.table::fwrite(params, gsub(csvpath, pattern="\\.csv", replacement="_params.csv"))
