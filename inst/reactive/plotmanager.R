@@ -59,7 +59,8 @@ shiny::observe({
                             list(summary_plot = p)
                           },
                           pattern = {
-                            p = MetaboShiny::ggPlotPattern(mSet,n = input$pattern_topn,
+                            p = MetaboShiny::ggPlotPattern(mSet,
+                                                           n = input$pattern_topn,
                                                            cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                             
                             list(pattern_plot = p)

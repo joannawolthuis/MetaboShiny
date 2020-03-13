@@ -40,6 +40,7 @@ lapply(c("prematch","search_mz"), function(search_type){
       blocks = switch(search_type,
                       prematch = split(colnames(mSet$dataSet$norm), ceiling(seq_along(1:ncol(mSet$dataSet$norm))/blocksize)),
                       search_mz = list(my_selection$mz))
+      
       shiny::withProgress({
         i = 0
         matches = pbapply::pblapply(blocks, function(mzs){
@@ -60,8 +61,12 @@ lapply(c("prematch","search_mz"), function(search_type){
             mzs = gsub(mzs, pattern="RT.*$", replacement="")
           }
           
+          ionmode = sapply(mzs, function(mz) if(grepl(mz, pattern="\\-")) "negative" else "positive")
+          mzs = stringr::str_match(mzs, "(^\\d+\\.\\d+)")[,2]
+          
           if("cmmmediator" %in% db_list){
             ionmode = sapply(mzs, function(mz) if(grepl(mz, pattern="\\-")) "negative" else "positive")
+            
             res.online <- MetaDBparse::searchMZonline(mz = mzs, 
                                                       mode = ionmode,
                                                       ppm = ppm,
@@ -115,8 +120,6 @@ lapply(c("prematch","search_mz"), function(search_type){
                 ppm <- as.numeric(mSet$ppm)
               }
               
-              ionmode = if(stringr::str_match(mz, "([+|-])")[,2] == "+") "positive" else "negative"
-              
               res.predict = MetaDBparse::getPredicted(mz = as.numeric(mz), 
                                                       ppm = ppm,
                                                       mode = ionmode,
@@ -132,17 +135,12 @@ lapply(c("prematch","search_mz"), function(search_type){
                 search_db = T
               }
               
-              if(nrow(res.predict) > 0 & search_db == T){
-                res.predict$source = c("magicball")
+              if(nrow(res.predict) > 0 & search_db){
                 if(lcl$apikey == " ") shiny::showNotification("Skipping ChemSpider, you haven't entered an API key!")
                 res.big.db = MetaDBparse::searchFormulaWeb(unique(res.predict$baseformula),
                                                            search = intersect(db_list, 
-                                                                              if(lcl$apikey != " ") c("pubchem",
-                                                                                                     "chemspider",
-                                                                                                     "knapsack",
-                                                                                                     "supernatural2") else c("pubchem",
-                                                                                                                             "knapsack",
-                                                                                                                             "supernatural2")),
+                                                                              if(lcl$apikey != " ") c("pubchem", "chemspider", "knapsack","supernatural2") else 
+                                                                                                       c("pubchem", "knapsack", "supernatural2")),
                                                            detailed = TRUE,#input$predict_details,
                                                            apikey = lcl$apikey)
                 
@@ -164,6 +162,7 @@ lapply(c("prematch","search_mz"), function(search_type){
                 withSmi = which(results_full$structure != "")
                 if(length(withSmi) > 0){
                   results_nosmi <- results_full[ -withSmi ]
+                  results_nosmi$structure = paste0("[",results_nosmi$fullformula,"]0")
                   results_withsmi <- results_full[ withSmi ]  
                   if(input$predict_structure_check){
                     mols = MetaDBparse::smiles.to.iatom(results_withsmi$structure)
@@ -171,7 +170,8 @@ lapply(c("prematch","search_mz"), function(search_type){
                     results_withsmi$structure <- new.smi
                   }
                   if(input$predict_adduct_rules){
-                    rulematch = MetaDBparse::countAdductRuleMatches(mols, adduct_rules)
+                    rulematch = MetaDBparse::countAdductRuleMatches(mols,
+                                                                    adduct_rules)
                     structure.adducts.possible =  MetaDBparse::checkAdductRule(rulematch,
                                                                                adducts)
                     keep <- sapply(1:nrow(results_withsmi), function(i){
@@ -202,10 +202,6 @@ lapply(c("prematch","search_mz"), function(search_type){
                                    replacement = "", 
                                    perl=T), gbl$vectors$db_no_build)
           if(length(dbs.local)>0){
-            
-            ionmode = sapply(mzs, function(mz) if(grepl(mz, pattern="\\-")) "negative" else "positive")
-            mzs = stringr::str_match(mzs, "(^\\d+\\.\\d+)")[,2]
-            
             res.local = MetaDBparse::searchMZ(mzs = mzs,
                                               ionmodes = ionmode,
                                               base.dbname = dbs.local,
@@ -270,8 +266,19 @@ lapply(c("prematch","search_mz"), function(search_type){
       #}
       
     }else{
-      MetaboShiny::metshiAlert("Please build at least one database to enable this feature!")
-      return(NULL)
+      if(length(grep(pattern = "supernatural|pubchem|magicball|chemspider|cmmediator|knapsack", 
+                     x = lcl$vectors$built_dbs, value = T, invert = T)) == 0){
+        MetaboShiny::metshiAlert("Please build at least one database (or select an online one) to enable this feature!")
+      }else{
+        MetaboShiny::metshiAlert("Please select at least one database to enable this feature!")
+      }
+      shinyBS::updateCollapse(session = session, 
+                              id = "search_panel",
+                              open = "databases",
+                              style = "info")
+      shiny::updateTabsetPanel(session, 
+                               "tab_iden_1", 
+                               selected = "pick_databases")
     }
   })
 })

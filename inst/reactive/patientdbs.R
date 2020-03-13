@@ -100,44 +100,33 @@ shiny::observeEvent(input$import_db, {
 shiny::observeEvent(input$metadata_new_add, {
   
   meta_path <- shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata_new)$datapath
-  
+  success = F
   try({
     new_meta <- data.table::fread(meta_path)
     new_meta <- MetaboShiny::reformat.metadata(new_meta)
     colnames(new_meta) <- tolower(colnames(new_meta))
+    mSet <- MetaboShiny::reset.mSet(mSet,
+                                    fn = file.path(lcl$paths$proj_dir, 
+                                                   paste0(lcl$proj_name,
+                                                          "_ORIG.metshi")))
     
-    missing <- which(!(new_meta$sample %in% mSet$storage$orig$data$covars$sample))
-    
-    if(length(missing) == nrow(new_meta)){
-      # TODO: allow new info added for only a few samples
-      MetaboShiny::metshiAlert("Sample name mismatch! Please check your new metadata...")
-    }else{
-      new_meta <- new_meta[-missing,]
-      # removed_variables?
-      missing_variables <- setdiff(colnames(mSet$storage$orig$data$covars), colnames(new_meta))
-      if(length(missing_variables)>1){
-        # save these to add later
-        meta_base <- mSet$storage$orig$data$covars[, ..missing_variables]
-      }else{
-        meta_base <- data.table::data.table()
-      }
-      
-      # reorder to match old order
-      reordered_new_meta <- new_meta[match(mSet$storage$orig$data$covars$sample, new_meta$sample),]
-      merged_new_meta <- cbind(reordered_new_meta, 
-                               meta_base)
-      
-      mSet <- MetaboShiny::store.mSet(mSet)
-      mSet$storage$orig$data$covars <- merged_new_meta
-      mSet <- MetaboShiny::reset.mSet(mSet)
-      mSet <<- mSet
-      
-      shiny::showNotification("Updated metadata! Your experiment was saved but your current variable reset.")
-      
-      datamanager$reload <- "general"  
-    }
+    mSet$dataSet$covars <- plyr::join(mSet$dataSet$covars[,"sample"], new_meta[,-c("injection","batch")], type = "left")
+    mSet <- MetaboShiny::store.mSet(mSet)
+    success = T
   })
-  
+  if(success){
+    mSet <<- mSet
+    # overwrite orig?
+    saveRDS(list(data = mSet$dataSet,
+                 analysis = mSet$analSet,
+                 settings = mSet$settings), 
+            file = file.path(lcl$paths$proj_dir, 
+                             paste0(lcl$proj_name,"_ORIG.metshi")))
+    shiny::showNotification("Updated metadata! Your experiment was saved but your current variable reset.")
+    uimanager$refresh <- "general"
+  }else{
+    shiny::showNotification("Something went wrong! :(")
+  }
 })
 
 # triggers when 'get options' is clicked in the normalization pane

@@ -214,14 +214,13 @@ shiny::observe({
       
       if(!success){
         MetaboShiny::metshiAlert("Table rendering failed!")
-      }
-      
-      mapply(function(mytable, tableName){
-        output[[tableName]] <- DT::renderDataTable({
-          MetaboShiny::metshiTable(content = mytable)
-        }, server = FALSE)
-      }, toWrap, names(toWrap))
-      
+      }else{
+        mapply(function(mytable, tableName){
+          output[[tableName]] <- DT::renderDataTable({
+            MetaboShiny::metshiTable(content = mytable)
+          }, server = FALSE)
+        }, toWrap, names(toWrap)) 
+      } 
     }
     tablemanager$make <- NULL # set makeing to 'off'
   }
