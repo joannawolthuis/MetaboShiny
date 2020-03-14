@@ -322,13 +322,26 @@ shiny::observe({
                                                          column_text_angle = 90,
                                                          xlab = "Sample",
                                                          ylab = "m/z",
-                                                         showticklabels = c(T,F),
+                                                         #showticklabels = c(T,F),
                                                          #symm=F,symkey=F,
                                                          symbreaks=T
                                                          #label_names = c("m/z", "sample", "intensity") #breaks side colours...
                                     )
+                                    
+                                    # stats::heatmap(mSet$analSet$heatmap$matrix[1:if(input$heatmap_topn < nrow(mSet$analSet$heatmap$matrix)) input$heatmap_topn else nrow(mSet$analSet$heatmap$matrix),],
+                                    #                      Colv = mSet$analSet$heatmap$my_order,
+                                    #                      Rowv = T,
+                                    #                      col = gbl$functions$color.functions[[lcl$aes$spectrum]](256),
+                                    #                      ColSideColors = as.character(mSet$analSet$heatmap$colors[match(mSet$analSet$heatmap$translator[,!1][[1]],
+                                    #                                                                                     names(mSet$analSet$heatmap$colors)
+                                    #                                                                                     )]),
+                                    #                      xlab = "Sample",
+                                    #                      ylab = "m/z"
+                                    # )
+                                    
                                   }
                                 })
+                                hmap$x$layout$annotations[[1]]$text <- ""
                                 # save the order of mzs for later clicking functionality
                                 lcl$vectors$heatmap <<- hmap$x$layout[[if(mSet$dataSet$exp.type %in% c("2f", "t", "t1f")) "yaxis2" else "yaxis3"]]$ticktext 
                                 # return
@@ -383,7 +396,6 @@ shiny::observe({
             isSquare <- grepl("pca|plsda|tsne|roc|heatmap", plotName) & !grepl("scree|cv|perm|venn", plotName)
            
              # === WRAPPER ===
-            
             empty <- if(grepl(plotName, pattern="var|samp")) "output_empty2_width" else "output_empty3_width"
          
              output[[paste0(plotName, "_wrap")]] <- shiny::renderUI({
@@ -412,6 +424,8 @@ shiny::observe({
                  is3D <- F
                }
                
+               is3D <- plotName == "heatmap"
+               
                 if(!is3D){
                    myplot <- myplot + 
                      gbl$functions$plot.themes[[lcl$aes$theme]](base_size = 15) + 
@@ -430,8 +444,16 @@ shiny::observe({
                if(!is.null(session$clientData[[empty]])){
                  
                  try({
-                   output[[plotName]] <- shiny::renderPlot(myplot)  
-                 }, silent = T)
+                   output[[plotName]] <- shiny::renderPlot({
+                     if(plotName == "heatmap"){
+                       data = data.frame(text = "Currently only available in 'plotly' mode!\nPlease switch in the sidebar.")
+                       ggplot(data) + geom_text(aes(label = text), x = 0.5, y = 0.5, size = 10) +
+                         theme(text = element_text(family = lcl$aes$font$family)) + theme_bw()
+                     }else{
+                       myplot
+                     }
+                   })  
+                 }, silent = F)
                  
                  plotFn <- paste0(c(gsub(":|,:", "_", mSet$dataSet$cls.name), 
                                     plotName), collapse="_")
@@ -451,16 +473,20 @@ shiny::observe({
                                            tooltip = "text", 
                                            height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)  
                    }
-                   
-                   myplot <- myplot %>%
+                   if(plotName != "heatmap"){
+                     if(grepl("venn", plotName)) myplot %>% layout(xaxis = emptyax,
+                                                                   yaxis = emptyax,
+                                                                   showlegend=F) else myplot %>% layout(showlegend=F) 
+                   }else{
+                     myplot <- myplot %>% layout(height = session$clientData[[empty]]/1.4,
+                                                     width = session$clientData[[empty]])
+                   }
+                   myplot %>%
                      config(
                        toImageButtonOptions = list(
                          format = if(input$plotsvg) "svg" else "png",
                          filename = paste0(plotFn, "_interactive")
                        ))
-                   if(grepl("venn", plotName)) myplot %>% layout(xaxis = emptyax,
-                                                                 yaxis = emptyax,
-                                                                 showlegend=F) else myplot %>% layout(showlegend=F)
                  })
                  
                  output[[paste0("download_", plotName)]] <- downloadHandler(
