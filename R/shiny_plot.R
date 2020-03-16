@@ -1213,27 +1213,25 @@ ggPlotVenn <- function(mSet,
                        cols,
                        cf){
   
-  
   flattened <- getTopHits (mSet, unlist(venn_yes$now), top)
   
   parseFun = function(labels){
     sapply(labels, function(label){
       if(grepl(label, pattern=":")){
-        searched=stringr::str_match(label, "(^.*?):(.*):(.*$)")
-        experiment = trimws(searched[,2])
-        experiment = gsub(pattern = '([[:lower:]])', perl = TRUE, replacement = '\\U\\1', experiment)
-        stats = trimws(searched[,4])
-        stats = gsub(pattern = '([[:lower:]])', perl = TRUE, replacement = '\\U\\1', stats)
-        label = gsub("\\(|\\)","",searched[,3])
-        indented = gsub(label, pattern=":", replacement='\n')
-        indented = gsub(indented, pattern=",", replacement="")
-        indented = gsub(indented, pattern = "(=|\\+)", replacement = " \\1 ")
-        paste0(experiment, "\n", indented,  "\n", paste0(">> ",stats, " <<"))
+        split = trimws(stringr::str_split(label, ":")[[1]])
+        stats_on = toupper(split[1])
+        which_stats = split[length(split)]
+        subset = grep("=", split, value=T)
+        print(subset)
+        paste0(stats_on, "\n", if(length(subset)>0) paste0(subset, collapse="\n", "\n") else "", paste0(">> ", which_stats, " <<\n\n"))
       }else{
         label
       }
     })
   }
+  
+  #labels = c("species: aov", "species: PC1 (PLS-DA)", "species_type:tissue=distal intestine: tt")
+  #cat(parseFun(labels))
   
   p = ggVennDiagram::ggVennDiagram(flattened,
                                    label_alpha = 1, 
