@@ -445,7 +445,8 @@ shiny::observe({
                      myplot <- myplot + 
                        ggplot2::theme_void() +
                        ggplot2::theme(panel.grid = ggplot2::element_blank(),
-                                      legend.position="none")
+                                      legend.position="none",
+                                      text = ggplot2::element_text(family = lcl$aes$font$family))
                         
                    }
                     
