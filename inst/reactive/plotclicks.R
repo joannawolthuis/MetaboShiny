@@ -2,7 +2,7 @@
 shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
   
   d <<- plotly::event_data("plotly_click", priority = "event") # get click details (which point, additional included info, etc...
-
+  
   for(pietype in c("add", "iso", "db")){
     try({
       if(input$tab_search == "match_filters_tab" & input$match_filters == paste0("pie_",pietype)){
@@ -79,11 +79,13 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                enrich$current <- myHits
              },
              venn = {
-               picked_intersection = d$key[[1]]
-               groups = stringr::str_split(picked_intersection, "<br />")[[1]]
-               shiny::updateSelectInput(session = session, 
-                                        inputId = "intersect_venn", 
-                                        selected = groups)
+               if("key" %in% colnames(d)){
+                 picked_intersection = d$key[[1]]
+                 groups = stringr::str_split(picked_intersection, "<br />")[[1]]
+                 shiny::updateSelectInput(session = session, 
+                                          inputId = "intersect_venn", 
+                                          selected = groups)   
+               }
              },
              {if('key' %not in% colnames(d)) return(NULL)
                if(gsub(d$key[[1]],pattern="`",replacement="") %not in% colnames(mSet$dataSet$prenorm)) return(NULL)

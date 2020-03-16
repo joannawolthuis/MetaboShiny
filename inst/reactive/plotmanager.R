@@ -52,9 +52,14 @@ shiny::observe({
                             NULL
                           },
                           summary = {
-                            p = MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
+                            p = MetaboShiny::ggplotSummary(mSet, my_selection$mz, 
+                                                           shape.fac = input$shape_var, 
+                                                           cols = lcl$aes$mycols, 
+                                                           cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
                                                            styles = input$ggplot_sum_style,
-                                                           add_stats = input$ggplot_sum_stats, color.fac = input$col_var, text.fac = input$txt_var)
+                                                           add_stats = input$ggplot_sum_stats, 
+                                                           color.fac = input$col_var, 
+                                                           text.fac = input$txt_var)
                             
                             list(summary_plot = p)
                           },
@@ -436,9 +441,14 @@ shiny::observe({
                                                                        size=lcl$aes$font$title.size*1.2,
                                                                        face="bold"),
                                     text = ggplot2::element_text(family = lcl$aes$font$family))
-                   if(grepl("venn", plotName)) myplot <- myplot + 
-                       ggplot2::theme_void() + 
-                       ggplot2::theme(panel.grid = ggplot2::element_blank())
+                   if(grepl("venn", plotName)){
+                     myplot <- myplot + 
+                       ggplot2::theme_void() +
+                       ggplot2::theme(panel.grid = ggplot2::element_blank(),
+                                      legend.position="none")
+                        
+                   }
+                    
                 }
                  
                if(!is.null(session$clientData[[empty]])){
@@ -470,13 +480,13 @@ shiny::observe({
  
                    if(!is3D){
                      myplot <- plotly::ggplotly(myplot,
-                                           tooltip = "text", 
-                                           height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)  
+                                                tooltip = "text", 
+                                                height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)  
                    }
                    if(plotName != "heatmap"){
-                     if(grepl("venn", plotName)) myplot %>% layout(xaxis = emptyax,
-                                                                   yaxis = emptyax,
-                                                                   showlegend=F) else myplot %>% layout(showlegend=F) 
+                     myplot <- if(grepl("venn", plotName)) myplot %>% layout(xaxis = emptyax,
+                                                                             yaxis = emptyax,
+                                                                             showlegend=F) else myplot %>% layout(showlegend=F) 
                    }else{
                      myplot <- myplot %>% layout(height = session$clientData[[empty]]/1.4,
                                                      width = session$clientData[[empty]])

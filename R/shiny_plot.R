@@ -1214,7 +1214,7 @@ ggPlotVenn <- function(mSet,
                        cf){
   
   
-  flattened <- getTopHits(mSet, unlist(venn_yes$now), top)
+  flattened <- getTopHits (mSet, unlist(venn_yes$now), top)
   
   parseFun = function(labels){
     sapply(labels, function(label){
