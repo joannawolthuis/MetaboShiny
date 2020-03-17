@@ -59,6 +59,17 @@ get_prematches <- function(who = NA,
     res$isocat <- sapply(res$`%iso`, function(perc) if(perc == 100) "main" else "minor")
   }
   
+  if(nrow(res) > 0){
+    has.no.struct = which(trimws(res$structure) == "")
+    if(length(has.no.struct) > 0){
+      res[has.no.struct,]$structure <- paste0("[", 
+                                             res[has.no.struct,]$baseformula, "]", 
+                                             res[has.no.struct,]$finalcharge, "_", 
+                                             res[has.no.struct,]$identifier)
+    }  
+  }
+  
+  
   RSQLite::dbDisconnect(conn)
   return(res)
 }

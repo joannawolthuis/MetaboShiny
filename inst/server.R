@@ -404,7 +404,7 @@ omit_unknown = yes')
     if(search$go){
       shiny::withProgress({
         if(input$tab_iden_2 == "mzmol"){
-          if(lcl$prev_mz != my_selection$mz){
+          if(lcl$prev_mz != my_selection$mz & !identical(lcl$vectors$prev_dbs, lcl$vectors$db_search_list)){
             matches = data.table::as.data.table(MetaboShiny::get_prematches(who = gsub(my_selection$mz, pattern="/.*$|RT.*$", replacement=""),
                                                                             what = "map.query_mz",
                                                                             patdb = lcl$paths$patdb,
@@ -417,6 +417,7 @@ omit_unknown = yes')
             }
             
             lcl$prev_mz <<- my_selection$mz
+            lcl$vectors$prev_dbs <<- lcl$vectors$db_search_list
             pieinfo$db <- reshape::melt(table(matches$source))
             pieinfo$add <- reshape::melt(table(matches$adduct))
             pieinfo$iso <- reshape::melt(table(matches$isocat))
@@ -470,7 +471,7 @@ omit_unknown = yes')
             
             # move extra names to descriptions
             split_names <- strsplit(info_aggr$name, split = "SEPERATOR")
-            main_names <- unlist(lapply(split_names, function(x) x[[1]]))
+            main_names <- unlist(lapply(split_names, function(x) if(length(x) > 1) x[[1]] else x[1]))
             
             synonyms <- unlist(lapply(split_names, function(x){
               if(length(x)>1){

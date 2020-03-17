@@ -24,9 +24,9 @@ lapply(c("prematch","search_mz"), function(search_type){
                       prematch = length(lcl$vectors$db_prematch_list) > 0,
                       search_mz = length(lcl$vectors$db_search_list) > 0 & my_selection$mz != "")
     
-    db_list = switch(search_type,
-                     prematch = lcl$vectors$db_prematch_list,
-                     search_mz = lcl$vectors$db_search_list)
+    db_list <- switch(search_type,
+                      prematch = lcl$vectors$db_prematch_list,
+                      search_mz = lcl$vectors$db_search_list)
     
     if(continue){ # go through selected databases
       
@@ -70,7 +70,8 @@ lapply(c("prematch","search_mz"), function(search_type){
             res.online <- MetaDBparse::searchMZonline(mz = mzs, 
                                                       mode = ionmode,
                                                       ppm = ppm,
-                                                      which_db = "cmmr")
+                                                      which_db = "cmmr",
+                                                      apikey = lcl$apikey)
             if(nrow(res.online) > 0 ){
               if(!("structure" %in% colnames(res.online))){
                 res.online$structure <- c("")
@@ -243,27 +244,28 @@ lapply(c("prematch","search_mz"), function(search_type){
       mapper = unique(data.table::rbindlist(lapply(matches, function(x) x$mapper)))
       content = unique(data.table::rbindlist(lapply(matches, function(x) x$content)))
       
-      #if(nrow(mapper)>0){
-      RSQLite::dbWriteTable(conn, 
-                            "match_mapper", 
-                            mapper, overwrite=T, use.names = T)
-      RSQLite::dbWriteTable(conn, 
-                            "match_content", 
-                            content, overwrite=T, use.names = T)
-      RSQLite::dbExecute(conn, "CREATE INDEX map_mz ON match_mapper(query_mz)")
-      RSQLite::dbExecute(conn, "CREATE INDEX map_ba ON match_mapper(baseformula, adduct)")
-      RSQLite::dbExecute(conn, "CREATE INDEX cont_ba ON match_content(baseformula, adduct)")
-      RSQLite::dbExecute(conn, "CREATE INDEX cont_str ON match_content(structure)")
-      if(search_type == "prematch"){
-        mSet$metshiParams$prematched<<-T
-        search_button$on <- FALSE   
+      if(nrow(mapper)>0){
+        
+        RSQLite::dbWriteTable(conn, 
+                              "match_mapper", 
+                              mapper, overwrite=T, use.names = T)
+        RSQLite::dbWriteTable(conn, 
+                              "match_content", 
+                              content, overwrite=T, use.names = T)
+        RSQLite::dbExecute(conn, "CREATE INDEX map_mz ON match_mapper(query_mz)")
+        RSQLite::dbExecute(conn, "CREATE INDEX map_ba ON match_mapper(baseformula, adduct)")
+        RSQLite::dbExecute(conn, "CREATE INDEX cont_ba ON match_content(baseformula, adduct)")
+        RSQLite::dbExecute(conn, "CREATE INDEX cont_str ON match_content(structure)")
+        if(search_type == "prematch"){
+          mSet$metshiParams$prematched<<-T
+          search_button$on <- FALSE   
+        }else{
+          search$go <- TRUE
+        }
+        RSQLite::dbDisconnect(conn)
       }else{
-        search$go <- TRUE
+        shiny::showNotification("No matches found!")  
       }
-      RSQLite::dbDisconnect(conn)
-      #}else{
-      #shiny::showNotification("No matches found!")  
-      #}
       
     }else{
       if(length(grep(pattern = "supernatural|pubchem|magicball|chemspider|cmmediator|knapsack", 
