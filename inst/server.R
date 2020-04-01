@@ -413,9 +413,10 @@ omit_unknown = yes')
                                                                             showiso = c()))
             
             if(nrow(matches) == 0){
+              shown_matches$forward_unique <- data.table::data.table()
+              shown_matches$forward_full <- data.table::data.table()
               return(NULL)
             }
-            
             lcl$prev_mz <<- my_selection$mz
             lcl$vectors$prev_dbs <<- lcl$vectors$db_search_list
             pieinfo$db <- reshape::melt(table(matches$source))

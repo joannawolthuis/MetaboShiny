@@ -265,6 +265,8 @@ lapply(c("prematch","search_mz"), function(search_type){
         RSQLite::dbDisconnect(conn)
       }else{
         shiny::showNotification("No matches found!")  
+        shown_matches$forward_unique <<- data.table::data.table()
+        shown_matches$forward_full <<- data.table::data.table()
       }
       
     }else{
