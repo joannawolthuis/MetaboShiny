@@ -6,7 +6,7 @@ ggplotNormSummary <- function(mSet,
                               cf){
   
   # load in original data (pre-normalization, post-filter)
-  orig_data <- as.data.frame(mSet$dataSet$prenorm)
+  orig_data <- as.data.frame(mSet$dataSet$proc)
   # load in normalized data
   norm_data <- as.data.frame(mSet$dataSet$norm)
   
@@ -30,27 +30,41 @@ ggplotNormSummary <- function(mSet,
   plot <- ggplot2::ggplot(data=orig_melt)
   
   # first result plot: is a density plot of chosen 20 mz values with 20 samples
-  RES1 <- plot + ggplot2::geom_density(ggplot2::aes(x=value), colour="blue", fill="blue", alpha=0.4)
+  RES1 <- plot + ggplot2::geom_density(ggplot2::aes(x=value,y=..scaled..), colour="blue", fill="blue", alpha=0.4) +
+    ggplot2::ylab("density") + 
+    ggplot2::xlab("intensity")
   
   # second result plot: shows the spread of the intensities before normalization
   RES2 <- plot + ggplot2::geom_boxplot(
-    ggplot2::aes(x=value,y=variable),
+    ggplot2::aes(y=value, x=variable),
     color=cf(sampsize),
-    alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(orig_melt$value)))
+    alpha=0.4) + ggplot2::geom_hline(ggplot2::aes(yintercept=median(value))) + 
+    coord_flip() +
+    ggplot2::xlab("m/z") + 
+    ggplot2::ylab("intensity")
   
   # create base plot with base theme and font size for normalized data
   plot <- ggplot2::ggplot(data=norm_melt)
   
   # third result plot: a density plot of chosen 20 mz values post normalization
-  RES3 <- plot + ggplot2::geom_density(ggplot2::aes(x=value), colour="pink", fill="pink", alpha=0.4)
+  RES3 <- plot + ggplot2::geom_density(ggplot2::aes(x=value,y=..scaled..), colour="pink", fill="pink", alpha=0.4) + 
+    ggplot2::ylab("density") + 
+    ggplot2::xlab("intensity")
   # fourth result plot: spread of intensities after normalization
   RES4 <- plot + ggplot2::geom_boxplot(
-    ggplot2::aes(x=value,y=variable),
+    ggplot2::aes(y=value, x=variable),
     color=cf(sampsize),
-    alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(norm_melt$value)))
+    alpha=0.4) + ggplot2::geom_hline(ggplot2::aes(yintercept=median(value))) + 
+    coord_flip() +
+    ggplot2::xlab("m/z") + 
+    ggplot2::ylab("intensity")
 
-    list(tl=RES1, bl=RES2, 
-         tr=RES3, br=RES4)
+  scaleFUN <- function(x) sprintf("%.1f", x)
+  
+    list(tl=RES1 + ggplot2::scale_y_continuous(labels=scaleFUN), 
+         bl=RES2, 
+         tr=RES3 + ggplot2::scale_y_continuous(labels=scaleFUN), 
+         br=RES4)
   
 }
 
@@ -61,7 +75,7 @@ ggplotNormSummary <- function(mSet,
 ggplotSampleNormSummary <- function(mSet,
                                     cf){
   # 4 by 4 plot, based on random 20-30 picked
-  orig_data <- as.data.frame(mSet$dataSet$prenorm)
+  orig_data <- as.data.frame(mSet$dataSet$proc)
   norm_data <- as.data.frame(mSet$dataSet$norm)
   
   candidate.samps <- intersect(rownames(orig_data), rownames(norm_data))
@@ -90,25 +104,37 @@ ggplotSampleNormSummary <- function(mSet,
   norm_melt_sums$variable <- rownames(norm_melt_sums)
   
   RES1 <- ggplot2::ggplot(data=orig_melt_sums) +
-     ggplot2::geom_density(ggplot2::aes(x=value), colour="blue", fill="blue", alpha=0.4)
+     ggplot2::geom_density(ggplot2::aes(x=value,y=..scaled..), colour="blue", fill="blue", alpha=0.4) + 
+    ggplot2::ylab("density") + 
+    ggplot2::xlab("intensity")
   
   RES2 <- ggplot2::ggplot(data=orig_melt) +
      ggplot2::geom_boxplot(
-      ggplot2::aes(x=value,y=Label),
+      ggplot2::aes(y=value,x=Label),
       color=cf(sampsize),
-      alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(orig_melt$value),text=Label))
+      alpha=0.4) + ggplot2::geom_hline(ggplot2::aes(yintercept=median(value),text=Label)) + coord_flip() +
+    ggplot2::xlab("m/z") + 
+    ggplot2::ylab("intensity")
   
   RES3 <- ggplot2::ggplot(data=norm_melt_sums) +
-     ggplot2::geom_density(ggplot2::aes(x=value), colour="pink", fill="pink", alpha=0.4)
+     ggplot2::geom_density(ggplot2::aes(x=value, y=..scaled..), colour="pink", fill="pink", alpha=0.4) +
+    ggplot2::ylab("density") + 
+    ggplot2::xlab("intensity")
   
   RES4 <- ggplot2::ggplot(data=norm_melt) +
      ggplot2::geom_boxplot(
-      ggplot2::aes(x=value,y=Label),
+      ggplot2::aes(y=value,x=Label),
       color=cf(sampsize),
-      alpha=0.4) + ggplot2::geom_vline(ggplot2::aes(xintercept=median(norm_melt$value),text=Label))
+      alpha=0.4) + ggplot2::geom_hline(ggplot2::aes(yintercept=median(value),text=Label))+coord_flip() + 
+    ggplot2::xlab("m/z") + 
+    ggplot2::ylab("intensity")
   
-    list(tl=RES1, bl=RES2, 
-         tr=RES3, br=RES4)
+  scaleFUN <- function(x) sprintf("%.2f", x)
+  
+  list(tl=RES1 + ggplot2::scale_y_continuous(labels=scaleFUN), 
+       bl=RES2, 
+       tr=RES3 + ggplot2::scale_y_continuous(labels=scaleFUN), 
+       br=RES4)
   
 }
 
@@ -423,19 +449,20 @@ ggPlotTT <- function(mSet, cf, n=20){
   profile[,2] <- round(profile[,2], digits = 2)
   profile$Peak <- c(1:nrow(profile))
   colnames(profile)[1:2] <- c("m/z", "-log(p)")
-  scaleFUN <- function(x) sprintf("%.1f", x)
-  
-  xaxis = seq(0,600, 50)
+  profile[["-log(p)"]] <- as.numeric(sprintf("%.1f", profile[["-log(p)"]]))
+
+  xaxis = seq(0, as.numeric(max(profile$`m/z`)), 50)
   # ---------------------------
   p <- ggplot2::ggplot(data=profile) +
-    ggplot2::geom_point(ggplot2::aes(x=`m/z`, y=`-log(p)`,
+    ggplot2::geom_point(ggplot2::aes(y=Peak,
+                                     x=`-log(p)`,
                                      text=`m/z`,
                                      color=`-log(p)`, 
                                      key=`m/z`)) +
-    ggplot2::scale_x_discrete(breaks = xaxis, labels=as.character(xaxis)) +
-    ggplot2::scale_colour_gradientn(colours = cf(n)) +
-    #ggplot2::scale_y_log10()+
-    ggplot2::scale_y_continuous(labels=scaleFUN)
+    # ggplot2::scale_y_discrete(breaks = xaxis, 
+    #                           labels=as.character(xaxis)) +
+    ggplot2::scale_colour_gradientn(colours = cf(n)) + coord_flip()
+    #ggplot2::scale_y_continuous()
   p
 }
 
@@ -468,8 +495,7 @@ ggPlotPattern <- function(mSet, cf, n=20){
     ggplot2::ylab("correlation") + 
     ggplot2::xlab("m/z") + 
     ggplot2::labs(fill="p-value", 
-                  color="p-value")+
-    
+                  color="p-value") + 
     ggplot2::scale_colour_gradientn(colours = cf(n)) +
     ggplot2::scale_fill_gradientn(colours = cf(n)) +
     ggplot2::scale_y_continuous(labels=scaleFUN)
@@ -490,14 +516,14 @@ ggPlotFC <- function(mSet, cf, n=20){
   scaleFUN <- function(x) sprintf("%.0f", x)
   # ---------------------------
   p <- ggplot2::ggplot(data=profile) +
-    ggplot2::geom_point(ggplot2::aes(x=Peak, 
-                                     y=log2fc, 
+    ggplot2::geom_point(ggplot2::aes(y=Peak, 
+                                     x=log2fc, 
                                      color=log2fc, 
                                      key=`m/z`,
                                      text=`m/z`)) +
-    ggplot2::geom_abline(ggplot2::aes(intercept = 0, slope = 0)) +
+    ggplot2::geom_vline(ggplot2::aes(xintercept = 0)) +
     ggplot2::scale_y_continuous(labels=scaleFUN) +
-    ggplot2::scale_colour_gradientn(colours = cf(n))
+    ggplot2::scale_colour_gradientn(colours = cf(n)) + coord_flip()
   
   p
 }

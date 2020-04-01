@@ -8,9 +8,7 @@ shiny::observe({
     
     if(!is.null(mSet)){
       
-      #if(lcl$hasChanged){
       mSet <- MetaboShiny::store.mSet(mSet) # save analyses
-      #}
       
       oldSettings <- mSet$settings
       
@@ -89,8 +87,7 @@ shiny::observe({
                                                           stats_type = mSet.settings$exp.type)
                          mSet$dataSet$paired <- mSet.settings$paired
                          mSet
-                       }
-        ) 
+                       }) 
         
         if(mSet$dataSet$paired){
           mSet$settings$paired <- TRUE
@@ -124,6 +121,21 @@ shiny::observe({
       })
       
       if(success){
+        # filtering?
+        if(mSet$settings$filt.type != "none"){
+          shiny::showNotification("Filtering dataset...")
+          # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
+          keep.mz <- colnames(MetaboAnalystR::FilterVariable(mSet,
+                                                             filter = mSet$settings$filt.type,
+                                                             qcFilter = "F",
+                                                             rsd = 25)$dataSet$filt)
+          mSet$dataSet$norm <- mSet$dataSet$norm[,keep.mz]
+          mSet$dataSet$proc <- mSet$dataSet$proc[,keep.mz]
+          #mSet$dataSet$prenorm <- mSet$dataSet$prenorm[,keep.mz]
+        }
+        
+        # =========
+        
         if(MetaboShiny::is.ordered.mSet(mSet)){
           msg = "mSet class label order still correct! :)"
           try({

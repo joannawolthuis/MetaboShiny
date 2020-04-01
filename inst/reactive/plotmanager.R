@@ -398,7 +398,7 @@ shiny::observe({
               }
             }
             
-            isSquare <- grepl("pca|plsda|tsne|roc|heatmap", plotName) & !grepl("scree|cv|perm|venn", plotName)
+            isSquare <- grepl("pca|plsda|tsne|roc|heatmap|var|samp", plotName) & !grepl("scree|cv|perm|venn", plotName)
            
              # === WRAPPER ===
             empty <- if(grepl(plotName, pattern="var|samp")) "output_empty2_width" else "output_empty3_width"

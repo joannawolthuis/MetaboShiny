@@ -263,14 +263,14 @@ shiny::observe({
                    shiny::setProgress(value = 0)
                    
                    # get base table to use for process
-                   curr <- data.table::as.data.table(mSet$dataSet$prenorm)
+                   curr <- data.table::as.data.table(mSet$dataSet$proc)
                    
                    # replace NA's with zero
                    curr <- curr[,(1:ncol(curr)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
                    
                    # conv to data frame
                    curr <- as.data.frame(curr)
-                   rownames(curr) <- rownames(mSet$dataSet$prenorm)
+                   rownames(curr) <- rownames(mSet$dataSet$proc)
                    
                    # find the qc rows and remove them
                    is.qc <- grepl("QC|qc", rownames(curr))
@@ -480,7 +480,7 @@ shiny::observe({
                    
                    # check if a storage list for machine learning results already exists
                    if(!"ml" %in% names(mSet$analSet)){
-                     mSet$analSet$ml <<- list() # otherwise make it
+                     mSet$analSet$ml <- list() # otherwise make it
                    }
                    
                    mz.imp <- lapply(repeats, function(x) x$importance)
@@ -548,7 +548,7 @@ shiny::observe({
                    mSet$analSet$ml$last <- list(name = input$ml_name,
                                                 method = input$ml_method)
                    
-                   mSet_ml <<- mSet
+                   #mSet_ml <<- mSet
                    })
                },
                heatmap = {

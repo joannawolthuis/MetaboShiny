@@ -3,14 +3,14 @@ import.pat.csvs <- function(db.name,
                             metapath,
                             pospath,
                             negpath,
-                            overwrite=FALSE,
-                            rtree=TRUE,
+                            overwrite = FALSE,
+                            rtree = TRUE,
                             make.full = TRUE,
-                            ppm=2,
-                            inshiny=F,
-                            csvpath=lcl$paths$csv_loc,
+                            ppm = 2,
+                            inshiny = F,
+                            csvpath = lcl$paths$csv_loc,
                             wipe.regex = ".*_(?>POS|NEG)_[0+]*",
-                            missperc=99){
+                            missperc = 99){
   
   ppm = as.numeric(ppm)
 
@@ -18,12 +18,19 @@ import.pat.csvs <- function(db.name,
   metadata <- MetaboShiny::reformat.metadata(metadata)
   
   keep.cols = colSums(is.na(metadata)) < nrow(metadata) & sapply(colnames(metadata), function(x) length(unique(metadata[,..x][[1]])) > 1) 
+  print(which(duplicated(metadata$sample)))
   metadata$sample <- gsub(metadata$sample, pattern = wipe.regex, replacement = "", perl=T)
+  print(any(duplicated(metadata$sample)))
   metadata.filt = unique(metadata[, ..keep.cols])
   if(!("individual" %in% colnames(metadata.filt))) metadata.filt$individual <- metadata.filt$sample
 
   poslist <- data.table::fread(pospath, header=T)
   neglist <- data.table::fread(negpath, header=T)
+
+  #library(corrplot)
+  ## corrplot 0.84 loaded
+  #M <- cor(poslist[1:50,3:53])
+  #corrplot(M, method = "circle")
   
   hasRT=F
   
@@ -55,20 +62,19 @@ import.pat.csvs <- function(db.name,
     neglist[,label:=NULL]
   }
 
-  # replace 0 with NA  
+  miss_threshold = ceiling(nrow(poslist)*(missperc/100))
+
+  # miss values
+  poslist <- poslist[,which(colSums(poslist == 0) <= miss_threshold),with=F] # at least one sample with non-na
+  neglist <- neglist[,which(colSums(neglist == 0) <= miss_threshold),with=F] # at least one sample with non-na
+  
+  print(paste0("Remaining m/z values for positive mode:", ncol(poslist)))
+  print(paste0("Remaining m/z values for negative mode:", ncol(neglist)))
+
   if(!any(is.na(unlist(poslist[1:5,10:20])))){
     poslist[,(2:ncol(poslist)) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)}), .SDcols = 2:ncol(poslist)]
     neglist[,(2:ncol(neglist)) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)}), .SDcols = 2:ncol(neglist)]
   }
-  
-  # miss values
-  miss_threshold = ceiling(missperc/100 * nrow(poslist))
-
-  poslist <- poslist[,which(colSums(is.na(poslist)) <= miss_threshold),with=F] # at least one sample with non-na
-  neglist <- neglist[,which(colSums(is.na(neglist)) <= miss_threshold),with=F] # at least one sample with non-na
-  
-  print(paste0("Remaining m/z values for positive mode:", ncol(poslist)))
-  print(paste0("Remaining m/z values for negative mode:", ncol(neglist)))
   
   # REGEX SAMPLE NAMES if applicable
   if(wipe.regex != ""){
@@ -122,19 +128,6 @@ import.pat.csvs <- function(db.name,
       newName = paste0(roundedMz, "+", if(hasPPM|hasRT) paste0(if(hasPPM) "/" else "RT", roundedPpm) else "") 
       return(newName)
     })
-  
-  # dup_newmz <- unique(c(which(duplicated(newmz), duplicated(newmz, fromLast = T))))
-  # rounded_cols <- pbapply::pblapply(newmz, function(mz){
-  #   origmz = names(newmz)[newmz == mz]
-  #   res = poslist[, ..origmz]
-  #   if(ncol(res) > 1){
-  #     res = rowMeans(res, na.rm=T)
-  #     res[is.nan(res)] <- c(NA)
-  #     res = data.table::data.table(res)
-  #   }
-  #   colnames(res) <- mz
-  #   res
-  # })
   
   ismz <- suppressWarnings(which(!is.na(as.numeric(gsub(colnames(neglist), pattern="/.*$|RT.*$", replacement="")))))
   colnames(neglist)[ismz] <- pbapply::pbsapply(colnames(neglist)[ismz], function(mz){

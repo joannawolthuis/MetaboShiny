@@ -107,7 +107,9 @@ shiny::observeEvent(input$initialize, {
                                               anal.type = "stat",
                                               paired = FALSE)
       
+      anal.type <<- "stat"
       mSet$dataSet$paired = F
+      
       # load new csv into empty mSet!
       mSet <- MetaboAnalystR::Read.TextData(mSet,
                                             filePath = csv_loc_final,
@@ -154,16 +156,14 @@ shiny::observeEvent(input$initialize, {
         }
       }
       
-      if(req(input$filt_type ) != "none"){
+      if(input$filt_type != "none"){
         shiny::showNotification("Filtering dataset...")
         # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
-        mSet <- MetaboAnalystR::FilterVariable(mSet,
-                                               filter = input$filt_type,
-                                               qcFilter = "F",
-                                               rsd = 25)
-        # keep.mz <- colnames(mSet$dataSet$filt)
-        # mSet <- MetaboShiny::filt.mSet(mSet, keep.mz)
-      } 
+        keep.mz <- colnames(MetaboAnalystR::FilterVariable(mSet,
+                                                           filter = input$filt_type,
+                                                           qcFilter = "F",
+                                                           rsd = 25)$dataSet$filt)
+      }
       
       mSet$dataSet$preproc <- NULL
       gc()
@@ -205,8 +205,8 @@ shiny::observeEvent(input$initialize, {
                                             ref = input$ref_var)
       
       
-      mSet$dataSet$proc <- NULL
-      #mSet$dataSet$prenorm <- NULL
+      #mSet$dataSet$proc <- NULL
+      mSet$dataSet$prenorm <- NULL
       gc()
       
       shiny::setProgress(session=session, value= .8)
@@ -253,10 +253,7 @@ shiny::observeEvent(input$initialize, {
             
             }), .SDcols = 1:ncol(dtNorm)]
         }
-        
-        # remove QC samples if user doesn't use batch as condition
-        #if(!batchview & has.qc){
-        #}
+
         
         # check which batch values are left after initial correction
         left_batch_vars <- grep(input$batch_var,
@@ -304,13 +301,6 @@ shiny::observeEvent(input$initialize, {
           # save normalized table to mSet
           mSet$dataSet$norm <- as.data.frame(batch_normalized)
       }}
-      # else{
-      #     # if qcs presnt and user doesn't want to analyse qc samples
-      #     if(!batchview & has.qc){
-      #       # remove QC rows and associated data from mSet
-      #       mSet <- MetaboShiny::hideQC(mSet)
-      #     }
-      #   }
       
       shiny::setProgress(session=session, value= .9)
       
@@ -346,7 +336,8 @@ shiny::observeEvent(input$initialize, {
                             time.var = mSet$dataSet$time.var,
                             exp.type = mSet$dataSet$exp.type,
                             paired = mSet$paired,
-                            orig.count = nrow(mSet$dataSet$prenorm))
+                            filt.type = input$filt_type,
+                            orig.count = nrow(mSet$dataSet$norm))
       
       if(typeof(mSet) != "double"){
         success = T
@@ -354,18 +345,21 @@ shiny::observeEvent(input$initialize, {
     })
     
     if(success){
+      
+      if(has.qc){
+        mSet <- MetaboShiny::hideQC(mSet)
+      }
+      
       saveRDS(list(data = mSet$dataSet,
                    analysis = mSet$analSet,
                    settings = mSet$settings), 
               file = file.path(lcl$paths$proj_dir, 
                                paste0(lcl$proj_name,"_ORIG.metshi")))
-     
-      # mSet <- readRDS(file.path(lcl$paths$proj_dir, 
-      #                           paste0(lcl$proj_name,"_ORIG.metshi")))
-      #names(mSet) <- c("dataSet", "analSet", "settings")
-      if(has.qc){
-        mSet <- MetaboShiny::hideQC(mSet)
+      
+      if(input$filt_type != "none"){
+        mSet$dataSet$norm <- mSet$dataSet$norm[,keep.mz]
       }
+      
       mSet <<- mSet
       
       fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
