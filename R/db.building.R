@@ -65,16 +65,18 @@ import.pat.csvs <- function(db.name,
   miss_threshold = ceiling(nrow(poslist)*(missperc/100))
 
   # miss values
-  poslist <- poslist[,which(colSums(poslist == 0) <= miss_threshold),with=F] # at least one sample with non-na
-  neglist <- neglist[,which(colSums(neglist == 0) <= miss_threshold),with=F] # at least one sample with non-na
-  
-  print(paste0("Remaining m/z values for positive mode:", ncol(poslist)))
-  print(paste0("Remaining m/z values for negative mode:", ncol(neglist)))
 
   if(!any(is.na(unlist(poslist[1:5,10:20])))){
     poslist[,(2:ncol(poslist)) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)}), .SDcols = 2:ncol(poslist)]
     neglist[,(2:ncol(neglist)) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)}), .SDcols = 2:ncol(neglist)]
   }
+  
+  poslist <- poslist[,which(colSums(is.na(poslist)) <= miss_threshold), with=F] # at least one sample with non-na
+  neglist <- neglist[,which(colSums(is.na(neglist)) <= miss_threshold), with=F] # at least one sample with non-na
+  
+  print(paste0("Remaining m/z values for positive mode:", ncol(poslist)))
+  print(paste0("Remaining m/z values for negative mode:", ncol(neglist)))
+  
   
   # REGEX SAMPLE NAMES if applicable
   if(wipe.regex != ""){

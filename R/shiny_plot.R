@@ -451,7 +451,8 @@ ggPlotTT <- function(mSet, cf, n=20){
   colnames(profile)[1:2] <- c("m/z", "-log(p)")
   profile[["-log(p)"]] <- as.numeric(sprintf("%.1f", profile[["-log(p)"]]))
 
-  xaxis = seq(0, as.numeric(max(profile$`m/z`)), 50)
+  xaxis = seq(0,600, 50)
+  
   # ---------------------------
   p <- ggplot2::ggplot(data=profile) +
     ggplot2::geom_point(ggplot2::aes(y=Peak,
@@ -718,7 +719,7 @@ ggPlotBar <- function(data,
       }else{
         round(as.numeric(as.character(x)),digits=1)
       }
-    })), size = 4, vjust = -.5, lineheight = .6)
+    })), size = 4, lineheight = .6, vjust=-1, hjust = 0, angle = 45) + expand_limits(y=max(data.subset$importance) + max(data.subset$importance)*0.1)
   }
   
   mzdata <- p$data
