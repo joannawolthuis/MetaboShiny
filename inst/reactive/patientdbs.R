@@ -65,7 +65,8 @@ shiny::observeEvent(input$create_csv,{
                                    negpath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath,
                                    metapath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath,
                                    wipe.regex = input$wipe_regex,
-                                   missperc = input$perc_limit,
+                                   missperc.mz = input$perc_limit_mz,
+                                   missperc.samp = input$perc_limit_samp,
                                    csvpath = lcl$paths$csv_loc,
                                    overwrite = T,
                                    inshiny=F)

@@ -10,7 +10,8 @@ import.pat.csvs <- function(db.name,
                             inshiny = F,
                             csvpath = lcl$paths$csv_loc,
                             wipe.regex = ".*_(?>POS|NEG)_[0+]*",
-                            missperc = 99){
+                            missperc.mz = 99,
+                            missperc.samp = 100){
   
   ppm = as.numeric(ppm)
 
@@ -62,8 +63,6 @@ import.pat.csvs <- function(db.name,
     neglist[,label:=NULL]
   }
 
-  miss_threshold = ceiling(nrow(poslist)*(missperc/100))
-
   # miss values
 
   if(!any(is.na(unlist(poslist[1:5,10:20])))){
@@ -71,11 +70,29 @@ import.pat.csvs <- function(db.name,
     neglist[,(2:ncol(neglist)) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)}), .SDcols = 2:ncol(neglist)]
   }
   
-  poslist <- poslist[,which(colSums(is.na(poslist)) <= miss_threshold), with=F] # at least one sample with non-na
-  neglist <- neglist[,which(colSums(is.na(neglist)) <= miss_threshold), with=F] # at least one sample with non-na
+  if(missperc.samp < 100){
+    miss_threshold_samp = ceiling(ncol(poslist)*(missperc.samp/100))
+    
+    keep.samps.pos = which(rowSums(is.na(poslist)) <= miss_threshold_samp)
+    keep.samps.neg = which(rowSums(is.na(neglist)) <= miss_threshold_samp)
+    keep.samps.both = intersect(keep.samps.pos, keep.samps.neg)
+    
+    poslist <- poslist[,keep.samps.both, with=F] # at least one sample with non-na
+    neglist <- neglist[,keep.samps.both, with=F] # at least one sample with non-na
+    
+    shiny::showNotification(paste0("Remaining samples:", nrow(poslist)))
+  }
   
-  print(paste0("Remaining m/z values for positive mode:", ncol(poslist)))
-  print(paste0("Remaining m/z values for negative mode:", ncol(neglist)))
+  if(missperc.mz < 100){
+    miss_threshold_mz = ceiling(nrow(poslist)*(missperc.mz/100))
+    
+    poslist <- poslist[,which(colSums(is.na(poslist)) <= miss_threshold_mz), with=F] # at least one sample with non-na
+    neglist <- neglist[,which(colSums(is.na(neglist)) <= miss_threshold_mz), with=F] # at least one sample with non-na
+    
+    shiny::showNotification(paste0("Remaining m/z values for positive mode:", ncol(poslist)))
+    shiny::showNotification(paste0("Remaining m/z values for negative mode:", ncol(neglist)))
+  }
+    
   
   
   # REGEX SAMPLE NAMES if applicable

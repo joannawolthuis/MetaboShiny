@@ -1,0 +1,68 @@
+dist: trusty   # Use Ubuntu 14.04 image (instead of 12.04)
+language: r
+sudo: false
+r: 3.6.2
+
+# Install packrat if needed and have it restore packages.
+install:
+- sudo R CMD javareconf
+- wget https://github.com/plotly/orca/releases/download/v1.1.1/orca-1.1.1-x86_64.AppImage -P /home
+- chmod 777 /home/orca-1.1.1-x86_64.AppImage 
+- cd /home && /home/orca-1.1.1-x86_64.AppImage --appimage-extract
+- printf '#!/bin/bash \nxvfb-run --auto-servernum --server-args "-screen 0 640x480x24" /home/squashfs-root/app/orca "$@"' > /usr/bin/orca
+- chmod 777 /usr/bin/orca
+- chmod -R 777 /home/squashfs-root/
+- R -e 'install.packages("devtools")'
+- R -e 'install.packages("BiocManager")'
+- R -e 'BiocManager::install("org.Hs.eg.db")'
+- R -e 'install.packages("pacman")'
+- R -e 'library(pacman)'
+- R -e 'pacman::p_load(Rserve, ellipse, scatterplot3d, Cairo, randomForest, caTools, e1071, som, impute, pcaMethods, RJSONIO, ROCR, globaltest, GlobalAncova, Rgraphviz, preprocessCore, genefilter, pheatmap, SSPA, sva, Rcpp, pROC, data.table, limma, car, fitdistrplus, lars, Hmisc, magrittr, methods, xtable, pls, caret, lattice, igraph, gplots, KEGGgraph, reshape, RColorBrewer, tibble, siggenes, plotly, xcms, CAMERA, fgsea, MSnbase, BiocParallel, metap, reshape2, scales)'
+- R -e 'devtools::install_github("xia-lab/MetaboAnalystR")'
+- R -e 'devtools::install_github("rwehrens/BatchCorrMetabolomics")'
+- R -e 'devtools::install_github("yixuan/showtext")'
+- R -e 'BiocManager::install("ChemmineR")'
+- R -e 'BiocManager::install("KEGGREST")'
+- R -e 'devtools::install_github("UMCUGenetics/MetaDBparse")'
+- R -e 'devtools::install_github("UMCUGenetics/MetaboShiny")'
+
+cache:
+
+# Main R library
+packages: true
+
+# Install PhantomJS (if not cached)
+before_install:
+    - apt-get install -y sudo
+    - apt-get install -y gdebi-core
+    - apt-get install -y pandoc
+    - apt-get install -y pandoc-citeproc
+    - apt-get install -y libcurl4-gnutls-dev
+    - apt-get install -y libcairo2-dev/unstable
+    - apt-get install -y libxt-dev
+    - apt-get install -y libssl-dev
+    - apt-get install -y libxml2-dev
+    - apt-get install -y libgmp-dev
+    - apt-get install -y libnetcdf-dev
+    - apt-get install -y mesa-common-dev
+    - apt-get install -y apt-utils
+    - apt-get install -y libgit2-dev
+    - apt-get install -y libglu1-mesa
+    - apt-get install -y libglu1-mesa-dev
+    - apt-get install -y libpng-dev
+    - apt-get install -y librsvg2-dev
+    - apt-get install -y default-jre
+    - apt-get install -y default-jdk
+    - apt-get install -y ca-certificates
+    - apt-get install -y curl
+    - apt-get install -y sqlite3
+    - apt-get install -y libsqlite3-dev
+    - apt-get install -y libgtk2.0-0
+    - apt-get install -y gconf-gsettings-backend
+    - apt-get install -y xvfb
+    - apt-get install -y fuse
+    - apt-get install -y desktop-file-utils
+    - apt-get install -y gnupg
+
+script:
+  - R -f run_tests.R
