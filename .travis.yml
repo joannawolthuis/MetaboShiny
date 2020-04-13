@@ -60,6 +60,8 @@ before_install:
      - sudo apt-get install -y libxml2-dev
      - sudo apt-get install -y libgmp-dev
      - sudo apt-get install -y libnetcdf-dev
+     - sudo apt-get install -y r-cran-ncdf4
+     - sudo apt-get install -y netcdf-bin
      - sudo apt-get install -y mesa-common-dev
      - sudo apt-get install -y apt-utils
      - sudo apt-get install -y libgit2-dev
