@@ -1,6 +1,6 @@
 dist: trusty   # Use Ubuntu 14.04 image (instead of 12.04)
 language: r
-sudo: false
+sudo: true
 r: 3.6.0
 
 # Install packrat if needed and have it restore packages.
