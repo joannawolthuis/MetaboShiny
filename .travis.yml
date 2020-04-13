@@ -45,37 +45,37 @@ packages: true
 
 # Install PhantomJS (if not cached)
 before_install:
-     - apt-get install -y sudo
-     - apt-get install -y gdebi-core
-     - apt-get install -y pandoc
-     - apt-get install -y openjdk-11-jdk
-     - apt-get install -y pandoc-citeproc
-     - apt-get install -y libcurl4-gnutls-dev
-     - apt-get install -y libcairo2-dev/unstable
-     - apt-get install -y libxt-dev
-     - apt-get install -y libssl-dev
-     - apt-get install -y libxml2-dev
-     - apt-get install -y libgmp-dev
-     - apt-get install -y libnetcdf-dev
-     - apt-get install -y mesa-common-dev
-     - apt-get install -y apt-utils
-     - apt-get install -y libgit2-dev
-     - apt-get install -y libglu1-mesa
-     - apt-get install -y libglu1-mesa-dev
-     - apt-get install -y libpng-dev
-     - apt-get install -y libudunits2-dev
-     - apt-get install -y librsvg2-dev
-     - apt-get install -y ca-certificates
-     - apt-get install -y curl
-     - apt-get install -y sqlite3
-     - apt-get install -y libsqlite3-dev
-     - apt-get install -y libgtk2.0-0
-     - apt-get install -y gconf-gsettings-backend
-     - apt-get install -y xvfb
-     - apt-get install -y fuse
-     - apt-get install -y desktop-file-utils
-     - apt-get install -y libgdal-dev
-     - apt-get install -y gnupg
+     - sudo apt-get install -y sudo
+     - sudo apt-get install -y gdebi-core
+     - sudo apt-get install -y pandoc
+     - sudo apt-get install -y openjdk-11-jdk
+     - sudo apt-get install -y pandoc-citeproc
+     - sudo apt-get install -y libcurl4-gnutls-dev
+     - sudo apt-get install -y libcairo2-dev/unstable
+     - sudo apt-get install -y libxt-dev
+     - sudo apt-get install -y libssl-dev
+     - sudo apt-get install -y libxml2-dev
+     - sudo apt-get install -y libgmp-dev
+     - sudo apt-get install -y libnetcdf-dev
+     - sudo apt-get install -y mesa-common-dev
+     - sudo apt-get install -y apt-utils
+     - sudo apt-get install -y libgit2-dev
+     - sudo apt-get install -y libglu1-mesa
+     - sudo apt-get install -y libglu1-mesa-dev
+     - sudo apt-get install -y libpng-dev
+     - sudo apt-get install -y libudunits2-dev
+     - sudo apt-get install -y librsvg2-dev
+     - sudo apt-get install -y ca-certificates
+     - sudo apt-get install -y curl
+     - sudo apt-get install -y sqlite3
+     - sudo apt-get install -y libsqlite3-dev
+     - sudo apt-get install -y libgtk2.0-0
+     - sudo apt-get install -y gconf-gsettings-backend
+     - sudo apt-get install -y xvfb
+     - sudo apt-get install -y fuse
+     - sudo apt-get install -y desktop-file-utils
+     - sudo apt-get install -y libgdal-dev
+     - sudo apt-get install -y gnupg
 
 script:
   - R -f run_tests.R
