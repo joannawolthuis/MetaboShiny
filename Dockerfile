@@ -37,8 +37,6 @@ RUN apt-get update && apt-get install -y \
     libgdal-dev \
     gnupg
 
-RUN sudo R CMD javareconf
-
 # Download orca AppImage, extract it, and make it executable under xvfb
 RUN wget https://github.com/plotly/orca/releases/download/v1.1.1/orca-1.1.1-x86_64.AppImage -P /home
 RUN chmod 777 /home/orca-1.1.1-x86_64.AppImage 
@@ -76,6 +74,7 @@ RUN R -e 'pacman::p_load(ggplot2, data.table, plotly, shinyBS, shinyjs, caret, g
                InterpretMSSpectrum, DBI, qdap, reshape2, Hmisc, ggbeeswarm, Rmisc, rgl,\
                stats, pROC, car, doParallel, missForest)'
 RUN R -e 'devtools::install_github("UMCUGenetics/MetaboShiny", "dev")'
+RUN sudo R CMD javareconf
 
 # Make the ShinyApp available at port 8080
 CMD ['R -e "MetaboShiny::start.metshi(inBrowser=F, port=8080, runmode='docker')"']

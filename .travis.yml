@@ -2,10 +2,10 @@ dist: trusty   # Use Ubuntu 14.04 image (instead of 12.04)
 language: r
 sudo: true
 r: 3.6.0
+cache: packages
 
 # Install packrat if needed and have it restore packages.
 install:
-- sudo R CMD javareconf
 - R -e 'install.packages("devtools")'
 - R -e 'install.packages("BiocManager")'
 - R -e 'BiocManager::install("org.Hs.eg.db")'
@@ -29,6 +29,7 @@ install:
                R.utils, KEGGREST, zip, ChemmineR, rvest, xml2, stringi, reshape2, 
                Hmisc, httr, RJSONIO, readxl, cmmr, progress, Rdisop, rlist, SPARQL)'
 - R -e 'devtools::install_github("UMCUGenetics/MetaDBparse")'
+- sudo R CMD javareconf
 - R -e 'pacman::p_load(ggplot2, data.table, plotly, shinyBS, shinyjs, caret, grDevices,
                RColorBrewer, colorRamps, tidytext, qdapDictionaries, tm, shiny, htmltools,
                BiocManager, pacman, devtools, classyfireR, httr, jsonlite, RCurl, shinyFiles,
