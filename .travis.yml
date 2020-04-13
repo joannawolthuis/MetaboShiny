@@ -11,19 +11,19 @@ install:
 - R -e 'BiocManager::install("org.Hs.eg.db")'
 - R -e 'install.packages("pacman")'
 - R -e 'library(pacman)'
-- R -e 'pacman::p_load(Rserve, RSclient, ellipse, scatterplot3d, Cairo, \
-randomForest, caTools, e1071, som, impute, pcaMethods, RJSONIO, ROCR,\
-globaltest, GlobalAncova, Rgraphviz, preprocessCore, genefilter, \
-pheatmap, SSPA, sva, Rcpp, pROC, data.table, limma, car, fitdistrplus, \
-lars, Hmisc, magrittr, methods, xtable, pls, caret, lattice, igraph, \
-gplots, KEGGgraph, reshape, RColorBrewer, tibble, siggenes, plotly, \
-fgsea, metap, reshape2, scales, CAMERA)'
+- R -e 'pacman::p_load(Rserve, RSclient, ellipse, scatterplot3d, Cairo,\
+                        randomForest, caTools, e1071, som, impute, pcaMethods, RJSONIO, ROCR,\
+                        globaltest, GlobalAncova, Rgraphviz, preprocessCore, genefilter,\
+                        pheatmap, SSPA, sva, Rcpp, pROC, data.table, limma, car, fitdistrplus,\
+                        lars, Hmisc, magrittr, methods, xtable, pls, caret, lattice, igraph,\
+                        gplots, KEGGgraph, reshape, RColorBrewer, tibble, siggenes, plotly,\
+                        fgsea, metap, reshape2, scales, CAMERA)'
 - R -e 'devtools::install_github("xia-lab/MetaboAnalystR")'
 - R -e 'devtools::install_github("rwehrens/BatchCorrMetabolomics")'
 - R -e 'devtools::install_github("yixuan/showtext")'
 - R -e 'devtools::install_github("joannawolthuis/ggVennDiagram")'
 - R -e 'install.packages("rJava", type="source")'
-- R -e 'pacman::p_load(pacman, rcdk, rJava, parallel, pbapply, enviPat, data.table, 
+- R -e 'pacman::p_load(pacman, rcdk, rJava, parallel, pbapply, enviPat, data.table,\
                 RSQLite, DBI, gsubfn, utils, RCurl, XML, base, \
                stringr, WikidataQueryServiceR, webchem, openxlsx, jsonlite,\
                R.utils, KEGGREST, zip, ChemmineR, rvest, xml2, stringi, reshape2, \
