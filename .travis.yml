@@ -45,6 +45,7 @@ packages: true
 
 # Install PhantomJS (if not cached)
 before_install:
+     - sudo apt-get update
      - sudo apt-get install -y sudo
      - sudo apt-get install -y gdebi-core
      - sudo apt-get install -y pandoc
