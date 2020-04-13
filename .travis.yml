@@ -6,12 +6,6 @@ r: 3.6.0
 # Install packrat if needed and have it restore packages.
 install:
 - sudo R CMD javareconf
-- wget https://github.com/plotly/orca/releases/download/v1.1.1/orca-1.1.1-x86_64.AppImage -P /home
-- chmod 777 /home/orca-1.1.1-x86_64.AppImage 
-- cd /home && /home/orca-1.1.1-x86_64.AppImage --appimage-extract
-- printf '#!/bin/bash \nxvfb-run --auto-servernum --server-args "-screen 0 640x480x24" /home/squashfs-root/app/orca "$@"' > /usr/bin/orca
-- chmod 777 /usr/bin/orca
-- chmod -R 777 /home/squashfs-root/
 - R -e 'install.packages("devtools")'
 - R -e 'install.packages("BiocManager")'
 - R -e 'BiocManager::install("org.Hs.eg.db")'
