@@ -1,52 +1,20 @@
-dist: trusty   # Use Ubuntu 14.04 image (instead of 12.04)
-language: r
-sudo: true
-r: 3.6.0
-cache: packages
+language: generic
+dist: trusty
 
-# Install packrat if needed and have it restore packages.
-install:
-- R -e 'install.packages("devtools")'
-- R -e 'install.packages("BiocManager")'
-- R -e 'BiocManager::install("org.Hs.eg.db")'
-- R -e 'install.packages("pacman")'
-- R -e 'library(pacman)'
-- R -e 'pacman::p_load(Rserve, RSclient, ellipse, scatterplot3d, Cairo,
-                        randomForest, caTools, e1071, som, impute, pcaMethods, RJSONIO, ROCR,
-                        globaltest, GlobalAncova, Rgraphviz, preprocessCore, genefilter,
-                        pheatmap, SSPA, sva, Rcpp, pROC, data.table, limma, car, fitdistrplus,
-                        lars, Hmisc, magrittr, methods, xtable, pls, caret, lattice, igraph,
-                        gplots, KEGGgraph, reshape, RColorBrewer, tibble, siggenes, plotly,
-                        fgsea, metap, reshape2, scales, CAMERA)'
-- R -e 'devtools::install_github("xia-lab/MetaboAnalystR")'
-- R -e 'devtools::install_github("rwehrens/BatchCorrMetabolomics")'
-- R -e 'devtools::install_github("yixuan/showtext")'
-- R -e 'devtools::install_github("joannawolthuis/ggVennDiagram")'
-- R -e 'install.packages("rJava", type="source")'
-- R -e 'pacman::p_load(pacman, rcdk, rJava, parallel, pbapply, enviPat, data.table,
-                RSQLite, DBI, gsubfn, utils, RCurl, XML, base,
-               stringr, WikidataQueryServiceR, webchem, openxlsx, jsonlite,
-               R.utils, KEGGREST, zip, ChemmineR, rvest, xml2, stringi, reshape2, 
-               Hmisc, httr, RJSONIO, readxl, cmmr, progress, Rdisop, rlist, SPARQL)'
-- R -e 'devtools::install_github("UMCUGenetics/MetaDBparse")'
-- sudo R CMD javareconf
-- R -e 'pacman::p_load(ggplot2, data.table, plotly, shinyBS, shinyjs, caret, grDevices,
-               RColorBrewer, colorRamps, tidytext, qdapDictionaries, tm, shiny, htmltools,
-               BiocManager, pacman, devtools, classyfireR, httr, jsonlite, RCurl, shinyFiles,
-               DT, RSQLite, pbapply, stringr, gsubfn, shinyWidgets, parallel,
-               mice, sva, limma, tools, plyr, heatmaply, wordcloud2, shinyjqui, rmarkdown, enviPat, ROCR, tsne, e1071,
-               pls, rhandsontable, testthat, shinytest, showtext, sysfonts, colourpicker,
-               reshape, ggdark, ECharts2Shiny, shinyalert, shinybusy, rcdk, RISmed, dplyr,
-               InterpretMSSpectrum, DBI, qdap, reshape2, Hmisc, ggbeeswarm, Rmisc, rgl,
-               stats, pROC, car, doParallel, missForest)'
-- R -e 'devtools::install_github("UMCUGenetics/MetaboShiny", "dev")'
-
-# Main R library
-packages: true
-
-# Install PhantomJS (if not cached)
-before_install:
-     - npm install -g electron@6.1.4 orca
+cache:
+  apt: true
+  directories:
+    - $HOME/usr/
+    - $HOME/.sonar/cache
+    - build/resources
+    - /home/travis/R-bin/lib/R
+    
+matrix:
+  include:
+    - stage: dependencies general
+      os: linux
+      install: 
+      - npm install -g electron@6.1.4 orca
      - sudo add-apt-repository ppa:openjdk-r/ppa -y
      - sudo apt-get update
      - sudo apt-get install -y sudo
@@ -83,6 +51,51 @@ before_install:
      - sudo apt-get install -y libgdal-dev
      - sudo apt-get install -y gnupg
      - sudo apt-get install r-base
-
-script:
-  - R -f run_tests.R
+    - stage: dependencies MetaboAnalystR
+      os: linux
+      install:
+      - R -e 'install.packages("pacman")'
+      - R -e 'library(pacman)'
+      - R -e 'install.packages("devtools")'
+      - R -e 'pacman::p_load(Rserve, RSclient, ellipse, scatterplot3d, Cairo,
+                        randomForest, caTools, e1071, som, impute, pcaMethods, RJSONIO, ROCR,
+                        globaltest, GlobalAncova, Rgraphviz, preprocessCore, genefilter,
+                        pheatmap, SSPA, sva, Rcpp, pROC, data.table, limma, car, fitdistrplus,
+                        lars, Hmisc, magrittr, methods, xtable, pls, caret, lattice, igraph,
+                        gplots, KEGGgraph, reshape, RColorBrewer, tibble, siggenes, plotly,
+                        fgsea, metap, reshape2, scales, CAMERA)'
+- R -e 'devtools::install_github("xia-lab/MetaboAnalystR")'
+    - stage: dependencies MetaDBparse
+      os: linux
+      install:
+      - R -e 'install.packages("pacman")'
+      - R -e 'library(pacman)'
+      - R -e 'install.packages("devtools")'
+      - R -e 'install.packages("rJava", type="source")'
+      - R -e 'pacman::p_load(pacman, rcdk, rJava, parallel, pbapply, enviPat, data.table,
+                RSQLite, DBI, gsubfn, utils, RCurl, XML, base,
+               stringr, WikidataQueryServiceR, webchem, openxlsx, jsonlite,
+               R.utils, KEGGREST, zip, ChemmineR, rvest, xml2, stringi, reshape2, 
+               Hmisc, httr, RJSONIO, readxl, cmmr, progress, Rdisop, rlist, SPARQL)'
+    - stage: dependencies MetaboShiny
+      os: linux
+      install:
+      - R -e 'install.packages("pacman")'
+      - R -e 'library(pacman)'
+      - R -e 'install.packages("devtools")'
+      - R -e 'BiocManager::install("org.Hs.eg.db")'
+      - R -e 'devtools::install_github("rwehrens/BatchCorrMetabolomics")'
+      - R -e 'devtools::install_github("yixuan/showtext")'
+      - R -e 'devtools::install_github("joannawolthuis/ggVennDiagram")'
+      - R -e 'devtools::install_github("UMCUGenetics/MetaDBparse")'
+      - sudo R CMD javareconf
+      - R -e 'pacman::p_load(ggplot2, data.table, plotly, shinyBS, shinyjs, caret, grDevices,
+                     RColorBrewer, colorRamps, tidytext, qdapDictionaries, tm, shiny, htmltools,
+                     BiocManager, pacman, devtools, classyfireR, httr, jsonlite, RCurl, shinyFiles,
+                     DT, RSQLite, pbapply, stringr, gsubfn, shinyWidgets, parallel,
+                     mice, sva, limma, tools, plyr, heatmaply, wordcloud2, shinyjqui, rmarkdown, enviPat, ROCR, tsne, e1071,
+                     pls, rhandsontable, testthat, shinytest, showtext, sysfonts, colourpicker,
+                     reshape, ggdark, ECharts2Shiny, shinyalert, shinybusy, rcdk, RISmed, dplyr,
+                     InterpretMSSpectrum, DBI, qdap, reshape2, Hmisc, ggbeeswarm, Rmisc, rgl,
+                     stats, pROC, car, doParallel, missForest)'
+      - R -e 'devtools::install_github("UMCUGenetics/MetaboShiny", "dev")'
