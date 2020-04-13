@@ -53,7 +53,7 @@ before_install:
      - sudo apt-get install -y openjdk-11-jdk
      - sudo apt-get install -y pandoc-citeproc
      - sudo apt-get install -y libcurl4-gnutls-dev
-     - sudo apt-get install -y libcairo2-dev/unstable
+     - sudo apt-get install -y libcairo2-dev
      - sudo apt-get install -y libxt-dev
      - sudo apt-get install -y libssl-dev
      - sudo apt-get install -y libxml2-dev
