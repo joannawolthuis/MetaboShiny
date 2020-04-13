@@ -78,6 +78,7 @@ before_install:
      - sudo apt-get install -y desktop-file-utils
      - sudo apt-get install -y libgdal-dev
      - sudo apt-get install -y gnupg
+     - sudo apt-get install r-base
 
 script:
   - R -f run_tests.R
