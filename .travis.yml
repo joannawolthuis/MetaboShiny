@@ -45,7 +45,7 @@ packages: true
 
 # Install PhantomJS (if not cached)
 before_install:
-     - sudo add-apt-repository ppa:openjdk-r/ppa
+     - sudo add-apt-repository ppa:openjdk-r/ppa -y
      - sudo apt-get update
      - sudo apt-get install -y sudo
      - sudo apt-get install -y gdebi-core
