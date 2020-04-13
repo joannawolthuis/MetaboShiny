@@ -45,6 +45,7 @@ packages: true
 
 # Install PhantomJS (if not cached)
 before_install:
+     - npm install -g electron@6.1.4 orca
      - sudo add-apt-repository ppa:openjdk-r/ppa -y
      - sudo apt-get update
      - sudo apt-get install -y sudo
