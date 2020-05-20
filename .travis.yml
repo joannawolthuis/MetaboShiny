@@ -1,8 +1,5 @@
 dist: trusty   # Use Ubuntu 14.04 image (instead of 12.04)
-language: r
 sudo: true
-r: 3.6.0
-cache: packages
 
 # Install packrat if needed and have it restore packages.
 install:
@@ -12,4 +9,4 @@ install:
 packages: true
 
 script:
-  - R -f run_tests.R
+  - docker run -it jcwolthuis/metaboshiny Rscript -e "MetaboShiny::testMetshi()"
