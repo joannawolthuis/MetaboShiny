@@ -13,9 +13,9 @@ http://biorxiv.org/cgi/content/short/734236v1
   * [User file import](#user-file-import)
   * [Data normalization](#data-normalization)
   * [Pre-matching all m/z (optional)](#Pre-matching-all-mz-optional)
-  * [Statistics panel / side bar](#statistics-panel-side-bar)
-  * [Dimension reduction / plot export](#dimension-reduction-plot-export)
-  * [Overview plots / search bar](#overview-plots-search-bar)
+  * [Statistics panel / side bar](#statistics-panel--side-bar)
+  * [Dimension reduction / plot export](#dimension-reduction--plot-export)
+  * [Overview plots / search bar](#overview-plots--search-bar)
 
 # Installation
 ## Through Docker
