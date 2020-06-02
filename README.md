@@ -84,7 +84,7 @@ In this section, you will find multiple options and methods to filter and normal
 
 Select one of each of the options for the following normalization features and then press "Go" (see [Normalization](#normalization) figure).
 **ADD DESCRIPTIONS/INFO ON THE DIFFERENT OPTIONS**
- - Filtering **WHAT IS BEING FILTERED OUT?**
+- Filtering **WHAT IS BEING FILTERED OUT?**
   - Interquartile range
   - Mean
   - Median absolute deviation
@@ -93,7 +93,7 @@ Select one of each of the options for the following normalization features and t
   - Relative standard deviation (stdev)
   - Standard deviation
   - None
- - Normalization type
+- Normalization type
   - By reference compound
   - By reference feature
   - By sample-specific factor
@@ -101,17 +101,17 @@ Select one of each of the options for the following normalization features and t
   - Quantile normalization
   - Sum
   - None
- - Data transformation
+- Data transformation
   - Cubic root transform
   - Log transform
   - None
- - Scaling
+- Scaling
   - Autoscale/Z-transform
   - Mean-center
   - Pareto scaling
   - Range scaling
   - None
- - Missing values
+- Missing values
   - Half feature minimum
   - Half sample minimum
   - Total minimum
@@ -124,7 +124,7 @@ Select one of each of the options for the following normalization features and t
   - Mean
   - Leave them out
   - Leave them alone
- - Outliers
+- Outliers
  The user can choose whether to exclude outliers from the data analysis by toggling the "Exclude outliers?" tab.
 
 **THIS FIGURE NEEDS TO BE UPDATED! The % filtering is now in the data upload step**
