@@ -134,6 +134,7 @@ Select one of each of the options for the following normalization features and t
 
 # Pre-matching all m/z
 *This step is optional*
+
 In the pre-matching tab (see [Prematching](#prematching) figure) the user can match all m/z values with all or a subset of the available databases. This can be a time-consuming step if the dataset is large and many databases are selected, but will make searching for possible m/z metabolite matches much faster in the data analysis step.
 1. Toggle the "Do matching beforehand?" button to "Yes" (see [Prematching](#prematching) figure).
 2. Select the databases you wish to find matches in or click on the shopping basket to match with all databases.
@@ -145,6 +146,41 @@ If you wish to match with other or more databases, click the "Clear matches" but
 
 
 # Analysis
+The analysis tab has two sections; the statistics panel and the side bar. The statistics panel contains tabs with different statistical analysis methods and the side bar contains multiple functions regarding variable choices, data subsetting, plot aesthetics, m/z matching, and plot export.
+
+## Side bar
+The side bar contains four tabs, whose descriptions and functions you can find below.
+
+### Switch/subset
+ - *Current experiment* Shows the variable(s) and subset(s) that are currently being analysed.
+ - *Change of variable of interest* Here you can choose to inspect one variable, two variables in combindation, time-series, or time-series in combination with one variable. Press "do stats on selected" to change the current experiment for analysis.
+ - *Subset data* The "Current sample count" shows the number of samples that are analysed in the current experiment. To subset data, select the variable that you want to subset based on and then select the group(s) that you want to inspect. Click "click to subset" to apply changes.
+ - *Load existing meta-dataset* **EXPLANATION OF THIS PART**
+
+### Search
+ - *Settings* If the data is pre-matched, this part is skipped. Otherwise, here you can select the databases that you want to match your data to. Click the shopping basket to add all available databases.
+ - *Compound info* This tab will display all database matches for a selected m/z value from the statistics panel (see **XX**). The displayed table in the "mz > molecule" tab can be sorted based on m/z value, adduct, isotope percentage, or the m/z value distance from the database range (dppm). The table can be copied or exported as a .csv or .xlsx file. By clicking on the funnel icon, you can filter the matched results based on adduct, database, and main and minor isotope. In the "molecule > mz" tab you can search for a specific metabolite name and the resulting table will list all m/z values from the data that match a corresponding metabolite in any of the databases.
+
+### Plot aesthetics
+ - *Plot style* Here you can choose whether to use plotly or ggplot for the figures in the statistics panel. Plotly provides interactive plots with the ability to zoom and hover over data points for information, whereas ggplot is faster but does not have interactive features. Additionally, you can choose whether plots are exported as .png or .svg files.
+ - *Style(s)* Choose the plotting style for the scatter plots for t-test and ANOVA results. Options are beeswarm, boxplot, scatterplot, and violin plots. It is possible to select multiple styles, e.g., violin plot with a beeswarm scatter.
+ - *Stats shown* Select whether to show median or mean lines in the plots.
+ - *Marker shape* Select the variable that determines the marker shape.
+ - *Color* Select the variable that determines the marker color.
+ - *Hover text* Select the variable that is displayed when hovering over data points.
+ - *Plot theme* Select one of the following themes for the plot background
+   - Minimal
+   - Grid, gray background
+   - Grid, black background
+   - Grid, white background
+   - No grid, white background
+   - Grid, white background, gray axes
+   - Line drawing
+ - *Continuous data* Select a color scheme for plotting continuous data, which is used in heatmaps and volcano plots. All options of the **XX** package are possible (**LINK**).
+ - *Discrete data* Select colors to use when plotting discrete data. Click on the color field to select a color or type in the HEX code.
+
+### Metadata
+In this tab you can upload new metadata. The file should be in a .csv format and contain a column with sample IDs and any new metadata as additional columns with new unique headers.
 
 
 
