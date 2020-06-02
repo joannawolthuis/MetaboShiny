@@ -4,6 +4,10 @@ For example input files (positive and negative peaklists + metadata) please see 
 
 http://biorxiv.org/cgi/content/short/734236v1
 
+- [Installation](#Installation)
+  * [Through Docker](#Through Docker)
+  * [Through R](#Through R)
+
 # Installation
 ## Through Docker
 1. Install Docker. If you are on Windows and not running 10 pro or enterprise (likely) please try the following tutorial:https://docs.docker.com/toolbox/toolbox_install_windows/
