@@ -16,7 +16,7 @@ http://biorxiv.org/cgi/content/short/734236v1
   * [m/z peak files](#mz-peak-files)
   * [Metadata file](#metadata-file)
 - [Load data files](#load-data-files)
--
+- [Data normalization](#data-normalization)
   * [Pre-matching all m/z (optional)](#Pre-matching-all-mz-optional)
   * [Statistics panel / side bar](#statistics-panel--side-bar)
   * [Dimension reduction / plot export](#dimension-reduction--plot-export)
@@ -38,39 +38,102 @@ http://biorxiv.org/cgi/content/short/734236v1
 
 # Before starting
 ## Building databases
-MetaboShiny offers over XX metabolite databases for m/z identification. Before any other steps are taken, it is necessary to build the databases that the user is interested in. Each database only needs to be built once. To check if a database has been built, click the "check if database exists" button below the logo (Figure [Database Tab]). The database version number and download date are listed there as well.
+MetaboShiny offers over **XX** metabolite databases for m/z identification. Before any other steps are taken, it is necessary to build the databases that the user is interested in. Each database only needs to be built once. To check if a database has been built, click the "check if database exists" button below the logo (Figure [Database Tab]). The database version number and download date are listed there as well.
 ## Updating databases
 MetaboShiny does not automatically update databases. To re-build a database of interest, click on the "build database" button below the logo in the [Database Tab](#database-tab). The database version number and download date are listed below the logo.
 ## Adding custom databases
-HOW TO ADD CUSTOM DB
+**HOW TO ADD CUSTOM DB**
 
 ![Database Tab](inst/www/database_panel_a.png?raw=true "Database tab")
 
 # Prepare input files
 ## m/z peak files
-**![#f03c15](DESCRIBE HOW TO GET POSITIVE/NEGATIVE MODE FILES FROM RAW MS DATA?
-LINK TO EXAMPLE DATA.) `#f03c15`**
+**DESCRIBE HOW TO GET POSITIVE/NEGATIVE MODE FILES FROM RAW MS DATA?
+LINK TO EXAMPLE DATA.**
 
 ## Metadata file
-**![#f03c15]DESCRIBE METADATA FILE FORMAT, NECESSARY COLUMNS, ETC.
-LINK TO EXAMPLE DATA. `#f03c15`**
+**DESCRIBE METADATA FILE FORMAT, NECESSARY COLUMNS, ETC.
+LINK TO EXAMPLE DATA.**
 
 # Load data files
 To load your data into MetaboShiny, follow the 6 steps listed in the [File Import](#file-import) figure.
 1. Enter a unique project name.
 2. Set the error margin of your mass spectrometer in parts per million (ppm).
-3. Set the m/z missing values percentage threshold. This is how many samples are allowed to be missing each m/z value without it being filtered out. A common rule of thumb is to set this value to 20% (**![#f03c15]REF TO 20/80 RULE PAPER `#f03c15`**).
+3. Set the m/z missing values percentage threshold. This is how many samples are allowed to be missing each m/z value without it being filtered out. A common rule of thumb is to set this value to 20% (**REF TO 20/80 RULE PAPER**).
 4. Select input data files
  * 4a. (optional) Input a regex string to to adjust peaklist names to metadata sample names - the match is removed from each name.
  * 4b. Upload your metadata and positive and negative mode m/z peak files.
 5. Click on the arrow to merge peak data and metadata and create an SQLITE database.
 6. Once step 5 is completed (green tick mark), click on the arrow to the right to generate a CSV file that will serve as the input into MetaboShiny.
-7. Once step 6 is completed (green tick mark), lick on the "normalization" tab to normalize your data before analysis.
+7. Once step 6 is completed (green tick mark), continue to the [Data normalization](#data-normalization) step.
 
-**![#f03c15]THIS FIGURE NEEDS TO BE UPDATED! `#f03c15`**
+**THIS FIGURE NEEDS TO BE UPDATED! The % filtering is missing**
 ![File Import](inst/www/file_import.png?raw=true "File import")
 
-## Data normalization
+# Data normalization
+The data needs to be normalized in order to compare m/z peak values between samples and batches.
+
+## Batches and concentration
+If your metadata only contains one batch and no column that represents concentration (**EXPLAIN WHAT THIS MEANS**), then you can skip this part and continue to the [Filtering and normalization](#filtering-and-normalization) step. Otherwise, follow the steps below.
+ 1. Click on the "Get options" button ([Normalization](#normalization) figure).
+ 2. If applicable, select the variable that represents concentration in your data.
+ 3. If applicable, select the variable that contains your multiple batch IDs.
+
+## Filtering and normalization
+In this section, you will find multiple options and methods to filter and normalize your data. The best selection will depend on each user's data and we encourage you to look into the different methods that can be applied here. After normalization, the distribution of pre- and post-normalized peak values will be plotted for a randomly selected set of m/z values and samples, so the user can see how the data distribution has changed with the normalization and adjust their parameters if needed (see [Normalization](#normalization) figure).
+
+Select one of each of the options for the following normalization features and then press "Go" (see [Normalization](#normalization) figure).
+**ADD DESCRIPTIONS/INFO ON THE DIFFERENT OPTIONS**
+- Filtering
+**WHAT IS BEING FILTERED OUT?**
+ * Interquartile range
+ * Mean
+ * Median absolute deviation
+ * Median
+ * Non-parametric relative standard deviation (stdev)
+ * Relative standard deviation (stdev)
+ * Standard deviation
+ * None
+
+- Normalization type
+ * By reference compound
+ * By reference feature
+ * By sample-specific factor
+ * Median
+ * Quantile normalization
+ * Sum
+ * None
+
+- Data transformation
+ * Cubic root transform
+ * Log transform
+ * None
+
+- Scaling
+ * Autoscale/Z-transform
+ * Mean-center
+ * Pareto scaling
+ * Range scaling
+ * None
+
+- Missing values
+ * Half feature minimum
+ * Half sample minimum
+ * Total minimum
+ * Random forest. It is possible to adjust the number of trees built per variable and whether to parallelize based on forests or variables, or not.
+ * KNN imputation
+ * SVD imputation
+ * BPCA imputation
+ * PPCA imputation
+ * Median
+ * Mean
+ * Leave them out
+ * Leave them alone
+
+- Outliers
+The user can choose whether to exclude outliers from the data analysis by toggling the "Exclude outliers?" tab.
+
+**THIS FIGURE NEEDS TO BE UPDATED! The % filtering is now in the data upload step**
 ![Normalization](inst/www/normalization.png?raw=true "Normalization")
 
 
