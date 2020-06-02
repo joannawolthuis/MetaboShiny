@@ -5,14 +5,12 @@ For example input files (positive and negative peaklists + metadata) please see 
 http://biorxiv.org/cgi/content/short/734236v1
 
 # Installation
-<details><summary>## Through Docker</summary>
-<p>
+## Through Docker
 1. Install Docker. If you are on Windows and not running 10 pro or enterprise (likely) please try the following tutorial:https://docs.docker.com/toolbox/toolbox_install_windows/
 2. Run the following in a terminal: `docker pull jcwolthuis/metaboshiny`
 3. Make a folder in your home folder, in terminal: `mkdir -p ~/MetaboShiny/{databases,saves/admin}`
 3. Run the following on command line/terminal: `docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny:latest Rscript -e "MetaboShiny::start.metshi(inBrowser=F)"`
-</p>
-</details>
+
 
 ## Through R
 1. Install an R version that at least is R 3.5, install [Java](https://www.java.com/en/download/) and JDK (https://www.oracle.com/technetwork/java/javase/downloads/jdk12-downloads-5295953.html, may require creating an Oracle account)
