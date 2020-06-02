@@ -5,8 +5,8 @@ For example input files (positive and negative peaklists + metadata) please see 
 http://biorxiv.org/cgi/content/short/734236v1
 
 - [Installation](#Installation)
-  * [Through Docker](#Through Docker)
-  * [Through R](#Through R)
+  * [Through Docker](#through-docker)
+  * [Through R](#through-r)
 
 # Installation
 ## Through Docker
