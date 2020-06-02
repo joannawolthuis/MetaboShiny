@@ -84,54 +84,54 @@ In this section, you will find multiple options and methods to filter and normal
 
 Select one of each of the options for the following normalization features and then press "Go" (see [Normalization](#normalization) figure).
 **ADD DESCRIPTIONS/INFO ON THE DIFFERENT OPTIONS**
-- Filtering
+ - Filtering
 **WHAT IS BEING FILTERED OUT?**
- * Interquartile range
- * Mean
- * Median absolute deviation
- * Median
- * Non-parametric relative standard deviation (stdev)
- * Relative standard deviation (stdev)
- * Standard deviation
- * None
+  * Interquartile range
+  * Mean
+  * Median absolute deviation
+  * Median
+  * Non-parametric relative standard deviation (stdev)
+  * Relative standard deviation (stdev)
+  * Standard deviation
+  * None
 
-- Normalization type
- * By reference compound
- * By reference feature
- * By sample-specific factor
- * Median
- * Quantile normalization
- * Sum
- * None
+ - Normalization type
+  * By reference compound
+  * By reference feature
+  * By sample-specific factor
+  * Median
+  * Quantile normalization
+  * Sum
+  * None
 
-- Data transformation
- * Cubic root transform
- * Log transform
- * None
+ - Data transformation
+  * Cubic root transform
+  * Log transform
+  * None
 
-- Scaling
- * Autoscale/Z-transform
- * Mean-center
- * Pareto scaling
- * Range scaling
- * None
+ - Scaling
+  * Autoscale/Z-transform
+  * Mean-center
+  * Pareto scaling
+  * Range scaling
+  * None
 
-- Missing values
- * Half feature minimum
- * Half sample minimum
- * Total minimum
- * Random forest. It is possible to adjust the number of trees built per variable and whether to parallelize based on forests or variables, or not.
- * KNN imputation
- * SVD imputation
- * BPCA imputation
- * PPCA imputation
- * Median
- * Mean
- * Leave them out
- * Leave them alone
+ - Missing values
+  * Half feature minimum
+  * Half sample minimum
+  * Total minimum
+  * Random forest. It is possible to adjust the number of trees built per variable and whether to parallelize based on forests or variables, or not.
+  * KNN imputation
+  * SVD imputation
+  * BPCA imputation
+  * PPCA imputation
+  * Median
+  * Mean
+  * Leave them out
+  * Leave them alone
 
-- Outliers
-The user can choose whether to exclude outliers from the data analysis by toggling the "Exclude outliers?" tab.
+ - Outliers
+ The user can choose whether to exclude outliers from the data analysis by toggling the "Exclude outliers?" tab.
 
 **THIS FIGURE NEEDS TO BE UPDATED! The % filtering is now in the data upload step**
 ![Normalization](inst/www/normalization.png?raw=true "Normalization")
