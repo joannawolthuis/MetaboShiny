@@ -8,7 +8,7 @@ http://biorxiv.org/cgi/content/short/734236v1
 - [Installation](#installation)
   * [Through Docker](#through-docker)
   * [Through R](#through-r)
-- [Manual](#manual)
+- [Input files](#input-files)
   * [Databases](#databases)
   * [User file import](#user-file-import)
   * [Data normalization](#data-normalization)
@@ -30,6 +30,20 @@ http://biorxiv.org/cgi/content/short/734236v1
 2. Copy the commands listed in the `inst/install.metshi.R` file on this repository and run them in R (terminal or Rstudio)
 3. In R(studio), run: `library(MetaboShiny); start.metshi(inBrowser=T)`;
 4. Your browser should open automatically for you and you're in! Otherwise browse to the "Listening on x.x.x.x" address noted in terminal in your browser.
+
+# Before starting
+## Building databases
+MetaboShiny offers over XX metabolite databases for m/z identification. Before any other steps are taken, it is necessary to build the databases that the user is interested in. Each database only needs to be built once. To check if a database has been built, click the "check if database exists" button below the logo (Figure [Database Tab]). The database version number and download date are listed there as well.
+## Updating databases
+MetaboShiny does not automatically update databases. To re-build a database of interest, click on the "build database" button below the logo in the database tab (Figure [Database Tab]). The database version number and download date are listed below the logo.
+## Add custom databases
+
+![Database Tab](inst/www/database_panel_a.png?raw=true "Database tab")
+
+# Input files
+## m/z peak files
+
+## metadata file
 
 # Manual
 
