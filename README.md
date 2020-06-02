@@ -17,10 +17,11 @@ http://biorxiv.org/cgi/content/short/734236v1
   * [Metadata file](#metadata-file)
 - [Load data files](#load-data-files)
 - [Data normalization](#data-normalization)
-  * [Pre-matching all m/z (optional)](#Pre-matching-all-mz-optional)
-  * [Statistics panel / side bar](#statistics-panel--side-bar)
-  * [Dimension reduction / plot export](#dimension-reduction--plot-export)
-  * [Overview plots / search bar](#overview-plots--search-bar)
+  * [Batches and concentration](#batches-and-concentration)
+  * [Filtering and normalization](#filtering-and-normalization)
+- [Pre-matching all m/z](#pre-matching-all-mz)
+- [Analysis](#analysis)
+  *
 
 # Installation
 ## Through Docker
@@ -75,14 +76,14 @@ The data needs to be normalized in order to compare m/z peak values between samp
 
 ## Batches and concentration
 If your metadata only contains one batch and no column that represents concentration (**EXPLAIN WHAT THIS MEANS**), then you can skip this part and continue to the [Filtering and normalization](#filtering-and-normalization) step. Otherwise, follow the steps below.
- 1. Click on the "Get options" button ([Normalization](#normalization) figure).
+ 1. Click on the "Get options" button (see [Normalization](#normalization) figure).
  2. If applicable, select the variable that represents concentration in your data.
  3. If applicable, select the variable that contains your multiple batch IDs.
 
 ## Filtering and normalization
 In this section, you will find multiple options and methods to filter and normalize your data. The best selection will depend on each user's data and we encourage you to look into the different methods that can be applied here. After normalization, the distribution of pre- and post-normalized peak values will be plotted for a randomly selected set of m/z values and samples, so the user can see how the data distribution has changed with the normalization and adjust their parameters if needed (see [Normalization](#normalization) figure).
 
-Select one of each of the options for the following normalization features and then press "Go" (see [Normalization](#normalization) figure).
+Select one of each of the options for the following normalization features and then press "Go" (see [Normalization](#normalization) figure). It is advised to save your data after completing this step (button on the bottom center of the screen).
 **ADD DESCRIPTIONS/INFO ON THE DIFFERENT OPTIONS**
 - Filtering **WHAT IS BEING FILTERED OUT?**
   - Interquartile range
@@ -131,9 +132,22 @@ Select one of each of the options for the following normalization features and t
 ![Normalization](inst/www/normalization.png?raw=true "Normalization")
 
 
+# Pre-matching all m/z
+*This step is optional*
+In the pre-matching tab (see [Prematching](#prematching) figure) the user can match all m/z values with all or a subset of the available databases. This can be a time-consuming step if the dataset is large and many databases are selected, but will make searching for possible m/z metabolite matches much faster in the data analysis step.
+1. Toggle the "Do matching beforehand?" button to "Yes" (see [Prematching](#prematching) figure).
+2. Select the databases you wish to find matches in or click on the shopping basket to match with all databases.
+3. Click on "Find matches". This can take a few minutes.
+4. Save your data (button on the bottom center of the screen).
+If you wish to match with other or more databases, click the "Clear matches" button and re-do the steps above.
 
-## Pre-matching all m/z (optional)
 ![Prematching](inst/www/prematching.png?raw=true "Prematching")
+
+
+# Analysis
+
+
+
 ## Statistics panel / side bar
 ![Statistics panel start](inst/www/stats.png?raw=true "Statistics Panel Start")
 ### Dimension reduction / plot export
