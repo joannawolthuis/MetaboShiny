@@ -8,10 +8,15 @@ http://biorxiv.org/cgi/content/short/734236v1
 - [Installation](#installation)
   * [Through Docker](#through-docker)
   * [Through R](#through-r)
-- [Input files](#input-files)
-  * [Databases](#databases)
-  * [User file import](#user-file-import)
-  * [Data normalization](#data-normalization)
+- [Before starting](#before-starting)
+  * [Building databases](#building-databases)
+  * [Updating databases](#updating-databases)
+  * [Adding custom databases](#adding-custom-databases)
+- [Prepare input files](#prepare-input-files)
+  * [m/z peak files](#mz-peak-files)
+  * [Metadata file](#metadata-file)
+- [Load data files](#load-data-files)
+-
   * [Pre-matching all m/z (optional)](#Pre-matching-all-mz-optional)
   * [Statistics panel / side bar](#statistics-panel--side-bar)
   * [Dimension reduction / plot export](#dimension-reduction--plot-export)
@@ -35,24 +40,41 @@ http://biorxiv.org/cgi/content/short/734236v1
 ## Building databases
 MetaboShiny offers over XX metabolite databases for m/z identification. Before any other steps are taken, it is necessary to build the databases that the user is interested in. Each database only needs to be built once. To check if a database has been built, click the "check if database exists" button below the logo (Figure [Database Tab]). The database version number and download date are listed there as well.
 ## Updating databases
-MetaboShiny does not automatically update databases. To re-build a database of interest, click on the "build database" button below the logo in the database tab (Figure [Database Tab](#database-tab)). The database version number and download date are listed below the logo.
-## Add custom databases
+MetaboShiny does not automatically update databases. To re-build a database of interest, click on the "build database" button below the logo in the [Database Tab](#database-tab). The database version number and download date are listed below the logo.
+## Adding custom databases
+HOW TO ADD CUSTOM DB
 
 ![Database Tab](inst/www/database_panel_a.png?raw=true "Database tab")
 
-# Input files
+# Prepare input files
 ## m/z peak files
+**![#f03c15]DESCRIBE HOW TO GET POSITIVE/NEGATIVE MODE FILES FROM RAW MS DATA?
+LINK TO EXAMPLE DATA. `#f03c15`**
 
-## metadata file
+## Metadata file
+**![#f03c15]DESCRIBE METADATA FILE FORMAT, NECESSARY COLUMNS, ETC.
+LINK TO EXAMPLE DATA. `#f03c15`**
 
-# Manual
+# Load data files
+To load your data into MetaboShiny, follow the 6 steps listed in the [File Import](#file-import) figure.
+1. Enter a unique project name.
+2. Set the error margin of your mass spectrometer in parts per million (ppm).
+3. Set the m/z missing values percentage threshold. This is how many samples are allowed to be missing each m/z value without it being filtered out. A common rule of thumb is to set this value to 20% (**![#f03c15]REF TO 20/80 RULE PAPER `#f03c15`**).
+4. Select input data files
+ * 4a. (optional) Input a regex string to to adjust peaklist names to metadata sample names - the match is removed from each name.
+ * 4b. Upload your metadata and positive and negative mode m/z peak files.
+5. Click on the arrow to merge peak data and metadata and create an SQLITE database.
+6. Once step 5 is completed (green tick mark), click on the arrow to the right to generate a CSV file that will serve as the input into MetaboShiny.
+7. Once step 6 is completed (green tick mark), lick on the "normalization" tab to normalize your data before analysis.
 
-## Databases
-![Database Tab](inst/www/database_panel_a.png?raw=true "Database tab")
-## User file import
+**![#f03c15]THIS FIGURE NEEDS TO BE UPDATED! `#f03c15`**
 ![File Import](inst/www/file_import.png?raw=true "File import")
+
 ## Data normalization
 ![Normalization](inst/www/normalization.png?raw=true "Normalization")
+
+
+
 ## Pre-matching all m/z (optional)
 ![Prematching](inst/www/prematching.png?raw=true "Prematching")
 ## Statistics panel / side bar
