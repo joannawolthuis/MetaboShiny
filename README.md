@@ -35,13 +35,18 @@ http://biorxiv.org/cgi/content/short/734236v1
       * [t-test](#t-test)
       * [Fold-change](#fold-change)
       * [Analysis of variance (ANOVA)](#analysis-of-variance-anova)
-      * [Analysis of variance – simultaneous component analysis (ASCA)](#analysis-of-variance--simultaneous component-analysis-asca)
+      * [Analysis of variance – simultaneous component analysis (ASCA)](#analysis-of-variance-simultaneous component-analysis-asca)
       * [Multivariate empirical Bayes statistical time-series analysis (MEBA)](#multivariate-empirical-bayes-statistical-time-series-analysis-meba)
     - [Overview analyses](#overview-analyses)
       * [Volcano plot](#volcano-plot)
       * [Heatmap](#heatmap)
       * [Venn diagram](#venn-diagram)
     - [Machine learning](#machine-learning)
+      * [Settings](#settings)
+      * [Results](#results)
+- [How to cite](#how-to-cite)
+- [Feedback](#feedback)
+
 
 # Installation
 ## Through Docker
@@ -177,6 +182,7 @@ The side bar contains four tabs, whose descriptions and functions you can find b
  - *Load existing meta-dataset* **EXPLANATION OF THIS PART**
 
 ### Search
+**MISSING INFO ON THE ADDITIONAL TABS WITHIN THE SEARCH TAB. Formula prediction, word cloud, etc**
  - *Settings* If the data is pre-matched, this part is skipped. Otherwise, here you can select the databases that you want to match your data to. Click the shopping basket to add all available databases.
  - *Compound info* This tab will display all database matches for a selected m/z value from the statistics panel (see **XX**). The displayed table in the "mz > molecule" tab can be sorted based on m/z value, adduct, isotope percentage, or the m/z value distance from the database range (dppm). The table can be copied or exported as a .csv or .xlsx file. By clicking on the funnel icon, you can filter the matched results based on adduct, database, and main and minor isotope. In the "molecule > mz" tab you can search for a specific metabolite name and the resulting table will list all m/z values from the data that match a corresponding metabolite in any of the databases.
 
@@ -196,7 +202,9 @@ The side bar contains four tabs, whose descriptions and functions you can find b
    - Grid, white background, gray axes
    - Line drawing
  - *Continuous data* Select a color scheme for plotting continuous data, which is used in heatmaps and volcano plots. All options of the **XX** package are possible (**LINK**).
- - *Discrete data* Select colors to use when plotting discrete data. Click on the color field to select a color or type in the HEX code.
+ - *Discrete data* Select colors to use when plotting discrete data. Click on the color field to select a color or type in the HEX code (See [Plot customization](#plot-customization) figure).
+
+ ![Plot customization](inst/www/colorbar.png?raw=true "Plot customization")
 
 ### Metadata
 In this tab you can upload new metadata. The file should be in a .csv format and contain a column with sample IDs and any new metadata as additional columns with new unique headers.
@@ -235,29 +243,30 @@ Press "**XX**" to start the analysis.
 #### multivariate empirical Bayes statistical time-series analysis (MEBA)
 *This analysis is only available for time-series analyses*
 
+![Per m/z analysis](inst/www/permz_predict.png?raw=true "Per m/z analysis")
+
 ### Overview analyses
 #### Volcano plot
 *This analysis is only available for one-factor, two-category analyses*
+![Volcano plot](inst/www/stats2.png?raw=true "Volcano plot")
 
 #### Heatmap
 
 #### Venn diagram
 
 ### Machine learning
-
-
-### Overview plots / search bar
-![Volcano plot and search bar](inst/www/stats2.png?raw=true "Volcano plot and search bar")
-### Per m/z analysis / formula prediction
-![Per m/z analysis and prediction sidebar](inst/www/permz_predict.png?raw=true "Per m/z analysis and prediction sidebar")
-### Machine learning
-![Machine learning settings and metadata bar](inst/www/ml1.png?raw=true "Machine learning settings and metadata bar")
+#### Settings
+**ADD DESCRIPTIONS OF THE PARAMETERS/SETTINGS**
+![Machine learning settings](inst/www/ml1.png?raw=true "Machine learning settings")
+#### Results
+**ADD DESCRIPTION OF WHAT RESULTS ARE SHOWN**
 ![Machine learning results](inst/www/ml2.png?raw=true "Machine learning results")
+
 ### Match isotope scoring and abstract searching
 ![Isoscoring and abstract searching](inst/www/isoscore_wordcloud.png?raw=true "Isoscoring and abstract searching")
-### Plot customization
-![Plot customization](inst/www/colorbar.png?raw=true "Plot customization")
 
+# How to cite
+**ADD LINK/CITATION HERE**
 
-
+# Feedback
 Please report any issues and feedback on the Issues page here, along with suggestions! =)
