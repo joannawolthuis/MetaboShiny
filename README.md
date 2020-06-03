@@ -21,7 +21,27 @@ http://biorxiv.org/cgi/content/short/734236v1
   * [Filtering and normalization](#filtering-and-normalization)
 - [Pre-matching all m/z](#pre-matching-all-mz)
 - [Analysis](#analysis)
-  *
+  * [Side bar](#side-bar)
+    - [Switch/subset](#switchsubset)
+    - [Search](#search)
+    - [Plot aesthetics](#plot-aesthetics)
+    - [Metadata](#metadata)
+  * [Statistics](#statistics)
+    - [Dimension reduction](#dimension-reduction)
+      * [Principal components analysis (PCA)](#principal-components-analysis-pca)
+      * [Partial least squares-discriminant analysis (PLS-DA)](#partial-least-squares-discriminant-analysis-pls-da)
+      * [t-Distributed Stochastic Neighbor Embedding (t-SNE)](#t-distributed-stochastic-neighbor-embedding-t-sne)
+    - [Per m/z](#per-mz)
+      * [t-test](#t-test)
+      * [Fold-change](#fold-change)
+      * [Analysis of variance (ANOVA)](#analysis-of-variance-anova)
+      * [Analysis of variance – simultaneous component analysis (ASCA)](#analysis-of-variance--simultaneous component-analysis-asca)
+      * [Multivariate empirical Bayes statistical time-series analysis (MEBA)](#multivariate-empirical-bayes-statistical-time-series-analysis-meba)
+    - [Overview analyses](#overview-analyses)
+      * [Volcano plot](#volcano-plot)
+      * [Heatmap](#heatmap)
+      * [Venn diagram](#venn-diagram)
+    - [Machine learning](#machine-learning)
 
 # Installation
 ## Through Docker
@@ -64,9 +84,8 @@ To load your data into MetaboShiny, follow the 6 steps listed in the [File Impor
 4. Select input data files
  * 4a. (optional) Input a regex string to to adjust peaklist names to metadata sample names - the match is removed from each name.
  * 4b. Upload your metadata and positive and negative mode m/z peak files.
-5. Click on the arrow to merge peak data and metadata and create an SQLITE database.
-6. Once step 5 is completed (green tick mark), click on the arrow to the right to generate a CSV file that will serve as the input into MetaboShiny.
-7. Once step 6 is completed (green tick mark), continue to the [Data normalization](#data-normalization) step.
+5. Click on the arrow to merge peak data and metadata and convert them to a format that will serve as the input for the analyses.
+6. Once step 5 is completed (green tick mark), continue to the [Data normalization](#data-normalization) step.
 
 **THIS FIGURE NEEDS TO BE UPDATED! The % filtering is missing**
 ![File Import](inst/www/file_import.png?raw=true "File import")
@@ -149,7 +168,7 @@ If you wish to match with other or more databases, click the "Clear matches" but
 The analysis tab has two sections; the statistics panel and the side bar. The statistics panel contains tabs with different statistical analysis methods and the side bar contains multiple functions regarding variable choices, data subsetting, plot aesthetics, m/z matching, and plot export.
 
 ## Side bar
-The side bar contains four tabs, whose descriptions and functions you can find below.
+The side bar contains four tabs, whose descriptions and functions you can find below (see [Statistics panel start](#statistics-panel-start) figure)
 
 ### Switch/subset
  - *Current experiment* Shows the variable(s) and subset(s) that are currently being analysed.
@@ -182,12 +201,51 @@ The side bar contains four tabs, whose descriptions and functions you can find b
 ### Metadata
 In this tab you can upload new metadata. The file should be in a .csv format and contain a column with sample IDs and any new metadata as additional columns with new unique headers.
 
-
-
-## Statistics panel / side bar
 ![Statistics panel start](inst/www/stats.png?raw=true "Statistics Panel Start")
-### Dimension reduction / plot export
-![Dimension reduction and plot export](inst/www/dimred_export.png?raw=true "Dimension reduction and plot export")
+
+## Statistics
+The statistics panel has four tabs whose contents change based on whether the [current experiment](#switchsubset) is a one-factor, two-factor, or a time series analysis. The four statistics categories are [dimension reduction methods](#dimension-reduction), [per m/z value analyses](#per-mz), [overview analyses](#overview-analyses), and [machine learning](#machine-learning) (see [Statistics panel start](#statistics-panel-start) figure).
+
+### Dimension reduction
+
+#### Principal components analysis (PCA)
+Press "**XX**" to start the analysis. Once done, a graph will appear on the screen and a table below with scores, loadings, and **XX**. By toggling the button below the graph, you can switch between 2D and 3D graphics of the results. On the bottom left you can control which principal components (PC) are shown in the graph.
+
+#### Partial least squares-discriminant analysis (PLS-DA)
+*This analysis is only available for one-factor analyses*
+
+Press "**XX**" to start the analysis.
+
+#### t-Distributed Stochastic Neighbor Embedding (t-SNE)
+
+![Dimension reduction](inst/www/dimred_export.png?raw=true "Dimension reduction")
+
+### Per m/z
+#### t-test
+*This analysis is only available for one-factor, two-category analyses*
+
+#### Fold-change
+*This analysis is only available for one-factor, two-category analyses*
+
+#### Analysis of variance (ANOVA)
+
+#### Analysis of variance – simultaneous component analysis (ASCA)
+*This analysis is only available for two-factor or time-series analyses*
+
+#### multivariate empirical Bayes statistical time-series analysis (MEBA)
+*This analysis is only available for time-series analyses*
+
+### Overview analyses
+#### Volcano plot
+*This analysis is only available for one-factor, two-category analyses*
+
+#### Heatmap
+
+#### Venn diagram
+
+### Machine learning
+
+
 ### Overview plots / search bar
 ![Volcano plot and search bar](inst/www/stats2.png?raw=true "Volcano plot and search bar")
 ### Per m/z analysis / formula prediction
