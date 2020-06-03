@@ -35,7 +35,7 @@ http://biorxiv.org/cgi/content/short/734236v1
       * [t-test](#t-test)
       * [Fold-change](#fold-change)
       * [Analysis of variance (ANOVA)](#analysis-of-variance-anova)
-      * [Analysis of variance - simultaneous component analysis (ASCA)](#analysis-of-variance-simultaneous-component-analysis-asca)
+      * [Analysis of variance - simultaneous component analysis (ASCA)](#analysis-of-variance--simultaneous-component-analysis-asca)
       * [Multivariate empirical Bayes statistical time-series analysis (MEBA)](#multivariate-empirical-bayes-statistical-time-series-analysis-meba)
     - [Overview analyses](#overview-analyses)
       * [Volcano plot](#volcano-plot)
