@@ -1,7 +1,52 @@
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param x PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname trim
+#' @export 
 trim <- function (x) gsub("^\\s+|\\s+$", "", x)
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param x PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname trim.trailing
+#' @export 
 trim.trailing <- function (x) sub("\\s+$", "", x)
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param lst PARAM_DESCRIPTION
+#' @param type PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @seealso 
+#'  \code{\link[pbapply]{pbapply}}
+#'  \code{\link[data.table]{rbindlist}}
+#' @rdname list.to.df
+#' @export 
+#' @importFrom pbapply pblapply
+#' @importFrom data.table rbindlist
 list.to.df <- function(lst,
                        type){
   dfStorage <- pbapply::pblapply(seq_along(lst), FUN=function(y, n, i){
@@ -20,6 +65,19 @@ list.to.df <- function(lst,
   df
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param vector PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname factorize
+#' @export 
 factorize <- function(vector){
   items <- as.factor(vector)
   new.levels <- c(0:(length(levels(items)) - 1 ))
@@ -30,9 +88,44 @@ factorize <- function(vector){
 
 `%not in%` <- function (x, table) is.na(match(x, table, nomatch=NA_integer_))
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param mz PARAM_DESCRIPTION
+#' @param ppm PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname ppm_range
+#' @export 
 ppm_range <- function(mz, ppm) c((mz - (ppm/1000000 * mz)), (mz + (ppm/1000000 * mz)))
 
 # plot molecules in R plot window instead of separate Java window
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param smi PARAM_DESCRIPTION
+#' @param width PARAM_DESCRIPTION, Default: 500
+#' @param height PARAM_DESCRIPTION, Default: 500
+#' @param marg PARAM_DESCRIPTION, Default: 0
+#' @param main PARAM_DESCRIPTION, Default: ''
+#' @param style PARAM_DESCRIPTION, Default: 'bow'
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @seealso 
+#'  \code{\link[rcdk]{parse.smiles}},\code{\link[rcdk]{c("get.depictor", "get.depictor")}},\code{\link[rcdk]{c("view.image.2d", "view.image.2d")}}
+#' @rdname plot.mol
+#' @export 
+#' @importFrom rcdk parse.smiles get.depictor view.image.2d
 plot.mol = function(smi,
                     width=500,
                     height=500,
@@ -63,6 +156,31 @@ plot.mol = function(smi,
 }
 
 # @export
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param mzvals PARAM_DESCRIPTION
+#' @param cl PARAM_DESCRIPTION, Default: FALSE
+#' @param ppm PARAM_DESCRIPTION, Default: 3
+#' @param charge PARAM_DESCRIPTION, Default: 1
+#' @param element.counts PARAM_DESCRIPTION, Default: list(c("C", 0, 50), c("H", 0, 50), c("N", 0, 50), c("O", 0, 50), 
+#'    c("S", 0, 50), c("Na", 0, 5), c("Cl", 0, 5), c("P", 0, 5))
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @seealso 
+#'  \code{\link[pbapply]{pbapply}}
+#'  \code{\link[rcdk]{generate.formula}}
+#'  \code{\link[data.table]{rbindlist}}
+#' @rdname find.formulas
+#' @export 
+#' @importFrom pbapply pblapply
+#' @importFrom rcdk generate.formula
+#' @importFrom data.table data.table rbindlist
 find.formulas <- function(mzvals, cl=FALSE, ppm=3, charge=1, element.counts = list(c("C",0,50),c("H",0,50),
                                                                                    c("N",0,50),c("O",0,50),
                                                                                    c("S",0,50),c("Na", 0, 5),
@@ -94,7 +212,22 @@ find.formulas <- function(mzvals, cl=FALSE, ppm=3, charge=1, element.counts = li
   data.table::rbindlist(found.rows[!is.na(found.rows)])
 }
 
-#'@export
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @seealso 
+#'  \code{\link[shiny]{isolate}},\code{\link[shiny]{reactiveValuesToList}}
+#' @rdname joanna_debugger
+#' @export 
+#' @importFrom shiny isolate reactiveValuesToList
 joanna_debugger <- function(){
   lcl <<- debug_lcl
   mSet <<- debug_mSet
@@ -108,6 +241,19 @@ joanna_debugger <- function(){
 }
 
 # @export
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param testsite PARAM_DESCRIPTION, Default: 'http://www.google.com'
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname internetWorks
+#' @export 
 internetWorks <- function(testsite = "http://www.google.com"){
   works = FALSE
   try({
@@ -117,12 +263,19 @@ internetWorks <- function(testsite = "http://www.google.com"){
   works
 }  
 
-#' Load user options saved in file.
-#'
-#' \code{getOptions} returns all current user options defined in the given options file.
-#'
-#' @param file.loc Path to user options file to read in.
-#' @return R list with keys as option types and values as option values.
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param file.loc PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname getOptions
+#' @export 
 getOptions <- function(file.loc){
   opt_conn <- file(file.loc)
   # ----------------
@@ -139,17 +292,25 @@ getOptions <- function(file.loc){
 }
 
 
-#' Changes an option in the given MetaboShiny user options file.
-#'
-#' \code{setOption} changes an option in the options file. Can also be used to add new options to the file.
-#'
-#' @param file.loc Location of user options file. Usually .txt but any format is fine.
-#' @param key Name of the new option / to change option
-#' @param value Value of the option to change or add 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param file.loc PARAM_DESCRIPTION
+#' @param key PARAM_DESCRIPTION
+#' @param value PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname setOption
+#' @export 
 setOption <- function(file.loc, key, value){
   opt_conn <- file(file.loc)
   # -------------------------
-  options <- MetaboShiny::getOptions(file.loc)
+  options <- getOptions(file.loc)
   # --- add new or change ---
   options[[key]] = value
   # --- list-ify ---
@@ -162,10 +323,19 @@ setOption <- function(file.loc, key, value){
   close(opt_conn)
 }
 
-#' Gets the current used operating system. Important for parallel/multithreaded functions if using makeCluster("FORK")
-#' \code{get_os} finds the name of the OS the user is running this function on.
-#'
-#' @return osx, windows/win or linux
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname get_os
+#' @export 
 get_os <- function(){
   sysinf <- Sys.info()
   if (!is.null(sysinf)){
@@ -192,18 +362,24 @@ get_os <- function(){
 # CSS3 code was found on https://proto.io/freebies/onoff/
 # For CSS3 customisation, refer to this website.
 
-#' A function to change the Original checkbox of rshiny
-#' into a nice true/false or on/off switch button
-#' No javascript involved. Only CSS code.
-#' 
-#' To be used with CSS script 'button.css' stored in a 'www' folder in your Shiny app folder
-#' 
-#' @param inputId The input slot that will be used to access the value.
-#' @param label Display label for the control, or NULL for no label.
-#' @param value Initial value (TRUE or FALSE).
-#' @param col Color set of the switch button. Choose between "GB" (Grey-Blue) and "RG" (Red-Green)
-#' @param type Text type of the button. Choose between "TF" (TRUE - FALSE), "OO" (ON - OFF) or leave empty for no text.
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param inputId PARAM_DESCRIPTION
+#' @param label PARAM_DESCRIPTION
+#' @param value PARAM_DESCRIPTION, Default: FALSE
+#' @param col PARAM_DESCRIPTION, Default: 'GB'
+#' @param type PARAM_DESCRIPTION, Default: 'TF'
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname switchButton
+#' @export 
 switchButton <- function(inputId, label, value=FALSE, col = "GB", type="TF") {
   
   # # color class
@@ -271,10 +447,41 @@ switchButton <- function(inputId, label, value=FALSE, col = "GB", type="TF") {
   }
 }
 
-#' Squishes HTML elements close together.
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param content PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @seealso 
+#'  \code{\link[shiny]{builder}}
+#' @rdname sardine
+#' @export 
+#' @importFrom shiny div
 sardine <- function(content) shiny::div(style="display: inline-block;vertical-align:top;", content)
 
 # loading screen
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param failed PARAM_DESCRIPTION, Default: FALSE
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @seealso 
+#'  \code{\link[shiny]{modalDialog}},\code{\link[shiny]{fluidPage}},\code{\link[shiny]{builder}}
+#' @rdname loadModal
+#' @export 
+#' @importFrom shiny modalDialog fluidRow br h3 img
 loadModal <- function(failed = FALSE) {
   shiny::modalDialog(
     shiny::fluidRow(align="center",
@@ -289,6 +496,21 @@ loadModal <- function(failed = FALSE) {
   )
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param x PARAM_DESCRIPTION
+#' @param y PARAM_DESCRIPTION
+#' @param include.equals PARAM_DESCRIPTION, Default: FALSE
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname expand.grid.unique
+#' @export 
 expand.grid.unique <- function(x, y, include.equals=FALSE)
 {
   x <- unique(x)
@@ -303,6 +525,25 @@ expand.grid.unique <- function(x, y, include.equals=FALSE)
   do.call(rbind, lapply(seq_along(x), g))
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param searchTerms PARAM_DESCRIPTION
+#' @param retmax PARAM_DESCRIPTION, Default: 500
+#' @param mindate PARAM_DESCRIPTION, Default: 2000
+#' @param maxdate PARAM_DESCRIPTION, Default: 2019
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @seealso 
+#'  \code{\link[RISmed]{EUtilsSummary}},\code{\link[RISmed]{QueryId}},\code{\link[RISmed]{EUtilsGet}}
+#' @rdname getAbstracts
+#' @export 
+#' @importFrom RISmed EUtilsSummary QueryId EUtilsGet
 getAbstracts <- function(searchTerms, retmax=500, mindate=2000, maxdate=2019){
   searchTerms = strsplit(searchTerms, " ")[[1]]
   # ==== SEARCH A METABOLITE TERM =====
@@ -325,6 +566,19 @@ getAbstracts <- function(searchTerms, retmax=500, mindate=2000, maxdate=2019){
 }
 
 #wordfrequency of whole abstract #frequencies = getWordFrequency(abstracts)#it should be # from here
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param abstractsx PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname getWordFrequency
+#' @export 
 getWordFrequency <- function(abstractsx){
   require(dplyr)
   abstractsx <- data.table(abstract = abstractsx)
@@ -338,6 +592,20 @@ getWordFrequency <- function(abstractsx){
 #filterList are medicalwords
 #filterWords are summerized and uniqued of filterList
 #getFilteredWordFreqency is filterd from medicalwords
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param frequencies PARAM_DESCRIPTION
+#' @param filterList PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname getFilteredWordFreqency
+#' @export 
 getFilteredWordFreqency <- function(frequencies, filterList){
   filterWords <- unique(filterList)#$word)
   filteredWords <- frequencies[!(frequencies$word %in% filterWords),]
@@ -345,6 +613,19 @@ getFilteredWordFreqency <- function(frequencies, filterList){
   return(filteredWords)
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param str PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname escape
+#' @export 
 escape = function(str){
   str_adj = gsub(str, pattern = "( )", replacement = "\\\\\\1")
   str_adj = gsub(str_adj, pattern = "(\\))", replacement = "\\\\\\1")

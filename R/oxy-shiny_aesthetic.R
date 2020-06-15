@@ -1,3 +1,13 @@
+#' @title Generate css for MetShi footer
+#' @description Takes user aesthetic settings and generates footer CSS and hTML
+#' @param RGB.bg Hex background color, Default: '#ffc8c2'
+#' @param font.col Font color, Default: 'white'
+#' @return CSS
+#' @seealso 
+#'  \code{\link[gsubfn]{fn}}
+#' @rdname footer.css
+#' @export 
+#' @importFrom gsubfn fn
 footer.css <- function(RGB.bg = "#ffc8c2", font.col="white"){
   base <- ".footer {position:fixed;
                     bottom:0;
@@ -22,6 +32,17 @@ footer.css <- function(RGB.bg = "#ffc8c2", font.col="white"){
   filled
 }
 
+#' @title Generate navigation bar CSS for use in MetaboShiny
+#' @param RGB.bg Hex background color, Default: '#ffc8c2'
+#' @param RGB.active.bg Hex active background color, Default: '#e1897f'
+#' @param RGB.col Hex text color, Default: '#ffffff'
+#' @param RGB.active.col Hex active text color, Default: '#ffffff'
+#' @return CSS string
+#' @seealso 
+#'  \code{\link[gsubfn]{fn}}
+#' @rdname nav.bar.css
+#' @export 
+#' @importFrom gsubfn fn
 nav.bar.css <- function(RGB.bg = "#ffc8c2",
                         RGB.active.bg = "#e1897f",
                         RGB.col = "#ffffff",
@@ -50,6 +71,26 @@ nav.bar.css <- function(RGB.bg = "#ffc8c2",
   filled
 }
 
+#' @title Generate font CSS
+#' @description Takes user options and generates CSS to set font correctly on start.
+#' @param font.h1 h1 font, Default: 'Press Start 2P'
+#' @param font.h2 h2 font, Default: 'Raleway bold'
+#' @param font.h3 h3 font, Default: 'Raleway'
+#' @param font.body body font, Default: 'Raleway serif'
+#' @param size.h1 h1 size, Default: 33
+#' @param size.h2 h3 size, Default: 22
+#' @param size.h3 h3 size, Default: 15
+#' @param size.body body size, Default: 13
+#' @param font.col Font color, Default: 'white'
+#' @param online Are we online? (needed for proper font setting), Default: T
+#' @return CSS string
+#' @seealso 
+#'  \code{\link[stringr]{str_extract}}
+#'  \code{\link[gsubfn]{fn}}
+#' @rdname app.font.css
+#' @export 
+#' @importFrom stringr str_extract
+#' @importFrom gsubfn fn
 app.font.css <- function(font.h1 = "Press Start 2P",
                         font.h2 = "Raleway bold",
                         font.h3 = "Raleway",

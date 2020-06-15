@@ -18,7 +18,7 @@ Imports:
   clipr,
   shinyBS,
   shinyjs,
-  MetaboShiny,
+  shinycssloaders,
   caret,
   grDevices,
   RColorBrewer,

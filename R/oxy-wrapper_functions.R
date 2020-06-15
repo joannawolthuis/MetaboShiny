@@ -1,3 +1,23 @@
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param mSet PARAM_DESCRIPTION
+#' @param signif.only PARAM_DESCRIPTION
+#' @param source.anal PARAM_DESCRIPTION
+#' @param top.hits PARAM_DESCRIPTION
+#' @param cols PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @seealso 
+#'  \code{\link[data.table]{rbindlist}}
+#' @rdname calcHeatMap
+#' @export 
+#' @importFrom data.table data.table rbindlist
 calcHeatMap <- function(mSet, signif.only, 
                         source.anal, 
                         top.hits, 
@@ -69,6 +89,35 @@ calcHeatMap <- function(mSet, signif.only,
   }
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param curr PARAM_DESCRIPTION
+#' @param config PARAM_DESCRIPTION
+#' @param train_vec PARAM_DESCRIPTION
+#' @param test_vec PARAM_DESCRIPTION
+#' @param configCols PARAM_DESCRIPTION
+#' @param ml_method PARAM_DESCRIPTION
+#' @param ml_perf_metr PARAM_DESCRIPTION
+#' @param ml_folds PARAM_DESCRIPTION
+#' @param ml_preproc PARAM_DESCRIPTION
+#' @param tuneGrid PARAM_DESCRIPTION
+#' @param ml_train_perc PARAM_DESCRIPTION
+#' @param sampling PARAM_DESCRIPTION, Default: 'none'
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @seealso 
+#'  \code{\link[caret]{createDataPartition}},\code{\link[caret]{trainControl}},\code{\link[caret]{train}},\code{\link[caret]{varImp}}
+#'  \code{\link[stats]{predict}}
+#' @rdname runML
+#' @export 
+#' @importFrom caret createDataPartition trainControl train varImp
+#' @importFrom stats predict
 runML <- function(curr,
                   config,
                   train_vec,
@@ -164,6 +213,24 @@ runML <- function(curr,
   
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param model PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @seealso 
+#'  \code{\link[pROC]{multiclass.roc}},\code{\link[pROC]{auc}}
+#'  \code{\link[data.table]{rbindlist}}
+#' @rdname getMultiMLperformance
+#' @export 
+#' @importFrom pROC multiclass.roc auc
+#' @importFrom data.table rbindlist
 getMultiMLperformance <- function(model){
   roc = pROC::multiclass.roc(model$labels, model$prediction)
   data.table::rbindlist(lapply(roc$rocs, function(roc.pair){
@@ -175,6 +242,19 @@ getMultiMLperformance <- function(model){
   })) 
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param csv PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname getColDistribution
+#' @export 
 getColDistribution <- function(csv){
   suppressWarnings({
     gsubbed = gsub(x = colnames(csv),
@@ -187,6 +267,24 @@ getColDistribution <- function(csv){
   list(meta = exp.vars, mz = mz.vars)
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param csv PARAM_DESCRIPTION
+#' @param regex PARAM_DESCRIPTION, Default: ' |\(|\)|\+'
+#' @param exp.vars PARAM_DESCRIPTION
+#' @param mz.vars PARAM_DESCRIPTION
+#' @param miss.meta PARAM_DESCRIPTION
+#' @param miss.mz PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname cleanCSV
+#' @export 
 cleanCSV <- function(csv, regex=" |\\(|\\)|\\+",exp.vars, mz.vars, miss.meta, miss.mz){
   # remove whitespace
   csv$sample <- gsub(csv$sample, pattern=regex, replacement="")
@@ -204,6 +302,23 @@ cleanCSV <- function(csv, regex=" |\\(|\\)|\\+",exp.vars, mz.vars, miss.meta, mi
   csv
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param csv PARAM_DESCRIPTION
+#' @param exp.vars PARAM_DESCRIPTION
+#' @param excl.rows PARAM_DESCRIPTION
+#' @param excl.cond PARAM_DESCRIPTION
+#' @param min.lev PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname getDefaultCondition
+#' @export 
 getDefaultCondition <- function(csv, exp.vars, excl.rows, excl.cond, min.lev){
   unique.levels <- apply(csv[!excl.rows, ..exp.vars, with=F], MARGIN=2, function(col){
     lvls <- levels(as.factor(col))
@@ -217,6 +332,23 @@ getDefaultCondition <- function(csv, exp.vars, excl.rows, excl.cond, min.lev){
   condition
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param csv PARAM_DESCRIPTION
+#' @param exp.vals PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @seealso 
+#'  \code{\link[car]{Boxplot}}
+#' @rdname removeOutliers
+#' @export 
+#' @importFrom car Boxplot
 removeOutliers <- function(csv, exp.vals){
   sums <- rowSums(csv[,-exp.vars,with=FALSE],na.rm = TRUE)
   names(sums) <- csv$sample
@@ -224,6 +356,20 @@ removeOutliers <- function(csv, exp.vals){
   csv[!(sample %in% outliers),]  
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param csv PARAM_DESCRIPTION
+#' @param covar_table PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname removeUnusedQC
+#' @export 
 removeUnusedQC <- function(csv, covar_table){
   samps <- which(!grepl(covar_table$sample, pattern = "QC"))
   batchnum <- unique(covar_table[samps, "batch"][[1]])
@@ -232,6 +378,20 @@ removeUnusedQC <- function(csv, covar_table){
   csv[which(csv$sample %in% keep_samps_post_qc),]  
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param csv PARAM_DESCRIPTION
+#' @param exp.vars PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname asMetaboAnalyst
+#' @export 
 asMetaboAnalyst <- function(csv, exp.vars){
   # remove all except sample and time in saved csv
   exp_var_names <- colnames(csv)[exp.vars]
@@ -240,17 +400,45 @@ asMetaboAnalyst <- function(csv, exp.vars){
   csv[,-remove,with=F]
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param mSet PARAM_DESCRIPTION
+#' @param perc_limit PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname mzLeftPostFilt
+#' @export 
 mzLeftPostFilt <- function(mSet, perc_limit){
   int.mat <- mSet$dataSet$preproc
   minConc <- mSet$dataSet$minConc
   missvals = apply(is.na(int.mat), 2, sum)/nrow(int.mat)
   good.inx <- missvals < perc_limit/100
   if(length(which(good.inx))==0){
-    MetaboShiny::metshiAlert(paste("No m/z left after filtering, please make your missing value correction more lenient... Recommended minumum to retain at least 1 m/z value:", paste0(min(missvals)*100, "%")))
+    metshiAlert(paste("No m/z left after filtering, please make your missing value correction more lenient... Recommended minumum to retain at least 1 m/z value:", paste0(min(missvals)*100, "%")))
     return(NULL)
   }  
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param mSet PARAM_DESCRIPTION
+#' @param max.missing.per.samp PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname tooEmptySamps
+#' @export 
 tooEmptySamps <- function(mSet, max.missing.per.samp){
   w.missing <- mSet$dataSet$preproc
   miss.per.samp = rowSums(is.na(w.missing))
@@ -258,6 +446,24 @@ tooEmptySamps <- function(mSet, max.missing.per.samp){
   which(miss.per.samp.perc >= max.missing.per.samp)
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param mSet PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @seealso 
+#'  \code{\link[data.table]{as.data.table}}
+#'  \code{\link[pbapply]{pboptions}}
+#' @rdname replRowMin
+#' @export 
+#' @importFrom data.table as.data.table
+#' @importFrom pbapply startpb setpb
 replRowMin <- function(mSet){
   samples <- rownames(mSet$dataSet$preproc)
   w.missing <- data.table::as.data.table(mSet$dataSet$preproc)
@@ -269,6 +475,27 @@ replRowMin <- function(mSet){
   return(w.missing)
   }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param mSet PARAM_DESCRIPTION
+#' @param parallelMode PARAM_DESCRIPTION
+#' @param ntree PARAM_DESCRIPTION
+#' @param cl PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @seealso 
+#'  \code{\link[doParallel]{registerDoParallel}}
+#'  \code{\link[missForest]{missForest}}
+#' @rdname replRF
+#' @export 
+#' @importFrom doParallel registerDoParallel
+#' @importFrom missForest missForest
 replRF <- function(mSet, parallelMode, ntree, cl){
   samples <- rownames(mSet$dataSet$preproc)
   # convert all to as numeric
@@ -295,6 +522,24 @@ replRF <- function(mSet, parallelMode, ntree, cl){
   imp$ximp
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param mSet PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @seealso 
+#'  \code{\link[pbapply]{pbapply}}
+#'  \code{\link[BatchCorrMetabolomics]{doBC}}
+#' @rdname batchCorrQC
+#' @export 
+#' @importFrom pbapply pblapply
+#' @importFrom BatchCorrMetabolomics doBC
 batchCorrQC <- function(mSet){
   smps <- rownames(mSet$dataSet$norm)
   # get which rows are QC samples
@@ -326,6 +571,19 @@ batchCorrQC <- function(mSet){
   as.data.frame(qc_corr_matrix)
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param mSet PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname hideQC
+#' @export 
 hideQC <- function(mSet){
   smps <- rownames(mSet$dataSet$norm)
   # get which rows are QC samples
@@ -337,6 +595,22 @@ hideQC <- function(mSet){
   mSet
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param mSet PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @seealso 
+#'  \code{\link[data.table]{as.data.table}}
+#' @rdname combatCSV
+#' @export 
+#' @importFrom data.table as.data.table
 combatCSV <- function(mSet){
   # get sample names and classes
   smp <- rownames(mSet$dataSet$norm)
@@ -353,6 +627,26 @@ combatCSV <- function(mSet){
   csv_edata
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param content PARAM_DESCRIPTION
+#' @param options PARAM_DESCRIPTION, Default: NULL
+#' @param rownames PARAM_DESCRIPTION, Default: T
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @seealso 
+#'  \code{\link[stringr]{str_match}}
+#'  \code{\link[DT]{datatable}}
+#' @rdname metshiTable
+#' @export 
+#' @importFrom stringr str_match
+#' @importFrom DT datatable
 metshiTable <- function(content, options=NULL, rownames= T){
   opts = list(deferRender = TRUE, 
               scrollY = 200,
@@ -386,6 +680,26 @@ metshiTable <- function(content, options=NULL, rownames= T){
   )
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param mSet PARAM_DESCRIPTION
+#' @param expnames PARAM_DESCRIPTION
+#' @param top PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @seealso 
+#'  \code{\link[stringr]{str_match}}
+#'  \code{\link[data.table]{as.data.table}}
+#' @rdname getTopHits
+#' @export 
+#' @importFrom stringr str_match
+#' @importFrom data.table as.data.table
 getTopHits <- function(mSet, expnames, top){
   
   experiments <- stringr::str_match(expnames, 
@@ -497,7 +811,7 @@ getTopHits <- function(mSet, expnames, top){
                        names(res) = base_name
                        res
                      },
-                     {MetaboShiny::metshiAlert("Not currently supported...")
+                     {metshiAlert("Not currently supported...")
                        return(NULL)})
       
       if(is.null(tbls)) return(NULL)

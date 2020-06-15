@@ -1,9 +1,26 @@
-get_exp_vars <- function(from, patcsv){
+#' @title Get experimental variables from a MetShi csv
+#' @description Sees which columns are numeric and which aren't, the ones that are not are the metadata
+#' @param patcsv Source CSV
+#' @return Head of table metadata
+#' @seealso 
+#'  \code{\link[data.table]{fread}}
+#' @rdname get_exp_vars
+#' @export 
+#' @importFrom data.table fread
+get_exp_vars <- function(patcsv){
   header = data.table::fread(patcsv, nrows = 5, header=T)
   return(header[getColDistribution(header)$meta])
 }
 
-#' @export
+#' @title Browse a base database
+#' @description Deprecated, should be moved to MetaDBparse. Returns full database (can be memory heavy)
+#' @param chosen.db Which base db to browse (full path).
+#' @return Data table of whole database
+#' @seealso 
+#'  \code{\link[RSQLite]{character(0)}},\code{\link[RSQLite]{SQLite}}
+#' @rdname browse_db
+#' @export 
+#' @importFrom RSQLite dbConnect SQLite dbGetQuery
 browse_db <- function(chosen.db){
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), chosen.db) # change this to proper var later
   # --- browse ---
@@ -12,7 +29,22 @@ browse_db <- function(chosen.db){
   result
 }
 
-#' @export
+#' @title Get results of a m/z search
+#' @description Search results are stored in a SQLITE table, which can be returned through this function with filters.
+#' @param who Which m/z to return, Default: NA
+#' @param what Which column are we matching the 'who' to?, Default: 'query_mz'
+#' @param patdb SQLITE database file of current project
+#' @param showdb Which databases to include, Default: c()
+#' @param showadd Which adducts to include, Default: c()
+#' @param showiso Which isotope category to include, Default: c()
+#' @return Data table with results
+#' @seealso 
+#'  \code{\link[RSQLite]{character(0)}},\code{\link[RSQLite]{SQLite}}
+#'  \code{\link[gsubfn]{fn}}
+#' @rdname get_prematches
+#' @export 
+#' @importFrom RSQLite dbConnect SQLite dbGetQuery dbDisconnect
+#' @importFrom gsubfn fn
 get_prematches <- function(who = NA,
                            what = "query_mz",
                            patdb,
@@ -74,6 +106,28 @@ get_prematches <- function(who = NA,
   return(res)
 }
 
+#' @title Perform isotope scoring
+#' @description For a given compound, check patient data to see if the theoretical isotope pattern is close to the one seen.
+#' @param table Result table from match finding
+#' @param mSet mSet item
+#' @param method Method to perform scoring, currently only mScore from 'InterpretMSSpectrum', Default: 'mscore'
+#' @param inshiny Are we running in shiny or outside?, Default: TRUE
+#' @param session Shiny session, Default: 0
+#' @param intprec Percentage the intensity is expected to be off
+#' @param ppm Parts per million m/z error margin allowed
+#' @param dbdir Where is your database stored?
+#' @return Input 'table' with score column added.
+#' @seealso 
+#'  \code{\link[shiny]{showNotification}}
+#'  \code{\link[pbapply]{pbapply}}
+#'  \code{\link[InterpretMSSpectrum]{mScore}}
+#'  \code{\link[data.table]{rbindlist}}
+#' @rdname score.isos
+#' @export 
+#' @importFrom shiny showNotification
+#' @importFrom pbapply pblapply
+#' @importFrom InterpretMSSpectrum mScore
+#' @importFrom data.table data.table rbindlist
 score.isos <- function(table, mSet, method="mscore", inshiny=TRUE, session=0, intprec, ppm, dbdir){
   
   shiny::showNotification("Scoring isotopes...")
@@ -91,7 +145,7 @@ score.isos <- function(table, mSet, method="mscore", inshiny=TRUE, session=0, in
     smi=mini.table$structure[i]
     add=mini.table$adduct[i]
     form=mini.table$baseformula[i]
-    revres = as.data.table(MetaDBparse::searchRev(smi, "extended", dbdir))
+    revres = as.data.table(searchRev(smi, "extended", dbdir))
     isotopes_to_find = revres[adduct == add]
     isotopes_to_find$form = c(form)
     isotopes_to_find
@@ -105,7 +159,7 @@ score.isos <- function(table, mSet, method="mscore", inshiny=TRUE, session=0, in
     formula = unique(l$fullformula)
     
     per_mz_cols = lapply(mzs, function(mz){
-      matches = which(as.numeric(gsub("-","",colnames(mSet$dataSet$norm))) %between% MetaboShiny::ppm_range(mz, ppm))
+      matches = which(as.numeric(gsub("-","",colnames(mSet$dataSet$norm))) %between% ppm_range(mz, ppm))
       if(length(matches) > 0){
         int = as.data.table(mSet$dataSet$norm)[,..matches]
         int[is.na(int)] <- 0
@@ -164,18 +218,18 @@ score.isos <- function(table, mSet, method="mscore", inshiny=TRUE, session=0, in
   data.table::rbindlist(score_rows)
 }
 
-get_user_role <- function(username, password){
-  conn <- RSQLite::dbConnect(RSQLite::SQLite(), "users.db") # change this to proper var later
-  role = RSQLite::dbGetQuery(conn, gsubfn::fn$paste(
-    "SELECT role FROM users WHERE username = '$username' AND password = '$password'"))
-  if(nrow(role) == 0){
-    return(NULL)
-  }else{
-    return(role[1,1])
-  }
-  RSQLite::dbDisconnect(conn)
-}
-
+#' @title Filter patient database
+#' @description Remove samples from DB file that do not have metadata
+#' @param patdb Patient database file (full path)
+#' @seealso 
+#'  \code{\link[RSQLite]{SQLite}}
+#'  \code{\link[pbapply]{pbapply}}
+#'  \code{\link[gsubfn]{fn}}
+#' @rdname filterPatDB
+#' @export 
+#' @importFrom RSQLite dbConnect SQLite dbGetQuery dbExecute dbDisconnect
+#' @importFrom pbapply pblapply
+#' @importFrom gsubfn fn
 filterPatDB <- function(patdb){
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), normalizePath(patdb))
   # which samples to remove?
@@ -195,11 +249,16 @@ filterPatDB <- function(patdb){
   RSQLite::dbDisconnect(conn)
 }
 
+#' @title Checks for integrating metadata and peak table
+#' @param conn Database connection
+#' @rdname prepDatabase
+#' @export 
+#' @importFrom RSQLite dbExecute
 prepDatabase <- function(conn){
   cat("Checking for mismatches between peak tables and metadata... \n")
   
-  fn_meta <- MetaboShiny::allSampInMeta(conn)
-  fn_int <- MetaboShiny::allSampInPeaktable(conn)
+  fn_meta <- allSampInMeta(conn)
+  fn_int <- allSampInPeaktable(conn)
   
   cat(paste0("-- in peaklist, not in metadata: --- \n", 
              paste0(setdiff(fn_int,
@@ -216,6 +275,17 @@ prepDatabase <- function(conn){
   RSQLite::dbExecute(conn, "CREATE INDEX IF NOT EXISTS filenames ON mzintensities(filename)")
 }
 
+#' @title Generate query to get long format MetaboShiny table from database file
+#' @description Checks if 'setup' table exists (original metadata format) and adjusts query based on that.
+#' @param conn Database connection
+#' @return SQLITE query to get long format MetaboShiny table.
+#' @seealso 
+#'  \code{\link[DBI]{dbExistsTable}}
+#'  \code{\link[gsubfn]{fn}}
+#' @rdname getCSVquery
+#' @export 
+#' @importFrom DBI dbExistsTable
+#' @importFrom gsubfn fn
 getCSVquery <- function(conn){
   if(DBI::dbExistsTable(conn, "setup")){
     query <- strwrap(gsubfn::fn$paste("select distinct d.sample as sample, d.*, s.*
@@ -235,6 +305,13 @@ getCSVquery <- function(conn){
   }
 }
 
+#' @title Get all m/z values from database
+#' @description Collects all m/z values from given database.
+#' @param conn Database connection.
+#' @return Vector of m/z values.
+#' @rdname allMZ
+#' @export 
+#' @importFrom RSQLite dbGetQuery
 allMZ <- function(conn){
   RSQLite::dbGetQuery(conn, "select distinct i.mzmed
                              from mzintensities i
@@ -242,14 +319,40 @@ allMZ <- function(conn){
                              on i.filename = d.sample")[,1]  
 }
 
+#' @title Get all samples in metadata table
+#' @param conn Database connection
+#' @return Vector of sample names.
+#' @rdname allSampInMeta
+#' @export 
+#' @importFrom RSQLite dbGetQuery
 allSampInMeta <- function(conn){
   RSQLite::dbGetQuery(conn, "SELECT DISTINCT sample FROM individual_data")[,1]
 }
 
+#' @title Get all samples in peaktable
+#' @param conn Database connection
+#' @return Vector of sample names.
+#' @rdname allSampInPeaktable
+#' @export 
+#' @importFrom RSQLite dbGetQuery
 allSampInPeaktable <- function(conn){
   RSQLite::dbGetQuery(conn, "SELECT DISTINCT filename FROM mzintensities")[,1]
 }
 
+#' @title Get metadata for given sample
+#' @description Given a file name, grabs metadata for that specific sample.
+#' @param conn Database connection
+#' @param filename File name as seen in peak table
+#' @param query Base query to fetch relevant sample data
+#' @return Metadata vector
+#' @seealso 
+#'  \code{\link[gsubfn]{fn}}
+#'  \code{\link[data.table]{as.data.table}}
+#' @rdname getSampMeta
+#' @export 
+#' @importFrom gsubfn fn
+#' @importFrom data.table as.data.table
+#' @importFrom RSQLite dbGetQuery
 getSampMeta <- function(conn, filename, query){
   # adjust query
   query_add = gsubfn::fn$paste(" WHERE i.filename = '$filename'")
@@ -262,6 +365,20 @@ getSampMeta <- function(conn, filename, query){
   if(nrow(z.meta)==0) return(NA) else return(z.meta)
 }
 
+#' @title Get m/z intensities for given sample
+#' @description Given a filename, fetches all m/z value intensities
+#' @param conn Database connection
+#' @param filename File name as seen in peak table.
+#' @param all_mz All m/z values (needed for proper reordering)
+#' @return Vector of intensities
+#' @seealso 
+#'  \code{\link[gsubfn]{fn}}
+#'  \code{\link[data.table]{as.data.table}},\code{\link[data.table]{dcast.data.table}}
+#' @rdname getSampInt
+#' @export 
+#' @importFrom gsubfn fn
+#' @importFrom data.table as.data.table dcast.data.table
+#' @importFrom RSQLite dbGetQuery
 getSampInt <- function(conn, filename, all_mz){
   query_add = gsubfn::fn$paste(" WHERE i.filename = '$filename'")
   z.int = data.table::as.data.table(RSQLite::dbGetQuery(conn, 

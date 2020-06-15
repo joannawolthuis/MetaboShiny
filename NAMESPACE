@@ -10,6 +10,7 @@ import(plotly)
 import(colorRamps)
 import(stringr)
 import(shinycssloaders)
+importFrom("stats", "power")
 importFrom("grDevices", "gray.colors", "rainbow")
 importFrom("graphics", "par", "plot", "rasterImage")
 importFrom("stats", "D", "chisq.test", "complete.cases", "cov",

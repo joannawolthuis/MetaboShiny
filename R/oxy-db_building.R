@@ -1,11 +1,32 @@
-#' @export
-import.pat.csvs <- function(db.name,
-                            metapath,
+#' @title Merge metadata and peak tables into SQLITE database.
+#' @description Wrapper function to integrate user data into the format used in MetaboShiny.
+#' @param metapath Path to metadata csv
+#' @param pospath Path to positive peaklist csv
+#' @param negpath Path to negative peaklist csv
+#' @param overwrite Overwrite existing database?, Default: FALSE
+#' @param rtree Use RTree structure? Generally enables faster matching., Default: TRUE
+#' @param ppm Parts per million error allowed., Default: 2
+#' @param inshiny Running in shiny?, Default: F
+#' @param csvpath Path to write resulting, Default: lcl$paths$csv_loc
+#' @param wipe.regex Regex to apply to metadata sample names. Matches are removed from name, Default: '.*_(?>POS|NEG)_[0+]*'
+#' @param missperc.mz Allowed percentage of samples missing for a  m/z, removed otherwise., Default: 99
+#' @param missperc.samp Allowed percentage of m/z missing for a sample, removed otherwise., Default: 100
+#' @seealso 
+#'  \code{\link[data.table]{fread}},\code{\link[data.table]{melt.data.table}},\code{\link[data.table]{dcast.data.table}},\code{\link[data.table]{fwrite}}
+#'  \code{\link[shiny]{showNotification}}
+#'  \code{\link[pbapply]{pbapply}}
+#'  \code{\link[stringr]{str_split}}
+#' @rdname import.pat.csvs
+#' @export 
+#' @importFrom data.table fread melt dcast fwrite
+#' @importFrom shiny showNotification
+#' @importFrom pbapply pbsapply
+#' @importFrom stringr str_split
+import.pat.csvs <- function(metapath,
                             pospath,
                             negpath,
                             overwrite = FALSE,
                             rtree = TRUE,
-                            make.full = TRUE,
                             ppm = 2,
                             inshiny = F,
                             csvpath = lcl$paths$csv_loc,
@@ -16,7 +37,7 @@ import.pat.csvs <- function(db.name,
   ppm = as.numeric(ppm)
 
   metadata <- data.table::fread(metapath)
-  metadata <- MetaboShiny::reformat.metadata(metadata)
+  metadata <- reformat.metadata(metadata)
   
   keep.cols = colSums(is.na(metadata)) < nrow(metadata) & sapply(colnames(metadata), function(x) length(unique(metadata[,..x][[1]])) > 1) 
   print(which(duplicated(metadata$sample)))
@@ -93,8 +114,6 @@ import.pat.csvs <- function(db.name,
     shiny::showNotification(paste0("Remaining m/z values for negative mode:", ncol(neglist)))
   }
     
-  
-  
   # REGEX SAMPLE NAMES if applicable
   if(wipe.regex != ""){
     poslist[, sample := gsub(wipe.regex, replacement = "", sample, perl=T)]
