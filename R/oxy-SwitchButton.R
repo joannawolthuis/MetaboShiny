@@ -8,18 +8,26 @@
 # CSS3 code was found on https://proto.io/freebies/onoff/
 # For CSS3 customisation, refer to this website.
 
-#' A function to change the Original checkbox of rshiny
-#' into a nice true/false or on/off switch button
-#' No javascript involved. Only CSS code.
-#' 
-#' To be used with CSS script 'button.css' stored in a 'www' folder in your Shiny app folder
-#' 
-#' @param inputId The input slot that will be used to access the value.
-#' @param label Display label for the control, or NULL for no label.
-#' @param value Initial value (TRUE or FALSE).
-#' @param col Color set of the switch button. Choose between "GB" (Grey-Blue) and "RG" (Red-Green)
-#' @param type Text type of the button. Choose between "TF" (TRUE - FALSE), "OO" (ON - OFF) or leave empty for no text.
 
+#' @title Generate custom switch button
+#' @description Generates css for custom switch button.
+#' @param inputId Shiny ID to use (behaves as checkbox)
+#' @param label HTML label
+#' @param value Default on/off? TRUE/FALSE, Default: FALSE
+#' @param col Color binary used (GB green blue, GB grey blue), Default: 'GB'
+#' @param type Pick display option TF true-false, OO on-off, YN yes-no, Default: 'TF'
+#' @return HTML tag to display in shiny app
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  switchButton("doThing", "Do thing?", TRUE, "GB", "YN")
+#'  }
+#' }
+#' @seealso 
+#'  \code{\link[shiny]{tag}},\code{\link[shiny]{builder}}
+#' @rdname switchButton
+#' @export 
+#' @importFrom shiny tagList tags
 switchButton <- function(inputId, label, value=FALSE, col = "GB", type="TF") {
   
   # color class
@@ -79,6 +87,17 @@ switchButton <- function(inputId, label, value=FALSE, col = "GB", type="TF") {
 }
 
 
+#' @title Small image checkbox that fades upon deselection
+#' @description Used in MetaboShiny database selection when searching or pre-matching
+#' @param inputId Shiny input ID to connect to
+#' @param img.path Path to image to use, Default: NULL
+#' @param value Default value (T/F), Default: FALSE
+#' @return Shiny HTML tag
+#' @seealso 
+#'  \code{\link[shiny]{tag}},\code{\link[shiny]{builder}}
+#' @rdname fadeImageButton
+#' @export 
+#' @importFrom shiny tagList tags
 fadeImageButton <- function(inputId, img.path=NULL,value=FALSE) {
   # ---------------
   #if(is.null(img)) stop("Please enter an image name (place in www folder please)")

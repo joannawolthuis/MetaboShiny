@@ -1,3 +1,8 @@
+#' @title Check if mSet sample order in peaktable data and metadata are the same
+#' @param mSet mSet object
+#' @return TRUE/FALSE
+#' @rdname is.ordered.mSet
+#' @export 
 is.ordered.mSet <- function(mSet) {
   covarsMatch = all(mSet$dataSet$covars$sample == rownames(mSet$dataSet$norm))
   mSet$dataSet$exp.type <-
@@ -44,6 +49,12 @@ is.ordered.mSet <- function(mSet) {
   return(isOK)
 }
 
+#' @title Generate mSet name
+#' @description For MetShi display purposes. Takes subset and selected variable(s) to generate a name for this subexperiment.
+#' @param mSet mSet object
+#' @return character object
+#' @rdname name.mSet
+#' @export 
 name.mSet <- function(mSet) {
   info_vec = c()
   if (mSet$dataSet$exp.type %in% c("t1f", "t")) {
@@ -124,6 +135,20 @@ name.mSet <- function(mSet) {
   mset_name
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param mSet PARAM_DESCRIPTION
+#' @param fn PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname reset.mSet
+#' @export 
 reset.mSet <- function(mSet, fn) {
   origItem <-
     readRDS(file = fn)
@@ -133,18 +158,67 @@ reset.mSet <- function(mSet, fn) {
   return(mSet)
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param mSet PARAM_DESCRIPTION
+#' @param name PARAM_DESCRIPTION, Default: mSet$dataSet$cls.name
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname load.mSet
+#' @export 
 load.mSet <- function(mSet, name = mSet$dataSet$cls.name) {
   mSet$analSet <- mSet$storage[[name]]$analysis
   mSet$settings <- mSet$storage[[name]]$settings
   return(mSet)
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param mSet PARAM_DESCRIPTION
+#' @param name PARAM_DESCRIPTION, Default: mSet$dataSet$cls.name
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname store.mSet
+#' @export 
 store.mSet <- function(mSet, name = mSet$dataSet$cls.name) {
   mSet$storage[[name]]$analysis <- mSet$analSet
   mSet$storage[[name]]$settings <- mSet$settings
   return(mSet)
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param mSet PARAM_DESCRIPTION
+#' @param stats_type PARAM_DESCRIPTION
+#' @param stats_var PARAM_DESCRIPTION, Default: NULL
+#' @param time_var PARAM_DESCRIPTION, Default: NULL
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @seealso 
+#'  \code{\link[shiny]{showNotification}}
+#'  \code{\link[MetaboAnalystR]{SetDesignType}}
+#' @rdname change.mSet
+#' @export 
+#' @importFrom shiny showNotification
+#' @importFrom MetaboAnalystR SetDesignType
 change.mSet <-
   function(mSet,
            stats_type,
@@ -202,7 +276,7 @@ change.mSet <-
         mSet$dataSet$exp.fac <-
           as.factor(mSet$dataSet$covars$individual)
         if (!any(duplicated(mSet$dataSet$exp.fac))) {
-          MetaboShiny::metshiAlert(
+          metshiAlert(
             "This analysis needs multiple of the same sample in the 'individual' metadata column!"
           )
           return(NULL)
@@ -222,7 +296,7 @@ change.mSet <-
         mSet <-
           MetaboAnalystR::SetDesignType(mSet, "time")
         if (!any(duplicated(as.factor(mSet$dataSet$covars$individual)))) {
-          MetaboShiny::metshiAlert(
+          metshiAlert(
             "This analysis needs multiple of the same sample in the 'individual' metadata column!"
           )
           return(NULL)
@@ -260,6 +334,22 @@ change.mSet <-
     return(mSet)
   }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param mSet PARAM_DESCRIPTION
+#' @param subset_var PARAM_DESCRIPTION
+#' @param subset_group PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname subset.mSet
+#' @export 
+#' @importFrom data.table data.table
 subset.mSet <- function(mSet, subset_var, subset_group) {
   if (!is.null(subset_var)) {
     keep.i <- which(mSet$dataSet$covars[[subset_var]] %in% subset_group)
@@ -311,6 +401,26 @@ subset.mSet <- function(mSet, subset_var, subset_group) {
   mSet
 }
 
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param mSet PARAM_DESCRIPTION
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @seealso 
+#'  \code{\link[data.table]{as.data.table}}
+#'  \code{\link[pbapply]{pbapply}}
+#'  \code{\link[caret]{downSample}}
+#' @rdname pair.mSet
+#' @export 
+#' @importFrom data.table as.data.table
+#' @importFrom pbapply pbsapply
+#' @importFrom caret downSample
 pair.mSet <- function(mSet) {
   stats_var = mSet$dataSet$exp.var
   time_var = mSet$dataSet$time.var
@@ -409,13 +519,13 @@ pair.mSet <- function(mSet) {
   }
   
   if (length(keep.samp) > 2) {
-    mSet <- MetaboShiny::subset.mSet(mSet,
-                                     subset_var = "sample",
-                                     subset_group = keep.samp)
+    mSet <- subset.mSet(mSet,
+                        subset_var = "sample",
+                        subset_group = keep.samp)
     mSet$settings$paired <- TRUE
     mSet$dataSet$paired <- TRUE
   } else{
-    MetaboShiny::metshiAlert("Not enough samples for paired analysis!")
+    metshiAlert("Not enough samples for paired analysis!")
     return(NULL)
   }
   mSet

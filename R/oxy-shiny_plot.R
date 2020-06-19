@@ -1,7 +1,15 @@
-#' @export
-#' Plot a summary of metaboanalystR normalization results. Takes the total of 20 m/z values and 20 samples before and after normalization and plots that distribution.
-#' @param mSet input user mSet
-#' @return list of four plots that fit in a 2x2 raster used in MetaboShiny.
+#' @title Generate before and after normalization plot
+#' @description Function to generate ggplot or plotly plot for data normalization
+#' @param mSet mSet object
+#' @param cf Function to get plot colors from
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[reshape2]{melt}}
+#'  \code{\link[ggplot2]{ggplot}},\code{\link[ggplot2]{geom_density}},\code{\link[ggplot2]{aes}},\code{\link[ggplot2]{labs}},\code{\link[ggplot2]{geom_boxplot}},\code{\link[ggplot2]{geom_abline}},\code{\link[ggplot2]{scale_continuous}}
+#' @rdname ggplotNormSummary
+#' @export 
+#' @importFrom reshape2 melt
+#' @importFrom ggplot2 ggplot geom_density aes ylab xlab geom_boxplot geom_hline scale_y_continuous
 ggplotNormSummary <- function(mSet,
                               cf){
   
@@ -68,10 +76,18 @@ ggplotNormSummary <- function(mSet,
   
 }
 
-#' @export
-#' Plot a summary of metaboanalystR normalization results. Takes the total of 20 samples before and after normalization and plots that distribution.
-#' @param mSet input user mSet
-#' @return list of four plots that fit in a 2x2 raster used in MetaboShiny.
+#' @title Generate sample normalization before/after plots
+#' @description Function to generate ggplot or plotly plot for sample intensity normalization
+#' @param mSet mSet object
+#' @param cf Function to get plot colors from
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[reshape2]{melt}}
+#'  \code{\link[ggplot2]{ggplot}},\code{\link[ggplot2]{geom_density}},\code{\link[ggplot2]{aes}},\code{\link[ggplot2]{labs}},\code{\link[ggplot2]{geom_boxplot}},\code{\link[ggplot2]{geom_abline}},\code{\link[ggplot2]{scale_continuous}}
+#' @rdname ggplotSampleNormSummary
+#' @export 
+#' @importFrom reshape2 melt
+#' @importFrom ggplot2 ggplot geom_density aes ylab xlab geom_boxplot geom_hline scale_y_continuous
 ggplotSampleNormSummary <- function(mSet,
                                     cf){
   # 4 by 4 plot, based on random 20-30 picked
@@ -139,7 +155,23 @@ ggplotSampleNormSummary <- function(mSet,
 }
 
 
-#' @export
+#' @title Generate MEBA plot
+#' @description Function to generate ggplot or plotly plot for MEBA analysis
+#' @param mSet mSet object
+#' @param cpd m/z value of interest
+#' @param draw.average PARAM_DESCRIPTION, Default: T
+#' @param cols Colors to use
+#' @param cf Function to get plot colors from
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[stringr]{str_match}}
+#'  \code{\link[ggplot2]{ggplot}},\code{\link[ggplot2]{geom_path}},\code{\link[ggplot2]{aes}},\code{\link[ggplot2]{scale_x_discrete}},\code{\link[ggplot2]{scale_manual}},\code{\link[ggplot2]{stat_summary_bin}}
+#'  \code{\link[Hmisc]{capitalize}}
+#' @rdname ggplotMeba
+#' @export 
+#' @importFrom stringr str_match
+#' @importFrom ggplot2 ggplot geom_line aes scale_x_discrete scale_color_manual stat_summary
+#' @importFrom Hmisc capitalize
 ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
                        cf){
   
@@ -155,9 +187,9 @@ ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
     cols
   }
   
-  profile <- MetaboShiny::getProfile(mSet, 
-                                     cpd, 
-                                     mode="multi")
+  profile <- getProfile(mSet, 
+                        cpd, 
+                        mode="multi")
   
   cpd = stringr::str_match(cpd, "(\\d+\\.\\d+)")[,2]
   
@@ -194,11 +226,47 @@ ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
   p
 }
 
+#' @title Generate black/white gradient
+#' @description Function to generate black/white gradient 
+#' @param n Number of colors to include in gradient
+#' @return Vector of color values
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  bw.cols = blackwhite.colors(256)
+#'  }
+#' }
+#' @rdname blackwhite.colors
+#' @export 
 blackwhite.colors <- function(n){
   gray.colors(n, start=0, end=1)
 }
 
-#' @export
+#' @title Generate intensity summary plot
+#' @description Function to generate ggplot or plotly plot for the current m/z selected
+#' @param mSet mSet object
+#' @param cpd m/z value of interest
+#' @param shape.fac Change shape based on this metadata column, Default: 'label'
+#' @param cols Colors to use, Default: c("black", "pink")
+#' @param cf Function to get plot colors from, Default: rainbow
+#' @param mode Normal(nm), time series etc., Default: 'nm'
+#' @param styles Which plot styles to apply (each adds a new layer), Default: c("box", "beeswarm")
+#' @param add_stats Add statistics-based line in plot? And use what to do so?, Default: 'mean'
+#' @param color.fac Change fill color based on this metadata column, Default: 'label'
+#' @param text.fac Change hover text based on this metadata column, Default: 'label'
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[stringr]{str_match}}
+#'  \code{\link[ggplot2]{ggplot}},\code{\link[ggplot2]{geom_boxplot}},\code{\link[ggplot2]{geom_violin}},\code{\link[ggplot2]{geom_point}},\code{\link[ggplot2]{annotate}},\code{\link[ggplot2]{stat_summary_bin}},\code{\link[ggplot2]{scale_manual}},\code{\link[ggplot2]{labs}}
+#'  \code{\link[Hmisc]{capitalize}}
+#'  \code{\link[ggbeeswarm]{geom_beeswarm}}
+#' @rdname ggplotSummary
+#' @export 
+#' @importFrom stringr str_match
+#' @importFrom data.table data.table
+#' @importFrom ggplot2 ggplot geom_boxplot geom_violin geom_point annotate stat_summary scale_color_manual scale_fill_manual xlab
+#' @importFrom Hmisc capitalize
+#' @importFrom ggbeeswarm geom_beeswarm
 ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pink"),
                           cf = rainbow, 
                           mode = "nm", 
@@ -217,7 +285,7 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
     mode = "multi"
   }
   
-  profile <- MetaboShiny::getProfile(mSet, 
+  profile <- getProfile(mSet, 
                                      cpd, 
                                      mode=if(mode == "nm") "stat" else "multi")
   
@@ -406,6 +474,21 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
   })
 }
 
+#' @title Generate ANOVA plot
+#' @description Function to generate ggplot or plotly plot for ANOVA
+#' @param mSet mSet object
+#' @param cf Function to get plot colors from
+#' @param n Amount of colors in gradient, Default: 20
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[data.table]{as.data.table}}
+#'  \code{\link[shiny]{showNotification}}
+#'  \code{\link[ggplot2]{ggplot}},\code{\link[ggplot2]{geom_point}},\code{\link[ggplot2]{aes}},\code{\link[ggplot2]{scale_x_discrete}},\code{\link[ggplot2]{scale_colour_gradient}},\code{\link[ggplot2]{scale_continuous}}
+#' @rdname ggPlotAOV
+#' @export 
+#' @importFrom data.table as.data.table
+#' @importFrom shiny showNotification
+#' @importFrom ggplot2 ggplot geom_point aes scale_x_discrete scale_colour_gradientn scale_y_continuous
 ggPlotAOV <- function(mSet, cf, n=20){
   
   which_aov = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
@@ -438,6 +521,21 @@ ggPlotAOV <- function(mSet, cf, n=20){
   p
 }
 
+#' @title Generate T-TEST plot
+#' @description Function to generate ggplot or plotly plot for T-TEST
+#' @param mSet mSet object
+#' @param cf Function to get plot colors from
+#' @param n Number of colors in gradient, Default: 20
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[data.table]{as.data.table}}
+#'  \code{\link[shiny]{showNotification}}
+#'  \code{\link[ggplot2]{ggplot}},\code{\link[ggplot2]{geom_point}},\code{\link[ggplot2]{aes}},\code{\link[ggplot2]{scale_colour_gradient}}
+#' @rdname ggPlotTT
+#' @export 
+#' @importFrom data.table as.data.table
+#' @importFrom shiny showNotification
+#' @importFrom ggplot2 ggplot geom_point aes scale_colour_gradientn
 ggPlotTT <- function(mSet, cf, n=20){
   profile <- data.table::as.data.table(mSet$analSet$tt$p.log[mSet$analSet$tt$inx.imp],keep.rownames = T)
   
@@ -467,6 +565,21 @@ ggPlotTT <- function(mSet, cf, n=20){
   p
 }
 
+#' @title Generate pattern analysis plot
+#' @description Function to generate ggplot or plotly plot for pattern analysis
+#' @param mSet mSet object
+#' @param cf Function to get plot colors from
+#' @param n Number of colors in gradient, Default: 20
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[data.table]{as.data.table}}
+#'  \code{\link[shiny]{showNotification}}
+#'  \code{\link[ggplot2]{ggplot}},\code{\link[ggplot2]{geom_bar}},\code{\link[ggplot2]{labs}},\code{\link[ggplot2]{coord_flip}},\code{\link[ggplot2]{scale_colour_gradient}},\code{\link[ggplot2]{scale_continuous}}
+#' @rdname ggPlotPattern
+#' @export 
+#' @importFrom data.table as.data.table
+#' @importFrom shiny showNotification
+#' @importFrom ggplot2 ggplot geom_bar ggtitle coord_flip ylab xlab labs scale_colour_gradientn scale_fill_gradientn scale_y_continuous
 ggPlotPattern <- function(mSet, cf, n=20){
   profile <- data.table::as.data.table(mSet$analSet$corr$cor.mat,keep.rownames = T)
   profile <- profile[1:n]
@@ -504,6 +617,21 @@ ggPlotPattern <- function(mSet, cf, n=20){
   p
 }
 
+#' @title Generate fold-change analysis plot
+#' @description Function to generate ggplot or plotly plot for fold-change analysis
+#' @param mSet mSet object
+#' @param cf Function to get plot colors from
+#' @param n Number of colors in gradient, Default: 20
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[data.table]{as.data.table}}
+#'  \code{\link[shiny]{showNotification}}
+#'  \code{\link[ggplot2]{ggplot}},\code{\link[ggplot2]{geom_point}},\code{\link[ggplot2]{aes}},\code{\link[ggplot2]{geom_abline}},\code{\link[ggplot2]{scale_continuous}},\code{\link[ggplot2]{scale_colour_gradient}}
+#' @rdname ggPlotFC
+#' @export 
+#' @importFrom data.table as.data.table
+#' @importFrom shiny showNotification
+#' @importFrom ggplot2 ggplot geom_point aes geom_vline scale_y_continuous scale_colour_gradientn
 ggPlotFC <- function(mSet, cf, n=20){
   profile <- data.table::as.data.table(mSet$analSet$fc$fc.log[mSet$analSet$fc$inx.imp],keep.rownames = T)
   
@@ -529,6 +657,19 @@ ggPlotFC <- function(mSet, cf, n=20){
   p
 }
 
+#' @title Generate volcano plot
+#' @description Function to generate ggplot or plotly plot for volcano plot
+#' @param mSet mSet object
+#' @param cf Function to get plot colors from
+#' @param n Number of colors in gradient, Default: 20
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[shiny]{showNotification}}
+#'  \code{\link[ggplot2]{ggplot}},\code{\link[ggplot2]{geom_point}},\code{\link[ggplot2]{aes}},\code{\link[ggplot2]{scale_colour_gradient}}
+#' @rdname ggPlotVolc
+#' @export 
+#' @importFrom shiny showNotification
+#' @importFrom ggplot2 ggplot geom_point aes scale_colour_gradientn
 ggPlotVolc <- function(mSet,
                        cf,
                        n=20){
@@ -557,6 +698,18 @@ ggPlotVolc <- function(mSet,
   p
 }
 
+#' @title Generate PLS-DA classification plot
+#' @description Function to generate ggplot or plotly plot for PLS-DA classification
+#' @param mSet mSet object
+#' @param pls.type PLSDA type, Default: 'plsda'
+#' @param cf Function to get plot colors from
+#' @param pcs PCs used to classify, Default: 3
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[ggplot2]{geom_bar}},\code{\link[ggplot2]{ggtheme}},\code{\link[ggplot2]{scale_manual}}
+#' @rdname ggPlotClass
+#' @export 
+#' @importFrom ggplot2 geom_bar theme_minimal scale_fill_manual
 ggPlotClass <- function(mSet,
                         pls.type = "plsda",
                         cf,
@@ -577,6 +730,20 @@ ggPlotClass <- function(mSet,
   p
 }
 
+#' @title Generate PLS-DA permutation plot
+#' @description Function to generate ggplot or plotly plot for PLS-DA permutation
+#' @param mSet mSet object
+#' @param pls.type PLS-DA type, Default: 'plsda'
+#' @param cf Function to get plot colors from
+#' @param pcs PCs used for permutation, Default: 3
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[stringr]{str_match}}
+#'  \code{\link[ggplot2]{geom_freqpoly}},\code{\link[ggplot2]{scale_manual}},\code{\link[ggplot2]{geom_segment}},\code{\link[ggplot2]{geom_label}}
+#' @rdname ggPlotPerm
+#' @export 
+#' @importFrom stringr str_match
+#' @importFrom ggplot2 geom_histogram scale_fill_manual geom_segment geom_text
 ggPlotPerm <- function(mSet,
                        pls.type = "plsda",
                        cf,
@@ -609,6 +776,22 @@ ggPlotPerm <- function(mSet,
   p
 }
 
+#' @title Generate ROC plot
+#' @description Function to generate ggplot or plotly ROC plot for machine learning
+#' @param data Model data
+#' @param attempts Number of models that were created, Default: 50
+#' @param cf Function to get plot colors from
+#' @param class_type Binary or multivariate? (b/m), Default: 'b'
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[shiny]{showNotification}}
+#'  \code{\link[pbapply]{pbapply}}
+#'  \code{\link[ggplot2]{geom_path}},\code{\link[ggplot2]{annotate}},\code{\link[ggplot2]{stat_summary_bin}},\code{\link[ggplot2]{scale_manual}},\code{\link[ggplot2]{coord_fixed}},\code{\link[ggplot2]{coord_cartesian}}
+#' @rdname ggPlotROC
+#' @export 
+#' @importFrom shiny showNotification
+#' @importFrom pbapply pbsapply
+#' @importFrom ggplot2 geom_path annotate stat_summary_bin scale_color_manual coord_fixed coord_cartesian
 ggPlotROC <- function(data,
                       attempts = 50,
                       cf,
@@ -670,6 +853,22 @@ ggPlotROC <- function(data,
   p
 }
 
+#' @title Generate machine learning importance bar plot
+#' @description Function to generate ggplot or plotly variable importance barplot for machine learning
+#' @param data Model data
+#' @param attempts Number of models in data, Default: 50
+#' @param cf Function to get plot colors from
+#' @param topn Top number of compounds to display in plot, Default: 50
+#' @param ml_name ML name as defined by user
+#' @param ml_type ML model type
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[Rmisc]{group.CI}}
+#'  \code{\link[ggplot2]{geom_bar}},\code{\link[ggplot2]{scale_colour_gradient}},\code{\link[ggplot2]{theme}},\code{\link[ggplot2]{margin}},\code{\link[ggplot2]{geom_label}}
+#' @rdname ggPlotBar
+#' @export 
+#' @importFrom Rmisc group.CI
+#' @importFrom ggplot2 geom_bar scale_fill_gradientn theme element_blank geom_text
 ggPlotBar <- function(data,
                       attempts=50,
                       cf,
@@ -729,6 +928,23 @@ ggPlotBar <- function(data,
   
 }
 
+#' @title Generate PCA/PLS-DA loadings plot
+#' @description Function to generate ggplot or plotly loadings plot for PCA
+#' @param mSet mSet object
+#' @param cf Function to get plot colors from
+#' @param pcx X axis PC to use
+#' @param pcy Y axis PC to use
+#' @param type pca or plsda?, Default: 'pca'
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[data.table]{as.data.table}}
+#'  \code{\link[ggplot2]{geom_point}},\code{\link[ggplot2]{scale_continuous}},\code{\link[ggplot2]{scale_colour_gradient}}
+#'  \code{\link[gsubfn]{fn}}
+#' @rdname plotPCAloadings.2d
+#' @export 
+#' @importFrom data.table as.data.table
+#' @importFrom ggplot2 geom_point scale_x_continuous scale_y_continuous scale_colour_gradientn
+#' @importFrom gsubfn fn
 plotPCAloadings.2d <- function(mSet,
                                cf,
                                pcx,
@@ -783,6 +999,23 @@ plotPCAloadings.2d <- function(mSet,
   p 
 }
 
+#' @title Generate PCA/PLS-DA loadings plot
+#' @description Function to generate ggplot or plotly loadings plot for PCA
+#' @param mSet mSet object
+#' @param cf Function to get plot colors from
+#' @param pcx X axis PC to use
+#' @param pcy Y axis PC to use
+#' @param pcz Z axis PC to use
+#' @param font Font family to use in plotly plot
+#' @param type pca or plsda?, Default: 'pca'
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[data.table]{as.data.table}}
+#'  \code{\link[gsubfn]{fn}}
+#' @rdname plotPCAloadings.3d
+#' @export 
+#' @importFrom data.table as.data.table
+#' @importFrom gsubfn fn
 plotPCAloadings.3d <- function(mSet,
                                cf,
                                pcx,
@@ -869,6 +1102,31 @@ plotPCAloadings.3d <- function(mSet,
 }
 
 
+#' @title Generate 3d scatter plot
+#' @description Function to generate ggplot or plotly plot for PCA/PLS-DA/T-SNE
+#' @param mSet mSet object
+#' @param cols Colors to use
+#' @param shape.fac Marker shape based on which metadata column?, Default: 'label'
+#' @param pcx X component
+#' @param pcy Y component
+#' @param pcz Z component
+#' @param type pca, plsda or tsne?, Default: 'pca'
+#' @param font Font family to use in plot
+#' @param col.fac Marker fill based on which metadata column?, Default: 'label'
+#' @param mode normal or timeseries mode?, Default: 'normal'
+#' @param cf Function to get plot colors from
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[data.table]{as.data.table}}
+#'  \code{\link[plotly]{plot_ly}}
+#'  \code{\link[rgl]{ellipse3d}}
+#'  \code{\link[gsubfn]{fn}}
+#' @rdname plotPCA.3d
+#' @export 
+#' @importFrom data.table as.data.table
+#' @importFrom plotly plot_ly
+#' @importFrom rgl ellipse3d
+#' @importFrom gsubfn fn
 plotPCA.3d <- function(mSet,
                        cols,
                        shape.fac="label",
@@ -876,9 +1134,6 @@ plotPCA.3d <- function(mSet,
                        type="pca",font,
                        col.fac = "label",
                        mode="normal",cf){
-  
-  print(type)
-  
   switch(type,
          tsne = {
            df = mSet$analSet$tsne$x
@@ -1115,6 +1370,30 @@ plotPCA.3d <- function(mSet,
 
 
 
+#' @title Generate 2d scatter plot
+#' @description Function to generate ggplot or plotly plot for PCA/PLS-DA/T-SNE
+#' @param mSet mSet object
+#' @param cols Colors to use
+#' @param shape.fac Marker shape based on which metadata column?, Default: 'label'
+#' @param pcx X component
+#' @param pcy Y component
+#' @param type pca, plsda or tsne?, Default: 'pca'
+#' @param font Font family to use in plot
+#' @param col.fac Marker fill based on which metadata column?, Default: 'label'
+#' @param mode normal or timeseries mode?, Default: 'normal'
+#' @param cf Function to get plot colors from
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[data.table]{as.data.table}}
+#'  \code{\link[ggplot2]{ggplot}},\code{\link[ggplot2]{geom_point}},\code{\link[ggplot2]{stat_ellipse}},\code{\link[ggplot2]{scale_continuous}},\code{\link[ggplot2]{scale_manual}},\code{\link[ggplot2]{labs}}
+#'  \code{\link[gsubfn]{fn}}
+#'  \code{\link[Hmisc]{capitalize}}
+#' @rdname plotPCA.2d
+#' @export 
+#' @importFrom data.table as.data.table
+#' @importFrom ggplot2 ggplot geom_point stat_ellipse scale_x_continuous scale_y_continuous scale_fill_manual scale_color_manual ggtitle
+#' @importFrom gsubfn fn
+#' @importFrom Hmisc capitalize
 plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",
                        pcx, pcy, mode="normal", type="pca",
                        cf = rainbow){
@@ -1234,6 +1513,23 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",
   p
 }
 
+#' @title Generate Venn plot
+#' @description Function to generate ggplot or plotly plot for Venn diagram
+#' @param mSet mSet object
+#' @param venn_yes Table with data-subsets to include in venn diagram
+#' @param top Top x m/z per category chosen for intersection, Default: 100
+#' @param cols Colors to use
+#' @param cf Function to get plot colors from
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[stringr]{str_split}}
+#'  \code{\link[ggVennDiagram]{ggVennDiagram}}
+#'  \code{\link[ggplot2]{lims}}
+#' @rdname ggPlotVenn
+#' @export 
+#' @importFrom stringr str_split
+#' @importFrom ggVennDiagram ggVennDiagram
+#' @importFrom ggplot2 lims
 ggPlotVenn <- function(mSet,
                        venn_yes,
                        top = 100,
@@ -1257,9 +1553,6 @@ ggPlotVenn <- function(mSet,
     })
   }
   
-  #labels = c("species: aov", "species: PC1 (PLS-DA)", "species_type:tissue=distal intestine: tt")
-  #cat(parseFun(labels))
-  
   p = ggVennDiagram::ggVennDiagram(flattened,
                                    label_alpha = 1, 
                                    cf = cf,
@@ -1275,6 +1568,18 @@ ggPlotVenn <- function(mSet,
   
 }
 
+#' @title Generate PCA Scree plot
+#' @description Function to generate ggplot or plotly scree plot forPCA
+#' @param mSet mSet object
+#' @param cf Function to get plot colors from
+#' @param pcs Principal components displayed, Default: 20
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[ggplot2]{ggplot}},\code{\link[ggplot2]{geom_path}},\code{\link[ggplot2]{scale_colour_gradient}}
+#' @rdname ggPlotScree
+#' @export 
+#' @importFrom data.table data.table
+#' @importFrom ggplot2 ggplot geom_line scale_colour_gradientn
 ggPlotScree <- function(mSet, cf, pcs=20){
   df <- data.table::data.table(
     pc = 1:length(names(mSet$analSet$pca$variance)),
@@ -1286,6 +1591,17 @@ ggPlotScree <- function(mSet, cf, pcs=20){
   p
 }
 
+#' @title Generate wordcloud bar plot
+#' @description Function to generate ggplot or plotly barplot for word cloud
+#' @param wcdata Word cloud data
+#' @param cf Function to get plot colors from
+#' @param plotlyfy Convert plot to plotly object?, Default: T
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[ggplot2]{geom_bar}},\code{\link[ggplot2]{coord_flip}},\code{\link[ggplot2]{scale_colour_gradient}},\code{\link[ggplot2]{theme}},\code{\link[ggplot2]{margin}}
+#' @rdname ggPlotWordBar
+#' @export 
+#' @importFrom ggplot2 geom_bar coord_flip scale_fill_gradientn theme element_blank
 ggPlotWordBar <- function(wcdata, cf, plotlyfy=T){
   g <- ggplot(wcdata, aes(y = freq, x = reorder(word, 
                                                 freq, 
@@ -1300,6 +1616,20 @@ ggPlotWordBar <- function(wcdata, cf, plotlyfy=T){
   g
 }
 
+#' @title Generate power plot
+#' @description Function to generate ggplot or plotly plot for power analysis
+#' @param mSet mSet object
+#' @param cf Function to get plot colors from
+#' @param comparisons Which 1 vs 1 classes to use?
+#' @param max_samples Max amount of samples simulated per group
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[data.table]{rbindlist}},\code{\link[data.table]{data.table-package}}
+#'  \code{\link[ggplot2]{geom_path}},\code{\link[ggplot2]{stat_summary_bin}},\code{\link[ggplot2]{coord_cartesian}}
+#' @rdname ggPlotPower
+#' @export 
+#' @importFrom data.table rbindlist data.table
+#' @importFrom ggplot2 geom_path stat_summary_bin coord_cartesian
 ggPlotPower <- function(mSet,
                         cf,
                         comparisons,
@@ -1343,6 +1673,17 @@ ggPlotPower <- function(mSet,
   }
 }
 
+#' @title Generate MUMMICHOG plot
+#' @description Function to generate ggplot or plotly plot for MUMMICHOG
+#' @param mum_mSet mSet object
+#' @param anal.type Mummichog or GSEA? , Default: 'mummichog'
+#' @param cf Function to get plot colors from
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[ggplot2]{labs}},\code{\link[ggplot2]{scale_colour_gradient}}
+#' @rdname ggPlotMummi
+#' @export 
+#' @importFrom ggplot2 ylab xlab scale_colour_gradientn
 ggPlotMummi <- function(mum_mSet, anal.type = "mummichog", cf){
   if (anal.type == "mummichog") {
     mummi.mat <- mum_mSet$mummi.resmat

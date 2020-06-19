@@ -1,3 +1,14 @@
+#' @title Start MetaboShiny
+#' @description Function to start the MetaboShiny app
+#' @param port Port to host the app on, Default: 8080
+#' @param inBrowser Open in browser automatically?, Default: F
+#' @param debug Run in debug mode?, Default: F
+#' @param runmode Run locally or on server? (deprecated, ignore), Default: 'local'
+#' @seealso 
+#'  \code{\link[shiny]{runApp}}
+#' @rdname start.metshi
+#' @export 
+#' @importFrom shiny runApp
 start.metshi <- function(port=8080, inBrowser=F, 
                          debug=F, runmode="local"){
   

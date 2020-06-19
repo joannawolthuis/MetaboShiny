@@ -238,7 +238,7 @@ shiny::observe({
                               barplot_data <- ggPlotBar(data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar,
                                                                      attempts = input$ml_attempts,
                                                                      cf =gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                                                     topn = 10,#input$ml_top_x,
+                                                                     topn = input$ml_top_x,
                                                                      ml_name = mSet$analSet$ml$last$name,
                                                                      ml_type = mSet$analSet$ml$last$method)
                               
