@@ -34,6 +34,7 @@ http://biorxiv.org/cgi/content/short/734236v1
     - [Per m/z](#per-mz)
       * [t-test](#t-test)
       * [Fold-change](#fold-change)
+      * [Pattern](#pattern)
       * [Analysis of variance (ANOVA)](#analysis-of-variance-anova)
       * [Analysis of variance - simultaneous component analysis (ASCA)](#analysis-of-variance---simultaneous-component-analysis-asca)
       * [Multivariate empirical Bayes statistical time-series analysis (MEBA)](#multivariate-empirical-bayes-statistical-time-series-analysis-meba)
@@ -235,6 +236,8 @@ Press "**XX**" to start the analysis.
 #### Fold-change
 *This analysis is only available for one-factor, two-category analyses*
 
+#### Pattern
+
 #### Analysis of variance (ANOVA)
 
 #### Analysis of variance - simultaneous component analysis (ASCA)
@@ -253,6 +256,10 @@ Press "**XX**" to start the analysis.
 #### Heatmap
 
 #### Venn diagram
+
+#### Power calculation
+
+#### Enrichment
 
 ### Machine learning
 #### Settings
