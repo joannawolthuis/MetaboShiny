@@ -218,14 +218,24 @@ The statistics panel has four tabs whose contents change based on whether the [c
 ### Dimension reduction
 
 #### Principal components analysis (PCA)
-Press "**XX**" to start the analysis. Once done, a graph will appear on the screen and a table below with scores, loadings, and **XX**. By toggling the button below the graph, you can switch between 2D and 3D graphics of the results. On the bottom left you can control which principal components (PC) are shown in the graph.
+Go to "Settings" and press "click to start PCA" to start the analysis. Once done, a "Plots" section and a "Tables" sections will appear.
+
+In the "Plots" section, you can switch between the scores and the loadings plots. Below the plots you can select which principal component (PC) is plotted on which axis, and whether to render a 2D or 3D version of the plot.
+
+The "Tables" section has three tabs showing the %explained variance of each principal component ("table"), the scree plot, and loadings.
 
 #### Partial least squares-discriminant analysis (PLS-DA)
 *This analysis is only available for one-factor analyses*
 
-Press "**XX**" to start the analysis.
+Go to "Settings" and press "click to start PLS-DA" to start the analysis. Once done, a "Plots" section and a "Tables" sections will appear.
+
+In the "Plots" section, you can switch between the samples, loadings, and performance (cross-validation and permutation). Below the plots you can select which principal component (PC) is plotted on which axis, and whether to render a 2D or 3D version of the plot.
+
+The "Tables" section shows the %explained variance of each principal component and the loadings.
+
 
 #### t-Distributed Stochastic Neighbor Embedding (t-SNE)
+In "Settings", select the initial number of dimensions (default 30), perplexity (default 30), and maximum number of iterations (default 1000), and press "click to start t-SNE" to start the analysis. Once done, a "Plots" section will appear showing the t-SNE plot. Below the plot is a toggle button to make a 2D or 3D plot.
 
 ![Dimension reduction](inst/www/dimred_export.png?raw=true "Dimension reduction")
 
@@ -233,12 +243,26 @@ Press "**XX**" to start the analysis.
 #### t-test
 *This analysis is only available for one-factor, two-category analyses*
 
+In "Settings", select whether to make a non-parametric t-test (default "no") and equal variance (default "yes"). Press "click to start t-test" to start the analysis. Once finished, a "Plots" and "Tables" sections will appear.
+
+In "Plots", you will find a plot showing your m/z values ordered on the x-axis and the negative log10 of the p-value from the t-test. **Is there a certain number displayed? All/significant/top X?**
+
+In "Tables", you will find a table showing the t-stat, p-value, negative log10 of the p-value, and the false discovery rate (FDR).
+
 #### Fold-change
 *This analysis is only available for one-factor, two-category analyses*
 
+In "Settings", press "click to start fold-change analysis". Once finished, a "Plots" and "Tables" sections will appear.
+
+In "Plots", you will find a plot showing your m/z values ordered on the x-axis and the log2 of the fold-change value.
+
+In "Tables", you will find a table showing the fold-change value and the log2 of the fold-change.
+
 #### Pattern
+**JOANNA**
 
 #### Analysis of variance (ANOVA)
+
 
 #### Analysis of variance - simultaneous component analysis (ASCA)
 *This analysis is only available for two-factor or time-series analyses*
@@ -251,11 +275,26 @@ Press "**XX**" to start the analysis.
 ### Overview analyses
 #### Volcano plot
 *This analysis is only available for one-factor, two-category analyses*
+
+In "Settings", press "click to make volcano plot". Once finished, a "Plots" and "Tables" sections will appear.
+
+In "Plots", you will find a plot with the log2 of the fold-change value on x-axis and the negative log10 of the t-test p-value on the y-axis.
+
+In "Tables", you will find a table showing the fold-change value, the log2 of the fold-change, the raw p-value, and the negative log10 of the p-value.
+
 ![Volcano plot](inst/www/stats2.png?raw=true "Volcano plot")
 
 #### Heatmap
+In "Settings", select the analysis that you want to use for your heatmap. The drop-down list will give a list of all analyses that have been performed and can be used for a heatmap. Choose wether to only use significant hits (default "no"), and whether to color based on all metabolites (default "no") or only those that will appear in the heatmap. Press "Click to make heatmap".
+
+The heatmap will appear in the "Plots" section. Use the sliding scale to select how many m/z values to feature on your heatmap. 
 
 #### Venn diagram
+In the venn diagram you can see which m/z values overlap between the different analyses.
+1. Select the analyses you would like to compare by clicking on them and pressing the "down" arrow button. Select an analysis from the lower list and press the "up" arrow to remove the analysis from the comparison.
+2. Select how many hits to include from each analysis.
+3. Press "click to make venn diagram". The diagram will appear on the right.
+4. Below the diagram, you can select any of the included analysis to view the m/z values that overlap between them.
 
 #### Power calculation
 
