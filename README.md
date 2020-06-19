@@ -71,7 +71,7 @@ MetaboShiny does not automatically update databases. To re-build a database of i
 
 ## Adding custom databases
 **HOW TO ADD CUSTOM DB**
-{% include image.html url="/inst/www/database_panel_a.png" description="Database tab." %}
+{% include image.html url="{{site.url}}/inst/www/database_panel_a.png" description="Database tab." %}
 
 <figure>
   <img src="{{site.url}}/inst/www/database_panel_a.png" alt="my alt text"/>
