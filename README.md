@@ -65,9 +65,10 @@ http://biorxiv.org/cgi/content/short/734236v1
 
 # Before starting
 ## Building databases
-MetaboShiny offers over **XX** metabolite databases for m/z identification. Before any other steps are taken, it is necessary to build the databases that the user is interested in. Each database only needs to be built once. To check if a database has been built, click the "check if database exists" button below the logo (Figure [Database Tab]). The database version number and download date are listed there as well.
+MetaboShiny offers multiple metabolite databases for m/z identification. Before any other steps are taken, it is necessary to build the databases that the user is interested in. Each database only needs to be built once. To check if a database has been built, click the "check if database exists" button below the logo (Figure [Database Tab]). The database version number and download date are listed there as well.
 ## Updating databases
-MetaboShiny does not automatically update databases. To re-build a database of interest, click on the "build database" button below the logo in the [Database Tab](#database-tab). The database version number and download date are listed below the logo.
+MetaboShiny does not automatically update databases. To re-build a database of interest, click on the "build database" button below the logo in the Database Tab. The database version number and download date are listed below the logo.
+
 ## Adding custom databases
 **HOW TO ADD CUSTOM DB**
 
