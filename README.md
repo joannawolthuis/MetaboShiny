@@ -71,7 +71,8 @@ MetaboShiny does not automatically update databases. To re-build a database of i
 
 ## Adding custom databases
 **HOW TO ADD CUSTOM DB**
-
+{% include image.html url="inst/www/database_panel_a.png" description="Database tab." %}
+{% include image.html url="inst/www/database_panel_a.png?raw=true "Database tab"" description="Database tab." %}
 ![Database Tab](inst/www/database_panel_a.png?raw=true "Database tab")
 
 # Prepare input files
@@ -288,7 +289,7 @@ In "Tables", you will find a table showing the fold-change value, the log2 of th
 #### Heatmap
 In "Settings", select the analysis that you want to use for your heatmap. The drop-down list will give a list of all analyses that have been performed and can be used for a heatmap. Choose wether to only use significant hits (default "no"), and whether to color based on all metabolites (default "no") or only those that will appear in the heatmap. Press "Click to make heatmap".
 
-The heatmap will appear in the "Plots" section. Use the sliding scale to select how many m/z values to feature on your heatmap. 
+The heatmap will appear in the "Plots" section. Use the sliding scale to select how many m/z values to feature on your heatmap.
 
 #### Venn diagram
 In the venn diagram you can see which m/z values overlap between the different analyses.
