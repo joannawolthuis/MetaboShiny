@@ -15,7 +15,7 @@ shiny::observe({
                    vennrich = {
                      # - - - - -
                      analyses = names(mSet$storage)
-                     venn_no$start <- rbindlist(lapply(analyses, function(name){
+                     venn_no$start <- data.table::rbindlist(lapply(analyses, function(name){
                        analysis = mSet$storage[[name]]$analysis
                        analysis_names = names(analysis)
                        # - - -
