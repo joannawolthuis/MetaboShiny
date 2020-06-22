@@ -286,8 +286,8 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
   }
   
   profile <- getProfile(mSet, 
-                                     cpd, 
-                                     mode=if(mode == "nm") "stat" else "multi")
+                        cpd, 
+                        mode=if(mode == "nm") "stat" else "multi")
   
   cpd = stringr::str_match(cpd, "(\\d+\\.\\d+)")[,2]
   
@@ -349,25 +349,25 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
         switch(mode,
                nm = {
                  p <- switch(style,
-                             box = p + ggplot2::geom_boxplot(data = prof, alpha=0.4, aes(x = Group,
+                             box = p + ggplot2::geom_boxplot(data = prof, alpha=0.4, ggplot2::aes(x = Group,
                                                                                          y = Abundance,
                                                                                          shape = Shape,
                                                                                          text = Text,
                                                                                          color = Group,
                                                                                          fill = Color)),
-                             violin = p + ggplot2::geom_violin(data = prof, alpha=0.4, position = "identity", aes(x = Group,
+                             violin = p + ggplot2::geom_violin(data = prof, alpha=0.4, position = "identity", ggplot2::aes(x = Group,
                                                                                                                   y = Abundance,
                                                                                                                   color = Group,
                                                                                                                   fill = Color)),
                              beeswarm = p + ggbeeswarm::geom_beeswarm(data = prof, alpha=0.7, size = 2, 
                                                                       #position = position_dodge(width=.3), 
-                                                                      aes(x = Group,
+                                                                      ggplot2::aes(x = Group,
                                                                           y = Abundance,
                                                                           text = Text,
                                                                           shape = Shape,
                                                                           color = Group,
                                                                           fill = Color)),
-                             scatter = p + ggplot2::geom_point(data = prof, alpha=0.7, size = 2, aes(x = Group,
+                             scatter = p + ggplot2::geom_point(data = prof, alpha=0.7, size = 2, ggplot2::aes(x = Group,
                                                                                                      y = Abundance,
                                                                                                      text=Text,
                                                                                                      shape = Shape,
@@ -377,26 +377,26 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                },
                multi = {
                  p <- switch(style,
-                             box = p + ggplot2::geom_boxplot(data = prof, alpha=0.4, aes(x = GroupB,
+                             box = p + ggplot2::geom_boxplot(data = prof, alpha=0.4, ggplot2::aes(x = GroupB,
                                                                                          y = Abundance,
                                                                                          text = Text,
                                                                                          shape = Shape,
                                                                                          color = Color,
                                                                                          fill = GroupA)),
-                             violin = p + ggplot2::geom_violin(data = prof, alpha=0.4, position = "identity", aes(x = GroupB,
+                             violin = p + ggplot2::geom_violin(data = prof, alpha=0.4, position = "identity", ggplot2::aes(x = GroupB,
                                                                                                                   y = Abundance,
                                                                                                                   group = GroupB,
                                                                                                                   text = Text,
                                                                                                                   color = Color,
                                                                                                                   fill = GroupA)),
                              beeswarm = {
-                               p + ggbeeswarm::geom_beeswarm(data = prof, alpha=0.7, size = 2, position = position_dodge(width=.3), aes(x = GroupB,
+                               p + ggbeeswarm::geom_beeswarm(data = prof, alpha=0.7, size = 2, position = ggplot2::position_dodge(width=.3), ggplot2::aes(x = GroupB,
                                                                                                                                         y = Abundance,
                                                                                                                                         text=Text,
                                                                                                                                         shape = Shape,
                                                                                                                                         color = Color,
                                                                                                                                         fill = GroupA))},
-                             scatter = p + ggplot2::geom_point(data = prof, alpha=0.7, size = 2, position = position_jitterdodge(), aes(x = GroupB,
+                             scatter = p + ggplot2::geom_point(data = prof, alpha=0.7, size = 2, position = ggplot2::position_jitterdodge(), ggplot2::aes(x = GroupB,
                                                                                                                                         y = Abundance,
                                                                                                                                         text=Text,
                                                                                                                                         shape = Shape,
@@ -410,13 +410,13 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                           x = switch(mode, nm = 1.5,
                                      multi = max(as.numeric(as.factor(profile$GroupB)))/2 + .5),
                           y = min(profile$Abundance - 0.3),
-                          label = stars, size = 8, col = "black") + ggtitle(paste(cpd, "m/z"))
+                          label = stars, size = 8, col = "black") + ggplot2::ggtitle(paste(cpd, "m/z"))
       
       if(!("box" %in% styles)){
         p <- switch(add_stats,
                     median = {
                       p + ggplot2::stat_summary(data = prof,
-                                                aes( x = if(mode == "nm") Group else GroupB,
+                                                ggplot2::aes( x = if(mode == "nm") Group else GroupB,
                                                      y = Abundance,
                                                      color = if(mode == "nm") Group else GroupA),
                                                 fun = median,
@@ -1508,7 +1508,7 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",
     ggplot2::scale_color_manual(values = cols)
   
   if(mode == "ipca"){
-    p <- p + facet_wrap(~groupB,ncol = 2)
+    p <- p + ggplot2::facet_wrap(~groupB,ncol = 2)
     p <- p + ggplot2::ggtitle(Hmisc::capitalize(mSet$dataSet$facB.lbl))
   }
   p
