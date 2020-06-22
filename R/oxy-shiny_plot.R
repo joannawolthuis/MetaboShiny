@@ -211,7 +211,7 @@ ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
     ggplot2::scale_color_manual(values=cols) +
     ggtitle(paste(cpd, "m/z")) + 
     xlab(Hmisc::capitalize(mSet$dataSet$facB.lbl)) + 
-    labs(color = Hmisc::capitalize(switch(mSet$dataSet$exp.type, 
+    ggplot2::labs(color = Hmisc::capitalize(switch(mSet$dataSet$exp.type, 
                                           t1f=mSet$dataSet$facA.lbl,
                                           t="Individual")))
   if(draw.average){
@@ -762,7 +762,7 @@ ggPlotPerm <- function(mSet,
                             binwidth=0.01) +
     ggplot2::scale_fill_manual(values=cf(20)) +
     
-    labs(x="Accuracy", y = "Permutations") +
+    ggplot2::labs(x="Accuracy", y = "Permutations") +
     ggplot2::geom_segment(data=df,
                           color="black",
                           x=bw.vec[1],
@@ -836,7 +836,7 @@ ggPlotROC <- function(data,
                       size = 8,
                       x = 0.77,
                       y = 0.03) +
-    labs(color = if(class_type == "m") "Comparison" else "Attempt",
+    ggplot2::labs(color = if(class_type == "m") "Comparison" else "Attempt",
          text = if(class_type == "m") "Comparison" else "Attempt",
          key = if(class_type == "m") "Comparison" else "Attempt") +
     
@@ -905,7 +905,7 @@ ggPlotBar <- function(data,
     
     ggplot2::theme(axis.text.x=ggplot2::element_blank(),
                    axis.ticks.x=ggplot2::element_blank())+
-    labs(x="Top hits (m/z)",y=if(ml_type == "glmnet") "Times included in final model" else "Relative importance (%)")
+    ggplot2::labs(x="Top hits (m/z)",y=if(ml_type == "glmnet") "Times included in final model" else "Relative importance (%)")
   
   if(topn <= 15){
     p <- p + ggplot2::geom_text(ggplot2::aes(x=`m/z`, y=importance.mean, label=`m/z`
@@ -1613,7 +1613,7 @@ ggPlotWordBar <- function(wcdata, cf, plotlyfy=T){
     ggplot2::scale_fill_gradientn(colors=cf(256)) +
     ggplot2::theme(axis.text.x=ggplot2::element_blank(),
                    axis.ticks.x=ggplot2::element_blank()) +
-    labs(x="Word",y="Frequency")
+    ggplot2::labs(x="Word",y="Frequency")
   g
 }
 
