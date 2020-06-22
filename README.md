@@ -54,13 +54,13 @@ http://biorxiv.org/cgi/content/short/734236v1
 1. Install Docker. If you are on Windows and not running 10 pro or enterprise (likely) please try the following tutorial:https://docs.docker.com/toolbox/toolbox_install_windows/
 2. Run the following in a terminal: `docker pull jcwolthuis/metaboshiny`
 3. Make a folder in your home folder, in terminal: `mkdir -p ~/MetaboShiny/{databases,saves/admin}`
-3. Run the following on command line/terminal: `docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny:latest Rscript -e "MetaboShiny::start.metshi(inBrowser=F)"`
+3. Run the following on command line/terminal: `docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny:latest Rscript -e "MetaboShiny::start_metshi(inBrowser=F)"`
 
 
 ## Through R
 1. Install an R version that at least is R 3.5, install [Java](https://www.java.com/en/download/) and JDK (https://www.oracle.com/technetwork/java/javase/downloads/jdk12-downloads-5295953.html, may require creating an Oracle account)
 2. Copy the commands listed in the `inst/install.metshi.R` file on this repository and run them in R (terminal or Rstudio)
-3. In R(studio), run: `library(MetaboShiny); start.metshi(inBrowser=T)`;
+3. In R(studio), run: `library(MetaboShiny); start_metshi(inBrowser=T)`;
 4. Your browser should open automatically for you and you're in! Otherwise browse to the "Listening on x.x.x.x" address noted in terminal in your browser.
 
 # Before starting
@@ -71,13 +71,6 @@ MetaboShiny does not automatically update databases. To re-build a database of i
 
 ## Adding custom databases
 **HOW TO ADD CUSTOM DB**
-{% include image.html url="http://github.com/joannawolthuis/MetaboShiny/inst/www/database_panel_a.png" description="Database tab." %}
-
-<figure>
-  <img src="http://github.com/joannawolthuis/MetaboShiny/inst/www/database_panel_a.png" alt="my alt text"/>
-  <figcaption>This is my caption text.</figcaption>
-</figure>
-
 
 ![Database Tab](inst/www/database_panel_a.png?raw=true "Database tab")
 
@@ -226,24 +219,22 @@ The statistics panel has four tabs whose contents change based on whether the [c
 ### Dimension reduction
 
 #### Principal components analysis (PCA)
-Go to "Settings" and press "click to start PCA" to start the analysis. Once done, a "Plots" section and a "Tables" sections will appear.
-
-In the "Plots" section, you can switch between the scores and the loadings plots. Below the plots you can select which principal component (PC) is plotted on which axis, and whether to render a 2D or 3D version of the plot.
-
-The "Tables" section has three tabs showing the %explained variance of each principal component ("table"), the scree plot, and loadings.
+1. Go to "Settings" and press "click to start PCA" to start the analysis.
+2. Once done, a "Plots" section and a "Tables" sections will appear. 
+3. In "Plots" you can view the scores and the loadings plots. Below the plots you can select which principal component (PC) is plotted on which axis, and whether to render a 2D or 3D version of the plot.
+4. The "Tables" section has three tabs showing the %explained variance of each principal component ("table"), the scree plot, and loadings.
 
 #### Partial least squares-discriminant analysis (PLS-DA)
 *This analysis is only available for one-factor analyses*
 
-Go to "Settings" and press "click to start PLS-DA" to start the analysis. Once done, a "Plots" section and a "Tables" sections will appear.
-
-In the "Plots" section, you can switch between the samples, loadings, and performance (cross-validation and permutation). Below the plots you can select which principal component (PC) is plotted on which axis, and whether to render a 2D or 3D version of the plot.
-
-The "Tables" section shows the %explained variance of each principal component and the loadings.
-
+1. Go to "Settings" and press "click to start PLS-DA" to start the analysis.
+2. Once done, a "Plots" section and a "Tables" sections will appear.
+3. In the "Plots" section, you can switch between the samples, loadings, and performance (cross-validation and permutation). Below the plots you can select which principal component (PC) is plotted on which axis, and whether to render a 2D or 3D version of the plot.
+4. The "Tables" section shows the %explained variance of each principal component and the loadings.
 
 #### t-Distributed Stochastic Neighbor Embedding (t-SNE)
-In "Settings", select the initial number of dimensions (default 30), perplexity (default 30), and maximum number of iterations (default 1000), and press "click to start t-SNE" to start the analysis. Once done, a "Plots" section will appear showing the t-SNE plot. Below the plot is a toggle button to make a 2D or 3D plot.
+1. In "Settings", select the initial number of dimensions (default 30), perplexity (default 30), and maximum number of iterations (default 1000), and press "click to start t-SNE" to start the analysis. 
+2. Once done, a "Plots" section will appear showing the t-SNE plot. Below the plot is a toggle button to make a 2D or 3D plot.
 
 ![Dimension reduction](inst/www/dimred_export.png?raw=true "Dimension reduction")
 
@@ -251,26 +242,27 @@ In "Settings", select the initial number of dimensions (default 30), perplexity 
 #### t-test
 *This analysis is only available for one-factor, two-category analyses*
 
-In "Settings", select whether to make a non-parametric t-test (default "no") and equal variance (default "yes"). Press "click to start t-test" to start the analysis. Once finished, a "Plots" and "Tables" sections will appear.
-
-In "Plots", you will find a plot showing your m/z values ordered on the x-axis and the negative log10 of the p-value from the t-test. **Is there a certain number displayed? All/significant/top X?**
-
-In "Tables", you will find a table showing the t-stat, p-value, negative log10 of the p-value, and the false discovery rate (FDR).
+1. In "Settings", select whether to make a non-parametric t-test (default "no") and equal variance (default "yes"). Press "click to start t-test" to start the analysis.
+2. Once finished, a "Plots" and "Tables" sections will appear.
+3. In "Plots", you will find a plot showing your m/z values ordered on the x-axis and the negative log10 of the p-value from the t-test. **Is there a certain number displayed? All/significant/top X?**
+4. In "Tables", you will find a table showing the t-stat, p-value, negative log10 of the p-value, and the false discovery rate (FDR).
 
 #### Fold-change
 *This analysis is only available for one-factor, two-category analyses*
 
-In "Settings", press "click to start fold-change analysis". Once finished, a "Plots" and "Tables" sections will appear.
-
-In "Plots", you will find a plot showing your m/z values ordered on the x-axis and the log2 of the fold-change value.
-
-In "Tables", you will find a table showing the fold-change value and the log2 of the fold-change.
+1. In "Settings", press "click to start fold-change analysis".
+2. Once finished, a "Plots" and "Tables" sections will appear.
+3. In "Plots", you will find a plot showing your m/z values ordered on the x-axis and the log2 of the fold-change value on the y-axis.
+4. In "Tables", you will find a table showing the fold-change value and the log2 of the fold-change.
 
 #### Pattern
 **JOANNA**
 
 #### Analysis of variance (ANOVA)
-
+1. In "Settings", press "click to start ANOVA". 
+2. Once finished, a "Plots" and "Tables" sections will appear.
+3. In "Plots", you will find a plot showing your m/z values ordered on the x-axis and the negative log10 of the p-value on the y-axis.
+4. In "Tables", you will find a table showing the p-value and false discovery rate (FDR) from a Fisher's Least Significant Difference (LSD) test.
 
 #### Analysis of variance - simultaneous component analysis (ASCA)
 *This analysis is only available for two-factor or time-series analyses*
@@ -284,18 +276,16 @@ In "Tables", you will find a table showing the fold-change value and the log2 of
 #### Volcano plot
 *This analysis is only available for one-factor, two-category analyses*
 
-In "Settings", press "click to make volcano plot". Once finished, a "Plots" and "Tables" sections will appear.
-
-In "Plots", you will find a plot with the log2 of the fold-change value on x-axis and the negative log10 of the t-test p-value on the y-axis.
-
-In "Tables", you will find a table showing the fold-change value, the log2 of the fold-change, the raw p-value, and the negative log10 of the p-value.
+1. In "Settings", press "click to make volcano plot". 
+2. Once finished, a "Plots" and "Tables" sections will appear.
+3. In "Plots", you will find a plot with the log2 of the fold-change value on x-axis and the negative log10 of the t-test p-value on the y-axis.
+4. In "Tables", you will find a table showing the fold-change value, the log2 of the fold-change, the raw p-value, and the negative log10 of the p-value.
 
 ![Volcano plot](inst/www/stats2.png?raw=true "Volcano plot")
 
 #### Heatmap
-In "Settings", select the analysis that you want to use for your heatmap. The drop-down list will give a list of all analyses that have been performed and can be used for a heatmap. Choose wether to only use significant hits (default "no"), and whether to color based on all metabolites (default "no") or only those that will appear in the heatmap. Press "Click to make heatmap".
-
-The heatmap will appear in the "Plots" section. Use the sliding scale to select how many m/z values to feature on your heatmap.
+1. In "Settings", select the analysis that you want to use for your heatmap. The drop-down list will give a list of all analyses that have been performed and can be used for a heatmap. Choose wether to only use significant hits (default "no"), and whether to color based on all metabolites (default "no") or only those that will appear in the heatmap. Press "Click to make heatmap".
+2. The heatmap will appear in the "Plots" section. Use the sliding scale to select how many m/z values to feature on your heatmap.
 
 #### Venn diagram
 In the venn diagram you can see which m/z values overlap between the different analyses.
