@@ -2,6 +2,7 @@
 
 function(input, output, session) {
   
+  library(MetaboShiny)
   #require(shinyjs)
   
   shiny::showModal(MetaboShiny::loadModal())

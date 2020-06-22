@@ -21,7 +21,7 @@ output$ramp_plot <- plotly::renderPlotly({
                   colors = gbl$functions$color.functions[[lcl$aes$spectrum]](100),
                   type = "heatmap",
                   showscale=FALSE)  %>%
-    layout(xaxis = ax, yaxis = ax)
+    plotly::layout(xaxis = ax, yaxis = ax)
 })
 
 
