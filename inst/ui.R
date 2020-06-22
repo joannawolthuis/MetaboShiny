@@ -805,7 +805,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                          trigger = "hover",options=list(container="body"))
                                                                                                                                    , shiny::h2("Current experiment:"),
                                                                                                                                    shiny::div(
-                                                                                                                                     MetaboShiny::sardine(shiny::uiOutput("curr_name")),
+                                                                                                                                     shiny::div(style="display: inline-block;vertical-align:top;",shiny::uiOutput("curr_name")),
                                                                                                                                      style="background-color:white;
                                                                                                                                       width:100%;
                                                                                                                                       margin: 0 auto;
@@ -950,28 +950,28 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                    shiny::uiOutput("manual_search"),
                                                                                                                                    br(),
                                                                                                                                    shiny::div(
-                                                                                                                                     MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
+                                                                                                                                     shiny::div(style="display: inline-block;vertical-align:top;",shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
                                                                                                                                                                      style="position:relative;
                                                                                                                      top:10px;")),
-                                                                                                                                     MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
+                                                                                                                                     shiny::div(style="display: inline-block;vertical-align:top;",shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
                                                                                                                                                                      style="position:relative;
                                                                                                                      top:25px;")),
-                                                                                                                                     MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
+                                                                                                                                     shiny::div(style="display: inline-block;vertical-align:top;",shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
                                                                                                                                                                      style="position:relative;
-                                                                                                                     top:10px;")),MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
+                                                                                                                     top:10px;")),shiny::div(style="display: inline-block;vertical-align:top;",shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
                                                                                                                                                                   style="position:relative;
-                                                                                                                     top:25px;")),MetaboShiny::sardine(shiny::h2(shiny::textOutput("curr_mz"),
+                                                                                                                     top:25px;")),shiny::div(style="display: inline-block;vertical-align:top;",shiny::h2(shiny::textOutput("curr_mz"),
                                                                                                                                                                  style="margin-top:15px;")),
-                                                                                                                                     MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
+                                                                                                                                     shiny::div(style="display: inline-block;vertical-align:top;",shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
                                                                                                                                                                      style="position:relative;
                                                                                                                      top:10px;")),
-                                                                                                                                     MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
+                                                                                                                                     shiny::div(style="display: inline-block;vertical-align:top;",shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
                                                                                                                                                                      style="position:relative;
                                                                                                                      top:25px;")),
-                                                                                                                                     MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
+                                                                                                                                     shiny::div(style="display: inline-block;vertical-align:top;",shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
                                                                                                                                                                      style="position:relative;
                                                                                                                      top:10px;")),
-                                                                                                                                     MetaboShiny::sardine(shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
+                                                                                                                                     shiny::div(style="display: inline-block;vertical-align:top;",shiny::div(shiny::icon("paw","fa-xs fa-rotate-90"),
                                                                                                                                                                      style="position:relative;
                                                                                                                      top:25px;")),
                                                                                                                                      style="background-color:white;
@@ -1022,12 +1022,12 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                          shiny::helpText("Current match filtering:"),
                                                                                                                                                                                          shiny::fluidRow(align="center",
                                                                                                                                                                                                          shiny::imageOutput("empty",width="100%",height="1px"),
-                                                                                                                                                                                                         MetaboShiny::sardine(shiny::icon("plus-circle")), 
-                                                                                                                                                                                                         MetaboShiny::sardine(shiny::div(verbatimTextOutput("curr_add"),style='font-size:60%;padding:2px')), 
-                                                                                                                                                                                                         MetaboShiny::sardine(shiny::icon("percentage")), 
-                                                                                                                                                                                                         MetaboShiny::sardine(shiny::div(verbatimTextOutput("curr_iso"),style='font-size:60%;padding:2px')),
-                                                                                                                                                                                                         MetaboShiny::sardine(shiny::icon("database")), 
-                                                                                                                                                                                                         MetaboShiny::sardine(shiny::div(verbatimTextOutput("curr_db"),style='font-size:60%;padding:2px'))   
+                                                                                                                                                                                                         shiny::div(style="display: inline-block;vertical-align:top;",shiny::icon("plus-circle")), 
+                                                                                                                                                                                                         shiny::div(style="display: inline-block;vertical-align:top;",shiny::div(verbatimTextOutput("curr_add"),style='font-size:60%;padding:2px')), 
+                                                                                                                                                                                                         shiny::div(style="display: inline-block;vertical-align:top;",shiny::icon("percentage")), 
+                                                                                                                                                                                                         shiny::div(style="display: inline-block;vertical-align:top;",shiny::div(verbatimTextOutput("curr_iso"),style='font-size:60%;padding:2px')),
+                                                                                                                                                                                                         shiny::div(style="display: inline-block;vertical-align:top;",shiny::icon("database")), 
+                                                                                                                                                                                                         shiny::div(style="display: inline-block;vertical-align:top;",shiny::div(verbatimTextOutput("curr_db"),style='font-size:60%;padding:2px'))   
                                                                                                                                                                                          ),
                                                                                                                                                                                          shiny::helpText("Undo match filtering"),
                                                                                                                                                                                          shinyWidgets::circleButton("undo_match_filt", icon = shiny::icon("undo-alt")),
@@ -1240,7 +1240,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                         "Import adduct table",
                                                                                                                                                         multiple = F,
                                                                                                                                                         accept = c(".RData", ".csv")),
-                                                                                                                        MetaboShiny::sardine(shiny::actionButton("import_adducts", "Import definitions"))
+                                                                                                                        shiny::div(style="display: inline-block;vertical-align:top;",shiny::actionButton("import_adducts", "Import definitions"))
                                                                                                         )
                                                                                         ),
                                                                                         shiny::tabPanel("Rules",
@@ -1253,7 +1253,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                          multiple = F,
                                                                                                                          accept = c(".RData", ".csv")),
                                                                                                         shiny::fluidRow(align="center",
-                                                                                                                        MetaboShiny::sardine(shiny::actionButton("import_adduct_rules", "Import rules"))
+                                                                                                                        shiny::div(style="display: inline-block;vertical-align:top;",shiny::actionButton("import_adduct_rules", "Import rules"))
                                                                                                         )
                                                                                         )
                                                                                       ),
@@ -1269,7 +1269,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                       shiny::passwordInput("apikey", 
                                                                                                            label = "If you want to use ChemSpider, please register on their website and enter your API key below.",
                                                                                                            value = ""),
-                                                                                      sardine(shinyWidgets::circleButton("set_api", icon = icon("save"))),sardine(shiny::textOutput("api_set")),
+                                                                                      shiny::div(style="display: inline-block;vertical-align:top;",shinyWidgets::circleButton("set_api", icon = icon("save"))),shiny::div(style="display: inline-block;vertical-align:top;",shiny::textOutput("api_set")),
                                                                                       selectInput("predict_rules", 
                                                                                                   label = "Use which chemical formula rules?", 
                                                                                                   choices = c("senior", "lewis", "hc", "chnops", "nops"), 

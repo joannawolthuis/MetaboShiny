@@ -263,7 +263,7 @@ shiny::observe({
           shiny::fluidRow(
             lapply(display, function(db){
               which_idx = grep(sapply(gbl$constants$images, function(x) x$name), pattern = db) # find the matching image (NAME MUST HAVE DB NAME IN IT COMPLETELY)
-              shinyBS::tipify(MetaboShiny::sardine(MetaboShiny::fadeImageButton(inputId = paste0(prefix, "_", db), img.path = gbl$constants$images[[which_idx]]$path)),title = gbl$constants$db.build.info[[db]]$title) # generate fitting html
+              shinyBS::tipify(shiny::div(style="display: inline-block;vertical-align:top;",MetaboShiny::fadeImageButton(inputId = paste0(prefix, "_", db), img.path = gbl$constants$images[[which_idx]]$path)),title = gbl$constants$db.build.info[[db]]$title) # generate fitting html
             })
           )
         })

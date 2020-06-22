@@ -215,7 +215,7 @@ ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
                                           t1f=mSet$dataSet$facA.lbl,
                                           t="Individual")))
   if(draw.average){
-    p <- p + ggplot2::stat_summary(fun.y="mean", size=2, 
+    p <- p + ggplot2::stat_summary(fun="mean", size=2, 
                                    geom="line", ggplot2::aes(x=GroupB, 
                                                              y=Abundance, 
                                                              color = Color, 
@@ -419,7 +419,7 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                                                 aes( x = if(mode == "nm") Group else GroupB,
                                                      y = Abundance,
                                                      color = if(mode == "nm") Group else GroupA),
-                                                fun.y = median,
+                                                fun = median,
                                                 fun.ymin = median,
                                                 fun.ymax = median,
                                                 geom = "crossbar",
@@ -432,7 +432,7 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                       p + ggplot2::stat_summary(data = prof,
                                                 aes(x = if(mode == "nm") Group else GroupB,
                                                     y = Abundance),
-                                                fun.y = mean,
+                                                fun = mean,
                                                 fun.ymin = mean,
                                                 fun.ymax = mean,
                                                 geom = "crossbar",
@@ -843,7 +843,7 @@ ggPlotROC <- function(data,
     ggplot2::stat_summary_bin(#alpha=.6,
       ggplot2::aes(FPR, TPR, 
           group = comparison), 
-      fun.y=mean, geom="line", 
+      fun=mean, geom="line", 
       cex = 2.3,color="black") +
     ggplot2::scale_color_manual(values = cols) +
     #scale_y_continuous(limits=c(0,1)) +
@@ -896,9 +896,9 @@ ggPlotBar <- function(data,
   data.subset$`m/z` <- reorder(x = data.subset$`m/z`, X = -data.subset$importance.mean)
   
   p <- ggplot2::ggplot(data.subset, ggplot2::aes(x = `m/z`,
-                               y = importance.mean,
-                               text = `m/z`,
-                               key = `m/z`)) +
+                                                 y = importance.mean,
+                                                 text = `m/z`,
+                                                 key = `m/z`)) +
     ggplot2::geom_bar(stat = "identity",
                       ggplot2::aes(fill = importance.mean)) +
     ggplot2::scale_fill_gradientn(colors=cf(20)) +
@@ -908,17 +908,19 @@ ggPlotBar <- function(data,
     labs(x="Top hits (m/z)",y=if(ml_type == "glmnet") "Times included in final model" else "Relative importance (%)")
   
   if(topn <= 15){
-    p <- p + ggplot2::geom_text(ggplot2::aes(x=`m/z`, y=importance.mean, label=sapply(`m/z`, function(x){
-      if(is.na(as.numeric(as.character(x)))){
-        if(grepl(x, pattern = "_")){
-          as.character(gsub(x, pattern = "_", replacement = "\n"))
-        }else{
-          as.character(x)
-        }
-      }else{
-        round(as.numeric(as.character(x)),digits=1)
-      }
-    })), size = 4, lineheight = .6, vjust=-1, hjust = 0, angle = 45) + expand_limits(y=max(data.subset$importance) + max(data.subset$importance)*0.1)
+    p <- p + ggplot2::geom_text(ggplot2::aes(x=`m/z`, y=importance.mean, label=`m/z`
+    # sapply(`m/z`, function(x){
+    #   if(is.na(as.numeric(as.character(x)))){
+    #     if(grepl(x, pattern = "_")){
+    #       as.character(gsub(x, pattern = "_", replacement = "\n"))
+    #     }else{
+    #       as.character(x)
+    #     }
+    #   }else{
+    #     round(as.numeric(as.character(x)),digits=1)
+    #   }
+    #})
+), size = 4, lineheight = .6, vjust=-1, hjust = 0, angle = 45) + ggplot2::expand_limits(y=max(data.subset$importance) + max(data.subset$importance)*0.1)
   }
   
   mzdata <- p$data
@@ -1653,18 +1655,18 @@ ggPlotPower <- function(mSet,
         ggplot2::aes(samples, 
             power, 
             group=comparison), 
-        fun.y=mean, geom="line", 
+        fun=mean, geom="line", 
         cex = 2.3,color="black") +
       ggplot2::stat_summary_bin(#alpha=.6,
         ggplot2::aes(samples, power, 
             color=comparison
             #,group=comparison
             ), 
-        fun.y=mean, geom="line", 
+        fun=mean, geom="line", 
         cex = 1.2) +
       ggplot2::stat_summary_bin(ggplot2::aes(samples,
                                     power), 
-                                fun.y=mean, color="black", 
+                                fun=mean, color="black", 
                                 geom="line", cex = 2) +
       ggplot2::coord_cartesian(xlim = c(0,max_samples), ylim = c(.04,.96))
     
