@@ -430,7 +430,7 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                     },
                     mean = {
                       p + ggplot2::stat_summary(data = prof,
-                                                aes(x = if(mode == "nm") Group else GroupB,
+                                                ggplot2::aes(x = if(mode == "nm") Group else GroupB,
                                                     y = Abundance),
                                                 fun = mean,
                                                 fun.ymin = mean,
@@ -597,7 +597,7 @@ ggPlotPattern <- function(mSet, cf, n=20){
   
   # ---------------------------
   p <- ggplot2::ggplot(data=profile) +
-    ggplot2::geom_bar(mapping = aes(x = `m/z`, 
+    ggplot2::geom_bar(mapping = ggplot2::aes(x = `m/z`, 
                                     y = correlation, 
                                     key = `m/z`, 
                                     text = `m/z`, 
