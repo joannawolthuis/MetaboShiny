@@ -990,12 +990,12 @@ plotPCAloadings.2d <- function(mSet,
                         #fill="white", 
                         alpha=0.7)+
     
-    scale_size_area(max_size = 15) +
+    ggplot2::scale_size_area(max_size = 15) +
     ggplot2::scale_x_continuous(labels=scaleFUN,name=gsubfn::fn$paste(if(type != "tsne") "$pcx ($x.var%)" else "t-sne dimension 1")) +
     ggplot2::scale_y_continuous(labels=scaleFUN,name=gsubfn::fn$paste(if(type != "tsne") "$pcy ($y.var%)" else "t-sne dimension 2")) +
     ggplot2::scale_colour_gradientn(colors=cf(20))
-  #scale_y_discrete(labels=scaleFUN) +
-  #scale_x_discrete(labels=scaleFUN)
+  #ggplot2::scale_y_discrete(labels=scaleFUN) +
+  #ggplot2::scale_x_discrete(labels=scaleFUN)
   p 
 }
 
@@ -1730,8 +1730,8 @@ ggPlotMummi <- function(mum_mSet, anal.type = "mummichog", cf){
                          gsea = "-log10(p.value)")) + 
     ggplot2::xlab("significant hits / all pathway hits") +
     ggplot2::scale_colour_gradientn(colours = cf(20)) +
-    scale_y_discrete(labels=scaleFUN) +
-    scale_x_discrete(labels=scaleFUN)
+    ggplot2::scale_y_discrete(labels=scaleFUN) +
+    ggplot2::scale_x_discrete(labels=scaleFUN)
   
   p
 }

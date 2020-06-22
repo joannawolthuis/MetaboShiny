@@ -235,7 +235,7 @@ shiny::observe({
                                                               attempts = input$ml_attempts,
                                                               cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                               
-                              barplot_data <- ggPlotBar(data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar,
+                              barplot_data <-  MetaboShiny::ggPlotBar(data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar,
                                                                      attempts = input$ml_attempts,
                                                                      cf =gbl$functions$color.functions[[lcl$aes$spectrum]],
                                                                      topn = input$ml_top_x,
@@ -426,10 +426,8 @@ shiny::observe({
                  whichAnal <- stringr::str_match(plotName, "pca|plsda|tsne")[,1]
                  is3D <- !input[[paste0(whichAnal, "_2d3d")]]
                }else{
-                 is3D <- F
+                 is3D <- plotName == "heatmap"
                }
-               
-               is3D <- plotName == "heatmap"
                
                 if(!is3D){
                    myplot <- myplot + 
@@ -490,7 +488,7 @@ shiny::observe({
                                                                              showlegend=F) else myplot %>% plotly::layout(showlegend=F) 
                    }else{
                      myplot <- myplot %>% plotly::layout(height = session$clientData[[empty]]/1.4,
-                                                     width = session$clientData[[empty]])
+                                                         width = session$clientData[[empty]])
                    }
                    myplot %>%
                      plotly::config(

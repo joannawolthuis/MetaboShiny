@@ -715,9 +715,9 @@ omit_unknown = yes')
                                                         width = lines)),
                               #The 'pull' attribute can also be used to create space between the sectors
                               showlegend = FALSE) %>%
-            layout(autosize = T, margin = m,
-                   xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-                   yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))  
+            plotly::layout(autosize = T, margin = m,
+                           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))  
         }
         return(p)          
       }
@@ -1178,7 +1178,7 @@ omit_unknown = yes')
       })
     }
     shiny::stopApp()
-    js$closeWindow()
+    shinyjs::js$closeWindow()
   },ignoreNULL = T)
   
   onStop(function() {
