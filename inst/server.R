@@ -485,7 +485,7 @@ omit_unknown = yes')
             has.syn <- which(!is.na(synonyms))
             
             info_aggr$description[has.syn] <- paste0(synonyms[has.syn], info_aggr$description[has.syn])
-            info_aggr <- as.data.table(info_aggr)
+            info_aggr <- data.table::as.data.table(info_aggr)
             
             # =================
             
