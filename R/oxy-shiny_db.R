@@ -17,7 +17,7 @@ get_exp_vars <- function(patcsv){
 #' @param chosen.db Which base db to browse (full path).
 #' @return Data table of whole database
 #' @seealso 
-#'  \code{\link[RSQLite]{character(0)}},\code{\link[RSQLite]{SQLite}}
+#'  \code{\link[RSQLite]{SQLite}}
 #' @rdname browse_db
 #' @export 
 #' @importFrom RSQLite dbConnect SQLite dbGetQuery
@@ -39,7 +39,7 @@ browse_db <- function(chosen.db){
 #' @param showiso Which isotope category to include, Default: c()
 #' @return Data table with results
 #' @seealso 
-#'  \code{\link[RSQLite]{character(0)}},\code{\link[RSQLite]{SQLite}}
+#'  \code{\link[RSQLite]{SQLite}}
 #'  \code{\link[gsubfn]{fn}}
 #' @rdname get_prematches
 #' @export 
@@ -131,8 +131,7 @@ get_prematches <- function(who = NA,
 score.isos <- function(table, mSet, method="mscore", inshiny=TRUE, session=0, intprec, ppm, dbdir){
   
   shiny::showNotification("Scoring isotopes...")
-  require(InterpretMSSpectrum)
-  
+
   formulas = unique(table$fullformula)
   
   repr.smiles <- sapply(formulas, function(form){

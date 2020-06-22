@@ -1,81 +1,23 @@
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param x PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Trim whitespace
+#' @description Uses regex to remove whitespace from a string.
+#' @param x String
+#' @return String without whitespace
 #' @rdname trim
 #' @export 
 trim <- function (x) gsub("^\\s+|\\s+$", "", x)
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param x PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Removes trailing whitespace
+#' @description Uses regex to remove trailing whitespace from a string.
+#' @param x String
+#' @return String without trailing whitespace.
 #' @rdname trim.trailing
 #' @export 
 trim.trailing <- function (x) sub("\\s+$", "", x)
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param lst PARAM_DESCRIPTION
-#' @param type PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
-#' @seealso 
-#'  \code{\link[pbapply]{pbapply}}
-#'  \code{\link[data.table]{rbindlist}}
-#' @rdname list.to.df
-#' @export 
-#' @importFrom pbapply pblapply
-#' @importFrom data.table rbindlist
-list.to.df <- function(lst,
-                       type){
-  dfStorage <- pbapply::pblapply(seq_along(lst), FUN=function(y, n, i){
-    matches <- as.character(y[[i]])
-    if((length(matches) == 0) && (typeof(matches) == "character")){ matches = NA }
-    temp.df <- data.frame(stringsAsFactors = FALSE, 
-                          "mz"=rep(n[[i]], length(matches)), 
-                          "CompoundName"=matches[[1]], 
-                          "Adduct"=matches[[2]], 
-                          "Isotope"=matches[[3]], 
-                          "Source"=rep(type, length(matches)))
-    temp.df
-  },y=lst, n=names(lst))
-  df <- data.table::rbindlist(dfStorage)
-  # --- return ---
-  df
-}
-
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param vector PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Convert a vector to factor
+#' @description Takes a numeric or character factor and converts it to factor. Sets levels to numeric levels 0-3 etc.
+#' @param vector Vector
+#' @return Factor vector
 #' @rdname factorize
 #' @export 
 factorize <- function(vector){
@@ -86,47 +28,40 @@ factorize <- function(vector){
   items
 }
 
+#' @title Is variable not in a table?
+#' @description Checks if variable x is oresent in table 'table'.
+#' @param x Variable
+#' @param table Table or vector
+#' @return TRUE/FALSE
+#' @rdname not_in
+#' @export 
 `%not in%` <- function (x, table) is.na(match(x, table, nomatch=NA_integer_))
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param mz PARAM_DESCRIPTION
-#' @param ppm PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Get PPM error range 
+#' @description Given a m/z value, generates a window of user ppm to perform matching in.
+#' @param mz Mass over charge value
+#' @param ppm Parts per million error allowed
+#' @return Character vector c(mz - mz times ppm, mz + mz times ppm)
 #' @rdname ppm_range
 #' @export 
 ppm_range <- function(mz, ppm) c((mz - (ppm/1000000 * mz)), (mz + (ppm/1000000 * mz)))
 
-# plot molecules in R plot window instead of separate Java window
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param smi PARAM_DESCRIPTION
-#' @param width PARAM_DESCRIPTION, Default: 500
-#' @param height PARAM_DESCRIPTION, Default: 500
-#' @param marg PARAM_DESCRIPTION, Default: 0
-#' @param main PARAM_DESCRIPTION, Default: ''
-#' @param style PARAM_DESCRIPTION, Default: 'bow'
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+# 
+#' @title Visualise SMILES molecule.
+#' @description Plot molecules in R plot window instead of separate Java window
+#' @param smi SMILES string
+#' @param width Image width in pixels, Default: 500
+#' @param height Image height in pixels, Default: 500
+#' @param marg Margins around molecule, Default: 0
+#' @param main Text above image, Default: ''
+#' @param style Style (see rcdk 'get.depictor'), Default: 'bow'
+#' @return File path to refer to in shiny.
 #' @seealso 
-#'  \code{\link[rcdk]{parse.smiles}},\code{\link[rcdk]{c("get.depictor", "get.depictor")}},\code{\link[rcdk]{c("view.image.2d", "view.image.2d")}}
+#'  \code{\link[rcdk]{parse.smiles}}
 #' @rdname plot.mol
 #' @export 
 #' @importFrom rcdk parse.smiles get.depictor view.image.2d
-plot.mol = function(smi,
+plot_mol = function(smi,
                     width=500,
                     height=500,
                     marg=0,
@@ -155,125 +90,39 @@ plot.mol = function(smi,
   list(src = a)
 }
 
-# @export
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param mzvals PARAM_DESCRIPTION
-#' @param cl PARAM_DESCRIPTION, Default: FALSE
-#' @param ppm PARAM_DESCRIPTION, Default: 3
-#' @param charge PARAM_DESCRIPTION, Default: 1
-#' @param element.counts PARAM_DESCRIPTION, Default: list(c("C", 0, 50), c("H", 0, 50), c("N", 0, 50), c("O", 0, 50), 
-#'    c("S", 0, 50), c("Na", 0, 5), c("Cl", 0, 5), c("P", 0, 5))
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
-#' @seealso 
-#'  \code{\link[pbapply]{pbapply}}
-#'  \code{\link[rcdk]{generate.formula}}
-#'  \code{\link[data.table]{rbindlist}}
-#' @rdname find.formulas
-#' @export 
-#' @importFrom pbapply pblapply
-#' @importFrom rcdk generate.formula
-#' @importFrom data.table data.table rbindlist
-find.formulas <- function(mzvals, cl=FALSE, ppm=3, charge=1, element.counts = list(c("C",0,50),c("H",0,50),
-                                                                                   c("N",0,50),c("O",0,50),
-                                                                                   c("S",0,50),c("Na", 0, 5),
-                                                                                   c("Cl", 0, 5), c("P", 0,5))){
+#lcl = mSet = input = enrich = shown_matches = my_selection = browse_content = pieinfo = result_filters = list()
 
-  found.rows <- pbapply::pblapply(mzvals,cl=cl, function(mz){
-    window = mz * (ppm / 1e6)
-    # --- generate molecular formulae ---
-    found.mfs <- rcdk::generate.formula(mz, window = window, 
-                                  element.counts, 
-                                  validation=TRUE, charge=charge)
-    rows <- if(length(found.mfs) == 0) NA else(
-      rows <- lapply(found.mfs, function(formula){
-        # --- check for ppm range ---
-        mz.found <- formula@mass
-        within.ppm <- abs(mz - mz.found) < window
-        if(within.ppm){
-          data.table::data.table(origMZ = mz,
-                     genMZ = mz.found,
-                     BaseFormula = formula@string)
-        } else(data.table::data.table(origMZ=mz,
-                          genMZ=NA,
-                          BaseFormula=NA))
-      })
-    )
-    # --- return ---
-    unique(data.table::rbindlist(rows[!is.na(rows)]))
-  })
-  data.table::rbindlist(found.rows[!is.na(found.rows)])
-}
-
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Joanna's debugger
+#' @description Function to use after using the 'debug' button when running in R. Writes various objects (mSet, current input etc.) to global.
 #' @seealso 
 #'  \code{\link[shiny]{isolate}},\code{\link[shiny]{reactiveValuesToList}}
 #' @rdname joanna_debugger
 #' @export 
 #' @importFrom shiny isolate reactiveValuesToList
 joanna_debugger <- function(){
-  lcl <<- debug_lcl
-  mSet <<- debug_mSet
-  input <<- debug_input
-  enrich <<- debug_enrich 
-  shown_matches <<- shiny::isolate({shiny::reactiveValuesToList(debug_matches)})
-  my_selection <<- shiny::isolate({shiny::reactiveValuesToList(debug_selection)})
-  browse_content <<- shiny::isolate({shiny::reactiveValuesToList(debug_browse_content)})
-  pieinfo <<- shiny::isolate({shiny::reactiveValuesToList(debug_pieinfo)})
-  result_filters <<- shiny::isolate({shiny::reactiveValuesToList(debug_result_filters)})
+  
+  shown_matches <- shiny::isolate({shiny::reactiveValuesToList(debug_matches)})
+  my_selection <- shiny::isolate({shiny::reactiveValuesToList(debug_selection)})
+  browse_content <- shiny::isolate({shiny::reactiveValuesToList(debug_browse_content)})
+  pieinfo <- shiny::isolate({shiny::reactiveValuesToList(debug_pieinfo)})
+  result_filters <- shiny::isolate({shiny::reactiveValuesToList(debug_result_filters)})
+  
+  assign("lcl", debug_lcl, envir = .GlobalEnv)
+  assign("mSet", debug_mSet, envir = .GlobalEnv)
+  assign("input", debug_input, envir = .GlobalEnv)
+  assign("enrich", debug_enrich, envir = .GlobalEnv)
+  assign("shown_matches", shown_matches, envir = .GlobalEnv)
+  assign("my_selection", my_selection, envir = .GlobalEnv)
+  assign("browse_content", browse_content, envir = .GlobalEnv)
+  assign("pieinfo", pieinfo, envir = .GlobalEnv)
+  assign("result_filters", result_filters, envir = .GlobalEnv)
+  
 }
-
-# @export
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param testsite PARAM_DESCRIPTION, Default: 'http://www.google.com'
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
-#' @rdname internetWorks
-#' @export 
-internetWorks <- function(testsite = "http://www.google.com"){
-  works = FALSE
-  try({
-    GET(testsite)
-    works=TRUE
-  },silent = T)
-  works
-}  
 
 #' @title FUNCTION_TITLE
 #' @description FUNCTION_DESCRIPTION
 #' @param file.loc PARAM_DESCRIPTION
 #' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
 #' @rdname getOptions
 #' @export 
 getOptions <- function(file.loc){
@@ -298,13 +147,6 @@ getOptions <- function(file.loc){
 #' @param key PARAM_DESCRIPTION
 #' @param value PARAM_DESCRIPTION
 #' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
 #' @rdname setOption
 #' @export 
 setOption <- function(file.loc, key, value){
@@ -325,15 +167,7 @@ setOption <- function(file.loc, key, value){
 
 #' @title FUNCTION_TITLE
 #' @description FUNCTION_DESCRIPTION
-
 #' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
 #' @rdname get_os
 #' @export 
 get_os <- function(){
@@ -361,25 +195,25 @@ get_os <- function(){
 #
 # CSS3 code was found on https://proto.io/freebies/onoff/
 # For CSS3 customisation, refer to this website.
-
-
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param inputId PARAM_DESCRIPTION
-#' @param label PARAM_DESCRIPTION
-#' @param value PARAM_DESCRIPTION, Default: FALSE
-#' @param col PARAM_DESCRIPTION, Default: 'GB'
-#' @param type PARAM_DESCRIPTION, Default: 'TF'
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
+#' @title Generate custom switch button
+#' @description Generates css for custom switch button.
+#' @param inputId Shiny ID to use (behaves as checkbox)
+#' @param label HTML label
+#' @param value Default on/off? TRUE/FALSE, Default: FALSE
+#' @param col Color binary used (RG red green, GB grey blue BW black white), Default: 'GB'
+#' @param type Pick display option TF true-false, OO on-off, YN yes-no, ASMB asca-meba, TTFC t-test/fold-change Default: 'TF'
+#' @return HTML tag to display in shiny app
 #' @examples 
 #' \dontrun{
 #' if(interactive()){
-#'  #EXAMPLE1
+#'  switchButton("doThing", "Do thing?", TRUE, "GB", "YN")
 #'  }
 #' }
+#' @seealso 
+#'  \code{\link[shiny]{tag}},\code{\link[shiny]{builder}}
 #' @rdname switchButton
 #' @export 
+#' @importFrom shiny tagList tags
 switchButton <- function(inputId, label, value=FALSE, col = "GB", type="TF") {
   
   # # color class
@@ -447,17 +281,38 @@ switchButton <- function(inputId, label, value=FALSE, col = "GB", type="TF") {
   }
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param content PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Small image checkbox that fades upon deselection
+#' @description Used in MetaboShiny database selection when searching or pre-matching
+#' @param inputId Shiny input ID to connect to
+#' @param img.path Path to image to use, Default: NULL
+#' @param value Default value (T/F), Default: FALSE
+#' @return Shiny HTML tag
+#' @seealso 
+#'  \code{\link[shiny]{tag}},\code{\link[shiny]{builder}}
+#' @rdname fadeImageButton
+#' @export 
+#' @importFrom shiny tagList tags
+fadeImageButton <- function(inputId, img.path=NULL,value=FALSE) {
+  # ---------------
+  #if(is.null(img)) stop("Please enter an image name (place in www folder please)")
+  # ---------------
+  shiny::tagList(
+    shiny::tags$div(class = "form-group shiny-input-container",
+                    if(value){
+                      shiny::tags$input(type="checkbox", class="fadebox", id=inputId)
+                    } else{
+                      shiny::tags$input(type="checkbox", class="fadebox", id=inputId, checked="")
+                    },
+                    shiny::tags$label(class="btn", "for"=inputId,
+                                      shiny::tags$img(src=img.path, id="btnLeft"))
+    )
+  )
+}
+
+#' @title Make content sit next to each other
+#' @description Hacky thing to make html elements sit next to each other.
+#' @param content List of shiny html tags 
+#' @return Shiny inline-block div
 #' @seealso 
 #'  \code{\link[shiny]{builder}}
 #' @rdname sardine
@@ -466,23 +321,15 @@ switchButton <- function(inputId, label, value=FALSE, col = "GB", type="TF") {
 sardine <- function(content) shiny::div(style="display: inline-block;vertical-align:top;", content)
 
 # loading screen
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param failed PARAM_DESCRIPTION, Default: FALSE
+#' @title MetaboShiny loading screen
+#' @description Generates the loading screen modal!
 #' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
 #' @seealso 
 #'  \code{\link[shiny]{modalDialog}},\code{\link[shiny]{fluidPage}},\code{\link[shiny]{builder}}
 #' @rdname loadModal
 #' @export 
 #' @importFrom shiny modalDialog fluidRow br h3 img
-loadModal <- function(failed = FALSE) {
+loadModal <- function() {
   shiny::modalDialog(
     shiny::fluidRow(align="center",
              shiny::br(),shiny::br(),
@@ -496,25 +343,17 @@ loadModal <- function(failed = FALSE) {
   )
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param x PARAM_DESCRIPTION
-#' @param y PARAM_DESCRIPTION
-#' @param include.equals PARAM_DESCRIPTION, Default: FALSE
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Create table with all possible comparisons
+#' @description Takes a vector and makes all possible pairs of two elements. Useful in power analysis.
+#' @param x One vector
+#' @param y Another vector
+#' @param include.equals Include same vs. same pairings?, Default: FALSE
+#' @return Table of all possible unique pairs.
 #' @rdname expand.grid.unique
 #' @export 
 expand.grid.unique <- function(x, y, include.equals=FALSE)
 {
   x <- unique(x)
-  
   y <- unique(y)
   
   g <- function(i)
@@ -525,20 +364,13 @@ expand.grid.unique <- function(x, y, include.equals=FALSE)
   do.call(rbind, lapply(seq_along(x), g))
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param searchTerms PARAM_DESCRIPTION
-#' @param retmax PARAM_DESCRIPTION, Default: 500
-#' @param mindate PARAM_DESCRIPTION, Default: 2000
-#' @param maxdate PARAM_DESCRIPTION, Default: 2019
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Perform a search to get PubMed abstracts
+#' @description Taking a search term, date range and amount of abstracts to count, finds all abstracts of interest.
+#' @param searchTerms Search term(s). If multiple, make them one string with spaces in between the words.
+#' @param retmax Max abstracts to consider, Default: 500
+#' @param mindate Minimum year to consider, Default: 2000
+#' @param maxdate Maximum year to consider, Default: 2019
+#' @return Data frame of abstracts
 #' @seealso 
 #'  \code{\link[RISmed]{EUtilsSummary}},\code{\link[RISmed]{QueryId}},\code{\link[RISmed]{EUtilsGet}}
 #' @rdname getAbstracts
@@ -565,45 +397,28 @@ getAbstracts <- function(searchTerms, retmax=500, mindate=2000, maxdate=2019){
   return(abstractsx)
 }
 
-#wordfrequency of whole abstract #frequencies = getWordFrequency(abstracts)#it should be # from here
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param abstractsx PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Get frequency of a word in an abstract
+#' @description Takes an abstract, returns word vs frequency table.
+#' @param abstractsx Data table with abstract
+#' @seealso 
+#'  \code{\link[tidytext]{unnest_tokens}}
+#' @return Frequency table
 #' @rdname getWordFrequency
 #' @export 
+#' @importFrom tidytext unnest_tokens
 getWordFrequency <- function(abstractsx){
-  require(dplyr)
-  abstractsx <- data.table(abstract = abstractsx)
+  abstractsx <- data.table::data.table(abstract = abstractsx)
   #Split a column into tokens using the tokenizers package
-  CorpusofMyCloudx <- abstractsx %>% unnest_tokens(word, abstract) %>% count(word, sort = TRUE)
+  CorpusofMyCloudx <- abstractsx %>% tidytext::unnest_tokens(word, abstract) %>% count(word, sort = TRUE)
   CorpusofMyCloudx$word <- gsub("^\\d+$", "", CorpusofMyCloudx$word)
   return(CorpusofMyCloudx)
 }
 
-# frequencies <- getWordFrequency(abstractsx)#? or abstracts# why is it problem???????????????????
-#filterList are medicalwords
-#filterWords are summerized and uniqued of filterList
-#getFilteredWordFreqency is filterd from medicalwords
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param frequencies PARAM_DESCRIPTION
-#' @param filterList PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Filter lists out of a frequency table
+#' @description Taking a blacklist, removes words that match that blacklist.
+#' @param frequencies Frequency table
+#' @param filterList Vector of words to filter out
+#' @return Filtered frequency table
 #' @rdname getFilteredWordFreqency
 #' @export 
 getFilteredWordFreqency <- function(frequencies, filterList){
@@ -613,17 +428,10 @@ getFilteredWordFreqency <- function(frequencies, filterList){
   return(filteredWords)
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param str PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Escape a string for use in terminal
+#' @description If you're suffering from file names with spaces and brackets on a linux machine, this escapes everything so you can copy paste without manually doing the escapes.
+#' @param str String
+#' @return Escaped string
 #' @rdname escape
 #' @export 
 escape = function(str){

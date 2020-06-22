@@ -2,7 +2,7 @@
 
 function(input, output, session) {
   
-  require(shinyjs)
+  #require(shinyjs)
   
   shiny::showModal(MetaboShiny::loadModal())
   
@@ -23,7 +23,7 @@ function(input, output, session) {
   # Rshiny app to analyse untargeted metabolomics data! BASH INSTRUCTIONS: STEP 1: mydir=~"/MetaboShiny" #or another of your choice | STEP 2: mkdir $mydir | STEP 3: docker run -p 8080:8080 -v $mydir:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny /start.sh
   
   # rjava.so error.. or rdb corrupt.. 'sudo R CMD javareconf'
-  require(tidytext)
+  #require(tidytext)
   
   runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
   
@@ -57,8 +57,8 @@ function(input, output, session) {
   
   reinstall_restart <- function(){
     devtools::install(reload = T,upgrade = F)
-    require(MetaboShiny)
-    start.metshi(inBrowser = T)
+    #require(MetaboShiny)
+    MetaboShiny::start_metshi(inBrowser = T)
   }
   
   # == REACTIVE VALUES ==
@@ -117,11 +117,11 @@ function(input, output, session) {
       lcl$paths$db_dir <<- dbdir
       
       if("adducts.csv" %in% basename(list.files(lcl$paths$work_dir))){
-        adducts <<- fread(file.path(lcl$paths$work_dir, "adducts.csv"))
+        adducts <<- data.table::fread(file.path(lcl$paths$work_dir, "adducts.csv"))
       }
       
       if("adduct_rules.csv" %in% basename(list.files(lcl$paths$work_dir))){
-        adduct_rules <<- fread(file.path(lcl$paths$work_dir, "adduct_rules.csv"))
+        adduct_rules <<- data.table::fread(file.path(lcl$paths$work_dir, "adduct_rules.csv"))
       }
       
       adducts[adducts == ''|adducts == ' '] <<- NA
@@ -619,7 +619,7 @@ omit_unknown = yes')
     if(!MetaDBparse::is.empty(my_selection$struct)){
       width = shiny::reactiveValuesToList(session$clientData)$output_empty_width
       if(width > 300) width = 300
-      output$curr_struct <- shiny::renderPlot({plot.mol(my_selection$struct,
+      output$curr_struct <- shiny::renderPlot({plot_mol(my_selection$struct,
                                                         style = "cow")},
                                               width=width, 
                                               height=width) # plot molecular structure WITH CHEMMINER
@@ -1164,7 +1164,7 @@ omit_unknown = yes')
       )
     }else{
       shiny::stopApp()
-      js$closeWindow()
+      shinyjs::js$closeWindow()
     }
   })
   

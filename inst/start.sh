@@ -1,3 +1,3 @@
 #!/bin/bash
 
-Rscript -e "MetaboShiny::start.metshi()"
+Rscript -e "MetaboShiny::start_metshi()"

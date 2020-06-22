@@ -30,7 +30,7 @@ shiny::observe({
             subs = subs[names(subs) != "sample"]
             if(length(subs) > 0){
               for(i in 1:length(subs)){
-                mSet <- MetaboShiny::subset.mSet(mSet, 
+                mSet <- MetaboShiny::subset_mSet(mSet, 
                                                  subset_var = names(subs)[i], 
                                                  subset_group = subs[[i]])  
               }  
@@ -62,7 +62,7 @@ shiny::observe({
                            shiny::showNotification("omitting 'unknown' labeled samples...")
                            knowns = mSet$dataSet$covars$sample[which(mSet$dataSet$covars[ , input$stats_var, with=F][[1]] != "unknown")]
                            if(length(knowns) > 0){
-                             mSet <- MetaboShiny::subset.mSet(mSet,
+                             mSet <- MetaboShiny::subset_mSet(mSet,
                                                               subset_var = "sample", 
                                                               subset_group = knowns) 
                            }
@@ -74,7 +74,7 @@ shiny::observe({
                                                           stats_var = mSet.settings$exp.var, 
                                                           time_var =  mSet.settings$time.var,
                                                           stats_type = mSet.settings$exp.type)
-                         mSet <- MetaboShiny::subset.mSet(mSet,
+                         mSet <- MetaboShiny::subset_mSet(mSet,
                                                           subset_var = input$subset_var, 
                                                           subset_group = input$subset_group)
                          mSet$dataSet$paired <- mSet.settings$paired

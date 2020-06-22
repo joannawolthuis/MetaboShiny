@@ -1,18 +1,13 @@
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param mSet PARAM_DESCRIPTION
-#' @param signif.only PARAM_DESCRIPTION
-#' @param source.anal PARAM_DESCRIPTION
-#' @param top.hits PARAM_DESCRIPTION
-#' @param cols PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+globalVariables(c("-log(p)", "-log10P", "..change_var", "..col.fac", "..count..", "..exp.vars", "..keep.cols", "..matches", "..predictor", "..rmcols", "..scaled..", "..shape.fac", "..stats_var", "..time_var", "..x", "Abundance", "Color", "FPR", "Group", "GroupA", "GroupB", "Individual", "Label", "Metric", "PC", "Peak", "Sample", "Shape", "TPR", "Text", "Value", "abstract", "acc", "adduct", "aes", "attempt", "color", "comparison", "coord_flip", "correlation", "count", "debug_browse_content", "debug_enrich", "debug_input", "debug_lcl", "debug_mSet", "debug_matches", "debug_pieinfo", "debug_result_filters", "debug_selection", "exp.vars", "expand_limits", "extremity", "facet_grid", "facet_wrap", "freq", "fullformula", "gbl", "geom_point", "ggplot", "ggtitle", "group", "importance.mean", "individual", "label", "labs", "lcl", "log2FC", "log2fc", "m/z", "p-value", "pathway", "pc", "position_dodge", "position_jitterdodge", "samples", "scale_size_area", "scale_x_discrete", "scale_y_discrete", "searchRev", "shape", "value", "variable", "x", "xlab", "y"))
+
+#' @title Collect info needed for heatmap
+#' @description Given an mSet and an analysis of interest, generates the matrix etc. needed for heatmap creation later on.
+#' @param mSet mSet object
+#' @param signif.only Only include significant hits?
+#' @param source.anal Source analysis (tt, aov, etc.)
+#' @param top.hits Top n hits to include in heatmap
+#' @param cols Color vector
+#' @return List with matrix and other required information for heatmap creation.
 #' @seealso 
 #'  \code{\link[data.table]{rbindlist}}
 #' @rdname calcHeatMap
@@ -89,28 +84,21 @@ calcHeatMap <- function(mSet, signif.only,
   }
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param curr PARAM_DESCRIPTION
-#' @param config PARAM_DESCRIPTION
-#' @param train_vec PARAM_DESCRIPTION
-#' @param test_vec PARAM_DESCRIPTION
-#' @param configCols PARAM_DESCRIPTION
-#' @param ml_method PARAM_DESCRIPTION
-#' @param ml_perf_metr PARAM_DESCRIPTION
-#' @param ml_folds PARAM_DESCRIPTION
-#' @param ml_preproc PARAM_DESCRIPTION
-#' @param tuneGrid PARAM_DESCRIPTION
-#' @param ml_train_perc PARAM_DESCRIPTION
-#' @param sampling PARAM_DESCRIPTION, Default: 'none'
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Run machine learning
+#' @description Large wrapper function to run machine learning
+#' @param curr Non-normalized peak table (generally mSet$dataSet$proc or something similar)
+#' @param config Configuration table (metadata table)
+#' @param train_vec Metadata group to train on
+#' @param test_vec Metadata group to test on
+#' @param configCols Columns representing metadata
+#' @param ml_method caret ML method
+#' @param ml_perf_metr Performance measuring method
+#' @param ml_folds Cross validation folds
+#' @param ml_preproc Preproc table object
+#' @param tuneGrid Table of settings to try out to optimize parameters
+#' @param ml_train_perc Percentage in training
+#' @param sampling Up- or downsampling settings, Default: 'none'
+#' @return List of machine learning model, importance, labels and prediction.
 #' @seealso 
 #'  \code{\link[caret]{createDataPartition}},\code{\link[caret]{trainControl}},\code{\link[caret]{train}},\code{\link[caret]{varImp}}
 #'  \code{\link[stats]{predict}}
@@ -169,8 +157,6 @@ runML <- function(curr,
   training <- curr[inTrain,]
   testing <- curr[inTest,]
   
-  require(caret)
-  
   if(ml_folds == "LOOCV"){
     trainCtrl <- caret::trainControl(verboseIter = T,
                                      allowParallel = F,
@@ -213,17 +199,10 @@ runML <- function(curr,
   
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param model PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Get performance for multi-comparison ML model
+#' @description ROC curves can be a bit tricky for multivariate models. This evaluates each possible pair of categories to generate individual and average AUC.
+#' @param model ML model
+#' @return FPR,TPR,average AUC,AUC for a given pair, and the name of the comparison
 #' @seealso 
 #'  \code{\link[pROC]{multiclass.roc}},\code{\link[pROC]{auc}}
 #'  \code{\link[data.table]{rbindlist}}
@@ -242,17 +221,10 @@ getMultiMLperformance <- function(model){
   })) 
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param csv PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Get metadata/mz column distribution
+#' @description Which columns are metadata, which are m/z values?
+#' @param csv CSV to evaluate
+#' @return List with meta = which columns (in numbers) are metadata, mz = which are mz.
 #' @rdname getColDistribution
 #' @export 
 getColDistribution <- function(csv){
@@ -267,22 +239,15 @@ getColDistribution <- function(csv){
   list(meta = exp.vars, mz = mz.vars)
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param csv PARAM_DESCRIPTION
-#' @param regex PARAM_DESCRIPTION, Default: ' |\(|\)|\+'
-#' @param exp.vars PARAM_DESCRIPTION
-#' @param mz.vars PARAM_DESCRIPTION
-#' @param miss.meta PARAM_DESCRIPTION
-#' @param miss.mz PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Clean csv
+#' @description Remove whitespace, replace zeros with user preferred missing value filler, cleans sample names with regex.
+#' @param csv CSV to clean
+#' @param regex Regex to apply to sample names., Default: ' |\(|\)|\+'
+#' @param exp.vars Column numbers that are metadata
+#' @param mz.vars Column numbers that are m/z
+#' @param miss.meta What to fill missing values with in metadata
+#' @param miss.mz What to fill missing values with in m/z values
+#' @return Data table
 #' @rdname cleanCSV
 #' @export 
 cleanCSV <- function(csv, regex=" |\\(|\\)|\\+",exp.vars, mz.vars, miss.meta, miss.mz){
@@ -302,21 +267,14 @@ cleanCSV <- function(csv, regex=" |\\(|\\)|\\+",exp.vars, mz.vars, miss.meta, mi
   csv
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param csv PARAM_DESCRIPTION
-#' @param exp.vars PARAM_DESCRIPTION
-#' @param excl.rows PARAM_DESCRIPTION
-#' @param excl.cond PARAM_DESCRIPTION
-#' @param min.lev PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Get default experimental condition
+#' @description Searches for experimental condition that has at least 'min.lev' categories, and then the least amount of categories within that.
+#' @param csv CSV to search in
+#' @param exp.vars Which columns are metadata?
+#' @param excl.rows Rows to exclude from evaluation
+#' @param excl.cond Conditions to exclude from evaluation
+#' @param min.lev Minimum kevels a condition needs to have to be considered. 
+#' @return Metadata column name that is chosen as initial experimental variable.
 #' @rdname getDefaultCondition
 #' @export 
 getDefaultCondition <- function(csv, exp.vars, excl.rows, excl.cond, min.lev){
@@ -332,18 +290,11 @@ getDefaultCondition <- function(csv, exp.vars, excl.rows, excl.cond, min.lev){
   condition
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param csv PARAM_DESCRIPTION
-#' @param exp.vals PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Remove outliers
+#' @description Uses boxplot function to exclude outlier samples from csv.
+#' @param csv Data table
+#' @param exp.vals Which columns are metadata?
+#' @return Data table with outliers removed
 #' @seealso 
 #'  \code{\link[car]{Boxplot}}
 #' @rdname removeOutliers
@@ -356,18 +307,11 @@ removeOutliers <- function(csv, exp.vals){
   csv[!(sample %in% outliers),]  
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param csv PARAM_DESCRIPTION
-#' @param covar_table PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Remove unused QC samples
+#' @description Removes QC samples that don't have any matching samples in their batch, thus not useful for batch correction.
+#' @param csv Data table
+#' @param covar_table Metadata table (which has the batch data)
+#' @return Data table without unused QC samples
 #' @rdname removeUnusedQC
 #' @export 
 removeUnusedQC <- function(csv, covar_table){
@@ -378,18 +322,11 @@ removeUnusedQC <- function(csv, covar_table){
   csv[which(csv$sample %in% keep_samps_post_qc),]  
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param csv PARAM_DESCRIPTION
-#' @param exp.vars PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Reformat peaktable to be in MetaboAnalyst format
+#' @description Takes the MetShi peaktable and reformats it to be accepted by MetaboAnalystR as input.
+#' @param csv Data table
+#' @param exp.vars Which columns are metadata?
+#' @return Data frame that can be imported
 #' @rdname asMetaboAnalyst
 #' @export 
 asMetaboAnalyst <- function(csv, exp.vars){
@@ -400,18 +337,10 @@ asMetaboAnalyst <- function(csv, exp.vars){
   csv[,-remove,with=F]
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param mSet PARAM_DESCRIPTION
-#' @param perc_limit PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Check if any m/z are left after missing value based filtering
+#' @description After excluding m/z values with more than 'perc_limit' samples missing, are any m/z values left for analysis?
+#' @param mSet mSet object
+#' @param perc_limit Max allowed missing samples for a m/z value in percent. 
 #' @rdname mzLeftPostFilt
 #' @export 
 mzLeftPostFilt <- function(mSet, perc_limit){
@@ -425,18 +354,11 @@ mzLeftPostFilt <- function(mSet, perc_limit){
   }  
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param mSet PARAM_DESCRIPTION
-#' @param max.missing.per.samp PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Which samples have too many m/z missing?
+#' @description Checks which samples have more than 'max.missing.per.samp' percent of m/z values missing. This can cause problems for KNN means missing value imputation (if >80% is missing).
+#' @param mSet mSet object
+#' @param max.missing.per.samp Max percentage of m/z allowed to be missing for a given sample.
+#' @return Indices of which samples should be removed according to this threshold.
 #' @rdname tooEmptySamps
 #' @export 
 tooEmptySamps <- function(mSet, max.missing.per.samp){
@@ -446,17 +368,10 @@ tooEmptySamps <- function(mSet, max.missing.per.samp){
   which(miss.per.samp.perc >= max.missing.per.samp)
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param mSet PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Fill missing values with half minimum of this sample
+#' @description Performs missing value filling with the sample half minimum pre-normalization.
+#' @param mSet mSet object
+#' @return mSet object
 #' @seealso 
 #'  \code{\link[data.table]{as.data.table}}
 #'  \code{\link[pbapply]{pboptions}}
@@ -475,20 +390,13 @@ replRowMin <- function(mSet){
   return(w.missing)
   }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param mSet PARAM_DESCRIPTION
-#' @param parallelMode PARAM_DESCRIPTION
-#' @param ntree PARAM_DESCRIPTION
-#' @param cl PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Impute missing values with Random Forest
+#' @description Uses the missForest package to impute missing values. The most time-consuming but accurate imputation function.
+#' @param mSet mSet object
+#' @param parallelMode Parallelize 'variables' or 'forests'?
+#' @param ntree How many trees per m/z value?
+#' @param cl parallel::makeCluster object for multithreading
+#' @return mSet object
 #' @seealso 
 #'  \code{\link[doParallel]{registerDoParallel}}
 #'  \code{\link[missForest]{missForest}}
@@ -522,17 +430,10 @@ replRF <- function(mSet, parallelMode, ntree, cl){
   imp$ximp
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param mSet PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Batch correction using QC samples
+#' @description Using QC samples, attempt to correct existing batch effect.
+#' @param mSet mSet object
+#' @return mSet object
 #' @seealso 
 #'  \code{\link[pbapply]{pbapply}}
 #'  \code{\link[BatchCorrMetabolomics]{doBC}}
@@ -571,17 +472,10 @@ batchCorrQC <- function(mSet){
   as.data.frame(qc_corr_matrix)
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param mSet PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Remove QC values from dataset
+#' @description Post-batch correction, it's likely that users don't need the QC samples anymore. This removes them from the mSet, including their metadata rows.
+#' @param mSet mSet object
+#' @return mSet object
 #' @rdname hideQC
 #' @export 
 hideQC <- function(mSet){
@@ -595,17 +489,10 @@ hideQC <- function(mSet){
   mSet
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param mSet PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Prepare COMBAT table
+#' @description COMBAT batch correction requires a certain table format. This adjusts the mSet tables to fit that standard.
+#' @param mSet mSet object
+#' @return CSV ready for use in COMBAT.
 #' @seealso 
 #'  \code{\link[data.table]{as.data.table}}
 #' @rdname combatCSV
@@ -627,19 +514,12 @@ combatCSV <- function(mSet){
   csv_edata
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param content PARAM_DESCRIPTION
-#' @param options PARAM_DESCRIPTION, Default: NULL
-#' @param rownames PARAM_DESCRIPTION, Default: T
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Generate interactive table
+#' @description Generates interactive table in MetaboShiny. Adjust this function to change all table display functionality!
+#' @param content Table content (generally a data table)
+#' @param options Table options (in DT format), Default: NULL
+#' @param rownames Use row names?, Default: T
+#' @return DT data table object for use in shiny.
 #' @seealso 
 #'  \code{\link[stringr]{str_match}}
 #'  \code{\link[DT]{datatable}}
@@ -680,19 +560,12 @@ metshiTable <- function(content, options=NULL, rownames= T){
   )
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param mSet PARAM_DESCRIPTION
-#' @param expnames PARAM_DESCRIPTION
-#' @param top PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Get top hits of an experiment
+#' @description Goes through mSet storage to find experiments of interest, then takes the top x m/z values and returns them. Used mostly for Venn Diagram creation.
+#' @param mSet mSet object
+#' @param expnames Experiment names
+#' @param top Number of top m/z values to return to user
+#' @return List object with top hits per experiment
 #' @seealso 
 #'  \code{\link[stringr]{str_match}}
 #'  \code{\link[data.table]{as.data.table}}
@@ -845,3 +718,32 @@ getTopHits <- function(mSet, expnames, top){
   flattened <- lapply(flattened, function(x) x[!is.na(x)])
   return(flattened)
 }
+
+# # old remotes field
+# Remotes:
+#   github::UMCUGenetics/MetaDBparse,
+# github::xia-lab/MetaboAnalystR,
+# github::rwehrens/BatchCorrMetabolomics,
+# github::yixuan/showtext,
+# github::joannawolthuis/ggVennDiagram,
+# bioc::xcms, 
+# bioc::CAMERA, 
+# bioc::MSnbase,
+# bioc::impute, 
+# bioc::pcaMethods, 
+# bioc::siggenes, 
+# bioc::globaltest, 
+# bioc::GlobalAncova, 
+# bioc::Rgraphviz, 
+# bioc::KEGGgraph, 
+# bioc::preprocessCore, 
+# bioc::genefilter, 
+# bioc::SSPA, 
+# bioc::sva, 
+# bioc::ChemmineR, 
+# bioc::KEGGREST,
+# bioc::fgsea,
+# bioc::Rdisop,
+# bioc::Biostrings,
+# bioc::GOSemSim,
+# bioc::fmcsR

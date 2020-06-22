@@ -1,24 +1,17 @@
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param mSet PARAM_DESCRIPTION
-#' @param varName PARAM_DESCRIPTION
-#' @param title PARAM_DESCRIPTION, Default: varName
-#' @param mode PARAM_DESCRIPTION, Default: 'stat'
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Get m/z intensity profile
+#' @description Given a m/z, return intensities for all samples for this m/z.
+#' @param mSet mSet object
+#' @param varName m/z
+#' @param title Title of plot, Default: varName
+#' @param mode stat or multi mode? , Default: 'stat'
+#' @return Data table with m/z intensities per sample.
 #' @rdname getProfile
 #' @export 
 getProfile <- function(mSet, varName, title=varName, mode="stat"){
   sourceTable = mSet$dataSet$norm
   # ---------------
   varInx <- colnames(sourceTable) == varName;
-  var <- as.data.table(sourceTable,
+  var <- data.table::as.data.table(sourceTable,
                        keep.rownames = T)[,varInx, with=FALSE];
   samp.names <- rownames(sourceTable)
   # ---------------
@@ -54,80 +47,22 @@ getProfile <- function(mSet, varName, title=varName, mode="stat"){
   return(translator)
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param atomlist PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
-#' @rdname kegg.charge
-#' @export 
-kegg.charge <- function(atomlist){
-  charges <- regmatches(
-    atomlist,
-    regexpr(atomlist, pattern = "#[+-]|#\\d*[+-]",perl = T)
-  )
-  formal_charge = 0
-  for(ch in charges[!is.na(charges)]){
-    ch.base <- gsub(ch, pattern = "#", replacement = "")
-    ch.base <- if(ch.base == "-" | ch.base == "+") paste0(ch.base, 1) else(ch.base)
-    ch.base <- gsub(ch.base, pattern = "\\+", replacement = "")
-    ch.base <- as.numeric(sub("([0-9.]+)-$", "-\\1", ch.base))
-    # -------
-    formal_charge = formal_charge + ch.base
-  }
-  formal_charge
-}
-
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param actual PARAM_DESCRIPTION
-#' @param pred PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Mean absolute percentage error calculation
+#' @description Calculates MAPE (Mean absolute percentage error). Will be used as one of the options in isotope pattern scoring.
+#' @param actual Data values
+#' @param pred Predicted values (for example, isotope pattern)
+#' @return MAPE score
 #' @rdname mape
 #' @export 
 mape <- function(actual,pred){
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param actual PARAM_DESCRIPTION
-#' @param pred PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
-#' @rdname mape
-#' @export 
   mape <- mean(abs((actual - pred)/actual))*100
   return (mape)
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param x PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Un-nest a list
+#' @description Flatten a list of lists into one long list
+#' @param x list object
+#' @return list object
 #' @rdname flattenlist
 #' @export 
 flattenlist <- function(x){
@@ -140,17 +75,10 @@ flattenlist <- function(x){
   }
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param optionfile PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Get color options
+#' @description Retrieves color options from user options file.
+#' @param optionfile Path to options file.
+#' @return Color options (hex)
 #' @rdname get.col.map
 #' @export 
 get.col.map <- function(optionfile){
@@ -161,18 +89,10 @@ get.col.map <- function(optionfile){
   col.items
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param optionfile PARAM_DESCRIPTION
-#' @param colmap PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Set color options
+#' @description Sets color options in user options file.
+#' @param optionfile Path to options file.
+#' @param colmap Vector of hex colors.
 #' @rdname set.col.map
 #' @export 
 set.col.map <- function(optionfile, colmap){
@@ -182,19 +102,12 @@ set.col.map <- function(optionfile, colmap){
   setOption(optionfile, key="gcols", value=joined)
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param abstracts PARAM_DESCRIPTION
-#' @param queryword PARAM_DESCRIPTION
-#' @param top PARAM_DESCRIPTION, Default: 20
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Generate word cloud from list of abstracts
+#' @description Wrapper function to create a wordcloud from a literature search.
+#' @param abstracts List of abstracts (RISmed format)
+#' @param queryword Searched word (will be added to words not to include in the cloud)
+#' @param top Top x words used in plot, Default: 20
+#' @return Data table that can be used to generate word cloud (word vs. frequency)
 #' @seealso 
 #'  \code{\link[RISmed]{AbstractText}}
 #'  \code{\link[qdap]{strip}},\code{\link[qdap]{rm_stopwords}}
@@ -217,17 +130,10 @@ abstracts2wordcloud <-function(abstracts, queryword,  top=20){
   head(ord, top)
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param pval PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title P value to 'stars'
+#' @description Get one to four star significance from a given p value.
+#' @param pval P value.
+#' @return Character vector of one to four stars (or n.s. non significant)
 #' @rdname p2stars
 #' @export 
 p2stars = function(pval){
@@ -241,41 +147,10 @@ p2stars = function(pval){
   }
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
-#' @rdname havingIP
-#' @export 
-havingIP <- function(){
-  if(.Platform$OS.type == "windows"){
-    ipmessage = system("ipconfig", intern=T)
-  }else{
-    ipmessage = system("ifconfig", intern=T)
-  }
-  print(ipmessage)
-  validIP = "((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)[.]){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
-  any(grep(validIP, ipmessage))
-}
-
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param testsite PARAM_DESCRIPTION, Default: 'http://www.google.com'
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Are you currently online?
+#' @description Function to check if the user can connect to the internet.
+#' @param testsite Website to connect to for the test, Default: 'http://www.google.com'
+#' @return TRUE/FALSE
 #' @rdname internetWorks
 #' @export 
 internetWorks <- function(testsite = "http://www.google.com"){
@@ -287,18 +162,11 @@ internetWorks <- function(testsite = "http://www.google.com"){
   works
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param message PARAM_DESCRIPTION
-#' @param session PARAM_DESCRIPTION, Default: shiny::getDefaultReactiveDomain()
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Show alert in MetaboShiny
+#' @description Function to create a SweetAlert in MetaboShiny with user message.
+#' @param message User message
+#' @param session Shiny session, Default: shiny::getDefaultReactiveDomain()
+#' @return SweetAlert object to render in shiny
 #' @seealso 
 #'  \code{\link[shiny]{domains}},\code{\link[shiny]{builder}}
 #'  \code{\link[shinyWidgets]{sendSweetAlert}}
@@ -321,17 +189,10 @@ metshiAlert <- function(message, session = shiny::getDefaultReactiveDomain()){
   )
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param metadata PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Reformat metadata
+#' @description Clean matadata to be imported in MetShi. Often used to import 'new' metadata into an existing dataset.
+#' @param metadata Metadata data table
+#' @return Cleaned data table
 #' @rdname reformat.metadata
 #' @export 
 reformat.metadata <- function(metadata){

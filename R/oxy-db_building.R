@@ -36,23 +36,17 @@ import.pat.csvs <- function(metapath,
   
   ppm = as.numeric(ppm)
 
-  metadata <- data.table::fread(metapath)
-  metadata <- reformat.metadata(metadata)
-  
-  keep.cols = colSums(is.na(metadata)) < nrow(metadata) & sapply(colnames(metadata), function(x) length(unique(metadata[,..x][[1]])) > 1) 
-  print(which(duplicated(metadata$sample)))
-  metadata$sample <- gsub(metadata$sample, pattern = wipe.regex, replacement = "", perl=T)
-  print(any(duplicated(metadata$sample)))
-  metadata.filt = unique(metadata[, ..keep.cols])
-  if(!("individual" %in% colnames(metadata.filt))) metadata.filt$individual <- metadata.filt$sample
-
   poslist <- data.table::fread(pospath, header=T)
   neglist <- data.table::fread(negpath, header=T)
 
-  #library(corrplot)
-  ## corrplot 0.84 loaded
-  #M <- cor(poslist[1:50,3:53])
-  #corrplot(M, method = "circle")
+  colnames(poslist)[1:2] <- tolower(colnames(poslist)[1:2])
+  colnames(neglist)[1:2] <- tolower(colnames(neglist)[1:2])
+  
+  metadata = NULL
+  try({
+    metadata <- data.table::fread(metapath)
+    metadata <- reformat.metadata(metadata)  
+  })
   
   hasRT=F
   
@@ -77,22 +71,44 @@ import.pat.csvs <- function(metapath,
     neglist <- data.table::dcast(neglist_melty, sample ~ mzmed, value.var = "into")
     # REQUIREMENTS: "sample" - mz1 mz2 mz3 mz3 ... 
     # TODO: check for metabolights samples!
+  }else{
+    hasRT=any(grepl(colnames(poslist), pattern = "RT\\d+"))
   }
   
+  metadata = NULL
+  try({
+    metadata <- data.table::fread(metapath)
+    metadata <- reformat.metadata(metadata)  
+  },silent = T)
+  
+  if(is.null(metadata)){
+    if("label" %in% tolower(colnames(poslist)[1:5])){
+      premeta = poslist[,1:30]
+      colnames(premeta) <- tolower(colnames(premeta))
+      metadata = premeta[,c("sample", "label")]
+    }else{
+      stop("Requires either metadata uploaded OR a label/Label column!")
+    }
+  }
+  
+  keep.cols = colSums(is.na(metadata)) < nrow(metadata) & sapply(colnames(metadata), function(x) length(unique(metadata[,..x][[1]])) > 1) 
+  metadata$sample <- gsub(metadata$sample, pattern = wipe.regex, replacement = "", perl=T)
+  metadata.filt = unique(metadata[, ..keep.cols])
+  if(!("individual" %in% colnames(metadata.filt))) metadata.filt$individual <- metadata.filt$sample
+
   if("label" %in% colnames(poslist)[1:5]){
     poslist[,label:=NULL]
     neglist[,label:=NULL]
   }
 
   # miss values
-
   if(!any(is.na(unlist(poslist[1:5,10:20])))){
     poslist[,(2:ncol(poslist)) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)}), .SDcols = 2:ncol(poslist)]
     neglist[,(2:ncol(neglist)) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)}), .SDcols = 2:ncol(neglist)]
   }
   
   if(missperc.samp < 100){
-    miss_threshold_samp = ceiling(ncol(poslist)*(missperc.samp/100))
+    miss_threshold_samp = ceiling(ncol(poslist) * (missperc.samp/100))
     
     keep.samps.pos = which(rowSums(is.na(poslist)) <= miss_threshold_samp)
     keep.samps.neg = which(rowSums(is.na(neglist)) <= miss_threshold_samp)
@@ -101,7 +117,9 @@ import.pat.csvs <- function(metapath,
     poslist <- poslist[,keep.samps.both, with=F] # at least one sample with non-na
     neglist <- neglist[,keep.samps.both, with=F] # at least one sample with non-na
     
-    shiny::showNotification(paste0("Remaining samples:", nrow(poslist)))
+    try({
+      shiny::showNotification(paste0("Remaining samples:", nrow(poslist)))
+    }, silent=T)
   }
   
   if(missperc.mz < 100){
@@ -110,9 +128,12 @@ import.pat.csvs <- function(metapath,
     poslist <- poslist[,which(colSums(is.na(poslist)) <= miss_threshold_mz), with=F] # at least one sample with non-na
     neglist <- neglist[,which(colSums(is.na(neglist)) <= miss_threshold_mz), with=F] # at least one sample with non-na
     
-    shiny::showNotification(paste0("Remaining m/z values for positive mode:", ncol(poslist)))
-    shiny::showNotification(paste0("Remaining m/z values for negative mode:", ncol(neglist)))
-  }
+    try({
+      shiny::showNotification(paste0("Remaining m/z values for positive mode:", ncol(poslist)))
+      shiny::showNotification(paste0("Remaining m/z values for negative mode:", ncol(neglist)))
+      
+    }, silent=T)
+    }
     
   # REGEX SAMPLE NAMES if applicable
   if(wipe.regex != ""){
@@ -151,13 +172,17 @@ import.pat.csvs <- function(metapath,
   hasPPM = any(grepl(colnames(poslist), pattern = "/"))
 
   # ROUND MZ VALUES
-  ismz <- suppressWarnings(which(!is.na(as.numeric(gsub(colnames(poslist), pattern="/.*$|RT.*$", replacement="")))))
+
+  subbed = gsub(x = colnames(poslist), pattern="/.*$|RT.*$", replacement="")
+  ismz <- suppressWarnings(which(!is.na(as.numeric(subbed))))
+  print(ismz)
   colnames(poslist)[ismz] <- pbapply::pbsapply(colnames(poslist)[ismz], function(mz){
       if(hasPPM | hasRT){
         split.mz <- stringr::str_split(mz, "/|RT")[[1]]
         mz = split.mz[1]
         ppm = split.mz[2]
       }
+      print(split.mz)
       ppmRange <- as.numeric(mz)/1e6 * as.numeric(ppm)
       zeros = sapply(ppmRange,zeros_after_period)
       decSpots = zeros + 2 # todo: verify this formula?

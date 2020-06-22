@@ -4,12 +4,12 @@ options(stringsAsFactors = FALSE,"java.parameters" = c("-Xmx8G")) # give java en
 
 if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
-library(ggplot2)
-library(data.table)
-library(plotly)
-library(shinyBS)
-library(shinyjs)
-library(MetaboShiny)
+# library(ggplot2)
+# library(data.table)
+# library(plotly)
+# library(shinyBS)
+# library(shinyjs)
+# library(MetaboShiny)
 
 # set the home path
 home = normalizePath("~")

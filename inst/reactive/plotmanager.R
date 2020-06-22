@@ -406,7 +406,7 @@ shiny::observe({
              output[[paste0(plotName, "_wrap")]] <- shiny::renderUI({
                   list(conditionalPanel(
                     condition = 'input.ggplotly == true',
-                    plotlyOutput(paste0(plotName, "_interactive"), height = "100%")),
+                    plotly::plotlyOutput(paste0(plotName, "_interactive"), height = "100%")),
                     conditionalPanel(
                       condition = 'input.ggplotly == false',
                       list(fluidRow(align="right",
@@ -485,15 +485,15 @@ shiny::observe({
                                                 height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)  
                    }
                    if(plotName != "heatmap"){
-                     myplot <- if(grepl("venn", plotName)) myplot %>% layout(xaxis = emptyax,
+                     myplot <- if(grepl("venn", plotName)) myplot %>% plotly::layout(xaxis = emptyax,
                                                                              yaxis = emptyax,
-                                                                             showlegend=F) else myplot %>% layout(showlegend=F) 
+                                                                             showlegend=F) else myplot %>% plotly::layout(showlegend=F) 
                    }else{
-                     myplot <- myplot %>% layout(height = session$clientData[[empty]]/1.4,
+                     myplot <- myplot %>% plotly::layout(height = session$clientData[[empty]]/1.4,
                                                      width = session$clientData[[empty]])
                    }
                    myplot %>%
-                     config(
+                     plotly::config(
                        toImageButtonOptions = list(
                          format = if(input$plotsvg) "svg" else "png",
                          filename = paste0(plotFn, "_interactive")

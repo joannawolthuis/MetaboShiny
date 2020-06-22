@@ -47,7 +47,7 @@ ggplotNormSummary <- function(mSet,
     ggplot2::aes(y=value, x=variable),
     color=cf(sampsize),
     alpha=0.4) + ggplot2::geom_hline(ggplot2::aes(yintercept=median(value))) + 
-    coord_flip() +
+    ggplot2::coord_flip() +
     ggplot2::xlab("m/z") + 
     ggplot2::ylab("intensity")
   
@@ -63,7 +63,7 @@ ggplotNormSummary <- function(mSet,
     ggplot2::aes(y=value, x=variable),
     color=cf(sampsize),
     alpha=0.4) + ggplot2::geom_hline(ggplot2::aes(yintercept=median(value))) + 
-    coord_flip() +
+    ggplot2::coord_flip() +
     ggplot2::xlab("m/z") + 
     ggplot2::ylab("intensity")
 
@@ -128,7 +128,7 @@ ggplotSampleNormSummary <- function(mSet,
      ggplot2::geom_boxplot(
       ggplot2::aes(y=value,x=Label),
       color=cf(sampsize),
-      alpha=0.4) + ggplot2::geom_hline(ggplot2::aes(yintercept=median(value),text=Label)) + coord_flip() +
+      alpha=0.4) + ggplot2::geom_hline(ggplot2::aes(yintercept=median(value),text=Label)) + ggplot2::coord_flip() +
     ggplot2::xlab("m/z") + 
     ggplot2::ylab("intensity")
   
@@ -141,7 +141,7 @@ ggplotSampleNormSummary <- function(mSet,
      ggplot2::geom_boxplot(
       ggplot2::aes(y=value,x=Label),
       color=cf(sampsize),
-      alpha=0.4) + ggplot2::geom_hline(ggplot2::aes(yintercept=median(value),text=Label))+coord_flip() + 
+      alpha=0.4) + ggplot2::geom_hline(ggplot2::aes(yintercept=median(value),text=Label))+ggplot2::coord_flip() + 
     ggplot2::xlab("m/z") + 
     ggplot2::ylab("intensity")
   
@@ -560,7 +560,7 @@ ggPlotTT <- function(mSet, cf, n=20){
                                      key=`m/z`)) +
     # ggplot2::scale_y_discrete(breaks = xaxis, 
     #                           labels=as.character(xaxis)) +
-    ggplot2::scale_colour_gradientn(colours = cf(n)) + coord_flip()
+    ggplot2::scale_colour_gradientn(colours = cf(n)) + ggplot2::coord_flip()
     #ggplot2::scale_y_continuous()
   p
 }
@@ -721,7 +721,7 @@ ggPlotClass <- function(mSet,
   df <- melt(res)
   df$Component <- paste0("PC",df$Component)
   colnames(df) <- c("Metric", "Component", "Value")
-  p <- ggplot(df, aes(x=Metric, y=Value, fill=Metric)) +
+  p <- ggplot2::ggplot(df, ggplot2::aes(x=Metric, y=Value, fill=Metric)) +
     ggplot2::geom_bar(stat="identity") +
     ggplot2::theme_minimal() +
     
@@ -757,8 +757,8 @@ ggPlotPerm <- function(mSet,
   rounded <- round(as.numeric(stringr::str_match(pval, "0\\.\\d*")), digits = 3)
   pval <- gsub(pval, pattern = "(0\\.\\d*)", replacement=rounded)
   # - - -
-  p <- ggplot(df) +
-    ggplot2::geom_histogram(mapping=aes(x=acc, y=..count.., fill=factor(..count..)),
+  p <- ggplot2::ggplot(df) +
+    ggplot2::geom_histogram(mapping=ggplot2::aes(x=acc, y=..count.., fill=factor(..count..)),
                             binwidth=0.01) +
     ggplot2::scale_fill_manual(values=cf(20)) +
     
@@ -768,10 +768,10 @@ ggPlotPerm <- function(mSet,
                           x=bw.vec[1],
                           xend=bw.vec[1],
                           y=0,
-                          aes(yend=.1*nrow(df)),
+                          ggplot2::aes(yend=.1*nrow(df)),
                           size=1.5,
                           linetype=8) +
-    ggplot2::geom_text(mapping = aes(x = bw.vec[1], y =  .11*nrow(df), label = pval), color = "black", size = 4)
+    ggplot2::geom_text(mapping = ggplot2::aes(x = bw.vec[1], y =  .11*nrow(df), label = pval), color = "black", size = 4)
   
   p
 }
@@ -818,12 +818,12 @@ ggPlotROC <- function(data,
     class_type = "b"
   }
   
-  p <- ggplot(perf.long, aes(FPR,TPR,
+  p <- ggplot2::ggplot(perf.long, ggplot2::aes(FPR,TPR,
                              key = attempt,
                              text = attempt)) +
     ggplot2::geom_path(alpha=.5,
                        cex=.7,
-                       aes(color = if(class_type == "m") comparison else as.factor(attempt),
+                       ggplot2::aes(color = if(class_type == "m") comparison else as.factor(attempt),
                            text = if(class_type == "m") comparison else as.factor(attempt),
                            key = if(class_type == "m") comparison else as.factor(attempt),
                            group = attempt)) +
@@ -841,7 +841,7 @@ ggPlotROC <- function(data,
          key = if(class_type == "m") "Comparison" else "Attempt") +
     
     ggplot2::stat_summary_bin(#alpha=.6,
-      aes(FPR, TPR, 
+      ggplot2::aes(FPR, TPR, 
           group = comparison), 
       fun.y=mean, geom="line", 
       cex = 2.3,color="black") +
@@ -895,12 +895,12 @@ ggPlotBar <- function(data,
   data.subset <- data.ordered[1:topn,]    
   data.subset$`m/z` <- reorder(x = data.subset$`m/z`, X = -data.subset$importance.mean)
   
-  p <- ggplot(data.subset, aes(x = `m/z`,
+  p <- ggplot2::ggplot(data.subset, ggplot2::aes(x = `m/z`,
                                y = importance.mean,
                                text = `m/z`,
                                key = `m/z`)) +
     ggplot2::geom_bar(stat = "identity",
-                      aes(fill = importance.mean)) +
+                      ggplot2::aes(fill = importance.mean)) +
     ggplot2::scale_fill_gradientn(colors=cf(20)) +
     
     ggplot2::theme(axis.text.x=ggplot2::element_blank(),
@@ -908,7 +908,7 @@ ggPlotBar <- function(data,
     labs(x="Top hits (m/z)",y=if(ml_type == "glmnet") "Times included in final model" else "Relative importance (%)")
   
   if(topn <= 15){
-    p <- p + ggplot2::geom_text(aes(x=`m/z`, y=importance.mean, label=sapply(`m/z`, function(x){
+    p <- p + ggplot2::geom_text(ggplot2::aes(x=`m/z`, y=importance.mean, label=sapply(`m/z`, function(x){
       if(is.na(as.numeric(as.character(x)))){
         if(grepl(x, pattern = "_")){
           as.character(gsub(x, pattern = "_", replacement = "\n"))
@@ -981,8 +981,8 @@ plotPCAloadings.2d <- function(mSet,
   
   scaleFUN <- function(x) sprintf("%.4s", x)
   
-  p <- ggplot(df, aes(df[[pcx]], df[[pcy]])) +
-    ggplot2::geom_point(aes(color = extremity,
+  p <- ggplot2::ggplot(df, ggplot2::aes(df[[pcx]], df[[pcy]])) +
+    ggplot2::geom_point(ggplot2::aes(color = extremity,
                             size = extremity,
                             text = rownames(df),
                             key = rownames(df)),
@@ -1378,7 +1378,6 @@ plotPCA.3d <- function(mSet,
 #' @param pcx X component
 #' @param pcy Y component
 #' @param type pca, plsda or tsne?, Default: 'pca'
-#' @param font Font family to use in plot
 #' @param col.fac Marker fill based on which metadata column?, Default: 'label'
 #' @param mode normal or timeseries mode?, Default: 'normal'
 #' @param cf Function to get plot colors from
@@ -1495,12 +1494,12 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",
     cols
   }
   
-  p <- ggplot2::ggplot(dat_long, aes(x, y,group=group)) +
-    ggplot2::geom_point(size=5, aes(shape=shape,
+  p <- ggplot2::ggplot(dat_long, ggplot2::aes(x, y,group=group)) +
+    ggplot2::geom_point(size=5, ggplot2::aes(shape=shape,
                                     text=variable,
                                     fill=group,
                                     color=color), alpha=0.7)+
-    ggplot2::stat_ellipse(geom = "polygon", aes(fill=group), alpha = 0.3,level = .95) +
+    ggplot2::stat_ellipse(geom = "polygon", ggplot2::aes(fill=group), alpha = 0.3,level = .95) +
     ggplot2::scale_x_continuous(name=gsubfn::fn$paste(if(type != "tsne") "$pcx ($x.var%)" else "t-sne dimension 1")) +
     ggplot2::scale_y_continuous(name=gsubfn::fn$paste(if(type != "tsne") "$pcy ($y.var%)" else "t-sne dimension 2")) +
     ggplot2::scale_fill_manual(values=cols) +
@@ -1584,7 +1583,7 @@ ggPlotScree <- function(mSet, cf, pcs=20){
   df <- data.table::data.table(
     pc = 1:length(names(mSet$analSet$pca$variance)),
     var = round(mSet$analSet$pca$variance*100,digits = 1))
-  p <- ggplot2::ggplot(data=df[1:20,]) + ggplot2::geom_line(mapping = aes(x=pc, y=var, colour=var), cex=3) +
+  p <- ggplot2::ggplot(data=df[1:20,]) + ggplot2::geom_line(mapping = ggplot2::aes(x=pc, y=var, colour=var), cex=3) +
     
     ggplot2::scale_colour_gradientn(colours = cf(20))
   # - - - - -
@@ -1603,10 +1602,10 @@ ggPlotScree <- function(mSet, cf, pcs=20){
 #' @export 
 #' @importFrom ggplot2 geom_bar coord_flip scale_fill_gradientn theme element_blank
 ggPlotWordBar <- function(wcdata, cf, plotlyfy=T){
-  g <- ggplot(wcdata, aes(y = freq, x = reorder(word, 
+  g <- ggplot2::ggplot(wcdata, ggplot2::aes(y = freq, x = reorder(word, 
                                                 freq, 
                                                 sum)))
-  g <- g + ggplot2::geom_bar(aes(fill = freq),
+  g <- g + ggplot2::geom_bar(ggplot2::aes(fill = freq),
                              stat = "identity") +
     ggplot2::coord_flip() +
     ggplot2::scale_fill_gradientn(colors=cf(256)) +
@@ -1646,24 +1645,24 @@ ggPlotPower <- function(mSet,
   if(ncol(data) == 1){
     stop("Something went wrong! Try other settings please :(")
   }else{
-    p <- ggplot(data, aes(samples,power)) +
+    p <- ggplot2::ggplot(data, ggplot2::aes(samples,power)) +
       ggplot2::geom_path(alpha=.5,
                          cex=.5,
-                         aes(color = comparison, group = comparison)) +
+                         ggplot2::aes(color = comparison, group = comparison)) +
       ggplot2::stat_summary_bin(#alpha=.6,
-        aes(samples, 
+        ggplot2::aes(samples, 
             power, 
             group=comparison), 
         fun.y=mean, geom="line", 
         cex = 2.3,color="black") +
       ggplot2::stat_summary_bin(#alpha=.6,
-        aes(samples, power, 
+        ggplot2::aes(samples, power, 
             color=comparison
             #,group=comparison
             ), 
         fun.y=mean, geom="line", 
         cex = 1.2) +
-      ggplot2::stat_summary_bin(aes(samples,
+      ggplot2::stat_summary_bin(ggplot2::aes(samples,
                                     power), 
                                 fun.y=mean, color="black", 
                                 geom="line", cex = 2) +
@@ -1720,7 +1719,7 @@ ggPlotMummi <- function(mum_mSet, anal.type = "mummichog", cf){
   
   scaleFUN <- function(x) sprintf("%.4s", x)
   
-  p = ggplot(dat) + geom_point(aes(y = y, 
+  p = ggplot2::ggplot(dat) + ggplot2::geom_point(ggplot2::aes(y = y, 
                                    x = x, 
                                    size = `radi.vec`, 
                                    color = `radi.vec`,

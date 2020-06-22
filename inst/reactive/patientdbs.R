@@ -7,7 +7,7 @@ lapply(c("merge",
     # see which db files are present in folder
     folder_files <- list.files(lcl$paths$proj_dir)
     is.present <- switch(col,
-                         merge = is.list(input$metadata) & is.list(input$outlist_pos) & is.list(input$outlist_neg),
+                         merge =is.list(input$outlist_pos) & is.list(input$outlist_neg), #& is.list(input$metadata) 
                          csv = paste0(input$proj_name_new, ".csv") %in% folder_files,
                          db = paste0(input$proj_name_new, ".db") %in% folder_files)
     check_pic <- if(is.present) "yes.png" else "no.png"
@@ -23,7 +23,7 @@ lapply(c("merge",
 # triggers when user wants to create database from .db and excel or 2 csv files and excel
 shiny::observeEvent(input$create_csv,{
 
-  files.present = is.list(input$metadata) & is.list(input$outlist_pos) & is.list(input$outlist_neg)
+  files.present = is.list(input$outlist_pos) & is.list(input$outlist_neg) # & (is.list(input$metadata))
 
   if(!files.present) return(NULL)
   
@@ -59,17 +59,16 @@ shiny::observeEvent(input$create_csv,{
       output$proj_name <<- shiny::renderText(proj_name)
       
       # if loading in .csv files...
-      import.pat.csvs(db.name = lcl$paths$patdb,
-                                   ppm = input$ppm,
-                                   pospath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath,
-                                   negpath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath,
-                                   metapath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath,
-                                   wipe.regex = input$wipe_regex,
-                                   missperc.mz = input$perc_limit_mz,
-                                   missperc.samp = input$perc_limit_samp,
-                                   csvpath = lcl$paths$csv_loc,
-                                   overwrite = T,
-                                   inshiny=F)
+      import.pat.csvs(ppm = input$ppm,
+                      pospath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath,
+                      negpath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath,
+                      metapath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath,
+                      wipe.regex = input$wipe_regex,
+                      missperc.mz = input$perc_limit_mz,
+                      missperc.samp = input$perc_limit_samp,
+                      csvpath = lcl$paths$csv_loc,
+                      overwrite = T,
+                      inshiny=F)
       
       success=T
       output$proj_csv_check <- shiny::renderImage({

@@ -6,8 +6,8 @@ Author: Joanna Wolthuis
 Depends: 
     R (>= 3.5)
 Maintainer: Joanna Wolthuis <J.C.Wolthuis-2@umcutrecht.nl>
-Description: MetaboShiny enables rapid and rigorous analysis and interpretation of direct infusion untargeted metabolomics data. Data import, statistics and database searching is possible.
-License: Apache License Version 2.0 + file LICENSE
+Description: Rapid and rigorous analysis and interpretation of direct infusion untargeted metabolomics data. Data import, statistics and database searching is possible.
+License: file LICENSE
 Encoding: UTF-8
 LazyData: true
 URL: https://github.com/UMCUGenetics/MetaboShiny
@@ -84,30 +84,4 @@ Imports:
   car,
   doParallel,
   missForest
-Remotes:
-  github::UMCUGenetics/MetaDBparse,
-  github::xia-lab/MetaboAnalystR,
-  github::rwehrens/BatchCorrMetabolomics,
-  github::yixuan/showtext,
-  github::joannawolthuis/ggVennDiagram,
-  bioc::xcms, 
-  bioc::CAMERA, 
-  bioc::MSnbase,
-  bioc::impute, 
-  bioc::pcaMethods, 
-  bioc::siggenes, 
-  bioc::globaltest, 
-  bioc::GlobalAncova, 
-  bioc::Rgraphviz, 
-  bioc::KEGGgraph, 
-  bioc::preprocessCore, 
-  bioc::genefilter, 
-  bioc::SSPA, 
-  bioc::sva, 
-  bioc::ChemmineR, 
-  bioc::KEGGREST,
-  bioc::fgsea,
-  bioc::Rdisop,
-  bioc::Biostrings,
-  bioc::GOSemSim,
-  bioc::fmcsR
+RoxygenNote: 7.1.0

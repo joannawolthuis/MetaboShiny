@@ -135,18 +135,11 @@ name.mSet <- function(mSet) {
   mset_name
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param mSet PARAM_DESCRIPTION
-#' @param fn PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Reset mSet to original post-normalization format
+#' @description Returns mSet to right after normalization, without subsetting or changing the default variable.
+#' @param mSet mSet object
+#' @param fn filename to load in
+#' @return mSet object
 #' @rdname reset.mSet
 #' @export 
 reset.mSet <- function(mSet, fn) {
@@ -158,18 +151,11 @@ reset.mSet <- function(mSet, fn) {
   return(mSet)
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param mSet PARAM_DESCRIPTION
-#' @param name PARAM_DESCRIPTION, Default: mSet$dataSet$cls.name
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Load mSet from mSet internal storage
+#' @description MetShi mSets store previous dataset results and settings in the mSet storage. This loads one of those datasets.
+#' @param mSet mSet object
+#' @param name Name of subexperiemnt to load, Default: mSet$dataSet$cls.name
+#' @return mSet object
 #' @rdname load.mSet
 #' @export 
 load.mSet <- function(mSet, name = mSet$dataSet$cls.name) {
@@ -178,18 +164,11 @@ load.mSet <- function(mSet, name = mSet$dataSet$cls.name) {
   return(mSet)
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param mSet PARAM_DESCRIPTION
+#' @title Store mSet analysis and settings in mSet internal storage
+#' @description MetShi mSets store previous dataset results and settings in the mSet storage. This saves the current mSet in there.
+#' @param mSet mSet object
 #' @param name PARAM_DESCRIPTION, Default: mSet$dataSet$cls.name
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @return Name of current subexperiment
 #' @rdname store.mSet
 #' @export 
 store.mSet <- function(mSet, name = mSet$dataSet$cls.name) {
@@ -198,20 +177,13 @@ store.mSet <- function(mSet, name = mSet$dataSet$cls.name) {
   return(mSet)
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param mSet PARAM_DESCRIPTION
-#' @param stats_type PARAM_DESCRIPTION
-#' @param stats_var PARAM_DESCRIPTION, Default: NULL
-#' @param time_var PARAM_DESCRIPTION, Default: NULL
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Change mSet
+#' @description Wrapper function to change statistics variable(s) and mode (one/two-factor, time series)
+#' @param mSet mSet object
+#' @param stats_type Statistics category to change to
+#' @param stats_var Metadata variable(s) to do statistics on, Default: NULL
+#' @param time_var Metadata variable representing time, Default: NULL
+#' @return mSet object
 #' @seealso 
 #'  \code{\link[shiny]{showNotification}}
 #'  \code{\link[MetaboAnalystR]{SetDesignType}}
@@ -334,23 +306,16 @@ change.mSet <-
     return(mSet)
   }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param mSet PARAM_DESCRIPTION
-#' @param subset_var PARAM_DESCRIPTION
-#' @param subset_group PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
-#' @rdname subset.mSet
+#' @title Subset mSet
+#' @description Subset the current dataset based on metadata variables
+#' @param mSet mSet object
+#' @param subset_var Metadata variable to subset on
+#' @param subset_group Within that variable, the categories to include in subset
+#' @return mSet object
+#' @rdname subset_mSet
 #' @export 
 #' @importFrom data.table data.table
-subset.mSet <- function(mSet, subset_var, subset_group) {
+subset_mSet <- function(mSet, subset_var, subset_group) {
   if (!is.null(subset_var)) {
     keep.i <- which(mSet$dataSet$covars[[subset_var]] %in% subset_group)
     keep.samples <- mSet$dataSet$covars$sample[keep.i]
@@ -401,17 +366,10 @@ subset.mSet <- function(mSet, subset_var, subset_group) {
   mSet
 }
 
-#' @title FUNCTION_TITLE
-#' @description FUNCTION_DESCRIPTION
-#' @param mSet PARAM_DESCRIPTION
-#' @return OUTPUT_DESCRIPTION
-#' @details DETAILS
-#' @examples 
-#' \dontrun{
-#' if(interactive()){
-#'  #EXAMPLE1
-#'  }
-#' }
+#' @title Pair mSet samples
+#' @description Some analyses require paired samples. This function takes care of downsampling to achieve that.
+#' @param mSet mSet object
+#' @return mSet object
 #' @seealso 
 #'  \code{\link[data.table]{as.data.table}}
 #'  \code{\link[pbapply]{pbapply}}
@@ -519,7 +477,7 @@ pair.mSet <- function(mSet) {
   }
   
   if (length(keep.samp) > 2) {
-    mSet <- subset.mSet(mSet,
+    mSet <- subset_mSet(mSet,
                         subset_var = "sample",
                         subset_group = keep.samp)
     mSet$settings$paired <- TRUE
