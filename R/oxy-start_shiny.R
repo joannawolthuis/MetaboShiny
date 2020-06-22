@@ -41,6 +41,8 @@ start_metshi <- function(port=8080, inBrowser=F,
     devtools::install_github("rwehrens/BatchCorrMetabolomics",quiet = T, upgrade=F)
   }
   
+  #library(httr)
+  # rjava.so error.. or rdb corrupt.. 'sudo R CMD javareconf'
   requireNamespace("MetaboAnalystR", quietly = TRUE)
   requireNamespace("ggVennDiagram", quietly = TRUE)
   requireNamespace("MetaDBparse", quietly = TRUE)
@@ -53,7 +55,8 @@ start_metshi <- function(port=8080, inBrowser=F,
           'download.file.method' = 'curl',
           width = 1200, height=800)
   
-  appdir <- system.file(package = "MetaboShiny")
+
+  appdir = system.file(package = "MetaboShiny")
   
   runmode <<- runmode
   
