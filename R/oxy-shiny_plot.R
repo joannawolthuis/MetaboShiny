@@ -725,7 +725,7 @@ ggPlotClass <- function(mSet,
     ggplot2::geom_bar(stat="identity") +
     ggplot2::theme_minimal() +
     
-    facet_grid(~Component) +
+    ggplot2::facet_grid(~Component) +
     ggplot2::scale_fill_manual(values=cf(pcs))
   p
 }

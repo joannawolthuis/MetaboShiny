@@ -94,7 +94,7 @@ shiny::observeEvent(input$match_tab_rows_selected,{
                        formula = my_selection$form,
                        name = my_selection$name)
   if(input$autocopy){
-    clipr::write_clip(toClipboard)
+    clipr::write_clip(toClipboard, allow_non_interactive = TRUE)
     shiny::updateTextInput(session,
                            "wordcloud_searchTerm",
                            value = toClipboard)
