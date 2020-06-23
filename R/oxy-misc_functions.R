@@ -409,7 +409,7 @@ getAbstracts <- function(searchTerms, retmax=500, mindate=2000, maxdate=2019){
 getWordFrequency <- function(abstractsx){
   abstractsx <- data.table::data.table(abstract = abstractsx)
   #Split a column into tokens using the tokenizers package
-  CorpusofMyCloudx <- abstractsx %>% tidytext::unnest_tokens(word, abstract) %>% count(word, sort = TRUE)
+  CorpusofMyCloudx <- abstractsx %>% tidytext::unnest_tokens(word, abstract) %>% dplyr::count(word, sort = TRUE)
   CorpusofMyCloudx$word <- gsub("^\\d+$", "", CorpusofMyCloudx$word)
   return(CorpusofMyCloudx)
 }

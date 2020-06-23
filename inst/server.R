@@ -42,7 +42,7 @@ function(input, output, session) {
     prev_mz = "",
     prev_struct = "",
     tables = list(last_matches = data.table::data.table(query_mz = "none"),
-                prev_pie = data.table::data.table()),
+                  prev_pie = data.table::data.table()),
     functions = list(),
     aes = list(font = list(),
                mycols = c(),
@@ -327,10 +327,10 @@ omit_unknown = yes')
       })
       
       lcl$aes$font <<- list(family = opts$font4,
-                           ax.num.size = as.numeric(opts$size4),
-                           ax.txt.size = as.numeric(opts$size3),
-                           ann.size = as.numeric(opts$size4),
-                           title.size = as.numeric(opts$size2))
+                            ax.num.size = as.numeric(opts$size4),
+                            ax.txt.size = as.numeric(opts$size3),
+                            ann.size = as.numeric(opts$size4),
+                            title.size = as.numeric(opts$size2))
       
       # create color pickers based on amount of colours allowed in global
       output$colorPickers <- shiny::renderUI({
@@ -588,21 +588,28 @@ omit_unknown = yes')
               }else{
                 id = gbl$constants$db.build.info[[db]]$image_id
                 address = unlist(sapply(gbl$constants$images, function(item) if(item$name == id) item$path else NULL))
-                
-                output_id = paste0("desc_icon_", db)
-                
-                output[[output_id]] <- shiny::renderImage({
-                  list(src = address, height=30)
-                }, deleteFile = FALSE)
-                
                 ui = shiny::fluidRow(align="center", 
-                                     shiny::imageOutput(output_id,inline = T),
+                                     shiny::tags$button(
+                                       id = paste0(db, "_copy_id"),
+                                       class = "btn btn-default action-button shiny-bound-input",
+                                       shiny::img(src = address,
+                                                  height = "30px"),
+                                       style = "vertical-align: middle;border-radius: 0px;border-width: 0px;background-color: #ff000000;"
+                                     ),
                                      shiny::br(),
                                      helpText(desc),
                                      shiny::br()
                 )
+                
+                shiny::observeEvent(input[[paste0(db, "_copy_id")]], {
+                  shiny::showNotification("Saving database identifier to clipboard!")
+                  dbID = stringr::str_match(desc, "Database ID: (.*?). ")[,2]
+                  clipr::write_clip(dbID, allow_non_interactive = TRUE)
+                  shiny::updateTextInput(session,
+                                         "wordcloud_searchTerm",
+                                         value = dbID)
+                })
               }
-              # text cloud underneath https://codepen.io/rikschennink/pen/mjywQb
               return(ui)
             })
           })  
@@ -1089,14 +1096,14 @@ omit_unknown = yes')
           shinyjs::show(selector = paste0("div.panel[value=collapse_", input$statistics, "_plots]"))
           plotmanager$make <- input$statistics
           shinyBS::updateCollapse(session, paste0("collapse_",input$statistics),open = paste0("collapse_", 
-                                                                                                input$statistics, 
-                                                                                                c("_tables","_plots")))
+                                                                                              input$statistics, 
+                                                                                              c("_tables","_plots")))
         }else{
-            shinyBS::updateCollapse(session, paste0("collapse_",input$statistics),open = paste0("collapse_", 
-                                                                                                input$statistics, 
-                                                                                                "_settings")) 
-            shinyjs::hide(selector = paste0("div.panel[value=collapse_", input$statistics, "_plots]"))
-            shinyjs::hide(selector = paste0("div.panel[value=collapse_", input$statistics, "_tables]"))
+          shinyBS::updateCollapse(session, paste0("collapse_",input$statistics),open = paste0("collapse_", 
+                                                                                              input$statistics, 
+                                                                                              "_settings")) 
+          shinyjs::hide(selector = paste0("div.panel[value=collapse_", input$statistics, "_plots]"))
+          shinyjs::hide(selector = paste0("div.panel[value=collapse_", input$statistics, "_tables]"))
         }
       }  
     }
@@ -1143,7 +1150,7 @@ omit_unknown = yes')
   for(fp in list.files("reactive", full.names = T)){
     source(fp, local = T)
   }  
-                         
+  
   # ==== ON EXIT ====
   
   observeEvent(input$quit_metshi, {

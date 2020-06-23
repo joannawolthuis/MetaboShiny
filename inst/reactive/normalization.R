@@ -58,8 +58,8 @@ shiny::observeEvent(input$initialize, {
                     pattern="\\.csv",
                     replacement="_params.csv")
       
-      ppm <- fread(params)$ppm
-      detPPM <- fread(params)$ppmpermz
+      ppm <- data.table::fread(params)$ppm
+      detPPM <- data.table::fread(params)$ppmpermz
 
       # re-make csv with the corrected data
       metshiCSV <- cbind(metshiCSV[,..exp.vars, with=FALSE], # if 'label' is in excel file remove it, it will clash with the metaboanalystR 'label'
@@ -238,7 +238,7 @@ shiny::observeEvent(input$initialize, {
           # get injection order for samples
           seq.idx = as.numeric(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"injection"][[1]])
           # go through all the metabolite columns
-          dtNorm <- as.data.table(mSet$dataSet$norm)
+          dtNorm <- data.table::as.data.table(mSet$dataSet$norm)
           pb <- pbapply::startpb(0, max = ncol(dtNorm))
           i = 0
           dtNorm[,(1:ncol(dtNorm)) := lapply(.SD,function(x){ 

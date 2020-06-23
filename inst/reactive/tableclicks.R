@@ -97,7 +97,7 @@ shiny::observeEvent(input$match_tab_rows_selected,{
     clipr::write_clip(toClipboard, allow_non_interactive = TRUE)
     shiny::updateTextInput(session,
                            "wordcloud_searchTerm",
-                           value = toClipboard)
+                           value = as.character(toClipboard))
   }
   
   })
