@@ -31,7 +31,7 @@ output$ramp_plot <- plotly::renderPlotly({
     lcl$aes$theme <<- input$ggplot_theme
     
     p <- ggplot2::ggplot(mtcars) + 
-      ggplot2::geom_boxplot(aes(x = wt, y = mpg,
+      ggplot2::geom_boxplot(ggplot2::aes(x = wt, y = mpg,
                        colour = factor(gear))) +
       gbl$functions$plot.themes[[lcl$aes$theme]]()
     
