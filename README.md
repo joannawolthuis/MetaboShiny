@@ -187,7 +187,7 @@ The side bar contains four tabs, whose descriptions and functions you can find b
 **MISSING INFO ON THE ADDITIONAL TABS WITHIN THE SEARCH TAB. Formula prediction, word cloud, etc**
  - *Settings* If the data is pre-matched, this part is skipped. Otherwise, here you can select the databases that you want to match your data to. Click the shopping basket to add all available databases.
  - *Compound info* This tab will display all database matches for a selected m/z value from the statistics panel (see **XX**). The displayed table in the "mz > molecule" tab can be sorted based on m/z value, adduct, isotope percentage, or the m/z value distance from the database range (dppm). The table can be copied or exported as a .csv or .xlsx file. By clicking on the funnel icon, you can filter the matched results based on adduct, database, and main and minor isotope. In the "molecule > mz" tab you can search for a specific metabolite name and the resulting table will list all m/z values from the data that match a corresponding metabolite in any of the databases.
- 
+
 ![Search tab](inst/www/mz_search.png?raw=true "Search tab")
 
 ### Plot aesthetics
@@ -222,7 +222,7 @@ The statistics panel has four tabs whose contents change based on whether the [c
 
 #### Principal components analysis (PCA)
 1. Go to "Settings" and press "click to start PCA" to start the analysis.
-2. Once done, a "Plots" section and a "Tables" sections will appear. 
+2. Once done, a "Plots" section and a "Tables" sections will appear.
 3. In "Plots" you can view the scores and the loadings plots. Below the plots you can select which principal component (PC) is plotted on which axis, and whether to render a 2D or 3D version of the plot.
 4. The "Tables" section has three tabs showing the %explained variance of each principal component ("table"), the scree plot, and loadings.
 
@@ -235,7 +235,7 @@ The statistics panel has four tabs whose contents change based on whether the [c
 4. The "Tables" section shows the %explained variance of each principal component and the loadings.
 
 #### t-Distributed Stochastic Neighbor Embedding (t-SNE)
-1. In "Settings", select the initial number of dimensions (default 30), perplexity (default 30), and maximum number of iterations (default 1000), and press "click to start t-SNE" to start the analysis. 
+1. In "Settings", select the initial number of dimensions (default 30), perplexity (default 30), and maximum number of iterations (default 1000), and press "click to start t-SNE" to start the analysis.
 2. Once done, a "Plots" section will appear showing the t-SNE plot. Below the plot is a toggle button to make a 2D or 3D plot.
 
 ![Dimension reduction](inst/www/dimred_export.png?raw=true "Dimension reduction")
@@ -261,7 +261,7 @@ The statistics panel has four tabs whose contents change based on whether the [c
 **JOANNA**
 
 #### Analysis of variance (ANOVA)
-1. In "Settings", press "click to start ANOVA". 
+1. In "Settings", press "click to start ANOVA".
 2. Once finished, a "Plots" and "Tables" sections will appear.
 3. In "Plots", you will find a plot showing your m/z values ordered on the x-axis and the negative log10 of the p-value on the y-axis.
 4. In "Tables", you will find a table showing the p-value and false discovery rate (FDR) from a Fisher's Least Significant Difference (LSD) test.
@@ -278,7 +278,7 @@ The statistics panel has four tabs whose contents change based on whether the [c
 #### Volcano plot
 *This analysis is only available for one-factor, two-category analyses*
 
-1. In "Settings", press "click to make volcano plot". 
+1. In "Settings", press "click to make volcano plot".
 2. Once finished, a "Plots" and "Tables" sections will appear.
 3. In "Plots", you will find a plot with the log2 of the fold-change value on x-axis and the negative log10 of the t-test p-value on the y-axis.
 4. In "Tables", you will find a table showing the fold-change value, the log2 of the fold-change, the raw p-value, and the negative log10 of the p-value.
@@ -303,7 +303,7 @@ In the venn diagram you can see which m/z values overlap between the different a
 ### Machine learning
 #### Settings
 **ADD DESCRIPTIONS OF THE PARAMETERS/SETTINGS**
-![Machine learning settings](inst/www/ml1.png?raw=true "Machine learning settings")
+![Machine learning settings](inst/www/machinelearning_settings.png?raw=true "Machine learning settings")
 #### Results
 **ADD DESCRIPTION OF WHAT RESULTS ARE SHOWN**
 ![Machine learning results](inst/www/ml2.png?raw=true "Machine learning results")
