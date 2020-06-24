@@ -32,7 +32,8 @@ import.pat.csvs <- function(metapath,
                             csvpath = lcl$paths$csv_loc,
                             wipe.regex = ".*_(?>POS|NEG)_[0+]*",
                             missperc.mz = 99,
-                            missperc.samp = 100){
+                            missperc.samp = 100,
+                            roundMz = T){
   
   ppm = as.numeric(ppm)
 
@@ -52,8 +53,8 @@ import.pat.csvs <- function(metapath,
   
   # PIVOT IF WRONG SIDE AROUND - METABOLIGHTS DATA
   if(any(grepl("mass_to_charge", colnames(poslist)))){
-    setnames(poslist, "mass_to_charge", "mzmed", skip_absent = T)
-    setnames(neglist, "mass_to_charge", "mzmed", skip_absent = T)
+    data.table::setnames(poslist, "mass_to_charge", "mzmed", skip_absent = T)
+    data.table::setnames(neglist, "mass_to_charge", "mzmed", skip_absent = T)
     if(!is.na(poslist$retention_time[1])){
       hasRT = TRUE
       poslist$mzmed <- paste0(poslist$mzmed,"RT", poslist$retention_time)
@@ -175,14 +176,14 @@ import.pat.csvs <- function(metapath,
 
   subbed = gsub(x = colnames(poslist), pattern="/.*$|RT.*$", replacement="")
   ismz <- suppressWarnings(which(!is.na(as.numeric(subbed))))
-  print(ismz)
-  colnames(poslist)[ismz] <- pbapply::pbsapply(colnames(poslist)[ismz], function(mz){
+
+  if(roundMz){
+    colnames(poslist)[ismz] <- pbapply::pbsapply(colnames(poslist)[ismz], function(mz){
       if(hasPPM | hasRT){
         split.mz <- stringr::str_split(mz, "/|RT")[[1]]
         mz = split.mz[1]
         ppm = split.mz[2]
       }
-      print(split.mz)
       ppmRange <- as.numeric(mz)/1e6 * as.numeric(ppm)
       zeros = sapply(ppmRange,zeros_after_period)
       decSpots = zeros + 2 # todo: verify this formula?
@@ -191,22 +192,23 @@ import.pat.csvs <- function(metapath,
       newName = paste0(roundedMz, "+", if(hasPPM|hasRT) paste0(if(hasPPM) "/" else "RT", roundedPpm) else "") 
       return(newName)
     })
-  
-  ismz <- suppressWarnings(which(!is.na(as.numeric(gsub(colnames(neglist), pattern="/.*$|RT.*$", replacement="")))))
-  colnames(neglist)[ismz] <- pbapply::pbsapply(colnames(neglist)[ismz], function(mz){
-    if(hasPPM|hasRT){
-      split.mz <- stringr::str_split(mz, "/|RT")[[1]]
-      mz = split.mz[1]
-      ppm = split.mz[2]
-    }
-    ppmRange <- as.numeric(mz)/1e6 * as.numeric(ppm)
-    zeros = sapply(ppmRange,zeros_after_period)
-    decSpots = zeros + 2 # todo: verify this formula?
-    roundedMz <- formatC(as.numeric(mz), digits = decSpots, format = "f")
-    roundedPpm <-formatC(as.numeric(ppm), digits = 6, format = "f")
-    newName = paste0(roundedMz, "-",  if(hasPPM|hasRT) paste0(if(hasPPM) "/" else "RT", roundedPpm) else "") 
-    return(newName)
-    })
+    
+    ismz <- suppressWarnings(which(!is.na(as.numeric(gsub(colnames(neglist), pattern="/.*$|RT.*$", replacement="")))))
+    colnames(neglist)[ismz] <- pbapply::pbsapply(colnames(neglist)[ismz], function(mz){
+      if(hasPPM|hasRT){
+        split.mz <- stringr::str_split(mz, "/|RT")[[1]]
+        mz = split.mz[1]
+        ppm = split.mz[2]
+      }
+      ppmRange <- as.numeric(mz)/1e6 * as.numeric(ppm)
+      zeros = sapply(ppmRange,zeros_after_period)
+      decSpots = zeros + 2 # todo: verify this formula?
+      roundedMz <- formatC(as.numeric(mz), digits = decSpots, format = "f")
+      roundedPpm <-formatC(as.numeric(ppm), digits = 6, format = "f")
+      newName = paste0(roundedMz, "-",  if(hasPPM|hasRT) paste0(if(hasPPM) "/" else "RT", roundedPpm) else "") 
+      return(newName)
+    }) 
+  }
   
   poslist <- poslist[sample %in% keep.samples.pos,]
   neglist <- neglist[sample %in% keep.samples.neg,]
@@ -214,17 +216,17 @@ import.pat.csvs <- function(metapath,
   # replace commas with dots
   if(any(grepl(unlist(poslist[1:5,10:20]), pattern = ","))){
     for(j in seq_along(poslist)){
-      set(poslist, i=which(grepl(pattern=",",poslist[[j]])), j=j, value=gsub(",",".",poslist[[j]]))
+      data.table::set(poslist, i=which(grepl(pattern=",",poslist[[j]])), j=j, value=gsub(",",".",poslist[[j]]))
     }
     for(j in seq_along(neglist)){
-      set(neglist, i=which(grepl(pattern=",",neglist[[j]])), j=j, value=gsub(",",".",neglist[[j]]))
+      data.table::set(neglist, i=which(grepl(pattern=",",neglist[[j]])), j=j, value=gsub(",",".",neglist[[j]]))
     }
   }
     
   # merge metadata with peaks
-  setkey(poslist, sample)
-  setkey(neglist, sample)
-  setkey(metadata.filt, sample)
+  data.table::setkey(poslist, sample)
+  data.table::setkey(neglist, sample)
+  data.table::setkey(metadata.filt, sample)
   
   mzlist <- merge(poslist, neglist, by = "sample")
   mzlist <- merge(metadata.filt, mzlist, by = "sample")
@@ -239,8 +241,8 @@ import.pat.csvs <- function(metapath,
   mzlist$sample <- gsub("[^[:alnum:]./_-]", "", mzlist$sample)
   # - - - - - - - - - - - - - - - - - - 
   data.table::fwrite(mzlist, csvpath)
-  print(mzlist[1:5,1:30])
-  params = data.table(ppm=ppm,
+
+  params = data.table::data.table(ppm=ppm,
                       ppmpermz = if(hasPPM) "yes" else "no")
   data.table::fwrite(params, gsub(csvpath, pattern="\\.csv", replacement="_params.csv"))
 }
