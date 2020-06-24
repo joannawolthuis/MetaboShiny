@@ -370,15 +370,10 @@ In the venn diagram you can see which m/z values overlap between the different a
 
 ### Machine learning
 #### Machine learning settings
-**ADD DESCRIPTIONS OF THE PARAMETERS/SETTINGS**
 ![Machine learning settings](inst/www/machinelearning_settings.png?raw=true "Machine learning settings")
 
 #### Machine learning results
-**ADD DESCRIPTION OF WHAT RESULTS ARE SHOWN**
 ![Machine learning results](inst/www/machinelearning_results.png?raw=true "Machine learning results")
-
-# How to cite
-**ADD LINK/CITATION HERE**
 
 # Feedback
 Please report any issues and feedback on the Issues page here, along with suggestions! =)
