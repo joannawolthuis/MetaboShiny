@@ -87,14 +87,13 @@ LINK TO EXAMPLE DATA.**
 To load your data into MetaboShiny, follow the 6 steps listed in the [File Import](#file-import) figure.
 1. Enter a unique project name.
 2. Set the error margin of your mass spectrometer in parts per million (ppm).
-3. Set the m/z missing values percentage threshold. This is how many samples are allowed to be missing each m/z value without it being filtered out. A common rule of thumb is to set this value to 20% (**REF TO 20/80 RULE PAPER**).
+3. Set the m/z missing values percentage threshold. This is how many samples are allowed to be missing each m/z value without it being filtered out.
 4. Select input data files
  * 4a. (optional) Input a regex string to to adjust peaklist names to metadata sample names - the match is removed from each name.
  * 4b. Upload your metadata and positive and negative mode m/z peak files.
 5. Click on the arrow to merge peak data and metadata and convert them to a format that will serve as the input for the analyses.
 6. Once step 5 is completed (green tick mark), continue to the [Data normalization](#data-normalization) step.
 
-**THIS FIGURE NEEDS TO BE UPDATED! The % filtering is missing**
 ![File Import](inst/www/file_import.png?raw=true "File import")
 
 # Data normalization
@@ -110,8 +109,7 @@ If your metadata only contains one batch and no column that represents concentra
 In this section, you will find multiple options and methods to filter and normalize your data. The best selection will depend on each user's data and we encourage you to look into the different methods that can be applied here. After normalization, the distribution of pre- and post-normalized peak values will be plotted for a randomly selected set of m/z values and samples, so the user can see how the data distribution has changed with the normalization and adjust their parameters if needed (see [Normalization](#normalization) figure).
 
 Select one of each of the options for the following normalization features and then press "Go" (see [Normalization](#normalization) figure). It is advised to save your data after completing this step (button on the bottom center of the screen).
-**ADD DESCRIPTIONS/INFO ON THE DIFFERENT OPTIONS**
-- Filtering **WHAT IS BEING FILTERED OUT?**
+- Filtering options
   - Interquartile range
   - Mean
   - Median absolute deviation
@@ -154,7 +152,6 @@ Select one of each of the options for the following normalization features and t
 - Outliers
  The user can choose whether to exclude outliers from the data analysis by toggling the "Exclude outliers?" tab.
 
-**THIS FIGURE NEEDS TO BE UPDATED! The % filtering is now in the data upload step**
 ![Normalization](inst/www/normalization.png?raw=true "Normalization")
 
 
@@ -185,11 +182,10 @@ The side bar contains four tabs, whose descriptions and functions you can find b
  - *Load existing meta-dataset* **EXPLANATION OF THIS PART**
 
 ### Search
-**MISSING INFO ON THE ADDITIONAL TABS WITHIN THE SEARCH TAB. Formula prediction, word cloud, etc**
  - *Database search setting*
    * If the data is pre-matched, this part is skipped. Otherwise, here you can select the databases that you want to match your data to. Click the shopping basket to add all available databases.
    * Click the inspector icon to match your selected m/z value to your selected databases
- - *Compound info* This tab will display all database matches for a selected m/z value from the statistics panel (see **XX**).
+ - *Compound info* This tab will display all database matches for a selected m/z value from the statistics panel.
    * The displayed table in the "mz > molecule" tab can be sorted based on m/z value, adduct, isotope percentage, or the m/z value distance from the database range (dppm).
    * The table can be copied or exported as a .csv or .xlsx file.
    * By clicking on the funnel icon, you can filter the matched results based on adduct, database, and main and minor isotope.
@@ -229,7 +225,7 @@ The side bar contains four tabs, whose descriptions and functions you can find b
    - No grid, white background
    - Grid, white background, gray axes
    - Line drawing
- - *Continuous data* Select a color scheme for plotting continuous data, which is used in heatmaps and volcano plots. All options of the **XX** package are possible (**LINK**).
+ - *Continuous data* Select a color scheme for plotting continuous data, which is used in heatmaps and volcano plots.
  - *Discrete data* Select colors to use when plotting discrete data. Click on the color field to select a color or type in the HEX code (See [Plot customization](#plot-customization) figure).
 
  ![Plot customization](inst/www/colorbar.png?raw=true "Plot customization")
