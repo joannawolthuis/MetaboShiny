@@ -11,6 +11,14 @@ http://biorxiv.org/cgi/content/short/734236v1
   * [Through Docker](#through-docker)
   * [Through R](#through-r)
 - [Before starting](#before-starting)
+  * [Settings](#settings)
+    + [Global](#global)
+    + [Project](#project)
+    + [Search](#search)
+    + [Adducts](#adducts)
+    + [Formula prediction and lookup](#formula-prediction-and-lookup)
+    + [Isotope scoring](#isotope-scoring)
+    + [Aesthetic](#aesthetic)
   * [Building databases](#building-databases)
   * [Updating databases](#updating-databases)
   * [Adding custom databases](#adding-custom-databases)
@@ -21,13 +29,17 @@ http://biorxiv.org/cgi/content/short/734236v1
 - [Data normalization](#data-normalization)
   * [Batches and concentration](#batches-and-concentration)
   * [Filtering and normalization](#filtering-and-normalization)
+- [Continue working on an existing data set](#continue-working-on-an-existing-data-set)
+  * [Save your data](#save-your-data)
+  * [Load existing data set](#load-existing-data-set)
 - [Pre-matching all m/z](#pre-matching-all-m-z)
 - [Analysis](#analysis)
   * [Side bar](#side-bar)
     + [Switch/subset](#switch-subset)
-    + [Search](#search)
-      - [Database search setting](#database-search-setting)
+    + [Search](#search-1)
+      - [Database search settings](#database-search-settings)
         * [Compound info](#compound-info)
+    + [Compound matches filtering](#compound-matches-filtering)
       - [PubMed search and word cloud](#pubmed-search-and-word-cloud)
     + [Plot aesthetics](#plot-aesthetics)
     + [Metadata](#metadata)
@@ -72,6 +84,26 @@ http://biorxiv.org/cgi/content/short/734236v1
 4. Your browser should open automatically for you and you're in! Otherwise browse to the "Listening on x.x.x.x" address noted in terminal in your browser.
 
 # Before starting
+## Settings
+![Settings](inst/www/settings.png?raw=true "Settings")
+### Global
+1. Set the number of cores that MetaboShiny can use for analysis.
+2. Define what to do with samples that are missing metadata (omit/keep).
+### Project
+The drop-down list shows all projects that have been saved.
+1. Select project name and press "Apply" to select project.
+2. Click "load" at the bottom of the screen to load the saved progress on the project.
+### Search
+When searching databases for compounds matching your m/z values you can click on the compounds in the match list. If selected, MetaboShiny will copy the ticked compound information to the clipboard (SMILES, name, formula).
+### Adducts
+The "Definitions" tab shows the current adduct table. Below the table is a field to import another adduct table. The "Rules" field shows the adduct rules that are used to calculate adducts when matching m/z values with database compounds. Below the table is a field to import a new adduct rule table.
+### Formula prediction and lookup
+Here you can set the parameters and rules to use when predicting chemical formulas.
+### Isotope scoring
+Select the method to use to score compounds that have the same weight (currently only M-score available). Set the intensity imprecision (default: 2%).
+### Aesthetic
+Change MetaboShiny colors, fonts, and font sizes. Restart MetaboShiny to apply changes.
+
 ## Building databases
 MetaboShiny offers multiple metabolite databases for m/z identification. Before any other steps are taken, it is necessary to build the databases that the user is interested in. Each database only needs to be built once. To check if a database has been built, click the "check if database exists" button below the logo (Figure [Database Tab]). The database version number and download date are listed there as well.
 ## Updating databases
@@ -92,8 +124,6 @@ LINK TO EXAMPLE DATA.]**
 LINK TO EXAMPLE DATA.]**
 
 # Load data files
-To load your data into MetaboShiny, follow the 6 steps listed in the [File Import](#file-import) figure.
-
 ![File Import](inst/www/file_import.png?raw=true "File import")
 
 1. Enter a unique project name.
@@ -162,13 +192,21 @@ Select one of each of the options for the following normalization features and t
   - Leave them alone
 - **Outliers** The user can choose whether to exclude outliers from the data analysis by toggling the "Exclude outliers?" tab.
 
+# Continue working on an existing data set
+## Save your data
+On the bottom center of the screen, you will find a "save" button. The data set will be saved under the name you chose in the [file importing step](#load-data-files).
+## Load existing data set
+1. Go to the "settings" panel
+2. Select the "Project" tab
+3. Select your project from the drop-down list and press "Apply"
+4. Press the "load" button on the bottom center of the screen
 
 # Pre-matching all m/z
 *This step is optional*
 ![Prematching](inst/www/prematching.png?raw=true "Prematching")
 
-In the pre-matching tab (see [Prematching](#prematching) figure) the user can match all m/z values with all or a subset of the available databases. This can be a time-consuming step if the dataset is large and many databases are selected, but will make searching for possible m/z metabolite matches much faster in the data analysis step.
-1. Toggle the "Do matching beforehand?" button to "Yes" (see [Prematching](#prematching) figure).
+In the pre-matching panel the user can match all m/z values with all or a subset of the available databases. This can be a time-consuming step if the dataset is large and many databases are selected, but will make searching for possible m/z metabolite matches much faster in the data analysis step.
+1. Toggle the "Do matching beforehand?" button to "Yes".
 2. Select the databases you wish to find matches in or click on the shopping basket to match with all databases.
 3. Click on "Find matches". This can take a few minutes.
 4. Save your data (button on the bottom center of the screen).
@@ -187,11 +225,12 @@ The side bar contains four tabs, whose descriptions and functions you can find b
  - **Current experiment** Shows the variable(s) and subset(s) that are currently being analysed.
  - **Change of variable of interest** Here you can choose to inspect one variable, two variables in combindation, time-series, or time-series in combination with one variable. Press "do stats on selected" to change the current experiment for analysis.
  - **Subset data** The "Current sample count" shows the number of samples that are analysed in the current experiment. To subset data, select the variable that you want to subset based on and then select the group(s) that you want to inspect. Click "click to subset" to apply changes.
- - **Load existing meta-dataset** **[EXPLANATION OF THIS PART]**
+ - **Load existing meta-dataset** Every time you use the subset/switch option, it saves the results from that subset. Use the drop-down menu under the subsetting field to go back to previously defined subsets.
 
 ### Search
 ![Search tab](inst/www/mz_search.png?raw=true "Search tab")
-#### Database search setting
+
+#### Database search settings
    * If the data is pre-matched, this part is skipped. Otherwise, here you can select the databases that you want to match your data to. Click the shopping basket to add all available databases.
    * Click the inspector icon to match your selected m/z value to your selected databases
 ##### Compound info
@@ -203,6 +242,11 @@ This tab will display all database matches for a selected m/z value from the sta
    * In the match menu, when selecting a compound:
      - the name and SMILES or formula (specified in settings) are copied to the clipboard.
      - in the compound description field, clicking on a database icon will copy the database id to the clipboard.
+### Compound matches filtering
+Click the funnel above the "compound info" section to filter the database matches based on adduct, main/minor isotope, or database.
+  * **Adduct** The bar chart shows the ratio of matches having a certain adduct. Hover over the slices for number of matches. Click on the slices that you are interested to filter for those adducts.
+  * **Isotope** You can filter for main (100% peak) or minor (<100% peak) isotopes. Click pie slices to filter.
+  * **Databases** The pie shows the ratio of results that come from each database. Hover over the slices for the number of matches. Click on the slices of the databases you want to filter for.
 
 #### PubMed search and word cloud
 ![PubMed search](inst/www/pubmed_wordcloud.png?raw=true "PubMed search and word cloud")
@@ -220,7 +264,9 @@ This tab will display all database matches for a selected m/z value from the sta
 
 
 ### Plot aesthetics
+**Plot aesthetic changes are applied when plot re-creation**
  ![Plot customization](inst/www/colorbar.png?raw=true "Plot customization")
+
  - **Plot style** Here you can choose whether to use plotly or ggplot for the figures in the statistics panel. Plotly provides interactive plots with the ability to zoom and hover over data points for information, whereas ggplot is faster but does not have interactive features. Additionally, you can choose whether plots are exported as .png or .svg files.
  - **Style(s)** Choose the plotting style for the scatter plots for t-test and ANOVA results. Options are beeswarm, boxplot, scatterplot, and violin plots. It is possible to select multiple styles, e.g., violin plot with a beeswarm scatter.
  - **Stats shown** Select whether to show median or mean lines in the plots.
@@ -241,10 +287,13 @@ This tab will display all database matches for a selected m/z value from the sta
 ### Metadata
 In this tab you can upload new metadata. The file should be in a .csv format and contain a column with sample IDs and any new metadata as additional columns with new unique headers.
 
+**Uploading new metadata replaces the old metadata**, so make sure to include all relevant columns in the new file.
+
 ## Statistics
 The statistics panel has four tabs whose contents change based on whether the current experiment is a one-factor, two-factor, or a time series analysis. The four statistics categories are dimension reduction methods), per m/z value analyses, overview analyses, and machine learning.
-
 ![Statistics panel start](inst/www/stats.png?raw=true "Statistics Panel Start")
+
+**If you click any m/z in the result table or in the plotly scatterplots, this will be recorded in the side bar. If the [prematching step](#pre-matching-all-mz) was performed then the matches will appear in the [side bar](#compound-info). Otherwise you can manually [search for matches](#search).**
 
 ### Dimension reduction
 
@@ -268,7 +317,7 @@ The statistics panel has four tabs whose contents change based on whether the cu
 #### t-test
 1. In "Settings", select whether to make a non-parametric t-test (default "no") and equal variance (default "yes"). Press "click to start t-test" to start the analysis.
 2. Once finished, a "Plots" and "Tables" sections will appear.
-3. In "Plots", you will find a plot showing your m/z values ordered on the x-axis and the negative log10 of the p-value from the t-test. **Is there a certain number displayed? All/significant/top X?**
+3. In "Plots", you will find a plot showing your m/z values ordered on the x-axis and the negative log10 of the p-value from the t-test.
 4. In "Tables", you will find a table showing the t-stat, p-value, negative log10 of the p-value, and the false discovery rate (FDR).
 
 #### Fold-change
@@ -278,7 +327,10 @@ The statistics panel has four tabs whose contents change based on whether the cu
 4. In "Tables", you will find a table showing the fold-change value and the log2 of the fold-change.
 
 #### Pattern
-**JOANNA**
+1. Drag the panels to select the pattern for correlation (low-high). The pattern corresponds to the expected pattern used to search for m/z values whose peak intensities increase linearly between the groups.
+2. Choose the correlation metric (pearson, spearman, kendall)
+3. Click to start pattern finding
+4. Once finished, a "Plots" and "Tables" section will appear.
 
 #### Analysis of variance (ANOVA)
 1. In "Settings", press "click to start ANOVA".
@@ -287,8 +339,12 @@ The statistics panel has four tabs whose contents change based on whether the cu
 4. In "Tables", you will find a table showing the p-value and false discovery rate (FDR) from a Fisher's Least Significant Difference (LSD) test.
 
 #### Analysis of variance - simultaneous component analysis (ASCA)
+1. In "settings", click to start ASCA analysis
+2. A "Tables" section will appear that shows the leverage and SPE values of the m/z values.
 
 #### Multivariate empirical Bayes statistical time-series analysis (MEBA)
+1. In "settings", click to start MEBA analysis
+2. A "Tables" section will appear showing the m/z value Hotelling/T2 scores.
 
 ### Overview analyses
 #### Volcano plot
