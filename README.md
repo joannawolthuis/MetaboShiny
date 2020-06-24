@@ -110,18 +110,16 @@ MetaboShiny offers multiple metabolite databases for m/z identification. Before 
 MetaboShiny does not automatically update databases. To re-build a database of interest, click on the "build database" button below the logo in the Database Tab. The database version number and download date are listed below the logo.
 
 ## Adding custom databases
-**[HOW TO ADD CUSTOM DB]**
+Users often have their own in-house databases. You can add these in MetaboShiny as well. To do so, scroll down on the database overview page to the large '+' button. Here, you'll be shown examples of what files are required (a logo, a base csv file with columns displayed in the pop-up, and a database name + description). After you upload these, your database will be available for building after the next restart and you can click the "build database" button as you usually would.
 
 ![Database Tab](inst/www/database_panel_a.png?raw=true "Database tab")
 
 # Prepare input files
 ## m/z peak files
-**[DESCRIBE HOW TO GET POSITIVE/NEGATIVE MODE FILES FROM RAW MS DATA?
-LINK TO EXAMPLE DATA.]**
+MetaboShiny does not accept raw peak data. We suggest using either XCMS (with the MetaboAnalyst export option) or another method of choice such as MSnbase. You can find examples of three different accepted data formats (MetaboAnalyst-like, MetaboShiny native and Metabolights) in the inst/examples folder.
 
 ## Metadata file
-**[DESCRIBE METADATA FILE FORMAT, NECESSARY COLUMNS, ETC.
-LINK TO EXAMPLE DATA.]**
+MetaboShiny, unless using the MetaboAnalyst format, requires an additional metadata table. This should minimally have a 'sample' column that contains the same sample identifiers used in the peak table files, an 'individual' column (since multiple samples can come from one individual in time series data) and at least one column on experimental group or something alike. Examples of metadata formats are also present in the inst/examples folder.
 
 # Load data files
 ![File Import](inst/www/file_import.png?raw=true "File import")
@@ -264,7 +262,7 @@ Click the funnel above the "compound info" section to filter the database matche
 
 
 ### Plot aesthetics
-**Plot aesthetic changes are applied when plot re-creation**
+**Plot aesthetic changes are applied on plot re-creation**
  ![Plot customization](inst/www/colorbar.png?raw=true "Plot customization")
 
  - **Plot style** Here you can choose whether to use plotly or ggplot for the figures in the statistics panel. Plotly provides interactive plots with the ability to zoom and hover over data points for information, whereas ggplot is faster but does not have interactive features. Additionally, you can choose whether plots are exported as .png or .svg files.
@@ -369,7 +367,19 @@ In the venn diagram you can see which m/z values overlap between the different a
 #### Enrichment
 
 ### Machine learning
+MetaboShiny supports most of the models included in the *caret* package and adds some functionality based on training/testing selection and up/downsampling.
+
 #### Machine learning settings
+1. Select the *caret* machine learning algorithm to use for your model building. Default is *rf* or Random Forest. Furthermore, we use *glmnet* or LASSO regression in our paper as well. 
+2. Select the method you wish to use for cross validation. By default, regular cross validation is suggested (users can choose the fold amount, or leave-one-out cross validation).
+3. Each algorithm has custom parameters to set - oftentimes if left empty, caret will auto-tune to find the optimal settings, but it is suggested to select them yourself. 
+4. Next, select the percentage of data you want to include in the training set. 
+5. *Optional* If you want to include metadata as predictive columns in your model, you can do so.
+6. *Optional* If you want to test and train on specific subsets of the data, select a subset as if you were going to completely subset via the sidebar, but do not submit through the button. Instead, use the buttons on the ML settings page to register which subsets you want to train and test on.
+7. *Optional* Select if you want to balance classes through up/downsampling, and if so, which method to use.
+8. Select the amount of models built, and if you want to re-split in train/test on every repeat, or build multiple models on the same data split.
+9. Press "click to start machine learning" 
+10. Once finished, an additional "results" tab will become available.
 ![Machine learning settings](inst/www/machinelearning_settings.png?raw=true "Machine learning settings")
 
 #### Machine learning results
