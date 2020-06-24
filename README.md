@@ -116,10 +116,10 @@ Users often have their own in-house databases. You can add these in MetaboShiny 
 
 # Prepare input files
 ## m/z peak files
-MetaboShiny does not accept raw peak data. We suggest using either XCMS (with the MetaboAnalyst export option) or another method of choice such as MSnbase. You can find examples of three different accepted data formats (MetaboAnalyst-like, MetaboShiny native and Metabolights) in the inst/examples folder.
+MetaboShiny does not accept raw peak data. We suggest using either XCMS (with the MetaboAnalyst export option) or another method of choice such as MSnbase. You can find examples of three different accepted data formats (MetaboAnalyst-like, MetaboShiny native and Metabolights) in the [inst/examples](./inst/examples) folder.
 
 ## Metadata file
-MetaboShiny, unless using the MetaboAnalyst format, requires an additional metadata table. This should minimally have a 'sample' column that contains the same sample identifiers used in the peak table files, an 'individual' column (since multiple samples can come from one individual in time series data) and at least one column on experimental group or something alike. Examples of metadata formats are also present in the inst/examples folder.
+MetaboShiny, unless using the MetaboAnalyst format, requires an additional metadata table. This should minimally have a 'sample' column that contains the same sample identifiers used in the peak table files, an 'individual' column (since multiple samples can come from one individual in time series data) and at least one column on experimental group or something alike. Examples of metadata formats are also present in the [inst/examples](./inst/examples) folder.
 
 # Load data files
 ![File Import](inst/www/file_import.png?raw=true "File import")
