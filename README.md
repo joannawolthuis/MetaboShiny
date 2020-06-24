@@ -175,7 +175,8 @@ If you wish to match with other or more databases, click the "Clear matches" but
 The analysis tab has two sections; the statistics panel and the side bar. The statistics panel contains tabs with different statistical analysis methods and the side bar contains multiple functions regarding variable choices, data subsetting, plot aesthetics, m/z matching, and plot export.
 
 ## Side bar
-The side bar contains four tabs, whose descriptions and functions you can find below (see [Statistics panel start](#statistics-panel-start) figure)
+The side bar contains four tabs, whose descriptions and functions you can find below (see [Statistics panel start](#statistics-panel-start) figure).
+  * Note that the side bar can be resized by dragging the left-hand side.
 
 ### Switch/subset
  - *Current experiment* Shows the variable(s) and subset(s) that are currently being analysed.
@@ -185,10 +186,33 @@ The side bar contains four tabs, whose descriptions and functions you can find b
 
 ### Search
 **MISSING INFO ON THE ADDITIONAL TABS WITHIN THE SEARCH TAB. Formula prediction, word cloud, etc**
- - *Settings* If the data is pre-matched, this part is skipped. Otherwise, here you can select the databases that you want to match your data to. Click the shopping basket to add all available databases.
- - *Compound info* This tab will display all database matches for a selected m/z value from the statistics panel (see **XX**). The displayed table in the "mz > molecule" tab can be sorted based on m/z value, adduct, isotope percentage, or the m/z value distance from the database range (dppm). The table can be copied or exported as a .csv or .xlsx file. By clicking on the funnel icon, you can filter the matched results based on adduct, database, and main and minor isotope. In the "molecule > mz" tab you can search for a specific metabolite name and the resulting table will list all m/z values from the data that match a corresponding metabolite in any of the databases.
-
+ - *Database search setting*
+   * If the data is pre-matched, this part is skipped. Otherwise, here you can select the databases that you want to match your data to. Click the shopping basket to add all available databases.
+   * Click the inspector icon to match your selected m/z value to your selected databases
+ - *Compound info* This tab will display all database matches for a selected m/z value from the statistics panel (see **XX**).
+   * The displayed table in the "mz > molecule" tab can be sorted based on m/z value, adduct, isotope percentage, or the m/z value distance from the database range (dppm).
+   * The table can be copied or exported as a .csv or .xlsx file.
+   * By clicking on the funnel icon, you can filter the matched results based on adduct, database, and main and minor isotope.
+   * In the "molecule > mz" tab you can search for a specific metabolite name and the resulting table will list all m/z values from the data that match a corresponding metabolite in any of the databases.
+   * In the match menu, when selecting a compound:
+     - the name and SMILES or formula (specified in settings) are copied to the clipboard.
+     - in the compound description field, clicking on a database icon will copy the database id to the clipboard.
 ![Search tab](inst/www/mz_search.png?raw=true "Search tab")
+
+ - *PubMed search and word cloud*
+   1. Settings
+     - For a PubMed search, enter your search term (e.g. metabolite name) and specify the publishing date range and how many abstracts to use in the search.
+     - To use the results from your m/z database matches, toggle "own word" to "from matches".
+   2. Press 'Plot' to start your search and render the word cloud
+   3. In the 'filters' tab, you can search for a second set of abstracts that you want to *exclude* from your previous search.
+   4. In the 'plot' tab you will find the word cloud. Toggle "cloud" to "barchart" to render a bar chart instead of a word cloud. Select the number of words to use for your plot.
+   5. Filter out words that are commonly used in the English language or metabolomics research by selecting predefined word filters. The words from your search in *3* will be listed as a separate set here.
+     * *stopwords* This set contains the top 200 most common words in the English language.
+     * *metabolomics* This set contains words that are common in the metabolomics field: metabolism, metabolic, metabolomic, metabolomics, biochemical, mass, spectrometry, nmr, direct, infusion, exposome, papers, compounds, and compound.
+     * *default* This set contains the words "exposome", "synonyms", and all the available database names.
+   6. Click on a word in the word cloud to show PubMed abstracts mentioning that word, and their PubMed IDs.
+
+![PubMed search](inst/www/pubmed_wordcloud.png?raw=true "PubMed search and word cloud")
 
 ### Plot aesthetics
  - *Plot style* Here you can choose whether to use plotly or ggplot for the figures in the statistics panel. Plotly provides interactive plots with the ability to zoom and hover over data points for information, whereas ggplot is faster but does not have interactive features. Additionally, you can choose whether plots are exported as .png or .svg files.
@@ -297,9 +321,6 @@ In the venn diagram you can see which m/z values overlap between the different a
 #### Results
 **ADD DESCRIPTION OF WHAT RESULTS ARE SHOWN**
 ![Machine learning results](inst/www/machinelearning_results.png?raw=true "Machine learning results")
-
-### Match isotope scoring and abstract searching
-![Isoscoring and abstract searching](inst/www/isoscore_wordcloud.png?raw=true "Isoscoring and abstract searching")
 
 # How to cite
 **ADD LINK/CITATION HERE**
