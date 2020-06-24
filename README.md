@@ -227,8 +227,6 @@ The statistics panel has four tabs whose contents change based on whether the [c
 4. The "Tables" section has three tabs showing the %explained variance of each principal component ("table"), the scree plot, and loadings.
 
 #### Partial least squares-discriminant analysis (PLS-DA)
-*This analysis is only available for one-factor analyses*
-
 1. Go to "Settings" and press "click to start PLS-DA" to start the analysis.
 2. Once done, a "Plots" section and a "Tables" sections will appear.
 3. In the "Plots" section, you can switch between the samples, loadings, and performance (cross-validation and permutation). Below the plots you can select which principal component (PC) is plotted on which axis, and whether to render a 2D or 3D version of the plot.
@@ -242,16 +240,12 @@ The statistics panel has four tabs whose contents change based on whether the [c
 
 ### Per m/z
 #### t-test
-*This analysis is only available for one-factor, two-category analyses*
-
 1. In "Settings", select whether to make a non-parametric t-test (default "no") and equal variance (default "yes"). Press "click to start t-test" to start the analysis.
 2. Once finished, a "Plots" and "Tables" sections will appear.
 3. In "Plots", you will find a plot showing your m/z values ordered on the x-axis and the negative log10 of the p-value from the t-test. **Is there a certain number displayed? All/significant/top X?**
 4. In "Tables", you will find a table showing the t-stat, p-value, negative log10 of the p-value, and the false discovery rate (FDR).
 
 #### Fold-change
-*This analysis is only available for one-factor, two-category analyses*
-
 1. In "Settings", press "click to start fold-change analysis".
 2. Once finished, a "Plots" and "Tables" sections will appear.
 3. In "Plots", you will find a plot showing your m/z values ordered on the x-axis and the log2 of the fold-change value on the y-axis.
@@ -267,17 +261,13 @@ The statistics panel has four tabs whose contents change based on whether the [c
 4. In "Tables", you will find a table showing the p-value and false discovery rate (FDR) from a Fisher's Least Significant Difference (LSD) test.
 
 #### Analysis of variance - simultaneous component analysis (ASCA)
-*This analysis is only available for two-factor or time-series analyses*
 
 #### Multivariate empirical Bayes statistical time-series analysis (MEBA)
-*This analysis is only available for time-series analyses*
 
 ![Per m/z analysis](inst/www/permz_predict.png?raw=true "Per m/z analysis")
 
 ### Overview analyses
 #### Volcano plot
-*This analysis is only available for one-factor, two-category analyses*
-
 1. In "Settings", press "click to make volcano plot".
 2. Once finished, a "Plots" and "Tables" sections will appear.
 3. In "Plots", you will find a plot with the log2 of the fold-change value on x-axis and the negative log10 of the t-test p-value on the y-axis.
@@ -306,7 +296,7 @@ In the venn diagram you can see which m/z values overlap between the different a
 ![Machine learning settings](inst/www/machinelearning_settings.png?raw=true "Machine learning settings")
 #### Results
 **ADD DESCRIPTION OF WHAT RESULTS ARE SHOWN**
-![Machine learning results](inst/www/ml2.png?raw=true "Machine learning results")
+![Machine learning results](inst/www/machinelearning_results.png?raw=true "Machine learning results")
 
 ### Match isotope scoring and abstract searching
 ![Isoscoring and abstract searching](inst/www/isoscore_wordcloud.png?raw=true "Isoscoring and abstract searching")
