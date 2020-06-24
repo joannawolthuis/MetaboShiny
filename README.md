@@ -383,6 +383,8 @@ MetaboShiny supports most of the models included in the *caret* package and adds
 ![Machine learning settings](inst/www/machinelearning_settings.png?raw=true "Machine learning settings")
 
 #### Machine learning results
+The machine learning results tab features two main plot + table sections to work with. First is the Receiver Operating Characteristic (ROC) curve often used to visualise the effectiveness of a predictive model. Here, a non-predictive model is shown as a diagonal straight line, and a 'perfect' model is a 90 degree curve hitting the top left of the graph. True positive rate and false positive rate are the axis descriptors here. Each of the models built has its own curve - in multivariate data this becomes more complex and curves are shown for each pair of possible class comparisons (e.g. with A B C one would see curves for A vs B, A vs C, A vs B, B vs C). When clicking a curve, the table below displays the features (m/z + metadata) used in this model and their importance within the model. Higher importance means that the feature is important to do a correct prediction. Models can also be selected in the left-hand table to explore the involved features without using the plot.
+The second plot available is a bar plot displaying a top amount of features based on feature importance, with more important features (averaged over all repeats) displayed first in the bar plot. Users can click these to register the m/z to use in further searching.
 ![Machine learning results](inst/www/machinelearning_results.png?raw=true "Machine learning results")
 
 # Feedback
