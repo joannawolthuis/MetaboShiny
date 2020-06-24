@@ -70,18 +70,18 @@ MetaboShiny offers multiple metabolite databases for m/z identification. Before 
 MetaboShiny does not automatically update databases. To re-build a database of interest, click on the "build database" button below the logo in the Database Tab. The database version number and download date are listed below the logo.
 
 ## Adding custom databases
-**HOW TO ADD CUSTOM DB**
+**[HOW TO ADD CUSTOM DB]**
 
 ![Database Tab](inst/www/database_panel_a.png?raw=true "Database tab")
 
 # Prepare input files
 ## m/z peak files
-**DESCRIBE HOW TO GET POSITIVE/NEGATIVE MODE FILES FROM RAW MS DATA?
-LINK TO EXAMPLE DATA.**
+**[DESCRIBE HOW TO GET POSITIVE/NEGATIVE MODE FILES FROM RAW MS DATA?
+LINK TO EXAMPLE DATA.]**
 
 ## Metadata file
-**DESCRIBE METADATA FILE FORMAT, NECESSARY COLUMNS, ETC.
-LINK TO EXAMPLE DATA.**
+**[DESCRIBE METADATA FILE FORMAT, NECESSARY COLUMNS, ETC.
+LINK TO EXAMPLE DATA.]**
 
 # Load data files
 To load your data into MetaboShiny, follow the 6 steps listed in the [File Import](#file-import) figure.
@@ -100,7 +100,7 @@ To load your data into MetaboShiny, follow the 6 steps listed in the [File Impor
 The data needs to be normalized in order to compare m/z peak values between samples and batches.
 
 ## Batches and concentration
-If your metadata only contains one batch and no column that represents concentration (**EXPLAIN WHAT THIS MEANS**), then you can skip this part and continue to the [Filtering and normalization](#filtering-and-normalization) step. Otherwise, follow the steps below.
+If your metadata only contains one batch and no column that represents concentration, then you can skip this part and continue to the [Filtering and normalization](#filtering-and-normalization) step. Otherwise, follow the steps below.
  1. Click on the "Get options" button (see [Normalization](#normalization) figure).
  2. If applicable, select the variable that represents concentration in your data.
  3. If applicable, select the variable that contains your multiple batch IDs.
@@ -109,7 +109,7 @@ If your metadata only contains one batch and no column that represents concentra
 In this section, you will find multiple options and methods to filter and normalize your data. The best selection will depend on each user's data and we encourage you to look into the different methods that can be applied here. After normalization, the distribution of pre- and post-normalized peak values will be plotted for a randomly selected set of m/z values and samples, so the user can see how the data distribution has changed with the normalization and adjust their parameters if needed (see [Normalization](#normalization) figure).
 
 Select one of each of the options for the following normalization features and then press "Go" (see [Normalization](#normalization) figure). It is advised to save your data after completing this step (button on the bottom center of the screen).
-- Filtering options
+- **Filtering options**
   - Interquartile range
   - Mean
   - Median absolute deviation
@@ -118,7 +118,7 @@ Select one of each of the options for the following normalization features and t
   - Relative standard deviation (stdev)
   - Standard deviation
   - None
-- Normalization type
+- **Normalization type**
   - By reference compound
   - By reference feature
   - By sample-specific factor
@@ -126,17 +126,17 @@ Select one of each of the options for the following normalization features and t
   - Quantile normalization
   - Sum
   - None
-- Data transformation
+- **Data transformation**
   - Cubic root transform
   - Log transform
   - None
-- Scaling
+- **Scaling**
   - Autoscale/Z-transform
   - Mean-center
   - Pareto scaling
   - Range scaling
   - None
-- Missing values
+- **Missing values**
   - Half feature minimum
   - Half sample minimum
   - Total minimum
@@ -149,8 +149,7 @@ Select one of each of the options for the following normalization features and t
   - Mean
   - Leave them out
   - Leave them alone
-- Outliers
- The user can choose whether to exclude outliers from the data analysis by toggling the "Exclude outliers?" tab.
+- **Outliers** The user can choose whether to exclude outliers from the data analysis by toggling the "Exclude outliers?" tab.
 
 ![Normalization](inst/www/normalization.png?raw=true "Normalization")
 
@@ -176,16 +175,17 @@ The side bar contains four tabs, whose descriptions and functions you can find b
   * Note that the side bar can be resized by dragging the left-hand side.
 
 ### Switch/subset
- - *Current experiment* Shows the variable(s) and subset(s) that are currently being analysed.
- - *Change of variable of interest* Here you can choose to inspect one variable, two variables in combindation, time-series, or time-series in combination with one variable. Press "do stats on selected" to change the current experiment for analysis.
- - *Subset data* The "Current sample count" shows the number of samples that are analysed in the current experiment. To subset data, select the variable that you want to subset based on and then select the group(s) that you want to inspect. Click "click to subset" to apply changes.
- - *Load existing meta-dataset* **EXPLANATION OF THIS PART**
+ - **Current experiment** Shows the variable(s) and subset(s) that are currently being analysed.
+ - **Change of variable of interest** Here you can choose to inspect one variable, two variables in combindation, time-series, or time-series in combination with one variable. Press "do stats on selected" to change the current experiment for analysis.
+ - **Subset data** The "Current sample count" shows the number of samples that are analysed in the current experiment. To subset data, select the variable that you want to subset based on and then select the group(s) that you want to inspect. Click "click to subset" to apply changes.
+ - **Load existing meta-dataset** **[EXPLANATION OF THIS PART]**
 
 ### Search
- - *Database search setting*
+#### Database search setting
    * If the data is pre-matched, this part is skipped. Otherwise, here you can select the databases that you want to match your data to. Click the shopping basket to add all available databases.
    * Click the inspector icon to match your selected m/z value to your selected databases
- - *Compound info* This tab will display all database matches for a selected m/z value from the statistics panel.
+##### Compound info
+This tab will display all database matches for a selected m/z value from the statistics panel.
    * The displayed table in the "mz > molecule" tab can be sorted based on m/z value, adduct, isotope percentage, or the m/z value distance from the database range (dppm).
    * The table can be copied or exported as a .csv or .xlsx file.
    * By clicking on the funnel icon, you can filter the matched results based on adduct, database, and main and minor isotope.
@@ -195,29 +195,29 @@ The side bar contains four tabs, whose descriptions and functions you can find b
      - in the compound description field, clicking on a database icon will copy the database id to the clipboard.
 ![Search tab](inst/www/mz_search.png?raw=true "Search tab")
 
- - *PubMed search and word cloud*
+#### PubMed search and word cloud
    1. Settings
-     - For a PubMed search, enter your search term (e.g. metabolite name) and specify the publishing date range and how many abstracts to use in the search.
-     - To use the results from your m/z database matches, toggle "own word" to "from matches".
+      - For a PubMed search, enter your search term (e.g. metabolite name) and specify the publishing date range and how many abstracts to use in the search.
+      - To use the results from your m/z database matches, toggle "own word" to "from matches".
    2. Press 'Plot' to start your search and render the word cloud
    3. In the 'filters' tab, you can search for a second set of abstracts that you want to *exclude* from your previous search.
    4. In the 'plot' tab you will find the word cloud. Toggle "cloud" to "barchart" to render a bar chart instead of a word cloud. Select the number of words to use for your plot.
    5. Filter out words that are commonly used in the English language or metabolomics research by selecting predefined word filters. The words from your search in *3* will be listed as a separate set here.
-     * *stopwords* This set contains the top 200 most common words in the English language.
-     * *metabolomics* This set contains words that are common in the metabolomics field: metabolism, metabolic, metabolomic, metabolomics, biochemical, mass, spectrometry, nmr, direct, infusion, exposome, papers, compounds, and compound.
-     * *default* This set contains the words "exposome", "synonyms", and all the available database names.
+      * **stopwords** This set contains the top 200 most common words in the English language.
+      * **metabolomics** This set contains words that are common in the metabolomics field: metabolism, metabolic, metabolomic, metabolomics, biochemical, mass, spectrometry, nmr, direct, infusion, exposome, papers, compounds, and compound.
+      * **default** This set contains the words "exposome", "synonyms", and all the available database names.
    6. Click on a word in the word cloud to show PubMed abstracts mentioning that word, and their PubMed IDs.
 
 ![PubMed search](inst/www/pubmed_wordcloud.png?raw=true "PubMed search and word cloud")
 
 ### Plot aesthetics
- - *Plot style* Here you can choose whether to use plotly or ggplot for the figures in the statistics panel. Plotly provides interactive plots with the ability to zoom and hover over data points for information, whereas ggplot is faster but does not have interactive features. Additionally, you can choose whether plots are exported as .png or .svg files.
- - *Style(s)* Choose the plotting style for the scatter plots for t-test and ANOVA results. Options are beeswarm, boxplot, scatterplot, and violin plots. It is possible to select multiple styles, e.g., violin plot with a beeswarm scatter.
- - *Stats shown* Select whether to show median or mean lines in the plots.
- - *Marker shape* Select the variable that determines the marker shape.
- - *Color* Select the variable that determines the marker color.
- - *Hover text* Select the variable that is displayed when hovering over data points.
- - *Plot theme* Select one of the following themes for the plot background
+ - **Plot style** Here you can choose whether to use plotly or ggplot for the figures in the statistics panel. Plotly provides interactive plots with the ability to zoom and hover over data points for information, whereas ggplot is faster but does not have interactive features. Additionally, you can choose whether plots are exported as .png or .svg files.
+ - **Style(s)** Choose the plotting style for the scatter plots for t-test and ANOVA results. Options are beeswarm, boxplot, scatterplot, and violin plots. It is possible to select multiple styles, e.g., violin plot with a beeswarm scatter.
+ - **Stats shown** Select whether to show median or mean lines in the plots.
+ - **Marker shape** Select the variable that determines the marker shape.
+ - **Color** Select the variable that determines the marker color.
+ - **Hover text** Select the variable that is displayed when hovering over data points.
+ - **Plot theme** Select one of the following themes for the plot background
    - Minimal
    - Grid, gray background
    - Grid, black background
@@ -225,18 +225,20 @@ The side bar contains four tabs, whose descriptions and functions you can find b
    - No grid, white background
    - Grid, white background, gray axes
    - Line drawing
- - *Continuous data* Select a color scheme for plotting continuous data, which is used in heatmaps and volcano plots.
- - *Discrete data* Select colors to use when plotting discrete data. Click on the color field to select a color or type in the HEX code (See [Plot customization](#plot-customization) figure).
+ - **Continuous data** Select a color scheme for plotting continuous data, which is used in heatmaps and volcano plots.
+ - **Discrete data** Select colors to use when plotting discrete data. Click on the color field to select a color or type in the HEX code (See [Plot customization](#plot-customization) figure).
 
  ![Plot customization](inst/www/colorbar.png?raw=true "Plot customization")
 
 ### Metadata
 In this tab you can upload new metadata. The file should be in a .csv format and contain a column with sample IDs and any new metadata as additional columns with new unique headers.
 
-![Statistics panel start](inst/www/stats.png?raw=true "Statistics Panel Start")
+
 
 ## Statistics
-The statistics panel has four tabs whose contents change based on whether the [current experiment](#switchsubset) is a one-factor, two-factor, or a time series analysis. The four statistics categories are [dimension reduction methods](#dimension-reduction), [per m/z value analyses](#per-mz), [overview analyses](#overview-analyses), and [machine learning](#machine-learning) (see [Statistics panel start](#statistics-panel-start) figure).
+The statistics panel has four tabs whose contents change based on whether the current experiment is a one-factor, two-factor, or a time series analysis. The four statistics categories are dimension reduction methods), per m/z value analyses, overview analyses, and machine learning (see [Statistics panel start](#statistics-panel-start) figure).
+
+![Statistics panel start](inst/www/stats.png?raw=true "Statistics Panel Start")
 
 ### Dimension reduction
 
@@ -311,10 +313,11 @@ In the venn diagram you can see which m/z values overlap between the different a
 #### Enrichment
 
 ### Machine learning
-#### Settings
+#### Machine learning settings
 **ADD DESCRIPTIONS OF THE PARAMETERS/SETTINGS**
 ![Machine learning settings](inst/www/machinelearning_settings.png?raw=true "Machine learning settings")
-#### Results
+
+#### Machine learning results
 **ADD DESCRIPTION OF WHAT RESULTS ARE SHOWN**
 ![Machine learning results](inst/www/machinelearning_results.png?raw=true "Machine learning results")
 
