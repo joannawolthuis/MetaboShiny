@@ -93,6 +93,9 @@ LINK TO EXAMPLE DATA.]**
 
 # Load data files
 To load your data into MetaboShiny, follow the 6 steps listed in the [File Import](#file-import) figure.
+
+![File Import](inst/www/file_import.png?raw=true "File import")
+
 1. Enter a unique project name.
 2. Set the error margin of your mass spectrometer in parts per million (ppm).
 3. Set the m/z missing values percentage threshold. This is how many samples are allowed to be missing each m/z value without it being filtered out.
@@ -102,21 +105,21 @@ To load your data into MetaboShiny, follow the 6 steps listed in the [File Impor
 5. Click on the arrow to merge peak data and metadata and convert them to a format that will serve as the input for the analyses.
 6. Once step 5 is completed (green tick mark), continue to the [Data normalization](#data-normalization) step.
 
-![File Import](inst/www/file_import.png?raw=true "File import")
-
 # Data normalization
 The data needs to be normalized in order to compare m/z peak values between samples and batches.
 
+![Normalization](inst/www/normalization.png?raw=true "Normalization")
+
 ## Batches and concentration
 If your metadata only contains one batch and no column that represents concentration, then you can skip this part and continue to the [Filtering and normalization](#filtering-and-normalization) step. Otherwise, follow the steps below.
- 1. Click on the "Get options" button (see [Normalization](#normalization) figure).
+ 1. Click on the "Get options" button.
  2. If applicable, select the variable that represents concentration in your data.
  3. If applicable, select the variable that contains your multiple batch IDs.
 
 ## Filtering and normalization
-In this section, you will find multiple options and methods to filter and normalize your data. The best selection will depend on each user's data and we encourage you to look into the different methods that can be applied here. After normalization, the distribution of pre- and post-normalized peak values will be plotted for a randomly selected set of m/z values and samples, so the user can see how the data distribution has changed with the normalization and adjust their parameters if needed (see [Normalization](#normalization) figure).
+In this section, you will find multiple options and methods to filter and normalize your data. The best selection will depend on each user's data and we encourage you to look into the different methods that can be applied here. After normalization, the distribution of pre- and post-normalized peak values will be plotted for a randomly selected set of m/z values and samples, so the user can see how the data distribution has changed with the normalization and adjust their parameters if needed.
 
-Select one of each of the options for the following normalization features and then press "Go" (see [Normalization](#normalization) figure). It is advised to save your data after completing this step (button on the bottom center of the screen).
+Select one of each of the options for the following normalization features and then press "Go". It is advised to save your data after completing this step (button on the bottom center of the screen).
 - **Filtering options**
   - Interquartile range
   - Mean
@@ -159,11 +162,10 @@ Select one of each of the options for the following normalization features and t
   - Leave them alone
 - **Outliers** The user can choose whether to exclude outliers from the data analysis by toggling the "Exclude outliers?" tab.
 
-![Normalization](inst/www/normalization.png?raw=true "Normalization")
-
 
 # Pre-matching all m/z
 *This step is optional*
+![Prematching](inst/www/prematching.png?raw=true "Prematching")
 
 In the pre-matching tab (see [Prematching](#prematching) figure) the user can match all m/z values with all or a subset of the available databases. This can be a time-consuming step if the dataset is large and many databases are selected, but will make searching for possible m/z metabolite matches much faster in the data analysis step.
 1. Toggle the "Do matching beforehand?" button to "Yes" (see [Prematching](#prematching) figure).
@@ -172,23 +174,23 @@ In the pre-matching tab (see [Prematching](#prematching) figure) the user can ma
 4. Save your data (button on the bottom center of the screen).
 If you wish to match with other or more databases, click the "Clear matches" button and re-do the steps above.
 
-![Prematching](inst/www/prematching.png?raw=true "Prematching")
-
 
 # Analysis
 The analysis tab has two sections; the statistics panel and the side bar. The statistics panel contains tabs with different statistical analysis methods and the side bar contains multiple functions regarding variable choices, data subsetting, plot aesthetics, m/z matching, and plot export.
 
 ## Side bar
-The side bar contains four tabs, whose descriptions and functions you can find below (see [Statistics panel start](#statistics-panel-start) figure).
+The side bar contains four tabs, whose descriptions and functions you can find below.
   * Note that the side bar can be resized by dragging the left-hand side.
 
 ### Switch/subset
+*See [Statistics panel figure](#statistics)*
  - **Current experiment** Shows the variable(s) and subset(s) that are currently being analysed.
  - **Change of variable of interest** Here you can choose to inspect one variable, two variables in combindation, time-series, or time-series in combination with one variable. Press "do stats on selected" to change the current experiment for analysis.
  - **Subset data** The "Current sample count" shows the number of samples that are analysed in the current experiment. To subset data, select the variable that you want to subset based on and then select the group(s) that you want to inspect. Click "click to subset" to apply changes.
  - **Load existing meta-dataset** **[EXPLANATION OF THIS PART]**
 
 ### Search
+![Search tab](inst/www/mz_search.png?raw=true "Search tab")
 #### Database search setting
    * If the data is pre-matched, this part is skipped. Otherwise, here you can select the databases that you want to match your data to. Click the shopping basket to add all available databases.
    * Click the inspector icon to match your selected m/z value to your selected databases
@@ -201,9 +203,9 @@ This tab will display all database matches for a selected m/z value from the sta
    * In the match menu, when selecting a compound:
      - the name and SMILES or formula (specified in settings) are copied to the clipboard.
      - in the compound description field, clicking on a database icon will copy the database id to the clipboard.
-![Search tab](inst/www/mz_search.png?raw=true "Search tab")
 
 #### PubMed search and word cloud
+![PubMed search](inst/www/pubmed_wordcloud.png?raw=true "PubMed search and word cloud")
    1. Settings
       - For a PubMed search, enter your search term (e.g. metabolite name) and specify the publishing date range and how many abstracts to use in the search.
       - To use the results from your m/z database matches, toggle "own word" to "from matches".
@@ -216,9 +218,9 @@ This tab will display all database matches for a selected m/z value from the sta
       * **default** This set contains the words "exposome", "synonyms", and all the available database names.
    6. Click on a word in the word cloud to show PubMed abstracts mentioning that word, and their PubMed IDs.
 
-![PubMed search](inst/www/pubmed_wordcloud.png?raw=true "PubMed search and word cloud")
 
 ### Plot aesthetics
+ ![Plot customization](inst/www/colorbar.png?raw=true "Plot customization")
  - **Plot style** Here you can choose whether to use plotly or ggplot for the figures in the statistics panel. Plotly provides interactive plots with the ability to zoom and hover over data points for information, whereas ggplot is faster but does not have interactive features. Additionally, you can choose whether plots are exported as .png or .svg files.
  - **Style(s)** Choose the plotting style for the scatter plots for t-test and ANOVA results. Options are beeswarm, boxplot, scatterplot, and violin plots. It is possible to select multiple styles, e.g., violin plot with a beeswarm scatter.
  - **Stats shown** Select whether to show median or mean lines in the plots.
@@ -234,17 +236,13 @@ This tab will display all database matches for a selected m/z value from the sta
    - Grid, white background, gray axes
    - Line drawing
  - **Continuous data** Select a color scheme for plotting continuous data, which is used in heatmaps and volcano plots.
- - **Discrete data** Select colors to use when plotting discrete data. Click on the color field to select a color or type in the HEX code (See [Plot customization](#plot-customization) figure).
-
- ![Plot customization](inst/www/colorbar.png?raw=true "Plot customization")
+ - **Discrete data** Select colors to use when plotting discrete data. Click on the color field to select a color or type in the HEX code.
 
 ### Metadata
 In this tab you can upload new metadata. The file should be in a .csv format and contain a column with sample IDs and any new metadata as additional columns with new unique headers.
 
-
-
 ## Statistics
-The statistics panel has four tabs whose contents change based on whether the current experiment is a one-factor, two-factor, or a time series analysis. The four statistics categories are dimension reduction methods), per m/z value analyses, overview analyses, and machine learning (see [Statistics panel start](#statistics-panel-start) figure).
+The statistics panel has four tabs whose contents change based on whether the current experiment is a one-factor, two-factor, or a time series analysis. The four statistics categories are dimension reduction methods), per m/z value analyses, overview analyses, and machine learning.
 
 ![Statistics panel start](inst/www/stats.png?raw=true "Statistics Panel Start")
 
@@ -265,8 +263,6 @@ The statistics panel has four tabs whose contents change based on whether the cu
 #### t-Distributed Stochastic Neighbor Embedding (t-SNE)
 1. In "Settings", select the initial number of dimensions (default 30), perplexity (default 30), and maximum number of iterations (default 1000), and press "click to start t-SNE" to start the analysis.
 2. Once done, a "Plots" section will appear showing the t-SNE plot. Below the plot is a toggle button to make a 2D or 3D plot.
-
-![Dimension reduction](inst/www/dimred_export.png?raw=true "Dimension reduction")
 
 ### Per m/z
 #### t-test
@@ -294,16 +290,12 @@ The statistics panel has four tabs whose contents change based on whether the cu
 
 #### Multivariate empirical Bayes statistical time-series analysis (MEBA)
 
-![Per m/z analysis](inst/www/permz_predict.png?raw=true "Per m/z analysis")
-
 ### Overview analyses
 #### Volcano plot
 1. In "Settings", press "click to make volcano plot".
 2. Once finished, a "Plots" and "Tables" sections will appear.
 3. In "Plots", you will find a plot with the log2 of the fold-change value on x-axis and the negative log10 of the t-test p-value on the y-axis.
 4. In "Tables", you will find a table showing the fold-change value, the log2 of the fold-change, the raw p-value, and the negative log10 of the p-value.
-
-![Volcano plot](inst/www/stats2.png?raw=true "Volcano plot")
 
 #### Heatmap
 1. In "Settings", select the analysis that you want to use for your heatmap. The drop-down list will give a list of all analyses that have been performed and can be used for a heatmap. Choose wether to only use significant hits (default "no"), and whether to color based on all metabolites (default "no") or only those that will appear in the heatmap. Press "Click to make heatmap".
