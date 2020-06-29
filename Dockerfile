@@ -7,6 +7,7 @@ RUN pwd
 RUN apt-get update && apt-get install -y \
     sudo \
     gdebi-core \
+    xclip \
     pandoc \
     openjdk-11-jdk \
     pandoc-citeproc \
@@ -77,6 +78,6 @@ RUN R -e 'devtools::install_github("UMCUGenetics/MetaboShiny", "dev")'
 RUN sudo R CMD javareconf
 
 # Make the ShinyApp available at port 8080
-CMD ['R -e "MetaboShiny::start.metshi(inBrowser=F, port=8080, runmode='docker')"']
+CMD ['R -e "MetaboShiny::start_metshi(inBrowser=F, port=8080, runmode='docker')"']
 EXPOSE 8080
 

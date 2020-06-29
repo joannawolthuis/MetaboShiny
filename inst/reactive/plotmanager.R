@@ -353,8 +353,8 @@ shiny::observe({
                                 hmap
                               }else{
                                 data = data.frame(text = "No significant hits available!\nPlease try alternative source statistics below.")
-                                ggplot(data) + geom_text(aes(label = text), x = 0.5, y = 0.5, size = 10) +
-                                  theme(text = element_text(family = lcl$aes$font$family)) + theme_bw()
+                                ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10) +
+                                  ggplot2::theme(text = ggplot2::element_text(family = lcl$aes$font$family)) + ggplot2::theme_bw()
                               }
                             }
                             list(heatmap = p)
@@ -394,7 +394,7 @@ shiny::observe({
               whichAnal <- stringr::str_match(plotName, "aov|tt|fc|pattern|asca|volc")[,1]
               if(is.null(mSet$analSet[[whichAnal]]$sig.mat)){
                 data = data.frame(text = "No significant hits!")
-                myplot = ggplot(data) + geom_text(aes(label = text), x = 0.5, y = 0.5, size = 10)
+                myplot = ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10)
               }
             }
             
@@ -436,8 +436,7 @@ shiny::observe({
                                     axis.line = ggplot2::element_line(colour = 'black', size = .5),
                                     plot.title = ggplot2::element_text(hjust = 0.5,
                                                                        vjust = 0.1,
-                                                                       size=lcl$aes$font$title.size*1.2,
-                                                                       face="bold"),
+                                                                       size=lcl$aes$font$title.size*1.2),
                                     text = ggplot2::element_text(family = lcl$aes$font$family))
                    if(grepl("venn", plotName)){
                      myplot <- myplot + 
@@ -456,8 +455,8 @@ shiny::observe({
                    output[[plotName]] <- shiny::renderPlot({
                      if(plotName == "heatmap"){
                        data = data.frame(text = "Currently only available in 'plotly' mode!\nPlease switch in the sidebar.")
-                       ggplot(data) + geom_text(aes(label = text), x = 0.5, y = 0.5, size = 10) +
-                         theme(text = element_text(family = lcl$aes$font$family)) + theme_bw()
+                       ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10) +
+                         ggplot2::theme(text = ggplot2::element_text(family = lcl$aes$font$family)) + ggplot2::theme_bw()
                      }else{
                        myplot
                      }
