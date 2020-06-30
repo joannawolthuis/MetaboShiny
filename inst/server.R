@@ -1189,6 +1189,16 @@ omit_unknown = yes')
     shinyjs::js$closeWindow()
   },ignoreNULL = T)
   
+  # new version check for either github or docker
+  # packageVersion("MetaboShiny")
+  # if(need.new){
+  #   if(".dockerenv" %in% list.files("/",all.files=T)){
+  #     MetaboShiny::metshiAlert("New version available! Please pull the latest docker image.")
+  #   }else{
+  #     MetaboShiny::metshiAlert("New version available! Please install the latest GitHub version.")
+  #   }  
+  # }
+  
   onStop(function() {
     print("Closing MetaboShiny ~ヾ(＾∇＾)")
     if(!is.null(session_cl)){
