@@ -95,18 +95,37 @@ shiny::observeEvent(input$match_tab_rows_selected,{
                        name = my_selection$name)
   if(input$autocopy){
     #clipr::write_clip(toClipboard, allow_non_interactive = TRUE)
-    shinyjs::runjs(stringr::str_wrap(gsubfn::fn$paste("var textArea = document.createElement('textarea');
-                    textArea.value = $toClipboard;
-                    
-                    textArea.style.top = '0';
-                    textArea.style.left = '0';
-                    textArea.style.position = 'fixed';
-                  
-                    document.body.appendChild(textArea);
-                    textArea.focus();
-                    textArea.select();
-                  
-                    document.execCommand('copy');"), width=10000))
+    shinyjs::runjs(stringr::str_wrap(gsubfn::fn$paste("
+  textArea.style.position = 'fixed';
+  textArea.style.top = 0;
+  textArea.style.left = 0;
+
+  textArea.style.width = '2em';
+  textArea.style.height = '2em';
+
+  textArea.style.padding = 0;
+
+  textArea.style.border = 'none';
+  textArea.style.outline = 'none';
+  textArea.style.boxShadow = 'none';
+
+  textArea.style.background = 'transparent';
+
+  textArea.value = $toClipboard;
+
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+
+  try {
+    var successful = document.execCommand('copy');
+    var msg = successful ? 'successful' : 'unsuccessful';
+    console.log('Copying text command was ' + msg);
+  } catch (err) {
+    console.log('Oops, unable to copy');
+  }
+
+  document.body.removeChild(textArea);"), width=10000))
     shiny::updateTextInput(session,
                            "wordcloud_searchTerm",
                            value = as.character(toClipboard))
