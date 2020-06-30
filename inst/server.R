@@ -1189,7 +1189,7 @@ omit_unknown = yes')
     shinyjs::js$closeWindow()
   },ignoreNULL = T)
   
-  # new version check for either github or docker
+  # new version check for either github or docker (test)
   remote = remotes:::github_remote("joannawolthuis/MetaboShiny",
                                    host = "api.github.com",
                                    repos = getOption("repos"), 
