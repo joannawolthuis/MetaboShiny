@@ -3,7 +3,9 @@
 function(input, output, session) {
   
   library(MetaboShiny)
-  #require(shinyjs)
+  library(data.table)
+  library(plotly)
+  library(ggplot2)
   
   shiny::showModal(MetaboShiny::loadModal())
   
