@@ -176,9 +176,9 @@ internetWorks <- function(testsite = "http://www.google.com"){
 #' @export 
 #' @importFrom shiny getDefaultReactiveDomain img
 #' @importFrom shinyWidgets sendSweetAlert
-metshiAlert <- function(message, 
-                        session = shiny::getDefaultReactiveDomain(), 
-                        title = "Error", 
+metshiAlert <- function(message,
+                        session = shiny::getDefaultReactiveDomain(),
+                        title = "Error",
                         myImg = "gemmy_rainbow.png"){
   shinyWidgets::sendSweetAlert(
     session = session,
