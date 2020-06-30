@@ -96,6 +96,7 @@ shiny::observeEvent(input$match_tab_rows_selected,{
   if(input$autocopy){
     #clipr::write_clip(toClipboard, allow_non_interactive = TRUE)
     shinyjs::runjs(stringr::str_wrap(gsubfn::fn$paste("
+  var textArea = document.createElement('textarea');
   textArea.style.position = 'fixed';
   textArea.style.top = 0;
   textArea.style.left = 0;
@@ -111,7 +112,7 @@ shiny::observeEvent(input$match_tab_rows_selected,{
 
   textArea.style.background = 'transparent';
 
-  textArea.value = $toClipboard;
+  textArea.value = '$toClipboard';
 
   document.body.appendChild(textArea);
   textArea.focus();
