@@ -165,6 +165,8 @@ internetWorks <- function(testsite = "http://www.google.com"){
 #' @title Show alert in MetaboShiny
 #' @description Function to create a SweetAlert in MetaboShiny with user message.
 #' @param message User message
+#' @param title Title of alert
+#' @param myImg Path to image in /www folder
 #' @param session Shiny session, Default: shiny::getDefaultReactiveDomain()
 #' @return SweetAlert object to render in shiny
 #' @seealso 
@@ -174,14 +176,18 @@ internetWorks <- function(testsite = "http://www.google.com"){
 #' @export 
 #' @importFrom shiny getDefaultReactiveDomain img
 #' @importFrom shinyWidgets sendSweetAlert
-metshiAlert <- function(message, session = shiny::getDefaultReactiveDomain()){
+metshiAlert <- function(message, 
+                        session = shiny::getDefaultReactiveDomain(), 
+                        title = "Error", 
+                        myImg = "gemmy_rainbow.png"){
   shinyWidgets::sendSweetAlert(
     session = session,
-    title = "Error",
+    title = title,
     text = tags$div(
       shiny::img(#class = "rotategem", 
-                 src = "gemmy_rainbow.png", 
-                 width = "30px", height = "30px"),
+                 src = myImg, 
+                 #width = "30px", 
+                 height = "30px"),
       br(),
       h3(message)
     ),

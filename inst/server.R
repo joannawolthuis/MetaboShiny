@@ -1201,9 +1201,9 @@ omit_unknown = yes')
   
   if(need.new){
     if(".dockerenv" %in% list.files("/",all.files=T)){
-      MetaboShiny::metshiAlert("New version available! Please pull the latest docker image.")
+      MetaboShiny::metshiAlert("New version available! Please pull the latest docker image.", title = "Notification")
     }else{
-      MetaboShiny::metshiAlert("New version available! Please install the latest GitHub version.")
+      MetaboShiny::metshiAlert("New version available! Please install the latest GitHub version.", title = "Notification")
     }
   }
   
