@@ -1190,14 +1190,22 @@ omit_unknown = yes')
   },ignoreNULL = T)
   
   # new version check for either github or docker
-  # packageVersion("MetaboShiny")
-  # if(need.new){
-  #   if(".dockerenv" %in% list.files("/",all.files=T)){
-  #     MetaboShiny::metshiAlert("New version available! Please pull the latest docker image.")
-  #   }else{
-  #     MetaboShiny::metshiAlert("New version available! Please install the latest GitHub version.")
-  #   }  
-  # }
+  remote = remotes:::github_remote("joannawolthuis/MetaboShiny",
+                                   host = "api.github.com",
+                                   repos = getOption("repos"), 
+                                   type = getOption("pkgType"))
+  package_name <- remotes:::remote_package_name(remote)
+  local_sha <- remotes:::local_sha(package_name)
+  remote_sha <- remotes:::remote_sha(remote, local_sha)
+  need.new = local_sha != remote_sha
+  
+  if(need.new){
+    if(".dockerenv" %in% list.files("/",all.files=T)){
+      MetaboShiny::metshiAlert("New version available! Please pull the latest docker image.")
+    }else{
+      MetaboShiny::metshiAlert("New version available! Please install the latest GitHub version.")
+    }
+  }
   
   onStop(function() {
     print("Closing MetaboShiny ~ヾ(＾∇＾)")
