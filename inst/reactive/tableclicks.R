@@ -94,7 +94,19 @@ shiny::observeEvent(input$match_tab_rows_selected,{
                        formula = my_selection$form,
                        name = my_selection$name)
   if(input$autocopy){
-    clipr::write_clip(toClipboard, allow_non_interactive = TRUE)
+    #clipr::write_clip(toClipboard, allow_non_interactive = TRUE)
+    shinyjs::runjs(stringr::str_wrap(gsubfn::fn$paste("var textArea = document.createElement('textarea');
+                    textArea.value = $toClipboard;
+                    
+                    textArea.style.top = '0';
+                    textArea.style.left = '0';
+                    textArea.style.position = 'fixed';
+                  
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                  
+                    document.execCommand('copy');"), width=10000))
     shiny::updateTextInput(session,
                            "wordcloud_searchTerm",
                            value = as.character(toClipboard))
