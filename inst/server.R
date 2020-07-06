@@ -1192,20 +1192,22 @@ omit_unknown = yes')
   },ignoreNULL = T)
   
   # new version check for either github or docker
-  remote = remotes:::github_remote("joannawolthuis/MetaboShiny",
-                                   host = "api.github.com",
-                                   repos = getOption("repos"), 
-                                   type = getOption("pkgType"))
-  package_name <- remotes:::remote_package_name(remote)
-  local_sha <- remotes:::local_sha(package_name)
-  remote_sha <- remotes:::remote_sha(remote, local_sha)
-  need.new = local_sha != remote_sha
+  need.new = sapply(c("MetaboShiny", "MetaDBparse"), function(pkg){
+    remote = remotes:::github_remote(paste0("joannawolthuis/", pkg),
+                                     host = "api.github.com",
+                                     repos = getOption("repos"), 
+                                     type = getOption("pkgType"))
+    package_name <- remotes:::remote_package_name(remote)
+    local_sha <- remotes:::local_sha(package_name)
+    remote_sha <- remotes:::remote_sha(remote, local_sha)
+    local_sha != remote_sha
+  })
   
-  if(need.new){
+  if(any(need.new)){
     if(".dockerenv" %in% list.files("/",all.files=T)){
-      MetaboShiny::metshiAlert("New version available! Please pull the latest docker image.", title = "Notification")
+      MetaboShiny::metshiAlert(paste0("New ", paste(names(need.new)[need.new], collapse = " and "), " version available! Please pull the latest docker image."), title = "Notification")
     }else{
-      MetaboShiny::metshiAlert("New version available! Please install the latest GitHub version.", title = "Notification")
+      MetaboShiny::metshiAlert(paste0("New ", paste(names(need.new)[need.new], collapse = " and "), " version available! Please install the latest GitHub version", if(sum(need.new) == 2) "s." else "."), title = "Notification")
     }
   }
   
