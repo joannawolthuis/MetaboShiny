@@ -45,7 +45,7 @@ lapply(c("prematch","search_mz"), function(search_type){
         i = 0
         matches = pbapply::pblapply(blocks, function(mzs){
           
-          i = i + 1
+           i = i + 1
           
           try({
             shiny::setProgress(i)
@@ -121,7 +121,7 @@ lapply(c("prematch","search_mz"), function(search_type){
                 ppm <- as.numeric(mSet$ppm)
               }
               
-              res.predict = MetaDBparse::getPredicted(mz = as.numeric(mz), 
+              res.predict = MetaDBparse::getPredicted(mz = as.numeric(mz),
                                                       ppm = ppm,
                                                       mode = ionmode,
                                                       rules = input$predict_rules,
@@ -142,7 +142,7 @@ lapply(c("prematch","search_mz"), function(search_type){
                                                            search = intersect(db_list, 
                                                                               if(lcl$apikey != " ") c("pubchem", "chemspider", "knapsack","supernatural2") else 
                                                                                                        c("pubchem", "knapsack", "supernatural2")),
-                                                           detailed = TRUE,#input$predict_details,
+                                                           detailed = input$predict_details,
                                                            apikey = lcl$apikey)
                 
                 form_add_only <- res.predict[,c("baseformula",

@@ -43,7 +43,6 @@ shiny::observe({
              }else{
                output[[paste0(dbname, "_version")]] <- renderText({""})
               }
-             
              ver
            })
     names(versions) <- gsub(basename(db.paths), 

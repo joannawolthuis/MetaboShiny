@@ -97,6 +97,7 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                            list(name = 'lmdb_logo', path = 'www/lmdb_logo.png', dimensions = c(230, 100)),
                                            list(name = 'supernatural2_logo', path = 'www/supernatural2_logo.png', dimensions = c(300, 60)),
                                            list(name = 'stoff_logo', path = 'www/stoff_logo.png', dimensions = c(250, 130)),
+                                           list(name = 'pharmgkb_logo', path = 'www/pharmgkb.png', dimensions = c(250, 130)),
                                            list(name = 'knapsack_logo', path = 'www/knapsack_logo.gif', dimensions = c(200, 100)),
                                            list(name = 'laptop_icon', path = 'www/laptop.png', dimensions = c(150, 150))
                                            
@@ -198,6 +199,9 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                mvoc = list(title = "mVOC",
                                            description = "The mVOC 2.0 Database is based on extensive literature search for microbial volatile organic compounds (mVOCs)",
                                            image_id = "mvoc_logo"),
+                               pharmgkb = list(title = "PharmGKB",
+                                           description = "PharmGKB is a comprehensive resource that curates knowledge about the impact of genetic variation on drug response for clinicians and researchers.",
+                                           image_id = "pharmgkb_logo"),
                                # - - leave magicball last - -
                                cmmmediator = list(title = "CEU Mass Mediator",
                                                   description = "(ONLINE ONLY) CEU Mass Mediator is a tool for searching metabolites in different databases (Kegg, HMDB, LipidMaps, Metlin, MINE and an in-house library).",
@@ -336,6 +340,7 @@ vectors = list(
     'bmdb',
     'stoff',
     'nanpdb',
+    'pharmgkb',
     'phenolexplorer',
     "magicball",
     'cmmmediator',
