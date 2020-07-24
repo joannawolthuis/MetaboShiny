@@ -157,6 +157,7 @@ shiny::observe({
                        roc_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
                        roc_data$perf <- data.table::as.data.table(roc_data$perf)
                        res = unique(roc_data$perf[,c("AUC_PAIR", "comparison", "attempt")])
+                       lcl$tables$ml_roc_all <<- res
                        list(ml_overview_tab = res)
                      }else{
                        list()

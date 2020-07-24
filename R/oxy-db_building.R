@@ -36,20 +36,129 @@ import.pat.csvs <- function(metapath,
                             roundMz = T){
   
   ppm = as.numeric(ppm)
-
-  poslist <- data.table::fread(pospath, header=T)
-  neglist <- data.table::fread(negpath, header=T)
-
-  colnames(poslist)[1:2] <- tolower(colnames(poslist)[1:2])
-  colnames(neglist)[1:2] <- tolower(colnames(neglist)[1:2])
+  
+  biggestFile = utils:::format.object_size(file.info(pospath)$size, "GB")
+  if(grepl("Gb", x = biggestFile)) reallyBig = T else F
   
   metadata = NULL
   try({
     metadata <- data.table::fread(metapath)
     metadata <- reformat.metadata(metadata)  
-  })
+    keep.cols = colSums(is.na(metadata)) < nrow(metadata) & sapply(colnames(metadata), function(x) length(unique(metadata[,..x][[1]])) > 1) 
+    metadata$sample <- gsub(metadata$sample, pattern = wipe.regex, replacement = "", perl=T)
+    metadata.filt = unique(metadata[, ..keep.cols])
+    if(!("individual" %in% colnames(metadata.filt))) metadata.filt$individual <- metadata.filt$sample
+  },silent = T)
+  
+  samplesIn <-metadata.filt$sample
+
+  nrows = length(count.fields(pospath, sep = ","))
+  
+  if(!reallyBig){
+    poslist <- data.table::fread(pospath, header=T)
+    neglist <- data.table::fread(negpath, header=T)
+  }else{
+    # === POSITIVE MODE ===
+    con = file(pospath, "r")
+    # get missing count
+    missRes = pbapply::pblapply(1:nrows, function(i, con){
+      line = readLines(con, n = 1)
+      splRow = stringr::str_split(line, ",")[[1]]
+      sampName = splRow[1]
+      splRow = splRow[3:length(splRow)]
+      if(i > 1 & sampName %in% samplesIn){
+        as.list(splRow == "0" | splRow == 0 | splRow == "" | is.na(splRow))
+      }else{
+        NULL
+      }
+    }, con = con)
+    close.connection(con)
+    missTable = data.table::rbindlist(missRes[!sapply(missRes, is.null)])
+    miss_threshold_mz = ceiling(nrows * (missperc.mz/100))
+    qualifies = which(colSums(missTable) <= miss_threshold_mz)
+    missTable <- NULL
+    missRes <- NULL
+    gc()
+    
+    # get actual data
+    con = file(pospath, "r")
+    cols= readLines(con, n = 1)
+    filtRes = pbapply::pblapply(2:nrows, function(i, con, qualifies){
+      line = readLines(con, n = 1)
+      splRow = stringr::str_split(line, ",")[[1]]
+      sampName = splRow[1]
+      label =splRow[2]
+      splRow = splRow[3:length(splRow)]
+      if(sampName %in% samplesIn){
+        as.list(c(sampName, label, splRow[qualifies]))
+      }else{
+        NULL
+      }
+    }, con = con, qualifies = qualifies)
+    close.connection(con)
+    poslist = data.table::rbindlist(filtRes[!sapply(filtRes, is.null)])
+    colnames(poslist) <- stringr::str_split(cols, ",")[[1]][c(1,2,qualifies)]
+    filtRes <- NULL
+    gc()
+    
+    # === NEGATIVE MODE ===
+    con = file(negpath, "r")
+    cols= readLines(con, n = 1)
+    # get missing count
+    missRes = pbapply::pblapply(2:nrows, function(i, con){
+      line = readLines(con, n = 1)
+      splRow = stringr::str_split(line, ",")[[1]]
+      sampName = splRow[1]
+      splRow = splRow[3:length(splRow)]
+      if(sampName %in% samplesIn){
+        as.list(splRow == "0" | splRow == 0 | splRow == "")
+      }else{
+        NULL
+      }
+    }, con = con)
+    close.connection(con)
+    missTable = data.table::rbindlist(missRes[!sapply(missRes, is.null)])
+    miss_threshold_mz = ceiling(nrows  * (missperc.mz/100))
+    qualifies = which(colSums(missTable) <= miss_threshold_mz)
+    missTable <- NULL
+    missRes <- NULL
+    gc()
+    
+    # get actual data
+    con = file(negpath, "r")
+    filtRes = pbapply::pblapply(1:nrows, function(i, con, qualifies){
+      line = readLines(con, n = 1)
+      splRow = stringr::str_split(line, ",")[[1]]
+      sampName = splRow[1]
+      label =splRow[2]
+      splRow = splRow[3:length(splRow)]
+      if(sampName %in% samplesIn){
+        as.list(c(sampName, label, splRow[qualifies]))
+      }else{
+        NULL
+      }
+    }, con = con, qualifies = qualifies)
+    close.connection(con)
+    neglist = data.table::rbindlist(filtRes[!sapply(filtRes, is.null)])
+    colnames(neglist) <- stringr::str_split(cols, ",")[[1]][c(1,2,qualifies)]
+    filtRes <- NULL
+    gc()
+  }
+  
+  colnames(poslist)[1:2] <- tolower(colnames(poslist)[1:2])
+  colnames(neglist)[1:2] <- tolower(colnames(neglist)[1:2])
   
   hasRT=F
+  
+  if(is.null(metadata)){
+    if("label" %in% tolower(colnames(poslist)[1:5])){
+      premeta = poslist[,1:30]
+      colnames(premeta) <- tolower(colnames(premeta))
+      metadata = premeta[,c("sample", "label")]
+    }else{
+      stop("Requires either metadata uploaded OR a label/Label column!")
+    }
+  }
   
   # PIVOT IF WRONG SIDE AROUND - METABOLIGHTS DATA
   if(any(grepl("mass_to_charge", colnames(poslist)))){
@@ -75,27 +184,6 @@ import.pat.csvs <- function(metapath,
   }else{
     hasRT=any(grepl(colnames(poslist), pattern = "RT\\d+"))
   }
-  
-  metadata = NULL
-  try({
-    metadata <- data.table::fread(metapath)
-    metadata <- reformat.metadata(metadata)  
-  },silent = T)
-  
-  if(is.null(metadata)){
-    if("label" %in% tolower(colnames(poslist)[1:5])){
-      premeta = poslist[,1:30]
-      colnames(premeta) <- tolower(colnames(premeta))
-      metadata = premeta[,c("sample", "label")]
-    }else{
-      stop("Requires either metadata uploaded OR a label/Label column!")
-    }
-  }
-  
-  keep.cols = colSums(is.na(metadata)) < nrow(metadata) & sapply(colnames(metadata), function(x) length(unique(metadata[,..x][[1]])) > 1) 
-  metadata$sample <- gsub(metadata$sample, pattern = wipe.regex, replacement = "", perl=T)
-  metadata.filt = unique(metadata[, ..keep.cols])
-  if(!("individual" %in% colnames(metadata.filt))) metadata.filt$individual <- metadata.filt$sample
 
   if("label" %in% colnames(poslist)[1:5]){
     poslist[,label:=NULL]
@@ -123,19 +211,17 @@ import.pat.csvs <- function(metapath,
     }, silent=T)
   }
   
-  if(missperc.mz < 100){
+  if(missperc.mz < 100 & !reallyBig){
     miss_threshold_mz = ceiling(nrow(poslist)*(missperc.mz/100))
-    
     poslist <- poslist[,which(colSums(is.na(poslist)) <= miss_threshold_mz), with=F] # at least one sample with non-na
     neglist <- neglist[,which(colSums(is.na(neglist)) <= miss_threshold_mz), with=F] # at least one sample with non-na
+  }
     
-    try({
-      shiny::showNotification(paste0("Remaining m/z values for positive mode:", ncol(poslist)))
-      shiny::showNotification(paste0("Remaining m/z values for negative mode:", ncol(neglist)))
-      
-    }, silent=T)
-    }
-    
+  try({
+    shiny::showNotification(paste0("Remaining m/z values for positive mode:", ncol(poslist)))
+    shiny::showNotification(paste0("Remaining m/z values for negative mode:", ncol(neglist)))
+  }, silent=T)
+  
   # REGEX SAMPLE NAMES if applicable
   if(wipe.regex != ""){
     poslist[, sample := gsub(wipe.regex, replacement = "", sample, perl=T)]

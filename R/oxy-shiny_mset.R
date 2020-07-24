@@ -59,18 +59,23 @@ name.mSet <- function(mSet) {
   info_vec = c()
   if (mSet$dataSet$exp.type %in% c("t1f", "t")) {
     info_vec = c("timeseries")
-  } else if (mSet$dataSet$paired) {
+  } else if (mSet$settings$paired) {
     info_vec = c(info_vec, "paired")
   }
-  if (length(mSet$dataSet$subset) > 0) {
-    subsetgroups = sapply(1:length(mSet$dataSet$subset), function(i) {
-      if (names(mSet$dataSet$subset)[i] == "sample") {
+  
+  if("mz" %in% names(mSet$settings$subset)){
+    info_vec = c(info_vec, "prematched m/z only")
+  }
+  
+  if (length(mSet$settings$subset) > 0) {
+    subsetgroups = sapply(1:length(mSet$settings$subset), function(i) {
+      if (names(mSet$settings$subset)[i] %in% c("sample", "mz")) {
         NULL
       } else{
         paste0(
-          names(mSet$dataSet$subset)[i],
+          names(mSet$settings$subset)[i],
           "=",
-          paste0(mSet$dataSet$subset[[i]], collapse = "+")
+          paste0(mSet$settings$subset[[i]], collapse = "+")
         )
       }
     })
@@ -132,6 +137,7 @@ name.mSet <- function(mSet) {
                        tolower(paste0(":", subsetgroups, collapse = ","))
                      else
                        "")
+  print(mset_name)
   mset_name
 }
 
@@ -305,6 +311,36 @@ change.mSet <-
     mSet$analSet <- NULL
     return(mSet)
   }
+
+
+# subset by mz
+subset_mSet_mz <- function(mSet, keep.mzs) {
+  if (length(keep.mzs) > 0) {
+    tables = c("norm", "proc")
+    clss = c("cls", "proc.cls")
+    combi.tbl = data.table::data.table(tbl = tables)
+    
+    for (i in 1:nrow(combi.tbl)){
+      try({
+        tbl = combi.tbl$tbl[i]
+        # convert back
+        if(any(grepl(colnames(mSet$dataSet[[tbl]]), pattern="/"))){
+          eachPPM = T
+          ppm = ceiling(as.numeric(gsub(colnames(tbl), pattern="^.*/", replacement="")))
+          fixedCols = gsub(colnames(mSet$dataSet[[tbl]]), pattern="/.*$", replacement="")
+        }else{
+          eachPPM = F
+          ppm = mSet$ppm
+          fixedCols = gsub(colnames(mSet$dataSet[[tbl]]), pattern="RT.*$", replacement="")
+        }
+        keep = which(fixedCols %in% keep.mzs)
+        mSet$dataSet[[tbl]] <- mSet$dataSet[[tbl]][, keep]
+        mSet$settings$subset$mz <- keep.mzs
+      }, silent = T)
+    }
+  }
+  mSet
+}
 
 #' @title Subset mSet
 #' @description Subset the current dataset based on metadata variables

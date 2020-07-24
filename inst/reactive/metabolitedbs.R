@@ -240,7 +240,9 @@ shiny::observe({
                             
             ),
             tooltips,
-            uiOutput(paste0(prefix,"_db_categ"))
+            shiny::wellPanel(id = "def",
+                             style = "overflow-y:scroll; max-height: 250px; border:1px dashed #e3e3e3; background-color: #ffffff;",
+                             shiny::uiOutput(paste0(prefix,"_db_categ")))
           )
         }
       })

@@ -1,6 +1,5 @@
 shiny::observeEvent(input$clear_prematch,{
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb) # change this to proper var later
-  
   RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS map_mz")
   RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS map_struc")
   RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS cont_struc")
@@ -8,6 +7,8 @@ shiny::observeEvent(input$clear_prematch,{
   RSQLite::dbExecute(conn, "DROP TABLE IF EXISTS match_mapper")
   RSQLite::dbExecute(conn, "VACUUM")
   mSet$metshiParams$prematched <<- FALSE
+  # remove ALL mSet storage that had prematched m/z
+  mSet$storage <<- mSet$storage[!grepl(pattern = "\\(prematched m/z only\\)", names(mSet$storage))]
   search_button$go <- TRUE
   #RSQLite::dbDisconnect(conn)
 })
@@ -158,7 +159,7 @@ lapply(c("prematch","search_mz"), function(search_type){
                 if(!("source" %in% colnames(results_full))){
                   results_full$source = "magicball"
                 }
-                results_full[is.na(source),]$name <- results_full[is.na(source),]$baseformula
+                results_full[is.na(source),]$compoundname <- results_full[is.na(source),]$baseformula
                 results_full[is.na(source),]$source <- c("magicball")
                 withSmi = which(results_full$structure != "")
                 if(length(withSmi) > 0){
@@ -225,7 +226,7 @@ lapply(c("prematch","search_mz"), function(search_type){
                                         "%iso",
                                         "dppm")]),
                  content = unique(res[,c("query_mz",
-                                         "name",
+                                         "compoundname",
                                          "baseformula",
                                          "adduct",
                                          "fullformula",

@@ -20,3 +20,11 @@ shiny::observeEvent(input$load_storage, {
   mSetter$do <- "load"
   uimanager$refresh <- "general"
 })
+
+
+observeEvent(input$show_prematched_mz_only, {
+  if(mSet$metshiParams$prematched){
+    mSetter$do <- "refresh"
+    uimanager$refresh <- "general"  
+  }
+},ignoreInit = T)

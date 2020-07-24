@@ -29,6 +29,7 @@
     transform: translate(-50%, 0) !important;
 }
 
+
 .bttn-bordered.bttn-default {
     border-color: black;
     color: black;
@@ -430,6 +431,13 @@
   float: left;
 }
 
+.readme_image {
+  width: 70%;  
+}
+
+ol, ul { display:inline-table; 
+         list-style-position: inside; }
+
 pre {
    padding: 0px;
 }
@@ -461,7 +469,7 @@ a {
   border-top: 5px solid;
   border-top-right-radius: 20px;
   margin-left: 30%;
-  margin-top: 15px;    
+  margin-top: 16px;    
 }
 
 #right:before
@@ -469,7 +477,7 @@ a {
   border-top: 5px solid;
   border-top-left-radius: 20px;
   margin-left: -10%;
-  margin-top: 15px;
+  margin-top: 16px;
 }
 
 #right:after

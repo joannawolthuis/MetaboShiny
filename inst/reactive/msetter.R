@@ -27,7 +27,7 @@ shiny::observe({
           mSet.settings <- if(mSetter$do == "load") mSet$storage[[input$storage_choice]]$settings else oldSettings
           if(length(mSet.settings$subset) > 0){
             subs = mSet.settings$subset
-            subs = subs[names(subs) != "sample"]
+            subs = subs[!(names(subs) %in% c("sample", "mz"))]
             if(length(subs) > 0){
               for(i in 1:length(subs)){
                 mSet <- MetaboShiny::subset_mSet(mSet, 
@@ -40,10 +40,15 @@ shiny::observe({
           mSet.settings <- oldSettings
         }
         
-        # TODO: fix mismatch between cls order, covars order and table sample order
-        # use match() somehow?
-        # should be fixed in #CHANGE.MSET
         mSet <- switch(mSetter$do,
+                       refresh = {
+                         mSet <- MetaboShiny::change.mSet(mSet, 
+                                                          stats_var = mSet.settings$exp.var, 
+                                                          time_var =  mSet.settings$time.var,
+                                                          stats_type = mSet.settings$exp.type)
+                         mSet$dataSet$paired <- mSet.settings$paired
+                         mSet
+                       },
                        load = {
                          mSet <- MetaboShiny::change.mSet(mSet, 
                                                           stats_var = mSet.settings$exp.var, 
@@ -102,7 +107,7 @@ shiny::observe({
         }
         
         mSet$settings$exp.type = mSet$dataSet$exp.type 
-        new.name = if(mSetter$do == "load") input$storage_choice else MetaboShiny::name.mSet(mSet)
+        new.name = if(mSetter$do == "load") input$storage_choice else name.mSet(mSet)
         
         if(new.name %in% names(mSet$storage)){
           mSet <- MetaboShiny::load.mSet(mSet, new.name)
@@ -131,8 +136,39 @@ shiny::observe({
                                                              rsd = 25)$dataSet$filt)
           mSet$dataSet$norm <- mSet$dataSet$norm[,keep.mz]
           mSet$dataSet$proc <- mSet$dataSet$proc[,keep.mz]
-          #mSet$dataSet$prenorm <- mSet$dataSet$prenorm[,keep.mz]
         }
+        
+        # if(mSet$metshiParams$prematched & input$show_prematched_mz_only){
+        #   orig.mz <- ncol(mSet$dataSet$norm)
+        #   conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb)
+        #   
+        #   showadd = input$prematch_show_add
+        #   showiso = input$prematch_show_iso
+        #   
+        #   showadd <- if(length(showadd) > 0) paste0(showadd, collapse=" OR adduct = '", "'") 
+        #   showiso <- if(length(showiso) > 0) if(length(showiso) == 2) c() else showiso
+        #   
+        #   firstpart = "SELECT DISTINCT query_mz FROM match_mapper"
+        #   addfrag = if(length(showadd) > 0) gsubfn::fn$paste("AND (adduct = '$showadd)") else ""
+        #   isofrag = if(length(showiso) > 0) switch(showiso, 
+        #                                          main = "AND `%iso` > 99.9999", 
+        #                                          minor = "AND `%iso` < 99.9999") else ""
+        #   
+        #   query = gsubfn::fn$paste("$firstpart WHERE query_mz IS NOT NULL $addfrag $isofrag")
+        # 
+        #   matched_mz = DBI::dbGetQuery(conn, query)[,1]
+        #   DBI::dbDisconnect(conn)
+        #   mSet <- subset_mSet_mz(mSet, matched_mz)
+        #   
+        #   new.mz <- ncol(mSet$dataSet$norm)
+        #   # update on screen
+        #   output$mz_count <- shiny::renderText({
+        #     paste0("m/z: ", 
+        #            as.character(new.mz), if(orig.mz == new.mz) "" else paste0("/",as.character(orig.mz)))
+        #   })
+        # }else{
+        #   output$mz_count <- shiny::renderText("")
+        # }
         
         # =========
         

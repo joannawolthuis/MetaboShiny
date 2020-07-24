@@ -158,7 +158,7 @@ app.font.css <- function(font.h1 = "Press Start 2P",
 
   base <- '$base.import
 
-  h1 {
+  #appHeader {
   margin: 2px;
   font-family: "$font.h1";
   color: $font.col !important;
@@ -167,6 +167,10 @@ app.font.css <- function(font.h1 = "Press Start 2P",
   line-height: 0.5;
   margin-top: 8px;
   z-index:99998 !important;
+  }
+  
+  h1 {
+  font-family: "$font.h1";
   }
 
   h2 {

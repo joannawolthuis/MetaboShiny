@@ -15,6 +15,7 @@ function(input, output, session) {
   # used to be in startshiny.R
   options("download.file.method" = "libcurl")
   options(expressions = 5e5)
+  online = MetaboShiny::internetWorks()
   
   # make metaboshiny_storage dir in home first..
   # docker run -p 8080:8080 -v ~/MetaboShiny/:/userfiles/:cached --rm -it metaboshiny/master /bin/bash
@@ -133,6 +134,29 @@ function(input, output, session) {
       tmp = tempdir()
       addResourcePath('tmp', tmp)
       
+      # - - - - - - - - - - - - - - - - - - - - - -
+      
+      if(online){
+        url <- "https://github.com/joannawolthuis/MetaboShiny/blob/master/README.md"
+        source <- readLines(url, encoding = "UTF-8")
+        parsed_doc <- XML::htmlParse(source, encoding = "UTF-8")
+        helpFile = tempfile()
+        XML::xpathSApply(parsed_doc, path = '//*[@id="readme"]/article', function(x) XML::saveXML(x,helpFile))
+        html = suppressWarnings(paste0(readLines(helpFile),collapse="<br>"))
+        html = gsub("([\\w|\\/]+)www", "www", html, perl=T)
+        html = gsub("(img src=.+?) ", "\\1 class=\"readme_image\" ", html, perl = T)
+        html = gsub("[ |]\\(Figure.*?\\)", "", html)
+        html = gsub("id=\"user-content-", "id=\"", html)
+        html = gsub("<svg.*?\\/svg>", "", html)
+        html = gsub("\\/joannawolthuis", "https://github.com/joannawolthuis", html)
+        html = gsub("Issues page here,", "Issues page on <a href=\"https://github.com/joannawolthuis/MetaboShiny/issues\">GitHub<\\/a>", html)
+        
+        output$help <- shiny::renderUI(shiny::HTML(html))  
+      }else{
+        output$help <- shiny::renderUI(shiny::helpText("You are offline!"))
+      }
+      
+      
       # - - - - check for custom databases - - - - 
       
       last_db = length(gbl$vectors$db_list) - 2
@@ -226,7 +250,6 @@ omit_unknown = yes')
       # send specific functions/packages to other threads
       
       # === GOOGLE FONT SUPPORT FOR GGPLOT2 ===
-      online = MetaboShiny::internetWorks()
       
       # Download a webfont
       if(online){
@@ -408,7 +431,9 @@ omit_unknown = yes')
       shiny::withProgress({
         if(input$tab_iden_2 == "mzmol"){
           if(lcl$prev_mz != my_selection$mz & !identical(lcl$vectors$prev_dbs, lcl$vectors$db_search_list)){
-            matches = data.table::as.data.table(MetaboShiny::get_prematches(who = gsub(my_selection$mz, pattern="/.*$|RT.*$", replacement=""),
+            matches = data.table::as.data.table(MetaboShiny::get_prematches(who = gsub(my_selection$mz, 
+                                                                                       pattern="/.*$|RT.*$", 
+                                                                                       replacement=""),
                                                                             what = "map.query_mz",
                                                                             patdb = lcl$paths$patdb,
                                                                             showadd = c(),
@@ -440,7 +465,7 @@ omit_unknown = yes')
             
             shiny::setProgress(0.2)
             
-            matches$name[matches$source != "magicball"] <- tolower(matches$name[matches$source != "magicball"])
+            matches$compoundname[matches$source != "magicball"] <- tolower(matches$compoundname[matches$source != "magicball"])
             
             # =====
             
@@ -452,7 +477,7 @@ omit_unknown = yes')
             
             # === aggregate ===
             
-            info_only = unique(matches[,c("name", 
+            info_only = unique(matches[,c("compoundname", 
                                           "source", 
                                           "structure", 
                                           "description",
@@ -463,7 +488,7 @@ omit_unknown = yes')
             info_no_na <- info_only[!is.na(info_only$structure)]
             info_na <- info_only[is.na(info_only$structure)]
             
-            info_aggr <- aggregate(info_no_na, by = list(info_no_na$name), FUN = function(x) paste0(x, collapse = "SEPERATOR"))
+            info_aggr <- aggregate(info_no_na, by = list(info_no_na$compoundname), FUN = function(x) paste0(x, collapse = "SEPERATOR"))
             info_aggr <- aggregate(info_aggr, by = list(info_aggr$structure), FUN = function(x) paste0(x, collapse = "SEPERATOR"))
             
             info_aggr <- rbind(info_aggr, info_na, fill=T)
@@ -474,7 +499,7 @@ omit_unknown = yes')
             info_aggr$structure <- main_structs
             
             # move extra names to descriptions
-            split_names <- strsplit(info_aggr$name, split = "SEPERATOR")
+            split_names <- strsplit(info_aggr$compoundname, split = "SEPERATOR")
             main_names <- unlist(lapply(split_names, function(x) if(length(x) > 1) x[[1]] else x[1]))
             
             synonyms <- unlist(lapply(split_names, function(x){
@@ -483,7 +508,7 @@ omit_unknown = yes')
               }else NA
             }))
             
-            info_aggr$name <- main_names
+            info_aggr$compoundname <- main_names
             has.syn <- which(!is.na(synonyms))
             
             info_aggr$description[has.syn] <- paste0(synonyms[has.syn], info_aggr$description[has.syn])
@@ -499,7 +524,7 @@ omit_unknown = yes')
             uniq.to.aggr <- match(uniques[is.no.na.uniq]$structure, 
                                   info_aggr[is.no.na.info]$structure)
             
-            uniques$name[is.no.na.uniq] <- info_aggr$name[is.no.na.info][uniq.to.aggr]
+            uniques$compoundname[is.no.na.uniq] <- info_aggr$compoundname[is.no.na.info][uniq.to.aggr]
             uniques$structure[is.no.na.uniq] <- info_aggr$structure[is.no.na.info][uniq.to.aggr]
             
             uniques <- unique(uniques)
@@ -539,7 +564,7 @@ omit_unknown = yes')
   shiny::observe({
     if(my_selection$name != ""){
       if(nrow(shown_matches$forward_full) > 0 ){
-        subsec = data.table::as.data.table(shown_matches$forward_full)[name == my_selection$name]
+        subsec = data.table::as.data.table(shown_matches$forward_full)[compoundname == my_selection$name]
         
         if(grepl("SYNONYMS:", x = subsec$description)){
           has_syn = T
@@ -549,7 +574,7 @@ omit_unknown = yes')
           has_syn = F
         }
         
-        subsec <- subsec[, .(name, 
+        subsec <- subsec[, .(compoundname, 
                              source = strsplit(source, split = "SEPERATOR")[[1]], 
                              structure = structure, 
                              description = strsplit(description, split = "SEPERATOR")[[1]]
@@ -1142,7 +1167,31 @@ omit_unknown = yes')
       fluidRow(align="center", 
                shiny::img(src = "pawprint.png",height = "50px"),
                br(),
-               tags$h2("pre-matched"))
+               tags$h2("pre-matched")
+               # ,br(),
+               # shinyWidgets::switchInput(
+               #   inputId = "show_prematched_mz_only",
+               #   value = FALSE,
+               #   label = "Show m/z",
+               #   onLabel = "with matches",
+               #   width = "100%",
+               #   offLabel = "all"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
+               # ),
+               # shiny::fluidRow(shiny::selectInput("prematch_show_add", 
+               #                                    label = "Adducts", 
+               #                                    choices = adducts$Name, 
+               #                                    width = "50%", 
+               #                                    multiple = T,
+               #                                    selected = c("[M+H]1+", "[M-H]1-")),
+               #                 shiny::selectInput("prematch_show_iso", 
+               #                                    label = "Isotopes",
+               #                                    choices = c("main", "minor"), 
+               #                                    width="50%", multiple = T,
+               #                                    selected = "main")),
+               # shiny::conditionalPanel("input.show_prematched_mz_only == true",
+               #                         shiny::textOutput("mz_count")
+               #                         )
+               )
     }
   })
   
@@ -1192,23 +1241,25 @@ omit_unknown = yes')
   },ignoreNULL = T)
   
   # new version check for either github or docker
-  need.new = sapply(c("MetaboShiny", "MetaDBparse"), function(pkg){
-    remote = remotes:::github_remote(paste0("joannawolthuis/", pkg),
-                                     host = "api.github.com",
-                                     repos = getOption("repos"), 
-                                     type = getOption("pkgType"))
-    package_name <- remotes:::remote_package_name(remote)
-    local_sha <- remotes:::local_sha(package_name)
-    remote_sha <- remotes:::remote_sha(remote, local_sha)
-    local_sha != remote_sha
-  })
-  
-  if(any(need.new)){
-    if(".dockerenv" %in% list.files("/",all.files=T)){
-      MetaboShiny::metshiAlert(paste0("New ", paste(names(need.new)[need.new], collapse = " and "), " version available! Please pull the latest docker image."), title = "Notification")
-    }else{
-      MetaboShiny::metshiAlert(paste0("New ", paste(names(need.new)[need.new], collapse = " and "), " version available! Please install the latest GitHub version", if(sum(need.new) == 2) "s." else "."), title = "Notification")
-    }
+  if(online){
+    need.new = sapply(c("MetaboShiny", "MetaDBparse"), function(pkg){
+      remote = remotes:::github_remote(paste0("joannawolthuis/", pkg),
+                                       host = "api.github.com",
+                                       repos = getOption("repos"), 
+                                       type = getOption("pkgType"))
+      package_name <- remotes:::remote_package_name(remote)
+      local_sha <- remotes:::local_sha(package_name)
+      remote_sha <- remotes:::remote_sha(remote, local_sha)
+      local_sha != remote_sha
+    })
+    
+    if(any(need.new)){
+      if(".dockerenv" %in% list.files("/",all.files=T)){
+        MetaboShiny::metshiAlert(paste0("New ", paste(names(need.new)[need.new], collapse = " and "), " version available! Please pull the latest docker image."), title = "Notification")
+      }else{
+        MetaboShiny::metshiAlert(paste0("New ", paste(names(need.new)[need.new], collapse = " and "), " version available! Please install the latest GitHub version", if(sum(need.new) == 2) "s." else "."), title = "Notification")
+      }
+    } 
   }
   
   onStop(function() {

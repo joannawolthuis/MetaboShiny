@@ -24,7 +24,7 @@ get_exp_vars <- function(patcsv){
 browse_db <- function(chosen.db){
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), chosen.db) # change this to proper var later
   # --- browse ---
-  result <- RSQLite::dbGetQuery(conn, "SELECT DISTINCT compoundname as name, baseformula as formula, description as description, charge as charge FROM base")
+  result <- RSQLite::dbGetQuery(conn, "SELECT DISTINCT compoundname, baseformula as formula, description as description, charge as charge FROM base")
   # --- result ---
   result
 }
@@ -51,9 +51,12 @@ get_prematches <- function(who = NA,
                            showdb=c(),
                            showadd=c(),
                            showiso=c()){
+  
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
   
-  firstpart = strwrap("SELECT DISTINCT map.query_mz, name,
+  print(who)
+  
+  firstpart = strwrap("SELECT DISTINCT map.query_mz, compoundname,
                                map.baseformula as baseformula,
                                map.adduct as adduct,
                                con.identifier,
@@ -83,6 +86,7 @@ get_prematches <- function(who = NA,
                                          main = "AND `%iso` > 99.9999", 
                                          minor = "AND `%iso` < 99.9999") else ""
   
+  who = gsub("0+$", "", who)
   query = gsubfn::fn$paste("$firstpart WHERE $what = '$who' $dbfrag $addfrag $isofrag")
 
   res = RSQLite::dbGetQuery(conn, query)

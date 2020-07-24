@@ -9,6 +9,7 @@ output$match_tab <- DT::renderDataTable({
   targets = unique(c(which(colnames(content) %in% gbl$vectors$hide_match_cols),
                      which(colnames(content) == "isocat")))
   
+  colnames(content)[colnames(content) == "compoundname"] <- "name"
   MetaboShiny::metshiTable(
               content = content,
               options = list(
@@ -61,7 +62,7 @@ output$ml_tab <- DT::renderDataTable({
 }, server = F)
 
 observeEvent(input$ml_overview_tab_rows_selected, {
-  attempt = unique(mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc$perf)[input$ml_overview_tab_rows_selected,]$attempt
+  attempt = lcl$tables$ml_roc_all[input$ml_overview_tab_rows_selected,]$attempt
   xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
   output$ml_tab <- DT::renderDataTable({
     imp <- data.table::as.data.table(xvals$imp[[attempt]], keep.rownames = T)

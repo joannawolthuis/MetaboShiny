@@ -227,7 +227,8 @@ shiny::observeEvent(input$initialize, {
       
       if(batch_corr){
         
-        if("batch" %in% input$batch_var & has.qc){
+        left_batch_vars = input$batch_var
+        if("batch" %in% input$batch_var & has.qc & input$batch_use_qcs){
           # save to mSet
           smps <- rownames(mSet$dataSet$norm)
           # get which rows are QC samples
@@ -252,21 +253,19 @@ shiny::observeEvent(input$initialize, {
                                         minBsamp = 1)
             
             }), .SDcols = 1:ncol(dtNorm)]
+          left_batch_vars <- grep(input$batch_var,
+                                  pattern = ifelse(has.qc, "batch|injection|sample", "injection|sample"),
+                                  value = T,
+                                  invert = T)
         }
 
-        
         # check which batch values are left after initial correction
-        left_batch_vars <- grep(input$batch_var,
-                                pattern =  ifelse(has.qc, "batch|injection|sample", "injection|sample"),
-                                value = T,
-                                invert = T)
         
         if(length(left_batch_vars) > 2){
           NULL  # no option for more than 2 other batch variables yet
         } else if(length(left_batch_vars) == 0){
           NULL # if none left, continue after this
         } else{
-          
           csv_edata <- MetaboShiny::combatCSV(mSet)
           
           if(length(left_batch_vars) == 1){
