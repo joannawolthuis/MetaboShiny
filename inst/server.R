@@ -136,26 +136,32 @@ function(input, output, session) {
       
       # - - - - - - - - - - - - - - - - - - - - - -
       
-      if(online){
-        url <- "https://github.com/joannawolthuis/MetaboShiny/blob/master/README.md"
-        source <- readLines(url, encoding = "UTF-8")
-        parsed_doc <- XML::htmlParse(source, encoding = "UTF-8")
-        helpFile = tempfile()
-        XML::xpathSApply(parsed_doc, path = '//*[@id="readme"]/article', function(x) XML::saveXML(x,helpFile))
-        html = suppressWarnings(paste0(readLines(helpFile),collapse="<br>"))
-        html = gsub("([\\w|\\/]+)www", "www", html, perl=T)
-        html = gsub("(img src=.+?) ", "\\1 class=\"readme_image\" ", html, perl = T)
-        html = gsub("[ |]\\(Figure.*?\\)", "", html)
-        html = gsub("id=\"user-content-", "id=\"", html)
-        html = gsub("<svg.*?\\/svg>", "", html)
-        html = gsub("\\/joannawolthuis", "https://github.com/joannawolthuis", html)
-        html = gsub("Issues page here,", "Issues page on <a href=\"https://github.com/joannawolthuis/MetaboShiny/issues\">GitHub<\\/a>", html)
-        
-        output$help <- shiny::renderUI(shiny::HTML(html))  
-      }else{
-        output$help <- shiny::renderUI(shiny::helpText("You are offline!"))
-      }
       
+      shiny::observeEvent(input$nav_general, {
+        if(input$nav_general == "help"){
+          if(online){
+            shiny::showNotification("Loading help file...")
+            url <- "https://github.com/joannawolthuis/MetaboShiny/blob/master/README.md"
+            source <- readLines(url, encoding = "UTF-8")
+            parsed_doc <- XML::htmlParse(source, encoding = "UTF-8")
+            helpFile = tempfile()
+            XML::xpathSApply(parsed_doc, path = '//*[@id="readme"]/article', function(x) XML::saveXML(x,helpFile))
+            
+            html = suppressWarnings(paste0(readLines(helpFile),collapse="<br>"))
+            html = gsub("([\\w|\\/]+)www", "www", html, perl=T)
+            html = gsub("(img src=.+?) ", "\\1 class=\"readme_image\" ", html, perl = T)
+            html = gsub("[ |]\\(Figure.*?\\)", "", html)
+            html = gsub("id=\"user-content-", "id=\"", html)
+            html = gsub("<svg.*?\\/svg>", "", html)
+            html = gsub("\\/joannawolthuis", "https://github.com/joannawolthuis", html)
+            html = gsub("Issues page here,", "Issues page on <a href=\"https://github.com/joannawolthuis/MetaboShiny/issues\">GitHub<\\/a>", html)
+            
+            output$help <- shiny::renderUI(shiny::HTML(html))  
+          }else{
+            output$help <- shiny::renderUI(shiny::h3("You are offline!"))
+          }
+        }
+      })
       
       # - - - - check for custom databases - - - - 
       
@@ -1242,7 +1248,8 @@ omit_unknown = yes')
   
   # new version check for either github or docker
   if(online){
-    need.new = sapply(c("MetaboShiny", "MetaDBparse"), function(pkg){
+    pkgs = c("MetaboShiny", "MetaDBparse")
+    need.new = lapply(pkgs, function(pkg){
       remote = remotes:::github_remote(paste0("joannawolthuis/", pkg),
                                        host = "api.github.com",
                                        repos = getOption("repos"), 
@@ -1250,16 +1257,44 @@ omit_unknown = yes')
       package_name <- remotes:::remote_package_name(remote)
       local_sha <- remotes:::local_sha(package_name)
       remote_sha <- remotes:::remote_sha(remote, local_sha)
-      local_sha != remote_sha
+      need = local_sha != remote_sha
+      msg = NA
+      if(need){
+        sha = remote_sha
+        url = gsubfn::fn$paste("https://api.github.com/repos/joannawolthuis/$pkg/git/commits/$sha")
+        json = jsonlite::read_json(url)
+        msg = json$message
+      }
+      list(need=need, msg=msg, pkg=pkg)
     })
     
-    if(any(need.new)){
-      if(".dockerenv" %in% list.files("/",all.files=T)){
-        MetaboShiny::metshiAlert(paste0("New ", paste(names(need.new)[need.new], collapse = " and "), " version available! Please pull the latest docker image."), title = "Notification")
+    needs.new = sapply(need.new, function(x) x[[1]])
+    if(any(needs.new)){
+      alertContent = lapply(need.new, function(pkgRes){
+        if(pkgRes$need){
+          textID=tolower(paste0(pkgRes$pkg, "_update"))
+          output[[textID]] <<- shiny::renderText(pkgRes$msg)
+          shiny::tagList(shiny::h2(pkgRes$pkg),
+                         shiny::wellPanel(shiny::helpText(pkgRes$msg))
+                         #shiny::helpText(pkgRes$msg)
+                         #shiny::verbatimTextOutput(textID)
+                         )
+        }else{
+          list()
+        }
+      })
+      if(".dockerenv" %in% list.files("/", all.files=T)){
+        headerMsg = paste0("New ", paste(pkgs[needs.new], collapse = " and "), " version available! Please pull the latest docker image.")
       }else{
-        MetaboShiny::metshiAlert(paste0("New ", paste(names(need.new)[need.new], collapse = " and "), " version available! Please install the latest GitHub version", if(sum(need.new) == 2) "s." else "."), title = "Notification")
+        headerMsg = paste0("New ", paste(pkgs[needs.new], collapse = " and "), " version available! Please install the latest GitHub version", if(sum(needs.new) == 2) "s." else ".")
       }
-    } 
+      MetaboShiny::metshiAlert(shiny::tagList(h3(headerMsg),
+                                              hr(),
+                                              alertContent), 
+                               session = session,
+                               title = "Notification")
+    }
+     
   }
   
   onStop(function() {
