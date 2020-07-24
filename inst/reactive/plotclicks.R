@@ -44,7 +44,6 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                      "venn")){ 
     
     if(curr_tab == "ml" & input$ml_results == "roc"){
-      print(d)
       attempt = as.numeric(d$key[[1]])
         xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
         if(attempt > 0){
@@ -66,7 +65,6 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                  if(!is.null(d$y)){
                    if(d$y > length(lcl$vectors$heatmap)) return(NULL)
                    my_selection$mz <<- lcl$vectors$heatmap[d$y]  
-                   print("...")
                    plotmanager$make <- "summary"
                  }
                },

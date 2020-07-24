@@ -1252,7 +1252,8 @@ omit_unknown = yes')
     need.new = lapply(pkgs, function(pkg){
       remote = remotes:::github_remote(paste0("joannawolthuis/", pkg),
                                        host = "api.github.com",
-                                       repos = getOption("repos"), 
+                                       repos = getOption("repos"),
+                                       auth_token = "ba37d78a62279dd052fbaa45f2497345ad652cf3", 
                                        type = getOption("pkgType"))
       package_name <- remotes:::remote_package_name(remote)
       local_sha <- remotes:::local_sha(package_name)
@@ -1262,8 +1263,15 @@ omit_unknown = yes')
       if(need){
         sha = remote_sha
         url = gsubfn::fn$paste("https://api.github.com/repos/joannawolthuis/$pkg/git/commits/$sha")
-        json = jsonlite::read_json(url)
-        msg = json$message
+        msg = ""
+        try({
+          response = httr::GET(
+            url,
+            httr::add_headers(Authorization = "ba37d78a62279dd052fbaa45f2497345ad652cf3")
+          )
+          resParsed = httr::content(response, as = "parsed")
+          msg <- resParsed$message
+        }, silent=T)
       }
       list(need=need, msg=msg, pkg=pkg)
     })
@@ -1274,11 +1282,15 @@ omit_unknown = yes')
         if(pkgRes$need){
           textID=tolower(paste0(pkgRes$pkg, "_update"))
           output[[textID]] <<- shiny::renderText(pkgRes$msg)
-          shiny::tagList(shiny::h2(pkgRes$pkg),
-                         shiny::wellPanel(shiny::helpText(pkgRes$msg))
-                         #shiny::helpText(pkgRes$msg)
-                         #shiny::verbatimTextOutput(textID)
-                         )
+          if(pkgRes$msg != ""){
+            shiny::tagList(shiny::h2(pkgRes$pkg),
+                           shiny::wellPanel(shiny::helpText(pkgRes$msg))
+                           #shiny::helpText(pkgRes$msg)
+                           #shiny::verbatimTextOutput(textID)
+            )  
+          }else{
+            list()
+          }
         }else{
           list()
         }

@@ -54,8 +54,6 @@ get_prematches <- function(who = NA,
   
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
   
-  print(who)
-  
   firstpart = strwrap("SELECT DISTINCT map.query_mz, compoundname,
                                map.baseformula as baseformula,
                                map.adduct as adduct,
