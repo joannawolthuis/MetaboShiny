@@ -1253,7 +1253,6 @@ omit_unknown = yes')
       remote = remotes:::github_remote(paste0("joannawolthuis/", pkg),
                                        host = "api.github.com",
                                        repos = getOption("repos"),
-                                       auth_token = "ba37d78a62279dd052fbaa45f2497345ad652cf3", 
                                        type = getOption("pkgType"))
       package_name <- remotes:::remote_package_name(remote)
       local_sha <- remotes:::local_sha(package_name)
@@ -1266,8 +1265,7 @@ omit_unknown = yes')
         msg = ""
         try({
           response = httr::GET(
-            url,
-            httr::add_headers(Authorization = "ba37d78a62279dd052fbaa45f2497345ad652cf3")
+            url
           )
           resParsed = httr::content(response, as = "parsed")
           msg <- resParsed$message

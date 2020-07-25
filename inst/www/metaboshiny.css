@@ -446,6 +446,10 @@ a {
     color: darkgray;
 }
 
+.tabbable > ul{
+  display:block;
+}
+
 .brace:before,
 .brace:after
 {
