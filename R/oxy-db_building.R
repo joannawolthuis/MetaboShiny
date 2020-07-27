@@ -14,13 +14,11 @@
 #' @seealso 
 #'  \code{\link[data.table]{fread}},\code{\link[data.table]{melt.data.table}},\code{\link[data.table]{dcast.data.table}},\code{\link[data.table]{fwrite}}
 #'  \code{\link[shiny]{showNotification}}
-#'  \code{\link[pbapply]{pbapply}}
 #'  \code{\link[stringr]{str_split}}
 #' @rdname import.pat.csvs
 #' @export 
 #' @importFrom data.table fread melt dcast fwrite
 #' @importFrom shiny showNotification
-#' @importFrom pbapply pbsapply
 #' @importFrom stringr str_split
 import.pat.csvs <- function(metapath,
                             pospath,
@@ -38,19 +36,19 @@ import.pat.csvs <- function(metapath,
   ppm = as.numeric(ppm)
   
   biggestFile = utils:::format.object_size(file.info(pospath)$size, "GB")
-  if(grepl("Gb", x = biggestFile)) reallyBig = T else F
-  
+  reallyBig = if(biggestFile == "0 Gb") F else T
+
   metadata = NULL
   try({
     metadata <- data.table::fread(metapath)
     metadata <- reformat.metadata(metadata)  
     keep.cols = colSums(is.na(metadata)) < nrow(metadata) & sapply(colnames(metadata), function(x) length(unique(metadata[,..x][[1]])) > 1) 
     metadata$sample <- gsub(metadata$sample, pattern = wipe.regex, replacement = "", perl=T)
-    metadata.filt = unique(metadata[, ..keep.cols])
-    if(!("individual" %in% colnames(metadata.filt))) metadata.filt$individual <- metadata.filt$sample
+    metadata = unique(metadata[, ..keep.cols])
+    if(!("individual" %in% colnames(metadata))) metadata$individual <- metadata$sample
   },silent = T)
   
-  samplesIn <-metadata.filt$sample
+  samplesIn <-metadata$sample
 
   nrows = length(count.fields(pospath, sep = ","))
   
@@ -61,7 +59,7 @@ import.pat.csvs <- function(metapath,
     # === POSITIVE MODE ===
     con = file(pospath, "r")
     # get missing count
-    missRes = pbapply::pblapply(1:nrows, function(i, con){
+    missRes = lapply(1:nrows, function(i, con){
       line = readLines(con, n = 1)
       splRow = stringr::str_split(line, ",")[[1]]
       sampName = splRow[1]
@@ -83,7 +81,7 @@ import.pat.csvs <- function(metapath,
     # get actual data
     con = file(pospath, "r")
     cols= readLines(con, n = 1)
-    filtRes = pbapply::pblapply(2:nrows, function(i, con, qualifies){
+    filtRes = lapply(2:nrows, function(i, con, qualifies){
       line = readLines(con, n = 1)
       splRow = stringr::str_split(line, ",")[[1]]
       sampName = splRow[1]
@@ -105,7 +103,7 @@ import.pat.csvs <- function(metapath,
     con = file(negpath, "r")
     cols= readLines(con, n = 1)
     # get missing count
-    missRes = pbapply::pblapply(2:nrows, function(i, con){
+    missRes = lapply(2:nrows, function(i, con){
       line = readLines(con, n = 1)
       splRow = stringr::str_split(line, ",")[[1]]
       sampName = splRow[1]
@@ -126,7 +124,7 @@ import.pat.csvs <- function(metapath,
     
     # get actual data
     con = file(negpath, "r")
-    filtRes = pbapply::pblapply(1:nrows, function(i, con, qualifies){
+    filtRes = lapply(1:nrows, function(i, con, qualifies){
       line = readLines(con, n = 1)
       splRow = stringr::str_split(line, ",")[[1]]
       sampName = splRow[1]
@@ -236,9 +234,9 @@ import.pat.csvs <- function(metapath,
   
   poslist$sample <- as.character(poslist$sample)
   neglist$sample <- as.character(neglist$sample)
-  metadata.filt$sample <- as.character(metadata.filt$sample)
+  metadata$sample <- as.character(metadata$sample)
   
-  unique.samples = unique(metadata.filt$sample)
+  unique.samples = unique(metadata$sample)
   
   # CHECK SAMPLES THAT ARE IN METADATA
   keep.samples.pos <- intersect(poslist$sample, unique.samples)
@@ -264,7 +262,7 @@ import.pat.csvs <- function(metapath,
   ismz <- suppressWarnings(which(!is.na(as.numeric(subbed))))
 
   if(roundMz){
-    colnames(poslist)[ismz] <- pbapply::pbsapply(colnames(poslist)[ismz], function(mz){
+    colnames(poslist)[ismz] <- sapply(colnames(poslist)[ismz], function(mz){
       if(hasPPM | hasRT){
         split.mz <- stringr::str_split(mz, "/|RT")[[1]]
         mz = split.mz[1]
@@ -280,7 +278,7 @@ import.pat.csvs <- function(metapath,
     })
     
     ismz <- suppressWarnings(which(!is.na(as.numeric(gsub(colnames(neglist), pattern="/.*$|RT.*$", replacement="")))))
-    colnames(neglist)[ismz] <- pbapply::pbsapply(colnames(neglist)[ismz], function(mz){
+    colnames(neglist)[ismz] <- sapply(colnames(neglist)[ismz], function(mz){
       if(hasPPM|hasRT){
         split.mz <- stringr::str_split(mz, "/|RT")[[1]]
         mz = split.mz[1]
@@ -312,10 +310,10 @@ import.pat.csvs <- function(metapath,
   # merge metadata with peaks
   data.table::setkey(poslist, sample)
   data.table::setkey(neglist, sample)
-  data.table::setkey(metadata.filt, sample)
+  data.table::setkey(metadata, sample)
   
   mzlist <- merge(poslist, neglist, by = "sample")
-  mzlist <- merge(metadata.filt, mzlist, by = "sample")
+  mzlist <- merge(metadata, mzlist, by = "sample")
 
   mz.meta <- getColDistribution(mzlist)
   exp.vars = mz.meta$meta
