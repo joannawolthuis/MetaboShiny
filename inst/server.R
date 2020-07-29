@@ -17,7 +17,7 @@ function(input, output, session) {
   options(expressions = 5e5)
   online = MetaboShiny::internetWorks()
   
-  # make metaboshiny_storage dir in home first..
+  # make MetaboShiny_storage dir in home first..
   # docker run -p 8080:8080 -v ~/MetaboShiny/:/userfiles/:cached --rm -it metaboshiny/master /bin/bash
   # with autorun
   # docker run -p 8080:8080 -v ~/MetaboShiny/:/userfiles/:cached --rm metaboshiny/master Rscript startShiny.R

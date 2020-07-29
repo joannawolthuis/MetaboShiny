@@ -63,6 +63,21 @@ nav.bar.css <- function(RGB.bg = "#ffc8c2",
       width: 100%;
       background: -webkit-gradient(radial, 50% 0, 10, 50% 0, 40, from($RGB.bg), color-stop(0.49, $RGB.bg), color-stop(0.51, #fff), to(white));
     -webkit-background-size: 29px 100%;
+  }
+  .focus_b 
+  {
+    background-color: $RGB.active.bg !important;
+    color: $RGB.active.col !important; 
+    font-weight: bolder;
+    /*padding: 3px; add this if you want a bit of space around the text*/
+  }
+  
+  .focus_a
+  {
+    background-color: $RGB.bg !important;
+    color: $RGB.col !important;
+    font-weight: bold;
+    /*padding: 3px; add this if you want a bit of space around the text*/
   }"
 
   no.na <- gsub(x = base, pattern = "\\n", replacement = "")

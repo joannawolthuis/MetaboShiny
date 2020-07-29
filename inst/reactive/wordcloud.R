@@ -68,9 +68,7 @@ observe({
     # ==========================================
     ShowAbstracts<-JustASelectedbstracts[isWhere]
     absTable = lcl$tables$abstracts[isWhere,]
-    # ShowAbstractsandSummaries<-paste(ShowAbstractsandSummaries,
-    #                                  collapse = "\n\n")
-    # ShowAbstractsandSummaries<-sapply(ShowAbstractsandSummaries,FUN = as.character,USE.NAMES = T)
+    
     # ==========================================
     output$wordcloud_abstracts <- renderUI({ 
       lapply(1:nrow(absTable), function(i){
@@ -78,11 +76,23 @@ observe({
         title = row$title#row[1]
         pmid = row$DOI#row[4]
         abstract = row[2]
+        
+        abstract = gsub("<.*?>",
+                        "", 
+                        abstract)
+        
+        abstract = gsub(paste0("((?i)", input$wordcloud_searchTerm,")"), 
+                        '<span class="focus_a">\\1</span>', 
+                        abstract)
+        abstract = gsub(paste0("((?i)", selected_word_clean, ")"), 
+                        '<span class="focus_b">\\1</span>', 
+                        abstract)
+        
         shiny::fluidRow(align="center", 
                  shiny::tags$b(title), 
                  shiny::a(gsubfn::fn$paste("($pmid)"), href=gsubfn::fn$paste("https://pubmed.ncbi.nlm.nih.gov/$pmid")),
                  br(),
-                 shiny::tags$i(abstract),
+                 shiny::HTML(paste0("<i>", abstract, "</i>")),
                  hr())
         })
       }) 

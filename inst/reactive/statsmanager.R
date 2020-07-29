@@ -50,6 +50,20 @@ shiny::observe({
                    mSet <- MetaboAnalystR::CalculateImpVarCutoff(mSet, 0.05, 0.9)
                  })
                },
+               network = {
+                 
+                # aov
+                flattened <- getTopHits(mSet, 
+                                       input$network_anal,
+                                       input$network_topn)
+                
+                useHits = flattened[[1]]
+                rcorrMat = Hmisc::rcorr(x = as.matrix(mSet$dataSet$norm[,useHits]),
+                                        y = as.matrix(mSet$dataSet$norm[,useHits]),
+                                        type = input$network_corr)
+                 mSet$analSet$network <- list(rcorr = rcorrMat)
+                 
+               },
                enrich = {
                  shiny::withProgress({
                    
