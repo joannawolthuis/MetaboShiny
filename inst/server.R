@@ -1114,11 +1114,16 @@ omit_unknown = yes')
     }
   })
   
+  observeEvent(input$network_selected,
+               {
+                 print(input$network_selected)
+               })
+  
   observeEvent(input$statistics, { 
     if(!is.null(mSet)){
       if(!is.null(input$statistics)){
         uimanager$refresh <- input$statistics
-        if(input$statistics %in% c("venn", "enrich", "heatmap")){
+        if(input$statistics %in% c("venn", "enrich", "heatmap", "network")){
           statsmanager$calculate <- "vennrich"
           tablemanager$make <- "vennrich"
           uimanager$refresh <- "vennrich"
@@ -1146,7 +1151,7 @@ omit_unknown = yes')
                 "pca", "tsne", "tt", "aov",
                 "fc", "volc", "heatmap", 
                 "meba", "asca", "pattern", 
-                "enrich")
+                "enrich", "network")
   
   lapply(analyses, function(an){
     shiny::observeEvent(input[[paste0("do_", an)]], {

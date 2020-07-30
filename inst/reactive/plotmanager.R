@@ -282,6 +282,68 @@ shiny::observe({
                             
                             list(fc_plot = p)
                           },
+                          network = {
+                            
+                            pval = input$network_sign
+                            
+                            mat = mSet$analSet$network$rcorr
+                            matp = mat$P
+                            matr = mat$r
+                            matr[matp < pval] <- 0
+                            igr = igraph::graph.adjacency(adjmatrix = matr,
+                                                          weighted = T,
+                                                          diag = F)
+                            netw = visNetwork::visIgraph(igr)
+                            
+                            cf = gbl$functions$color.functions[[lcl$aes$spectrum]]
+                            cols = cf(nrow(netw$x$nodes))
+                            
+                            netw$x$nodes$color <- sapply(netw$x$nodes$id, function(id){
+                              cols[which(mSet$analSet$network$order == id)]
+                            })
+                            netw$x$nodes$title = netw$x$nodes$label
+                            
+                            netw$x$edges$value <- netw$x$edges$weight
+                            netw$x$edges$title <- paste0("r=",netw$x$edges$weight)
+                            
+                            netw$x$edges$color <- c("black")
+                            
+                            p = netw %>% 
+                              visNetwork::visOptions(highlightNearest = TRUE,
+                                                     collapse = T,
+                                                     autoResize = T,
+                                                     nodesIdSelection = TRUE) %>% 
+                              visNetwork::visNodes(borderWidth = 2,font = list(size=22,
+                                                                               face=lcl$aes$font$family)) %>%
+                              visNetwork::visEdges(scaling = list(min = 0.5,
+                                                                  max = 6)) %>%
+                              visNetwork::visInteraction(#navigationButtons = TRUE,
+                                             keyboard = T)
+                            if(!input$network_style){
+                              p = p %>% visNetwork::visHierarchicalLayout()
+                            }
+                            # - - - - - - -
+                            matr[matr==1 | lower.tri(matr)] <- NA
+                            
+                            p2 = heatmaply::heatmaply(matr,
+                                                 Colv = T,
+                                                 Rowv = T,
+                                                 branches_lwd = 0.3,
+                                                 margins = c(0, 0, 0, 0),
+                                                 col = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                                 column_text_angle = 90,
+                                                 ylab = "m/z\n",
+                                                 showticklabels = if(ncol(matr) <= 95) c(F,T) else c(F,F),
+                                                 symm=T,
+                                                 symbreaks=T,
+                                                 dendrogram="none"
+                            )
+                            lcl$vectors$network_heatmap <<- p2$x$layout$yaxis$ticktext
+                            
+                            # - - - - - - - 
+                            list(network = p, 
+                                 network_heatmap = p2)
+                          },
                           heatmap = {
                             
                             breaks = seq(min(mSet$dataSet$norm), 
@@ -332,18 +394,6 @@ shiny::observe({
                                                          symbreaks=T
                                                          #label_names = c("m/z", "sample", "intensity") #breaks side colours...
                                     )
-                                    
-                                    # stats::heatmap(mSet$analSet$heatmap$matrix[1:if(input$heatmap_topn < nrow(mSet$analSet$heatmap$matrix)) input$heatmap_topn else nrow(mSet$analSet$heatmap$matrix),],
-                                    #                      Colv = mSet$analSet$heatmap$my_order,
-                                    #                      Rowv = T,
-                                    #                      col = gbl$functions$color.functions[[lcl$aes$spectrum]](256),
-                                    #                      ColSideColors = as.character(mSet$analSet$heatmap$colors[match(mSet$analSet$heatmap$translator[,!1][[1]],
-                                    #                                                                                     names(mSet$analSet$heatmap$colors)
-                                    #                                                                                     )]),
-                                    #                      xlab = "Sample",
-                                    #                      ylab = "m/z"
-                                    # )
-                                    
                                   }
                                 })
                                 hmap$x$layout$annotations[[1]]$text <- ""
@@ -398,15 +448,19 @@ shiny::observe({
               }
             }
             
-            isSquare <- grepl("pca|plsda|tsne|roc|heatmap|var|samp", plotName) & !grepl("scree|cv|perm|venn", plotName)
+            isSquare <- grepl("pca|plsda|tsne|roc|heatmap|var|samp|network", plotName) & !grepl("scree|cv|perm|venn", plotName)
            
              # === WRAPPER ===
             empty <- if(grepl(plotName, pattern="var|samp")) "output_empty2_width" else "output_empty3_width"
          
-             output[[paste0(plotName, "_wrap")]] <- shiny::renderUI({
+            output[[paste0(plotName, "_wrap")]] <- shiny::renderUI({
                   list(conditionalPanel(
                     condition = 'input.ggplotly == true',
-                    plotly::plotlyOutput(paste0(plotName, "_interactive"), height = "100%")),
+                    if(plotName != "network"){
+                      plotly::plotlyOutput(paste0(plotName, "_interactive"), height = "100%") 
+                    }else{
+                      visNetwork::visNetworkOutput(paste0(plotName, "_interactive"))
+                    }),
                     conditionalPanel(
                       condition = 'input.ggplotly == false',
                       list(fluidRow(align="right",
@@ -426,7 +480,7 @@ shiny::observe({
                  whichAnal <- stringr::str_match(plotName, "pca|plsda|tsne")[,1]
                  is3D <- !input[[paste0(whichAnal, "_2d3d")]]
                }else{
-                 is3D <- plotName == "heatmap"
+                 is3D <- plotName %in% c("heatmap", "network", "network_heatmap")
                }
                
                 if(!is3D){
@@ -453,7 +507,7 @@ shiny::observe({
                  
                  try({
                    output[[plotName]] <- shiny::renderPlot({
-                     if(plotName == "heatmap"){
+                     if(plotName %in% c("heatmap", "network_heatmap", "network")){
                        data = data.frame(text = "Currently only available in 'plotly' mode!\nPlease switch in the sidebar.")
                        ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10) +
                          ggplot2::theme(text = ggplot2::element_text(family = lcl$aes$font$family)) + ggplot2::theme_bw()
@@ -474,28 +528,34 @@ shiny::observe({
                    showgrid = FALSE
                  )
                  
-                 output[[paste0(plotName, "_interactive")]] <- plotly::renderPlotly({
- 
-                   if(!is3D){
-                     myplot <- plotly::ggplotly(myplot,
-                                                tooltip = "text", 
-                                                height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)  
-                   }
-                   if(plotName != "heatmap"){
-                     myplot <- if(grepl("venn", plotName)) myplot %>% plotly::layout(xaxis = emptyax,
-                                                                             yaxis = emptyax,
-                                                                             showlegend=F) else myplot %>% plotly::layout(showlegend=F) 
+                 output[[paste0(plotName, "_interactive")]] <- 
+                   
+                   if(plotName == "network"){
+                     visNetwork::renderVisNetwork(myplot)
                    }else{
-                     myplot <- myplot %>% plotly::layout(height = session$clientData[[empty]]/1.4,
-                                                         width = session$clientData[[empty]])
+                     plotly::renderPlotly({
+                       
+                       if(!is3D){
+                         myplot <- plotly::ggplotly(myplot,
+                                                    tooltip = "text", 
+                                                    height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)  
+                       }
+                       if(plotName != "heatmap"){
+                         myplot <- if(grepl("venn", plotName)) myplot %>% plotly::layout(xaxis = emptyax,
+                                                                                         yaxis = emptyax,
+                                                                                         showlegend=F) else myplot %>% plotly::layout(showlegend=F) 
+                       }else{
+                         myplot <- myplot %>% plotly::layout(height = session$clientData[[empty]]/1.4,
+                                                             width = session$clientData[[empty]])
+                       }
+                       myplot %>%
+                         plotly::config(
+                           toImageButtonOptions = list(
+                             format = if(input$plotsvg) "svg" else "png",
+                             filename = paste0(plotFn, "_interactive")
+                           ))
+                     })
                    }
-                   myplot %>%
-                     plotly::config(
-                       toImageButtonOptions = list(
-                         format = if(input$plotsvg) "svg" else "png",
-                         filename = paste0(plotFn, "_interactive")
-                       ))
-                 })
                  
                  output[[paste0("download_", plotName)]] <- downloadHandler(
                    filename = function() paste0(plotFn, if(input$plotsvg) ".svg" else ".png"),

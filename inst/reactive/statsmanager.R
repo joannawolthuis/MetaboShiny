@@ -54,15 +54,20 @@ shiny::observe({
                  
                 # aov
                 flattened <- getTopHits(mSet, 
-                                       input$network_anal,
+                                       input$network_table,
                                        input$network_topn)
                 
                 useHits = flattened[[1]]
-                rcorrMat = Hmisc::rcorr(x = as.matrix(mSet$dataSet$norm[,useHits]),
-                                        y = as.matrix(mSet$dataSet$norm[,useHits]),
+                
+                # ---
+                #TODO: gaussian graphical model
+                # ---
+                rcorrMat = Hmisc::rcorr(x = as.matrix(mSet$dataSet$norm[, useHits]),
+                                        #y = as.matrix(mSet$dataSet$norm[, useHits]),
                                         type = input$network_corr)
-                 mSet$analSet$network <- list(rcorr = rcorrMat)
-                 
+                mSet$analSet$network <- list(rcorr = rcorrMat,
+                                             order = useHits)
+                output$network_now <- shiny::renderText(input$network_table)
                },
                enrich = {
                  shiny::withProgress({

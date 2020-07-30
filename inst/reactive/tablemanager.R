@@ -55,12 +55,12 @@ shiny::observe({
                      venn_no$now <- venn_no$start
                      lcl$vectors$analyses <<- unlist(venn_no$start[,1])
                      # ---
-                     lapply(c("mummi_anal", "heattable"), function(inputID){
+                     lapply(c("mummi_anal", "heattable", "network_table"), function(inputID){
                        shiny::updateSelectInput(session,
                                                 inputID, 
                                                 choices = {
                                                  allChoices = as.character(lcl$vectors$analyses)
-                                                 if(inputID == "heattable"){
+                                                 if(inputID == "heattable" | inputID == "network_table"){
                                                    allChoices[grepl(mSet$dataSet$cls.name, allChoices, fixed=TRUE)]  
                                                  }else{
                                                    allChoices

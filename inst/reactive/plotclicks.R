@@ -41,6 +41,7 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                      "aov", 
                      "pattern",
                      "volc",
+                     "network",
                      "venn")){ 
     
     if(curr_tab == "ml" & input$ml_results == "roc"){
@@ -59,12 +60,19 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
           })
         }
     }else{
-      if(curr_tab %in% c("heatmap", "enrich","venn")){
+      if(curr_tab %in% c("heatmap", "enrich","venn","network")){
         switch(curr_tab,
                heatmap = {
                  if(!is.null(d$y)){
                    if(d$y > length(lcl$vectors$heatmap)) return(NULL)
                    my_selection$mz <<- lcl$vectors$heatmap[d$y]  
+                   plotmanager$make <- "summary"
+                 }
+               },
+               network = {
+                 if(!is.null(d$y)){
+                   if(d$y > length(lcl$vectors$network_heatmap)) return(NULL)
+                   my_selection$mz <<- lcl$vectors$network_heatmap[d$y]  
                    plotmanager$make <- "summary"
                  }
                },
@@ -95,4 +103,9 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
       }
     }
   }
+})
+
+shiny::observeEvent(input$network_interactive_selected, {
+  my_selection$mz <<- input$network_interactive_selected
+  plotmanager$make <- "summary"
 })
