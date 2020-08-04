@@ -42,6 +42,7 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                      "pattern",
                      "volc",
                      "network",
+                     "enrich",
                      "venn")){ 
     
     if(curr_tab == "ml" & input$ml_results == "roc"){
