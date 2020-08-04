@@ -219,6 +219,7 @@ score.isos <- function(table, mSet, method="mscore", inshiny=TRUE, session=0, in
   data.table::rbindlist(score_rows)
 }
 
+
 #' @title Filter patient database
 #' @description Remove samples from DB file that do not have metadata
 #' @param patdb Patient database file (full path)
@@ -408,4 +409,59 @@ getSampInt <- function(conn, filename, all_mz){
   complete.row.dt <- data.table::as.data.table(t(data.table::as.data.table(complete.row)))
   colnames(complete.row.dt) <- names(complete.row)  
   complete.row.dt
+}
+
+#' @export
+score.rt <- function(qmz, table, mSet, inshiny=TRUE, 
+                     session=0, mzppm, rtperc, dbdir, 
+                     adducts_considered = adducts$Name){
+  
+  formulas = unique(table$fullformula)
+  
+  repr.smiles <- sapply(formulas, function(form){
+    table[fullformula == form][1,]$structure
+  })
+  
+  mini.table <- table[structure %in% repr.smiles]
+  
+  maptable = lapply(1:nrow(mini.table), function(i){
+    smi=mini.table$structure[i]
+    form=mini.table$baseformula[i]
+    revres = data.table::as.data.table(MetaDBparse::searchRev(smi, 
+                                                              "extended", 
+                                                              dbdir))
+    to_find = revres[adduct %in% adducts_considered & isoprevalence == 100]
+    to_find$form = c(form)
+    to_find$smi = smi
+    to_find
+  })
+  
+  maptable <- unique(maptable)
+  
+  ionMode = if(grepl("\\-", qmz)) "neg" else "pos"
+  rt = as.numeric(gsub("(.*RT)", "", qmz))
+  rtRange = c(rt - rtperc/100 * rt, rt + rtperc/100 * rt)
+  splitMzRt=stringr::str_split(colnames(mSet$dataSet$norm), "RT")
+  mzRtTable = data.table::as.data.table(do.call("rbind", splitMzRt))
+  colnames(mzRtTable) = c("mz", "rt")
+  mzRtTable$mzmode = sapply(mzRtTable$mz, function(mz) if(grepl("\\-", mz)) "neg" else "pos")
+  mzRtTable <- mzRtTable[mzmode == ionMode]
+  mzRtTable$mz = gsub("\\+|\\-", "", mzRtTable$mz)
+  mzRtTable$mz <- as.numeric(mzRtTable$mz) 
+  mzRtTable$rt <- as.numeric(mzRtTable$rt) 
+  
+  score_rows = pbapply::pblapply(maptable, function(l){
+    mzs = l$fullmz
+    formula = unique(l$fullformula)
+    per_mz_cols = sapply(mzs, function(mz){
+      matches_mz = which(mzRtTable$mz %between% MetaboShiny::ppm_range(mz, mzppm) && 
+                         mzRtTable$rt %between% rtRange &
+                         mzRtTable$mzmode == ionMode)
+      matchTable = mzRtTable[matches_mz,]
+      nrow(matchTable) > 0
+    })
+    list(structure = unique(l$smi), 
+         score = sum(per_mz_cols)/length(adducts_considered) * 100)
+  })
+  data.table::rbindlist(score_rows)
 }

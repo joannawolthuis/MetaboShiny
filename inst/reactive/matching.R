@@ -293,8 +293,8 @@ shiny::observeEvent(input$score_iso, {
   # check if the matches table even exists
   if(!data.table::is.data.table(shown_matches$forward_unique)) return(NULL)
   # check if a previous scoring was already done (remove that column if so, new score is generated in a bit)
-  if("score" %in% colnames(shown_matches$forward)){
-    shown_matches$forward_unique <<- shown_matches$forward_unique[,-"score"]
+  if("isoScore" %in% colnames(shown_matches$forward)){
+    shown_matches$forward_unique <<- shown_matches$forward_unique[,-"isoScore"]
   }
 
   # get table including isotope scores
@@ -307,8 +307,33 @@ shiny::observeEvent(input$score_iso, {
                                            method = input$iso_score_method, 
                                            inshiny = T, 
                                            intprec = as.numeric(input$int_prec))
+    colnames(score_table)[ colnames(score_table) == "score"] <- "isoScore"
     })
   shown_matches$forward_unique <- shown_matches$forward_unique[score_table, on = c("fullformula")]
+})
+
+shiny::observeEvent(input$score_rt, {
+  # check if the matches table even exists
+  if(!data.table::is.data.table(shown_matches$forward_unique)) return(NULL)
+  # check if a previous scoring was already done (remove that column if so, new score is generated in a bit)
+  if("rtScore" %in% colnames(shown_matches$forward)){
+    shown_matches$forward_unique <<- shown_matches$forward_unique[,-"rtScore"]
+  }
+  
+  # get table including isotope scores
+  # as input, takes user method for doing this scoring
+  shiny::withProgress({
+    score_table <- score.rt(qmz = my_selection$mz,
+                            table = shown_matches$forward_unique, 
+                            adducts_considered=input$rt_adducts,
+                            mSet = mSet, 
+                            rtperc = input$rt_perc,
+                            mzppm = mSet$ppm,
+                            dbdir = lcl$paths$db_dir,
+                            inshiny = T)
+  })
+  colnames(score_table)[ colnames(score_table) == "score"] <- "rtScore"
+  shown_matches$forward_unique <- shown_matches$forward_unique[score_table, on = c("structure")]
 })
 
 shiny::observeEvent(input$search_pubmed,{

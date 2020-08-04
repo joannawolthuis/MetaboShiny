@@ -52,6 +52,25 @@ shiny::observe({
                          })
                        )
                        
+                       if(grepl("RT", colnames(mSet$dataSet$norm)[1])){
+                         # ADD RETENTION TIME SCORING
+                         shiny::appendTab("tab_iden_1",
+                                          session=session, 
+                                          shiny::tabPanel(title=shiny::icon("clock"),
+                                                          shiny::fluidRow(align="center",
+                                                                          br(),
+                                                                          h3("Score matches by retention time"),
+                                                                          shiny::helpText("Per match, investigates if other main isotope adducts are present in the same RT window."),
+                                                                          shiny::selectInput(inputId = "rt_adducts",
+                                                                                             choices = adducts$Name,
+                                                                                             label = "Adducts to look for:",
+                                                                                             selected = c("[M+H]1+", "[M+Na]1+", "[M+2H]2+", "[M+K]1+"),
+                                                                                             multiple = T),
+                                                                          shiny::sliderInput("rt_perc", label = "Max. perc RT difference", min = 1, max = 100, value = 0.1, post = "%"),
+                                                                          shinyWidgets::circleButton("score_rt", icon = shiny::icon("stopwatch"), size = "sm"))
+                                          ))
+                       }
+                       
                        shiny::updateNavbarPage(session, "statistics", selected = "inf")
                        origcount = mSet$settings$orig.count 
                        output$samp_count <- shiny::renderText({

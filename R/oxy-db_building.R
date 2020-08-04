@@ -57,7 +57,6 @@ import.pat.csvs <- function(metapath,
     peakpath = switch(ionMode,
                       "pos" = pospath,
                       "neg" = negpath)
-    print(peakpath)
     
     if(length(peakpath) == 0) return(list(ionMode = ionMode, 
                                           peaktbl = data.table::data.table()))
@@ -133,11 +132,9 @@ import.pat.csvs <- function(metapath,
     # PIVOT IF WRONG SIDE AROUND - METABOLIGHTS DATA
     if(any(grepl("mass_to_charge", colnames(peaklist)))){
       data.table::setnames(peaklist, "mass_to_charge", "mzmed", skip_absent = T)
-      data.table::setnames(neglist, "mass_to_charge", "mzmed", skip_absent = T)
       if(!is.na(peaklist$retention_time[1])){
         hasRT = TRUE
         peaklist$mzmed <- paste0(peaklist$mzmed,"RT", peaklist$retention_time)
-        neglist$mzmed <- paste0(neglist$mzmed,"RT", neglist$retention_time)
       }
       rmcols = c("database_identifier", "chemical_formula", "smiles", "inchi", 
                  "metabolite_identification", "fragmentation", "modifications", 
