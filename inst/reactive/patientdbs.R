@@ -7,7 +7,13 @@ lapply(c("merge",
     # see which db files are present in folder
     folder_files <- list.files(lcl$paths$proj_dir)
     is.present <- switch(col,
-                         merge =is.list(input$outlist_pos) & is.list(input$outlist_neg), #& is.list(input$metadata) 
+                         merge = {
+                           if(!is.null(input$ms_modes)){
+                             all(sapply(input$ms_modes, function(ionMode){
+                               is.list(input[[paste0("outlist_", ionMode)]])
+                             }) & is.list(input$metadata))  
+                           }else FALSE
+                         },
                          csv = paste0(input$proj_name_new, ".csv") %in% folder_files,
                          db = paste0(input$proj_name_new, ".db") %in% folder_files)
     check_pic <- if(is.present) "yes.png" else "no.png"
@@ -20,11 +26,24 @@ lapply(c("merge",
   })
 })
 
+shiny::observeEvent(input$ms_modes, {
+  pickerUI = lapply(input$ms_modes, function(mode){
+    char=if(mode == "pos") "+" else "-"
+    shinyFiles::shinyFilesButton(paste0('outlist_',mode), 
+                                 gsubfn::fn$paste('upload $char peaks'), 
+                                 gsubfn::fn$paste('Upload $char mode peaks'), 
+                                 FALSE)
+  })
+  output$outlist_pickers <-shiny::renderUI(pickerUI)
+})
+
 # triggers when user wants to create database from .db and excel or 2 csv files and excel
 shiny::observeEvent(input$create_csv,{
 
-  files.present = is.list(input$outlist_pos) & is.list(input$outlist_neg) # & (is.list(input$metadata))
-
+  files.present = all(sapply(input$ms_modes, function(ionMode){
+    is.list(input[[paste0("outlist_", ionMode)]])
+  }) & is.list(input$metadata))
+  
   if(!files.present) return(NULL)
   
   # update the path to patient csv
@@ -58,10 +77,13 @@ shiny::observeEvent(input$create_csv,{
       # print the changed name in the UI
       output$proj_name <<- shiny::renderText(proj_name)
       
+      hasPos = "pos" %in% input$ms_modes
+      hasNeg = "neg" %in% input$ms_modes
+      
       # if loading in .csv files...
       import.pat.csvs(ppm = input$ppm,
-                      pospath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath,
-                      negpath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath,
+                      pospath = if(hasPos) shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath else c(),
+                      negpath = if(hasNeg) shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath else c(),
                       metapath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath,
                       wipe.regex = input$wipe_regex,
                       missperc.mz = input$perc_limit_mz,

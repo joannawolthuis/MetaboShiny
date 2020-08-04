@@ -52,11 +52,16 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                      tags$i("Regex to adjust peaklist names to metadata sample names - the match is removed from each name (optional):"), 
                                                                                                                      placeholder = "", 
                                                                                                                      width="50%"), style='font-size:70%'),
-                                                                                                br(),
                                                                                                 shinyFiles::shinyFilesButton('metadata', 'metadata', 'Select metadata', FALSE),
-                                                                                                condition = "input.importmode == 'csv'",
-                                                                                                shinyFiles::shinyFilesButton('outlist_pos', '+ peaks', 'Select + mode peaks', FALSE),
-                                                                                                shinyFiles::shinyFilesButton('outlist_neg', '- peaks', 'Select - mode peaks', FALSE)
+                                                                                                br(),
+                                                                                                shinyWidgets::checkboxGroupButtons(
+                                                                                                  inputId = "ms_modes",
+                                                                                                  label = "Mass spec modes:", 
+                                                                                                  choices = c(`<b class='fa fa-plus'> positive</b>` = "pos", 
+                                                                                                              `<b class='fa fa-minus'> negative</b>` = "neg"),
+                                                                                                  justified = F
+                                                                                                ),
+                                                                                                shiny::uiOutput("outlist_pickers")
                                                                                                 
                                                    ),shiny::column(2, 
                                                                    shiny::tags$b("STEP 6: Convert to input-ready format"),
