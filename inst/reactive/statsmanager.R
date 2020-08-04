@@ -106,7 +106,7 @@ shiny::observe({
                                                              "t.score")
                    enr_mSet$dataSet$pos_inx <- tbl$mode == "positive"
                    enr_mSet$dataSet$mumType <- "list"
-                   
+                   enr_mSet$dataSet$mumRT <- FALSE
                    mumDataContainsPval <<- 0#if(grepl(input$mummi_anal, pattern = "tt|aov|aov2")) 1 else 0
                    
                    shiny::setProgress(0.2)
@@ -251,30 +251,19 @@ shiny::observe({
                    assignInNamespace("new_adduct_mzlist", new_adduct_mzlist, ns="MetaboAnalystR", 
                                      envir=as.environment("package:MetaboAnalystR"))
                    
-                   enr_mSet <- MetaboAnalystR::SetPeakEnrichMethod(enr_mSet, if(input$mummi_enr_method) "mummichog" else "gsea")
+                   enr_mSet <- MetaboAnalystR::SetPeakEnrichMethod(enr_mSet, 
+                                                                   if(input$mummi_enr_method) "mum" else "gsea")
                    
                    shiny::setProgress(0.9)
+                   enr_mSet$dataSet$N <- 20
+                   enr_mSet <- MetaboAnalystR::SetMummichogPval(enr_mSet, input$mummi_pval)
                    
-                   enr_mSet <- MetaboAnalystR::SetMummichogPval(enr_mSet, 0.0)#input$mummi_pval)
+                   enr_mSet <- MetaboAnalystR::PerformPSEA(mSetObj = enr_mSet, 
+                                                           lib = lib, 
+                                                           libVersion = libVersion, 
+                                                           permNum = 100) 
                    
-                   enr_mSet <- MetaboAnalystR::PerformPSEA(enr_mSet, 
-                                                           lib, 
-                                                           libVersion, 
-                                                           100)#input$mummi_perm)
                    mSet$analSet$enrich <- enr_mSet
-                   
-                   # === PLOT ====
-                   
-                   output$enrich_plot <- plotly::renderPlotly({
-                     # --- ggplot ---
-                     MetaboShiny::ggPlotMummi(mSet$analSet$enrich, 
-                                              if(input$mummi_enr_method) "mummichog" else "gsea",
-                                              cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                              plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                              plotlyfy=TRUE,font = lcl$aes$font)
-                   })
-                   # render results table
-                   enrich$overview <- mSet$analSet$enrich$mummi.resmat
                  })
                },
                ml = {
@@ -708,7 +697,8 @@ shiny::observe({
                                                                                             statsmanager$calculate, 
                                                                                             c("_tables","_plots")))
       }else{
-        MetaboShiny::metshiAlert("Analysis failed!")
+        MetaboShiny::metshiAlert(paste0("Analysis failed!\n", msg.vec))
+        #shiny::showNotification(msg.vec)
         mSet <<- mSet.old
       }
       lcl <<- lcl

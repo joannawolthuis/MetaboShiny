@@ -49,7 +49,10 @@ shiny::observe({
                             }
                           },
                           enrich = {
-                            NULL
+                            p = MetaboShiny::ggPlotMummi(mSet$analSet$enrich, 
+                                                         if(input$mummi_enr_method) "mummichog" else "gsea",
+                                                         cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                            list(enrich_plot = p)
                           },
                           summary = {
                             p = MetaboShiny::ggplotSummary(mSet, my_selection$mz, 
@@ -319,8 +322,12 @@ shiny::observe({
                                                                   max = 6)) %>%
                               visNetwork::visInteraction(#navigationButtons = TRUE,
                                              keyboard = T)
-                            if(!input$network_style){
-                              p = p %>% visNetwork::visHierarchicalLayout()
+                            if(!input$network_auto){
+                              if(input$network_style == "hierarchical"){
+                                p = p %>% visNetwork::visHierarchicalLayout()  
+                              }else{
+                                p = p %>% visNetwork::visIgraphLayout(layout = input$network_style)
+                              }
                             }
                             # - - - - - - -
                             matr[matr==1 | lower.tri(matr)] <- NA

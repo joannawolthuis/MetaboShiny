@@ -284,8 +284,10 @@ getDefaultCondition <- function(csv, exp.vars, excl.rows, excl.cond, min.lev){
     length(lvls)
   })
   unique.levels <- unique.levels[!(names(unique.levels) %in% excl.cond)]
+  min.grpsize = apply(csv[,names(unique.levels), with=F],2,function(x)min(table(x)))
   # use this as the default selected experimental variable (user can change later)
-  which.default <- unique.levels[which(unique.levels == min(unique.levels[which(unique.levels > min.lev)]))][1]
+  which.default <- unique.levels[which(unique.levels == min(unique.levels[which(unique.levels > min.lev)]) &
+                                       min.grpsize >= 3)][1]
   condition = names(which.default)
   condition
 }

@@ -48,7 +48,7 @@ import.pat.csvs <- function(metapath,
     if(!("individual" %in% colnames(metadata))) metadata$individual <- metadata$sample
   },silent = T)
   
-  samplesIn <-metadata$sample
+  samplesIn <- metadata$sample
 
   nrows = length(count.fields(pospath, sep = ","))
   
@@ -63,6 +63,7 @@ import.pat.csvs <- function(metapath,
       line = readLines(con, n = 1)
       splRow = stringr::str_split(line, ",")[[1]]
       sampName = splRow[1]
+      sampName =  gsub(sampName, pattern = wipe.regex, replacement = "")
       splRow = splRow[3:length(splRow)]
       if(i > 1 & sampName %in% samplesIn){
         as.list(splRow == "0" | splRow == 0 | splRow == "" | is.na(splRow))
@@ -85,6 +86,7 @@ import.pat.csvs <- function(metapath,
       line = readLines(con, n = 1)
       splRow = stringr::str_split(line, ",")[[1]]
       sampName = splRow[1]
+      sampName =  gsub(sampName, pattern = wipe.regex, replacement = "", perl=T)
       label =splRow[2]
       splRow = splRow[3:length(splRow)]
       if(sampName %in% samplesIn){
@@ -107,6 +109,7 @@ import.pat.csvs <- function(metapath,
       line = readLines(con, n = 1)
       splRow = stringr::str_split(line, ",")[[1]]
       sampName = splRow[1]
+      sampName =  gsub(sampName, pattern = wipe.regex, replacement = "", perl=T)
       splRow = splRow[3:length(splRow)]
       if(sampName %in% samplesIn){
         as.list(splRow == "0" | splRow == 0 | splRow == "")
@@ -128,6 +131,7 @@ import.pat.csvs <- function(metapath,
       line = readLines(con, n = 1)
       splRow = stringr::str_split(line, ",")[[1]]
       sampName = splRow[1]
+      sampName =  gsub(sampName, pattern = wipe.regex, replacement = "", perl=T)
       label =splRow[2]
       splRow = splRow[3:length(splRow)]
       if(sampName %in% samplesIn){
@@ -234,6 +238,7 @@ import.pat.csvs <- function(metapath,
   
   poslist$sample <- as.character(poslist$sample)
   neglist$sample <- as.character(neglist$sample)
+ 
   metadata$sample <- as.character(metadata$sample)
   
   unique.samples = unique(metadata$sample)

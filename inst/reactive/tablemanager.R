@@ -70,6 +70,10 @@ shiny::observe({
                      # --- 
                      list()
                    },
+                   enrich = {
+                     enrich$overview <- mSet$analSet$enrich$mummi.resmat  
+                     list()
+                   },
                    pattern = {
                      res =if(is.null(mSet$analSet$corr$cor.mat)){
                        data.table::data.table("No significant hits found")

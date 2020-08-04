@@ -1691,10 +1691,8 @@ ggPlotMummi <- function(mum_mSet, anal.type = "mummichog", cf){
     y <- -log10(mummi.mat[, 5])
     x <- mummi.mat[, 3]/mummi.mat[, 4]
     pathnames <- rownames(mummi.mat)
-  }
-  else {
+  } else {
     gsea.mat <- mum_mSet$mummi.gsea.resmat
-    print(colnames(gsea.mat))
     y <- -log10(gsea.mat[, 3])
     x <- gsea.mat[, 2]/gsea.mat[, 1]
     pathnames <- rownames(gsea.mat)
@@ -1714,26 +1712,26 @@ ggPlotMummi <- function(mum_mSet, anal.type = "mummichog", cf){
   minR <- (max.x - min.x)/160
   radi.vec <- minR + (maxR - minR) * (sqx - min.x)/(max.x - 
                                                       min.x)
-  dat = as.data.frame(cbind(pathway = rownames(mummi.mat),
-                            y = as.numeric(y), 
-                            x = as.numeric(x), 
-                            as.numeric(radi.vec)))
+  bg.vec <- heat.colors(length(y))
+ 
+  df <- data.frame(path.nms, x, y)
+ 
+  plot(x, y, type = "n", axes = F, xlab = "Enrichment Factor", 
+       ylab = "-log10(p)", bty = "l")
   
-  scaleFUN <- function(x) sprintf("%.4s", x)
+  scaleFUN <- function(x) sprintf("%.2f", x)
   
-  p = ggplot2::ggplot(dat) + ggplot2::geom_point(ggplot2::aes(y = y, 
+  p = ggplot2::ggplot(df) + ggplot2::geom_point(ggplot2::aes(y = y, 
                                    x = x, 
                                    size = `radi.vec`, 
                                    color = `radi.vec`,
-                                   text = pathway)) +
-     ggtitle("Enrichment Results") +
-    ggplot2::ylab(switch(anal.type, 
-                         mummichog = "-log10(FET)", 
-                         gsea = "-log10(p.value)")) + 
-    ggplot2::xlab("significant hits / all pathway hits") +
+                                   text = path.nms,
+                                   key = path.nms)) +
+    # ggtitle("Enrichment Results") +
+    ggplot2::ylab("-log10(p)") + 
+    ggplot2::xlab("Enrichment Factor") +
     ggplot2::scale_colour_gradientn(colours = cf(20)) +
-    ggplot2::scale_y_discrete(labels=scaleFUN) +
-    ggplot2::scale_x_discrete(labels=scaleFUN)
+    ggplot2::scale_y_continuous(labels=scaleFUN)
   
   p
 }

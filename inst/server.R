@@ -777,6 +777,11 @@ omit_unknown = yes')
     }
   })
   
+  shiny::observeEvent(input$network_style, {
+    if("network" %in% names(mSet$analSet)){
+      plotmanager$make <- "network"
+    }
+  })
   # this toggles when 'interface' values change (for example from 'bivar' to 'multivar' etc.)
   shiny::observe({
     # hide all tabs by default, easier to hide them and then make visible selectively
