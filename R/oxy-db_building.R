@@ -117,6 +117,8 @@ import.pat.csvs <- function(metapath,
     }
     colnames(peaklist)[1:2] <- tolower(colnames(peaklist)[1:2])
     
+    print(peaklist[1:5,1:5])
+    
     hasRT=F
     
     if(is.null(metadata)){

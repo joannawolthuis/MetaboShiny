@@ -300,13 +300,15 @@ shiny::observeEvent(input$score_iso, {
   # get table including isotope scores
   # as input, takes user method for doing this scoring
   shiny::withProgress({
-    score_table <- MetaboShiny::score.isos(table = shown_matches$forward_unique, 
-                                           mSet = mSet, 
-                                           ppm = as.numeric(mSet$ppm),
-                                           dbdir = lcl$paths$db_dir,
-                                           method = input$iso_score_method, 
-                                           inshiny = T, 
-                                           intprec = as.numeric(input$int_prec))
+    score_table <- score.isos(qmz=my_selection$mz,
+                              table = shown_matches$forward_unique, 
+                              mSet = mSet,
+                              ppm = as.numeric(mSet$ppm),
+                              dbdir = lcl$paths$db_dir,
+                              method = input$iso_score_method,
+                              inshiny = F,
+                              intprec = as.numeric(input$int_prec),
+                              rtmode=any(grepl("RT", colnames(mSet$dataSet$norm))))
     colnames(score_table)[ colnames(score_table) == "score"] <- "isoScore"
     })
   shown_matches$forward_unique <- shown_matches$forward_unique[score_table, on = c("fullformula")]
@@ -327,7 +329,7 @@ shiny::observeEvent(input$score_rt, {
                             table = shown_matches$forward_unique, 
                             adducts_considered=input$rt_adducts,
                             mSet = mSet, 
-                            rtperc = input$rt_perc,
+                            rtperc = 5,#input$rt_perc,
                             mzppm = mSet$ppm,
                             dbdir = lcl$paths$db_dir,
                             inshiny = T)

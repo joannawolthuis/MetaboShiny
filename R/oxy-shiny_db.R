@@ -130,9 +130,11 @@ get_prematches <- function(who = NA,
 #' @importFrom pbapply pblapply
 #' @importFrom InterpretMSSpectrum mScore
 #' @importFrom data.table data.table rbindlist
-score.isos <- function(table, mSet, method="mscore", inshiny=TRUE, session=0, intprec, ppm, dbdir){
+score.isos <- function(qmz, table, mSet, method="mscore", inshiny=TRUE, 
+                       session=0, intprec, ppm, dbdir,
+                       rtmode=F, rtperc=0.1){
   
-  shiny::showNotification("Scoring isotopes...")
+  if(inshiny) shiny::showNotification("Scoring isotopes...")
 
   formulas = unique(table$fullformula)
   
@@ -153,6 +155,33 @@ score.isos <- function(table, mSet, method="mscore", inshiny=TRUE, session=0, in
   })
   
   isotopies <- unique(isotopies)
+  ionMode = if(grepl("\\-", qmz)) "neg" else "pos"
+  
+  if(rtmode){
+    rt = as.numeric(gsub("(.*RT)", "", qmz))
+    rtRange = c(rt - rtperc/100 * rt, rt + rtperc/100 * rt)  
+    splitMzRt=stringr::str_split(colnames(mSet$dataSet$proc), "RT")
+  }else{
+    splitMzRt=lapply(colnames(mSet$dataSet$proc), function(mz) list(mz, mz, NA))
+  }
+  
+  mzRtTable = data.table::as.data.table(do.call("rbind", splitMzRt))
+  colnames(mzRtTable) = c("mz", "rt")
+  mzRtTable$mzfull = colnames(mSet$dataSet$proc)
+  mzRtTable$mzmode = sapply(mzRtTable$mz, function(mz) if(grepl("\\-", mz)) "neg" else "pos")
+  mzRtTable <- mzRtTable[mzmode == ionMode]
+  mzRtTable$mz = gsub("\\+|\\-", "", mzRtTable$mz)
+  mzRtTable$mz <- as.numeric(mzRtTable$mz) 
+  mzRtTable$rt <- as.numeric(mzRtTable$rt) 
+  
+  if(rtmode){
+    mzRtTable <- mzRtTable[mzRtTable$rt %between% rtRange,]
+  }
+  
+  if(nrow(mzRtTable) == 0){
+    if(inshiny) shiny::showNotification("No isotopes within RT range...")
+    return(data.table::data.table(fullformula = mini.table$fullformula, score = c(0)))
+  }
   
   score_rows = pbapply::pblapply(isotopies, function(l){
     
@@ -160,13 +189,15 @@ score.isos <- function(table, mSet, method="mscore", inshiny=TRUE, session=0, in
     formula = unique(l$fullformula)
     
     per_mz_cols = lapply(mzs, function(mz){
-      matches = which(as.numeric(gsub("\\-|\\+|RT.*$","",colnames(mSet$dataSet$norm))) %between% MetaboShiny::ppm_range(mz, ppm))
+      
+      matches = mzRtTable$mzfull[which(mzRtTable$mz %between% MetaboShiny::ppm_range(mz, ppm))]
+      
       if(length(matches) > 0){
-        int = data.table::as.data.table(mSet$dataSet$norm)[,..matches]
+        int = data.table::as.data.table(mSet$dataSet$proc)[, ..matches]
         int[is.na(int)] <- 0
         int = rowMeans(int)
       }else{
-        int = rep(0, nrow(mSet$dataSet$norm))
+        int = rep(0, nrow(mSet$dataSet$proc))
       }
       l = list(values = int)
       names(l) = mz
@@ -179,7 +210,8 @@ score.isos <- function(table, mSet, method="mscore", inshiny=TRUE, session=0, in
     theor = matrix(c(l$fullmz, l$isoprevalence), nrow=2, byrow = T)
 
     scores_persamp = apply(bound, MARGIN=1, FUN = function(row){
-      foundiso = which(row > 0)
+      
+      foundiso = which(row != 0)
       if(length(foundiso) <= 1){
         return(0)
       }
@@ -192,7 +224,7 @@ score.isos <- function(table, mSet, method="mscore", inshiny=TRUE, session=0, in
                actual = obs[2,]
                theor = theor[2,]
                deltaSignal = abs(theor - actual)
-               percentageDifference = deltaSignal / actual * 100# Percent by element.
+               percentageDifference = deltaSignal / actual * 100 # Percent by element.
                # - - -
                mean(percentageDifference) #Average percentage over all elements.
              },
@@ -416,17 +448,9 @@ score.rt <- function(qmz, table, mSet, inshiny=TRUE,
                      session=0, mzppm, rtperc, dbdir, 
                      adducts_considered = adducts$Name){
   
-  formulas = unique(table$fullformula)
-  
-  repr.smiles <- sapply(formulas, function(form){
-    table[fullformula == form][1,]$structure
-  })
-  
-  mini.table <- table[structure %in% repr.smiles]
-  
-  maptable = lapply(1:nrow(mini.table), function(i){
-    smi=mini.table$structure[i]
-    form=mini.table$baseformula[i]
+  maptable = pbapply::pblapply(1:nrow(table), function(i){
+    smi=table$structure[i]
+    form=table$baseformula[i]
     revres = data.table::as.data.table(MetaDBparse::searchRev(smi, 
                                                               "extended", 
                                                               dbdir))
@@ -437,25 +461,27 @@ score.rt <- function(qmz, table, mSet, inshiny=TRUE,
   })
   
   maptable <- unique(maptable)
+  maptable = maptable[sapply(maptable, function(x) nrow(x) > 0)]
   
   ionMode = if(grepl("\\-", qmz)) "neg" else "pos"
   rt = as.numeric(gsub("(.*RT)", "", qmz))
   rtRange = c(rt - rtperc/100 * rt, rt + rtperc/100 * rt)
-  splitMzRt=stringr::str_split(colnames(mSet$dataSet$norm), "RT")
+  splitMzRt=stringr::str_split(colnames(mSet$dataSet$proc), "RT")
   mzRtTable = data.table::as.data.table(do.call("rbind", splitMzRt))
   colnames(mzRtTable) = c("mz", "rt")
+  mzRtTable$mzfull = colnames(mSet$dataSet$proc)
   mzRtTable$mzmode = sapply(mzRtTable$mz, function(mz) if(grepl("\\-", mz)) "neg" else "pos")
   mzRtTable <- mzRtTable[mzmode == ionMode]
   mzRtTable$mz = gsub("\\+|\\-", "", mzRtTable$mz)
   mzRtTable$mz <- as.numeric(mzRtTable$mz) 
   mzRtTable$rt <- as.numeric(mzRtTable$rt) 
+  mzRtTable <- mzRtTable[mzRtTable$rt %between% rtRange,]
   
   score_rows = pbapply::pblapply(maptable, function(l){
     mzs = l$fullmz
     formula = unique(l$fullformula)
     per_mz_cols = sapply(mzs, function(mz){
-      matches_mz = which(mzRtTable$mz %between% MetaboShiny::ppm_range(mz, mzppm) && 
-                         mzRtTable$rt %between% rtRange &
+      matches_mz = which(mzRtTable$mz %between% MetaboShiny::ppm_range(mz, mzppm) &
                          mzRtTable$mzmode == ionMode)
       matchTable = mzRtTable[matches_mz,]
       nrow(matchTable) > 0

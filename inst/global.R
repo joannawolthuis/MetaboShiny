@@ -14,7 +14,6 @@ if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 # set the home path
 home = normalizePath("~")
 
-# load default adduct table
 #TODO: add option to put user custom tables in user directory
 data(adducts, package = "MetaDBparse")
 adducts <- data.table::as.data.table(adducts)

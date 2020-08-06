@@ -66,7 +66,12 @@ shiny::observe({
                                                                                              label = "Adducts to look for:",
                                                                                              selected = c("[M+H]1+", "[M+Na]1+", "[M+2H]2+", "[M+K]1+"),
                                                                                              multiple = T),
-                                                                          shiny::sliderInput("rt_perc", label = "Max. perc RT difference", min = 1, max = 100, value = 0.1, post = "%"),
+                                                                          shiny::numericInput("rt_perc", 
+                                                                                              label = "Max. perc RT difference", 
+                                                                                              value = 0.1, 
+                                                                                              min = 0,
+                                                                                              max = 100,
+                                                                                              width = "30%"),
                                                                           shinyWidgets::circleButton("score_rt", icon = shiny::icon("stopwatch"), size = "sm"))
                                           ))
                        }
