@@ -6,6 +6,7 @@ function(input, output, session) {
   library(data.table)
   library(plotly)
   library(ggplot2)
+  library(SPARQL)
   
   shiny::showModal(MetaboShiny::loadModal())
   
@@ -27,8 +28,7 @@ function(input, output, session) {
   # Rshiny app to analyse untargeted metabolomics data! BASH INSTRUCTIONS: STEP 1: mydir=~"/MetaboShiny" #or another of your choice | STEP 2: mkdir $mydir | STEP 3: docker run -p 8080:8080 -v $mydir:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny /start.sh
   
   # rjava.so error.. or rdb corrupt.. 'sudo R CMD javareconf'
-  #require(tidytext)
-  
+
   runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
   
   mSet <- NULL
@@ -672,6 +672,13 @@ omit_unknown = yes')
     }
   })
   
+  shiny::observeEvent(input$curr_mz, {
+    if(input$curr_mz %in% colnames(mSet$dataSet$norm)){
+      my_selection$mz <- input$curr_mz   
+      plotmanager$make <- "summary"
+    }
+  })
+  
   shiny::observe({
     if(my_selection$struct != "" & input$tab_iden_2 == "molmz"){
       if(!mSet$metshiParams$prematched){
@@ -872,7 +879,12 @@ omit_unknown = yes')
   })
   
   # print current compound in sidebar
-  output$curr_mz <- shiny::renderText(stringr::str_match(my_selection$mz, "(^\\d+\\.\\d+)")[,2])
+  observe({
+    shinyWidgets::updatePickerInput(session, 
+                                    "curr_mz", 
+                                    selected = my_selection$mz)
+  })
+  
   
   # make miniplot for sidebar with current compound
   output$curr_plot <- plotly::renderPlotly({
@@ -934,6 +946,16 @@ omit_unknown = yes')
                      icon=shiny::icon("search")),
         shiny::hr()
       )
+    }
+  })
+  
+  shiny::observe({
+    if(length(input$curr_mz) > 0){
+      if(input$curr_mz != my_selection$mz){
+        shinyWidgets::updatePickerInput(session,
+                                        "curr_mz",
+                                        selected=my_selection$mz)
+      }      
     }
   })
   
@@ -1185,29 +1207,6 @@ omit_unknown = yes')
                shiny::img(src = "pawprint.png",height = "50px"),
                br(),
                tags$h2("pre-matched")
-               # ,br(),
-               # shinyWidgets::switchInput(
-               #   inputId = "show_prematched_mz_only",
-               #   value = FALSE,
-               #   label = "Show m/z",
-               #   onLabel = "with matches",
-               #   width = "100%",
-               #   offLabel = "all"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
-               # ),
-               # shiny::fluidRow(shiny::selectInput("prematch_show_add", 
-               #                                    label = "Adducts", 
-               #                                    choices = adducts$Name, 
-               #                                    width = "50%", 
-               #                                    multiple = T,
-               #                                    selected = c("[M+H]1+", "[M-H]1-")),
-               #                 shiny::selectInput("prematch_show_iso", 
-               #                                    label = "Isotopes",
-               #                                    choices = c("main", "minor"), 
-               #                                    width="50%", multiple = T,
-               #                                    selected = "main")),
-               # shiny::conditionalPanel("input.show_prematched_mz_only == true",
-               #                         shiny::textOutput("mz_count")
-               #                         )
                )
     }
   })
@@ -1258,65 +1257,68 @@ omit_unknown = yes')
   },ignoreNULL = T)
   
   # new version check for either github or docker
-  if(online){
-    pkgs = c("MetaboShiny", "MetaDBparse")
-    need.new = lapply(pkgs, function(pkg){
-      remote = remotes:::github_remote(paste0("joannawolthuis/", pkg),
-                                       host = "api.github.com",
-                                       repos = getOption("repos"),
-                                       type = getOption("pkgType"))
-      package_name <- remotes:::remote_package_name(remote)
-      local_sha <- remotes:::local_sha(package_name)
-      remote_sha <- remotes:::remote_sha(remote, local_sha)
-      need = local_sha != remote_sha
-      msg = NA
-      if(need){
-        sha = remote_sha
-        url = gsubfn::fn$paste("https://api.github.com/repos/joannawolthuis/$pkg/git/commits/$sha")
-        msg = ""
-        try({
-          response = httr::GET(
-            url
-          )
-          resParsed = httr::content(response, as = "parsed")
-          msg <- resParsed$message
-        }, silent=T)
-      }
-      list(need=need, msg=msg, pkg=pkg)
-    })
-    
-    needs.new = sapply(need.new, function(x) x[[1]])
-    if(any(needs.new)){
-      alertContent = lapply(need.new, function(pkgRes){
-        if(pkgRes$need){
-          textID=tolower(paste0(pkgRes$pkg, "_update"))
-          output[[textID]] <<- shiny::renderText(pkgRes$msg)
-          if(pkgRes$msg != ""){
-            shiny::tagList(shiny::h2(pkgRes$pkg),
-                           shiny::wellPanel(shiny::helpText(pkgRes$msg))
-                           #shiny::helpText(pkgRes$msg)
-                           #shiny::verbatimTextOutput(textID)
-            )  
+  try({
+    if(online){
+      pkgs = c("MetaboShiny", "MetaDBparse")
+      need.new = lapply(pkgs, function(pkg){
+        remote = remotes:::github_remote(paste0("joannawolthuis/", pkg),
+                                         host = "api.github.com",
+                                         repos = getOption("repos"),
+                                         type = getOption("pkgType"))
+        package_name <- remotes:::remote_package_name(remote)
+        local_sha <- remotes:::local_sha(package_name)
+        remote_sha <- remotes:::remote_sha(remote, local_sha)
+        need = local_sha != remote_sha
+        msg = NA
+        if(need){
+          sha = remote_sha
+          url = gsubfn::fn$paste("https://api.github.com/repos/joannawolthuis/$pkg/git/commits/$sha")
+          msg = ""
+          try({
+            response = httr::GET(
+              url
+            )
+            resParsed = httr::content(response, as = "parsed")
+            msg <- resParsed$message
+          }, silent=T)
+        }
+        list(need=need, msg=msg, pkg=pkg)
+      })
+      
+      needs.new = sapply(need.new, function(x) x[[1]])
+      if(any(needs.new)){
+        alertContent = lapply(need.new, function(pkgRes){
+          if(pkgRes$need){
+            textID=tolower(paste0(pkgRes$pkg, "_update"))
+            output[[textID]] <<- shiny::renderText(pkgRes$msg)
+            if(pkgRes$msg != ""){
+              shiny::tagList(shiny::h2(pkgRes$pkg),
+                             shiny::wellPanel(shiny::helpText(pkgRes$msg))
+                             #shiny::helpText(pkgRes$msg)
+                             #shiny::verbatimTextOutput(textID)
+              )  
+            }else{
+              list()
+            }
           }else{
             list()
           }
+        })
+        if(".dockerenv" %in% list.files("/", all.files=T)){
+          headerMsg = paste0("New ", paste(pkgs[needs.new], collapse = " and "), " version available! Please pull the latest docker image.")
         }else{
-          list()
+          headerMsg = paste0("New ", paste(pkgs[needs.new], collapse = " and "), " version available! Please install the latest GitHub version", if(sum(needs.new) == 2) "s." else ".")
         }
-      })
-      if(".dockerenv" %in% list.files("/", all.files=T)){
-        headerMsg = paste0("New ", paste(pkgs[needs.new], collapse = " and "), " version available! Please pull the latest docker image.")
-      }else{
-        headerMsg = paste0("New ", paste(pkgs[needs.new], collapse = " and "), " version available! Please install the latest GitHub version", if(sum(needs.new) == 2) "s." else ".")
+        MetaboShiny::metshiAlert(shiny::tagList(h3(headerMsg),
+                                                hr(),
+                                                alertContent), 
+                                 session = session,
+                                 title = "Notification")
       }
-      MetaboShiny::metshiAlert(shiny::tagList(h3(headerMsg),
-                                              hr(),
-                                              alertContent), 
-                               session = session,
-                               title = "Notification")
-    }
-     
-  }
+      
+    }  
+  },silent = T)
+  
   
   onStop(function() {
     print("Closing MetaboShiny ~ヾ(＾∇＾)")

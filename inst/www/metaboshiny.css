@@ -1,3 +1,22 @@
+.bootstrap-select>.dropdown-toggle {
+  width: auto;
+  background-color: transparent;
+  border-color: transparent;
+  font-size: x-large;
+}
+
+.bootstrap-select .dropdown-toggle .caret {
+  top: 100%;
+}
+
+.open>.dropdown-menu {
+    display: inline;
+}
+
+.bootstrap-select .dropdown-menu {
+    min-width: auto;
+}
+
 .hidden {
   display: none !important;
 }

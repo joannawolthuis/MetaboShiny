@@ -76,6 +76,36 @@ shiny::observe({
                                           ))
                        }
                        
+                       # --- MZ PICKER ---
+                       
+                       neededForChoices = lapply(colnames(mSet$dataSet$norm), function(mzfull){
+                         if(grepl("RT", mzfull)){
+                           split = stringr::str_split(mzfull, "RT")[[1]]
+                           mz = split[1]
+                           rt = split[2]
+                         }else{
+                           mz = mzfull
+                           rt = ""
+                         }
+                         list(full = mzfull, mz = mz, rt = rt)
+                       })
+
+                       allMz = lapply(neededForChoices, function(x) x$full)
+                       names(allMz) = lapply(neededForChoices, function(x) paste(x$mz, "m/z"))
+                       subtext = lapply(neededForChoices, function(x) x$rt)
+                       newOrder = order(unlist(allMz))
+                       
+                       shinyWidgets::updatePickerInput(session, 
+                                                       "curr_mz",
+                                                       choices = append(allMz[newOrder], 
+                                                                        list("select a m/z")), 
+                                                       choicesOpt = list(subtext = c(subtext[newOrder], "select a m/z"),
+                                                                         icon = c(rep('',length(subtext)), "fa-cat"),
+                                                                         style = c(rep('text-align:center;',length(subtext) + 1))),
+                                                       selected = "fa-cat"
+                                                       )
+                       
+                       # -----------------
                        shiny::updateNavbarPage(session, "statistics", selected = "inf")
                        origcount = mSet$settings$orig.count 
                        output$samp_count <- shiny::renderText({

@@ -10,7 +10,7 @@ shiny::observeEvent(input$clear_prematch,{
   # remove ALL mSet storage that had prematched m/z
   mSet$storage <<- mSet$storage[!grepl(pattern = "\\(prematched m/z only\\)", names(mSet$storage))]
   search_button$go <- TRUE
-  #RSQLite::dbDisconnect(conn)
+  RSQLite::dbDisconnect(conn)
 })
   
 lapply(c("prematch","search_mz"), function(search_type){
@@ -107,7 +107,8 @@ lapply(c("prematch","search_mz"), function(search_type){
                                  "pubchem",
                                  "chemspider",
                                  "knapsack",
-                                 "supernatural2"), db_list)
+                                 "supernatural2",
+                                 "chemidplus"), db_list)
           predict = length(pred_dbs) > 0
           
           if(predict){
@@ -141,8 +142,8 @@ lapply(c("prematch","search_mz"), function(search_type){
                 if(lcl$apikey == " ") shiny::showNotification("Skipping ChemSpider, you haven't entered an API key!")
                 res.big.db = MetaDBparse::searchFormulaWeb(unique(res.predict$baseformula),
                                                            search = intersect(db_list, 
-                                                                              if(lcl$apikey != " ") c("pubchem", "chemspider", "knapsack","supernatural2") else 
-                                                                                                       c("pubchem", "knapsack", "supernatural2")),
+                                                                              if(lcl$apikey != " ") c("pubchem", "chemspider", "knapsack","supernatural2","chemidplus") else 
+                                                                                                       c("pubchem", "knapsack", "supernatural2","chemidplus")),
                                                            detailed = input$predict_details,
                                                            apikey = lcl$apikey)
                 
@@ -154,8 +155,16 @@ lapply(c("prematch","search_mz"), function(search_type){
                 keep = form_add_only$baseformula %in% res.big.db$baseformula
                 form_add_only <- form_add_only[keep,]
                 
-                results_full <- merge(res.big.db, form_add_only, on = "baseformula", 
-                                      all.y = ifelse("magicball" %in% db_list, TRUE, FALSE))
+                if(nrow(res.big.db) > 0){
+                  results_full <- merge(res.big.db, 
+                                        form_add_only, 
+                                        on = "baseformula", 
+                                        all.y = ifelse("magicball" %in% db_list, TRUE, FALSE), 
+                                        allow.cartesian=T)  
+                }else{
+                  results_full <- res.predict
+                }
+                
                 if(!("source" %in% colnames(results_full))){
                   results_full$source = "magicball"
                 }
@@ -271,7 +280,7 @@ lapply(c("prematch","search_mz"), function(search_type){
       }
       
     }else{
-      if(length(grep(pattern = "supernatural|pubchem|magicball|chemspider|cmmediator|knapsack", 
+      if(length(grep(pattern = "supernatural|pubchem|magicball|chemspider|cmmediator|knapsack|chemidplus", 
                      x = lcl$vectors$built_dbs, value = T, invert = T)) == 0){
         MetaboShiny::metshiAlert("Please build at least one database (or select an online one) to enable this feature!")
       }else{
