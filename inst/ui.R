@@ -1070,7 +1070,10 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                choices = "fa-cat",
                                                                                                                                                                                choicesOpt = list(
                                                                                                                                                                                  subtext = "",
-                                                                                                                                                                                 style='text-align:center;')
+                                                                                                                                                                                 style='text-align:center;'),
+                                                                                                                                                                               options = list(
+                                                                                                                                                                                 `live-search` = TRUE,
+                                                                                                                                                                                 size = 10)
                                                                                                                                                                              ),
                                                                                                                                                                              #shiny::helpText(" "),
                                                                                                                                                                              div(shiny::icon("paw", "fa-xs fa-rotate-90"), style="margin-top: 20px; display: flex;"),
