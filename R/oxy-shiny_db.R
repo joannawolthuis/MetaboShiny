@@ -132,7 +132,9 @@ get_prematches <- function(who = NA,
 #' @importFrom data.table data.table rbindlist
 score.isos <- function(qmz, table, mSet, method="mscore", inshiny=TRUE, 
                        session=0, intprec, ppm, dbdir,
-                       rtmode=F, rtperc=0.1){
+                       rtmode=F, rtperc=0.1, useint=T){
+  
+  if(is.null(rtmode)) rtmode = F
   
   if(inshiny) shiny::showNotification("Scoring isotopes...")
 
@@ -162,10 +164,15 @@ score.isos <- function(qmz, table, mSet, method="mscore", inshiny=TRUE,
     rtRange = c(rt - rtperc/100 * rt, rt + rtperc/100 * rt)  
     splitMzRt=stringr::str_split(colnames(mSet$dataSet$proc), "RT")
   }else{
-    splitMzRt=lapply(colnames(mSet$dataSet$proc), function(mz) list(mz, mz, NA))
+    if(grepl("RT", qmz)){
+      splitMzRt=stringr::str_split(colnames(mSet$dataSet$proc), "RT")
+    }else{
+      splitMzRt=lapply(colnames(mSet$dataSet$proc), function(mz) list(mz, NA))
+    }
   }
   
   mzRtTable = data.table::as.data.table(do.call("rbind", splitMzRt))
+  
   colnames(mzRtTable) = c("mz", "rt")
   mzRtTable$mzfull = colnames(mSet$dataSet$proc)
   mzRtTable$mzmode = sapply(mzRtTable$mz, function(mz) if(grepl("\\-", mz)) "neg" else "pos")
@@ -207,43 +214,48 @@ score.isos <- function(qmz, table, mSet, method="mscore", inshiny=TRUE,
     bound = do.call("cbind", per_mz_cols)
     colnames(bound) = mzs
     
+    
     theor = matrix(c(l$fullmz, l$isoprevalence), nrow=2, byrow = T)
 
     scores_persamp = apply(bound, MARGIN=1, FUN = function(row){
       
       foundiso = which(row != 0)
+
       if(length(foundiso) <= 1){
         return(0)
       }
 
-      row <- sapply(row, function(x) if(x == max(row)) 100 else x/max(row))
-      obs = matrix(c(as.numeric(names(row)), row), nrow=2, byrow = T)
-      
-      switch(method,
-             mape={
-               actual = obs[2,]
-               theor = theor[2,]
-               deltaSignal = abs(theor - actual)
-               percentageDifference = deltaSignal / actual * 100 # Percent by element.
-               # - - -
-               mean(percentageDifference) #Average percentage over all elements.
-             },
-             mscore={
-               score = InterpretMSSpectrum::mScore(obs = obs,
-                                                   the = theor,
-                                                   dppm = ppm,
-                                                   int_prec = intprec/100)
-               score
-             },
-             sirius={NULL},
-             chisq={
-               test <- chisq.test(obs[2,],
-                                  p = theor[2,],
-                                  rescale.p = T)
-               # - - -
-               as.numeric(test$p.value)
-             }
-      )
+      if(useint){
+        row <- sapply(row, function(x) if(x == max(row)) 100 else x/max(row))
+        obs = matrix(c(as.numeric(names(row)), row), nrow=2, byrow = T)
+        switch(method,
+               mape={
+                 actual = obs[2,]
+                 theor = theor[2,]
+                 deltaSignal = abs(theor - actual)
+                 percentageDifference = deltaSignal / actual * 100 # Percent by element.
+                 # - - -
+                 mean(percentageDifference) #Average percentage over all elements.
+               },
+               mscore={
+                 score = InterpretMSSpectrum::mScore(obs = obs,
+                                                     the = theor,
+                                                     dppm = ppm,
+                                                     int_prec = intprec/100)
+                 score
+               },
+               sirius={NULL},
+               chisq={
+                 test <- chisq.test(obs[2,],
+                                    p = theor[2,],
+                                    rescale.p = T)
+                 # - - -
+                 as.numeric(test$p.value)
+               }
+        ) 
+      }else{
+        return(length(foundiso) / ncol(theor) * 100) # percentage of possible isotopes found
+      }
     })
     meanScore = mean(scores_persamp, na.rm = T)
     data.table::data.table(fullformula = formula, score = meanScore)
@@ -444,9 +456,11 @@ getSampInt <- function(conn, filename, all_mz){
 }
 
 #' @export
-score.rt <- function(qmz, table, mSet, inshiny=TRUE, 
-                     session=0, mzppm, rtperc, dbdir, 
+score.add <- function(qmz, table, mSet, inshiny=TRUE, 
+                     session=0, mzppm, rtperc=0.1, rtmode=F, dbdir, 
                      adducts_considered = adducts$Name){
+  
+  if(is.null(rtmode)) rtmode = F
   
   maptable = pbapply::pblapply(1:nrow(table), function(i){
     smi=table$structure[i]
@@ -464,18 +478,26 @@ score.rt <- function(qmz, table, mSet, inshiny=TRUE,
   maptable = maptable[sapply(maptable, function(x) nrow(x) > 0)]
   
   ionMode = if(grepl("\\-", qmz)) "neg" else "pos"
-  rt = as.numeric(gsub("(.*RT)", "", qmz))
-  rtRange = c(rt - rtperc/100 * rt, rt + rtperc/100 * rt)
-  splitMzRt=stringr::str_split(colnames(mSet$dataSet$proc), "RT")
-  mzRtTable = data.table::as.data.table(do.call("rbind", splitMzRt))
-  colnames(mzRtTable) = c("mz", "rt")
-  mzRtTable$mzfull = colnames(mSet$dataSet$proc)
+  
+  if(rtmode){
+    rt = as.numeric(gsub("(.*RT)", "", qmz))
+    rtRange = c(rt - rtperc/100 * rt, rt + rtperc/100 * rt)
+    splitMzRt=stringr::str_split(colnames(mSet$dataSet$proc), "RT")
+    mzRtTable = data.table::as.data.table(do.call("rbind", splitMzRt))
+    colnames(mzRtTable) = c("mz", "rt")
+    mzRtTable$mzfull = colnames(mSet$dataSet$proc)
+    mzRtTable <- mzRtTable[mzmode == ionMode]
+    mzRtTable$mz = gsub("\\+|\\-", "", mzRtTable$mz)
+    mzRtTable$mz <- as.numeric(mzRtTable$mz) 
+    mzRtTable$rt <- as.numeric(mzRtTable$rt) 
+    mzRtTable <- mzRtTable[mzRtTable$rt %between% rtRange,] 
+  }else{
+    mzRtTable <- data.table::data.table(mz = gsub("(RT.*)-?$", "",
+                                                  colnames(mSet$dataSet$proc)))
+  }
+  
   mzRtTable$mzmode = sapply(mzRtTable$mz, function(mz) if(grepl("\\-", mz)) "neg" else "pos")
-  mzRtTable <- mzRtTable[mzmode == ionMode]
-  mzRtTable$mz = gsub("\\+|\\-", "", mzRtTable$mz)
-  mzRtTable$mz <- as.numeric(mzRtTable$mz) 
-  mzRtTable$rt <- as.numeric(mzRtTable$rt) 
-  mzRtTable <- mzRtTable[mzRtTable$rt %between% rtRange,]
+  mzRtTable$mz = as.numeric(gsub("\\+|\\-", "", mzRtTable$mz))
   
   score_rows = pbapply::pblapply(maptable, function(l){
     mzs = l$fullmz

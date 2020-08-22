@@ -3,6 +3,7 @@
   background-color: transparent;
   border-color: transparent;
   font-size: x-large;
+  width: 100%;
 }
 
 .bootstrap-select .dropdown-toggle .caret {

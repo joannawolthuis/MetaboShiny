@@ -4,21 +4,23 @@ options(stringsAsFactors = FALSE,"java.parameters" = c("-Xmx8G")) # give java en
 
 if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
-# library(ggplot2)
-# library(data.table)
-# library(plotly)
-# library(shinyBS)
-# library(shinyjs)
-# library(MetaboShiny)
-
 # set the home path
 home = normalizePath("~")
 
 #TODO: add option to put user custom tables in user directory
-data(adducts, package = "MetaDBparse")
-adducts <- data.table::as.data.table(adducts)
-data(adduct_rules, package = "MetaDBparse")
-adduct_rules <- data.table::as.data.table(adduct_rules)
+if("adducts.csv" %in% list.files(file.path(home, "MetaboShiny", "saves", "admin"))){
+  adducts <- data.table::fread(file.path(home, "MetaboShiny", "saves", "admin", "adducts.csv"))
+}else{
+  data(adducts, package = "MetaDBparse")
+  adducts <- data.table::as.data.table(adducts)
+}
+
+if("adduct_rules.csv" %in% list.files(file.path(home, "MetaboShiny", "saves", "admin"))){
+  adduct_rules <- data.table::fread(file.path(home, "MetaboShiny", "saves", "admin", "adduct_rules.csv"))
+}else{
+  data(adduct_rules, package = "MetaDBparse")
+  adduct_rules <- data.table::as.data.table(adduct_rules)
+}
 
 caret.mdls <- caret::getModelInfo()
 

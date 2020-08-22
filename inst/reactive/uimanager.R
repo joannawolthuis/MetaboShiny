@@ -52,28 +52,29 @@ shiny::observe({
                          })
                        )
                        
-                       if(grepl("RT", colnames(mSet$dataSet$norm)[1])){
-                         # ADD RETENTION TIME SCORING
-                         shiny::appendTab("tab_iden_1",
-                                          session=session, 
-                                          shiny::tabPanel(title=shiny::icon("clock"),
-                                                          shiny::fluidRow(align="center",
-                                                                          br(),
-                                                                          h3("Score matches by retention time"),
-                                                                          shiny::helpText("Per match, investigates if other main isotope adducts are present in the same RT window."),
-                                                                          shiny::selectInput(inputId = "rt_adducts",
-                                                                                             choices = adducts$Name,
-                                                                                             label = "Adducts to look for:",
-                                                                                             selected = c("[M+H]1+", "[M+Na]1+", "[M+2H]2+", "[M+K]1+"),
-                                                                                             multiple = T),
-                                                                          shiny::numericInput("rt_perc", 
-                                                                                              label = "Max. perc RT difference", 
-                                                                                              value = 0.1, 
-                                                                                              min = 0,
-                                                                                              max = 100,
-                                                                                              width = "30%"),
-                                                                          shinyWidgets::circleButton("score_rt", icon = shiny::icon("stopwatch"), size = "sm"))
-                                          ))
+                       if(any(grepl("RT", colnames(mSet$dataSet$norm)))){
+                         for(picker in c("add", "iso")){
+                           output[[paste0(picker, "_rt_ui")]] <- shiny::renderUI({
+                             list(
+                               shiny::helpText("Only consider options within a certain retention time window?"),
+                               shinyWidgets::switchInput(
+                                 inputId = paste0(picker, "_use_rt"),
+                                 size = "mini",
+                                 onLabel = "Yes", 
+                                 offLabel = "No", 
+                                 value = TRUE
+                               ),
+                               shiny::conditionalPanel(gsubfn::fn$paste("input.$picker_use_rt == true"),
+                                                       shiny::numericInput(paste0(picker, "_rt_perc") ,
+                                                                           label = "Max. retention time error margin:", 
+                                                                           value = 0.1, 
+                                                                           min = 0,
+                                                                           max = 100,
+                                                                           width = "30%")
+                               ) 
+                             )
+                           })
+                         }
                        }
                        
                        # --- MZ PICKER ---

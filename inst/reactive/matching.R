@@ -268,6 +268,8 @@ lapply(c("prematch","search_mz"), function(search_type){
         RSQLite::dbExecute(conn, "CREATE INDEX cont_str ON match_content(structure)")
         if(search_type == "prematch"){
           mSet$metshiParams$prematched<<-T
+          fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
+          save(mSet, file = fn)
           search_button$on <- FALSE   
         }else{
           search$go <- TRUE
@@ -317,33 +319,36 @@ shiny::observeEvent(input$score_iso, {
                               method = input$iso_score_method,
                               inshiny = F,
                               intprec = as.numeric(input$int_prec),
-                              rtmode=any(grepl("RT", colnames(mSet$dataSet$norm))))
+                              rtmode = input$iso_use_rt,
+                              rtperc = input$iso_rt_perc,
+                              useint = input$iso_use_int)
     colnames(score_table)[ colnames(score_table) == "score"] <- "isoScore"
     })
-  shown_matches$forward_unique <- shown_matches$forward_unique[score_table, on = c("fullformula")]
+  shown_matches$forward_unique <- shown_matches$forward_unique[unique(score_table), on = c("fullformula")]
 })
 
-shiny::observeEvent(input$score_rt, {
+shiny::observeEvent(input$score_add, {
   # check if the matches table even exists
   if(!data.table::is.data.table(shown_matches$forward_unique)) return(NULL)
   # check if a previous scoring was already done (remove that column if so, new score is generated in a bit)
-  if("rtScore" %in% colnames(shown_matches$forward)){
-    shown_matches$forward_unique <<- shown_matches$forward_unique[,-"rtScore"]
+  if("addScore" %in% colnames(shown_matches$forward)){
+    shown_matches$forward_unique <<- shown_matches$forward_unique[,-"addScore"]
   }
   
   # get table including isotope scores
   # as input, takes user method for doing this scoring
   shiny::withProgress({
-    score_table <- score.rt(qmz = my_selection$mz,
+    score_table <- score.add(qmz = my_selection$mz,
                             table = shown_matches$forward_unique, 
-                            adducts_considered=input$rt_adducts,
-                            mSet = mSet, 
-                            rtperc = 5,#input$rt_perc,
+                            adducts_considered=input$score_adducts,
+                            mSet = mSet,
+                            rtperc = input$add_rt_perc,
+                            rtmode=input$add_use_rt,
                             mzppm = mSet$ppm,
                             dbdir = lcl$paths$db_dir,
                             inshiny = T)
   })
-  colnames(score_table)[ colnames(score_table) == "score"] <- "rtScore"
+  colnames(score_table)[ colnames(score_table) == "score"] <- "addScore"
   shown_matches$forward_unique <- shown_matches$forward_unique[score_table, on = c("structure")]
 })
 

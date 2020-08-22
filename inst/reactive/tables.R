@@ -40,20 +40,6 @@ output$browse_tab <-DT::renderDataTable({
               ))
 }, server=T)
 
-# generate positive and negative adduct picker tabs (for csv creation)
-# defaults are in the huge global object :-)
-shiny::observe({
-  modes = c("pos", "neg")
-  lapply(modes, function(mode){
-    output[[paste0(mode, "_add_tab")]] <- DT::renderDataTable({
-      DT::datatable(gbl$vectors$pos_adducts,
-                    selection = list(mode = 'multiple',
-                                     selected = lcl$vectors[[paste0(mode, "_selected_add")]], target="row"),
-                    options = list(pageLength = 5, dom = 'tp'),
-                    rownames = F)
-    })
-  })
-})
 
 # adduct table editing from settings tab
 
@@ -61,7 +47,7 @@ output$ml_tab <- DT::renderDataTable({
   MetaboShiny::metshiTable(content = data.table::data.table("nothing selected"="Please select a model from ROC plot or left-hand table!"))
 }, server = F)
 
-observeEvent(input$ml_overview_tab_rows_selected, {
+shiny::observeEvent(input$ml_overview_tab_rows_selected, {
   attempt = lcl$tables$ml_roc_all[input$ml_overview_tab_rows_selected,]$attempt
   xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
   output$ml_tab <- DT::renderDataTable({
@@ -110,24 +96,23 @@ lapply(c("adducts", "adduct_rules"), function(prefix){
   }) 
   
   shiny::observeEvent(input[[paste0("import_", prefix)]], {
-    file.copy(input[[tab.pfx]]$datapath, 
-              file.path(lcl$paths$work_dir, 
-                        paste0(prefix,".csv")), 
-              overwrite = T)
+    
+    # file.copy(input[[tab.pfx]]$datapath, 
+    #           file.path(lcl$paths$work_dir, 
+    #                     paste0(prefix,".csv")), 
+    #           overwrite = T)
     
     switch(prefix,
            adducts = {
-             adducts <<- data.table::fread(input$add_tab$datapath)
              show.tab = adducts
            },
            adduct_rules = {
-             adduct_rules <<- data.table::fread(input$add_rule_tab$datapath)
              show.tab = adduct_rules
            })
     
     output[[paste0(prefix, "_tab")]] <- rhandsontable::renderRHandsontable({
       if (!is.null(show.tbl))
-        rhandsontable::rhandsontable(show.tbl, stretchH = "all", useTypes = TRUE)
+        rhandsontable::rhandsontable(show.tab, stretchH = "all", useTypes = TRUE)
     })
   })
   
@@ -176,26 +161,21 @@ output$adduct_rules_tab <- rhandsontable::renderRHandsontable({
     rhandsontable::rhandsontable(DF, stretchH = "all", useTypes = TRUE)
 })
 
-observeEvent(input$save_adducts, {
-  shiny::showNotification("Saving changes to adducts ...")
-  fwrite(values$adducts, file = file.path(lcl$paths$work_dir, "adducts.csv"))
-  fwrite(values$adduct_rules, file = file.path(lcl$paths$work_dir, "adduct_rules.csv"))
-  adducts <<- fread(file.path(lcl$paths$work_dir, "adducts.csv"))
-  adduct_rules <<- fread(file.path(lcl$paths$work_dir, "adduct_rules.csv"))
+shiny::observeEvent(input$save_adducts, {
+  
+  shiny::showNotification("Saving & applying changes to adducts ...")
+  
+  for(tab.pfx in c("adducts", "adduct_rules")){
+    file.copy(input[[tab.pfx]]$datapath,
+              file.path(lcl$paths$work_dir,
+                        paste0(prefix,".csv")),
+              overwrite = T)  
+  }
+  adducts <<- data.table::fread(file.path(lcl$paths$work_dir, "adducts.csv"))
+  adduct_rules <<- data.table::fread(file.path(lcl$paths$work_dir, "adduct_rules.csv"))
+  selAdd = intersect(input$score_add, 
+                     adducts$Name)
+  shinyWidgets::updatePickerInput("score_add", 
+                                  choices=adducts$Name,
+                                  selected = selAdd)
 })
-
-# output$magicball_add_tab <- DT::renderDataTable({
-#   if(any(unlist(scanmode))){
-#     DT::datatable(data.table::data.table(Adduct = if(all(unlist(scanmode))){
-#       adducts$Name
-#     }else{adducts[scanmode %in% Ion_mode]$Name}),
-#     selection = list(mode = 'multiple',
-#                      selected = lcl$vectors[[paste0(scanmode, "_selected_add")]], target="row"),
-#     extensions = 'Scroller',
-#     options = list(deferRender = TRUE,
-#                    scrollY = 200,
-#                    scroller = TRUE, dom = 'tp',
-#                    columnDefs = list(list(className = 'dt-center', targets = "_all"))),
-#     rownames = F)  
-#   }
-# })
