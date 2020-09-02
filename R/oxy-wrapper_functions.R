@@ -383,12 +383,20 @@ tooEmptySamps <- function(mSet, max.missing.per.samp){
 #' @importFrom pbapply startpb setpb
 replRowMin <- function(mSet){
   samples <- rownames(mSet$dataSet$preproc)
+  mz <- colnames(mSet$dataSet$preproc)
   w.missing <- data.table::as.data.table(mSet$dataSet$preproc)
-  pb <- pbapply::startpb(0, ncol(w.missing))
+  pb <- pbapply::startpb(0, nrow(w.missing))
   i=0
-  w.missing = w.missing[,as.data.table(apply(.SD, 2, function(x) {i<<-i+1; pbapply::setpb(pb, i); x[is.na(x)] <- mean(x, na.rm=T)/2; x}))]
-  w.missing <- as.data.frame(w.missing)
+  w.missing = w.missing[,data.table::as.data.table(apply(.SD, 
+                                                         1, 
+                                                         function(x) {i<<-i+1; 
+                                                         pbapply::setpb(pb, i); 
+                                                         x[is.na(x)] <- min(x, na.rm=T)/2; 
+                                                         return(x)
+                                                         }))]
+  w.missing <- t(as.data.frame(w.missing))
   rownames(w.missing) <- samples
+  colnames(w.missing) <- mz
   return(w.missing)
   }
 

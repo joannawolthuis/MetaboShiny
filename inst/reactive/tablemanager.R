@@ -222,7 +222,14 @@ shiny::observe({
       }else{
         mapply(function(mytable, tableName){
           output[[tableName]] <- DT::renderDataTable({
-            MetaboShiny::metshiTable(content = mytable)
+            subbed = gsub("\\+", "", rownames(mytable))
+            rns = rownames(mytable)
+            if(subbed[1] %in% colnames(mSet$dataSet$norm)){ # check if a mz table
+              stars = sapply(mSet$report$mzStarred[subbed]$star, function(hasStar) if(hasStar) "★" else "")
+              starCol = data.table::data.table("★" = stars)
+              mytable = cbind(starCol, mytable)
+            }
+            MetaboShiny::metshiTable(content = mytable,rownames = rns)
           }, server = FALSE)
         }, toWrap, names(toWrap)) 
       } 

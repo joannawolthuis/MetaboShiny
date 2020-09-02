@@ -304,7 +304,8 @@ shiny::observeEvent(input$score_iso, {
   # check if the matches table even exists
   if(!data.table::is.data.table(shown_matches$forward_unique)) return(NULL)
   # check if a previous scoring was already done (remove that column if so, new score is generated in a bit)
-  if("isoScore" %in% colnames(shown_matches$forward)){
+  
+  if("isoScore" %in% colnames(shown_matches$forward_unique)){
     shown_matches$forward_unique <<- shown_matches$forward_unique[,-"isoScore"]
   }
 
@@ -331,7 +332,7 @@ shiny::observeEvent(input$score_add, {
   # check if the matches table even exists
   if(!data.table::is.data.table(shown_matches$forward_unique)) return(NULL)
   # check if a previous scoring was already done (remove that column if so, new score is generated in a bit)
-  if("addScore" %in% colnames(shown_matches$forward)){
+  if("addScore" %in% colnames(shown_matches$forward_unique)){
     shown_matches$forward_unique <<- shown_matches$forward_unique[,-"addScore"]
   }
   

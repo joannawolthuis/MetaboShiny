@@ -1,3 +1,7 @@
+.pretty {
+    margin-right: 0em;
+}
+
 .bootstrap-select>.dropdown-toggle {
   width: auto;
   background-color: transparent;

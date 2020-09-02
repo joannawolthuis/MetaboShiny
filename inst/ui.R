@@ -984,15 +984,6 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                                                                                                              shiny::h2("isoMatcher"),
                                                                                                                                                                                                                                                                              shiny::h3("Score matches by isotope pattern"),
                                                                                                                                                                                                                                                                              shiny::helpText("Per match, investigates if other same-formula isotopes are present."),
-                                                                                                                                                                                                                                                                             shiny::selectInput(width = "80%","iso_score_method",
-                                                                                                                                                                                                                                                                                                "Which method used to score compounds of same weight?",
-                                                                                                                                                                                                                                                                                                selected="mscore",
-                                                                                                                                                                                                                                                                                                choices=list("M-score"="mscore"
-                                                                                                                                                                                                                                                                                                             #"Chi-square"="chisq",
-                                                                                                                                                                                                                                                                                                             #"Mean absolute percentage error"="mape",
-                                                                                                                                                                                                                                                                                                             #"SIRIUS"="sirius",
-                                                                                                                                                                                                                                                                                                             #"Network-based"="network"
-                                                                                                                                                                                                                                                                                                )),
                                                                                                                                                                                                                                                                              shiny::helpText("Score pattern intensity simularity? (if not, only check for isotope presence)"),
                                                                                                                                                                                                                                                                              shinyWidgets::switchInput(
                                                                                                                                                                                                                                                                                inputId = "iso_use_int",
@@ -1002,6 +993,15 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                                                                                                                value = TRUE
                                                                                                                                                                                                                                                                              ),
                                                                                                                                                                                                                                                                              shiny::conditionalPanel("input.iso_use_int == true",
+                                                                                                                                                                                                                                                                                                     shiny::selectInput(width = "80%","iso_score_method",
+                                                                                                                                                                                                                                                                                                                        "Which method used to score compounds of same weight?",
+                                                                                                                                                                                                                                                                                                                        selected="mscore",
+                                                                                                                                                                                                                                                                                                                        choices=list("M-score"="mscore"
+                                                                                                                                                                                                                                                                                                                                     #"Chi-square"="chisq",
+                                                                                                                                                                                                                                                                                                                                     #"Mean absolute percentage error"="mape",
+                                                                                                                                                                                                                                                                                                                                     #"SIRIUS"="sirius",
+                                                                                                                                                                                                                                                                                                                                     #"Network-based"="network"
+                                                                                                                                                                                                                                                                                                                        )),
                                                                                                                                                                                                                                                                                                      shiny::sliderInput("int_prec", 
                                                                                                                                                                                                                                                                                                                         label = "Intensity error margin", 
                                                                                                                                                                                                                                                                                                                         min = 1, max = 100, 
@@ -1106,11 +1106,26 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                  `live-search` = TRUE,
                                                                                                                                                                                  size = 10)
                                                                                                                                                                              ),
-                                                                                                                                                                             #shiny::helpText(" "),
                                                                                                                                                                              div(shiny::icon("paw", "fa-xs fa-rotate-90"), style="margin-top: 20px; display: flex;"),
                                                                                                                                                                              div(shiny::icon("paw", "fa-xs fa-rotate-90"), style="display: flex;"),
                                                                                                                                                                              div(shiny::icon("paw", "fa-xs fa-rotate-90"), style="margin-top: 20px; display: flex;"),
-                                                                                                                                                                             style = "align-items: center; display: inline-flex;")),
+                                                                                                                                                                             br(),
+                                                                                                                                                                             style = "align-items: center; display: inline-flex;"),
+                                                                                                                                                                           ),
+                                                                                                                                                               shinyWidgets::prettyToggle(
+                                                                                                                                                                 status_off = "default", 
+                                                                                                                                                                 status_on = "warning",
+                                                                                                                                                                 bigger = T,
+                                                                                                                                                                 animation = "pulse",
+                                                                                                                                                                 inputId = "star_mz",
+                                                                                                                                                                 label_on = "", 
+                                                                                                                                                                 label_off = "",
+                                                                                                                                                                 outline = TRUE,
+                                                                                                                                                                 plain = TRUE,
+                                                                                                                                                                 value = FALSE,
+                                                                                                                                                                 icon_on = icon("star",lib ="glyphicon"), 
+                                                                                                                                                                 icon_off = icon("star-empty",lib ="glyphicon")
+                                                                                                                                                               ),
                                                                                                                                                                style = "border-top: 1px solid #DFDCDC; border-bottom: 1px solid #DFDCDC; margin-left: -15px; margin-right: -15px; background-color:white;"),
                                                                                                                                                            br(),
                                                                                                                                                            shiny::tabsetPanel(id = "tab_search", shiny::tabPanel(title = shinyBS::tipify(shiny::icon("paw"), 
@@ -1290,19 +1305,23 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                    ))),
                                    
                                    # report tab
-                                   #TODO: update to most recent version using orca and re-enable
-                                   # shiny::tabPanel("report",
-                                   #                 icon = shiny::icon("file-invoice", class = "outlined"),
-                                   #                 value="reportTab",
-                                   #                 shiny::fluidRow(
-                                   #                   shiny::column(width=12, align="center",
-                                   #                                 shiny::h2("Report"),
-                                   #                                 br(),
-                                   #                                 shiny::helpText("Report contents:"),
-                                   #                                 shiny::div(DT::dataTableOutput('report_unselected',  width="100%"))
-                                   #                   )#close column
-                                   #                 )#close fluidrow
-                                   #),#close tabpanel
+                                   shiny::tabPanel("report",
+                                                   icon = shiny::icon("file-invoice", class = "outlined"),
+                                                   value="reportTab",
+                                                   shiny::h2("Report"),
+                                                   shiny::fluidRow(
+                                                     shiny::column(width=5, align="center",
+                                                                   shiny::helpText("In report:"),
+                                                                   shiny::div(DT::dataTableOutput('report_selected',  
+                                                                                                  width="100%"))
+                                                     ),
+                                                     shiny::column(width = 2, align="center"),
+                                                     shiny::column(width=5, align="center",
+                                                                   shiny::helpText("Not in report:"),
+                                                                   shiny::div(DT::dataTableOutput('report_unselected',  
+                                                                                                  width="100%"))
+                                                     )
+                                                   )),
                                    # this tab is used to change general settings.
                                    shiny::tabPanel("settings",  icon = shiny::icon("cog",class = "outlined"), value="options",
                                                    shiny::tabsetPanel(id="tab_settings",

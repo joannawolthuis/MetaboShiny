@@ -1,188 +1,101 @@
-dataModal <- function(failed = FALSE) {
-  shiny::modalDialog(
-    shiny::fluidRow(align="center",
-                    shiny::textInput("report_plot_title", "Title", value = switch(input$statistics,
-                                                                    tt = paste0("T-test", " - ", lcl$curr_mz, " m/z"),
-                                                                    fc = paste0("Fold-change",  " - ", lcl$curr_mz, " m/z"),
-                                                                    anova = paste0("ANOVA",  " - ", lcl$curr_mz, " m/z"),
-                                                                    pca = "PCA",
-                                                                    plsda = "PLS-DA",
-                                                                    volc = "Volcano",
-                                                                    meba = paste0("MEBA",  " - ", lcl$curr_mz, " m/z"),
-                                                                    asca = paste0("ASCA",  " - ", lcl$curr_mz, " m/z"),
-                                                                    ml = "Machine learning")),
-                    shiny::textAreaInput("report_plot_notes", "Notes", value = "", height = "100px")
-    ),
-    footer = shiny::tagList(
-      shiny::fluidRow(align="center",
-                      shiny::modalButton("Cancel"),
-                      shiny::actionButton("report_plot", "Add plot to report")
-      )
-
-    )
-  )
-}
-
-shiny::observeEvent(input$show_window, {
-  shiny::showModal(dataModal())
-  shinyjqui::jqui_draggable(selector = '.modal-content') # make draggable
-})
-
-# Report buttons
-reportAppend = function(reportPlot, plotTitle, plotNotes){
-  # if no report folder, create
-  dir.create(file.path(options$work_dir, "report"))
-  dir.create(file.path(options$work_dir, "report",
-                       "figures"))
-
-  # Report file name (Rmd)
-  reportName <- file.path(options$work_dir, "report", paste("Report_", gsub("[^[:alnum:]]", "_", options$proj_name), ".Rmd", sep = ""))
-
-  # If report file doesn't exist yet
-  if (!file.exists(reportName)) {
-    reportTmp <- file(reportName, open = "w")
-    # Add Rmd base
-    cat(paste(
-      "---",
-      paste("title:", options$proj_name),
-      paste("author:", Sys.info()[["user"]]),
-      paste("date:", Sys.Date()),
-      "output: \n html_document: \n self_contained: no",
-      "---", "\n", "```{r setup, include=FALSE}", "knitr::opts_chunk$set(echo = FALSE)", "```", "\n",
-      sep = "\n"),
-      file = reportTmp)
-    close(reportTmp)
-  }
-
-  # append plot to file
-  reportTmp <- file(reportName, open = "a")
-  # unique file name to store figure for report
-  tmpFigureName <- paste(tempfile(pattern = "plot", tmpdir = file.path(options$work_dir, "report", "figures")), ".png", sep = "")
-  # save plo† as PDF
-  # ggsave(tmpFigureName, plot = lcl$last_plot)
-  ggplot2::ggsave(tmpFigureName, plot = reportPlot)
-  dev.off()
-
-  # htmlwidgets::saveWidget(lcl$last_plot, tmpFigureName)
-  # Add code to Rmd file
-  cat(paste(
-    paste("#", plotTitle, sep = " "),
-
-    # Input HTML in HTML (plotly interactive)
-    # paste("<iframe width=\"600\" height=\"600\" src=\"", tmpFigureName, "\"></iframe>", sep = ""),
-
-    # input figures in HTML
-    paste("<img src = \"", tmpFigureName, "\">", sep = ""),
-
-    # inputs PDF in HTML (zoom and scroll possible)
-    # "---", "\n", "```{r, out.width = \"85%\"}", "\n", paste("knitr::include_graphics(\"", tmpFigureName, "\")", sep = ""), "```", "\n",
-    plotNotes,
-    "\n",
-    sep = "\n"),
-    file = reportTmp)
-  close(reportTmp)
-
-  # create HTML
-  currentWD = getwd()
-  setwd(file.path(options$work_dir, "report"))
-  rmarkdown::render(reportName)
-  setwd(currentWD)
-
-  # reset title, caption, and notes
-  shiny::updateTextInput(session, "plotTitle", label = "Title", value = "")
-  shiny::updateTextAreaInput(session, "plotNotes", label = "Notes", value = "")
-}
-# observe report button presses, need one for each button*
-
-shiny::observeEvent(input$report_plot, {
-  shiny::reportAppend(lcl$last_plot, input$report_plot_title, input$report_plot_notes)
-})
-
-# For report tab where user can choose plots to appear in report
-# nonselected
-
-
-report_yes = shiny::reactiveValues(start = data.frame(),
-                            now = data.frame())
-
-report_no = shiny::reactiveValues(start = data.frame(c("a", "b", "c")),
-                           now = data.frame(c("a", "b", "c")))
-
-shiny::observe({
-  if(exists("mSet")){
-    if("storage" %in% names(mSet)){
-      analyses = names(mSet$storage)
-      report_no$start <- data.table::rbindlist(lapply(analyses, function(name){
-        analysis = mSet$storage[[name]]$analysis
-        analysis_names = names(analysis)
-        # - - -
-        with.subgroups <- intersect(analysis_names, c("ml", "plsr"))
-        if(length(with.subgroups) > 0){
-          extra_names <- lapply(with.subgroups, function(anal){
-            switch(anal,
-                   ml = {
-                     which.mls <- intersect(c("rf", "ls"), names(analysis$ml))
-                     ml.names = sapply(which.mls, function(meth){
-                       if(length(analysis$ml[[meth]]) > 0){
-                         paste0(meth, " - ", names(analysis$ml[[meth]]))
-                       }
-                     })
-                     unlist(ml.names)
-                   },
-                   plsr = {
-                     c ("plsda - PC1", "plsda - PC2", "plsda - PC3")
-                   })
-          })
-          analysis_names <- c(setdiff(analysis_names, c("ml", "plsr", "plsda")), unlist(extra_names))
-        }
-        # - - -
-        data.frame(
-          paste0(analysis_names, " (", name, ")")
-        )
-      }))
-      report_no$now <- report_no$start
-    }else{
-      report_no$start <- data.frame(names(mSet$analSet))
-      report_no$now <- report_no$start
+shiny::observeEvent(input$star_mz, {
+    print("toggle")
+    # - - - -
+    if(!is.null(mSet)){
+      if(!("report" %in% names(mSet))){
+        mSet$report <<- list(mzStarred = data.table::data.table(mz = colnames(mSet$dataSet$norm),
+                                                               star = c(FALSE)))  
+        data.table::setkey(mSet$report$mzStarred, mz)
+      }
     }
-  }
+    if(my_selection$mz != ""){
+      
+      mSet$report$mzStarred[my_selection$mz]$star <<- input$star_mz
+      
+      try({
+        tablemanager$make <- input$statistics
+      })
+    }
 })
 
-report_members <- shiny::reactiveValues(mzvals = list())
-
-shiny::observeEvent(input$report_add, {
-  # add to the 'selected' table
-  rows <- input$report_unselected_rows_selected
-  # get members and send to members list
-  added = report_no$now[rows,]
-  report_yes$now <- data.frame(c(unlist(report_yes$now), added))
-  report_no$now <- data.frame(report_no$now[-rows,])
-})
-
-shiny::observeEvent(input$report_remove, {
-  # add to the 'selected' table
-  rows <- input$report_selected_rows_selected
-  # get members and send to non members list
-  removed = report_yes$now[rows,]
-  report_no$now <- data.frame(c(unlist(report_no$now), removed))
-  report_yes$now <- data.frame(report_yes$now[-rows,])
-})
-
-
-# the 'non-selected' table
-output$report_unselected <- DT::renderDataTable({
-  res = DT::datatable(data.table(), rownames=FALSE, colnames="excluded", options = list(dom = 'tp'))
-  try({
-    res = DT::datatable(report_no$now,rownames = FALSE, colnames="excluded", selection = "multiple", options = list(dom = 'tp'))
-  })
-  res
-})
-
-# the 'selected' table
-output$report_selected <- DT::renderDataTable({
-  res = DT::datatable(data.table(), rownames=FALSE, colnames="included", options = list(dom = 'tp'))
-  try({
-    res = DT::datatable(report_yes$now,rownames = FALSE, colnames="included", selection = "multiple", options = list(dom = 'tp'))
-  })
-  res
-})
+# if(interactive()){
+#   # GENERAL IDEA
+#   "
+# PREP
+# create mSet$report list (mReport)
+# example:
+# list(analyses=list(tt = list(
+#                    plots = list(),
+#                    tables = list()),
+#                    mz = c(list(mz = .., matchRow = ..., note = ..., db = ...)))
+# 
+# RUN ANALYSES OF INTEREST 
+# example: t-test
+# STAR specific plot or tables
+# ADD to mReport
+# 
+# SELECT MZ AND DESC OF INTEREST
+# sift through mz of interest
+# if interesting, STAR that m/z 
+# OR star interesting description (savd)
+# 
+# create template for report
+# 
+# CREATING REPORT
+# WRITE HEADER
+# - logo - 
+# - title - 
+# - date - 
+# - user experiment description -
+# LOOP through analysis types
+# FOR EACH EXPERIMENT
+#   - ROW 1:(overview plot(s)) (starred mz highlighted)
+#   - ROW 2:
+#     - table with starred m/zs 
+#     - OR top x results
+#   - ROW 3: 
+#     - top x summary figures
+#     - OR FOR EACH m/z starred:
+#       match table rows (name, adduct, iso, description (only if starred))
+# 
+# "
+#   
+#   # SERVER
+#   
+#   ## rmd example ##
+#   # load data 
+#   set.seed(500)
+#   Score <- rnorm(40, 100, 15)
+#   Criteria1<-rnorm(40, 10, 5)
+#   Criteria2<-rnorm(40, 20, 5)
+#   ID <- sample(1:1000,8,replace=T)
+#   df <- data.frame(ID,Score,Criteria1,Criteria2)
+#   
+#   library("rmarkdown")
+#   
+#   experimentTitle = "myExperiment"
+#   fullpath = system.file("www/gemmy_rainbow.png", package="MetaboShiny")
+#   template = "
+# ```{r, echo=FALSE, fig.align='center',out.width = '150px'}
+# knitr::include_graphics(fullpath)
+# ```      
+# <center> <h1>`r experimentTitle`</h1> </center>
+# <center> <h3>analysed with MetaboShiny</h3> </center>
+# 
+# Test OWO haha.
+# 
+# ```{r, echo=FALSE}
+# #Report Analysis
+# summary(subgroup)
+# ```"
+#   tempLoc = "hewwo.Rmd"
+#   writeLines(template, tempLoc)
+#   
+#   id = unique(df$ID)[1]
+#   subgroup <- df[df$ID == id,]
+#   
+#   render(input = tempLoc,
+#          output_dir = getwd(),
+#          output_file = paste0('report.', id, '.html'))    
+#   
+# }

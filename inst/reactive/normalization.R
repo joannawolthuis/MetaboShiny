@@ -9,8 +9,8 @@ shiny::observeEvent(input$initialize, {
     try({
       # read in original CSV file
       metshiCSV <- data.table::fread(lcl$paths$csv_loc,
-                                    data.table = TRUE,
-                                    header = T)
+                                     data.table = TRUE,
+                                     header = T)
       
       # create empty mSet with 'stat' as default mode
       shiny::setProgress(session=session, value= .2)
@@ -133,7 +133,7 @@ shiny::observeEvent(input$initialize, {
       
       # missing value imputation
       if(req(input$miss_type ) != "none"){
-        if(req(input$miss_type ) == "rowmin"){ # use sample minimum
+        if(req(input$miss_type) == "rowmin"){ # use sample minimum
           mSet$dataSet$proc <- replRowMin(mSet)
         }
         else if(req(input$miss_type ) == "pmm"){ # use predictive mean matching
@@ -194,8 +194,16 @@ shiny::observeEvent(input$initialize, {
       
       mSet <- MetaboAnalystR::PreparePrenormData(mSet)
       
-     # mSet$dataSet$proc <- NULL
-     # gc()
+      # temp fix for disabling the json writing
+      OFFtoJSON <- function(obj){
+        print("Disabled in MetaboShiny!")
+      }
+      
+      rlang::env_unlock(env = asNamespace('RJSONIO'))
+      rlang::env_binding_unlock(env = asNamespace('RJSONIO'))
+      assign('toJSON', OFFtoJSON, envir = asNamespace('RJSONIO'))
+      rlang::env_binding_lock(env = asNamespace('RJSONIO'))
+      rlang::env_lock(asNamespace('RJSONIO'))
       
       # normalize dataset with user settings(result: mSet$dataSet$norm)
       mSet <- MetaboAnalystR::Normalization(mSet,
@@ -226,13 +234,13 @@ shiny::observeEvent(input$initialize, {
       # === check if it does wrong here... ===
       
       if(batch_corr){
-        
         left_batch_vars = input$batch_var
         if("batch" %in% input$batch_var & has.qc & input$batch_use_qcs){
           # save to mSet
           smps <- rownames(mSet$dataSet$norm)
           # get which rows are QC samples
-          qc_rows <- which(grepl(pattern = "QC", x = smps))
+          qc_rows <- which(grepl(pattern = "QC", 
+                                 x = smps))
           # get batch for each sample
           batch.idx = as.numeric(as.factor(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"batch"][[1]]))
           if(length(batch.idx) == 0) return(mSet$dataSet$norm)

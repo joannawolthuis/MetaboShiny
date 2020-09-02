@@ -564,6 +564,10 @@ omit_unknown = yes')
         search$go <- TRUE
         my_selection$name <- ""
       }
+      # update star logo
+      shinyWidgets::updatePrettyToggle(session, 
+                                       "star_mz",
+                                       value =  mSet$report$mzStarred[my_selection$mz]$star)
     }
   })
   
