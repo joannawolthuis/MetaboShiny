@@ -217,7 +217,6 @@ shiny::observe({
                                               choices = c(colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "individual"))]))
                      
                      if("ml" %in% names(mSet$analSet)){
-                       
                        shiny::showTab(session = session, 
                                       inputId = "ml2", 
                                       target = "res")

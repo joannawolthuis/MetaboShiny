@@ -509,15 +509,16 @@ ggPlotAOV <- function(mSet, cf, n=20){
   xaxis = seq(0,600, 50)
   # ---------------------------
   p <- ggplot2::ggplot(data=profile) +
-    ggplot2::geom_point(ggplot2::aes(x=`m/z`, y=`-log(p)`,
-                                     text=`m/z`, 
+    ggplot2::geom_point(ggplot2::aes(y=Peak,
+                                     x=`-log(p)`,
+                                     text=`m/z`,
                                      color=`-log(p)`, 
                                      key=`m/z`)) +
-    
-    ggplot2::scale_x_discrete(breaks = xaxis, labels=as.character(xaxis)) + 
-    ggplot2::scale_colour_gradientn(colours = cf(n)) +
-    #ggplot2::scale_y_log10()+
-    ggplot2::scale_y_continuous(labels=scaleFUN)
+    # ggplot2::scale_y_discrete(breaks = xaxis, 
+    #                           labels=as.character(xaxis)) +
+    ggplot2::scale_colour_gradientn(colours = cf(n)) + ggplot2::coord_flip()
+  #ggplot2::scale_y_continuous()
+  
   p
 }
 
@@ -718,7 +719,7 @@ ggPlotClass <- function(mSet,
   colnames(res) <- 1:ncol(res)
   # best.num <- mSet$analSet$plsda$best.num
   # choice <- mSet$analSet$plsda$choice
-  df <- melt(res)
+  df <- reshape2::melt(res)
   df$Component <- paste0("PC",df$Component)
   colnames(df) <- c("Metric", "Component", "Value")
   p <- ggplot2::ggplot(df, ggplot2::aes(x=Metric, y=Value, fill=Metric)) +
@@ -750,7 +751,7 @@ ggPlotPerm <- function(mSet,
                        pcs = 3){
   bw.vec <- mSet$analSet$plsda$permut
   len <- length(bw.vec)
-  df <- melt(bw.vec)
+  df <- reshape2::melt(bw.vec)
   colnames(df) = "acc"
   # round p value
   pval <- mSet$analSet$plsda$permut.p
@@ -983,7 +984,7 @@ plotPCAloadings.2d <- function(mSet,
   
   scaleFUN <- function(x) sprintf("%.4s", x)
   
-  p <- ggplot2::ggplot(df, ggplot2::aes(df[[pcx]], df[[pcy]])) +
+  p <- ggplot2::ggplot(df, ggplot2::aes(.data[[pcx]], .data[[pcy]])) +
     ggplot2::geom_point(ggplot2::aes(color = extremity,
                             size = extremity,
                             text = rownames(df),

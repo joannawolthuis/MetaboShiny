@@ -1093,6 +1093,9 @@ omit_unknown = yes')
     debug_matches <<- shown_matches
     debug_enrich <<- enrich
     debug_selection <<- my_selection
+    debug_venn_yes <<- venn_yes
+    debug_report_yes <<- report_yes
+    
     try({
       debug_browse_content <<- browse_content
     },silent=T)
@@ -1150,6 +1153,15 @@ omit_unknown = yes')
                {
                  print(input$network_selected)
                })
+  
+  observeEvent(input$nav_general, {
+    if(!is.null(mSet)){
+      if(input$nav_general == "report"){
+        statsmanager$calculate <- "vennrich"
+        tablemanager$make <- "vennrich"
+        uimanager$refresh <- "vennrich"
+      }}
+  })
   
   observeEvent(input$statistics, { 
     if(!is.null(mSet)){

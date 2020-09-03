@@ -106,6 +106,8 @@ joanna_debugger <- function(){
   browse_content <- shiny::isolate({shiny::reactiveValuesToList(debug_browse_content)})
   pieinfo <- shiny::isolate({shiny::reactiveValuesToList(debug_pieinfo)})
   result_filters <- shiny::isolate({shiny::reactiveValuesToList(debug_result_filters)})
+  report_yes <- shiny::isolate({shiny::reactiveValuesToList(debug_report_yes)})
+  venn_yes <- shiny::isolate({shiny::reactiveValuesToList(debug_venn_yes)})
   
   assign("lcl", debug_lcl, envir = .GlobalEnv)
   assign("mSet", debug_mSet, envir = .GlobalEnv)
@@ -116,6 +118,8 @@ joanna_debugger <- function(){
   assign("browse_content", browse_content, envir = .GlobalEnv)
   assign("pieinfo", pieinfo, envir = .GlobalEnv)
   assign("result_filters", result_filters, envir = .GlobalEnv)
+  assign("report_yes", report_yes, envir = .GlobalEnv)
+  assign("venn_yes", venn_yes, envir = .GlobalEnv)
   
 }
 

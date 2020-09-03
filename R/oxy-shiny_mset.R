@@ -154,6 +154,9 @@ reset.mSet <- function(mSet, fn) {
   mSet$dataSet <- origItem$data
   mSet$analSet <- origItem$analysis
   mSet$settings <- origItem$settings
+  mSet$report <- list(mzStarred = data.table::data.table(mz = colnames(mSet$dataSet$norm),
+                                                         star = c(FALSE)))  
+  data.table::setkey(mSet$report$mzStarred, mz)
   return(mSet)
 }
 
@@ -167,6 +170,7 @@ reset.mSet <- function(mSet, fn) {
 load.mSet <- function(mSet, name = mSet$dataSet$cls.name) {
   mSet$analSet <- mSet$storage[[name]]$analysis
   mSet$settings <- mSet$storage[[name]]$settings
+  mSet$report <- mSet$storage[[name]]$report
   return(mSet)
 }
 
@@ -180,6 +184,7 @@ load.mSet <- function(mSet, name = mSet$dataSet$cls.name) {
 store.mSet <- function(mSet, name = mSet$dataSet$cls.name) {
   mSet$storage[[name]]$analysis <- mSet$analSet
   mSet$storage[[name]]$settings <- mSet$settings
+  mSet$storage[[name]]$report <- mSet$report
   return(mSet)
 }
 

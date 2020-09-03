@@ -1,6 +1,4 @@
 shiny::observeEvent(input$star_mz, {
-    print("toggle")
-    # - - - -
     if(!is.null(mSet)){
       if(!("report" %in% names(mSet))){
         mSet$report <<- list(mzStarred = data.table::data.table(mz = colnames(mSet$dataSet$norm),
@@ -13,9 +11,56 @@ shiny::observeEvent(input$star_mz, {
       mSet$report$mzStarred[my_selection$mz]$star <<- input$star_mz
       
       try({
-        tablemanager$make <- input$statistics
+        tablemanager$make <- plotmanager$make <- input$statistics
       })
     }
+})
+
+# nonselected
+
+report_yes = shiny::reactiveValues(start = data.frame(),
+                                 now = data.frame())
+
+report_no = shiny::reactiveValues(
+  start = data.frame(c("a", "b", "c")),
+  now = data.frame(c("a", "b", "c")))
+
+report_members <- shiny::reactiveValues(mzvals = list())
+
+shiny::observeEvent(input$report_add, {
+  # add to the 'selected' table
+  rows <- input$report_unselected_rows_selected
+  # get members and send to members list
+  added = report_no$now[rows,]
+  report_yes$now <- data.frame(c(unlist(report_yes$now), added))
+  report_no$now <- data.frame(report_no$now[-rows,])
+})
+
+shiny::observeEvent(input$report_remove, {
+  # add to the 'selected' table
+  rows <- input$report_selected_rows_selected
+  # get members and send to non members list
+  removed = report_yes$now[rows,]
+  report_no$now <- data.frame(c(unlist(report_no$now), removed))
+  report_yes$now <- data.frame(report_yes$now[-rows,])
+})
+
+# the 'non-selected' table
+output$report_unselected <- DT::renderDataTable({
+  res = DT::datatable(data.table::data.table(), rownames=FALSE, colnames="Not in report", options = list(dom = 'tp'))
+  try({
+    res = DT::datatable(report_no$now, rownames = FALSE, colnames="Not in report", selection = "multiple", options = list(dom = 'tp'))
+  })
+  res
+})
+
+# the 'selected' table
+output$report_selected <- DT::renderDataTable({
+  res = DT::datatable(data.table::data.table(), rownames=FALSE, colnames="In report", options = list(dom = 'tp'))
+  try({
+    res = DT::datatable(report_yes$now,rownames = FALSE, colnames="In report", selection = "multiple", options = list(dom = 'tp'))
+  })
+  res
 })
 
 # if(interactive()){

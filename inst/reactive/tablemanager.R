@@ -15,7 +15,7 @@ shiny::observe({
                    vennrich = {
                      # - - - - -
                      analyses = names(mSet$storage)
-                     venn_no$start <- data.table::rbindlist(lapply(analyses, function(name){
+                     venn_no$start <- report_no$start <- data.table::rbindlist(lapply(analyses, function(name){
                        analysis = mSet$storage[[name]]$analysis
                        analysis_names = names(analysis)
                        # - - -
@@ -53,6 +53,7 @@ shiny::observe({
                        )
                      }))
                      venn_no$now <- venn_no$start
+                     report_no$now <- report_no$start
                      lcl$vectors$analyses <<- unlist(venn_no$start[,1])
                      # ---
                      lapply(c("mummi_anal", "heattable", "network_table"), function(inputID){

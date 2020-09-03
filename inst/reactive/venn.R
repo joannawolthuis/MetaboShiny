@@ -49,6 +49,9 @@ output$venn_selected <- DT::renderDataTable({
 # triggers on clicking the 'go' button on the venn diagram sidebar panel
 shiny::observeEvent(input$venn_build, {
   plotmanager$make <- "venn"
+  shiny::updateSelectizeInput(session, 
+                              "intersect_venn", 
+                              choices = names(lcl$vectors$venn_lists))
 })
 
 # triggers when users pick which intersecting hits they want
