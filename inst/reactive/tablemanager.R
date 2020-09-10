@@ -111,8 +111,8 @@ shiny::observe({
                    volc = {
                      # render results table
                      res <- if(is.null(mSet$analSet$volc$sig.mat)) data.table::data.table("No significant hits found") else{
-                       rownames(mSet$analSet$volc$sig.mat) <<- gsub(rownames(mSet$analSet$volc$sig.mat), pattern = "^X", replacement = "")
-                       rownames(mSet$analSet$volc$sig.mat) <<- gsub(rownames(mSet$analSet$volc$sig.mat), pattern = "(\\d+\\.\\d+)(\\.+)", replacement = "\\1/")
+                       rownames(mSet$analSet$volc$sig.mat) <- gsub(rownames(mSet$analSet$volc$sig.mat), pattern = "^X", replacement = "")
+                       rownames(mSet$analSet$volc$sig.mat) <- gsub(rownames(mSet$analSet$volc$sig.mat), pattern = "(\\d+\\.\\d+)(\\.+)", replacement = "\\1/")
                        mSet$analSet$volc$sig.mat}
                      list(volc_tab = res)
                    },
@@ -226,11 +226,12 @@ shiny::observe({
             subbed = gsub("\\+", "", rownames(mytable))
             rns = rownames(mytable)
             if(subbed[1] %in% colnames(mSet$dataSet$norm)){ # check if a mz table
-              stars = sapply(mSet$report$mzStarred[subbed]$star, function(hasStar) if(hasStar) "★" else "")
+              stars = sapply(mSet$report$mzStarred[subbed]$star, 
+                             function(hasStar) if(hasStar) "★" else "")
               starCol = data.table::data.table("★" = stars)
               mytable = cbind(starCol, mytable)
             }
-            MetaboShiny::metshiTable(content = mytable,rownames = rns)
+            MetaboShiny::metshiTable(content = mytable, rownames = rns)
           }, server = FALSE)
         }, toWrap, names(toWrap)) 
       } 

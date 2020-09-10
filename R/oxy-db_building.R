@@ -53,7 +53,7 @@ import.pat.csvs <- function(metapath,
     ifelse(isTRUE(all.equal(round(y),y)), -y-1, -ceiling(y))}
   
   peaklists <- lapply(c("pos", "neg"), function(ionMode){
-    
+
     peakpath = switch(ionMode,
                       "pos" = pospath,
                       "neg" = negpath)
@@ -63,6 +63,7 @@ import.pat.csvs <- function(metapath,
     
     bigFile = utils:::format.object_size(file.info(peakpath)$size, "GB")
     reallyBig = if(bigFile == "0 Gb") F else T
+
     nrows = length(count.fields(peakpath, sep = ","))
     
     print(paste("Importing", ionMode, "mode peaks!"))
@@ -70,10 +71,10 @@ import.pat.csvs <- function(metapath,
       peaklist <- data.table::fread(peakpath,
                                    header=T)
     }else{
-      # === POSITIVE MODE ===
+      print("Checking missing values...")
       con = file(peakpath, "r")
       # get missing count
-      missRes = lapply(1:nrows, function(i, con){
+      missRes = pbapply::pblapply(1:nrows, function(i, con){
         line = readLines(con, n = 1)
         splRow = stringr::str_split(line, ",")[[1]]
         sampName = splRow[1]
@@ -88,21 +89,22 @@ import.pat.csvs <- function(metapath,
       close.connection(con)
       missTable = data.table::rbindlist(missRes[!sapply(missRes, is.null)])
       miss_threshold_mz = ceiling(nrows * (missperc.mz/100))
-      qualifies = which(colSums(missTable) <= miss_threshold_mz)
+      qualifies = colSums(missTable) <= miss_threshold_mz
       missTable <- NULL
       missRes <- NULL
-      gc()
-      
+
       # get actual data
+      print("Subsetting table...")
       con = file(peakpath, "r")
-      cols= readLines(con, n = 1)
-      filtRes = lapply(2:nrows, function(i, con, qualifies){
+      cols = readLines(con, n = 1)
+      filtRes = pbapply::pblapply(2:nrows, function(i, con, qualifies){
         line = readLines(con, n = 1)
         splRow = stringr::str_split(line, ",")[[1]]
         sampName = splRow[1]
         sampName =  gsub(sampName, pattern = wipe.regex, replacement = "", perl=T)
-        label =splRow[2]
+        label = splRow[2]
         splRow = splRow[3:length(splRow)]
+        splRow[splRow == "0" | splRow == 0 | splRow == ""] <- NA
         if(sampName %in% samplesIn){
           as.list(c(sampName, label, splRow[qualifies]))
         }else{
@@ -111,9 +113,8 @@ import.pat.csvs <- function(metapath,
       }, con = con, qualifies = qualifies)
       close.connection(con)
       peaklist = data.table::rbindlist(filtRes[!sapply(filtRes, is.null)])
-      colnames(peaklist) <- stringr::str_split(cols, ",")[[1]][c(1,2,qualifies)]
+      colnames(peaklist) <- stringr::str_split(cols, ",")[[1]][c(TRUE, TRUE, qualifies)]
       filtRes <- NULL
-      gc()
     }
     colnames(peaklist)[1:2] <- tolower(colnames(peaklist)[1:2])
     
@@ -154,15 +155,24 @@ import.pat.csvs <- function(metapath,
       peaklist[,label:=NULL]
     }
     
-    # miss values
-    if(!any(is.na(unlist(peaklist[1:5,10:20])))){
-      peaklist[,(2:ncol(peaklist)) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)}), .SDcols = 2:ncol(peaklist)]
-    }
-    
     if(missperc.samp < 100){
-      miss_threshold_samp = ceiling(ncol(peaklist) * (missperc.samp/100))
-      keep.samps.peak = which(rowSums(is.na(peaklist)) <= miss_threshold_samp)
-      peaklist <- peaklist[,keep.samps.peak, with=F] # at least one sample with non-na
+      miss_threshold_samp = ceiling((ncol(peaklist)-1) * (missperc.samp/100))
+      rs = rowSums(is.na(peaklist))
+      keep.samps.peak = which(rs <= miss_threshold_samp)
+      if(length(keep.samps.peak) == 0){
+        lowerMe = seq(missperc.samp, 100, 5)
+        for(missPerc in lowerMe){
+          miss_threshold_samp = ceiling(ncol(peaklist) * (missPerc/100))
+          keep.samps.peak = which(rs <= miss_threshold_samp)
+          if(length(keep.samps.peak) > 1){
+            try({
+              shiny::showNotification(paste0("No samples qualify with original missing m/z threshold! Changed to ", missPerc, " percent"))
+            }, silent = T)
+            break
+            }
+        }
+      }
+      peaklist <- peaklist[keep.samps.peak, ] # at least one sample with non-na
       try({
         shiny::showNotification(paste0("Remaining samples:", nrow(peaklist)))
       }, silent=T)
@@ -179,7 +189,7 @@ import.pat.csvs <- function(metapath,
     
     # REGEX SAMPLE NAMES if applicable
     if(wipe.regex != ""){
-      peaklist[, sample := gsub(wipe.regex, replacement = "", sample, perl=T)]
+      peaklist$sample = gsub(wipe.regex, replacement = "", peaklist$sample, perl=T)
     } 
     
     peaklist$sample <- as.character(peaklist$sample)
@@ -208,7 +218,8 @@ import.pat.csvs <- function(metapath,
     ismz <- suppressWarnings(which(!is.na(as.numeric(subbed))))
     
     if(roundMz){
-      colnames(peaklist)[ismz] <- sapply(colnames(peaklist)[ismz], function(mz){
+      print("Rounding m/z to appropriate decimal for given ppm value...")
+      colnames(peaklist)[ismz] <- pbapply::pbsapply(colnames(peaklist)[ismz], function(mz){
         if(hasPPM | hasRT){
           split.mz <- stringr::str_split(mz, "/|RT")[[1]]
           mz = split.mz[1]
@@ -229,12 +240,11 @@ import.pat.csvs <- function(metapath,
     peaklist <- peaklist[sample %in% keep.samples.peak,]
     
     # replace commas with dots
-    if(any(grepl(unlist(peaklist[1:5,10:20]), pattern = ","))){
-      for(j in seq_along(peaklist)){
-        data.table::set(peaklist, i=which(grepl(pattern=",",peaklist[[j]])), j=j, value=gsub(",",".",peaklist[[j]]))
-      }
-    }
-    
+    # if(any(grepl(unlist(peaklist[1:5,10:20]), pattern = ","))){
+    #   for(j in seq_along(peaklist)){
+    #     data.table::set(peaklist, i=which(grepl(pattern=",",peaklist[[j]])), j=j, value=gsub(",",".",peaklist[[j]]))
+    #   }
+    # }
     return(list(ionMode = ionMode, peaktbl = peaklist))
   })
   

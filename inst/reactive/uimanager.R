@@ -78,7 +78,6 @@ shiny::observe({
                        }
                        
                        # --- MZ PICKER ---
-                       
                        neededForChoices = lapply(colnames(mSet$dataSet$norm), function(mzfull){
                          if(grepl("RT", mzfull)){
                            split = stringr::str_split(mzfull, "RT")[[1]]

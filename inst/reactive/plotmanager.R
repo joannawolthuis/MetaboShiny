@@ -69,7 +69,7 @@ shiny::observe({
                     #   ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10) +
                     #     ggplot2::theme(text = ggplot2::element_text(family = lcl$aes$font$family)) + ggplot2::theme_bw()
                     # }else{
-                      myplot
+                      suppressWarnings({myplot})
                     #}
                   })  
                 }, silent = F)
@@ -105,12 +105,14 @@ shiny::observe({
                         myplot <- myplot %>% plotly::layout(height = session$clientData[[empty]]/1.4,
                                                             width = session$clientData[[empty]])
                       }
-                      myplot %>%
-                        plotly::config(
-                          toImageButtonOptions = list(
-                            format = if(input$plotsvg) "svg" else "png",
-                            filename = paste0(plotFn, "_interactive")
-                          ))
+                      suppressWarnings({
+                        myplot %>%
+                          plotly::config(
+                            toImageButtonOptions = list(
+                              format = if(input$plotsvg) "svg" else "png",
+                              filename = paste0(plotFn, "_interactive")
+                            ))   
+                      })
                     })
                   }
                 

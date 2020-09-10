@@ -742,7 +742,7 @@ omit_unknown = yes')
         
         if(!is.null(pievec)){
           if(which_pie == "add"){
-            mzMode =if(grepl(my_selection$mz, pattern = "-")) "negative" else "positive"
+            mzMode = if(grepl(my_selection$mz, pattern = "-")) "negative" else "positive"
             targets = result_filters$add[[mzMode]]
           }else{
             targets = result_filters[[which_pie]]
@@ -894,7 +894,7 @@ omit_unknown = yes')
   output$curr_plot <- plotly::renderPlotly({
     if(my_selection$mz != ""){
       MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, 
-                                 cols = lcl$aes$mycols, cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                 cols = lcl$aes$mycols, cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
                                  styles = input$ggplot_sum_style,
                                  add_stats = input$ggplot_sum_stats, 
                                  color.fac = input$col_var,
@@ -904,7 +904,6 @@ omit_unknown = yes')
     }
   })
   
-  # -----------------
   shiny::observeEvent(input$undo_match_filt, {
     result_filters$add <- list(positive = c(), negative = c())
     result_filters$db <- c()
@@ -928,7 +927,7 @@ omit_unknown = yes')
     if(my_selection$mz != ""){
       scanmode$positive <- F
       scanmode$negative <- F
-      mzMode =if(grepl(my_selection$mz, pattern = "-")) "negative" else "positive"
+      mzMode = if(grepl(my_selection$mz, pattern = "-")) "negative" else "positive"
       for(mode in mzMode){
         scanmode[[mode]] <- TRUE
       }
@@ -952,16 +951,16 @@ omit_unknown = yes')
       )
     }
   })
-  
-  shiny::observe({
-    if(length(input$curr_mz) > 0){
-      if(input$curr_mz != my_selection$mz){
-        shinyWidgets::updatePickerInput(session,
-                                        "curr_mz",
-                                        selected=my_selection$mz)
-      }      
-    }
-  })
+  # shiny::observe({
+  #   if(length(input$curr_mz) > 0){
+  #     if(input$curr_mz != my_selection$mz){
+  #       print(input$curr_mz %in% colnames(mSet$dataSet$norm))
+  #       shinyWidgets::updatePickerInput(session,
+  #                                       "curr_mz",
+  #                                       selected = my_selection$mz)
+  #     }      
+  #   }
+  # })
   
   # triggers when check_csv is clicked - get factors usable for normalization
   shiny::observeEvent(input$check_csv, {
@@ -988,7 +987,9 @@ omit_unknown = yes')
     
     session_cl <<- parallel::makeCluster(input$ncores)#,outfile="") # leave 1 core for general use and 1 core for shiny session
     # send specific functions/packages to other threads
-    parallel::clusterEvalQ(session_cl, library(data.table))
+    parallel::clusterEvalQ(session_cl, {
+      library(data.table)
+      library(iterators)})
     MetaboShiny::setOption(lcl$paths$opt.loc, "cores", input$ncores)
   })
   
@@ -1071,6 +1072,7 @@ omit_unknown = yes')
       shiny::showNotification(paste0("Loading existing file: ", fn))
       if(file.exists(fn)){
         load(fn)
+        mSet$dataSet$combined.method <- TRUE # FC fix
         mSet <<- mSet
         opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
         lcl$proj_name <<- opts$proj_name
@@ -1148,11 +1150,6 @@ omit_unknown = yes')
       }  
     }
   })
-  
-  observeEvent(input$network_selected,
-               {
-                 print(input$network_selected)
-               })
   
   observeEvent(input$nav_general, {
     if(!is.null(mSet)){

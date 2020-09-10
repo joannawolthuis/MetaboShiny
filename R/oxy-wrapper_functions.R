@@ -1208,23 +1208,34 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
       
       if(any(mSet$report$mzStarred$star) & any(grepl("mz|m/z", names(data)))){
         #if(grepl("tt|fc|volc|pca_load|plsda_load|ml_bar", plotName)){
-        myX = myplot[["layers"]][[1]][["mapping"]][["x"]][[2]]
-        myY = myplot[["layers"]][[1]][["mapping"]][["y"]][[2]]
-        myText = myplot[["layers"]][[1]][["mapping"]][["text"]][[2]]
+        myX = rlang::quo_get_expr(myplot[["layers"]][[1]][["mapping"]][['x']])
+        myY = rlang::quo_get_expr(myplot[["layers"]][[1]][["mapping"]][['y']])
+        myText =rlang::quo_get_expr(myplot[["layers"]][[1]][["mapping"]][['text']])
+        myCol=rlang::quo_get_expr(myplot[["layers"]][[1]][["mapping"]][['colour']])
         flip = grepl("tt|fc|aov|var|samp|pattern", plotName)
-        
-        myplot <- myplot + 
+    
+        myplot <- 
+          myplot + 
           ggplot2::geom_text(ggplot2::aes(x = data[[myX]],
-                        y = data[[myY]],
-                        label = sapply(data[[myText]], function(mz){
-                          ifelse(mz %in% mSet$report$mzStarred[star == TRUE]$mz,
-                                 as.character(mz),'')
-                        }),size=2),
-                    nudge_y = {if(flip) 0 else .04} * max(data[[myY]]),
-                    nudge_x = {if(flip) .04 else 0} * max(data[[myX]]),
-                    #vjust="inward",hjust="inward"
-          )  
-        #}
+                                          y = data[[myY]],
+                                          label = sapply(data[[myText]], function(mz){
+                                            ifelse(mz %in% mSet$report$mzStarred[star == TRUE]$mz,
+                                                   as.character(mz), '')
+                                          })),
+                             nudge_y = {if(flip) 0 else .04} * max(data[[myY]]),
+                             nudge_x = {if(flip) .04 else 0} * max(data[[myX]]),
+                             hjust="inward",
+                             vjust="inward",
+                             size=4
+          ) + ggplot2::geom_text(ggplot2::aes(x = data[[myX]],
+                                              y = data[[myY]],
+                                              color = data[[myCol]],
+                                              label = sapply(data[[myText]], function(mz){
+                                                ifelse(mz %in% mSet$report$mzStarred[star == TRUE]$mz,
+                                                       "★", "")
+                                              }),size=2,family = "HiraKakuPro-W3"))
+            
+        
       }
     }
     

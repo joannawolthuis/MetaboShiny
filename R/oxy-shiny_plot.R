@@ -505,20 +505,14 @@ ggPlotAOV <- function(mSet, cf, n=20){
   profile$Peak <- c(1:nrow(profile))
   colnames(profile)[1:2] <- c("m/z", "-log(p)")
   scaleFUN <- function(x) sprintf("%.1f", x)
-  
   xaxis = seq(0,600, 50)
-  # ---------------------------
   p <- ggplot2::ggplot(data=profile) +
     ggplot2::geom_point(ggplot2::aes(y=Peak,
                                      x=`-log(p)`,
                                      text=`m/z`,
                                      color=`-log(p)`, 
                                      key=`m/z`)) +
-    # ggplot2::scale_y_discrete(breaks = xaxis, 
-    #                           labels=as.character(xaxis)) +
     ggplot2::scale_colour_gradientn(colours = cf(n)) + ggplot2::coord_flip()
-  #ggplot2::scale_y_continuous()
-  
   p
 }
 
@@ -653,7 +647,8 @@ ggPlotFC <- function(mSet, cf, n=20){
                                      text=`m/z`)) +
     ggplot2::geom_vline(ggplot2::aes(xintercept = 0)) +
     ggplot2::scale_y_continuous(labels=scaleFUN) +
-    ggplot2::scale_colour_gradientn(colours = cf(n)) + coord_flip()
+    ggplot2::scale_colour_gradientn(colours = cf(n)) + 
+    ggplot2::coord_flip()
   
   p
 }

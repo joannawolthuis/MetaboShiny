@@ -101,6 +101,7 @@ shiny::observeEvent(input$create_csv,{
     })
     if(!success){
       MetaboShiny::metshiAlert("Something is wrong with your input data!")
+      gc()
     }
     })
 })

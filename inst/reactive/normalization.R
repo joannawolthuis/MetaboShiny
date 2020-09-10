@@ -143,8 +143,8 @@ shiny::observeEvent(input$initialize, {
           
         }else if(req(input$miss_type ) == "rf"){ # random forest
           mSet$dataSet$proc <- MetaboShiny::replRF(mSet, 
-                                                   parallelMode = input$rf_norm_parallelize, 
-                                                   ntree = input$rf_norm_ntree,
+                                                   parallelMode = "variables",#input$rf_norm_parallelize, 
+                                                   ntree = 5,#input$rf_norm_ntree,
                                                    cl = session_cl)
           rownames(mSet$dataSet$proc) <- rownames(mSet$dataSet$preproc)
           # - - - - - - - - - - - -
@@ -195,7 +195,7 @@ shiny::observeEvent(input$initialize, {
       mSet <- MetaboAnalystR::PreparePrenormData(mSet)
       
       # temp fix for disabling the json writing
-      OFFtoJSON <- function(obj){
+      OFFtoJSON <- function(obj, ...){
         print("Disabled in MetaboShiny!")
       }
       
@@ -253,6 +253,8 @@ shiny::observeEvent(input$initialize, {
           dtNorm[,(1:ncol(dtNorm)) := lapply(.SD,function(x){ 
             i <<- i + 1
             pbapply::setpb(pb, i)
+            #print(sum(x == min(x))/length(x))
+            #Sys.sleep(5)
             BatchCorrMetabolomics::doBC(Xvec = as.numeric(x),
                                         ref.idx = as.numeric(qc_rows),
                                         batch.idx = batch.idx,

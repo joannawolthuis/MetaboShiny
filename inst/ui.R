@@ -1304,33 +1304,33 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                            ))))
                                                    ))),
                                    
-                                   # report tab
-                                   shiny::tabPanel("report",
-                                                   icon = shiny::icon("file-invoice", class = "outlined"),
-                                                   value="report",
-                                                   shiny::fluidRow(align="center", shiny::h2("Report")),
-                                                   shiny::fluidRow(
-                                                     shiny::column(width=5, align="center",
-                                                                   shiny::div(DT::dataTableOutput('report_unselected',  
-                                                                                                  width="100%"))
-                                                     ),
-                                                     shiny::column(width = 2, align="center",
-                                                                   shiny::br(),shiny::br(),shiny::br(),shiny::br(),shiny::br(),shiny::br(),
-                                                                   shinyWidgets::circleButton("report_add", icon=shiny::icon("arrow-right")),
-                                                                   shiny::br(),
-                                                                   shinyWidgets::circleButton("report_remove", icon=shiny::icon("arrow-left"))
-                                                                   ),
-                                                     shiny::column(width=5, align="center",
-                                                                   shiny::div(DT::dataTableOutput('report_selected',  
-                                                                                                  width="100%"))
-                                                     )
-                                                   ),shiny::br(),
-                                                   shiny::fluidRow(align="center",
-                                                                   shinyWidgets::circleButton("make_report", 
-                                                                                              icon=shiny::icon("file-invoice"), 
-                                                                                              size="lg")
-                                                   )
-                                                                   ),
+                                   # # report tab
+                                   # shiny::tabPanel("report",
+                                   #                 icon = shiny::icon("file-invoice", class = "outlined"),
+                                   #                 value="report",
+                                   #                 shiny::fluidRow(align="center", shiny::h2("Report")),
+                                   #                 shiny::fluidRow(
+                                   #                   shiny::column(width=5, align="center",
+                                   #                                 shiny::div(DT::dataTableOutput('report_unselected',  
+                                   #                                                                width="100%"))
+                                   #                   ),
+                                   #                   shiny::column(width = 2, align="center",
+                                   #                                 shiny::br(),shiny::br(),shiny::br(),shiny::br(),shiny::br(),shiny::br(),
+                                   #                                 shinyWidgets::circleButton("report_add", icon=shiny::icon("arrow-right")),
+                                   #                                 shiny::br(),
+                                   #                                 shinyWidgets::circleButton("report_remove", icon=shiny::icon("arrow-left"))
+                                   #                                 ),
+                                   #                   shiny::column(width=5, align="center",
+                                   #                                 shiny::div(DT::dataTableOutput('report_selected',  
+                                   #                                                                width="100%"))
+                                   #                   )
+                                   #                 ),shiny::br(),
+                                   #                 shiny::fluidRow(align="center",
+                                   #                                 shinyWidgets::circleButton("make_report", 
+                                   #                                                            icon=shiny::icon("file-invoice"), 
+                                   #                                                            size="lg")
+                                   #                 )
+                                   #                                 ),
                                    # this tab is used to change general settings.
                                    shiny::tabPanel("settings",  icon = shiny::icon("cog",class = "outlined"), value="options",
                                                    shiny::tabsetPanel(id="tab_settings",

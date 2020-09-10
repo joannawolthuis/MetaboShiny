@@ -697,7 +697,7 @@ shiny::observe({
                                                                                             statsmanager$calculate, 
                                                                                             c("_tables","_plots")))
       }else{
-        MetaboShiny::metshiAlert(paste0("Analysis failed!\n", msg.vec))
+        MetaboShiny::metshiAlert("Analysis failed!")
         #shiny::showNotification(msg.vec)
         mSet <<- mSet.old
       }
