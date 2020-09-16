@@ -20,8 +20,7 @@ lapply(c("merge",
     # generate checkmark image objects
     output[[paste0("proj_", col, "_check")]] <- shiny::renderImage({
       filename <- normalizePath(file.path('www', check_pic))
-      list(src = filename, width = 70,
-           height = 70)
+      list(src = filename, height = "70px")
     }, deleteFile = FALSE)# <- this is important or the checkmark file is deleted, haha
   })
 })
@@ -36,6 +35,84 @@ shiny::observeEvent(input$ms_modes, {
   })
   output$outlist_pickers <-shiny::renderUI(pickerUI)
 })
+
+# create reactive object
+# display should be: "Mz left: 100/120000
+missValues <- shiny::reactiveValues(pos = c(),
+                                    neg = c())
+
+output$missMzRatio <- shiny::renderUI({
+  if(length(missValues$pos) > 0){
+    posTotal = length(missValues$pos)
+    posKeep = length(which(missValues$pos < input$perc_limit_mz))
+    posText = paste0("Remaining (+): ", posKeep, " / ", posTotal)
+  }else{
+    posText = NULL
+  }
+  if(length(missValues$neg) > 0){
+    negTotal = length(missValues$neg)
+    negKeep = length(which(missValues$neg < input$perc_limit_mz))
+    negText = paste0("Remaining (-):", negKeep, " / ", negTotal)
+  }else{
+    negText = NULL
+  }
+  list(if(!is.null(posText)) shiny::helpText(posText),
+       if(!is.null(posText)) shiny::helpText(negText))
+})
+
+output$missMzPlot <- shiny::renderPlot({
+  if(length(missValues$pos) > 0 | length(missValues$neg > 0)){
+    # plot(density(missValues$pos),col="blue",main="Missing value distribution",xlab = "% missing", lwd=2)
+    # lines(density(missValues$neg),col="red",lwd=2)
+    # abline(v = input$perc_limit_mz, col="black", lwd=1.5, lty=2)
+    # text(x = input$perc_limit_mz, y = 0.5, "Current threshold",pos = 4,cex = 1.5)  
+    data = data.table::data.table(variable = c(rep("pos", length(missValues$pos)),
+                                               rep("neg", length(missValues$neg))),
+                                  "Missing percentage" = c(missValues$pos, 
+                                                           missValues$neg))
+    ggplot2::ggplot(data = data) + 
+      ggplot2::geom_density(aes(x=`Missing percentage`, fill=variable), alpha=0.5) +
+      ggplot2::geom_vline(xintercept=input$perc_limit_mz, size=0.7, linetype="dotted") +
+      # ggplot2::geom_label(y=0.5,
+      #                     x=input$perc_limit_mz,
+      #                     label="Current threshold")+
+      ggplot2::annotate(geom = "label", y=0.5, x = input$perc_limit_mz, label = "Current threshold") +
+      gbl$functions$plot.themes[[lcl$aes$theme]](base_size = 15) + 
+      ggplot2::theme(legend.position="none",
+                     axis.line = ggplot2::element_line(colour = 'black', size = .5),
+                     plot.title = ggplot2::element_text(hjust = 0.5,
+                                                        vjust = 0.1,
+                                                        size=lcl$aes$font$title.size*1.2),
+                     text = ggplot2::element_text(family = lcl$aes$font$family))
+      
+  }
+})
+
+# triggers when user wants to check missing values profile
+shiny::observeEvent(input$checkMiss, {
+  files.present = all(sapply(input$ms_modes, function(ionMode){
+    is.list(input[[paste0("outlist_", ionMode)]])
+  }))
+  
+  file.pos = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath
+  file.neg = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath
+  
+  if(files.present){
+    if(is.list(input$outlist_pos)){
+      nrows = length(vroom::vroom_lines(file.pos, altrep = TRUE, progress = TRUE)) - 1L
+      missPos = getMissing(file.pos, nrow=nrows)
+      missValues$pos = missPos/nrows * 100
+    }
+    if(is.list(input$outlist_neg)){
+      nrows = length(vroom::vroom_lines(file.neg, altrep = TRUE, progress = TRUE)) - 1L
+      missNeg = getMissing(file.neg, nrow=nrows)
+      missValues$neg = missNeg/length(missPos) * 100
+    }
+  }else{
+    MetaboShiny::metshiAlert("Please select files first!")
+  }
+})
+
 
 # triggers when user wants to create database from .db and excel or 2 csv files and excel
 shiny::observeEvent(input$create_csv,{
@@ -88,9 +165,11 @@ shiny::observeEvent(input$create_csv,{
                       wipe.regex = input$wipe_regex,
                       missperc.mz = input$perc_limit_mz,
                       missperc.samp = input$perc_limit_samp,
+                      missList = missValues,
                       csvpath = lcl$paths$csv_loc,
                       overwrite = T,
-                      inshiny=F)
+                      inshiny=F,
+                      roundMz=input$roundMZ)
       
       success=T
       output$proj_csv_check <- shiny::renderImage({

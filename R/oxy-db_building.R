@@ -1,3 +1,42 @@
+getMissing <- function(peakpath, nrow=NULL){
+  bigFile = utils:::format.object_size(file.info(peakpath)$size, "GB")
+  reallyBig = if(bigFile == "0 Gb") F else T
+  
+  if(!is.null(nrow)){
+    nrow = length(vroom::vroom_lines(peakpath, altrep = TRUE, progress = TRUE)) - 1L
+  }
+  
+  if(!reallyBig){
+    peaklist <- data.table::fread(peakpath,
+                                  header=T)
+    totalMissing = colSums(peaklist == "0" | peaklist == 0 | peaklist == "" | is.na(peaklist))
+  }else{
+    print("Checking missing values...")
+    con = file(peakpath, "r")
+    line = readLines(con, n = 1)
+    splRow = stringr::str_split(line, ",")[[1]]
+    mzs = splRow[3:length(splRow)]
+    totalMissing <- rep(0, length(mzs))
+    pb = pbapply::startpb(2, nrow)
+    
+    # get missing count
+    for(i in 1:nrow){
+      pbapply::setpb(pb, i)
+      line = readLines(con, n = 1)
+      splRow = stringr::str_split(line, ",")[[1]]
+      sampName = splRow[1]
+      splRow = splRow[3:length(splRow)]
+      if(i > 1){
+        isMissing = which(splRow == "0" | splRow == 0 | splRow == "" | is.na(splRow))
+        totalMissing[isMissing] <- totalMissing[isMissing] + 1
+      }
+    }
+    close.connection(con)
+    names(totalMissing) = mzs
+  }
+  totalMissing
+}
+
 #' @title Merge metadata and peak tables into SQLITE database.
 #' @description Wrapper function to integrate user data into the format used in MetaboShiny.
 #' @param metapath Path to metadata csv
@@ -31,6 +70,7 @@ import.pat.csvs <- function(metapath,
                             wipe.regex = ".*_(?>POS|NEG)_[0+]*",
                             missperc.mz = 99,
                             missperc.samp = 100,
+                            missList = c(pos=c(),neg=c()),
                             roundMz = T){
   
   ppm = as.numeric(ppm)
@@ -61,38 +101,24 @@ import.pat.csvs <- function(metapath,
     if(length(peakpath) == 0) return(list(ionMode = ionMode, 
                                           peaktbl = data.table::data.table()))
     
+    if(length(missList[[ionMode]]) > 0){
+      missCounts = missList[[ionMode]]
+    }else{
+      missCounts = getMissing(peakpath)
+    }
+    
     bigFile = utils:::format.object_size(file.info(peakpath)$size, "GB")
     reallyBig = if(bigFile == "0 Gb") F else T
 
-    nrows = length(count.fields(peakpath, sep = ","))
+    nrows = length(vroom::vroom_lines(peakpath, altrep = TRUE, progress = TRUE)) - 1L
+    miss_threshold_mz = ceiling(nrows * (missperc.mz/100))
+    qualifies = missCounts <= miss_threshold_mz
     
     print(paste("Importing", ionMode, "mode peaks!"))
     if(!reallyBig){
       peaklist <- data.table::fread(peakpath,
                                    header=T)
     }else{
-      print("Checking missing values...")
-      con = file(peakpath, "r")
-      # get missing count
-      missRes = pbapply::pblapply(1:nrows, function(i, con){
-        line = readLines(con, n = 1)
-        splRow = stringr::str_split(line, ",")[[1]]
-        sampName = splRow[1]
-        sampName =  gsub(sampName, pattern = wipe.regex, replacement = "")
-        splRow = splRow[3:length(splRow)]
-        if(i > 1 & sampName %in% samplesIn){
-          as.list(splRow == "0" | splRow == 0 | splRow == "" | is.na(splRow))
-        }else{
-          NULL
-        }
-      }, con = con)
-      close.connection(con)
-      missTable = data.table::rbindlist(missRes[!sapply(missRes, is.null)])
-      miss_threshold_mz = ceiling(nrows * (missperc.mz/100))
-      qualifies = colSums(missTable) <= miss_threshold_mz
-      missTable <- NULL
-      missRes <- NULL
-
       # get actual data
       print("Subsetting table...")
       con = file(peakpath, "r")
@@ -116,6 +142,7 @@ import.pat.csvs <- function(metapath,
       colnames(peaklist) <- stringr::str_split(cols, ",")[[1]][c(TRUE, TRUE, qualifies)]
       filtRes <- NULL
     }
+    
     colnames(peaklist)[1:2] <- tolower(colnames(peaklist)[1:2])
     
     print(peaklist[1:5,1:5])
