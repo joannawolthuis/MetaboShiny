@@ -71,7 +71,7 @@ output$missMzPlot <- shiny::renderPlot({
                                   "Missing percentage" = c(missValues$pos, 
                                                            missValues$neg))
     ggplot2::ggplot(data = data) + 
-      ggplot2::geom_density(aes(x=`Missing percentage`, fill=variable), alpha=0.5) +
+      ggplot2::geom_density(aes(x=`Missing percentage`, fill=variable, y=..scaled..), alpha=0.5) +
       ggplot2::geom_vline(xintercept=input$perc_limit_mz, size=0.7, linetype="dotted") +
       # ggplot2::geom_label(y=0.5,
       #                     x=input$perc_limit_mz,
