@@ -11,7 +11,7 @@ shiny::observe({
       try({
         for(do in plotmanager$make){
           #suppressWarnings({
-          toWrap <- MetaboShiny::getPlots(do, mSet, input, gbl, lcl, venn_yes, my_selection)
+          toWrap <- getPlots(do, mSet, input, gbl, lcl, venn_yes, my_selection)
           lcl <<- toWrap$lcl
           toWrap <- toWrap$plots
           
@@ -74,7 +74,7 @@ shiny::observe({
                   })  
                 }, silent = F)
                 
-                plotFn <- paste0(c(gsub(":|,:", "_", mSet$dataSet$cls.name), 
+                plotFn <- paste0(c(gsub(":|,:", "_", mSet$settings$cls.name), 
                                    plotName), collapse="_")
                 
                 # emptyax <- list(
@@ -129,7 +129,7 @@ shiny::observe({
         success = T
       })
       if(!success){
-        MetaboShiny::metshiAlert("Data plotting failed!")
+        metshiAlert("Data plotting failed!")
       }
     }
     plotmanager$make <- NULL # set reloading to 'off'

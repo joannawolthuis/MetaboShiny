@@ -35,14 +35,14 @@ shiny::observeEvent(input$initialize, {
                                                                   "sampling_date"), 
                                                     min.lev = 2)
       
-      # =================================|
+      # =========================================================================
       
-
       # if nothing is selected for batch, give empty
       if(is.null(batches)) batches <- ""
       
       # only turn on batch correction if user says so
-      batch_corr <- if(length(batches) == 1 & batches[1] == "") FALSE else TRUE
+      batch_corr <- if(length(batches) == 1 & 
+                       batches[1] == "") FALSE else TRUE
       
       # if 'batch' is selected, 'injection' is often also present
       # TODO: i can imagine this doesn't work for all  users, please disable this...
@@ -60,7 +60,7 @@ shiny::observeEvent(input$initialize, {
       
       ppm <- data.table::fread(params)$ppm
       detPPM <- data.table::fread(params)$ppmpermz
-
+      
       # re-make csv with the corrected data
       metshiCSV <- cbind(metshiCSV[,..exp.vars, with=FALSE], # if 'label' is in excel file remove it, it will clash with the metaboanalystR 'label'
                          "label" = metshiCSV[, ..condition][[1]], # set label as the initial variable of interest
@@ -97,15 +97,16 @@ shiny::observeEvent(input$initialize, {
                          file = csv_loc_final)
       
       metshiCSV <- NULL
-      gc()
-      
+
       shiny::setProgress(session=session, value= .5)
       
       # = = = = = = = = = = = = = = =
       
+      mSet <- NULL
       mSet <- MetaboAnalystR::InitDataObjects(data.type = "pktable",
                                               anal.type = "stat",
                                               paired = FALSE)
+      
       
       anal.type <<- "stat"
       mSet$dataSet$paired = F
@@ -116,258 +117,43 @@ shiny::observeEvent(input$initialize, {
                                             "rowu",
                                             lbl.type = "disc")  # rows contain samples
       
-      # set default time series mode'
       
-      mSet$dataSet$subset = c()
-      
-      # add covars to the mSet for later switching and machine learning
-      mSet$dataSet$covars <- data.table::as.data.table(covar_table)
-
-      # sanity check data
-      mSet <- MetaboAnalystR::SanityCheckData(mSet)
-      
-      mSet$dataSet$orig <- NULL
-      gc()
-      
-      shiny::setProgress(session=session, value= .6)
-      
-      # missing value imputation
-      if(req(input$miss_type ) != "none"){
-        if(req(input$miss_type) == "rowmin"){ # use sample minimum
-          mSet$dataSet$proc <- replRowMin(mSet)
-        }
-        else if(req(input$miss_type ) == "pmm"){ # use predictive mean matching
-          # TODO: re-enable, it's very slow
-          base <- mSet$dataSet$preproc
-          imp <- mice::mice(base, printFlag = TRUE)
-          
-        }else if(req(input$miss_type ) == "rf"){ # random forest
-          mSet$dataSet$proc <- MetaboShiny::replRF(mSet, 
-                                                   parallelMode = input$rf_norm_parallelize, 
-                                                   ntree = input$rf_norm_ntree,
-                                                   cl = session_cl)
-          rownames(mSet$dataSet$proc) <- rownames(mSet$dataSet$preproc)
-          # - - - - - - - - - - - -
-        }else{
-          # use built in imputation methods, knn means etc.
-          mSet <- MetaboAnalystR::ImputeVar(mSet,
-                                            method = input$miss_type
-          )
-        }
-      }
-      
-      #save(mSet, file="~/dsmRFnorm.RData")
-      
-      if(input$filt_type != "none"){
-        shiny::showNotification("Filtering dataset...")
-        # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
-        keep.mz <- colnames(MetaboAnalystR::FilterVariable(mSet,
-                                                           filter = input$filt_type,
-                                                           qcFilter = "F",
-                                                           rsd = 25)$dataSet$filt)
-      }
-      
-      mSet$dataSet$preproc <- NULL
-      gc()
-      
-      shiny::setProgress(session=session, value= .7)
-      
-      # if normalizing by a factor, do the below
-      if(req(input$norm_type) == "SpecNorm"){
-        norm.vec <<- mSet$dataSet$covars[match(mSet$dataSet$covars$sample,
-                                               rownames(mSet$dataSet$preproc)
-                                               ),][[input$samp_var]]
-        norm.vec <<- scale(x = norm.vec, center = 1)[,1] # normalize scaling factor
-      }else{
-        norm.vec <<- rep(1, length(mSet$dataSet$cls)) # empty
-      }
-      
-      # write these to mset!!!
       mSet$metshiParams <- list(
-        perc_limit = input$perc_limit,
         filt_type = input$filt_type,
         miss_type = input$miss_type,
         norm_type = input$norm_type,
         trans_type = input$trans_type,
         scale_type = input$scale_type,
+        max.allow = input$maxMz,
         ref_var = input$ref_var,
-        prematched = F
+        batch_var = input$batch_var,
+        batch_use_qcs = input$batch_use_qcs,
+        prematched = F,
+        rf_norm_parallelize = input$rf_norm_parallel,
+        rf_norm_ntree = input$rf_norm_ntree,
+        miss_perc = input$miss_perc_2,
+        orig.count = length(grep("qc",tolower(rownames(mSet$dataSet$orig)),invert = T))
       )
       
-      mSet <- MetaboAnalystR::PreparePrenormData(mSet)
+      mSet$dataSet$covars <- data.table::as.data.table(covar_table)
+      mSet$dataSet$missing <- is.na(mSet$dataSet$orig)
       
-      # temp fix for disabling the json writing
-      OFFtoJSON <- function(obj, ...){
-        print("Disabled in MetaboShiny!")
-      }
+      save(mSet, file = file.path(lcl$paths$proj_dir, 
+                                  paste0(lcl$proj_name,"_ORIG.metshi")))
       
-      rlang::env_unlock(env = asNamespace('RJSONIO'))
-      rlang::env_binding_unlock(env = asNamespace('RJSONIO'))
-      assign('toJSON', OFFtoJSON, envir = asNamespace('RJSONIO'))
-      rlang::env_binding_lock(env = asNamespace('RJSONIO'))
-      rlang::env_lock(asNamespace('RJSONIO'))
+      mSet <- metshiProcess(mSet, session=NULL)
       
-      # normalize dataset with user settings(result: mSet$dataSet$norm)
-      mSet <- MetaboAnalystR::Normalization(mSet,
-                                            rowNorm = input$norm_type,
-                                            transNorm = input$trans_type,
-                                            scaleNorm = input$scale_type,
-                                            ref = input$ref_var)
-      
-      
-      #mSet$dataSet$proc <- NULL
-      mSet$dataSet$prenorm <- NULL
-      gc()
-      
-      shiny::setProgress(session=session, value= .8)
-      
-      # get sample names
-      smps <- rownames(mSet$dataSet$norm)
-      
-      # get which rows are QC samples
-      qc_rows <- which(grepl(pattern = "QC", x = smps))
-      
-      # if at least one row has a QC in it, batch correct
-      has.qc <- length(qc_rows) > 0
-      
-      # lowercase all the covars table column names
-      colnames(mSet$dataSet$covars) <- tolower(colnames(mSet$dataSet$covars))
-      
-      # === check if it does wrong here... ===
-      
-      if(batch_corr){
-        left_batch_vars = input$batch_var
-        if("batch" %in% input$batch_var & has.qc & input$batch_use_qcs){
-          # save to mSet
-          smps <- rownames(mSet$dataSet$norm)
-          # get which rows are QC samples
-          qc_rows <- which(grepl(pattern = "QC", 
-                                 x = smps))
-          # get batch for each sample
-          batch.idx = as.numeric(as.factor(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"batch"][[1]]))
-          if(length(batch.idx) == 0) return(mSet$dataSet$norm)
-          # get injection order for samples
-          seq.idx = as.numeric(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"injection"][[1]])
-          # go through all the metabolite columns
-          dtNorm <- data.table::as.data.table(mSet$dataSet$norm)
-          pb <- pbapply::startpb(0, max = ncol(dtNorm))
-          i = 0
-          dtNorm[,(1:ncol(dtNorm)) := lapply(.SD,function(x){ 
-            i <<- i + 1
-            pbapply::setpb(pb, i)
-            BatchCorrMetabolomics::doBC(Xvec = as.numeric(x),
-                                        ref.idx = as.numeric(qc_rows),
-                                        batch.idx = batch.idx,
-                                        seq.idx = seq.idx,
-                                        result = "correctedX",
-                                        minBsamp = 1)
-            
-            }), .SDcols = 1:ncol(dtNorm)]
-          left_batch_vars <- grep(input$batch_var,
-                                  pattern = ifelse(has.qc, "batch|injection|sample", "injection|sample"),
-                                  value = T,
-                                  invert = T)
-        }
+      mSet$settings$subset <- list()
+      mSet$settings$exp.var <- condition
+      mSet$settings$time.var <- c()
+      mSet$settings$paired <- F
 
-        # check which batch values are left after initial correction
-        
-        if(length(left_batch_vars) > 2){
-          NULL  # no option for more than 2 other batch variables yet
-        } else if(length(left_batch_vars) == 0){
-          NULL # if none left, continue after this
-        } else{
-          csv_edata <- MetaboShiny::combatCSV(mSet)
-          
-          if(length(left_batch_vars) == 1){
-            # create a model table
-            csv_pheno <- data.frame(sample = 1:nrow(mSet$dataSet$covars),
-                                    batch1 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample),
-                                                                 left_batch_vars[1], with=FALSE][[1]]
-                                    #,batch2 = c(0),
-                                    #outcome = as.factor(mSet$dataSet$cls)
-            )
-            # batch correct with comBat
-            batch_normalized = t(sva::ComBat(dat = csv_edata,
-                                             batch = csv_pheno$batch1
-                                             # mod=mod.pheno,
-                                             # par.prior=TRUE
-            ))
-            # fix row names
-            rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
-          }else{
-            # create a model table
-            csv_pheno <- data.frame(sample = 1:nrow(mSet$dataSet$covars),
-                                    batch1 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample), left_batch_vars[1], with=FALSE][[1]],
-                                    batch2 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample), left_batch_vars[2], with=FALSE][[1]],
-                                    outcome = as.factor(exp_lbl))
-            # batch correct with limma and two batches
-            batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
-                                                          #design = mod.pheno,
-                                                          batch = csv_pheno$batch1,
-                                                          batch2 = csv_pheno$batch2))
-            rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
-          }
-          # save normalized table to mSet
-          mSet$dataSet$norm <- as.data.frame(batch_normalized)
-      }}
-      
-      shiny::setProgress(session=session, value= .9)
-      
-      mSet$dataSet$cls.num <- length(levels(mSet$dataSet$cls))
-      
-
-      # make sure covars order is consistent with mset$..$norm order
-      rematch = match(rownames(mSet$dataSet$norm),
-                      mSet$dataSet$covars$sample)
-      mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
-      
-      # set name of variable of interest
-      mSet$dataSet$cls.name <- condition
-      mSet$dataSet$exp.fac <- condition
-
-      # save the used adducts to mSet
-      mSet$ppm <- ppm
-      mSet$paired <- F
-      mSet$dataSet$subset <- list()
-      mSet$dataSet$exp.var <- condition
-      mSet$dataSet$time.var <- c()
-      mSet$storage <- list()
-      
-      if(mSet$dataSet$cls.num == 2){
-        mSet$dataSet$exp.type <- "1fb"
-      }else{
-        mSet$dataSet$exp.type <- "1fm"
-      }
-      
-      mSet$settings <- list(subset = mSet$dataSet$subset,
-                            exp.var = mSet$dataSet$exp.var,
-                            exp.fac = mSet$dataSet$exp.fac,
-                            time.var = mSet$dataSet$time.var,
-                            exp.type = mSet$dataSet$exp.type,
-                            paired = mSet$paired,
-                            filt.type = input$filt_type,
-                            orig.count = nrow(mSet$dataSet$norm))
-      
       if(typeof(mSet) != "double"){
         success = T
       }
     })
     
     if(success){
-      
-      if(has.qc){
-        mSet <- MetaboShiny::hideQC(mSet)
-      }
-      
-      saveRDS(list(data = mSet$dataSet,
-                   analysis = mSet$analSet,
-                   settings = mSet$settings), 
-              file = file.path(lcl$paths$proj_dir, 
-                               paste0(lcl$proj_name,"_ORIG.metshi")))
-      
-      if(input$filt_type != "none"){
-        mSet$dataSet$norm <- mSet$dataSet$norm[,keep.mz]
-      }
       
       mSet <<- mSet
       

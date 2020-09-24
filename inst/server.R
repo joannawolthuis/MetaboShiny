@@ -8,6 +8,18 @@ function(input, output, session) {
   library(ggplot2)
   library(SPARQL)
   
+  # FIX FOR NORMALIZATION
+  OFFtoJSON <- function(obj, ...){
+    print("Disabled in MetaboShiny!")
+  }
+  
+  rlang::env_unlock(env = asNamespace('RJSONIO'))
+  rlang::env_binding_unlock(env = asNamespace('RJSONIO'))
+  assign('toJSON', OFFtoJSON, envir = asNamespace('RJSONIO'))
+  rlang::env_binding_lock(env = asNamespace('RJSONIO'))
+  rlang::env_lock(asNamespace('RJSONIO'))
+  
+  # ====
   shiny::showModal(MetaboShiny::loadModal())
   
   shiny::showNotification("Starting server process...")

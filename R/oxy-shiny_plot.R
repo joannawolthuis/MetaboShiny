@@ -175,7 +175,7 @@ ggplotSampleNormSummary <- function(mSet,
 ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
                        cf){
   
-  time.mode = mSet$dataSet$exp.type
+  time.mode = mSet$settings$exp.type
   classes = unique(switch(time.mode, 
                           t1f=mSet$dataSet$facA, 
                           t=mSet$dataSet$sbj))
@@ -211,7 +211,7 @@ ggplotMeba <- function(mSet, cpd, draw.average=T, cols,
     ggplot2::scale_color_manual(values=cols) +
     ggtitle(paste(cpd, "m/z")) + 
     xlab(Hmisc::capitalize(mSet$dataSet$facB.lbl)) + 
-    ggplot2::labs(color = Hmisc::capitalize(switch(mSet$dataSet$exp.type, 
+    ggplot2::labs(color = Hmisc::capitalize(switch(mSet$settings$exp.type, 
                                           t1f=mSet$dataSet$facA.lbl,
                                           t="Individual")))
   if(draw.average){
@@ -281,7 +281,7 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
   }
   # - - -
   
-  if(mSet$dataSet$exp.type %in% c("t1f", "2f")){
+  if(mSet$settings$exp.type %in% c("t1f", "2f")){
     mode = "multi"
   }
   
@@ -452,7 +452,7 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
     if(mode == "multi"){
       p <- p + ggplot2::scale_color_manual(values=cols[1:length(unique(profile$GroupA))])
       p <- p + ggplot2::scale_fill_manual(values = cols[1:length(unique(profile$GroupA))])
-      if(mSet$dataSet$exp.type == "t"){
+      if(mSet$settings$exp.type == "t"){
         p <- p + ggplot2::xlab("Time")
       }else{
         p <- p + ggplot2::xlab(Hmisc::capitalize(mSet$dataSet$facB.lbl))
@@ -467,7 +467,7 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
         names(scale) <- c(levels(profile$Group),levels(profile$Color))
         p <- p + ggplot2::scale_fill_manual(values = scale)
       }  
-      p <- p + ggplot2::xlab(Hmisc::capitalize(gsub(x=mSet$dataSet$cls.name, pattern = ":.*$", replacement="")))
+      p <- p + ggplot2::xlab(Hmisc::capitalize(gsub(x=mSet$settings$cls.name, pattern = ":.*$", replacement="")))
     }
     # ---------------
     p  
@@ -491,7 +491,7 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
 #' @importFrom ggplot2 ggplot geom_point aes scale_x_discrete scale_colour_gradientn scale_y_continuous
 ggPlotAOV <- function(mSet, cf, n=20){
   
-  which_aov = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
+  which_aov = if(mSet$settings$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
   
   profile <- data.table::as.data.table(mSet$analSet[[which_aov]]$p.log[mSet$analSet[[which_aov]]$inx.imp],
                                        keep.rownames = T)
@@ -670,7 +670,7 @@ ggPlotVolc <- function(mSet,
                        cf,
                        n=20){
   
-  vcn<-mSet$analSet$volcano;
+  vcn<-mSet$analSet$volc;
   
   if(nrow(vcn$sig.mat)==0){
     shiny::showNotification("No significant hits")

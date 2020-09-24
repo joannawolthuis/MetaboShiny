@@ -16,7 +16,7 @@ getProfile <- function(mSet, varName, title=varName, mode="stat"){
   samp.names <- rownames(sourceTable)
   # ---------------
   if(mode == "multi"){
-    if(mSet$dataSet$exp.type == "t"){
+    if(mSet$settings$exp.type == "t"){
       translator <- data.table(
         index = 1:length(samp.names),
         Sample = gsub(x = samp.names, pattern = "_T|_t\\d$", replacement=""),

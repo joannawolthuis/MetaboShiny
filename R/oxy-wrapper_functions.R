@@ -37,7 +37,7 @@ calcHeatMap <- function(mSet, signif.only,
     # check if the sample order is correct - mSet$..$ norm needs to match the matrix
     sample_order <- match(colnames(final_matrix), rownames(mSet$dataSet$norm))
     
-    if(mSet$dataSet$exp.type %in% c("2f", "t1f", "t")){
+    if(mSet$settings$exp.type %in% c("2f", "t1f", "t")){
       
       # create convenient table with the ncessary info
       translator <- data.table::data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],GroupA=mSet$dataSet$facA[sample_order], GroupB=mSet$dataSet$facB[sample_order])
@@ -382,23 +382,16 @@ tooEmptySamps <- function(mSet, max.missing.per.samp){
 #' @importFrom data.table as.data.table
 #' @importFrom pbapply startpb setpb
 replRowMin <- function(mSet){
-  samples <- rownames(mSet$dataSet$preproc)
-  mz <- colnames(mSet$dataSet$preproc)
-  w.missing <- data.table::as.data.table(mSet$dataSet$preproc)
-  pb <- pbapply::startpb(0, nrow(w.missing))
-  i=0
-  w.missing = w.missing[,data.table::as.data.table(apply(.SD, 
-                                                         1, 
-                                                         function(x) {i<<-i+1; 
-                                                         pbapply::setpb(pb, i); 
-                                                         x[is.na(x)] <- min(x, na.rm=T)/2; 
-                                                         return(x)
-                                                         }))]
-  w.missing <- t(as.data.frame(w.missing))
-  rownames(w.missing) <- samples
-  colnames(w.missing) <- mz
-  return(w.missing)
-  }
+  mSet$dataSet$proc <- pbapply::pbapply(mSet$dataSet$preproc, 1, function(x) {
+    if (sum(is.na(x)) > 0) {
+      x[is.na(x)] <- min(x, na.rm = T)/2
+    }
+    x
+  })
+  mSet$dataSet$proc <- t(mSet$dataSet$proc)
+  return(mSet)
+}
+
 
 #' @title Impute missing values with Random Forest
 #' @description Uses the missForest package to impute missing values. The most time-consuming but accurate imputation function.
@@ -804,7 +797,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
            list(volc_plot = p)
          },
          tsne = {
-           mode <- if(mSet$dataSet$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
+           mode <- if(mSet$settings$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
              "ipca" # interactive PCA (old name, i like tpca more :P )
            }else{
              "normal" # normal pca
@@ -845,7 +838,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
              scree = MetaboShiny::ggPlotScree(mSet,
                                               cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
              # chekc which mode we're in
-             mode <- if(mSet$dataSet$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
+             mode <- if(mSet$settings$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
                "ipca" # interactive PCA (old name, i like tpca more :P )
              }else{
                "normal" # normal pca
@@ -895,7 +888,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
            
            if("plsda" %in% names(mSet$analSet)){ # if plsda has been performed...
              
-             mode <- if(mSet$dataSet$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
+             mode <- if(mSet$settings$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
                "ipca" # interactive PCA (old name, i like tpca more :P )
              }else{
                "normal" # normal pca
@@ -1119,7 +1112,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                })
                hmap$x$layout$annotations[[1]]$text <- ""
                # save the order of mzs for later clicking functionality
-               lcl$vectors$heatmap <- hmap$x$layout[[if(mSet$dataSet$exp.type %in% c("2f", "t", "t1f")) "yaxis2" else "yaxis3"]]$ticktext 
+               lcl$vectors$heatmap <- hmap$x$layout[[if(mSet$settings$exp.type %in% c("2f", "t", "t1f")) "yaxis2" else "yaxis3"]]$ticktext 
                # return
                hmap
              }else{

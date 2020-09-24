@@ -28,7 +28,7 @@ lapply(c("tt",
     
     if (is.null(curr_row)) return()
 
-    which_aov = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
+    which_aov = if(mSet$settings$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
     
     res_tbl <- data.table::as.data.table(switch(table,
                                                 pattern = mSet$analSet$corr$cor.mat,

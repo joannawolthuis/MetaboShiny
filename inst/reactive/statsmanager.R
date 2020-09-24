@@ -296,7 +296,7 @@ shiny::observe({
                    
                    config <- config[, input$ml_include_covars,with=F]# reorder so both halves match up later
                    
-                   if(mSet$dataSet$exp.type %in% c("2f", "t1f")){
+                   if(mSet$settings$exp.type %in% c("2f", "t1f")){
                      # just set to facA for now..
                      if(nrow(config)==0){
                        config <- data.frame(label=mSet$dataSet$facA)
@@ -599,11 +599,11 @@ shiny::observe({
                  })
                },
                aov = {
-                 aovtype = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
+                 aovtype = if(mSet$settings$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
                  redo = aovtype %not in% names(mSet$analSet)
                  if(redo){ # if done, don't redo
                    shiny::withProgress({
-                     mSet <- switch(mSet$dataSet$exp.type,
+                     mSet <- switch(mSet$settings$exp.type,
                                     "1fm"=MetaboAnalystR::ANOVA.Anal(mSet, thresh=0.1,post.hoc = "fdr",nonpar = F),
                                     "2f"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.1, "fdr", "", 1, 1),
                                     "t"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.1, "fdr", "time0", 1, 1),

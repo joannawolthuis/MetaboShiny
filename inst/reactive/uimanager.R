@@ -20,17 +20,17 @@ shiny::observe({
                        interface$mode <- NULL
                        
                      }else{
-                       if(is.null(mSet$dataSet$exp.type)){
-                         mSet$dataSet$exp.type <- "1f" # one factor, binary class
+                       if(is.null(mSet$settings$exp.type)){
+                         mSet$settings$exp.type <- "1f" # one factor, binary class
                        }  
                        
                        shiny::showNotification("Updating interface...")
                        
-                       interface$mode <<- mSet$dataSet$exp.type
+                       interface$mode <<- mSet$settings$exp.type
                        
                        output$curr_name <- shiny::renderUI(
                          shiny::HTML({
-                           expname = mSet$dataSet$cls.name
+                           expname = mSet$settings$cls.name
                            calc = stringr::str_match(expname, pattern = "(^.*?):")
                            expname = gsub(expname, pattern = "^.*?:", replacement="") 
                            if(!all(is.na(calc[1,]))){
@@ -129,10 +129,10 @@ shiny::observe({
                      
                      shiny::updateSelectInput(session, "stats_type", 
                                               selected = {
-                                                if(grepl(mSet$dataSet$exp.type, pattern = "^1f\\w")){
-                                                  gsub(mSet$dataSet$exp.type, pattern="^1f\\w", "1f")
+                                                if(grepl(mSet$settings$exp.type, pattern = "^1f\\w")){
+                                                  gsub(mSet$settings$exp.type, pattern="^1f\\w", "1f")
                                                 }else{
-                                                  mSet$dataSet$exp.type
+                                                  mSet$settings$exp.type
                                                 }
                                               })
                      
@@ -179,7 +179,7 @@ shiny::observe({
                          shiny::selectizeInput("stats_var", 
                                                label="Experimental variables:", 
                                                multiple = if(input$stats_type == "2f") T else F,
-                                               selected = mSet$dataSet$exp.var, 
+                                               selected = mSet$settings$exp.var, 
                                                choices = c("label", colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, 
                                                                                                               MARGIN = 2, function(col) length(unique(col)) < gbl$constants$max.cols))]),
                                                options = list(maxItems = 2),
@@ -244,7 +244,7 @@ shiny::observe({
                      NULL
                      }, 
                    power = {
-                     if(grepl(mSet$dataSet$exp.type, pattern = "1f.")){
+                     if(grepl(mSet$settings$exp.type, pattern = "1f.")){
                        pairs = MetaboShiny::expand.grid.unique(levels(mSet$dataSet$cls), 
                                                                levels(mSet$dataSet$cls))
                        pairs = paste(pairs[,1], "vs.", pairs[,2])
