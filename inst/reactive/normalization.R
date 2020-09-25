@@ -137,16 +137,23 @@ shiny::observeEvent(input$initialize, {
       
       mSet$dataSet$covars <- data.table::as.data.table(covar_table)
       mSet$dataSet$missing <- is.na(mSet$dataSet$orig)
+      mSet$dataSet$start <- mSet$dataSet$orig
       
-      save(mSet, file = file.path(lcl$paths$proj_dir, 
-                                  paste0(lcl$proj_name,"_ORIG.metshi")))
+      mSet <- metshiProcess(mSet, session=NULL, init=T)
       
-      mSet <- metshiProcess(mSet, session=NULL)
+      # save the used adducts to mSet
+      mSet$ppm <- ppm
       
-      mSet$settings$subset <- list()
-      mSet$settings$exp.var <- condition
-      mSet$settings$time.var <- c()
-      mSet$settings$paired <- F
+      mSet$storage <- list()
+      mSet$settings <- list(subset = list(),
+                            exp.var = condition,
+                            exp.fac = condition,
+                            cls.name = condition,
+                            time.var = c(),
+                            exp.type =  if(mSet$dataSet$cls.num == 2) "1fb" else "1fm",
+                            paired = F,
+                            filt.type = input$filt_type,
+                            orig.count = nrow(mSet$dataSet$norm))
 
       if(typeof(mSet) != "double"){
         success = T
@@ -156,6 +163,9 @@ shiny::observeEvent(input$initialize, {
     if(success){
       
       mSet <<- mSet
+      
+      save(mSet, file = file.path(lcl$paths$proj_dir, 
+                                  paste0(lcl$proj_name,"_ORIG.metshi")))
       
       fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
       save(mSet, file = fn)

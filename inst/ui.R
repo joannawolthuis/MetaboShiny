@@ -156,6 +156,14 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                                 "variables"),
                                                                                                                                      selected = "variables")
                                                                                          ),
+                                                                                         shinyWidgets::switchInput(
+                                                                                           inputId = "redo_upon_change",
+                                                                                           value = TRUE,
+                                                                                           label = "Renormalize after subsetting?:",
+                                                                                           onLabel = "yes",
+                                                                                           offLabel = "no",
+                                                                                           size = "small"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
+                                                                                         ),
                                                                                          # - - - - - -
                                                                                          MetaboShiny::switchButton(inputId = "remove_outliers",
                                                                                                                    label = "Exclude outliers?",

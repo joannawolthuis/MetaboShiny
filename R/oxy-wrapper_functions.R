@@ -483,11 +483,13 @@ batchCorrQC <- function(mSet){
 #' @export 
 hideQC <- function(mSet){
   smps <- rownames(mSet$dataSet$norm)
+  print(smps)
+  print(mSet$dataSet$covars$sample)
   # get which rows are QC samples
-  qc_rows <- which(grepl(pattern = "QC", x = smps))
+  qc_rows <- grep(pattern = "QC", x = smps)
   mSet$dataSet$norm <- mSet$dataSet$norm[-qc_rows,]
   mSet$dataSet$cls <- mSet$dataSet$cls[-qc_rows, drop = TRUE]
-  mSet$dataSet$covars <- mSet$dataSet$covars[-grep("QC", mSet$dataSet$covars$sample),]
+  mSet$dataSet$covars <- mSet$dataSet$covars[grep("QC",sample,invert = T),]
   mSet$dataSet$cls.num <- length(levels(mSet$dataSet$cls))
   mSet
 }

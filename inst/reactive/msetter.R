@@ -12,7 +12,6 @@ shiny::observe({
       
       oldSettings <- mSet$settings
       
-      # reset dataset
       mSet <- reset.mSet(mSet,
                          fn = file.path(lcl$paths$proj_dir, 
                                         paste0(lcl$proj_name,
@@ -53,15 +52,6 @@ shiny::observe({
                        },
                        change = {
                          mSet$dataSet$paired <- if(input$stats_type %in% c("t", "t1f") | input$paired) TRUE else FALSE
-                         if(input$omit_unknown & grepl("^1f", input$stats_type)){
-                           shiny::showNotification("omitting 'unknown' labeled samples...")
-                           knowns = mSet$dataSet$covars$sample[which(mSet$dataSet$covars[ , input$stats_var, with=F][[1]] != "unknown")]
-                           if(length(knowns) > 0){
-                             mSet <- subset_mSet(mSet,
-                                                 subset_var = "sample", 
-                                                 subset_group = knowns) 
-                           }
-                         }
                          mSet
                        },
                        subset = {
@@ -73,19 +63,43 @@ shiny::observe({
                        },
                        unsubset = {
                          mSet$dataSet$paired <- mSet.settings$paired
+                         mSet$settings$subset <- list()
                          mSet
                        }) 
         
         mSet$analSet <- list(type = "stat")
         mSet$analSet$type <- "stat"
-        mSet <- metshiProcess(mSet)
+        
+        if(input$redo_upon_change){
+          mSet$dataSet$orig <- mSet$dataSet$start
+          mSet$dataSet$start <- mSet$dataSet$preproc <- mSet$dataSet$proc <- mSet$dataSet$prenorm <- NULL
+          mSet2 <- metshiProcess(mSet)
+        }
         
         if(mSetter$do == "change"){
+          if(input$omit_unknown & grepl("^1f", input$stats_type)){
+            shiny::showNotification("omitting 'unknown' labeled samples...")
+            knowns = mSet$dataSet$covars$sample[which(mSet$dataSet$covars[ , input$stats_var, with=F][[1]] != "unknown")]
+            if(length(knowns) > 0){
+              mSet <- subset_mSet(mSet,
+                                  subset_var = "sample", 
+                                  subset_group = knowns) 
+            }
+          }
           mSet <- change.mSet(mSet, 
                               stats_var = input$stats_var, 
                               stats_type = input$stats_type, 
                               time_var = input$time_var)
         }else{
+          if(input$omit_unknown & grepl("^1f", mSet$settings$exp.type)){
+            shiny::showNotification("omitting 'unknown' labeled samples...")
+            knowns = mSet$dataSet$covars$sample[which(mSet$dataSet$covars[ , mSet$settings$exp.var, with=F][[1]] != "unknown")]
+            if(length(knowns) > 0){
+              mSet <- subset_mSet(mSet,
+                                  subset_var = "sample", 
+                                  subset_group = knowns) 
+            }
+          }
           mSet <- change.mSet(mSet, 
                               stats_var = mSet.settings$exp.var, 
                               time_var =  mSet.settings$time.var,
@@ -97,6 +111,7 @@ shiny::observe({
         if(new.name %in% names(mSet$storage)){
           mSet <- load.mSet(mSet, new.name)
         }
+        
         mSet$settings$cls.name <- new.name
         
         if(mSet$dataSet$paired){

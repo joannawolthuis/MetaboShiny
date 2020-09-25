@@ -260,15 +260,19 @@ name.mSet <- function(mSet) {
 #' @return mSet object
 #' @rdname reset.mSet
 #' @export 
-reset.mSet <- function(mSet, fn) {
+reset.mSet <- function(mSet_new, fn) {
   load(file = fn)
-  return(mSet)
+  mSet_new$dataSet <- mSet$dataSet
+  mSet_new$analSet <- mSet$analSet
+  mSet_new$settings <- mSet$settings
+  mSet_new$report <- mSet$report
+  return(mSet_new)
 }
 
 #' @title Load mSet from mSet internal storage
 #' @description MetShi mSets store previous dataset results and settings in the mSet storage. This loads one of those datasets.
 #' @param mSet mSet object
-#' @param name Name of subexperiemnt to load, Default: mSet$dataSet$cls.name
+#' @param name Name of subexperiemnt to load, Default: mSet$dataSet$cls.names
 #' @return mSet object
 #' @rdname load.mSet
 #' @export 
@@ -424,7 +428,7 @@ change.mSet <-
 # subset by mz
 subset_mSet_mz <- function(mSet, keep.mzs) {
   if (length(keep.mzs) > 0) {
-    tables = "orig" #c("norm", "proc", "missing")
+    tables = c("start", "orig", "norm", "proc","preproc","missing")
     combi.tbl = data.table::data.table(tbl = tables)
     
     for (i in 1:nrow(combi.tbl)){
@@ -465,8 +469,8 @@ subset_mSet <- function(mSet, subset_var, subset_group) {
     mSet$dataSet$covars <-
       mSet$dataSet$covars[sample %in% keep.samples, ]
     
-    tables = c("orig","missing")
-    clss = c("orig.cls", "placeholder")
+    tables = c("start", "orig", "norm", "proc","preproc","missing")
+    clss = c("placeholder", "orig.cls", "cls", "proc.cls", "preproc.cls", "placeholder")
     combi.tbl = data.table::data.table(tbl = tables,
                                        cls = clss)
     
@@ -483,7 +487,7 @@ subset_mSet <- function(mSet, subset_var, subset_group) {
         sampOrder = match(rownames(mSet$dataSet[[tbl]]),
                           mSet$dataSet$covars$sample)
         
-        if(tbl != "missing"){
+        if(!(tbl %in% c("start", "missing"))){
           mSet$dataSet[[cls]] <-
             as.factor(mSet$dataSet$covars[sampOrder, mSet$settings$exp.var, with = F][[1]])
           if (cls == "cls") {
@@ -508,7 +512,6 @@ subset_mSet <- function(mSet, subset_var, subset_group) {
         
       }, silent = T)
     }
-    mSet$dataSet$subset[[subset_var]] <- subset_group
     mSet$settings$subset[[subset_var]] <- subset_group
   }
   mSet
@@ -638,13 +641,16 @@ pair.mSet <- function(mSet) {
   mSet
 }
 
-metshiProcess <- function(mSet, session){
+metshiProcess <- function(mSet, session, init=F){
   #shiny::withProgress(session=session, expr={
+  print(dim(mSet$dataSet$covars))
+  print(dim(mSet$dataSet$norm))
   
   sums = colSums(mSet$dataSet$missing)
   good.inx <- sums/nrow(mSet$dataSet$missing) < (mSet$metshiParams$miss_perc/100)
   mSet$dataSet$orig <- as.data.frame(mSet$dataSet$orig[, good.inx, drop = FALSE])
-  mSet$dataSet$missing <- NULL
+  
+  if(!init) mSet$dataSet$missing <- NULL
   
   if(mSet$metshiParams$filt_type != "none" & (ncol(mSet$dataSet$orig) < mSet$metshiParams$max.allow)){
     #shiny::showNotification("Filtering dataset...")
@@ -804,17 +810,20 @@ metshiProcess <- function(mSet, session){
   mSet$dataSet$cls.num <- length(levels(mSet$dataSet$cls))
   
   # make sure covars order is consistent with mset$..$norm order
-  rematch = match(rownames(mSet$dataSet$norm),
-                  mSet$dataSet$covars$sample)
+  rematch = match(
+    rownames(mSet$dataSet$norm),
+    mSet$dataSet$covars$sample
+                  )
   mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
-  
+
   mSet$report <- list(mzStarred = data.table::data.table(mz = colnames(mSet$dataSet$norm),
                                                          star = c(FALSE)))  
   data.table::setkey(mSet$report$mzStarred, mz)
   
-  if(has.qc){
+  if(has.qc & !init){
     mSet <- hideQC(mSet)
   }
+
   mSet$analSet <- list(type = "stat")
   mSet
 }
