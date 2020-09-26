@@ -1125,10 +1125,22 @@ omit_unknown = yes')
     output$ml_train_ss <- shiny::renderText(subset.name)
   })
   
+  shiny::observeEvent(input$reset_ml_train, {
+    subset.name <- "all"
+    lcl$vectors$ml_train <<- NULL
+    output$ml_train_ss <- shiny::renderText(subset.name)
+  })
+  
   shiny::observeEvent(input$ml_test_ss, {
     keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]
     subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
     lcl$vectors$ml_test <<- c(input$subset_var, input$subset_group)
+    output$ml_test_ss <- shiny::renderText(subset.name)
+  })
+  
+  shiny::observeEvent(input$reset_ml_test, {
+    subset.name <- "all"
+    lcl$vectors$ml_test <<- NULL
     output$ml_test_ss <- shiny::renderText(subset.name)
   })
   

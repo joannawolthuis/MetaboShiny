@@ -73,7 +73,7 @@ shiny::observe({
         if(input$redo_upon_change){
           mSet$dataSet$orig <- mSet$dataSet$start
           mSet$dataSet$start <- mSet$dataSet$preproc <- mSet$dataSet$proc <- mSet$dataSet$prenorm <- NULL
-          mSet2 <- metshiProcess(mSet)
+          mSet <- metshiProcess(mSet)
         }
         
         if(mSetter$do == "change"){
@@ -152,6 +152,7 @@ shiny::observe({
         }
         mSet <<- mSet
         lcl$hasChanged <<- FALSE
+        uimanager$refresh <- "ml"
       }else{
         metshiAlert("Failed! Restoring old mSet...")
       }

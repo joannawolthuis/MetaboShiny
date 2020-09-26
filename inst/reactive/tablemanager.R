@@ -62,7 +62,7 @@ shiny::observe({
                                                 choices = {
                                                  allChoices = as.character(lcl$vectors$analyses)
                                                  if(inputID == "heattable" | inputID == "network_table"){
-                                                   allChoices[grepl(mSet$dataSet$cls.name, allChoices, fixed=TRUE)]  
+                                                   allChoices[grepl(mSet$settings$cls.name, allChoices, fixed=TRUE)]  
                                                  }else{
                                                    allChoices
                                                  }
@@ -84,7 +84,7 @@ shiny::observe({
                      list(pattern_tab = res)
                    },
                    aov = {
-                     which_aov = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
+                     which_aov = if(mSet$settings$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
                      
                      if(which_aov %in% names(mSet$analSet)){
                        

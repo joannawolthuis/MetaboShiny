@@ -141,9 +141,8 @@ runML <- function(curr,
     inTest <- test_idx
   }
   
-  if("split" %in% colnames(curr)){
-    curr <- curr[,-"split"]
-  }
+  need.rm = unique(c(train_vec[1],test_vec[1],"split"))
+  curr <- curr[,-..need.rm]
   
   # choose predictor "label" (some others are also included but cross validation will be done on this)
   predictor = "label"

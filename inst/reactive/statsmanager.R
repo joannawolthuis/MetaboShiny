@@ -271,14 +271,16 @@ shiny::observe({
                    shiny::setProgress(value = 0)
                    
                    # get base table to use for process
-                   curr <- data.table::as.data.table(mSet$dataSet$proc)
+                   curr <- data.table::as.data.table(mSet$dataSet$orig)
                    
                    # replace NA's with zero
-                   curr <- curr[,(1:ncol(curr)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
+                   for (j in seq_len(ncol(curr))){
+                     set(curr,which(is.na(curr[[j]])),j,0)
+                   }
                    
                    # conv to data frame
                    curr <- as.data.frame(curr)
-                   rownames(curr) <- rownames(mSet$dataSet$proc)
+                   rownames(curr) <- rownames(mSet$dataSet$orig)
                    
                    # find the qc rows and remove them
                    is.qc <- grepl("QC|qc", rownames(curr))
@@ -294,7 +296,20 @@ shiny::observe({
                      config <- mSet$dataSet$covars[order, ]
                    }
                    
-                   config <- config[, input$ml_include_covars,with=F]# reorder so both halves match up later
+                   if(!is.null(lcl$vectors$ml_train)){
+                     if(unique(lcl$vectors$ml_train) %in% c("split","all")){
+                       lcl$vectors$ml_train<<-NULL
+                     }
+                   }
+                   if(!is.null(lcl$vectors$ml_test)){
+                     if(unique(lcl$vectors$ml_test)%in% c("split","all")){
+                       lcl$vectors$ml_test<<-NULL
+                     }
+                   }
+                   
+                   needed_for_subset <- c(lcl$vectors$ml_train[1],lcl$vectors$ml_test[1])
+                   config <- config[, c(input$ml_include_covars,
+                                        needed_for_subset),with=F]# reorder so both halves match up later
                    
                    if(mSet$settings$exp.type %in% c("2f", "t1f")){
                      # just set to facA for now..
@@ -312,12 +327,14 @@ shiny::observe({
                      }
                    }
                    
-                   if(!input$ml_random_split){
+                   
+                   if(!input$ml_random_split & is.null(lcl$vectors$ml_train) & is.null(lcl$vectors$ml_test)){
                      try({
                        shiny::showNotification("Using same train/test split for all repeats...")
                      })
                      # make split for all repeats
-                     train_idx = caret::createDataPartition(y = config$label, p = input$ml_train_perc/100, list = FALSE) # partition data in a balanced way (uses labels)
+                     train_idx = caret::createDataPartition(y = config$label, 
+                                                            p = input$ml_train_perc/100, list = FALSE) # partition data in a balanced way (uses labels)
                      # add column to config for this split
                      config$split <- c("train")
                      config$split[train_idx] <- "test"
@@ -331,6 +348,7 @@ shiny::observe({
                      if(is.null(lcl$vectors$ml_test)){
                        lcl$vectors$ml_test <<- c("all", "all")
                      }
+                     
                      if(all(lcl$vectors$ml_test == lcl$vectors$ml_train)){
                        if(unique(lcl$vectors$ml_test) == "all"){
                          shiny::showNotification("No subset selected... continuing in normal non-subset mode")
@@ -359,7 +377,8 @@ shiny::observe({
                    remove = colnames(config)[which(has.na | has.all.unique)]
                    
                    #keep_configs <- which(names(config) == "label")
-                   remove <- unique(c(remove, "sample",  
+                   remove <- unique(c(remove, 
+                                      "sample",  
                                       "individual", 
                                       colnames(config)[caret::nearZeroVar(config)]))
                    
@@ -459,7 +478,7 @@ shiny::observe({
                                                            tuneGrid,
                                                            ml_train_perc,
                                                            sampling){
-                                                    MetaboShiny::runML(curr,
+                                                   runML(curr,
                                                                        train_vec = train_vec,
                                                                        test_vec = test_vec,
                                                                        config = config,
@@ -487,7 +506,7 @@ shiny::observe({
                    })
                    
                    # check if a storage list for machine learning results already exists
-                   if(!"ml" %in% names(mSet$analSet)){
+                   if(!("ml" %in% names(mSet$analSet))){
                      mSet$analSet$ml <- list() # otherwise make it
                    }
                    
@@ -547,7 +566,7 @@ shiny::observe({
                      bar_data <- tbl
                    }
                    # save results to mset
-                   if(input$ml_method %not in% mSet$analSet$ml){
+                   if(input$ml_method %not in% names(mSet$analSet$ml)){
                      mSet$analSet$ml[[input$ml_method]] <- list()
                    }
                    
@@ -556,7 +575,6 @@ shiny::observe({
                    mSet$analSet$ml$last <- list(name = input$ml_name,
                                                 method = input$ml_method)
                    
-                   #mSet_ml <<- mSet
                    })
                },
                heatmap = {
