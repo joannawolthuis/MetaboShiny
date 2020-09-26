@@ -277,6 +277,9 @@ reset.mSet <- function(mSet_new, fn) {
 #' @rdname load.mSet
 #' @export 
 load.mSet <- function(mSet, name = mSet$dataSet$cls.name) {
+  if(!is.null(mSet$storage[[name]]$data)){
+    mSet$dataSet <- mSet$storage[[name]]$data
+  }
   mSet$analSet <- mSet$storage[[name]]$analysis
   mSet$settings <- mSet$storage[[name]]$settings
   mSet$report <- mSet$storage[[name]]$report
@@ -292,6 +295,9 @@ load.mSet <- function(mSet, name = mSet$dataSet$cls.name) {
 #' @export 
 store.mSet <- function(mSet, name = mSet$settings$cls.name) {
   mSet$storage[[name]] <- list()
+  try({
+    mSet$storage[[name]]$data <- mSet$dataSet
+  })
   mSet$storage[[name]]$analysis <- mSet$analSet
   mSet$storage[[name]]$settings <- mSet$settings
   mSet$storage[[name]]$report <- mSet$report
