@@ -17,35 +17,27 @@ shiny::observe({
           
           mapply(function(myplot, plotName){
             
-            # if(grepl("aov|tt|fc|pattern|asca|volc", plotName)){
-            #   whichAnal <- stringr::str_match(plotName, "aov|tt|fc|pattern|asca|volc")[,1]
-            #   if(is.null(mSet$analSet[[whichAnal]]$sig.mat)){
-            #     data = data.frame(text = "No significant hits!")
-            #     myplot = ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10)
-            #   }
-            # }
-            
             isSquare <- grepl("pca|plsda|tsne|roc|heatmap|var|samp|network", plotName) & !grepl("scree|cv|perm|venn", plotName)
             
             # === WRAPPER ===
             empty <- if(grepl(plotName, pattern="var|samp")) "output_empty2_width" else "output_empty3_width"
             
             output[[paste0(plotName, "_wrap")]] <- shiny::renderUI({
-              list(conditionalPanel(
-                condition = 'input.ggplotly == true',
-                if(plotName != "network"){
-                  plotly::plotlyOutput(paste0(plotName, "_interactive"), height = "100%") 
-                }else{
-                  visNetwork::visNetworkOutput(paste0(plotName, "_interactive"))
-                }),
-                conditionalPanel(
-                  condition = 'input.ggplotly == false',
-                  list(fluidRow(align="right",
-                                downloadButton(outputId = paste0("download_", plotName),
-                                               label = icon("Click to download"))),
-                       plotOutput(plotName, height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)
-                  )
-                ))
+              if(plotName != "network"){
+                list(conditionalPanel(
+                  condition = 'input.ggplotly == true',
+                  plotly::plotlyOutput(paste0(plotName, "_interactive"), height = "100%") ,
+                  conditionalPanel(
+                    condition = 'input.ggplotly == false',
+                    list(fluidRow(align="right",
+                                  downloadButton(outputId = paste0("download_", plotName),
+                                                 label = icon("Click to download"))),
+                         plotOutput(plotName, height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)
+                    )
+                  )))  
+              }else{
+                visNetwork::visNetworkOutput(paste0(plotName, "_interactive"))
+              }
             })
             
             # === PLOTS ===
@@ -61,37 +53,26 @@ shiny::observe({
               }
               
               if(!is.null(session$clientData[[empty]])){
-                
-                try({
-                  output[[plotName]] <- shiny::renderPlot({
-                    # if(plotName %in% c("heatmap", "network_heatmap", "network")){
-                    #   data = data.frame(text = "Currently only available in 'plotly' mode!\nPlease switch in the sidebar.")
-                    #   ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10) +
-                    #     ggplot2::theme(text = ggplot2::element_text(family = lcl$aes$font$family)) + ggplot2::theme_bw()
-                    # }else{
-                      suppressWarnings({myplot})
-                    #}
-                  })  
-                }, silent = F)
-                
-                plotFn <- paste0(c(gsub(":|,:", "_", mSet$settings$cls.name), 
-                                   plotName), collapse="_")
-                
-                # emptyax <- list(
-                #   title = "",
-                #   zeroline = FALSE,
-                #   showline = FALSE,
-                #   showticklabels = FALSE,
-                #   showgrid = FALSE
-                # )
+                if(!(plotName %in% c("network","wordcloud"))){
+                  try({
+                    output[[plotName]] <- shiny::renderPlot({
+                      suppressWarnings({
+                        myplot
+                        })
+                    })  
+                  }, silent = F)
+                  plotFn <- paste0(c(gsub(":|,:", "_", mSet$settings$cls.name), 
+                                     plotName), collapse="_") 
+                }
                 
                 output[[paste0(plotName, "_interactive")]] <- 
                   
                   if(plotName == "network"){
                     visNetwork::renderVisNetwork(myplot)
+                  }else if(plotName == "wordcloud"){
+                    wordcloud2::renderWordcloud2(myplot)
                   }else{
                     plotly::renderPlotly({
-                      
                       if(!is3D){
                         myplot <- plotly::ggplotly(myplot,
                                                    tooltip = "text", 

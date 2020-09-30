@@ -9,14 +9,14 @@ shiny::observe({
 lapply(c("tt",
          "fc",
          "aov",
-         "volc",
+         "volcano",
          "asca",
          "meba",
          "pca_load",
          "plsda_load",
          "enrich_pw",
          "ml",
-         "pattern",
+         "corr",
          "mummi_detail",
          "venn"), FUN=function(table){
 
@@ -31,10 +31,10 @@ lapply(c("tt",
     which_aov = if(mSet$settings$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
     
     res_tbl <- data.table::as.data.table(switch(table,
-                                                pattern = mSet$analSet$corr$cor.mat,
+                                                corr = mSet$analSet$corr$cor.mat,
                                                 tt = mSet$analSet$tt$sig.mat,
                                                 fc = mSet$analSet$fc$sig.mat,
-                                                volc = mSet$analSet$volcano$sig.mat,
+                                                volcano = mSet$analSet$volcano$sig.mat,
                                                 pca_load = mSet$analSet$pca$rotation,
                                                 plsda_load = mSet$analSet$plsda$vip.mat,
                                                 ml = lcl$tables$ml_roc, #TODO: fix this, now in global

@@ -75,13 +75,13 @@ shiny::observe({
                      enrich$overview <- mSet$analSet$enrich$mummi.resmat  
                      list()
                    },
-                   pattern = {
+                   corr = {
                      res =if(is.null(mSet$analSet$corr$cor.mat)){
                        data.table::data.table("No significant hits found")
                      }else{
                        res = mSet$analSet$corr$cor.mat
                      }
-                     list(pattern_tab = res)
+                     list(corr_tab = res)
                    },
                    aov = {
                      which_aov = if(mSet$settings$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
@@ -108,13 +108,13 @@ shiny::observe({
                        list()
                      }
                    },
-                   volc = {
+                   volcano = {
                      # render results table
-                     res <- if(is.null(mSet$analSet$volc$sig.mat)) data.table::data.table("No significant hits found") else{
-                       rownames(mSet$analSet$volc$sig.mat) <- gsub(rownames(mSet$analSet$volc$sig.mat), pattern = "^X", replacement = "")
-                       rownames(mSet$analSet$volc$sig.mat) <- gsub(rownames(mSet$analSet$volc$sig.mat), pattern = "(\\d+\\.\\d+)(\\.+)", replacement = "\\1/")
-                       mSet$analSet$volc$sig.mat}
-                     list(volc_tab = res)
+                     res <- if(is.null(mSet$analSet$volcano$sig.mat)) data.table::data.table("No significant hits found") else{
+                       rownames(mSet$analSet$volcano$sig.mat) <- gsub(rownames(mSet$analSet$volcano$sig.mat), pattern = "^X", replacement = "")
+                       rownames(mSet$analSet$volcano$sig.mat) <- gsub(rownames(mSet$analSet$volcano$sig.mat), pattern = "(\\d+\\.\\d+)(\\.+)", replacement = "\\1/")
+                       mSet$analSet$volcano$sig.mat}
+                     list(volcano_tab = res)
                    },
                    tsne = {
                      NULL
@@ -219,7 +219,7 @@ shiny::observe({
       })
       
       if(!success){
-        MetaboShiny::metshiAlert("Table rendering failed!")
+        metshiAlert("Table rendering failed!")
       }else{
         mapply(function(mytable, tableName){
           output[[tableName]] <- DT::renderDataTable({
@@ -231,7 +231,7 @@ shiny::observe({
               starCol = data.table::data.table("★" = stars)
               mytable = cbind(starCol, mytable)
             }
-            MetaboShiny::metshiTable(content = mytable, rownames = rns)
+            metshiTable(content = mytable, rownames = rns)
           }, server = FALSE)
         }, toWrap, names(toWrap)) 
       } 

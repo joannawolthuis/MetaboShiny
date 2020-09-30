@@ -207,24 +207,30 @@ shiny::observeEvent(input$metadata_new_add, {
     new_meta <- data.table::fread(meta_path)
     new_meta <- MetaboShiny::reformat.metadata(new_meta)
     colnames(new_meta) <- tolower(colnames(new_meta))
+    mSet <- MetaboShiny::store.mSet(mSet)
     mSet <- MetaboShiny::reset.mSet(mSet,
                                     fn = file.path(lcl$paths$proj_dir, 
                                                    paste0(lcl$proj_name,
                                                           "_ORIG.metshi")))
-    
-    mSet$dataSet$covars <- plyr::join(mSet$dataSet$covars[,"sample"], new_meta[,-c("injection","batch")], type = "left")
-    mSet <- MetaboShiny::store.mSet(mSet)
+    mSet$dataSet$covars <- plyr::join(mSet$dataSet$covars[,"sample"], new_meta, type = "left")
+    for(project in names(mSet$storage)){
+      if("dataSet" %in% names(mSet$storage[[project]])){
+        mSet$storage[[project]]$dataSet$covars <- plyr::join(mSet$storage[[project]]$dataSet$covars[,"sample"], 
+                                                             new_meta,
+                                                             type = "left")
+      }
+    }
     success = T
   })
   if(success){
     mSet <<- mSet
     # overwrite orig?
-    saveRDS(list(data = mSet$dataSet,
-                 analysis = mSet$analSet,
-                 settings = mSet$settings), 
-            file = file.path(lcl$paths$proj_dir, 
-                             paste0(lcl$proj_name,"_ORIG.metshi")))
-    shiny::showNotification("Updated metadata! Your experiment was saved but your current variable reset.")
+    save(mSet, file = file.path(lcl$paths$proj_dir, 
+                                paste0(lcl$proj_name,"_ORIG.metshi")))
+    mSet$dataSet$missing <- mSet$dataSet$orig <- mSet$dataSet$start <- NULL 
+    fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
+    save(mSet, file = fn)
+    shiny::showNotification("Updated metadata!")
     uimanager$refresh <- "general"
   }else{
     shiny::showNotification("Something went wrong! :(")

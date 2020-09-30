@@ -670,7 +670,7 @@ ggPlotVolc <- function(mSet,
                        cf,
                        n=20){
   
-  vcn<-mSet$analSet$volc;
+  vcn<-mSet$analSet$volcano;
   
   if(nrow(vcn$sig.mat)==0){
     shiny::showNotification("No significant hits")
@@ -800,7 +800,7 @@ ggPlotROC <- function(data,
   
   ncomp = length(unique(means.per.comp$comparison))
   if(ncomp > 2){
-    cols = cf(ncomp)+1
+    cols = cf(ncomp + 1)
     class_type = "m"
     try({
       shiny::showNotification("Calculating AUCs per comparison...")
@@ -889,22 +889,20 @@ ggPlotBar <- function(data,
   }
   
   data.subset <- data.ordered[1:topn,]    
-  data.subset$`m/z` <- reorder(x = data.subset$`m/z`, X = -data.subset$importance.mean)
-  
+  data.subset$`m/z` <- gsub("`","",reorder(x = data.subset$`m/z`, X = -data.subset$importance.mean))
+
   p <- ggplot2::ggplot(data.subset, ggplot2::aes(x = `m/z`,
                                                  y = importance.mean,
                                                  text = `m/z`,
                                                  key = `m/z`)) +
     ggplot2::geom_bar(stat = "identity",
                       ggplot2::aes(fill = importance.mean)) +
+    #ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90))+
     ggplot2::scale_fill_gradientn(colors=cf(20)) +
-    
-    ggplot2::theme(axis.text.x=ggplot2::element_blank(),
-                   axis.ticks.x=ggplot2::element_blank())+
     ggplot2::labs(x="Top hits (m/z)",y=if(ml_type == "glmnet") "Times included in final model" else "Relative importance (%)")
   
   if(topn <= 15){
-    p <- p + ggplot2::geom_text(ggplot2::aes(x=`m/z`, y=importance.mean, label=`m/z`
+    p <- p + ggplot2::geom_text(ggplot2::aes(x=`m/z`, y=importance.mean, label=`m/z`,vjust="outward"
     # sapply(`m/z`, function(x){
     #   if(is.na(as.numeric(as.character(x)))){
     #     if(grepl(x, pattern = "_")){
@@ -916,12 +914,13 @@ ggPlotBar <- function(data,
     #     round(as.numeric(as.character(x)),digits=1)
     #   }
     #})
-), size = 4, lineheight = .6, vjust=-1, hjust = 0, angle = 45) + ggplot2::expand_limits(y=max(data.subset$importance) + max(data.subset$importance)*0.1)
+), size = 4, lineheight = .6, vjust=-1, hjust = 0, angle = 45) + ggplot2::expand_limits(y=max(data.subset$importance.mean) + max(data.subset$importance.mean)*0.1)
   }
   
   mzdata <- p$data
   mzdata$`m/z` <- gsub(mzdata$`m/z`, pattern = "`|'", replacement="")
 
+  print("here")
   list(mzdata = mzdata, plot = p)
   
 }

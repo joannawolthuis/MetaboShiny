@@ -23,14 +23,14 @@ shiny::observe({
                  # TODO: use this in venn diagram creation
                  mSet <- MetaboShiny::store.mSet(mSet)
                },
-               pattern = {
+               corr = {
                  # pearson kendall spearman
                  lvls = levels(mSet$dataSet$cls)
-                 pat = input$pattern_seq_order
+                 pat = input$corr_seq_order
                  pat_order = match(lvls,pat)
                  pattern = paste0(pat_order-1, collapse="-")
-                 mSet <- MetaboAnalystR::Match.Pattern(mSet, input$pattern_corr, pattern)
-                 names(mSet$analSet)[names(mSet$analSet) == "corr"] <- "pattern" 
+                 mSet <- MetaboAnalystR::Match.Pattern(mSet, input$corr_corr, pattern)
+                 #names(mSet$analSet)[names(mSet$analSet) == "corr"] <- "pattern" 
                },
                pca = {
                  shiny::withProgress({
@@ -72,15 +72,29 @@ shiny::observe({
                enrich = {
                  shiny::withProgress({
                    
+                   
+                   #=====NEW VER=====
+                   
+                   mSet<-InitDataObjects("mass_all", "mummichog", FALSE)
+                   SetPeakFormat("mpt")
+                   mSet<-UpdateInstrumentParameters(mSet, 5.0, "negative", "yes", 0.02);
+                   mSet<-Read.PeakListData(mSet, "Replacing_with_your_file_path");
+                   mSet<-SanityCheckMummichogData(mSet)
+                   mSet<-SetPeakEnrichMethod(mSet, "mum", "v2")
+                   mSet<-SetMummichogPval(mSet, 0.2)
+                   mSet<-PerformPSEA(mSet, "hsa_mfn", "current", 100)
+                   
+                   #=================
                    enr_mSet <- MetaboAnalystR::InitDataObjects("mass_all", 
                                                                "mummichog",
                                                                FALSE)
                    
                    MetaboAnalystR::SetPeakFormat("rmp")
                    
-                   enr_mSet <- MetaboAnalystR::UpdateInstrumentParameters(enr_mSet, 
-                                                                          mSet$ppm, 
-                                                                          "mixed");
+                   enr_mSet <- MetaboAnalystR::UpdateInstrumentParameters(mSetObj = enr_mSet,
+                                                                          instrumentOpt = mSet$ppm,
+                                                                          msModeOpt = "mixed"
+                                                                          )
                    
                    #similarly to venn diagram
                    flattened <- getTopHits(mSet, 
@@ -629,7 +643,7 @@ shiny::observe({
                    })
                  }
                },
-               volc = {
+               volcano = {
                  shiny::withProgress({
                    mSet <-  MetaboAnalystR::Volcano.Anal(mSet,
                                                          paired = mSet$dataSet$paired, 

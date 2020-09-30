@@ -2,11 +2,13 @@
 
 function(input, output, session) {
   
-  library(MetaboShiny)
   library(data.table)
   library(plotly)
   library(ggplot2)
   library(SPARQL)
+  
+  # EMPTY DEBUG
+  debug_browse_content <- debug_result_filters <- debug_pieinfo <- debug_input <- debug_lcl <- debug_mSet <- debug_matches <- debug_enrich <- debug_selection <- debug_venn_yes <- debug_report_yes <- list()
   
   # FIX FOR NORMALIZATION
   OFFtoJSON <- function(obj, ...){
@@ -817,14 +819,14 @@ omit_unknown = yes')
       list("permz", "meba"),#5
       list("permz", "aov"),#6
       list("statistics", "ml"),#7
-      list("overview", "volc"),#8
+      list("overview", "volcano"),#8
       list("overview", "venn"),#9
       list("overview", "heatmap"),#10
       list("overview", "power"),#11
       list("permz", "tt"),#12
       list("permz", "fc"),#13
       list("dimred", "tsne"),#14
-      list("permz", "pattern"),#15
+      list("permz", "corr"),#15
       list("overview", "enrich")#16
       # list("main", "dimred"),#17
       # list("main", "overview"),#18
@@ -1077,6 +1079,11 @@ omit_unknown = yes')
     }
   })
   
+  # for(store_item in names(mSet$storage)){
+  #   print(store_item)
+  #   print(object.size(mSet$storage[[store_item]]), unit="Mb")
+  # }
+  
   shiny::observeEvent(input$load_mset, {
     # load mset
     shiny::withProgress({
@@ -1101,20 +1108,17 @@ omit_unknown = yes')
   })
   
   shiny::observeEvent(input$debug_metshi, {
-    debug_input <<- shiny::isolate(shiny::reactiveValuesToList(input))
-    debug_lcl <<- lcl
-    debug_mSet <<- mSet
-    debug_matches <<- shown_matches
-    debug_enrich <<- enrich
-    debug_selection <<- my_selection
-    debug_venn_yes <<- venn_yes
-    debug_report_yes <<- report_yes
-    
-    try({
-      debug_browse_content <<- browse_content
-    },silent=T)
-    debug_result_filters <<- result_filters
-    debug_pieinfo <<- pieinfo
+    assign("lcl", lcl, envir = .GlobalEnv)
+    assign("mSet", mSet, envir = .GlobalEnv)
+    assign("input", shiny::isolate(shiny::reactiveValuesToList(input)), envir = .GlobalEnv)
+    assign("enrich", enrich, envir = .GlobalEnv)
+    assign("shown_matches", shown_matches, envir = .GlobalEnv)
+    assign("my_selection", my_selection, envir = .GlobalEnv)
+    assign("browse_content", browse_content, envir = .GlobalEnv)
+    assign("pieinfo", pieinfo, envir = .GlobalEnv)
+    assign("result_filters", result_filters, envir = .GlobalEnv)
+    assign("report_yes", report_yes, envir = .GlobalEnv)
+    assign("venn_yes", venn_yes, envir = .GlobalEnv)
   })
   
   shiny::observeEvent(input$ml_train_ss, {
@@ -1214,8 +1218,8 @@ omit_unknown = yes')
   
   analyses <- c("ml", "wordcloud", "plsda", 
                 "pca", "tsne", "tt", "aov",
-                "fc", "volc", "heatmap", 
-                "meba", "asca", "pattern", 
+                "fc", "volcano", "heatmap", 
+                "meba", "asca", "corr", 
                 "enrich", "network")
   
   lapply(analyses, function(an){

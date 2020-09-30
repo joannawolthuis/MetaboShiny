@@ -192,8 +192,8 @@ shiny::observe({
                    vennrich = {
                      NULL
                    },
-                   pattern = {
-                     output$jqui_ui <- shiny::renderUI(suppressWarnings(shinyjqui::orderInput(inputId = 'pattern_seq',
+                   corr = {
+                     output$jqui_ui <- shiny::renderUI(suppressWarnings(shinyjqui::orderInput(inputId = 'corr_seq',
                                                                              label = 'Drag panels to select pattern for correlation (low-high)', 
                                                                              items = {
                                                                                lvls = levels(mSet$dataSet$cls)

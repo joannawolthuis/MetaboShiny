@@ -286,7 +286,7 @@ getDefaultCondition <- function(csv, exp.vars, excl.rows, excl.cond, min.lev){
   min.grpsize = apply(csv[,names(unique.levels), with=F],2,function(x)min(table(x)))
   # use this as the default selected experimental variable (user can change later)
   which.default <- unique.levels[which(unique.levels == min(unique.levels[which(unique.levels > min.lev)]) &
-                                       min.grpsize >= 3)][1]
+                                         min.grpsize >= 3)][1]
   condition = names(which.default)
   condition
 }
@@ -622,37 +622,37 @@ getTopHits <- function(mSet, expnames, top){
                      },
                      aov = {
                        res = list(rownames(analysis$aov$sig.mat[order(analysis$aov$sig.mat[,2],
-                                                                                 decreasing = F),]))
+                                                                      decreasing = F),]))
                        names(res) = base_name
                        res
                      },
                      aov2 = {
                        res = list(rownames(analysis$aov2$sig.mat[order(analysis$aov2$sig.mat[,"Interaction(adj.p)"],
-                                                                                  decreasing = F),]))
+                                                                       decreasing = F),]))
                        names(res) = base_name
                        res
                      },
                      asca = {
                        res = list(rownames(analysis$asca$sig.list$Model.ab[order(analysis$asca$sig.list$Model.ab[,1],
-                                                                                            decreasing = T),]))
+                                                                                 decreasing = T),]))
                        names(res) = base_name
                        res
                      },
                      MB = {
                        res = list(rownames(analysis$MB$stats)[order(analysis$MB$stats[,1],
-                                                                                decreasing = T)])
+                                                                    decreasing = T)])
                        names(res) = base_name
                        res
                      },
                      tt = {
                        res = list(rownames(analysis$tt$sig.mat[order(analysis$tt$sig.mat[,2],
-                                                                                decreasing = F),]))
+                                                                     decreasing = F),]))
                        names(res) = base_name
                        res
                      },
                      fc = {
                        res = list(rownames(analysis$fc$sig.mat[order(abs(analysis$fc$sig.mat[,2]),
-                                                                                decreasing = F),]))
+                                                                     decreasing = F),]))
                        names(res) = base_name
                        res
                      },
@@ -683,7 +683,7 @@ getTopHits <- function(mSet, expnames, top){
                        # - - -
                        res
                      },
-                     volc = {
+                     volcano = {
                        res <- list(rownames(analysis$volcano$sig.mat))
                        names(res) = base_name
                        res
@@ -726,439 +726,439 @@ getTopHits <- function(mSet, expnames, top){
 getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
   toWrap <- switch(do,
                    general = {
-           # make sidebar
-           # make pca, plsda, ml(make plotmanager do that)
-           # update select input bars with current variable and covariables defined in excel
-           if(!is.null(mSet)){
-             varNormPlots <- MetaboShiny::ggplotNormSummary(mSet = mSet,
-                                                            cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-             
-             sampNormPlots <- MetaboShiny::ggplotSampleNormSummary(mSet,
-                                                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-             
-             list(var1=varNormPlots$tl, var2=varNormPlots$bl,
-                  var3=varNormPlots$tr, var4=varNormPlots$br,
-                  samp1=sampNormPlots$tl, samp2=sampNormPlots$bl, 
-                  samp3=sampNormPlots$tr, samp4=sampNormPlots$br)
-             
-           }},
-         venn = {
-           # get user input for how many top values to use for venn
-           top = input$venn_tophits
-           if(nrow(venn_yes$now) > 4 | nrow(venn_yes$now) <= 1){
-             MetaboShiny::metshiAlert("Can only take more than 2 and less than five analyses!")
-             list()
-           }else{
-             p <- MetaboShiny::ggPlotVenn(mSet = mSet,
-                                          venn_yes = as.list(venn_yes),
-                                          top = input$venn_tophits,
-                                          cols = lcl$aes$mycols,
-                                          cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-             lcl$vectors$venn_lists <- p$info
-             list(venn_plot = p$plot)
-           }
-         },
-         enrich = {
-           p = MetaboShiny::ggPlotMummi(mSet$analSet$enrich, 
-                                        if(input$mummi_enr_method) "mummichog" else "gsea",
-                                        cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-           list(enrich_plot = p)
-         },
-         summary = {
-           p = MetaboShiny::ggplotSummary(mSet, my_selection$mz, 
-                                          shape.fac = input$shape_var, 
-                                          cols = lcl$aes$mycols, 
-                                          cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                          styles = input$ggplot_sum_style,
-                                          add_stats = input$ggplot_sum_stats, 
-                                          color.fac = input$col_var, 
-                                          text.fac = input$txt_var)
-           
-           list(summary_plot = p)
-         },
-         pattern = {
-           p = MetaboShiny::ggPlotPattern(mSet,
-                                          n = input$pattern_topn,
-                                          cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-           
-           list(pattern_plot = p)
-         },
-         aov = { # render manhattan-like plot for UI
-           p = MetaboShiny::ggPlotAOV(mSet,
-                                      cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 20)
-           
-           list(aov_plot = p)
-         },
-         volc = {
-           # render volcano plot with user defined colours
-           p = MetaboShiny::ggPlotVolc(mSet,
-                                       cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                       20)
-           
-           list(volc_plot = p)
-         },
-         tsne = {
-           mode <- if(mSet$settings$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
-             "ipca" # interactive PCA (old name, i like tpca more :P )
-           }else{
-             "normal" # normal pca
-           }
-           
-           if("tsne" %in% names(mSet$analSet)){
-             if(input$tsne_2d3d | !input$ggplotly){ # check if switch button is in 2d or 3d mode
-               # render 2d plot
-               p = MetaboShiny::plotPCA.2d(mSet, 
-                                           cols = lcl$aes$mycols,
-                                           pcx = 1,
-                                           pcy = 2, 
-                                           type = "tsne",
-                                           mode = mode,
-                                           shape.fac = input$shape_var,
-                                           col.fac = input$col_var
-               )
-               
-             }else{
-               # render 3d plot
-               p = MetaboShiny::plotPCA.3d(mSet, 
-                                           lcl$aes$mycols,
-                                           pcx = 1,
-                                           pcy = 2,
-                                           pcz = 3,
-                                           type = "tsne",
-                                           mode = mode,
-                                           shape.fac = input$shape_var,
-                                           font = lcl$aes$font,
-                                           col.fac = input$col_var,
-                                           cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-             }
-           }
-           list(tsne_plot = p)
-         },
-         pca = {
-           if("pca" %in% names(mSet$analSet)){
-             scree = MetaboShiny::ggPlotScree(mSet,
-                                              cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-             # chekc which mode we're in
-             mode <- if(mSet$settings$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
-               "ipca" # interactive PCA (old name, i like tpca more :P )
-             }else{
-               "normal" # normal pca
-             }
-             
-             if(input$pca_2d3d | !input$ggplotly){ # check if switch button is in 2d or 3d mode
-               # render 2d plot
-               pca = MetaboShiny::plotPCA.2d(mSet, 
-                                             cols = lcl$aes$mycols,
-                                             pcx = input$pca_x,
-                                             pcy = input$pca_y, 
-                                             mode = mode,
-                                             type = "pca",
-                                             col.fac = input$col_var,
-                                             shape.fac = input$shape_var)
-               loadings = MetaboShiny::plotPCAloadings.2d(mSet,pcx = input$pca_x,
-                                                          pcy = input$pca_y, 
-                                                          type = "pca",
-                                                          cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-             }else{
-               # render 3d plot
-               pca = MetaboShiny::plotPCA.3d(mSet, 
-                                             pcx = input$pca_x,
-                                             pcy = input$pca_y,
-                                             pcz = input$pca_z, 
-                                             type = "pca",
-                                             col.fac = input$col_var,
-                                             mode = mode,
-                                             cols = lcl$aes$mycols,
-                                             shape.fac = input$shape_var,
-                                             font = lcl$aes$font,
-                                             cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-               loadings = MetaboShiny::plotPCAloadings.3d(mSet,
-                                                          pcx = input$pca_x,
-                                                          pcy = input$pca_y,
-                                                          pcz = input$pca_z, 
-                                                          type = "pca",
-                                                          font = lcl$aes$font,
-                                                          cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-             }
-             list(plot_pca = pca, plot_pca_loadings = loadings, pca_scree = scree)
-           }else{
-             NULL
-           }
-         },
-         plsda = {
-           
-           if("plsda" %in% names(mSet$analSet)){ # if plsda has been performed...
-             
-             mode <- if(mSet$settings$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
-               "ipca" # interactive PCA (old name, i like tpca more :P )
-             }else{
-               "normal" # normal pca
-             }
-             
-             # render cross validation plot
-             cv <- MetaboShiny::ggPlotClass(mSet, cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-             # render permutation plot
-             perm <- MetaboShiny::ggPlotPerm(mSet,cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-             # see PCA - render 2d or 3d plots, just with plsda as mode instead
-             if(input$plsda_2d3d | !input$ggplotly){
-               # 2d
-               plsda <- MetaboShiny::plotPCA.2d(mSet, lcl$aes$mycols,
-                                                pcx = input$plsda_x,
-                                                pcy = input$plsda_y, 
-                                                type = "plsda",
-                                                mode = mode,
-                                                col.fac = input$col_var,
-                                                shape.fac = input$shape_var,
-                                                cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-               
-               loadings <- MetaboShiny::plotPCAloadings.2d(mSet,pcx = input$plsda_x,
-                                                           pcy = input$plsda_y, 
-                                                           type = "plsda",
-                                                           cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-             }else{
-               # 3d
-               plsda <- MetaboShiny::plotPCA.3d(mSet, lcl$aes$mycols,
-                                                pcx = input$plsda_x,
-                                                pcy = input$plsda_y,
-                                                pcz = input$plsda_z, 
-                                                type = "plsda",
-                                                mode = mode,
-                                                col.fac = input$col_var,
-                                                shape.fac = input$shape_var,
-                                                font = lcl$aes$font, 
-                                                cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-               
-               loadings <- MetaboShiny::plotPCAloadings.3d(mSet,
-                                                           pcx = input$plsda_x,
-                                                           pcy = input$plsda_y,
-                                                           pcz = input$plsda_z, 
-                                                           type = "plsda",
-                                                           font = lcl$aes$font,
-                                                           cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-             }
-             list(plot_plsda = plsda, 
-                  plot_plsda_loadings = loadings,
-                  plsda_cv_plot = cv,
-                  plsda_perm_plot = perm)
-           }else{NULL}
-         },
-         ml = {
-           if("ml" %in% names(mSet$analSet)){
-             ml_roc = MetaboShiny::ggPlotROC(data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc,
-                                             attempts = input$ml_attempts,
-                                             cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-             
-             barplot_data <- MetaboShiny::ggPlotBar(data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar,
-                                                     attempts = input$ml_attempts,
-                                                     cf =gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                                     topn = input$ml_top_x,
-                                                     ml_name = mSet$analSet$ml$last$name,
-                                                     ml_type = mSet$analSet$ml$last$method)
-             
-             ml_barplot <- barplot_data$plot
-             lcl$tables$ml_bar <- barplot_data$mzdata
-           }
-           list(ml_roc = ml_roc, 
-                ml_bar = ml_barplot)
-         },
-         multigroup = {
-           p = MetaboShiny::ggplotSummary(mSet, my_selection$mz, 
-                                          shape.fac = input$shape_var, 
-                                          cols = lcl$aes$mycols, 
-                                          cf=gbl$functions$color.functions[[lcl$aes$spectrum]], 
-                                          mode = "multi",
-                                          styles = input$ggplot_sum_style,
-                                          add_stats = input$ggplot_sum_stats, color.fac = input$col_var, text.fac = input$txt_var)
-           list(summary_plot = p)
-         },
-         meba = {
-           p = MetaboShiny::ggplotMeba(mSet, my_selection$mz,
-                                       draw.average = T,
+                     # make sidebar
+                     # make pca, plsda, ml(make plotmanager do that)
+                     # update select input bars with current variable and covariables defined in excel
+                     if(!is.null(mSet)){
+                       varNormPlots <- ggplotNormSummary(mSet = mSet,
+                                                         cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       
+                       sampNormPlots <- ggplotSampleNormSummary(mSet,
+                                                                cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       
+                       list(var1=varNormPlots$tl, var2=varNormPlots$bl,
+                            var3=varNormPlots$tr, var4=varNormPlots$br,
+                            samp1=sampNormPlots$tl, samp2=sampNormPlots$bl, 
+                            samp3=sampNormPlots$tr, samp4=sampNormPlots$br)
+                       
+                     }},
+                   venn = {
+                     # get user input for how many top values to use for venn
+                     top = input$venn_tophits
+                     if(nrow(venn_yes$now) > 4 | nrow(venn_yes$now) <= 1){
+                       metshiAlert("Can only take more than 2 and less than five analyses!")
+                       list()
+                     }else{
+                       p <- ggPlotVenn(mSet = mSet,
+                                       venn_yes = as.list(venn_yes),
+                                       top = input$venn_tophits,
                                        cols = lcl$aes$mycols,
-                                       cf=gbl$functions$color.functions[[lcl$aes$spectrum]])
-           list(summary_plot = p)
-         },
-         tt = {
-           # render manhattan-like plot for UI
-           p = MetaboShiny::ggPlotTT(mSet,
-                                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 
-                                     20)
-           
-           list(tt_plot = p)
-         },
-         fc = {
-           # render manhattan-like plot for UI
-           p <- MetaboShiny::ggPlotFC(mSet,
-                                      gbl$functions$color.functions[[lcl$aes$spectrum]], 20)
-           
-           list(fc_plot = p)
-         },
-         network = {
-           
-           pval = input$network_sign
-           
-           mat = mSet$analSet$network$rcorr
-           matp = mat$P
-           matr = mat$r
-           matr[matp < pval] <- 0
-           igr = igraph::graph.adjacency(adjmatrix = matr,
-                                         weighted = T,
-                                         diag = F)
-           netw = visNetwork::visIgraph(igr)
-           
-           cf = gbl$functions$color.functions[[lcl$aes$spectrum]]
-           cols = cf(nrow(netw$x$nodes))
-           
-           netw$x$nodes$color <- sapply(netw$x$nodes$id, function(id){
-             cols[which(mSet$analSet$network$order == id)]
-           })
-           netw$x$nodes$title = netw$x$nodes$label
-           
-           netw$x$edges$value <- netw$x$edges$weight
-           netw$x$edges$title <- paste0("r=",netw$x$edges$weight)
-           
-           netw$x$edges$color <- c("black")
-           
-           p = netw %>% 
-             visNetwork::visOptions(highlightNearest = TRUE,
-                                    collapse = T,
-                                    autoResize = T,
-                                    nodesIdSelection = TRUE) %>% 
-             visNetwork::visNodes(borderWidth = 2,font = list(size=22,
-                                                              face=lcl$aes$font$family)) %>%
-             visNetwork::visEdges(scaling = list(min = 0.5,
-                                                 max = 6)) %>%
-             visNetwork::visInteraction(#navigationButtons = TRUE,
-               keyboard = T)
-           if(!input$network_auto){
-             if(input$network_style == "hierarchical"){
-               p = p %>% visNetwork::visHierarchicalLayout()  
-             }else{
-               p = p %>% visNetwork::visIgraphLayout(layout = input$network_style)
-             }
-           }
-           # - - - - - - -
-           matr[matr==1 | lower.tri(matr)] <- NA
-           
-           p2 = heatmaply::heatmaply(matr,
-                                     Colv = T,
-                                     Rowv = T,
-                                     branches_lwd = 0.3,
-                                     margins = c(0, 0, 0, 0),
-                                     col = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                     column_text_angle = 90,
-                                     ylab = "m/z\n",
-                                     showticklabels = if(ncol(matr) <= 95) c(F,T) else c(F,F),
-                                     symm=T,
-                                     symbreaks=T,
-                                     dendrogram="none"
-           )
-           lcl$vectors$network_heatmap <- p2$x$layout$yaxis$ticktext
-           
-           # - - - - - - - 
-           list(network = p, 
-                network_heatmap = p2)
-         },
-         heatmap = {
-           
-           breaks = seq(min(mSet$dataSet$norm), 
-                        max(mSet$dataSet$norm), 
-                        length = 256/2)
-           
-           p = {
-             
-             if(!is.null(mSet$analSet$heatmap$matrix)){
-               # create heatmap object
-               hmap <- suppressWarnings({
-                 if(input$heatlimits){
-                   heatmaply::heatmaply(mSet$analSet$heatmap$matrix[1:if(input$heatmap_topn < nrow(mSet$analSet$heatmap$matrix)) input$heatmap_topn else nrow(mSet$analSet$heatmap$matrix),],
-                                        Colv = mSet$analSet$heatmap$my_order,
-                                        Rowv = T,
-                                        branches_lwd = 0.3,
-                                        margins = c(60, 0, NA, 50),
-                                        col = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                        col_side_colors = mSet$analSet$heatmap$translator[,!1],
-                                        col_side_palette = mSet$analSet$heatmap$colors,
-                                        subplot_widths = c(.9,.1),
-                                        subplot_heights = if(mSet$analSet$heatmap$my_order) c(.1, .05, .85) else c(.05,.95),
-                                        column_text_angle = 90,
-                                        xlab = "Sample",
-                                        ylab = "m/z",
-                                        showticklabels = c(T,F),
-                                        limits = c(min(mSet$dataSet$norm), max(mSet$dataSet$norm)),
-                                        #symm=F,symkey=F,
-                                        symbreaks=T
-                                        #label_names = c("m/z", "sample", "intensity") #breaks side colours...
-                   )
-                 }else{
-                   heatmaply::heatmaply(mSet$analSet$heatmap$matrix[1:if(input$heatmap_topn < nrow(mSet$analSet$heatmap$matrix)) input$heatmap_topn else nrow(mSet$analSet$heatmap$matrix),],
-                                        Colv = mSet$analSet$heatmap$my_order,
-                                        Rowv = T,
-                                        branches_lwd = 0.3,
-                                        margins = c(60, 0, NA, 50),
-                                        colors = gbl$functions$color.functions[[lcl$aes$spectrum]](256),
-                                        col_side_colors = mSet$analSet$heatmap$translator[,!1],
-                                        col_side_palette = mSet$analSet$heatmap$colors,
-                                        subplot_widths = c(.9,.1),
-                                        subplot_heights = if(mSet$analSet$heatmap$my_order) c(.1, .05, .85) else c(.05,.95),
-                                        column_text_angle = 90,
-                                        xlab = "Sample",
-                                        ylab = "m/z",
-                                        #showticklabels = c(T,F),
-                                        #symm=F,symkey=F,
-                                        symbreaks=T
-                                        #label_names = c("m/z", "sample", "intensity") #breaks side colours...
-                   )
-                 }
-               })
-               hmap$x$layout$annotations[[1]]$text <- ""
-               # save the order of mzs for later clicking functionality
-               lcl$vectors$heatmap <- hmap$x$layout[[if(mSet$settings$exp.type %in% c("2f", "t", "t1f")) "yaxis2" else "yaxis3"]]$ticktext 
-               # return
-               hmap
-             }else{
-               data = data.frame(text = "No significant hits available!\nPlease try alternative source statistics below.")
-               ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10) +
-                 ggplot2::theme(text = ggplot2::element_text(family = lcl$aes$font$family)) + ggplot2::theme_bw()
-             }
-           }
-           list(heatmap = p)
-         }, 
-         power = {
-           p = {
-             if("power" %in% names(mSet$analSet)){
-               MetaboShiny::ggPlotPower(mSet, 
-                                        max_samples = max(mSet$analSet$power[[1]]$Jpred),
-                                        comparisons = names(mSet$analSet$power),
+                                       cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       lcl$vectors$venn_lists <- p$info
+                       list(venn_plot = p$plot)
+                     }
+                   },
+                   enrich = {
+                     p = ggPlotMummi(mSet$analSet$enrich, 
+                                     if(input$mummi_enr_method) "mummichog" else "gsea",
+                                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                     list(enrich_plot = p)
+                   },
+                   summary = {
+                     p = ggplotSummary(mSet, my_selection$mz, 
+                                       shape.fac = input$shape_var, 
+                                       cols = lcl$aes$mycols, 
+                                       cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                       styles = input$ggplot_sum_style,
+                                       add_stats = input$ggplot_sum_stats, 
+                                       color.fac = input$col_var, 
+                                       text.fac = input$txt_var)
+                     
+                     list(summary_plot = p)
+                   },
+                   corr = {
+                     p = ggPlotPattern(mSet,
+                                       n = input$corr_topn,
+                                       cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                     
+                     list(corr_plot = p)
+                   },
+                   aov = { # render manhattan-like plot for UI
+                     p = ggPlotAOV(mSet,
+                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 20)
+                     
+                     list(aov_plot = p)
+                   },
+                   volcano = {
+                     # render volcano plot with user defined colours
+                     p = ggPlotVolc(mSet,
+                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                    20)
+                     
+                     list(volcano_plot = p)
+                   },
+                   tsne = {
+                     mode <- if(mSet$settings$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
+                       "ipca" # interactive PCA (old name, i like tpca more :P )
+                     }else{
+                       "normal" # normal pca
+                     }
+                     
+                     if("tsne" %in% names(mSet$analSet)){
+                       if(input$tsne_2d3d | !input$ggplotly){ # check if switch button is in 2d or 3d mode
+                         # render 2d plot
+                         p = plotPCA.2d(mSet, 
+                                        cols = lcl$aes$mycols,
+                                        pcx = 1,
+                                        pcy = 2, 
+                                        type = "tsne",
+                                        mode = mode,
+                                        shape.fac = input$shape_var,
+                                        col.fac = input$col_var
+                         )
+                         
+                       }else{
+                         # render 3d plot
+                         p = plotPCA.3d(mSet, 
+                                        lcl$aes$mycols,
+                                        pcx = 1,
+                                        pcy = 2,
+                                        pcz = 3,
+                                        type = "tsne",
+                                        mode = mode,
+                                        shape.fac = input$shape_var,
+                                        font = lcl$aes$font,
+                                        col.fac = input$col_var,
                                         cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-             }else{
-               NULL
-             }
-           }
-           list(power_plot = p)
-         },
-         wordcloud = {
-           if(nrow(lcl$tables$wordcloud_filt) > 0){
-             topWords = if(input$wordcloud_topWords > nrow(lcl$tables$wordcloud_filt)) nrow(lcl$tables$wordcloud_filt) else input$wordcloud_topWords
-             output$wordcloud <-  wordcloud2::renderWordcloud2({ 
-               wordcloud2::wordcloud2(data.table::as.data.table(lcl$tables$wordcloud_filt)[order(n, decreasing = T)][1:topWords,], color = "random-light", size=.7, shape = "circle")
-             })
-             p = {
-               wcdata = data.table::as.data.table(lcl$tables$wordcloud_filt)[order(n, decreasing = T)][1:topWords,]
-               colnames(wcdata)[2] <- "freq"
-               MetaboShiny::ggPlotWordBar(wcdata = wcdata,
+                       }
+                     }
+                     list(tsne_plot = p)
+                   },
+                   pca = {
+                     if("pca" %in% names(mSet$analSet)){
+                       scree = ggPlotScree(mSet,
+                                           cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       # chekc which mode we're in
+                       mode <- if(mSet$settings$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
+                         "ipca" # interactive PCA (old name, i like tpca more :P )
+                       }else{
+                         "normal" # normal pca
+                       }
+                       
+                       if(input$pca_2d3d | !input$ggplotly){ # check if switch button is in 2d or 3d mode
+                         # render 2d plot
+                         pca = plotPCA.2d(mSet, 
+                                          cols = lcl$aes$mycols,
+                                          pcx = input$pca_x,
+                                          pcy = input$pca_y, 
+                                          mode = mode,
+                                          type = "pca",
+                                          col.fac = input$col_var,
+                                          shape.fac = input$shape_var)
+                         loadings = plotPCAloadings.2d(mSet,pcx = input$pca_x,
+                                                       pcy = input$pca_y, 
+                                                       type = "pca",
+                                                       cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       }else{
+                         # render 3d plot
+                         pca = plotPCA.3d(mSet, 
+                                          pcx = input$pca_x,
+                                          pcy = input$pca_y,
+                                          pcz = input$pca_z, 
+                                          type = "pca",
+                                          col.fac = input$col_var,
+                                          mode = mode,
+                                          cols = lcl$aes$mycols,
+                                          shape.fac = input$shape_var,
+                                          font = lcl$aes$font,
                                           cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-             }
-           }
-           list(wordbar = p)
-         }
+                         loadings = plotPCAloadings.3d(mSet,
+                                                       pcx = input$pca_x,
+                                                       pcy = input$pca_y,
+                                                       pcz = input$pca_z, 
+                                                       type = "pca",
+                                                       font = lcl$aes$font,
+                                                       cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       }
+                       list(plot_pca = pca, plot_pca_loadings = loadings, pca_scree = scree)
+                     }else{
+                       NULL
+                     }
+                   },
+                   plsda = {
+                     
+                     if("plsda" %in% names(mSet$analSet)){ # if plsda has been performed...
+                       
+                       mode <- if(mSet$settings$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
+                         "ipca" # interactive PCA (old name, i like tpca more :P )
+                       }else{
+                         "normal" # normal pca
+                       }
+                       
+                       # render cross validation plot
+                       cv <- ggPlotClass(mSet, cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       # render permutation plot
+                       perm <- ggPlotPerm(mSet,cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       # see PCA - render 2d or 3d plots, just with plsda as mode instead
+                       if(input$plsda_2d3d | !input$ggplotly){
+                         # 2d
+                         plsda <- plotPCA.2d(mSet, lcl$aes$mycols,
+                                             pcx = input$plsda_x,
+                                             pcy = input$plsda_y, 
+                                             type = "plsda",
+                                             mode = mode,
+                                             col.fac = input$col_var,
+                                             shape.fac = input$shape_var,
+                                             cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                         
+                         loadings <- plotPCAloadings.2d(mSet,pcx = input$plsda_x,
+                                                        pcy = input$plsda_y, 
+                                                        type = "plsda",
+                                                        cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       }else{
+                         # 3d
+                         plsda <- plotPCA.3d(mSet, lcl$aes$mycols,
+                                             pcx = input$plsda_x,
+                                             pcy = input$plsda_y,
+                                             pcz = input$plsda_z, 
+                                             type = "plsda",
+                                             mode = mode,
+                                             col.fac = input$col_var,
+                                             shape.fac = input$shape_var,
+                                             font = lcl$aes$font, 
+                                             cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                         
+                         loadings <- plotPCAloadings.3d(mSet,
+                                                        pcx = input$plsda_x,
+                                                        pcy = input$plsda_y,
+                                                        pcz = input$plsda_z, 
+                                                        type = "plsda",
+                                                        font = lcl$aes$font,
+                                                        cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       }
+                       list(plot_plsda = plsda, 
+                            plot_plsda_loadings = loadings,
+                            plsda_cv_plot = cv,
+                            plsda_perm_plot = perm)
+                     }else{NULL}
+                   },
+                   ml = {
+                     if("ml" %in% names(mSet$analSet)){
+                       ml_roc = ggPlotROC(data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc,
+                                          attempts = input$ml_attempts,
+                                          cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       
+                       barplot_data <- ggPlotBar(data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar,
+                                                 attempts = input$ml_attempts,
+                                                 cf =gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                                 topn = input$ml_top_x,
+                                                 ml_name = mSet$analSet$ml$last$name,
+                                                 ml_type = mSet$analSet$ml$last$method)
+                       
+                       ml_barplot <- barplot_data$plot
+                       lcl$tables$ml_bar <- barplot_data$mzdata
+                     }
+                     list(ml_roc = ml_roc, 
+                          ml_bar = ml_barplot)
+                   },
+                   multigroup = {
+                     p = ggplotSummary(mSet, my_selection$mz, 
+                                       shape.fac = input$shape_var, 
+                                       cols = lcl$aes$mycols, 
+                                       cf=gbl$functions$color.functions[[lcl$aes$spectrum]], 
+                                       mode = "multi",
+                                       styles = input$ggplot_sum_style,
+                                       add_stats = input$ggplot_sum_stats, color.fac = input$col_var, text.fac = input$txt_var)
+                     list(summary_plot = p)
+                   },
+                   meba = {
+                     p = ggplotMeba(mSet, my_selection$mz,
+                                    draw.average = T,
+                                    cols = lcl$aes$mycols,
+                                    cf=gbl$functions$color.functions[[lcl$aes$spectrum]])
+                     list(summary_plot = p)
+                   },
+                   tt = {
+                     # render manhattan-like plot for UI
+                     p = ggPlotTT(mSet,
+                                  cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 
+                                  20)
+                     
+                     list(tt_plot = p)
+                   },
+                   fc = {
+                     # render manhattan-like plot for UI
+                     p <- ggPlotFC(mSet,
+                                   gbl$functions$color.functions[[lcl$aes$spectrum]], 20)
+                     
+                     list(fc_plot = p)
+                   },
+                   network = {
+                     
+                     pval = input$network_sign
+                     
+                     mat = mSet$analSet$network$rcorr
+                     matp = mat$P
+                     matr = mat$r
+                     matr[matp < pval] <- 0
+                     igr = igraph::graph.adjacency(adjmatrix = matr,
+                                                   weighted = T,
+                                                   diag = F)
+                     netw = visNetwork::visIgraph(igr)
+                     
+                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]]
+                     cols = cf(nrow(netw$x$nodes))
+                     
+                     netw$x$nodes$color <- sapply(netw$x$nodes$id, function(id){
+                       cols[which(mSet$analSet$network$order == id)]
+                     })
+                     netw$x$nodes$title = netw$x$nodes$label
+                     
+                     netw$x$edges$value <- netw$x$edges$weight
+                     netw$x$edges$title <- paste0("r=",netw$x$edges$weight)
+                     
+                     netw$x$edges$color <- c("black")
+                     
+                     p = netw %>% 
+                       visNetwork::visOptions(highlightNearest = TRUE,
+                                              collapse = T,
+                                              autoResize = T,
+                                              nodesIdSelection = TRUE) %>% 
+                       visNetwork::visNodes(borderWidth = 2,font = list(size=22,
+                                                                        face=lcl$aes$font$family)) %>%
+                       visNetwork::visEdges(scaling = list(min = 0.5,
+                                                           max = 6)) %>%
+                       visNetwork::visInteraction(#navigationButtons = TRUE,
+                         keyboard = T)
+                     if(!input$network_auto){
+                       if(input$network_style == "hierarchical"){
+                         p = p %>% visNetwork::visHierarchicalLayout()  
+                       }else{
+                         p = p %>% visNetwork::visIgraphLayout(layout = input$network_style)
+                       }
+                     }
+                     # - - - - - - -
+                     matr[matr==1 | lower.tri(matr)] <- NA
+                     
+                     p2 = heatmaply::heatmaply(matr,
+                                               Colv = T,
+                                               Rowv = T,
+                                               branches_lwd = 0.3,
+                                               margins = c(0, 0, 0, 0),
+                                               col = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                               column_text_angle = 90,
+                                               ylab = "m/z\n",
+                                               showticklabels = if(ncol(matr) <= 95) c(F,T) else c(F,F),
+                                               symm=T,
+                                               symbreaks=T,
+                                               dendrogram="none"
+                     )
+                     lcl$vectors$network_heatmap <- p2$x$layout$yaxis$ticktext
+                     
+                     # - - - - - - - 
+                     list(network = p, 
+                          network_heatmap = p2)
+                   },
+                   heatmap = {
+                     
+                     breaks = seq(min(mSet$dataSet$norm), 
+                                  max(mSet$dataSet$norm), 
+                                  length = 256/2)
+                     
+                     p = {
+                       
+                       if(!is.null(mSet$analSet$heatmap$matrix)){
+                         # create heatmap object
+                         hmap <- suppressWarnings({
+                           if(input$heatlimits){
+                             heatmaply::heatmaply(mSet$analSet$heatmap$matrix[1:if(input$heatmap_topn < nrow(mSet$analSet$heatmap$matrix)) input$heatmap_topn else nrow(mSet$analSet$heatmap$matrix),],
+                                                  Colv = mSet$analSet$heatmap$my_order,
+                                                  Rowv = T,
+                                                  branches_lwd = 0.3,
+                                                  margins = c(60, 0, NA, 50),
+                                                  col = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                                  col_side_colors = mSet$analSet$heatmap$translator[,!1],
+                                                  col_side_palette = mSet$analSet$heatmap$colors,
+                                                  subplot_widths = c(.9,.1),
+                                                  subplot_heights = if(mSet$analSet$heatmap$my_order) c(.1, .05, .85) else c(.05,.95),
+                                                  column_text_angle = 90,
+                                                  xlab = "Sample",
+                                                  ylab = "m/z",
+                                                  showticklabels = c(T,F),
+                                                  limits = c(min(mSet$dataSet$norm), max(mSet$dataSet$norm)),
+                                                  #symm=F,symkey=F,
+                                                  symbreaks=T
+                                                  #label_names = c("m/z", "sample", "intensity") #breaks side colours...
+                             )
+                           }else{
+                             heatmaply::heatmaply(mSet$analSet$heatmap$matrix[1:if(input$heatmap_topn < nrow(mSet$analSet$heatmap$matrix)) input$heatmap_topn else nrow(mSet$analSet$heatmap$matrix),],
+                                                  Colv = mSet$analSet$heatmap$my_order,
+                                                  Rowv = T,
+                                                  branches_lwd = 0.3,
+                                                  margins = c(60, 0, NA, 50),
+                                                  colors = gbl$functions$color.functions[[lcl$aes$spectrum]](256),
+                                                  col_side_colors = mSet$analSet$heatmap$translator[,!1],
+                                                  col_side_palette = mSet$analSet$heatmap$colors,
+                                                  subplot_widths = c(.9,.1),
+                                                  subplot_heights = if(mSet$analSet$heatmap$my_order) c(.1, .05, .85) else c(.05,.95),
+                                                  column_text_angle = 90,
+                                                  xlab = "Sample",
+                                                  ylab = "m/z",
+                                                  #showticklabels = c(T,F),
+                                                  #symm=F,symkey=F,
+                                                  symbreaks=T
+                                                  #label_names = c("m/z", "sample", "intensity") #breaks side colours...
+                             )
+                           }
+                         })
+                         hmap$x$layout$annotations[[1]]$text <- ""
+                         # save the order of mzs for later clicking functionality
+                         lcl$vectors$heatmap <- hmap$x$layout[[if(mSet$settings$exp.type %in% c("2f", "t", "t1f")) "yaxis2" else "yaxis3"]]$ticktext 
+                         # return
+                         hmap
+                       }else{
+                         data = data.frame(text = "No significant hits available!\nPlease try alternative source statistics below.")
+                         ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10) +
+                           ggplot2::theme(text = ggplot2::element_text(family = lcl$aes$font$family)) + ggplot2::theme_bw()
+                       }
+                     }
+                     list(heatmap = p)
+                   }, 
+                   power = {
+                     p = {
+                       if("power" %in% names(mSet$analSet)){
+                         ggPlotPower(mSet, 
+                                     max_samples = max(mSet$analSet$power[[1]]$Jpred),
+                                     comparisons = names(mSet$analSet$power),
+                                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       }else{
+                         NULL
+                       }
+                     }
+                     list(power_plot = p)
+                   },
+                   wordcloud = {
+                     if(nrow(lcl$tables$wordcloud_filt) > 0){
+                       topWords = if(input$wordcloud_topWords > nrow(lcl$tables$wordcloud_filt)) nrow(lcl$tables$wordcloud_filt) else input$wordcloud_topWords
+                       wordcloud = wordcloud2::wordcloud2(data.table::as.data.table(lcl$tables$wordcloud_filt)[order(n, decreasing = T)][1:topWords,], color = "random-light", size=.7, shape = "circle")
+                       wordbar = {
+                         wcdata = data.table::as.data.table(lcl$tables$wordcloud_filt)[order(n, decreasing = T)][1:topWords,]
+                         colnames(wcdata)[2] <- "freq"
+                         ggPlotWordBar(wcdata = wcdata,
+                                       cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       }
+                     }
+                     list(
+                       wordcloud = wordcloud, 
+                       wordbar = wordbar)
+                   }
   )
   
   finalPlots <- mapply(function(myplot, plotName){
     
-    if(grepl("aov|tt|fc|pattern|asca|volc", plotName)){
-      whichAnal <- stringr::str_match(plotName, "aov|tt|fc|pattern|asca|volc")[,1]
-      if(is.null(mSet$analSet[[whichAnal]]$sig.mat)){
+    if(grepl("aov|tt|fc|corr|asca|volcano", plotName)){
+      whichAnal <- stringr::str_match(plotName, "aov|tt|fc|corr|asca|volcano")[,1]
+      if(is.null(mSet$analSet[[whichAnal]][[if(whichAnal != "corr") "sig.mat" else "cor.mat"]])){
         data = data.frame(text = "No significant hits!")
         myplot = ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10)
       }
@@ -1193,6 +1193,12 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                          text = ggplot2::element_text(family = lcl$aes$font$family))
         
       }
+      if(grepl("ml_bar", plotName)){
+        myplot <- myplot + 
+          ggplot2::theme(axis.text.x=ggplot2::element_blank(),
+                         axis.ticks.x=ggplot2::element_blank(),
+                         text = ggplot2::element_text(family = lcl$aes$font$family))
+      }
       
       if(length(myplot$data) > 0){
         data = myplot$data
@@ -1206,8 +1212,8 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
         myY = rlang::quo_get_expr(myplot[["layers"]][[1]][["mapping"]][['y']])
         myText =rlang::quo_get_expr(myplot[["layers"]][[1]][["mapping"]][['text']])
         myCol=rlang::quo_get_expr(myplot[["layers"]][[1]][["mapping"]][['colour']])
-        flip = grepl("tt|fc|aov|var|samp|pattern", plotName)
-    
+        flip = grepl("tt|fc|aov|var|samp|corr", plotName)
+        
         myplot <- 
           myplot + 
           ggplot2::geom_text(ggplot2::aes(x = data[[myX]],
@@ -1228,50 +1234,21 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                                 ifelse(mz %in% mSet$report$mzStarred[star == TRUE]$mz,
                                                        "★", "")
                                               }),size=2,family = "HiraKakuPro-W3"))
-            
+        
         
       }
     }
-    
-     try({
-        if(plotName %in% c("heatmap", "network_heatmap", "network")){
-          data = data.frame(text = "Currently only available in 'plotly' mode!\nPlease switch in the sidebar.")
-          myplot <- ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10) +
-            ggplot2::theme(text = ggplot2::element_text(family = lcl$aes$font$family)) + ggplot2::theme_bw()
-        }
-      }, silent = F)
-
+    # try({
+    #    if(plotName %in% c("heatmap", "network_heatmap")){
+    #      data = data.frame(text = "Currently only available in 'plotly' mode!\nPlease switch in the sidebar.")
+    #      myplot <- ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10) +
+    #        ggplot2::theme(text = ggplot2::element_text(family = lcl$aes$font$family)) + ggplot2::theme_bw()
+    #    }
+    #  }, silent = F)
     finalPlot = list(myplot)
     finalPlot
   }, toWrap, names(toWrap))
   
-  list(lcl = lcl, plots = finalPlots)
+  res = list(lcl = lcl, plots = finalPlots)
+  res
 }
-# # old remotes field
-# Remotes:
-#   github::UMCUGenetics/MetaDBparse,
-# github::xia-lab/MetaboAnalystR,
-# github::rwehrens/BatchCorrMetabolomics,
-# github::yixuan/showtext,
-# github::joannawolthuis/ggVennDiagram,
-# bioc::xcms, 
-# bioc::CAMERA, 
-# bioc::MSnbase,
-# bioc::impute, 
-# bioc::pcaMethods, 
-# bioc::siggenes, 
-# bioc::globaltest, 
-# bioc::GlobalAncova, 
-# bioc::Rgraphviz, 
-# bioc::KEGGgraph, 
-# bioc::preprocessCore, 
-# bioc::genefilter, 
-# bioc::SSPA, 
-# bioc::sva, 
-# bioc::ChemmineR, 
-# bioc::KEGGREST,
-# bioc::fgsea,
-# bioc::Rdisop,
-# bioc::Biostrings,
-# bioc::GOSemSim,
-# bioc::fmcsR

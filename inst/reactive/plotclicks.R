@@ -39,8 +39,8 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                      "fc", 
                      "rf", 
                      "aov", 
-                     "pattern",
-                     "volc",
+                     "corr",
+                     "volcano",
                      "network",
                      "enrich",
                      "venn")){ 
