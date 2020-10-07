@@ -26,7 +26,7 @@ shiny::observe({
               if(plotName != "network"){
                 list(conditionalPanel(
                   condition = 'input.ggplotly == true',
-                  plotly::plotlyOutput(paste0(plotName, "_interactive"), height = "100%") ,
+                  plotly::plotlyOutput(paste0(plotName, "_interactive"), height = "100%")) ,
                   conditionalPanel(
                     condition = 'input.ggplotly == false',
                     list(fluidRow(align="right",
@@ -34,7 +34,7 @@ shiny::observe({
                                                  label = icon("Click to download"))),
                          plotOutput(plotName, height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)
                     )
-                  )))  
+                  )) 
               }else{
                 visNetwork::visNetworkOutput(paste0(plotName, "_interactive"))
               }
@@ -79,11 +79,11 @@ shiny::observe({
                                                    height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)  
                       }
                       if(plotName != "heatmap"){
-                        myplot <- if(grepl("venn", plotName)) myplot %>% plotly::layout(xaxis = emptyax,
+                        myplot <- if(grepl("venn", plotName)) plotly::ggplotly(myplot) %>% plotly::layout(xaxis = emptyax,
                                                                                         yaxis = emptyax,
                                                                                         showlegend=F) else myplot %>% plotly::layout(showlegend=F) 
                       }else{
-                        myplot <- myplot %>% plotly::layout(height = session$clientData[[empty]]/1.4,
+                        myplot <- plotly::ggplotly(myplot) %>% plotly::layout(height = session$clientData[[empty]]/1.4,
                                                             width = session$clientData[[empty]])
                       }
                       suppressWarnings({

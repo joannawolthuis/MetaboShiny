@@ -8,8 +8,12 @@
 #' @export 
 #' @importFrom data.table fread
 get_exp_vars <- function(patcsv){
-  header = data.table::fread(patcsv, nrows = 5, header=T)
-  return(header[getColDistribution(header)$meta])
+  #patcsv="~/MetaboShiny/saves/admin/DSM_OWNCALLER/DSM_OWNCALLER.csv"
+  header_raw <- readLines(patcsv,n=1)
+  header_split <- strsplit(header_raw,",")[[1]][1:200]
+  header <- t(data.table::as.data.table(rep(0,length(header_split))))
+  colnames(header) <- header_split
+  return(header_split[getColDistribution(header)$meta])
 }
 
 #' @title Browse a base database

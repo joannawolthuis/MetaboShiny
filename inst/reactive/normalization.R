@@ -98,6 +98,8 @@ shiny::observeEvent(input$initialize, {
       
       metshiCSV <- NULL
 
+      gc()
+      
       shiny::setProgress(session=session, value= .5)
       
       # = = = = = = = = = = = = = = =
@@ -139,6 +141,7 @@ shiny::observeEvent(input$initialize, {
       mSet$dataSet$missing <- is.na(mSet$dataSet$orig)
       mSet$dataSet$start <- mSet$dataSet$orig
       
+      print(dim(mSet$dataSet$start))
       mSet <- metshiProcess(mSet, session=NULL, init=T)
       
       # save the used adducts to mSet
@@ -164,8 +167,8 @@ shiny::observeEvent(input$initialize, {
       
       mSet <<- mSet
       
-      save(mSet, file = file.path(lcl$paths$proj_dir, 
-                                  paste0(lcl$proj_name,"_ORIG.metshi")))
+      qs::qsave(mSet, file = file.path(lcl$paths$proj_dir, 
+                                       paste0(lcl$proj_name,"_ORIG.metshi")))
       
       fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
       save(mSet, file = fn)

@@ -261,7 +261,14 @@ name.mSet <- function(mSet) {
 #' @rdname reset.mSet
 #' @export 
 reset.mSet <- function(mSet_new, fn) {
-  load(file = fn)
+  mSet <- tryCatch({
+    load(fn)
+    mSet
+  },
+  error = function(cond){
+    mSet <- qs::qload(fn)
+    mSet
+  })
   mSet_new$dataSet <- mSet$dataSet
   mSet_new$analSet <- mSet$analSet
   mSet_new$settings <- mSet$settings
@@ -649,9 +656,7 @@ pair.mSet <- function(mSet) {
 
 metshiProcess <- function(mSet, session, init=F){
   #shiny::withProgress(session=session, expr={
-  print(dim(mSet$dataSet$covars))
-  print(dim(mSet$dataSet$norm))
-  
+
   sums = colSums(mSet$dataSet$missing)
   good.inx <- sums/nrow(mSet$dataSet$missing) < (mSet$metshiParams$miss_perc/100)
   mSet$dataSet$orig <- as.data.frame(mSet$dataSet$orig[, good.inx, drop = FALSE])
@@ -798,8 +803,9 @@ metshiProcess <- function(mSet, session, init=F){
         # create a model table
         csv_pheno <- data.frame(sample = 1:nrow(mSet$dataSet$covars),
                                 batch1 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample), left_batch_vars[1], with=FALSE][[1]],
-                                batch2 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample), left_batch_vars[2], with=FALSE][[1]],
-                                outcome = as.factor(exp_lbl))
+                                batch2 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample), left_batch_vars[2], with=FALSE][[1]]
+                                #,outcome = as.factor(exp_lbl)
+                                )
         # batch correct with limma and two batches
         batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
                                                       #design = mod.pheno,
@@ -830,6 +836,10 @@ metshiProcess <- function(mSet, session, init=F){
     mSet <- hideQC(mSet)
   }
 
+  if(!init){
+    mSet$dataSet$missing <- mSet$dataSet$start <- NULL 
+  }
+  
   mSet$analSet <- list(type = "stat")
   mSet
 }

@@ -1711,9 +1711,6 @@ ggPlotMummi <- function(mum_mSet, anal.type = "mummichog", cf){
  
   df <- data.frame(path.nms, x, y)
  
-  plot(x, y, type = "n", axes = F, xlab = "Enrichment Factor", 
-       ylab = "-log10(p)", bty = "l")
-  
   scaleFUN <- function(x) sprintf("%.2f", x)
   
   p = ggplot2::ggplot(df) + ggplot2::geom_point(ggplot2::aes(y = y, 

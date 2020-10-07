@@ -72,30 +72,6 @@ shiny::observe({
                enrich = {
                  shiny::withProgress({
                    
-                   
-                   #=====NEW VER=====
-                   
-                   mSet<-InitDataObjects("mass_all", "mummichog", FALSE)
-                   SetPeakFormat("mpt")
-                   mSet<-UpdateInstrumentParameters(mSet, 5.0, "negative", "yes", 0.02);
-                   mSet<-Read.PeakListData(mSet, "Replacing_with_your_file_path");
-                   mSet<-SanityCheckMummichogData(mSet)
-                   mSet<-SetPeakEnrichMethod(mSet, "mum", "v2")
-                   mSet<-SetMummichogPval(mSet, 0.2)
-                   mSet<-PerformPSEA(mSet, "hsa_mfn", "current", 100)
-                   
-                   #=================
-                   enr_mSet <- MetaboAnalystR::InitDataObjects("mass_all", 
-                                                               "mummichog",
-                                                               FALSE)
-                   
-                   MetaboAnalystR::SetPeakFormat("rmp")
-                   
-                   enr_mSet <- MetaboAnalystR::UpdateInstrumentParameters(mSetObj = enr_mSet,
-                                                                          instrumentOpt = mSet$ppm,
-                                                                          msModeOpt = "mixed"
-                                                                          )
-                   
                    #similarly to venn diagram
                    flattened <- getTopHits(mSet, 
                                            input$mummi_anal,
@@ -112,17 +88,22 @@ shiny::observe({
                    tbl[, "p.value"] = c(0)
                    tbl[, "t.score"] = c(0)
                    
-                   enr_mSet$dataSet$mummi.orig <- cbind(tbl$p.value,
-                                                        tbl$m.z,
-                                                        tbl$t.score)
-                   colnames(enr_mSet$dataSet$mummi.orig) = c("p.value", 
-                                                             "m.z", 
-                                                             "t.score")
-                   enr_mSet$dataSet$pos_inx <- tbl$mode == "positive"
-                   enr_mSet$dataSet$mumType <- "list"
-                   enr_mSet$dataSet$mumRT <- FALSE
-                   mumDataContainsPval <<- 0#if(grepl(input$mummi_anal, pattern = "tt|aov|aov2")) 1 else 0
+                   tmpfile=tempfile()
+                   fwrite(tbl, file=tmpfile)
                    
+                   # -----------------
+                   
+                   enr_mSet <- MetaboAnalystR::InitDataObjects("mass_all",
+                                               "mummichog",
+                                               FALSE)
+                   MetaboAnalystR::SetPeakFormat("rmp")
+                   enr_mSet <- MetaboAnalystR::UpdateInstrumentParameters(enr_mSet,
+                                                          mSet$ppm,
+                                                          "mixed",
+                                                          "yes",
+                                                          0.02);
+                   enr_mSet <- MetaboAnalystR::Read.PeakListData(enr_mSet, tmpfile);
+
                    shiny::setProgress(0.2)
                    
                    enr_mSet <- MetaboAnalystR::SanityCheckMummichogData(enr_mSet)
@@ -130,7 +111,11 @@ shiny::observe({
                    
                    shiny::setProgress(0.3)
                    
-                   require(enviPat)
+                   #===
+                   enr_mSet<-MetaboAnalystR::SetPeakEnrichMethod(enr_mSet, if(input$mummi_enr_method) "mum" else "gsea", "v2")
+                   enr_mSet<-MetaboAnalystR::SetMummichogPval(enr_mSet, 1)
+
+                   #===
                    
                    elecMass = 0.000548579909
                    mummi_adducts <- adducts[Name %in% input$mummi_adducts]
@@ -140,8 +125,8 @@ shiny::observe({
                      if(is.na(row$AddEx)) row$AddEx <- ""
                      if(is.na(row$RemAt)) row$RemAt <- ""
                      if(is.na(row$RemEx)) row$RemEx <- ""
-                     addForm <- mergeform(row$AddAt, row$AddEx)
-                     remForm <- mergeform(row$RemAt, row$RemEx)
+                     addForm <- enviPat::mergeform(row$AddAt, row$AddEx)
+                     remForm <- enviPat::mergeform(row$RemAt, row$RemEx)
                      addMass <- enviPat::check_chemform(isotopes, addForm)$monoisotopic_mass
                      remMass <- enviPat::check_chemform(isotopes, remForm)$monoisotopic_mass
                      if(addMass < 0) addMass <- 0
@@ -173,51 +158,7 @@ shiny::observe({
                    
                    enr_mSet$add.map <- match.values
                    
-                   shiny::setProgress(0.5)
-                   
-                   # === GETLIB ===
-                   lib = input$mummi_org
-                   libVersion <- "current"#input$mummi_db_ver
-                   
-                   filenm <- paste(lib, ".rds", sep = "")
-                   biocyc <- grepl("biocyc", lib)
-                   
-                   if (!is.null(enr_mSet$curr.cust)) {
-                     if (biocyc) {
-                       user.curr <- enr_mSet$curr.map$BioCyc
-                     }else {
-                       user.curr <- enr_mSet$curr.map$KEGG
-                     }
-                     currency <<- user.curr
-                     if (length(currency) > 0) {
-                       shiny::showNotification("Currency metabolites were successfully uploaded!")
-                     }else {
-                       shiny::showNotification("Errors in currency metabolites uploading!")
-                     }
-                   }
-                   if (libVersion == "old" && end.with(lib, "kegg")) {
-                     mum.url <- paste("https://www.metaboanalyst.ca/resources/libs/mummichog/kegg_2018/", 
-                                      filenm, sep = "")
-                   }else {
-                     mum.url <- paste("https://www.metaboanalyst.ca/resources/libs/mummichog/", 
-                                      filenm, sep = "")
-                   }
-                   download.file(mum.url, destfile = filenm, method = "libcurl", 
-                                 mode = "wb")
-                   mummichog.lib <- readRDS(filenm)
-                   
                    shiny::setProgress(0.6)
-                   
-                   prematchies <- MetaboShiny::get_prematches(if(biocyc) "metacyc" else "kegg", 
-                                                              "source", 
-                                                              lcl$paths$patdb)
-                   
-                   iden.vs.add <- unique(prematchies[,c("identifier", "adduct")])
-                   iden.vs.add$i <- match(iden.vs.add$identifier,mummichog.lib$cpd.lib$id)
-                   iden.vs.add <- data.table::as.data.table(iden.vs.add[complete.cases(iden.vs.add),])
-                   iden.vs.add <- iden.vs.add[adduct %in% mummi_adducts$Name]
-                   
-                   shiny::setProgress(0.7)
                    
                    # ==== NEW_ADDUCT_MZLIST ===
                    
@@ -265,16 +206,12 @@ shiny::observe({
                    assignInNamespace("new_adduct_mzlist", new_adduct_mzlist, ns="MetaboAnalystR", 
                                      envir=as.environment("package:MetaboAnalystR"))
                    
-                   enr_mSet <- MetaboAnalystR::SetPeakEnrichMethod(enr_mSet, 
-                                                                   if(input$mummi_enr_method) "mum" else "gsea")
-                   
                    shiny::setProgress(0.9)
                    enr_mSet$dataSet$N <- 20
-                   enr_mSet <- MetaboAnalystR::SetMummichogPval(enr_mSet, input$mummi_pval)
-                   
+
                    enr_mSet <- MetaboAnalystR::PerformPSEA(mSetObj = enr_mSet, 
-                                                           lib = lib, 
-                                                           libVersion = libVersion, 
+                                                           lib = input$mummi_org,
+                                                           libVersion = "current",
                                                            permNum = 100) 
                    
                    mSet$analSet$enrich <- enr_mSet
@@ -284,8 +221,9 @@ shiny::observe({
                  try({
                    shiny::setProgress(value = 0)
                    
+                   pickedTbl <- if(input$ml_run_on_norm) "norm" else "orig"
                    # get base table to use for process
-                   curr <- data.table::as.data.table(mSet$dataSet$orig)
+                   curr <- data.table::as.data.table(mSet$dataSet[[pickedTbl]])
                    
                    # replace NA's with zero
                    for (j in seq_len(ncol(curr))){
@@ -294,15 +232,14 @@ shiny::observe({
                    
                    # conv to data frame
                    curr <- as.data.frame(curr)
-                   rownames(curr) <- rownames(mSet$dataSet$orig)
+                   rownames(curr) <- rownames(mSet$dataSet[[pickedTbl]])
                    
                    # find the qc rows and remove them
                    is.qc <- grepl("QC|qc", rownames(curr))
                    if(sum(is.qc) > 0){
                      curr <- curr[!is.qc,]
                    }
-                   # reorder according to covars table (will be used soon)
-                   
+
                    order <- match(rownames(curr), mSet$dataSet$covars$sample)
                    if("label" %in% colnames(mSet$dataSet$covars)){
                      config <- mSet$dataSet$covars[order, -"label"]
@@ -326,18 +263,21 @@ shiny::observe({
                                         needed_for_subset),with=F]# reorder so both halves match up later
                    
                    if(mSet$settings$exp.type %in% c("2f", "t1f")){
+                     cls <- if(input$ml_run_on_norm) "" else "orig."
+                     
                      # just set to facA for now..
                      if(nrow(config)==0){
-                       config <- data.frame(label=mSet$dataSet$facA)
+                       config <- data.frame(label=mSet$dataSet[[paste0(cls,"facA")]])
                      }else{
-                       config <- cbind(config, label=mSet$dataSet$facA) # add current experimental condition
+                       config <- cbind(config, label=mSet$dataSet[[paste0(cls,"facA")]]) # add current experimental condition
                      }
                    }else{
+                     cls <- if(input$ml_run_on_norm) "cls" else "orig.cls"
                      if(nrow(config)==0){
-                       config <- data.frame(label=mSet$dataSet$cls)
+                       config <- data.frame(label=mSet$dataSet[[cls]])
                      }else{
                        config <- cbind(config, 
-                                       label=mSet$dataSet$cls) # add current experimental condition
+                                       label=mSet$dataSet[[cls]]) # add current experimental condition
                      }
                    }
                    

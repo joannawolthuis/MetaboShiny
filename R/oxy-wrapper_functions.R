@@ -381,7 +381,8 @@ tooEmptySamps <- function(mSet, max.missing.per.samp){
 #' @importFrom data.table as.data.table
 #' @importFrom pbapply startpb setpb
 replRowMin <- function(mSet){
-  mSet$dataSet$proc <- pbapply::pbapply(mSet$dataSet$preproc, 1, function(x) {
+  int.mat <- qs::qread("preproc.qs")
+  mSet$dataSet$proc <- pbapply::pbapply(int.mat, 1, function(x) {
     if (sum(is.na(x)) > 0) {
       x[is.na(x)] <- min(x, na.rm = T)/2
     }

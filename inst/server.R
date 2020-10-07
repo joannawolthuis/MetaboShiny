@@ -134,6 +134,12 @@ function(input, output, session) {
       lcl$paths$work_dir <<- userfolder
       lcl$paths$db_dir <<- dbdir
       
+      old.wd = getwd()
+      setwd(lcl$paths$work_dir)
+      on.exit({
+        setwd(old.wd)
+      })
+      
       if("adducts.csv" %in% basename(list.files(lcl$paths$work_dir))){
         adducts <<- data.table::fread(file.path(lcl$paths$work_dir, "adducts.csv"))
       }
@@ -993,13 +999,12 @@ omit_unknown = yes')
   
   shiny::observeEvent(input$ncores, {
     if(!is.null(session_cl)){
-      
       shiny::showNotification("Stopping threads...")
       parallel::stopCluster(session_cl)
     }
     shiny::showNotification("Starting new threads...")
-    
-    session_cl <<- parallel::makeCluster(input$ncores)#,outfile="") # leave 1 core for general use and 1 core for shiny session
+
+    session_cl <<- parallel::makeCluster(input$ncores)#,outfile="")#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
     # send specific functions/packages to other threads
     parallel::clusterEvalQ(session_cl, {
       library(data.table)
@@ -1090,7 +1095,14 @@ omit_unknown = yes')
       fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
       shiny::showNotification(paste0("Loading existing file: ", fn))
       if(file.exists(fn)){
-        load(fn)
+        mSet <- tryCatch({
+          load(fn)
+          mSet
+        },
+        error = function(cond){
+          mSet <- qs::qload(fn)
+          mSet
+        })
         mSet$dataSet$combined.method <- TRUE # FC fix
         mSet <<- mSet
         opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
@@ -1111,14 +1123,14 @@ omit_unknown = yes')
     assign("lcl", lcl, envir = .GlobalEnv)
     assign("mSet", mSet, envir = .GlobalEnv)
     assign("input", shiny::isolate(shiny::reactiveValuesToList(input)), envir = .GlobalEnv)
-    assign("enrich", enrich, envir = .GlobalEnv)
-    assign("shown_matches", shown_matches, envir = .GlobalEnv)
-    assign("my_selection", my_selection, envir = .GlobalEnv)
-    assign("browse_content", browse_content, envir = .GlobalEnv)
-    assign("pieinfo", pieinfo, envir = .GlobalEnv)
-    assign("result_filters", result_filters, envir = .GlobalEnv)
-    assign("report_yes", report_yes, envir = .GlobalEnv)
-    assign("venn_yes", venn_yes, envir = .GlobalEnv)
+    assign("enrich", shiny::isolate(shiny::reactiveValuesToList(enrich)), envir = .GlobalEnv)
+    assign("shown_matches", shiny::isolate(shiny::reactiveValuesToList(shown_matches)), envir = .GlobalEnv)
+    assign("my_selection", shiny::isolate(shiny::reactiveValuesToList(my_selection)), envir = .GlobalEnv)
+    assign("browse_content",  shiny::isolate(shiny::reactiveValuesToList(browse_content)), envir = .GlobalEnv)
+    assign("pieinfo",  shiny::isolate(shiny::reactiveValuesToList(pieinfo)), envir = .GlobalEnv)
+    assign("result_filters",  shiny::isolate(shiny::reactiveValuesToList(result_filters)), envir = .GlobalEnv)
+    assign("report_yes",  shiny::isolate(shiny::reactiveValuesToList(report_yes)), envir = .GlobalEnv)
+    assign("venn_yes",  shiny::isolate(shiny::reactiveValuesToList(venn_yes)), envir = .GlobalEnv)
   })
   
   shiny::observeEvent(input$ml_train_ss, {
@@ -1289,7 +1301,7 @@ omit_unknown = yes')
       shiny::withProgress({
         fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
         if(exists("mSet")){
-          save(mSet, file = fn)
+          qs::qsave(mSet, fn)
         }
       })
     }
@@ -1359,7 +1371,6 @@ omit_unknown = yes')
       
     }  
   },silent = T)
-  
   
   onStop(function() {
     print("Closing MetaboShiny ~ヾ(＾∇＾)")

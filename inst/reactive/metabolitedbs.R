@@ -8,7 +8,6 @@
 shiny::observe({
   if(db_section$load){
     shiny::showNotification("Loading database screen...")
-    
     # - - - load version numbers - - - 
     db.paths = list.files(lcl$paths$db_dir, pattern = "\\.db$",full.names = T)
     versions = lapply(db.paths,
@@ -17,7 +16,8 @@ shiny::observe({
              date = "unknown"
              try({
                conn <- RSQLite::dbConnect(RSQLite::SQLite(), path) # change this to proper var later
-               ver = RSQLite::dbGetQuery(conn, "SELECT version FROM metadata")[[1]]
+               meta = RSQLite::dbGetQuery(conn, "SELECT * FROM metadata")
+               ver = meta$version[[1]]
                suppressWarnings({
                  numver = as.numeric(ver)
                })
@@ -26,10 +26,11 @@ shiny::observe({
                    ver = as.character(as.Date(ver, origin = "1970-01-01"))
                  }  
                }
-               date = RSQLite::dbGetQuery(conn, "SELECT date FROM metadata")[[1]]
+               date = meta$date[[1]]
                date = as.character(as.Date(date, origin = "1970-01-01"))
                RSQLite::dbDisconnect(conn)  
              },silent = T)
+             if(is.na(ver)) ver <- "unknown"
              dbname = gsub(basename(path), 
                            pattern = "\\.db$", 
                            replacement="")
