@@ -154,6 +154,11 @@ shiny::observe({
                      }else{
                        search_button$on <- TRUE}
                      
+                     opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
+                     if("adducts" %in% names(opts)){
+                       uimanager$refresh <- "adds"
+                     }
+                     
                      shiny::updateNavbarPage(session, "statistics", selected = "inf")
                    },
                    wordcloud = {
@@ -188,6 +193,16 @@ shiny::observe({
                          list()
                        }
                      }) 
+                   },
+                   adds = {
+                     opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
+                     fav_adducts <- opts$adducts
+                     fav_adducts <- stringr::str_split(fav_adducts, pattern = "&")[[1]]
+                     for(id in c("mummi_adducts", 
+                                 "score_adducts",
+                                 "fav_adducts")){
+                       shinyWidgets::updatePickerInput(session, id, selected = fav_adducts)
+                     }
                    },
                    vennrich = {
                      NULL

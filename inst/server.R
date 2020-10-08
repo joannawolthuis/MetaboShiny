@@ -275,6 +275,15 @@ omit_unknown = yes')
       shiny::updateSliderInput(session, "ncores", value = as.numeric(opts$cores))
       # send specific functions/packages to other threads
       
+      
+      fav_adducts <- opts$adducts
+      fav_adducts <- stringr::str_split(fav_adducts, pattern = "&")[[1]]
+      for(id in c("mummi_adducts", 
+                  "score_adducts",
+                  "fav_adducts")){
+        shinyWidgets::updatePickerInput(session, id, selected = fav_adducts)
+      }
+      
       # === GOOGLE FONT SUPPORT FOR GGPLOT2 ===
       
       # Download a webfont
@@ -1080,7 +1089,7 @@ omit_unknown = yes')
   
   shiny::observeEvent(input$stats_type,{
     if(!is.null(mSet)){
-      uimanager$reload <- "statspicker"
+      uimanager$refresh <- "statspicker"
     }
   })
   
@@ -1110,11 +1119,12 @@ omit_unknown = yes')
         lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, lcl$proj_name)
         lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".db"))
         lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".csv"))
+        
         shiny::updateCheckboxInput(session,
                                    "paired",
                                    value = mSet$dataSet$paired)
       }
-      uimanager$refresh <- c("general","statspicker")
+      uimanager$refresh <- c("general","statspicker",if("adducts" %in% names(opts)) "adds" else NULL)
       plotmanager$make <- "general"
     })
   })
@@ -1189,6 +1199,15 @@ omit_unknown = yes')
         plotmanager$make <- "heatmap"  
       }  
     }
+  })
+  
+  observeEvent(input$save_fav_adducts,{
+    # save to options
+    pasted_adducts <- paste0(input$fav_adducts, collapse = "&")
+    MetaboShiny::setOption(lcl$paths$opt.loc, 
+                           "adducts", 
+                           pasted_adducts)
+    uimanager$refresh <- "adducts"
   })
   
   observeEvent(input$nav_general, {
@@ -1270,8 +1289,6 @@ omit_unknown = yes')
   for(fp in list.files("reactive", full.names = T)){
     source(fp, local = T)
   }  
-  
-  # ==== ON EXIT ====
   
   observeEvent(input$quit_metshi, {
     if(!is.null(mSet)){

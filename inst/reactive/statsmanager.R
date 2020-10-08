@@ -228,24 +228,33 @@ shiny::observe({
                    enr_mSet$dataSet$mumResTable <- data.table::fread(filenm)
                    
                    if(!input$mummi_enr_method){
-                     tbl <- tidyr::separate_rows(enr_mSet$dataSet$mumResTable,
+                     
+                     tbl.rows <- lapply(1:length(enr_mSet$path.hits), function(i){
+                       l = enr_mSet$path.hits[[i]]
+                       row = enr_mSet$dataSet$mumResTable[i,]
+                       row$Cpd.Hits <- paste0(l, collapse=";")
+                       row
+                     })
+                     tbl <- data.table::rbindlist(tbl.rows)
+                     tbl <- tidyr::separate_rows(tbl,
                                                  "Cpd.Hits",
                                                  sep = ";")
                      tbl <- as.data.frame(tbl)
                      tbl$Matched.Compound <- tbl$Cpd.Hits
+                     
                      add.tbl = data.frame(Matched.Compound = names(unlist(enr_mSet$cpd_form_dict)),
                                           adduct = unlist(enr_mSet$cpd_form_dict))
                      mz.tbl = data.frame(Query.Mass = names(unlist(enr_mSet$mz2cpd_dict)),
                                          Matched.Compound = unlist(enr_mSet$mz2cpd_dict))
                      mzorig.tbl = data.frame(Matched.Compound = names(unlist(enr_mSet$cpd2mz_dict)),
-                                         Orig.Mass = unlist(enr_mSet$cpd2mz_dict))
+                                             Orig.Mass = unlist(enr_mSet$cpd2mz_dict))
                      mergy = merge(tbl, add.tbl)
                      mergy = merge(mergy, mz.tbl)
                      mergy = merge(mergy, mzorig.tbl)
                      mergy$Mass.Diff = abs(as.numeric(mergy$Query.Mass) - as.numeric(mergy$Orig.Mass))
-                     #c("rn", "identifier", "adduct", "dppm")
                      mergy = unique(mergy[,c("Query.Mass", "Matched.Compound","adduct","Mass.Diff")])
                      enr_mSet$dataSet$mumResTable <- mergy
+                     
                    }
                    mSet$analSet$enrich <- enr_mSet
                  })

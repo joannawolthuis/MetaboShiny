@@ -1432,37 +1432,53 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                       # TODO: fix, i think this is currently non-functional
                                                                       shiny::tabPanel("Adducts", icon=shiny::icon("plus-square"),
                                                                                       shiny::tabsetPanel(
-                                                                                        shiny::tabPanel("Definitions",
-                                                                                                        shiny::fluidRow(align="center",shiny::h3("Current adduct table:")),
-                                                                                                        
-                                                                                                        rhandsontable::rHandsontableOutput("adduct_tab", 
-                                                                                                                                           width='100%', 
-                                                                                                                                           height='70%'),
-                                                                                                        
-                                                                                                        shiny::fluidRow(align="center",shiny::fileInput("add_tab", 
-                                                                                                                                                        "Import adduct table",
-                                                                                                                                                        multiple = F,
-                                                                                                                                                        accept = c(".RData", ".csv")),
-                                                                                                                        shiny::div(style="display: inline-block;vertical-align:top;",shiny::actionButton("import_adducts", "Import definitions"))
-                                                                                                        )
-                                                                                        ),
-                                                                                        shiny::tabPanel("Rules",
-                                                                                                        shiny::fluidRow(align="center", shiny::h3("Current adduct rules:")),
-                                                                                                        rhandsontable::rHandsontableOutput("adduct_rules_tab", 
-                                                                                                                                           width='100%', 
-                                                                                                                                           height='70%'),
-                                                                                                        shiny::fileInput("add_rule_tab", 
-                                                                                                                         "Import adduct rule table",
-                                                                                                                         multiple = F,
-                                                                                                                         accept = c(".RData", ".csv")),
+                                                                                        shiny::tabPanel("Favorites",
                                                                                                         shiny::fluidRow(align="center",
-                                                                                                                        shiny::div(style="display: inline-block;vertical-align:top;",shiny::actionButton("import_adduct_rules", "Import rules"))
+                                                                                                                        shinyWidgets::pickerInput(inputId = "fav_adducts",
+                                                                                                                                                  choices = adducts$Name,
+                                                                                                                                                  label = "Default (favorite) adducts:",
+                                                                                                                                                  selected = c("[M+H]1+", "[M+Na]1+", 
+                                                                                                                                                               "[M+2H]2+", "[M+K]1+"),
+                                                                                                                                                  multiple = T),
+                                                                                                                        shiny::hr(),
+                                                                                                                        shiny::actionButton("save_fav_adducts","Apply")
+                                                                                                                        )
+                                                                                        ),
+                                                                                        shiny::tabPanel("Current adducts",
+                                                                                                        shiny::tabsetPanel(
+                                                                                                          shiny::tabPanel("Definitions",
+                                                                                                                          shiny::fluidRow(align="center",shiny::h3("Current adduct table:")),
+                                                                                                                          
+                                                                                                                          rhandsontable::rHandsontableOutput("adduct_tab", 
+                                                                                                                                                             width='100%', 
+                                                                                                                                                             height='70%'),
+                                                                                                                          
+                                                                                                                          shiny::fluidRow(align="center",shiny::fileInput("add_tab", 
+                                                                                                                                                                          "Import adduct table",
+                                                                                                                                                                          multiple = F,
+                                                                                                                                                                          accept = c(".RData", ".csv")),
+                                                                                                                                          shiny::div(style="display: inline-block;vertical-align:top;",shiny::actionButton("import_adducts", "Import definitions"))
+                                                                                                                          )
+                                                                                                          ),
+                                                                                                          shiny::tabPanel("Rules",
+                                                                                                                          shiny::fluidRow(align="center", shiny::h3("Current adduct rules:")),
+                                                                                                                          rhandsontable::rHandsontableOutput("adduct_rules_tab", 
+                                                                                                                                                             width='100%', 
+                                                                                                                                                             height='70%'),
+                                                                                                                          shiny::fileInput("add_rule_tab", 
+                                                                                                                                           "Import adduct rule table",
+                                                                                                                                           multiple = F,
+                                                                                                                                           accept = c(".RData", ".csv")),
+                                                                                                                          shiny::fluidRow(align="center",
+                                                                                                                                          shiny::div(style="display: inline-block;vertical-align:top;",shiny::actionButton("import_adduct_rules", "Import rules"))
+                                                                                                                          )
+                                                                                                          )
+                                                                                                        ),
+                                                                                                        shiny::fluidRow(align="center",
+                                                                                                                        shiny::actionButton("save_adducts","Save changes"),
+                                                                                                                        shiny::hr()
                                                                                                         )
                                                                                         )
-                                                                                      ),
-                                                                                      shiny::fluidRow(align="center",
-                                                                                                      shiny::actionButton("save_adducts","Save changes"),
-                                                                                                      shiny::hr()
                                                                                       )
                                                                       ),
                                                                       shiny::tabPanel("Formula prediction & lookup", 

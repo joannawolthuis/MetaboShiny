@@ -83,7 +83,6 @@ shiny::observeEvent(input$match_tab_rows_selected,{
   if (is.null(curr_row)) return()
   # - - - - - - - - - - - - - - - - - - - - - -
   my_selection$name <- shown_matches$forward_unique[curr_row,'compoundname'][[1]] # get current structure
- 
   my_selection$form <- unlist(shown_matches$forward_unique[curr_row,'baseformula']) # get current formula
   my_selection$struct <- unlist(shown_matches$forward_unique[curr_row,'structure']) # get current formula
 
