@@ -77,6 +77,8 @@ shiny::observe({
                                            input$mummi_anal,
                                            input$mummi_topn)
                    
+                   hasP = grepl("tt|aov|asca",input$mummi_anal)
+                   
                    setProgress(0.1)
                    
                    myFile <- tempfile(fileext = ".csv")
@@ -85,23 +87,33 @@ shiny::observe({
                                                   if(grepl(pattern="-",x=mz)) "negative" else "positive"
                                                 }))
                    
-                   tbl[, "p.value"] = c(0)
-                   tbl[, "t.score"] = c(0)
+                   hasT = grepl("tt", input$mummi_anal)
                    
-                   tmpfile=tempfile()
+                   anal = gsub(" \\(.*$", "", input$mummi_anal)
+                   subset = gsub("\\(|\\)|.*\\(", "", input$mummi_anal)
+                   
+                   tbl[, "p.value"] = if(hasP) mSet$storage[[subset]]$analysis[[anal]]$sig.mat[match(flattened[[1]], 
+                                                                                                     rownames(mSet$analSet[[anal]]$sig.mat)),
+                                                                                               "p.value"] else c(0)
+                   tbl[, "t.score"] = if(hasT) mSet$storage[[subset]]$analysis[[anal]]$sig.mat[match(flattened[[1]], 
+                                                                                  rownames(mSet$analSet[[anal]]$sig.mat)),
+                                                                            "t.stat"] else c(0)
+                   
+                   tmpfile <- tempfile()
+                   
                    fwrite(tbl, file=tmpfile)
                    
-                   # -----------------
                    
                    enr_mSet <- MetaboAnalystR::InitDataObjects("mass_all",
                                                "mummichog",
                                                FALSE)
-                   MetaboAnalystR::SetPeakFormat("rmp")
+                   MetaboAnalystR::SetPeakFormat("mpt")
                    enr_mSet <- MetaboAnalystR::UpdateInstrumentParameters(enr_mSet,
                                                           mSet$ppm,
                                                           "mixed",
                                                           "yes",
                                                           0.02);
+                   
                    enr_mSet <- MetaboAnalystR::Read.PeakListData(enr_mSet, tmpfile);
 
                    shiny::setProgress(0.2)
@@ -112,8 +124,8 @@ shiny::observe({
                    shiny::setProgress(0.3)
                    
                    #===
-                   enr_mSet<-MetaboAnalystR::SetPeakEnrichMethod(enr_mSet, if(input$mummi_enr_method) "mum" else "gsea", "v2")
-                   enr_mSet<-MetaboAnalystR::SetMummichogPval(enr_mSet, 1)
+                   enr_mSet<-MetaboAnalystR::SetPeakEnrichMethod(enr_mSet, if(input$mummi_enr_method | !hasT) "mum" else "gsea", "v2")
+                   enr_mSet<-MetaboAnalystR::SetMummichogPval(enr_mSet, if(hasP) as.numeric(gsub(",",".",input$mummi_pval)) else 1)
 
                    #===
                    
@@ -179,16 +191,15 @@ shiny::observe({
                      mass.user.neg <- lapply(mass.list.neg, function(x) eval(parse(text = paste(gsub("PROTON", 
                                                                                                      1.007825, x)))))
                      mw_modified.neg <- do.call(cbind, mass.user.neg)
-                     colnames(mw_modified.neg) <- ion.name.neg
+                     if(!is.null(mw_modified.neg)) colnames(mw_modified.neg) <- ion.name.neg
                      mass.list.pos <- as.list(ion.mass.pos)
                      mass.user.pos <- lapply(mass.list.pos, function(x) eval(parse(text = paste(gsub("PROTON", 
                                                                                                      1.007825, x)))))
                      mw_modified.pos <- do.call(cbind, mass.user.pos)
-                     colnames(mw_modified.pos) <- ion.name.pos
+                     if(!is.null(mw_modified.pos)) colnames(mw_modified.pos) <- ion.name.pos
                      mw_modified <- list(mw_modified.neg, mw_modified.pos)
                      
                      if(use.rules){
-                       print("rules")
                        mw_modified <- lapply(mw_modified, function(mw_adds){
                          for(i in 1:nrow(mw_adds)){
                            ok.adducts <- iden.vs.add[i,]$adduct
@@ -202,7 +213,6 @@ shiny::observe({
                    
                    shiny::setProgress(0.8)
                    
-                   #unlockBinding("new_adduct_mzlist", as.environment("package:MetaboAnalystR"))
                    assignInNamespace("new_adduct_mzlist", new_adduct_mzlist, ns="MetaboAnalystR", 
                                      envir=as.environment("package:MetaboAnalystR"))
                    
@@ -214,6 +224,29 @@ shiny::observe({
                                                            libVersion = "current",
                                                            permNum = 100) 
                    
+                   filenm <- if(input$mummi_enr_method) "mummichog_matched_compound_all.csv" else "mummichog_fgsea_pathway_enrichment.csv"
+                   enr_mSet$dataSet$mumResTable <- data.table::fread(filenm)
+                   
+                   if(!input$mummi_enr_method){
+                     tbl <- tidyr::separate_rows(enr_mSet$dataSet$mumResTable,
+                                                 "Cpd.Hits",
+                                                 sep = ";")
+                     tbl <- as.data.frame(tbl)
+                     tbl$Matched.Compound <- tbl$Cpd.Hits
+                     add.tbl = data.frame(Matched.Compound = names(unlist(enr_mSet$cpd_form_dict)),
+                                          adduct = unlist(enr_mSet$cpd_form_dict))
+                     mz.tbl = data.frame(Query.Mass = names(unlist(enr_mSet$mz2cpd_dict)),
+                                         Matched.Compound = unlist(enr_mSet$mz2cpd_dict))
+                     mzorig.tbl = data.frame(Matched.Compound = names(unlist(enr_mSet$cpd2mz_dict)),
+                                         Orig.Mass = unlist(enr_mSet$cpd2mz_dict))
+                     mergy = merge(tbl, add.tbl)
+                     mergy = merge(mergy, mz.tbl)
+                     mergy = merge(mergy, mzorig.tbl)
+                     mergy$Mass.Diff = abs(as.numeric(mergy$Query.Mass) - as.numeric(mergy$Orig.Mass))
+                     #c("rn", "identifier", "adduct", "dppm")
+                     mergy = unique(mergy[,c("Query.Mass", "Matched.Compound","adduct","Mass.Diff")])
+                     enr_mSet$dataSet$mumResTable <- mergy
+                   }
                    mSet$analSet$enrich <- enr_mSet
                  })
                },

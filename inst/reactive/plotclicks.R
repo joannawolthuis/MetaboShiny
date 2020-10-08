@@ -78,13 +78,9 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                  }
                },
                enrich = {
-                 curr_pw <- rownames(mSet$analSet$enrich$mummi.resmat)[d$pointNumber + 1]
+                 curr_pw <- rownames(enrich$overview)[d$pointNumber + 1]
                  pw_i <- which(mSet$analSet$enrich$path.nms == curr_pw)
                  cpds = unlist(mSet$analSet$enrich$path.hits[[pw_i]])
-                 
-                 filenm="mummichog_matched_compound_all.csv"
-                 mSet$analSet$enrich$dataSet$mumResTable <- fread(filenm)
-                 
                  hit_tbl = data.table::as.data.table(mSet$analSet$enrich$dataSet$mumResTable)
                  myHits <- hit_tbl[Matched.Compound %in% unlist(cpds)]
                  myHits$Mass.Diff <- as.numeric(myHits$Mass.Diff)/(as.numeric(myHits$Query.Mass)*1e-6)

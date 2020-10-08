@@ -72,7 +72,11 @@ shiny::observe({
                      list()
                    },
                    enrich = {
-                     enrich$overview <- mSet$analSet$enrich$mummi.resmat  
+                     enrich$overview <- if("mummi.resmat" %in% names(mSet$analSet$enrich)){
+                       mSet$analSet$enrich$mummi.resmat 
+                     }else{
+                       mSet$analSet$enrich$mummi.gsea.resmat 
+                     } 
                      list()
                    },
                    corr = {

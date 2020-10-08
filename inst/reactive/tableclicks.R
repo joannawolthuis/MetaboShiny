@@ -67,11 +67,11 @@ shiny::observeEvent(input$enrich_tab_rows_selected,{
   curr_row <- input$enrich_tab_rows_selected
   if (is.null(curr_row)) return()
   # -----------------------------
-  curr_pw <- rownames(mSet$analSet$enrich$mummi.resmat)[curr_row]
+  curr_pw <- rownames(enrich$overview)[curr_row]
   pw_i <- which(mSet$analSet$enrich$path.nms == curr_pw)
-  cpds = mSet$analSet$enrich$path.hits[[pw_i]]
+  cpds = unlist(mSet$analSet$enrich$path.hits[[pw_i]])
   hit_tbl = data.table::as.data.table(mSet$analSet$enrich$dataSet$mumResTable)
-  myHits <- hit_tbl[Matched.Compound %in% cpds]
+  myHits <- hit_tbl[Matched.Compound %in% unlist(cpds)]
   myHits$Mass.Diff <- as.numeric(myHits$Mass.Diff)/(as.numeric(myHits$Query.Mass)*1e-6)
   colnames(myHits) <- c("rn", "identifier", "adduct", "dppm")
   enrich$current <- myHits
