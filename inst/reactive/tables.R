@@ -21,7 +21,7 @@ output$match_tab <- DT::renderDataTable({
               rownames = F)
 }, server = F)
 
-output$enrich_tab <-DT::renderDataTable({
+output$enrich_tab <- DT::renderDataTable({
   MetaboShiny::metshiTable(content = enrich$overview)
 }, server = F)
 

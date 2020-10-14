@@ -85,5 +85,9 @@ Imports:
   pROC,
   car,
   doParallel,
-  missForest
+  missForest,
+  ggfortify, 
+  fdrtool, 
+  plsdepot,
+  vroom
 RoxygenNote: 7.1.0

@@ -173,7 +173,7 @@ shiny::observeEvent(input$initialize, {
       fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
       save(mSet, file = fn)
       
-      uimanager$refresh <- c("general","statspicker")
+      uimanager$refresh <- c("general","statspicker","ml")
       plotmanager$make <- "general"
     }else{
       MetaboShiny::metshiAlert("Normalization failed!")

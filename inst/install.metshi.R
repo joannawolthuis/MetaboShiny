@@ -21,8 +21,9 @@ pacman::p_load(ggplot2, data.table, plotly, shinyBS, shinyjs, caret, grDevices,
                pls, rhandsontable, testthat, shinytest, showtext, sysfonts, colourpicker, 
                reshape, ggdark, ECharts2Shiny, shinyalert, shinybusy, rcdk, RISmed, dplyr, 
                InterpretMSSpectrum, DBI, qdap, reshape2, Hmisc, ggbeeswarm, Rmisc, rgl,
-               stats, pROC, car, doParallel, missForest)
+               stats, pROC, car, doParallel, missForest, ggfortify, fdrtool, plsdepot)
 
+devtools::install_github("dengkuistat/WaveICA")
 devtools::install_github("joannawolthuis/MetaDBparse")
 devtools::install_github("joannawolthuis/MetaboShiny", "reporting")
 MetaboShiny::start_metshi(inBrowser=T)

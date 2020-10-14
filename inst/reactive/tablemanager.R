@@ -72,10 +72,10 @@ shiny::observe({
                      list()
                    },
                    enrich = {
-                     enrich$overview <- if("mummi.resmat" %in% names(mSet$analSet$enrich)){
+                     enrich$overview <<- if("mummi.resmat" %in% names(mSet$analSet$enrich)){
                        mSet$analSet$enrich$mummi.resmat 
                      }else{
-                       mSet$analSet$enrich$mummi.gsea.resmat 
+                       mSet$analSet$enrich$mummi.gsea.resmat
                      } 
                      list()
                    },

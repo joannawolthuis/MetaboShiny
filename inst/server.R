@@ -6,6 +6,7 @@ function(input, output, session) {
   library(plotly)
   library(ggplot2)
   library(SPARQL)
+  library(MetaboShiny)
   
   # EMPTY DEBUG
   debug_browse_content <- debug_result_filters <- debug_pieinfo <- debug_input <- debug_lcl <- debug_mSet <- debug_matches <- debug_enrich <- debug_selection <- debug_venn_yes <- debug_report_yes <- list()
@@ -281,7 +282,7 @@ omit_unknown = yes')
       for(id in c("mummi_adducts", 
                   "score_adducts",
                   "fav_adducts")){
-        shinyWidgets::updatePickerInput(session, id, selected = fav_adducts)
+        shinyWidgets::updatePickerInput(session, id, selected = intersect(fav_adducts,adducts$Name))
       }
       
       # === GOOGLE FONT SUPPORT FOR GGPLOT2 ===
@@ -1017,7 +1018,9 @@ omit_unknown = yes')
     # send specific functions/packages to other threads
     parallel::clusterEvalQ(session_cl, {
       library(data.table)
-      library(iterators)})
+      library(iterators)
+      library(MetaboShiny)
+      library(MetaDBparse)})
     MetaboShiny::setOption(lcl$paths$opt.loc, "cores", input$ncores)
   })
   
@@ -1124,7 +1127,7 @@ omit_unknown = yes')
                                    "paired",
                                    value = mSet$dataSet$paired)
       }
-      uimanager$refresh <- c("general","statspicker",if("adducts" %in% names(opts)) "adds" else NULL)
+      uimanager$refresh <- c("general","statspicker",if("adducts" %in% names(opts)) "adds" else NULL, "ml")
       plotmanager$make <- "general"
     })
   })

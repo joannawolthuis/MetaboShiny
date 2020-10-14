@@ -347,10 +347,11 @@ change.mSet <-
           stats_var
         mSet$settings$exp.lbl <- change_var
         # change current variable of interest to user pick from covars table
-        mSet$dataSet$cls <-
+        mSet$dataSet$cls <- mSet$dataSet$orig.cls <-
           as.factor(mSet$dataSet$covars[, ..change_var, with = F][[1]])
+        
         # adjust bivariate/multivariate (2, >2)...
-        mSet$dataSet$cls.num <-
+        mSet$dataSet$cls.num <- mSet$dataSet$orig.cls.num <-
           length(levels(mSet$dataSet$cls))
         # - - -
         mSet
@@ -366,9 +367,9 @@ change.mSet <-
           idx1 = 1
           idx2 = 2
         }
-        mSet$dataSet$facA <-
+        mSet$dataSet$facA <- mSet$dataSet$facA.orig <-
           as.factor(mSet$dataSet$covars[, stats_var, with = F][[idx1]])
-        mSet$dataSet$facB <-
+        mSet$dataSet$facB <- mSet$dataSet$facB.orig <-
           as.factor(mSet$dataSet$covars[, stats_var, with = F][[idx2]])
         mSet$dataSet$facA.lbl <- stats_var[idx1]
         mSet$dataSet$facB.lbl <- stats_var[idx2]
@@ -390,7 +391,7 @@ change.mSet <-
         mSet$settings$exp.lbl <- "sample"
         mSet$settings$time.fac <- as.factor(mSet$dataSet$covars[, time_var, with = F][[1]])
         mSet$settings$exp.type <- "t"
-        mSet$dataSet$facA <- mSet$settings$time.fac
+        mSet$dataSet$facA <- mSet$dataSet$facA.orig <- mSet$settings$time.fac
         mSet$dataSet$facA.lbl <- "Time"
         mSet$dataSet$facA.lbl.orig <- time_var
         mSet$settings$paired <- TRUE
@@ -413,11 +414,10 @@ change.mSet <-
             stats_var[1]
         else
           stats_var
-        print(time_var)
-        
-        mSet$dataSet$facA <-
+
+        mSet$dataSet$facA <- mSet$dataSet$facA.orig <-
           as.factor(mSet$dataSet$covars[, ..change_var, with = F][[1]])
-        mSet$dataSet$facB <-
+        mSet$dataSet$facB <- mSet$dataSet$facB.orig <-
           as.factor(mSet$dataSet$covars[, ..time_var, with = F][[1]])
         mSet$dataSet$facA.lbl <- change_var
         mSet$dataSet$facB.lbl <- time_var
@@ -673,6 +673,7 @@ metshiProcess <- function(mSet, session, init=F){
                                              max.allow = mSet$metshiParams$max.allow
     )$dataSet$filt)  
     mSet$dataSet$orig <- mSet$dataSet$orig[,keep.mz]
+    mSet$dataSet$filt <- NULL
   }
   
   # sanity check data
@@ -681,13 +682,13 @@ metshiProcess <- function(mSet, session, init=F){
   #shiny::setProgress(session=session, value= .6)
   
   # missing value imputation
-  if(req(mSet$metshiParams$miss_type ) != "none"){
-    if(req(mSet$metshiParams$miss_type ) == "rowmin"){ # use sample minimum
+  if(req(mSet$metshiParams$miss_type) != "none"){
+    if(req(mSet$metshiParams$miss_type) == "rowmin"){ # use sample minimum
       mSet <- replRowMin(mSet)
     }
     else if(req(mSet$metshiParams$miss_type ) == "pmm"){ # use predictive mean matching
       # TODO: re-enable, it's very slow
-      base <- mSet$dataSet$preproc
+      base <- mSet$dataSet$orig
       imp <- mice::mice(base, printFlag = TRUE)
       
     }else if(req(mSet$metshiParams$miss_type ) == "rf"){ # random forest
@@ -754,20 +755,40 @@ metshiProcess <- function(mSet, session, init=F){
       # get injection order for samples
       seq.idx = as.numeric(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"injection"][[1]])
       # go through all the metabolite columns
-      dtNorm <- data.table::as.data.table(mSet$dataSet$norm)
-      pb <- pbapply::startpb(0, max = ncol(dtNorm))
-      i = 0
-      dtNorm[,(1:ncol(dtNorm)) := lapply(.SD,function(x){ 
-        i <<- i + 1
-        pbapply::setpb(pb, i)
-        BatchCorrMetabolomics::doBC(Xvec = as.numeric(x),
-                                    ref.idx = as.numeric(qc_rows),
-                                    batch.idx = batch.idx,
-                                    seq.idx = seq.idx,
-                                    result = "correctedX",
-                                    minBsamp = 1)
-        
-      }), .SDcols = 1:ncol(dtNorm)]
+      #dtNorm <- data.table::as.data.table(mSet$dataSet$norm)
+      dtNorm <- cbind(name = rownames(mSet$dataSet$norm), 
+                      injection.order = seq.idx,
+                      batch = batch.idx,
+                      group = rep(1, nrow(mSet$dataSet$norm)),
+                      mSet$dataSet$norm)
+      
+      dtNorm_merge_order <- dtNorm[order(dtNorm$batch,
+                                         dtNorm$injection.order),]
+      dtNorm_stat_order <- dtNorm_merge_order[,-c(1:4)]
+      
+      waveCorr = WaveICA::WaveICA(dtNorm_stat_order, batch = dtNorm_merge_order$batch)
+      waveCorr = waveCorr$data_wave
+      old.order = rownames(mSet$dataSet$norm)
+      new.order = rownames(waveCorr)
+      reorder = match(old.order, new.order)
+      reorderedCorr = as.data.frame(waveCorr[reorder,])
+      rownames(reorderedCorr) = old.order
+      mSet$dataSet$norm <- data.frame(lapply(reorderedCorr, function(x) as.numeric(as.character(x))),
+                                      check.names=F, row.names = rownames(reorderedCorr))
+      
+      #pb <- pbapply::startpb(0, max = ncol(dtNorm))
+      #i = 0
+      # dtNorm[,(1:ncol(dtNorm)) := lapply(.SD,function(x){ 
+      #   i <<- i + 1
+      #   pbapply::setpb(pb, i)
+      #   BatchCorrMetabolomics::doBC(Xvec = as.numeric(x),
+      #                               ref.idx = as.numeric(qc_rows),
+      #                               batch.idx = batch.idx,
+      #                               seq.idx = seq.idx,
+      #                               result = "correctedX",
+      #                               minBsamp = 1)
+      #   
+      # }), .SDcols = 1:ncol(dtNorm)]
       left_batch_vars <- grep(mSet$metshiParams$batch_var,
                               pattern = ifelse(has.qc, "batch|injection|sample", "injection|sample"),
                               value = T,

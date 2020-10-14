@@ -2,28 +2,28 @@
 lapply(c("merge", 
          "db", 
          "csv"), FUN=function(col){
-  # creates listener for if the 'check db' button is pressed
-  shiny::observe({
-    # see which db files are present in folder
-    folder_files <- list.files(lcl$paths$proj_dir)
-    is.present <- switch(col,
-                         merge = {
-                           if(!is.null(input$ms_modes)){
-                             all(sapply(input$ms_modes, function(ionMode){
-                               is.list(input[[paste0("outlist_", ionMode)]])
-                             }) & is.list(input$metadata))  
-                           }else FALSE
-                         },
-                         csv = paste0(input$proj_name_new, ".csv") %in% folder_files,
-                         db = paste0(input$proj_name_new, ".db") %in% folder_files)
-    check_pic <- if(is.present) "yes.png" else "no.png"
-    # generate checkmark image objects
-    output[[paste0("proj_", col, "_check")]] <- shiny::renderImage({
-      filename <- normalizePath(file.path('www', check_pic))
-      list(src = filename, height = "70px")
-    }, deleteFile = FALSE)# <- this is important or the checkmark file is deleted, haha
-  })
-})
+           # creates listener for if the 'check db' button is pressed
+           shiny::observe({
+             # see which db files are present in folder
+             folder_files <- list.files(lcl$paths$proj_dir)
+             is.present <- switch(col,
+                                  merge = {
+                                    if(!is.null(input$ms_modes)){
+                                      all(sapply(input$ms_modes, function(ionMode){
+                                        is.list(input[[paste0("outlist_", ionMode)]])
+                                      }) & is.list(input$metadata))  
+                                    }else FALSE
+                                  },
+                                  csv = paste0(input$proj_name_new, ".csv") %in% folder_files,
+                                  db = paste0(input$proj_name_new, ".db") %in% folder_files)
+             check_pic <- if(is.present) "yes.png" else "no.png"
+             # generate checkmark image objects
+             output[[paste0("proj_", col, "_check")]] <- shiny::renderImage({
+               filename <- normalizePath(file.path('www', check_pic))
+               list(src = filename, height = "70px")
+             }, deleteFile = FALSE)# <- this is important or the checkmark file is deleted, haha
+           })
+         })
 
 shiny::observeEvent(input$ms_modes, {
   pickerUI = lapply(input$ms_modes, function(mode){
@@ -71,7 +71,9 @@ output$missMzPlot <- shiny::renderPlot({
                                   "Missing percentage" = c(missValues$pos, 
                                                            missValues$neg))
     ggplot2::ggplot(data = data) + 
-      ggplot2::geom_density(aes(x=`Missing percentage`, fill=variable, y=..scaled..), alpha=0.5) +
+      ggplot2::geom_density(aes(x=`Missing percentage`, 
+                                fill=variable, 
+                                y=..scaled..), alpha=0.5) +
       ggplot2::geom_vline(xintercept=input$perc_limit_mz, size=0.7, linetype="dotted") +
       # ggplot2::geom_label(y=0.5,
       #                     x=input$perc_limit_mz,
@@ -84,7 +86,7 @@ output$missMzPlot <- shiny::renderPlot({
                                                         vjust = 0.1,
                                                         size=lcl$aes$font$title.size*1.2),
                      text = ggplot2::element_text(family = lcl$aes$font$family))
-      
+    
   }
 })
 
@@ -106,7 +108,7 @@ shiny::observeEvent(input$checkMiss, {
     if(is.list(input$outlist_neg)){
       nrows = length(vroom::vroom_lines(file.neg, altrep = TRUE, progress = TRUE)) - 1L
       missNeg = getMissing(file.neg, nrow=nrows)
-      missValues$neg = missNeg/length(missPos) * 100
+      missValues$neg = missNeg/nrows * 100
     }
   }else{
     MetaboShiny::metshiAlert("Please select files first!")
@@ -116,16 +118,16 @@ shiny::observeEvent(input$checkMiss, {
 
 # triggers when user wants to create database from .db and excel or 2 csv files and excel
 shiny::observeEvent(input$create_csv,{
-
+  
   files.present = all(sapply(input$ms_modes, function(ionMode){
     is.list(input[[paste0("outlist_", ionMode)]])
-  }) & is.list(input$metadata))
+  }))# & is.list(input$metadata))
   
   if(!files.present) return(NULL)
   
   # update the path to patient csv
   shiny::withProgress({
-
+    
     success=F
     try({
       shiny::setProgress(session=session, value= .1)
@@ -157,6 +159,23 @@ shiny::observeEvent(input$create_csv,{
       hasPos = "pos" %in% input$ms_modes
       hasNeg = "neg" %in% input$ms_modes
       
+      # if(interactive()){
+      #   ppm = input$ppm
+      #   pospath = if(hasPos) shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath else c()
+      #   negpath = if(hasNeg) shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath else c()
+      #   metapath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath
+      #   wipe.regex = input$wipe_regex
+      #   missperc.mz = input$perc_limit_mz
+      #   missperc.samp = input$perc_limit_samp
+      #   missList = missValues
+      #   csvpath = lcl$paths$csv_loc
+      #   overwrite = T
+      #   inshiny=F
+      #   roundMz=input$roundMz  
+      # }
+      
+      # FOR EXAMPLE DATA: "(^\\d+?_)|POS_|NEG_"
+      
       # if loading in .csv files...
       import.pat.csvs(ppm = input$ppm,
                       pospath = if(hasPos) shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath else c(),
@@ -169,7 +188,7 @@ shiny::observeEvent(input$create_csv,{
                       csvpath = lcl$paths$csv_loc,
                       overwrite = T,
                       inshiny=F,
-                      roundMz=input$roundMZ)
+                      roundMz=input$roundMz)
       
       success=T
       output$proj_csv_check <- shiny::renderImage({
@@ -182,7 +201,7 @@ shiny::observeEvent(input$create_csv,{
       MetaboShiny::metshiAlert("Something is wrong with your input data!")
       gc()
     }
-    })
+  })
 })
 
 # imports existing db file
@@ -218,6 +237,7 @@ shiny::observeEvent(input$metadata_new_add, {
         mSet$storage[[project]]$dataSet$covars <- plyr::join(mSet$storage[[project]]$dataSet$covars[,"sample"], 
                                                              new_meta,
                                                              type = "left")
+        #mSet$storage[[project]]$dataSet$cls <- mSet$storage[[project]]$dataSet$orig.cls
       }
     }
     success = T
@@ -240,21 +260,20 @@ shiny::observeEvent(input$metadata_new_add, {
 # triggers when 'get options' is clicked in the normalization pane
 shiny::observeEvent(input$check_csv, {
   # ----------------------
-
+  
   # get the names of those experimental variables
-  header = data.table::fread(lcl$paths$csv_loc, nrows = 2, header=T)
-  met.cols = getColDistribution(header)$meta
-  opts = colnames(header)[met.cols]
-  metadata = data.table::fread(lcl$paths$csv_loc, header=T, select=colnames(header)[met.cols])
+  opts = get_exp_vars(lcl$paths$csv_loc)
+  #opts = colnames(header)[met.cols]
+  #metadata = data.table::fread(lcl$paths$csv_loc, header=T, select=colnames(header)[met.cols])
   
   # get columns that can be used for batch correction (need to be non-unique)
-  batch <<- which(sapply(opts, function(x) length(unique(metadata[,..x][[1]])) < nrow(metadata)))
-
+  batch <- setdiff(opts, c("sample","individual","sampling_date"))#which(sapply(opts, function(x) length(unique(metadata[,..x][[1]])) < nrow(metadata)))
+  
   # update the possible options in the UI
   shiny::updateSelectInput(session, "samp_var",
-                    choices = opts)
+                           choices = opts)
   shiny::updateSelectizeInput(session, "batch_var",
-                       choices = opts[batch],
-                       options = list(maxItems = 3L - (length(input$batch_var)))
+                              choices = batch,
+                              options = list(maxItems = 3L - (length(input$batch_var)))
   )
 })

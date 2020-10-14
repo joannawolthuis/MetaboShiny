@@ -228,7 +228,6 @@ shiny::observe({
                    enr_mSet$dataSet$mumResTable <- data.table::fread(filenm)
                    
                    if(!input$mummi_enr_method){
-                     
                      tbl.rows <- lapply(1:length(enr_mSet$path.hits), function(i){
                        l = enr_mSet$path.hits[[i]]
                        row = enr_mSet$dataSet$mumResTable[i,]
@@ -254,7 +253,6 @@ shiny::observe({
                      mergy$Mass.Diff = abs(as.numeric(mergy$Query.Mass) - as.numeric(mergy$Orig.Mass))
                      mergy = unique(mergy[,c("Query.Mass", "Matched.Compound","adduct","Mass.Diff")])
                      enr_mSet$dataSet$mumResTable <- mergy
-                     
                    }
                    mSet$analSet$enrich <- enr_mSet
                  })
@@ -301,8 +299,10 @@ shiny::observe({
                    }
                    
                    needed_for_subset <- c(lcl$vectors$ml_train[1],lcl$vectors$ml_test[1])
+                
                    config <- config[, c(input$ml_include_covars,
-                                        needed_for_subset),with=F]# reorder so both halves match up later
+                                        needed_for_subset),with=F]# reorder so both halves match up later  
+                   
                    
                    if(mSet$settings$exp.type %in% c("2f", "t1f")){
                      cls <- if(input$ml_run_on_norm) "" else "orig."
@@ -314,7 +314,7 @@ shiny::observe({
                        config <- cbind(config, label=mSet$dataSet[[paste0(cls,"facA")]]) # add current experimental condition
                      }
                    }else{
-                     cls <- if(input$ml_run_on_norm) "cls" else "orig.cls"
+                     cls <- "cls"#if(input$ml_run_on_norm) "cls" else "orig.cls"
                      if(nrow(config)==0){
                        config <- data.frame(label=mSet$dataSet[[cls]])
                      }else{
@@ -371,6 +371,7 @@ shiny::observe({
                    has.na <- apply(config, MARGIN=2, FUN=function(x) any(is.na(x) | tolower(x) == "unknown"))
                    has.all.unique <- apply(config, MARGIN=2, FUN=function(x) length(unique(x)) == length(x))
                    remove = colnames(config)[which(has.na | has.all.unique)]
+                   remove = setdiff(remove, "label")
                    
                    #keep_configs <- which(names(config) == "label")
                    remove <- unique(c(remove, 

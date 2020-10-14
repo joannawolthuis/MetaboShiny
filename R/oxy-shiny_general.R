@@ -206,12 +206,16 @@ metshiAlert <- function(content,
 #' @rdname reformat.metadata
 #' @export 
 reformat.metadata <- function(metadata){
+  keep = !duplicated(colnames(metadata))
+  metadata = metadata[, ..keep]
   colnames(metadata) <- tolower(colnames(metadata))
   colnames(metadata) <- tolower(gsub(x=colnames(metadata), pattern = "\\.$|\\.\\.$|\\]", replacement = ""))
   colnames(metadata) <- gsub(x=colnames(metadata), pattern = "\\[|\\.|\\.\\.| ", replacement = "_")
   colnames(metadata) <- gsub(colnames(metadata), pattern = "characteristics_|factor_value_", replacement="")
   metadata[metadata == "" | is.na(metadata)] <- c("unknown")
   setnames(metadata, old = c("sample_name", "source_name"), new = c("sample", "individual"), skip_absent = T)
+  cols = colnames(metadata)   # define which columns to work with
+  metadata[ , (cols) := lapply(.SD, function(x) {gsub(",", ".", x)}), .SDcols = cols]
   
   # - - - 
   return(metadata)

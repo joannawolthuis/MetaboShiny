@@ -25,7 +25,6 @@ shiny::observe({
           
           orig.count <- mSet$metshiParams$orig.count
           
-
           if(!(mSetter$do %in% c("unsubset"))){
             mSet.settings <- if(mSetter$do == "load") mSet$storage[[input$storage_choice]]$settings else oldSettings
             if(length(mSet.settings$subset) > 0){

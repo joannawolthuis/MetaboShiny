@@ -408,17 +408,17 @@ replRowMin <- function(mSet){
 #' @importFrom doParallel registerDoParallel
 #' @importFrom missForest missForest
 replRF <- function(mSet, parallelMode, ntree, cl){
-  samples <- rownames(mSet$dataSet$preproc)
+  w.missing <- qs::qread("preproc.qs")
+  samples <- rownames(w.missing)
   # convert all to as numeric
   # TODO: remove, should be automatic
-  w.missing <- mSet$dataSet$preproc
   w.missing <- apply(w.missing, 2, as.numeric)
   
   # register other threads as parallel threads
   doParallel::registerDoParallel(cl)
   
   # set amount of tries (defined by missforest package)
-  auto.mtry <- floor(sqrt(ncol(mSet$dataSet$preproc)))
+  auto.mtry <- floor(sqrt(ncol(w.missing)))
   
   mtry <- ifelse(auto.mtry > 100, 
                  100, 
@@ -483,8 +483,6 @@ batchCorrQC <- function(mSet){
 #' @export 
 hideQC <- function(mSet){
   smps <- rownames(mSet$dataSet$norm)
-  print(smps)
-  print(mSet$dataSet$covars$sample)
   # get which rows are QC samples
   qc_rows <- grep(pattern = "QC", x = smps)
   mSet$dataSet$norm <- mSet$dataSet$norm[-qc_rows,]

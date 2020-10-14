@@ -9,6 +9,7 @@ shiny::observe({
     if(!is.null(mSet)){
       success = F
       try({
+        mSet.old <- mSet
         for(do in uimanager$refresh){
           suppressWarnings({
             switch(do,
@@ -201,7 +202,7 @@ shiny::observe({
                      for(id in c("mummi_adducts", 
                                  "score_adducts",
                                  "fav_adducts")){
-                       shinyWidgets::updatePickerInput(session, id, selected = fav_adducts)
+                       shinyWidgets::updatePickerInput(session, id, selected = intersect(fav_adducts,adducts$Name))
                      }
                    },
                    vennrich = {
@@ -273,7 +274,7 @@ shiny::observe({
       })
       if(!success){
         MetaboShiny::metshiAlert("Changing UI failed!")
-        mSet <<- mSet.old
+        mSet <- mSet.old
       }
     }
     uimanager$refresh <- NULL # set making to 'off'
