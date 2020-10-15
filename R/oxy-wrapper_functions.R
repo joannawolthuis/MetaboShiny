@@ -1197,6 +1197,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
           ggplot2::theme(axis.text.x=ggplot2::element_blank(),
                          axis.ticks.x=ggplot2::element_blank(),
                          text = ggplot2::element_text(family = lcl$aes$font$family))
+        plot(myplot)
       }
       
       if(length(myplot$data) > 0){

@@ -576,5 +576,5 @@ a {
 }
 
 .swal2-icon.swal2-question {
-    display: none;
+    display: none !important;
 }

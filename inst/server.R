@@ -1109,26 +1109,33 @@ omit_unknown = yes')
       if(file.exists(fn)){
         mSet <- tryCatch({
           load(fn)
-          mSet
+          if(is.list(mSet)){
+            metshiAlert("Old save selected! Please re-import data to use in v2.0. Conversion is not possible.")
+          }
+          mSet <- NULL
+          gc()
         },
         error = function(cond){
           mSet <- qs::qload(fn)
           mSet
         })
-        mSet$dataSet$combined.method <- TRUE # FC fix
-        mSet <<- mSet
-        opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
-        lcl$proj_name <<- opts$proj_name
-        lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, lcl$proj_name)
-        lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".db"))
-        lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".csv"))
-        
-        shiny::updateCheckboxInput(session,
-                                   "paired",
-                                   value = mSet$dataSet$paired)
+        if(is.list(mSet)){
+          mSet$dataSet$combined.method <- TRUE # FC fix
+          mSet <<- mSet
+          opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
+          lcl$proj_name <<- opts$proj_name
+          lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, lcl$proj_name)
+          lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".db"))
+          lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".csv"))
+          
+          shiny::updateCheckboxInput(session,
+                                     "paired",
+                                     value = mSet$dataSet$paired)
+          
+          uimanager$refresh <- c("general","statspicker",if("adducts" %in% names(opts)) "adds" else NULL, "ml")
+          plotmanager$make <- "general"  
+        }
       }
-      uimanager$refresh <- c("general","statspicker",if("adducts" %in% names(opts)) "adds" else NULL, "ml")
-      plotmanager$make <- "general"
     })
   })
   

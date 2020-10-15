@@ -889,9 +889,9 @@ ggPlotBar <- function(data,
   }
   
   data.subset <- data.ordered[1:topn,]    
-  data.subset$`m/z` <- gsub("`","",reorder(x = data.subset$`m/z`, X = -data.subset$importance.mean))
+  data.subset$`m/z` <- gsub("`","",data.subset$`m/z`)
 
-  p <- ggplot2::ggplot(data.subset, ggplot2::aes(x = `m/z`,
+  p <- ggplot2::ggplot(data.subset, ggplot2::aes(x = reorder(`m/z`, -importance.mean),
                                                  y = importance.mean,
                                                  text = `m/z`,
                                                  key = `m/z`)) +
@@ -902,25 +902,15 @@ ggPlotBar <- function(data,
     ggplot2::labs(x="Top hits (m/z)",y=if(ml_type == "glmnet") "Times included in final model" else "Relative importance (%)")
   
   if(topn <= 15){
-    p <- p + ggplot2::geom_text(ggplot2::aes(x=`m/z`, y=importance.mean, label=`m/z`,vjust="outward"
-    # sapply(`m/z`, function(x){
-    #   if(is.na(as.numeric(as.character(x)))){
-    #     if(grepl(x, pattern = "_")){
-    #       as.character(gsub(x, pattern = "_", replacement = "\n"))
-    #     }else{
-    #       as.character(x)
-    #     }
-    #   }else{
-    #     round(as.numeric(as.character(x)),digits=1)
-    #   }
-    #})
-), size = 4, lineheight = .6, vjust=-1, hjust = 0, angle = 45) + ggplot2::expand_limits(y=max(data.subset$importance.mean) + max(data.subset$importance.mean)*0.1)
+    p <- p + ggplot2::geom_text(ggplot2::aes(x=`m/z`, 
+                                             y=importance.mean + .02*max(importance.mean), 
+                                             label=substr(`m/z`,1,3)
+), size = 4) + ggplot2::expand_limits(y=max(data.subset$importance.mean) + max(data.subset$importance.mean)*0.1)
   }
   
   mzdata <- p$data
   mzdata$`m/z` <- gsub(mzdata$`m/z`, pattern = "`|'", replacement="")
 
-  print("here")
   list(mzdata = mzdata, plot = p)
   
 }
@@ -1541,7 +1531,6 @@ ggPlotVenn <- function(mSet,
         stats_on = toupper(split[1])
         which_stats = split[length(split)]
         subset = grep("=", split, value=T)
-        print(subset)
         paste0(stats_on, "\n", if(length(subset)>0) paste0(subset, collapse="\n", "\n") else "", paste0(">> ", which_stats, " <<\n\n"))
       }else{
         label
