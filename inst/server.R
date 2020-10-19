@@ -7,7 +7,7 @@ function(input, output, session) {
   library(ggplot2)
   library(SPARQL)
   library(MetaboShiny)
-  
+
   # EMPTY DEBUG
   debug_browse_content <- debug_result_filters <- debug_pieinfo <- debug_input <- debug_lcl <- debug_mSet <- debug_matches <- debug_enrich <- debug_selection <- debug_venn_yes <- debug_report_yes <- list()
   
@@ -23,8 +23,6 @@ function(input, output, session) {
   rlang::env_lock(asNamespace('RJSONIO'))
   
   # ====
-  shiny::showModal(MetaboShiny::loadModal())
-  
   shiny::showNotification("Starting server process...")
   
   # detach("package:MetaboShiny", unload=T)
@@ -79,6 +77,8 @@ function(input, output, session) {
     #require(MetaboShiny)
     MetaboShiny::start_metshi(inBrowser = T)
   }
+  
+  shiny::showModal(loadModal())
   
   # == REACTIVE VALUES ==
   
@@ -425,8 +425,6 @@ omit_unknown = yes')
       
       
     }
-    
-    shiny::removeModal()
     
   })
   # ================================= DEFAULTS ===================================
@@ -849,7 +847,6 @@ omit_unknown = yes')
       # list("main", "ml"),#19
       # list("main", "permz")#20
     )
-    
     # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
     # then show the relevent tabs
     # TODO: enable multivariate time series analysis
@@ -1082,9 +1079,9 @@ omit_unknown = yes')
     # save mset
     if(!is.null(mSet)){
       shiny::withProgress({
-        fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
         if(exists("mSet")){
-          save(mSet, file = fn)
+          fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
+          qs::qsave(as.list(mSet), file = fn)
         }
       })  
     }
@@ -1096,30 +1093,28 @@ omit_unknown = yes')
     }
   })
   
-  # for(store_item in names(mSet$storage)){
-  #   print(store_item)
-  #   print(object.size(mSet$storage[[store_item]]), unit="Mb")
-  # }
-  
   shiny::observeEvent(input$load_mset, {
     # load mset
     shiny::withProgress({
       fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
       shiny::showNotification(paste0("Loading existing file: ", fn))
       if(file.exists(fn)){
+        mSet <- NULL
         mSet <- tryCatch({
           load(fn)
           if(is.list(mSet)){
             metshiAlert("Old save selected! Please re-import data to use in v2.0. Conversion is not possible.")
+            mSet <- NULL
+            gc()
+          }else{
+            stop()
           }
-          mSet <- NULL
-          gc()
         },
         error = function(cond){
           mSet <- qs::qload(fn)
           mSet
         })
-        if(is.list(mSet)){
+        if(!is.null(mSet)){
           mSet$dataSet$combined.method <- TRUE # FC fix
           mSet <<- mSet
           opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
@@ -1182,7 +1177,18 @@ omit_unknown = yes')
   
   shiny::observeEvent(input$subset_var, {
     lvls = levels(as.factor(mSet$dataSet$covars[[input$subset_var]]))
-    shiny::updateSelectizeInput(session, "subset_group", choices = lvls)
+    subtext = sapply(lvls, function(lv){
+      samp.count = sum(unlist(mSet$dataSet$covars[[input$subset_var]]) == lv)
+      paste(samp.count, "samples")
+    })
+    shinyWidgets::updatePickerInput(session, 
+                                    "subset_group",
+                                    selected = if(!is.null(lvls[1])) lvls[1] else c(" "), 
+                                    choices = if(length(lvls) > 0) lvls else c(" "),
+                                    choicesOpt = list(subtext = subtext,
+                                                      style = c(rep('text-align:center;',
+                                                                    length(subtext))))
+    )
   },ignoreInit = T)
   
   shiny::observeEvent(input$export_plot,{
@@ -1309,7 +1315,7 @@ omit_unknown = yes')
           tags$b("Click upper right ", icon("times"), " button to cancel."),br(),
           shiny::img(#class = "rotategem", 
             src = "gemmy_rainbow.png", 
-            width = "70px", height = "70px"),
+            height = "70px"),
           br()
         ),
         btn_labels = c("No", "Yes"),
@@ -1328,7 +1334,7 @@ omit_unknown = yes')
       shiny::withProgress({
         fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
         if(exists("mSet")){
-          qs::qsave(mSet, fn)
+          qs::qsave(as.list(mSet), file = fn)
         }
       })
     }
@@ -1374,8 +1380,6 @@ omit_unknown = yes')
             if(pkgRes$msg != ""){
               shiny::tagList(shiny::h2(pkgRes$pkg),
                              shiny::wellPanel(shiny::helpText(pkgRes$msg))
-                             #shiny::helpText(pkgRes$msg)
-                             #shiny::verbatimTextOutput(textID)
               )  
             }else{
               list()
@@ -1399,6 +1403,22 @@ omit_unknown = yes')
     }  
   },silent = T)
   
+  observeEvent(input$fancy, {
+  beFancy = !input$fancy
+  if(beFancy){
+    shinyjs::runjs("$(document).ready(startCursor())")#paste0(readLines(readPath),collapse="\n"))
+    shinyjs::addClass(id = "fancy_pic", class = "imagetop")
+    shinyjs::addClass(id = "appHeader",class = "rainbow")#"color-text-flow text")
+  }else{
+    removeUI(selector = "[id^=dots]", multiple=T)
+    removeUI(selector = ".smallsparkle", multiple=T)
+    shinyjs::removeClass(id="appHeader",
+                         class="rainbow")
+    shinyjs::removeClass(id="fancy_pic",
+                         class="imagetop")
+  }
+  })
+  
   onStop(function() {
     print("Closing MetaboShiny ~ヾ(＾∇＾)")
     if(!is.null(session_cl)){
@@ -1408,4 +1428,7 @@ omit_unknown = yes')
     rmv <- list.files(".", pattern = ".csv|.log", full.names = T)
     if(all(file.remove(rmv))) NULL
   })
+  
+  shiny::removeModal()
+  
 }

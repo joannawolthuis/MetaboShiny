@@ -129,7 +129,8 @@ shiny::observeEvent(input$initialize, {
         max.allow = input$maxMz,
         ref_var = input$ref_var,
         batch_var = input$batch_var,
-        batch_use_qcs = input$batch_use_qcs,
+        batch_method_a = input$batch_method_a,
+        batch_method_b = input$batch_method_b,
         prematched = F,
         rf_norm_parallelize = input$rf_norm_parallel,
         rf_norm_ntree = input$rf_norm_ntree,
@@ -160,23 +161,18 @@ shiny::observeEvent(input$initialize, {
 
       if(typeof(mSet) != "double"){
         success = T
+        mSet <<- mSet
+        qs::qsave(mSet, file = file.path(lcl$paths$proj_dir, 
+                                         paste0(lcl$proj_name,"_ORIG.metshi")))
+        
+        fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
+        qs::qsave(mSet, file = fn)
+        
+        uimanager$refresh <- c("general","statspicker","ml")
+        plotmanager$make <- "general"
+      }else{
+        MetaboShiny::metshiAlert("Normalization failed!")
       }
     })
-    
-    if(success){
-      
-      mSet <<- mSet
-      
-      qs::qsave(mSet, file = file.path(lcl$paths$proj_dir, 
-                                       paste0(lcl$proj_name,"_ORIG.metshi")))
-      
-      fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
-      save(mSet, file = fn)
-      
-      uimanager$refresh <- c("general","statspicker","ml")
-      plotmanager$make <- "general"
-    }else{
-      MetaboShiny::metshiAlert("Normalization failed!")
-    }
   })
 })

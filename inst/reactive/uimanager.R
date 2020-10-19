@@ -19,10 +19,9 @@ shiny::observe({
                      # update select input bars with current variable and covariables defined in excel
                      if(is.null(mSet)){
                        interface$mode <- NULL
-                       
                      }else{
                        if(is.null(mSet$settings$exp.type)){
-                         mSet$settings$exp.type <- "1f" # one factor, binary class
+                         mSet$settings$exp.type <- "1fb" # one factor, binary class
                        }  
                        
                        shiny::showNotification("Updating interface...")
@@ -113,10 +112,28 @@ shiny::observe({
                          paste0(as.character(nrow(mSet$dataSet$norm)),
                                 if(nrow(mSet$dataSet$norm) == origcount) "" else paste0("/",as.character(origcount)))
                        })
-                       storeNames = c(names(mSet$storage)[sapply(mSet$storage, function(x) "settings" %in% names(x))])
-                       shiny::updateSelectInput(session, "storage_choice", 
-                                                choices = if(!is.null(storeNames[[1]])) storeNames else c()
+                       if(length(mSet$storage) > 0){
+                         storeNames = c(names(mSet$storage)[sapply(mSet$storage, function(x) "settings" %in% names(x))])
+                         subtext = sapply(storeNames, function(storeName){
+                           sz=format(object.size(mSet$storage[[storeName]]), unit="Mb")
+                               if(sz != "0 Mb"){
+                                 sz
+                               }else{
+                                 ""
+                               }
+                         })
+                        }else{
+                         storeNames=c(" ")
+                         subtext=c(" ")
+                       }
+                       shinyWidgets::updatePickerInput(session, 
+                                                       "storage_choice",
+                                                       selected = if(!is.null(storeNames[[1]])) storeNames else c(" "), 
+                                                       choices = if(length(storeNames) > 0) storeNames else c(" "),
+                                                       choicesOpt = list(subtext = subtext,
+                                                                         style = c(rep('text-align:center;',length(subtext))))
                        )
+                       
                        usesCovars <- paste0(c("stats","time","shape","col","txt","subset"), "_var")
                        lapply(usesCovars, function(inputId){
                          shiny::updateSelectInput(session, inputId,  

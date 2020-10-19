@@ -308,7 +308,7 @@ fadeImageButton <- function(inputId, img.path=NULL,value=FALSE) {
                       shiny::tags$input(type="checkbox", class="fadebox", id=inputId, checked="")
                     },
                     shiny::tags$label(class="btn", "for"=inputId,
-                                      shiny::tags$img(src=img.path, id="btnLeft"))
+                                      shiny::tags$img(src=img.path, id=paste0(inputId,"_pic")))
     )
   )
 }
@@ -339,10 +339,15 @@ loadModal <- function() {
              shiny::br(),shiny::br(),
              shiny::h3("Starting MetaboShiny..."),
              shiny::br(),shiny::br(),
-             #shiny::helpText("ଘ(੭ˊᵕˋ)੭* ੈ✩‧₊˚"), 
-             #shiny::br(),shiny::br(),
-             shiny::img(class="rotategem", src="gemmy_rainbow.png", width="70px", height="70px"),
-             shiny::br(),shiny::br(),shiny::br()
+             shiny::div(style="position:absolute; width:53%;",
+                        shiny::img(src="metshi_gemmo.png", height="90px",
+                                   style="position: relative;
+                                          left: 50%;"),
+                        shiny::img(class="imagetop", src="metshi_heart.png", height="36px",
+                                   style="position: relative;
+                                          left: 25%;")
+                        ),
+             br(),br(),shiny::br(),shiny::br(),shiny::br()
     )
   )
 }

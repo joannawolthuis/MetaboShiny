@@ -179,7 +179,7 @@ internetWorks <- function(testsite = "http://www.google.com"){
 metshiAlert <- function(content,
                         session = shiny::getDefaultReactiveDomain(),
                         title = "Error",
-                        myImg = "gemmy_rainbow.png"){
+                        myImg = "metshi_heart.png"){
   if(typeof(content) == "character"){
     content = h3(content)
   }
@@ -188,7 +188,7 @@ metshiAlert <- function(content,
     session = session,
     title = title,
     text = tags$div(
-      shiny::img(#class = "rotategem", 
+      shiny::img(class = "imagetop", 
                  src = myImg, 
                  #width = "30px", 
                  height = "30px"),

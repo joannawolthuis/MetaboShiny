@@ -3,6 +3,7 @@
 options(stringsAsFactors = FALSE,"java.parameters" = c("-Xmx8G")) # give java enough memory for smiles parsing
 
 library(MetaboShiny)
+library(shinyBS)
 
 if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 

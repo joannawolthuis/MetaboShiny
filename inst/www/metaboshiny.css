@@ -2,7 +2,7 @@
     margin-right: 0em;
 }
 
-.bootstrap-select>.dropdown-toggle {
+.mzpicker .bootstrap-select>.dropdown-toggle {
   width: auto;
   background-color: transparent;
   border-color: transparent;
@@ -10,7 +10,11 @@
   width: 100%;
 }
 
-.bootstrap-select .dropdown-toggle .caret {
+.mzpicker .bootstrap-select .dropdown-toggle .filter-option {
+    text-align: center;
+}
+
+.mzpicker .bootstrap-select .dropdown-toggle .caret {
   top: 100%;
 }
 
@@ -90,6 +94,10 @@
 
 .navbar-nav {
     margin: 7.5px -5px -10px;
+}
+
+.navbar-brand {
+    padding: 0px 0px !important; 
 }
 
 .caret {
@@ -379,6 +387,9 @@
   opacity: 0.25;
 }
 
+#fancy:checked + label > img {
+  opacity: 0.85;
+}
 
 /* SPINNING INTRO THINGY */
 .rotategem
@@ -398,21 +409,30 @@
 .spinnylocation1
 {
   position: absolute;
-  top: 0px;
-  right: -70px;
+  top: 25px;
+  right: -30px;
   animation-fill-mode: forwards;
   z-index:1000;
 }
 
 .imagetop
 {
-  -webkit-animation:spin 30s linear infinite;
-  -moz-animation:spin 30s linear infinite;
-  animation:spin 30s linear infinite;
-  -webkit-filter: drop-shadow(2px 1px 0 white)
-                  drop-shadow(-1px -1px 0 gray);
-  ilter: drop-shadow(2px 1px 0 white) drop-shadow(-1px -1px 0 gray);
+  animation-name: heartFadeInOut; 
+  animation-iteration-count: infinite;
+  animation-duration: 2s;
 }
+
+ @keyframes heartFadeInOut {
+  0% {transform: scale(1);}
+  25% {transform: scale(.97);}
+  35% {transform: scale(.9);}
+  45% {transform: scale(1.1);}
+  55% {transform: scale(.9);}
+  65% {transform: scale(1.1);}
+  75% {transform: scale(1.03);}
+  100% {transform: scale(1);}
+}
+
 
 .plus
 {
@@ -529,52 +549,45 @@ a {
   text-align: center;
 }
 
-/* sparkle stuff https://codepen.io/maxspeicher/details/zrVKLE */
-@-moz-keyframes my-sparkle {
-  0%   {
-    opacity: 0;
-    -moz-transform: rotate(0deg) scale(0);
-  }
-  50%  {
-    opacity: 1;
-    -moz-transform: rotate(360deg) scale(1);
-  }
-  100% {
-    opacity: 0;
-    -moz-transform: rotate(720deg) scale(0);
-  }
-}
-
-@-webkit-keyframes my-sparkle {
-  0%   {
-    opacity: 0;
-    -webkit-transform: rotate(0deg) scale(0);
-  }
-  50%  {
-    opacity: 1;
-    -webkit-transform: rotate(360deg) scale(1);
-  }
-  100% {
-    opacity: 0;
-    -webkit-transform: rotate(720deg) scale(0);
-  }
-}
-
-@keyframes my-sparkle {
-  0%   {
-    opacity: 0;
-    transform: rotate(0deg) scale(0);
-  }
-  50%  {
-    opacity: 1;
-    transform: rotate(360deg) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: rotate(720deg) scale(0);
-  }
-}
-
 .swal2-icon.swal2-question {
     display: none !important;
+}
+
+/* Animation rainbow background */
+@keyframes animatedBackground {
+    0% { background-position: 0; }
+    100% { background-position: 1000px; }
+}
+@-moz-keyframes animatedBackground {
+    0% { background-position: 0; }
+    100% { background-position: 1000px; }
+}
+@-webkit-keyframes animatedBackground {
+    0% { background-position: 0; }
+    100% { background-position: 1000px; }
+}
+@-o-keyframes animatedBackground {
+    0% { background-position: 0; }
+    100% { background-position: 1000px; }
+}
+
+#heartHolder .shiny-input-container {
+    position: relative;
+    left: 91.5%;
+    z-index: 1006;
+    height: 30px;
+    bottom: 74px;
+}
+
+.rainbow {
+  background-image: -webkit-gradient( linear, left top, right top, color-stop(0, #fb8a8a), color-stop(0.15, #ff8dc7), color-stop(0.3, #8484ff), color-stop(0.45, #a8ffff), color-stop(0.6, #a0ffa0),color-stop(0.75, #91ff91), color-stop(0.9, #ffffa8), color-stop(1, #f99292) );
+  background-image: gradient( linear, left top, right top, color-stop(0, #fb8a8a), color-stop(0.15, #ff8dc7), color-stop(0.3, #8484ff), color-stop(0.45, #a8ffff), color-stop(0.6, #a0ffa0),color-stop(0.75, #91ff91), color-stop(0.9, #ffffa8), color-stop(1, #f99292) );
+  color:transparent !important;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: animatedBackground 20s linear infinite;
+    -moz-animation: animatedBackground 20s linear infinite;
+    -webkit-animation: animatedBackground 20s linear infinite;
+    -ms-animation: animatedBackground 20s linear infinite;
+    -o-animation: animatedBackground 20s linear infinite;
 }

@@ -2,25 +2,48 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                  ECharts2Shiny::loadEChartsLibrary(),
                  shinyalert::useShinyalert(), 
                  shinyjs::useShinyjs(),
-                 tags$head(tags$script(src="sparkle.js"),
-                           tags$script(src="spinnytitle.js")),
+                 shinyjqui::includeJqueryUI(),
+                 tags$head(
+                   tags$script(src="cursor.js"), # TODO: make this only in fabulous mode
+                   #tags$script(src="spinnytitle.js")
+                   ),
+                 shiny::div(style = 'position:absolute;width:100%;',
+                            class = "plus",
+                            shiny::img(src="metshi_gemmo.png", 
+                                       id="metshiGem", 
+                                       style='position: relative;
+                                                        height: 100px;
+                                                          top: 7%;
+                                                          left: 88%;
+                                                          z-index: 1005;
+                                                      }'),
+                            shiny::div(id="heartHolder",
+                                style="width:100%;position:absolute;",
+                                MetaboShiny::fadeImageButton("fancy",
+                                                             img.path="metshi_heart.png",
+                                                             value = F)
+                                )
+                            
+                 ),
                  shinyjs::extendShinyjs(text = "shinyjs.closeWindow = function() { window.close(); }", 
                                         functions = c("closeWindow")),
                  shinybusy::add_busy_spinner(spin = "atom", 
                                              position = "full-page",
                                              margins = c("50%","50%"),
                                              height = "200px", 
-                                             width="200px", timeout = 1000),
+                                             width="200px", 
+                                             timeout = 1000),
                  shiny::navbarPage(windowTitle='MetaboShiny',
                                    # use this for title
                                    # https://codepen.io/maxspeicher/pen/zrVKLE
-                                   title=shiny::div(shiny::div(id="appHeader", "MetaboShiny"),
-                                                    class="outlined", 
-                                                    id="sparkley"
-                                   ), # make it use the sparkle.js for unnecessary sparkle effects ;)
+                                   title=shiny::div(id="appHeader",
+                                                     class="outlined",
+                                                    "MetaboShiny"), # make it use the sparkle.js for unnecessary sparkle effects ;)
                                    id="nav_general",
                                    # this tab shows the available databases, if they are installed, and buttons to install them. generated as output$db_build_ui in 'server'
-                                   shiny::tabPanel("database", icon = shiny::icon("database",class = "outlined"), value="database",
+                                   shiny::tabPanel("database", icon = shiny::icon("database",
+                                                                                  class = "outlined"), 
+                                                   value="database",
                                                    shiny::fluidRow(align="center", shinyBS::bsCollapse(shinyBS::bsCollapsePanel(title=shiny::h2("Settings"), value="panel4",
                                                                                                                                 shiny::sliderInput(inputId = "db_mz_range", label = "What mass range can your machine detect?",
                                                                                                                                                    min = 0, max = 3000, value = c(60, 600),
@@ -92,14 +115,19 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                    # this tab is used to perform normalization of your data. settings are processed as input$filt_type etc. in 'server'.
                                    tabPanel("normalize",  icon = shiny::icon("shower",class = "outlined"), value="filter",
                                             shiny::fluidRow(align="center",shiny::column(3, 
-                                                                                         shiny::selectInput(width = "80%",'samp_var', 'Which variable represents sample amount/concentration?', choices = c("")), #TODO: only show this when normalize by sample specific factor (specnorm) is selected
+                                                                                         shiny::selectInput(width = "80%",'samp_var', 'Which variable represents sample amount/concentration?', choices = c(" ")), #TODO: only show this when normalize by sample specific factor (specnorm) is selected
                                                                                          shiny::selectizeInput('batch_var', 'What are your batch variables?', choices = c("batch"), multiple=TRUE, options = list(maxItems = 2L)),
-                                                                                         shinyWidgets::switchInput(
-                                                                                           inputId = "batch_use_qcs",value = TRUE,
-                                                                                           label = "Batch correction method if QCS present:",
-                                                                                           onLabel = "WaveICA",
-                                                                                           offLabel = "ComBaT"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
-                                                                                         ),
+                                                                                         shiny::selectInput(inputId = "batch_method_a",
+                                                                                                            label = "Batch correction method if machine batch and injection order are present:",
+                                                                                                            choices = list("WaveICA - WaveICA" = "waveica",
+                                                                                                                           "limma - removeBatchEffect" = "limma",
+                                                                                                                           "ComBat" = "combat"),
+                                                                                                            selected="waveica"),
+                                                                                         shiny::selectInput(inputId = "batch_method_b",
+                                                                                                            label = "Batch correction method for other variables",
+                                                                                                            choices = list("limma - removeBatchEffect" = "limma",
+                                                                                                                           "ComBat" = "combat"),
+                                                                                                            selected="combat"),
                                                                                          shiny::actionButton("check_csv", "Get options", icon=shiny::icon("refresh")),
                                                                                          shiny::hr(),
                                                                                          shiny::selectInput(width = "80%",'filt_type', 'How will you filter your m/z values?', choices = list("Interquantile range" = "iqr",
@@ -678,7 +706,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                                                                                                          max = 999,
                                                                                                                                                                                                                                                                          step = 1),
                                                                                                                                                                                                                                                       shiny::selectInput("power_comps", "Which comparisons do you want to make?",
-                                                                                                                                                                                                                                                                         choices = c(),
+                                                                                                                                                                                                                                                                         choices = c(" "),
                                                                                                                                                                                                                                                                          multiple = T),
                                                                                                                                                                                                                                                       shiny::numericInput("power_fdr", "False discovery rate:", 
                                                                                                                                                                                                                                                                           value = 0.1, 
@@ -772,7 +800,9 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                                                     choices = adducts$Name,
                                                                                                                                                                                                                     label = "Adducts to look for:",
                                                                                                                                                                                                                     selected = c("[M+H]1+", "[M+Na]1+", "[M+2H]2+", "[M+K]1+"),
-                                                                                                                                                                                                                    multiple = T),
+                                                                                                                                                                                                                    multiple = T,
+                                                                                                                                                                                                                    options = list(
+                                                                                                                                                                                                                      `actions-box` = TRUE)),
                                                                                                                                                                                           shinyWidgets::actionBttn(
                                                                                                                                                                                             inputId = "do_enrich",
                                                                                                                                                                                             label = "click to start enrichment analysis", 
@@ -866,7 +896,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                            )
                                                                                                                                                                              ),
                                                                                                                                                                              shiny::column(width=3,align="center",
-                                                                                                                                                                                           shiny::selectizeInput("ml_include_covars", label = "Use which non-m/z info for prediction?", choices=c(), multiple=TRUE),
+                                                                                                                                                                                           shiny::selectizeInput("ml_include_covars", label = "Use which non-m/z info for prediction?", choices=c(" "), multiple=TRUE),
                                                                                                                                                                                            shiny::fluidRow(sardine(shiny::textOutput("ml_train_ss")),
                                                                                                                                                                                                            shinyWidgets::circleButton(inputId = "reset_ml_train",
                                                                                                                                                                                                                                       icon=shiny::icon("undo"),
@@ -891,7 +921,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                         shiny::fluidRow(align="center",
                                                                                                                                                                         shiny::selectInput("show_which_ml",
                                                                                                                                                                                            label = "Plot which model?", 
-                                                                                                                                                                                           choices = c())),
+                                                                                                                                                                                           choices = c(" "))),
                                                                                                                                                         shiny::tabsetPanel(id="ml_results",
                                                                                                                                                                            shiny::tabPanel(title = "roc",value = "roc",icon=shiny::icon("area-chart"),
                                                                                                                                                                                            shiny::fluidRow(align="center",shiny::uiOutput("ml_roc_wrap")),
@@ -964,7 +994,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                            ,shiny::conditionalPanel("input.stats_type == 't' || input.stats_type == 't1f'",
                                                                                                                                                                                     shiny::selectizeInput("time_var", 
                                                                                                                                                                                                           label="Time series variable:", 
-                                                                                                                                                                                                          choices = c("label"),width = "80%"))
+                                                                                                                                                                                                          choices = c(" "),width = "80%"))
                                                                                                                                                            ,shinyWidgets::actionBttn(
                                                                                                                                                              inputId = "change_cls",
                                                                                                                                                              label = "do stats on selected", 
@@ -977,8 +1007,14 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                            ,helpText("Current sample count:")
                                                                                                                                                            ,h2(shiny::textOutput("samp_count"))
                                                                                                                                                            ,br()
-                                                                                                                                                           ,shiny::selectInput("subset_var", label="Subset data based on:", choices = c("label"),width = "80%")
-                                                                                                                                                           ,shiny::selectizeInput("subset_group", label="Group(s) in subset:", choices = c(), multiple=TRUE,width = "80%")
+                                                                                                                                                           ,shiny::selectInput("subset_var", label="Subset data based on:", choices = c(" "),width = "80%")
+                                                                                                                                                           ,shinyWidgets::pickerInput(
+                                                                                                                                                             inputId = "subset_group",
+                                                                                                                                                             label = "Group(s) in subset:", 
+                                                                                                                                                             choices = c(" "),
+                                                                                                                                                             choicesOpt = list(
+                                                                                                                                                               subtext = c(" ")
+                                                                                                                                                           ),multiple = T)
                                                                                                                                                            ,shinyWidgets::actionBttn(
                                                                                                                                                              inputId = "change_subset",
                                                                                                                                                              label = "click to subset", 
@@ -986,14 +1022,30 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                              icon = icon("filter"),
                                                                                                                                                              size = "sm"
                                                                                                                                                            ),br(),br()
-                                                                                                                                                           ,shiny::selectInput("storage_choice", label="Load existing meta-dataset:", choices = c("label"),width = "80%")
-                                                                                                                                                           ,shinyWidgets::actionBttn(
+                                                                                                                                                           ,shinyWidgets::pickerInput(
+                                                                                                                                                             inputId = "storage_choice",
+                                                                                                                                                             label = "Load existing meta-dataset:", 
+                                                                                                                                                             choices = c(" "),
+                                                                                                                                                             choicesOpt = list(
+                                                                                                                                                               subtext = c(" ")
+                                                                                                                                                             ))
+                                                                                                                                                           ,span(shinyWidgets::actionBttn(
                                                                                                                                                              inputId = "load_storage",
-                                                                                                                                                             label = "click to load selected", 
+                                                                                                                                                             label = "load", 
                                                                                                                                                              style = "bordered",
                                                                                                                                                              icon = icon("folder-open"),
-                                                                                                                                                             size = "sm"
-                                                                                                                                                           ),br(),br()
+                                                                                                                                                             size = "sm",
+                                                                                                                                                             color = "success"
+                                                                                                                                                           ),
+                                                                                                                                                           shinyWidgets::actionBttn(
+                                                                                                                                                             inputId = "remove_storage",
+                                                                                                                                                             label = "delete", 
+                                                                                                                                                             style = "bordered",
+                                                                                                                                                             icon = icon("eraser"),
+                                                                                                                                                             size = "sm",
+                                                                                                                                                             color = "warning"
+                                                                                                                                                           ))
+                                                                                                                                                           ,br(),br()
                                                                                                                                                            ,helpText("Reset to non-subsetted or paired dataset")
                                                                                                                                                            ,shinyWidgets::actionBttn(
                                                                                                                                                              inputId = "reset_subset",
@@ -1066,7 +1118,9 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                                                                                                                                        choices = adducts$Name,
                                                                                                                                                                                                                                                                                                        label = "Adducts to look for:",
                                                                                                                                                                                                                                                                                                        selected = c("[M+H]1+", "[M+Na]1+", "[M+2H]2+", "[M+K]1+"),
-                                                                                                                                                                                                                                                                                                       multiple = T),
+                                                                                                                                                                                                                                                                                                       multiple = T,
+                                                                                                                                                                                                                                                                                                       options = list(
+                                                                                                                                                                                                                                                                                                         `actions-box` = TRUE)),
                                                                                                                                                                                                                                                                              shiny::uiOutput("add_rt_ui"),
                                                                                                                                                                                                                                                                              shinyWidgets::circleButton("score_add", 
                                                                                                                                                                                                                                                                                                         icon = shiny::icon("medal"), 
@@ -1141,7 +1195,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                  div(shiny::icon("paw", "fa-xs fa-rotate-90"), style="margin-top: 20px; display: flex;"),
                                                                                                                                                                                  div(shiny::icon("paw", "fa-xs fa-rotate-90"), style="display: flex;"),
                                                                                                                                                                                  div(shiny::icon("paw", "fa-xs fa-rotate-90"), style="margin-top: 20px; display: flex;"),
-                                                                                                                                                                                 shinyWidgets::pickerInput(
+                                                                                                                                                                                 div(shinyWidgets::pickerInput(
                                                                                                                                                                                    inputId = "curr_mz",
                                                                                                                                                                                    label = div(icon("search"), style="font-size: xx-large;margin-top: -30px;color: black;-webkit-text-fill-color: white;-webkit-text-stroke-width: 1.5px;-webkit-text-stroke-color: #DFDCDC"), 
                                                                                                                                                                                    choices = "fa-cat",
@@ -1151,7 +1205,7 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                    options = list(
                                                                                                                                                                                      `live-search` = TRUE,
                                                                                                                                                                                      size = 10)
-                                                                                                                                                                                 ),
+                                                                                                                                                                                 ),class = "mzpicker"),
                                                                                                                                                                                  div(shiny::icon("paw", "fa-xs fa-rotate-90"), style="margin-top: 20px; display: flex;"),
                                                                                                                                                                                  div(shiny::icon("paw", "fa-xs fa-rotate-90"), style="display: flex;"),
                                                                                                                                                                                  div(shiny::icon("paw", "fa-xs fa-rotate-90"), style="margin-top: 20px; display: flex;"),
@@ -1276,11 +1330,11 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                                                  selected = c("beeswarm"),width = "80%"),
                                                                                                                                                            shiny::selectInput("ggplot_sum_stats", label = "Stats shown", choices = list("median", "mean", "none"),width = "80%"),
                                                                                                                                                            shiny::h2("Shape")
-                                                                                                                                                           ,shiny::selectInput("shape_var", label="Marker shape based on:", choices = c("label"),width = "80%")
+                                                                                                                                                           ,shiny::selectInput("shape_var", label="Marker shape based on:", choices = c(" "),width = "80%")
                                                                                                                                                            ,shiny::h2("Color")
-                                                                                                                                                           ,shiny::selectInput("col_var", label="Marker color based on:", choices = c("label"),width = "80%")
+                                                                                                                                                           ,shiny::selectInput("col_var", label="Marker color based on:", choices = c(" "),width = "80%")
                                                                                                                                                            ,shiny::h2("Hover text")
-                                                                                                                                                           ,shiny::selectInput("txt_var", label="Marker hover text based on:", choices = c("label"),width = "80%"),
+                                                                                                                                                           ,shiny::selectInput("txt_var", label="Marker hover text based on:", choices = c(" "),width = "80%"),
                                                                                                                                                            shiny::h2("Plot theme"),
                                                                                                                                                            shiny::selectInput("ggplot_theme", label = "Theme", choices = list("Grid, white bg" = "bw",
                                                                                                                                                                                                                               "No grid, white bg" = "classic",
@@ -1442,7 +1496,9 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                                                                                                   label = "Default (favorite) adducts:",
                                                                                                                                                   selected = c("[M+H]1+", "[M+Na]1+", 
                                                                                                                                                                "[M+2H]2+", "[M+K]1+"),
-                                                                                                                                                  multiple = T),
+                                                                                                                                                  multiple = T,
+                                                                                                                                                  options = list(
+                                                                                                                                                    `actions-box` = TRUE)),
                                                                                                                         shiny::hr(),
                                                                                                                         shiny::actionButton("save_fav_adducts","Apply")
                                                                                                                         )
@@ -1553,15 +1609,10 @@ shiny::fluidPage(theme = "metaboshiny.css",class="hidden",id="metshi",
                                                                    shiny::uiOutput("help"))),
                                    # prompt user on opening the quit tab.
                                    # TODO: add 'save project?' dialog
-                                   #tabPanel(title = "", value="stop", icon = shiny::icon("times-circle",class = "outlined")),
-                                   shiny::div(class="spinnylocation1",
-                                              shiny::div(class="plus", img(class="imagetop", 
-                                                                           src="gemmy_rainbow.png", 
-                                                                           width="90px", height="90px"))
-                                   ),
-                                   div(class="scallop-down"),
-                                   shiny::div(class="line")
-                                   ,footer=shiny::fluidRow(
+                                   shiny::div(class="scallop-down"),
+                                   shiny::div(class="cursorHolder"),
+                                   shiny::div(class="line"),
+                                   footer=shiny::fluidRow(
                                      br(),br(),br(),br(),br(),
                                      shiny::div(class = "footer",
                                                 tags$i(icon("map-marker"), shiny::textOutput("proj_name",inline = T), style="vertical-align: middle;"),

@@ -118,10 +118,10 @@ FilterVariableMetshi <- function (mSetObj = NA, filter, qcFilter, rsd, max.allow
 #' @export 
 is.ordered.mSet <- function(mSet) {
   covarsMatch = all(mSet$dataSet$covars$sample == rownames(mSet$dataSet$norm))
-  mSet$settings$exp.type <-
+  exp.type <-
     gsub("^1f.",  "1f", mSet$settings$exp.type)
   expVarsMatch <- switch(
-    mSet$settings$exp.type,
+   exp.type,
     "1f" = {
       all(mSet$dataSet$cls == mSet$dataSet$covars[, mSet$settings$exp.fac, with =
                                                     F][[1]])
@@ -743,100 +743,171 @@ metshiProcess <- function(mSet, session, init=F){
   # === check if it does wrong here... ===
   
   if(length(mSet$metshiParams$batch_var)>0){
+    
+    csv_edata <- MetaboShiny::combatCSV(mSet)
     left_batch_vars = mSet$metshiParams$batch_var
-    if("batch" %in% mSet$metshiParams$batch_var & has.qc & mSet$metshiParams$batch_use_qcs){
-      # save to mSet
-      smps <- rownames(mSet$dataSet$norm)
-      # get which rows are QC samples
-      qc_rows <- which(grepl(pattern = "QC", x = smps))
-      # get batch for each sample
-      batch.idx = as.numeric(as.factor(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"batch"][[1]]))
-      if(length(batch.idx) == 0) return(mSet$dataSet$norm)
-      # get injection order for samples
-      seq.idx = as.numeric(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"injection"][[1]])
-      # go through all the metabolite columns
-      #dtNorm <- data.table::as.data.table(mSet$dataSet$norm)
-      dtNorm <- cbind(name = rownames(mSet$dataSet$norm), 
-                      injection.order = seq.idx,
-                      batch = batch.idx,
-                      group = rep(1, nrow(mSet$dataSet$norm)),
-                      mSet$dataSet$norm)
-      
-      dtNorm_merge_order <- dtNorm[order(dtNorm$batch,
-                                         dtNorm$injection.order),]
-      dtNorm_stat_order <- dtNorm_merge_order[,-c(1:4)]
-      
-      waveCorr = WaveICA::WaveICA(dtNorm_stat_order, batch = dtNorm_merge_order$batch)
-      waveCorr = waveCorr$data_wave
-      old.order = rownames(mSet$dataSet$norm)
-      new.order = rownames(waveCorr)
-      reorder = match(old.order, new.order)
-      reorderedCorr = as.data.frame(waveCorr[reorder,])
-      rownames(reorderedCorr) = old.order
-      mSet$dataSet$norm <- data.frame(lapply(reorderedCorr, function(x) as.numeric(as.character(x))),
-                                      check.names=F, row.names = rownames(reorderedCorr))
-      
-      #pb <- pbapply::startpb(0, max = ncol(dtNorm))
-      #i = 0
-      # dtNorm[,(1:ncol(dtNorm)) := lapply(.SD,function(x){ 
-      #   i <<- i + 1
-      #   pbapply::setpb(pb, i)
-      #   BatchCorrMetabolomics::doBC(Xvec = as.numeric(x),
-      #                               ref.idx = as.numeric(qc_rows),
-      #                               batch.idx = batch.idx,
-      #                               seq.idx = seq.idx,
-      #                               result = "correctedX",
-      #                               minBsamp = 1)
-      #   
-      # }), .SDcols = 1:ncol(dtNorm)]
-      left_batch_vars <- grep(mSet$metshiParams$batch_var,
-                              pattern = ifelse(has.qc, "batch|injection|sample", "injection|sample"),
-                              value = T,
-                              invert = T)
-    }
     
-    # check which batch values are left after initial correction
+    # APPLY THE FIRST METHOD ONLY FOR BATCH + INJECTION
     
-    if(length(left_batch_vars) > 2){
-      NULL  # no option for more than 2 other batch variables yet
-    } else if(length(left_batch_vars) == 0){
-      NULL # if none left, continue after this
-    } else{
-      csv_edata <- MetaboShiny::combatCSV(mSet)
-      
-      if(length(left_batch_vars) == 1){
-        # create a model table
-        csv_pheno <- data.frame(sample = 1:nrow(mSet$dataSet$covars),
-                                batch1 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample),
-                                                             left_batch_vars[1], with=FALSE][[1]]
-                                #,batch2 = c(0),
-                                #outcome = as.factor(mSet$dataSet$cls)
-        )
-        # batch correct with comBat
-        batch_normalized = t(sva::ComBat(dat = csv_edata,
-                                         batch = csv_pheno$batch1
-                                         # mod=mod.pheno,
-                                         # par.prior=TRUE
-        ))
-        # fix row names
-        rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
-      }else{
-        # create a model table
-        csv_pheno <- data.frame(sample = 1:nrow(mSet$dataSet$covars),
-                                batch1 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample), left_batch_vars[1], with=FALSE][[1]],
-                                batch2 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample), left_batch_vars[2], with=FALSE][[1]]
-                                #,outcome = as.factor(exp_lbl)
-                                )
-        # batch correct with limma and two batches
-        batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
-                                                      #design = mod.pheno,
-                                                      batch = csv_pheno$batch1,
-                                                      batch2 = csv_pheno$batch2))
-        rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
-      }
-      # save normalized table to mSet
+    if(mSet$metshiParams$batch_method_a == "limma" & 
+       mSet$metshiParams$batch_method_b == "limma" & 
+       length(left_batch_vars) == 2){
+      # create a model table
+      csv_pheno <- data.frame(sample = 1:nrow(mSet$dataSet$covars),
+                              batch1 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample), left_batch_vars[1], with=FALSE][[1]],
+                              batch2 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample), left_batch_vars[2], with=FALSE][[1]]
+                              #,outcome = as.factor(exp_lbl)
+      )
+      # batch correct with limma and two batches
+      batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
+                                                    batch = csv_pheno$batch1,
+                                                    batch2 = csv_pheno$batch2))
+      rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
       mSet$dataSet$norm <- as.data.frame(batch_normalized)
-    }}
+    }else{
+      if("batch" %in% mSet$metshiParams$batch_var){# & mSet$metshiParams$batch_use_qcs){# & has.qc){
+        csv_edata <- MetaboShiny::combatCSV(mSet)
+        # get batch for each sample
+        batch.idx = as.numeric(as.factor(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"batch"][[1]]))
+        if(length(batch.idx) == 0) return(mSet$dataSet$norm)
+        # get injection order for samples
+        seq.idx = as.numeric(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"injection"][[1]])
+        hasRT = any(grepl(pattern = "RT", colnames(mSet$dataSet$proc)))
+        
+        if(hasRT & mSet$metshiParams$batch_method_a == "batchCorr"){
+          metshiAlert("Only available for LC-MS data! Defaulting to WaveICA.")
+          mSet$metshiParams$batch_method_a <- "waveica"
+        }
+        
+        mSet$dataSet$norm <- 
+          switch(mSet$metshiParams$batch_method_a, 
+                 waveica = {
+                   dtNorm <- cbind(name = rownames(mSet$dataSet$norm), 
+                                   injection.order = seq.idx,
+                                   batch = batch.idx,
+                                   group = rep(1, nrow(mSet$dataSet$norm)),
+                                   mSet$dataSet$norm)
+                   
+                   dtNorm_merge_order <- dtNorm[order(dtNorm$batch,
+                                                      dtNorm$injection.order),]
+                   dtNorm_stat_order <- dtNorm_merge_order[,-c(1:4)]
+                   
+                   waveCorr = WaveICA::WaveICA(dtNorm_stat_order, batch = dtNorm_merge_order$batch)
+                   waveCorr = waveCorr$data_wave
+                   old.order = rownames(mSet$dataSet$norm)
+                   new.order = rownames(waveCorr)
+                   reorder = match(old.order, new.order)
+                   reorderedCorr = as.data.frame(waveCorr[reorder,])
+                   rownames(reorderedCorr) = old.order
+                   data.frame(lapply(reorderedCorr, function(x) as.numeric(as.character(x))),
+                              check.names=F, row.names = rownames(reorderedCorr))
+                 }, 
+                 batchCorr = {
+                   ## Perform batch alignment
+                   # Extract peakinfo (i.e. m/z and rt of features)
+                   peakIn <- batchCorr::peakInfo(PT = mSet$dataSet$proc,
+                                                 sep = 'PLACEHOLDER',
+                                                 start = 0) # These column names have 2 leading characters describing LC-MS mode -> start at 3
+
+
+                   spl.mzrt = stringr::str_split(colnames(mSet$dataSet$proc), "RT")
+                   mzs = sapply(spl.mzrt, function(x) x[[1]])
+                   rts = sapply(spl.mzrt, function(x) x[[2]])
+                   peakIn = data.frame(mz = as.numeric(gsub("\\+|-","",mzs)),
+                                       rt = as.numeric(rts))
+
+                   qc.or.samp = sapply(grepl(pattern = "QC|qc", rownames(mSet$dataSet$proc)), function(x) if(x) "qc" else "sample")
+
+                   alignBat <- batchCorr::alignBatches(peakInfo = peakIn,
+                                                       PeakTabNoFill = mSet$dataSet$orig,
+                                                       PeakTabFilled = mSet$dataSet$norm,
+                                                       batches = as.numeric(as.factor(mSet$dataSet$covars$batch)),
+                                                       sampleGroups = qc.or.samp,
+                                                       selectGroup = 'qc')
+
+                   # Extract new peak table
+                   PT=alignBat$PTalign
+                   },
+                 limma = {
+                   # create a model table
+                   csv_pheno <- data.frame(sample = 1:nrow(mSet$dataSet$covars),
+                                           batch1 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample), left_batch_vars[1], with=FALSE][[1]]
+                   )
+                   # batch correct with limma and two batches
+                   batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
+                                                                 #design = mod.pheno,
+                                                                 batch = csv_pheno$batch1,
+                                                                 batch2 = csv_pheno$batch2))
+                   rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
+                   as.data.frame(batch_normalized)
+                 },
+                 combat = {
+                   csv_pheno <- data.frame(sample = 1:nrow(mSet$dataSet$covars),
+                                           batch1 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample),
+                                                                        left_batch_vars[1], with=FALSE][[1]]
+                   )
+                   # batch correct with comBat
+                   batch_normalized = t(sva::ComBat(dat = csv_edata,
+                                                    batch = csv_pheno$batch1)
+                   )
+                   # fix row names
+                   rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
+                   batch_normalized
+                 })
+        
+        left_batch_vars <- grep(mSet$metshiParams$batch_var,
+                                pattern = "batch|injection|sample",
+                                value = T,
+                                invert = T)
+      }
+      
+      # check which batch values are left after initial correction
+      if(length(left_batch_vars) == 0){
+        NULL # if none left, continue after this
+      } else{
+          mSet$dataSet$norm <- 
+            switch(mSet$metshiParams$batch_method_b,
+                   combat = {
+                     batch_normalized = csv_edata
+                     for(var in left_batch_vars){
+                       # create a model table
+                       csv_pheno <- data.frame(sample = 1:nrow(mSet$dataSet$covars),
+                                               batch1 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample),
+                                                                            var, with=FALSE][[1]]
+                       )
+                       # batch correct with comBat
+                       batch_normalized = sva::ComBat(dat = batch_normalized,
+                                                        batch = csv_pheno$batch1
+                       )
+                     }
+                     batch_normalized = t(batch_normalized)
+                     rownames(batch_normalized) <- rownames(mSet$dataSet$norm) 
+                     batch_normalized
+                   },
+                   limma = {
+                     # create a model table
+                     csv_pheno <- data.frame(sample = 1:nrow(mSet$dataSet$covars),
+                                             batch1 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample), left_batch_vars[1], with=FALSE][[1]],
+                                             batch2 = if(length(left_batch_vars)==2) 
+                                               mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample), left_batch_vars[2], with=FALSE][[1]] else NULL
+                     )
+                     # batch correct with limma and two batches
+                     if(length(left_batch_vars)==2){
+                       batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
+                                                                     #design = mod.pheno,
+                                                                     batch = csv_pheno$batch1,
+                                                                     batch2 = csv_pheno$batch2))
+                     }else{
+                       batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
+                                                                     #design = mod.pheno,
+                                                                     batch = csv_pheno$batch1))  
+                     }
+                     rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
+                     as.data.frame(batch_normalized)
+                   })  
+        
+      }}
+    }
   
   #shiny::setProgress(session=session, value= .9)
   
