@@ -11,6 +11,23 @@ shiny::observeEvent(input$tsne_2d3d, {
   plotmanager$make <- "tsne"
 }, ignoreNULL = T)
 
+# reload plots (pca/plsda) if the 2d/3d button is triggered
+shiny::observeEvent(input$pca_ellipse, {
+  plotmanager$make <- "pca"
+}, ignoreNULL = T)
+
+shiny::observeEvent(input$plsda_ellipse, {
+  plotmanager$make <- "plsda"
+}, ignoreNULL = T)
+
+shiny::observeEvent(input$tsne_ellipse, {
+  plotmanager$make <- "tsne"
+}, ignoreNULL = T)
+
+shiny::observeEvent(input$corr_topn, {
+  plotmanager$make <- "corr"
+}, ignoreNULL = T)
+
 update_heatmap = shiny::reactive({
   input$heatmap_topn
 }) %>% shiny::debounce(1000)

@@ -619,6 +619,12 @@ getTopHits <- function(mSet, expnames, top){
                        # - - -
                        res
                      },
+                     corr = {
+                       res = list(rownames(analysis$corr$cor.mat[order(abs(analysis$corr$cor.mat[,1]),
+                                                                      decreasing = F),]))
+                       names(res) = base_name
+                       res
+                     },
                      aov = {
                        res = list(rownames(analysis$aov$sig.mat[order(analysis$aov$sig.mat[,2],
                                                                       decreasing = F),]))
@@ -813,8 +819,8 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                         type = "tsne",
                                         mode = mode,
                                         shape.fac = input$shape_var,
-                                        col.fac = input$col_var
-                         )
+                                        col.fac = input$col_var,
+                                        ellipse = input$tsne_ellipse)
                          
                        }else{
                          # render 3d plot
@@ -828,7 +834,8 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                         shape.fac = input$shape_var,
                                         font = lcl$aes$font,
                                         col.fac = input$col_var,
-                                        cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                                        cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                        ellipse = input$tsne_ellipse)
                        }
                      }
                      list(tsne_plot = p)
@@ -853,7 +860,8 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                           mode = mode,
                                           type = "pca",
                                           col.fac = input$col_var,
-                                          shape.fac = input$shape_var)
+                                          shape.fac = input$shape_var, 
+                                          ellipse = input$pca_ellipse)
                          loadings = plotPCAloadings.2d(mSet,pcx = input$pca_x,
                                                        pcy = input$pca_y, 
                                                        type = "pca",
@@ -870,7 +878,8 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                           cols = lcl$aes$mycols,
                                           shape.fac = input$shape_var,
                                           font = lcl$aes$font,
-                                          cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                                          cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                          ellipse = input$pca_ellipse)
                          loadings = plotPCAloadings.3d(mSet,
                                                        pcx = input$pca_x,
                                                        pcy = input$pca_y,
@@ -908,7 +917,8 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                              mode = mode,
                                              col.fac = input$col_var,
                                              shape.fac = input$shape_var,
-                                             cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                                             cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                             ellipse = input$plsda_ellipse)
                          
                          loadings <- plotPCAloadings.2d(mSet,pcx = input$plsda_x,
                                                         pcy = input$plsda_y, 
@@ -925,7 +935,8 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                              col.fac = input$col_var,
                                              shape.fac = input$shape_var,
                                              font = lcl$aes$font, 
-                                             cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                                             cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                             ellipse = input$plsda_ellipse)
                          
                          loadings <- plotPCAloadings.3d(mSet,
                                                         pcx = input$plsda_x,
@@ -1157,6 +1168,11 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
     
     if(grepl("aov|tt|fc|corr|asca|volcano", plotName)){
       whichAnal <- stringr::str_match(plotName, "aov|tt|fc|corr|asca|volcano")[,1]
+      
+      if(whichAnal == "aov"){
+        whichAnal = if(mSet$settings$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
+      }
+      
       if(is.null(mSet$analSet[[whichAnal]][[if(whichAnal != "corr") "sig.mat" else "cor.mat"]])){
         data = data.frame(text = "No significant hits!")
         myplot = ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10)

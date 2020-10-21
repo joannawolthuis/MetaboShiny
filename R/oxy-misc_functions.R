@@ -335,19 +335,20 @@ sardine <- function(content) shiny::div(style="display: inline-block;vertical-al
 #' @importFrom shiny modalDialog fluidRow br h3 img
 loadModal <- function() {
   shiny::modalDialog(
+    style="top:25%;", 
     shiny::fluidRow(align="center",
-             shiny::br(),shiny::br(),
-             shiny::h3("Starting MetaboShiny..."),
-             shiny::br(),shiny::br(),
-             shiny::div(style="position:absolute; width:53%;",
-                        shiny::img(src="metshi_gemmo.png", height="90px",
-                                   style="position: relative;
+                    shiny::br(),shiny::br(),
+                    shiny::h3("Initializing MetaboShiny..."),
+                    shiny::br(),shiny::br(),
+                    shiny::div(style="position:absolute; width:53%;",
+                               shiny::img(src="metshi_gemmo.png", height="90px",
+                                          style="position: relative;
                                           left: 50%;"),
-                        shiny::img(class="imagetop", src="metshi_heart.png", height="36px",
-                                   style="position: relative;
+                               shiny::img(class="imagetop", src="metshi_heart.png", height="36px",
+                                          style="position: relative;
                                           left: 25%;")
-                        ),
-             br(),br(),shiny::br(),shiny::br(),shiny::br()
+                    ),
+                    br(),br(),shiny::br(),shiny::br(),shiny::br()
     )
   )
 }

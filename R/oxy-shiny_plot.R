@@ -58,6 +58,7 @@ ggplotNormSummary <- function(mSet,
   RES3 <- plot + ggplot2::geom_density(ggplot2::aes(x=value,y=..scaled..), colour="pink", fill="pink", alpha=0.4) + 
     ggplot2::ylab("density") + 
     ggplot2::xlab("intensity")
+  
   # fourth result plot: spread of intensities after normalization
   RES4 <- plot + ggplot2::geom_boxplot(
     ggplot2::aes(y=value, x=variable),
@@ -469,6 +470,15 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
       }  
       p <- p + ggplot2::xlab(Hmisc::capitalize(gsub(x=mSet$settings$cls.name, pattern = ":.*$", replacement="")))
     }
+    symbols = c("16",#'circle',
+                "18",#'diamond',
+                "15",#'square',
+                "4",#'x',
+                "1",
+                "2","3",
+                as.character(c(5:14), 17, 19:25))
+    p <- p + ggplot2::scale_shape_manual(values = symbols)
+    
     # ---------------
     p  
   })
@@ -493,18 +503,23 @@ ggPlotAOV <- function(mSet, cf, n=20){
   
   which_aov = if(mSet$settings$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
   
-  profile <- data.table::as.data.table(mSet$analSet[[which_aov]]$p.log[mSet$analSet[[which_aov]]$inx.imp],
-                                       keep.rownames = T)
+  profile <- if(which_aov == "aov"){
+    data.table::as.data.table(mSet$analSet[[which_aov]]$p.log[mSet$analSet[[which_aov]]$inx.imp],
+                              keep.rownames = T)
+  }else{
+    data.table::as.data.table(-log(mSet$analSet[[which_aov]]$sig.mat[,"Interaction(adj.p)"]),
+                              keep.rownames = T)  
+  }
   
   if(nrow(profile)==0){
     shiny::showNotification("No significant hits")
     return(NULL)
   }
   
-  profile[,2] <- round(profile[,2], digits = 2)
+  #profile[,2] <- round(profile[,2], digits = 2)
   profile$Peak <- c(1:nrow(profile))
   colnames(profile)[1:2] <- c("m/z", "-log(p)")
-  scaleFUN <- function(x) sprintf("%.1f", x)
+  scaleFUN <- function(x) sprintf("%.2f", x)
   xaxis = seq(0,600, 50)
   p <- ggplot2::ggplot(data=profile) +
     ggplot2::geom_point(ggplot2::aes(y=Peak,
@@ -512,7 +527,10 @@ ggPlotAOV <- function(mSet, cf, n=20){
                                      text=`m/z`,
                                      color=`-log(p)`, 
                                      key=`m/z`)) +
-    ggplot2::scale_colour_gradientn(colours = cf(n)) + ggplot2::coord_flip()
+    ggplot2::scale_colour_gradientn(colours = cf(n)) + ggplot2::coord_flip() +
+    ggplot2::scale_x_continuous(labels=scaleFUN) + 
+    ggplot2::scale_y_continuous(labels=scaleFUN) + 
+    ggplot2::xlab(if(which_aov == "aov") "-log(p)" else "Interaction -log(p)")
   p
 }
 
@@ -717,12 +735,15 @@ ggPlotClass <- function(mSet,
   df <- reshape2::melt(res)
   df$Component <- paste0("PC",df$Component)
   colnames(df) <- c("Metric", "Component", "Value")
+  
+  scaleFUN <- function(x) sprintf("%.2f", x)
+  
   p <- ggplot2::ggplot(df, ggplot2::aes(x=Metric, y=Value, fill=Metric)) +
     ggplot2::geom_bar(stat="identity") +
     ggplot2::theme_minimal() +
-    
     ggplot2::facet_grid(~Component) +
-    ggplot2::scale_fill_manual(values=cf(pcs))
+    ggplot2::scale_fill_manual(values=cf(pcs)) +
+    ggplot2::scale_y_continuous(labels=scaleFUN)
   p
 }
 
@@ -753,6 +774,8 @@ ggPlotPerm <- function(mSet,
   rounded <- round(as.numeric(stringr::str_match(pval, "0\\.\\d*")), digits = 3)
   pval <- gsub(pval, pattern = "(0\\.\\d*)", replacement=rounded)
   # - - -
+  scaleFUN <- function(x) sprintf("%.2f", x)
+  
   p <- ggplot2::ggplot(df) +
     ggplot2::geom_histogram(mapping=ggplot2::aes(x=acc, y=..count.., fill=factor(..count..)),
                             binwidth=0.01) +
@@ -767,7 +790,8 @@ ggPlotPerm <- function(mSet,
                           ggplot2::aes(yend=.1*nrow(df)),
                           size=1.5,
                           linetype=8) +
-    ggplot2::geom_text(mapping = ggplot2::aes(x = bw.vec[1], y =  .11*nrow(df), label = pval), color = "black", size = 4)
+    ggplot2::geom_text(mapping = ggplot2::aes(x = bw.vec[1], y =  .11*nrow(df), label = pval), color = "black", size = 4)+
+    ggplot2::scale_x_continuous(labels=scaleFUN)
   
   p
 }
@@ -1120,7 +1144,8 @@ plotPCA.3d <- function(mSet,
                        pcx, pcy, pcz,
                        type="pca",font,
                        col.fac = "label",
-                       mode="normal",cf){
+                       mode="normal",cf,
+                       ellipse=T){
   switch(type,
          tsne = {
            df = mSet$analSet$tsne$x
@@ -1178,14 +1203,6 @@ plotPCA.3d <- function(mSet,
     cols[c(1:length(unique(classes)))]
   }
   
-  # --- add ellipses ---
-  
-  symbols = c('circle',
-              'diamond',
-              'square',
-              'x',
-              'o')
-  
   symbol.vec<-if(is.null(shape.fac)){
     rep('circle', times = length(classes))
   }else if(shape.fac == "label"){
@@ -1211,62 +1228,67 @@ plotPCA.3d <- function(mSet,
     plots <- plotly::plot_ly(showlegend = F, 
                              scene = paste0("scene", if(i > 1) i else ""))
     
-    show.orbs <- c(1:length(levels(classes)))
-    
-    for(class in levels(classes)){
+    if(ellipse){
       
-      samps <- rownames(mSet$dataSet$norm)[which(classes == class)]
-      row = which(rownames(df) %in% samps)
-      # ---------------------
-      xc=df[row, pcx]
-      yc=df[row, pcy]
-      zc=df[row, pcz]
+      show.orbs <- c(1:length(levels(classes)))
       
-      # --- plot ellipse ---
-      worked = F
-      
-      try({
-        o <- rgl::ellipse3d(cov(cbind(xc,yc,zc)),
-                            centre=c(mean(xc),
-                                     mean(yc),
-                                     mean(zc)),
-                            level = 0.95)
-        worked = T
-      })
-      
-      if(worked){
-        mesh <- c(list(x = o$vb[1, o$ib]/o$vb[4, o$ib],
-                       y = o$vb[2, o$ib]/o$vb[4, o$ib],
-                       z = o$vb[3, o$ib]/o$vb[4, o$ib]))
-        plots = plots %>% add_mesh(
-          x=mesh$x,
-          y=mesh$y,
-          z=mesh$z,
-          #type='mesh3d',
-          alphahull = 0,
-          opacity=0.1,
-          hoverinfo="none"
-        )
-        adj_plot <- plotly_build(plots)
-        rgbcols <- toRGB(cols[show.orbs])
-        c = 1
+      for(class in levels(classes)){
+        samps <- rownames(mSet$dataSet$norm)[which(classes == class)]
+        row = which(rownames(df) %in% samps)
+        # ---------------------
+        xc=df[row, pcx]
+        yc=df[row, pcy]
+        zc=df[row, pcz]
         
-        for(i in seq_along(adj_plot$x$data)){
-          item = adj_plot$x$data[[i]]
-          if(item$type == "mesh3d"){
-            adj_plot$x$data[[i]]$color <- rgbcols[c]
-            adj_plot$x$data[[i]]$visible <- TRUE
-            c = c + 1
+        # --- plot ellipse ---
+        worked = F
+        
+        try({
+          o <- rgl::ellipse3d(cov(cbind(xc,yc,zc)),
+                              centre=c(mean(xc),
+                                       mean(yc),
+                                       mean(zc)),
+                              level = 0.95)
+          worked = T
+        })
+        
+        if(worked){
+          mesh <- c(list(x = o$vb[1, o$ib]/o$vb[4, o$ib],
+                         y = o$vb[2, o$ib]/o$vb[4, o$ib],
+                         z = o$vb[3, o$ib]/o$vb[4, o$ib]))
+          plots = plots %>% add_mesh(
+            x=mesh$x,
+            y=mesh$y,
+            z=mesh$z,
+            type='mesh3d',
+            alphahull = 0,
+            opacity=0.1
+          )
+          
+          adj_plot <- plotly_build(plots)
+          rgbcols <- toRGB(cols[show.orbs])
+          c = 1
+          
+          for(i in seq_along(adj_plot$x$data)){
+            item = adj_plot$x$data[[i]]
+            if(item$type == "mesh3d"){
+              adj_plot$x$data[[i]]$color <- rgbcols[c]
+              adj_plot$x$data[[i]]$visible <- TRUE
+              #adj_plot$x$data[[i]]$hoverinfo <- "none"
+              c = c + 1
+            }
           }
+        }else{
+          adj_plot = plots
         }
-      }else{
-        adj_plot = plots
-      }
-      show.orbs <- c(show.orbs, worked)
+        show.orbs <- c(show.orbs, worked)
+      }       
+    }else{
+      adj_plot = plots
     }
-    
+
     t <- list(family = font$family)
-    
+
     # --- return ---
     pca_plot <- adj_plot %>% add_trace(
       hoverinfo = 'text',
@@ -1276,19 +1298,19 @@ plotPCA.3d <- function(mSet,
       z = df[, pcz],
       visible = rep(T, times=fac.lvls),
       type = "scatter3d",
-      color = classes,
+      color = col.vec[orig_idx],
       colors = cols,
       opacity = 1,
+      symbol = as.character(symbol.vec[orig_idx]),
+      symbols = c("circle", "square", "diamond", 
+                   "cross", "x", "triangle", 
+                   "pentagon", "hexagram", "star", 
+                   "diamond", "hourglass", "bowtie",
+                   "asterisk", "hash", "y","line"),
       marker = list(
-        line = list(#color = col.vec[orig_idx],
-          #colors = cols,
-          width = 2),
-        symbol = symbol.vec[orig_idx],
-        symbols = c('circle',
-                    'diamond',
-                    'square',
-                    'x',
-                    'o'))
+        line = list(
+          width = 2)
+        )
     ) 
     # --- return ---
     pca_plot
@@ -1382,20 +1404,13 @@ plotPCA.3d <- function(mSet,
 #' @importFrom Hmisc capitalize
 plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",
                        pcx, pcy, mode="normal", type="pca",
-                       cf = rainbow){
+                       cf = rainbow, ellipse=T){
   
   classes <- if(mode == "ipca"){
     mSet$dataSet$facA
   }else{
     mSet$dataSet$cls
   }
-  
-  symbols = c("16",#'circle',
-              "18",#'diamond',
-              "15",#'square',
-              "4",#'x',
-              "1"#'o'
-  )
   
   switch(type,
          tsne = {
@@ -1446,7 +1461,7 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",
            xc=df[, pcx]
            yc=df[, pcy]
            
-           dat_long <- data.table(variable = names(xc),
+           dat_long <- data.table::data.table(variable = names(xc),
                                   group = classes,
                                   x = xc,
                                   y = yc)
@@ -1474,6 +1489,7 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",
     as.factor(mSet$dataSet$covars[,..shape.fac][[1]])
   }
   
+  
   cols <- if(is.null(cols)) cf(length(levels(classes))) else{
     if(length(cols) < length(levels(classes))){
       cols <- cf(levels(classes))
@@ -1481,16 +1497,29 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",
     cols
   }
   
+  symbols = c("16",#'circle',
+              "18",#'diamond',
+              "15",#'square',
+              "4",#'x',
+              "1",
+              "2","3",
+              as.character(c(5:14, 17, 19:25)))
+  ggplot2::scale_shape_manual(values = symbols)
+
   p <- ggplot2::ggplot(dat_long, ggplot2::aes(x, y,group=group)) +
     ggplot2::geom_point(size=5, ggplot2::aes(shape=shape,
                                     text=variable,
                                     fill=group,
                                     color=color), alpha=0.7)+
-    ggplot2::stat_ellipse(geom = "polygon", ggplot2::aes(fill=group), alpha = 0.3,level = .95) +
     ggplot2::scale_x_continuous(name=gsubfn::fn$paste(if(type != "tsne") "$pcx ($x.var%)" else "t-sne dimension 1")) +
     ggplot2::scale_y_continuous(name=gsubfn::fn$paste(if(type != "tsne") "$pcy ($y.var%)" else "t-sne dimension 2")) +
     ggplot2::scale_fill_manual(values=cols) +
-    ggplot2::scale_color_manual(values = cols)
+    ggplot2::scale_color_manual(values = cols) +
+    ggplot2::scale_shape_manual(values = as.numeric(symbols))
+  
+  if(ellipse){
+    p <- p + ggplot2::stat_ellipse(geom = "polygon", ggplot2::aes(fill=group), alpha = 0.3,level = .95, type = "norm",)
+  }
   
   if(mode == "ipca"){
     p <- p + ggplot2::facet_wrap(~groupB,ncol = 2)
@@ -1569,9 +1598,12 @@ ggPlotScree <- function(mSet, cf, pcs=20){
   df <- data.table::data.table(
     pc = 1:length(names(mSet$analSet$pca$variance)),
     var = round(mSet$analSet$pca$variance*100,digits = 1))
-  p <- ggplot2::ggplot(data=df[1:20,]) + ggplot2::geom_line(mapping = ggplot2::aes(x=pc, y=var, colour=var), cex=3) +
-    
-    ggplot2::scale_colour_gradientn(colours = cf(20))
+    p <- ggplot2::ggplot(data=df[1:20,]) + 
+    ggplot2::geom_line(mapping = ggplot2::aes(x=pc, y=var), cex=1, color="black") +
+    ggplot2::geom_point(mapping = ggplot2::aes(x=pc, y=var, color=var), cex=3) +
+    ggplot2::scale_colour_gradientn(colours = cf(200)) + 
+    ggplot2::xlab("Principal components") +
+    ggplot2::ylab("% Variance")
   # - - - - -
   p
 }
@@ -1631,7 +1663,7 @@ ggPlotPower <- function(mSet,
   if(ncol(data) == 1){
     stop("Something went wrong! Try other settings please :(")
   }else{
-    p <- ggplot2::ggplot(data, ggplot2::aes(samples,power)) +
+    p <- ggplot2::ggplot(data, ggplot2::aes(x=samples,y=power)) +
       ggplot2::geom_path(alpha=.5,
                          cex=.5,
                          ggplot2::aes(color = comparison, group = comparison)) +
@@ -1651,9 +1683,9 @@ ggPlotPower <- function(mSet,
       ggplot2::stat_summary_bin(ggplot2::aes(samples,
                                     power), 
                                 fun=mean, color="black", 
-                                geom="line", cex = 2) +
-      ggplot2::coord_cartesian(xlim = c(0,max_samples), ylim = c(.04,.96))
-    
+                                geom="line", cex = 2)# +
+      # ggplot2::coord_cartesian(xlim = c(0,max_samples), 
+      #                          ylim = c(.04,.96))
     p 
   }
 }

@@ -1,3 +1,16 @@
+#shiny-modal {
+  top:25%;
+  z-index: 9950;
+}
+
+.modal-backdrop {
+  z-index: 9945;
+}
+
+.shinybusy {
+  z-index: 9935;
+}
+
 .pretty {
     margin-right: 0em;
 }
@@ -102,9 +115,13 @@
 
 .caret {
     position: absolute;
-    top: 90%;
+    top: 82% !important;
     left: 49%;
     margin-left: 0px;
+}
+
+.filter-option {
+  margin-bottom: 4px;
 }
 
 .fa-fw {
@@ -590,4 +607,8 @@ a {
     -webkit-animation: animatedBackground 20s linear infinite;
     -ms-animation: animatedBackground 20s linear infinite;
     -o-animation: animatedBackground 20s linear infinite;
+}
+
+.smallsparkle {
+  pointer-events: none
 }

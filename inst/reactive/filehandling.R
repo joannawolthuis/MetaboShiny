@@ -131,3 +131,71 @@ observeEvent(input$set_proj_name, {
   lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(lcl$proj_name,".db"))
   lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(lcl$proj_name,".csv"))
 })
+
+observe({
+  if(filemanager$do == "load"){
+    fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
+    shiny::showNotification(paste0("Loading existing file: ", fn))
+    if(file.exists(fn)){
+      mSet <- NULL
+      mSet <- tryCatch({
+        load(fn)
+        if(is.list(mSet)){
+          metshiAlert("Old save selected! Please re-import data to use in v2.0. Conversion is not possible.")
+          mSet <- NULL
+          gc()
+        }else{
+          stop()
+        }
+      },
+      error = function(cond){
+        mSet <- qs::qload(fn)
+        mSet
+      })
+      if(!is.null(mSet)){
+        mSet$mSet <- NULL
+        mSet$dataSet$combined.method <- TRUE # FC fix
+        mSet <<- mSet
+        opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
+        lcl$proj_name <<- opts$proj_name
+        lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, lcl$proj_name)
+        lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".db"))
+        lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".csv"))
+        
+        shiny::updateCheckboxInput(session,
+                                   "paired",
+                                   value = mSet$dataSet$paired)
+        
+        uimanager$refresh <- c("general","statspicker",if("adducts" %in% names(opts)) "adds" else NULL, "ml")
+        plotmanager$make <- "general"  
+      }
+    }
+  }else if(filemanager$do == "save"){
+    fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
+    
+    if(!is.null(mSet)){
+      
+      mSet$mSet <- NULL
+      fn_bu <- normalizePath(paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), 
+                                    "_BACKUP.metshi"),mustWork = F)
+      fn <- normalizePath(paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), 
+                                 ".metshi"))
+      file.rename(fn, fn_bu)
+      success = F
+      
+      try({
+        qs::qsave(mSet, file = fn)
+        success = T
+      })
+      
+      if(!success){
+        file.rename(from = fn_bu, 
+                    to = fn)
+      }else{
+        file.remove(fn_bu)
+      }
+    } 
+  }
+  filemanager$do <- "nothing"
+})
+

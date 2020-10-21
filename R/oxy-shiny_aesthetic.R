@@ -215,10 +215,25 @@ app.font.css <- function(font.h1 = "Press Start 2P",
   font-family: "$font.body";
   $font.body.w
   font-size: $size.body;
+  background-color: black;
   }'
 
   no.na <- gsub(x = base, pattern = "\\n", replacement = "")
   filled <- gsubfn::fn$paste(no.na)
   # -----
   filled
-  }
+}
+
+#https://stackoverflow.com/questions/31425841/css-for-each-page-in-r-shiny
+## Modify the CSS style of a given selector
+modifyStyle <- function(selector, ...) {
+  
+  values <- as.list(substitute(list(...)))[-1L]
+  parameters <- names(values)
+  
+  args <- Map(function(p, v) paste0("'", p,"': '", v,"'"), parameters, values)
+  jsc <- paste0("$('",selector,"').css({", paste(args, collapse = ", "),"});")
+  
+  shinyjs::runjs(code = jsc)
+  
+}

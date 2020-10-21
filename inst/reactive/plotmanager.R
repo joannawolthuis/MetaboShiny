@@ -9,6 +9,15 @@ shiny::observe({
     if(!is.null(mSet)){
       success = F
       try({
+        
+        emptyax <- list(
+          title = "",
+          zeroline = FALSE,
+          showline = FALSE,
+          showticklabels = FALSE,
+          showgrid = FALSE
+        )
+        
         for(do in plotmanager$make){
           #suppressWarnings({
           toWrap <- getPlots(do, mSet, input, gbl, lcl, venn_yes, my_selection)
@@ -86,6 +95,19 @@ shiny::observe({
                         myplot <- plotly::ggplotly(myplot) %>% plotly::layout(height = session$clientData[[empty]]/1.4,
                                                             width = session$clientData[[empty]])
                       }
+                      
+                      if(canBe3D){
+                        try({
+                          if(length(myplot$x$data) > 0){
+                            for(i in 1:length(myplot$x$data)){
+                              if(myplot$x$data[[i]]$hoveron == "fills"){
+                                myplot$x$data[[i]]$hoverinfo <- "skip"
+                              }
+                            }  
+                          }
+                        }, silent = T)
+                      }
+                      
                       suppressWarnings({
                         myplot %>%
                           plotly::config(

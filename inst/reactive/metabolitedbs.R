@@ -387,6 +387,8 @@ shiny::observe({
         })
       })
     })
+    modifyStyle("body", background = "white")
+    shiny::removeModal()
   }
 })
 
@@ -412,6 +414,7 @@ shiny::observeEvent(input$build_custom_db, {
   save(dbinfo, file = file.path(cust_dir, "info.RData"))
   # print OK message and ask to restart
   shiny::showNotification("Import OK! Please restart MetaboShiny to view and build your database.")
+  
   shiny::removeModal()
 })
 

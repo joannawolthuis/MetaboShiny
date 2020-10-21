@@ -222,6 +222,11 @@ shiny::observe({
                        shinyWidgets::updatePickerInput(session, id, selected = intersect(fav_adducts,adducts$Name))
                      }
                    },
+                   venn = {
+                     shiny::updateSelectizeInput(session, 
+                                                 "intersect_venn", 
+                                                 choices =  names(lcl$vectors$venn_lists))
+                   },
                    vennrich = {
                      NULL
                    },

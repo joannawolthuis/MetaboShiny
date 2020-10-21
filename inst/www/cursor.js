@@ -165,6 +165,7 @@ function createDiv(height, width) {
 	div.style.height=height+"px";
 	div.style.width=width+"px";
 	div.style.overflow="hidden";
+	//div.style.pointer-events="none";
 	return (div);
 }
 
@@ -210,17 +211,17 @@ s=(ns)?'':'.style';
 
 if (ns){
 	for (i = 0; i < n; i++)
-	  $(".cursorHolder").append('<layer name="dots'+i+'" top=0 left=0 width='+i/2+' height='+i/2+' bgcolor=#ff0000></layer>');
+	  $(".cursorHolder").append('<layer name="dots'+i+'" top=0 left=0 width='+i/2+' height='+i/2+' bgcolor=#ff0000 style="pointer-events: none"></layer>');
 		//document.write('<layer name="dots'+i+'" top=0 left=0 width='+i/2+' height='+i/2+' bgcolor=#ff0000></layer>');
 }
 
 if (ie)
-	$(".cursorHolder").append('<div id="con" style="position:absolute;top:0px;left:0px"><div style="position:relative">');
+	$(".cursorHolder").append('<div id="con" style="pointer-events: none; position:absolute;top:0px;left:0px"><div style="position:relative">');
 	//document.write('<div id="con" style="position:absolute;top:0px;left:0px"><div style="position:relative">');
 
 if (ie||n6){
 	for (i = 0; i < n; i++)
-	$(".cursorHolder").append('<div id="dots'+i+'" style="position:absolute;top:0px;left:0px;width:'+i/2+'px;height:'+i/2+'px;background:#ff0000;font-size:'+i/2+'"></div>');
+	$(".cursorHolder").append('<div id="dots'+i+'" style="pointer-events: none; position:absolute;top:0px;left:0px;width:'+i/2+'px;height:'+i/2+'px;background:#ff0000;font-size:'+i/2+'"></div>');
 		//document.write('<div id="dots'+i+'" style="position:absolute;top:0px;left:0px;width:'+i/2+'px;height:'+i/2+'px;background:#ff0000;font-size:'+i/2+'"></div>');
 }
 

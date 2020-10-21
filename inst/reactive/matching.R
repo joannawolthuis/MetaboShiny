@@ -1,3 +1,20 @@
+output$manual_search <- renderUI({
+  if(search_button$on){
+    tags$button(
+      id = "search_mz",
+      class = "btn btn-default action-button",
+      img(src = "detective.png",
+          height = "50px")
+    )
+  }else{
+    fluidRow(align="center", 
+             shiny::img(src = "pawprint.png",height = "50px"),
+             br(),
+             tags$h2("pre-matched")
+    )
+  }
+})
+
 shiny::observeEvent(input$clear_prematch,{
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb) # change this to proper var later
   RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS map_mz")

@@ -30,7 +30,6 @@ shiny::observe({
                  pat_order = match(lvls,pat)
                  pattern = paste0(pat_order-1, collapse="-")
                  mSet <- MetaboAnalystR::Match.Pattern(mSet, input$corr_corr, pattern)
-                 #names(mSet$analSet)[names(mSet$analSet) == "corr"] <- "pattern" 
                },
                pca = {
                  shiny::withProgress({

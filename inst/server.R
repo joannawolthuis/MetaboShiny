@@ -7,7 +7,7 @@ function(input, output, session) {
   library(ggplot2)
   library(SPARQL)
   library(MetaboShiny)
-
+  
   # EMPTY DEBUG
   debug_browse_content <- debug_result_filters <- debug_pieinfo <- debug_input <- debug_lcl <- debug_mSet <- debug_matches <- debug_enrich <- debug_selection <- debug_venn_yes <- debug_report_yes <- list()
   
@@ -41,7 +41,7 @@ function(input, output, session) {
   # Rshiny app to analyse untargeted metabolomics data! BASH INSTRUCTIONS: STEP 1: mydir=~"/MetaboShiny" #or another of your choice | STEP 2: mkdir $mydir | STEP 3: docker run -p 8080:8080 -v $mydir:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny /start.sh
   
   # rjava.so error.. or rdb corrupt.. 'sudo R CMD javareconf'
-
+  
   runmode <- if(file.exists(".dockerenv")) 'docker' else 'local'
   
   mSet <- NULL
@@ -86,6 +86,8 @@ function(input, output, session) {
   interface$mode <- NULL
   
   mSetter <- shiny::reactiveValues(do = NULL)
+  
+  filemanager <- shiny::reactiveValues(do = "nothing")
   
   ggplotly <- shiny::reactiveValues(fancy = T)
   
@@ -1010,7 +1012,7 @@ omit_unknown = yes')
       parallel::stopCluster(session_cl)
     }
     shiny::showNotification("Starting new threads...")
-
+    
     session_cl <<- parallel::makeCluster(input$ncores)#,outfile="")#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
     # send specific functions/packages to other threads
     parallel::clusterEvalQ(session_cl, {
@@ -1079,10 +1081,7 @@ omit_unknown = yes')
     # save mset
     if(!is.null(mSet)){
       shiny::withProgress({
-        if(exists("mSet")){
-          fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
-          qs::qsave(as.list(mSet), file = fn)
-        }
+        filemanager$do <- "save"
       })  
     }
   })
@@ -1111,7 +1110,7 @@ omit_unknown = yes')
           }
         },
         error = function(cond){
-          mSet <- qs::qload(fn)
+          mSet <- qs::qread(fn)
           mSet
         })
         if(!is.null(mSet)){
@@ -1267,7 +1266,7 @@ omit_unknown = yes')
                 "pca", "tsne", "tt", "aov",
                 "fc", "volcano", "heatmap", 
                 "meba", "asca", "corr", 
-                "enrich", "network")
+                "enrich", "network", "power")
   
   lapply(analyses, function(an){
     shiny::observeEvent(input[[paste0("do_", an)]], {
@@ -1280,23 +1279,6 @@ omit_unknown = yes')
         uimanager$refresh <- an
       })
     })    
-  })
-  
-  output$manual_search <- renderUI({
-    if(search_button$on){
-      tags$button(
-        id = "search_mz",
-        class = "btn btn-default action-button",
-        img(src = "detective.png",
-            height = "50px")
-      )
-    }else{
-      fluidRow(align="center", 
-               shiny::img(src = "pawprint.png",height = "50px"),
-               br(),
-               tags$h2("pre-matched")
-               )
-    }
   })
   
   # ==== LOAD LOGIN UI ====
@@ -1313,9 +1295,10 @@ omit_unknown = yes')
         inputId = "save_exit",
         text = tags$div(
           tags$b("Click upper right ", icon("times"), " button to cancel."),br(),
-          shiny::img(#class = "rotategem", 
-            src = "gemmy_rainbow.png", 
-            height = "70px"),
+          br(),
+          shiny::img(class = "imagetop", 
+                     src = "www/metshi_heart_bezel.png", 
+                     height = "70px"),
           br()
         ),
         btn_labels = c("No", "Yes"),
@@ -1331,12 +1314,7 @@ omit_unknown = yes')
   
   observeEvent(input$save_exit,{
     if(isTRUE(input$save_exit)){
-      shiny::withProgress({
-        fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
-        if(exists("mSet")){
-          qs::qsave(as.list(mSet), file = fn)
-        }
-      })
+      filemanager$do <- "save"
     }
     shiny::stopApp()
     shinyjs::js$closeWindow()
@@ -1393,30 +1371,37 @@ omit_unknown = yes')
         }else{
           headerMsg = paste0("New ", paste(pkgs[needs.new], collapse = " and "), " version available! Please install the latest GitHub version", if(sum(needs.new) == 2) "s." else ".")
         }
-        MetaboShiny::metshiAlert(shiny::tagList(h3(headerMsg),
-                                                hr(),
-                                                alertContent), 
-                                 session = session,
-                                 title = "Notification")
+        metshiAlert(shiny::tagList(h3(headerMsg),
+                                   hr(),
+                                   alertContent), 
+                    session = session,
+                    title = "Notification")
       }
       
     }  
   },silent = T)
   
   observeEvent(input$fancy, {
-  beFancy = !input$fancy
-  if(beFancy){
-    shinyjs::runjs("$(document).ready(startCursor())")#paste0(readLines(readPath),collapse="\n"))
-    shinyjs::addClass(id = "fancy_pic", class = "imagetop")
-    shinyjs::addClass(id = "appHeader",class = "rainbow")#"color-text-flow text")
-  }else{
-    removeUI(selector = "[id^=dots]", multiple=T)
-    removeUI(selector = ".smallsparkle", multiple=T)
-    shinyjs::removeClass(id="appHeader",
-                         class="rainbow")
-    shinyjs::removeClass(id="fancy_pic",
-                         class="imagetop")
-  }
+    beFancy = !input$fancy
+    if(beFancy){
+      shinyjs::runjs("$(document).ready(startCursor())")#paste0(readLines(readPath),collapse="\n"))
+      shinyjs::addClass(id = "fancy_pic", class = "imagetop")
+      shinyjs::addClass(id = "appHeader",class = "rainbow")#"color-text-flow text")
+    }else{
+      removeUI(selector = "[id^=dots]", multiple=T)
+      removeUI(selector = ".smallsparkle", multiple=T)
+      shinyjs::removeClass(id="appHeader",
+                           class="rainbow")
+      shinyjs::removeClass(id="fancy_pic",
+                           class="imagetop")
+    }
+  })
+  
+  observe({
+    # Re-execute this reactive expression after 1000 milliseconds
+    invalidateLater(600000, session)
+    shiny::showNotification("Autosaving...")
+    filemanager$do <- "save"
   })
   
   onStop(function() {
@@ -1428,7 +1413,4 @@ omit_unknown = yes')
     rmv <- list.files(".", pattern = ".csv|.log", full.names = T)
     if(all(file.remove(rmv))) NULL
   })
-  
-  shiny::removeModal()
-  
 }
