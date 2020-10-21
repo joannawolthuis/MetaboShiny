@@ -416,6 +416,9 @@ shiny::observeEvent(input$build_custom_db, {
   shiny::showNotification("Import OK! Please restart MetaboShiny to view and build your database.")
   
   shiny::removeModal()
+  
+  #Sys.sleep(5)
+  #setHeartLoader(40)
 })
 
 

@@ -162,6 +162,17 @@ internetWorks <- function(testsite = "http://www.google.com"){
   works
 }
 
+setHeartLoader <- function(perc){
+  # empty: 100px height on loading-fg
+  # full: 0px height on loading-fg
+  ht = 100 - perc
+  jsCode = paste0("div = document.getElementById('loading-fg'); ",
+                  "new_height = ", ht, "+'px'; ",
+                  "div.style.height = new_height;")
+  print(jsCode)
+  shinyjs::runjs(jsCode)
+}
+
 #' @title Show alert in MetaboShiny
 #' @description Function to create a SweetAlert in MetaboShiny with user message.
 #' @param message User message
@@ -188,11 +199,12 @@ metshiAlert <- function(content,
     session = session,
     title = title,
     text = tags$div(
+      br(),
       shiny::img(class = "imagetop", 
                  src = myImg, 
                  #width = "30px", 
                  height = "30px"),
-      br(),
+      br(),br(),
       content
     ),
     html = TRUE

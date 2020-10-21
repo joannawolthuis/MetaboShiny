@@ -1320,6 +1320,20 @@ omit_unknown = yes')
     shinyjs::js$closeWindow()
   },ignoreNULL = T)
   
+  shinyjs::runjs("delay=1000;
+                  setTimeoutConst = setTimeout(function(){
+                                        $('#loading-page').fadeIn(500);
+                                      }, delay);
+                  setInterval(function(){
+                    if ($('html').attr('class')=='shiny-busy') {
+                      setTimeoutConst = setTimeout(function(){
+                        $('#loading-page').fadeIn(500);
+                      }, delay);
+                    } else {
+                      clearTimeout(setTimeoutConst);
+                      $('#loading-page').hide();
+                    }
+                  },100)")
   # new version check for either github or docker
   try({
     if(online){

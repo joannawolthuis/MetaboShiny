@@ -23,12 +23,36 @@ shiny::fluidPage(theme = "metaboshiny.css",
                  ),
                  shinyjs::extendShinyjs(text = "shinyjs.closeWindow = function() { window.close(); }", 
                                         functions = c("closeWindow")),
-                 shinybusy::add_busy_spinner(spin = "atom", 
-                                             position = "full-page",
-                                             margins = c("50%","50%"),
-                                             height = "200px", 
-                                             width="200px", 
-                                             timeout = 1000),
+                 shiny::div(id="loading-page",
+                            style="position: absolute;
+                                  width: 200%;
+                                  height: 200%;
+                                  z-index: 4000;
+                                  background-color: black;
+                                  opacity: 0.6;
+                                  margin-left: -20px;",
+                            div(id="load-img-holder",
+                            class="imagetop",
+                            style="left: 25%;
+                                                position: absolute;
+                                                top: 25%;
+                                                height:100px;
+                                                width:100px;
+                                                margin-top: -60px;
+                                                margin-left: -60px;",
+                                div(id="loading-bg",
+                                    style="background-image: url(metshi_heart_bezel.png);
+                                    width:120px;
+                                    height:100px;")#,
+                                # div(id="loading-fg",
+                                #     style="background-image: url(metshi_heart_full.png);
+                                #           z-index:4001;
+                                #           width:120px;
+                                #           transition: 1s height;
+                                #           height:0px;
+                                #           margin-top: -100px;")
+                            )
+                 ),
                  shiny::navbarPage(windowTitle='MetaboShiny',
                                    # use this for title
                                    # https://codepen.io/maxspeicher/pen/zrVKLE
