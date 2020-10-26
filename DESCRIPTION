@@ -89,5 +89,13 @@ Imports:
   ggfortify, 
   fdrtool, 
   plsdepot,
-  vroom
+  vroom,
+  qs,
+  WaveICA,
+  ctc,
+  gdata,
+  glasso,
+  huge,
+  ppcor,
+  crmn
 RoxygenNote: 7.1.0

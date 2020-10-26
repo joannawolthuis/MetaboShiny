@@ -22,6 +22,13 @@ function(input, output, session) {
   rlang::env_binding_lock(env = asNamespace('RJSONIO'))
   rlang::env_lock(asNamespace('RJSONIO'))
   
+  AddErrMsg <- function(msg){
+    shiny::showNotification(msg)
+  }
+  
+  assignInNamespace("AddErrMsg", AddErrMsg, ns="MetaboAnalystR", 
+                    envir=as.environment("package:MetaboAnalystR"))
+  
   # ====
   shiny::showNotification("Starting server process...")
   
@@ -928,6 +935,7 @@ omit_unknown = yes')
                                  add_stats = input$ggplot_sum_stats, 
                                  color.fac = input$col_var,
                                  text.fac = input$txt_var,
+                                 fill.fac = input$fill_var,
                                  plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
                                  font = lcl$aes$font)
     }
@@ -1093,44 +1101,7 @@ omit_unknown = yes')
   })
   
   shiny::observeEvent(input$load_mset, {
-    # load mset
-    shiny::withProgress({
-      fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
-      shiny::showNotification(paste0("Loading existing file: ", fn))
-      if(file.exists(fn)){
-        mSet <- NULL
-        mSet <- tryCatch({
-          load(fn)
-          if(is.list(mSet)){
-            metshiAlert("Old save selected! Please re-import data to use in v2.0. Conversion is not possible.")
-            mSet <- NULL
-            gc()
-          }else{
-            stop()
-          }
-        },
-        error = function(cond){
-          mSet <- qs::qread(fn)
-          mSet
-        })
-        if(!is.null(mSet)){
-          mSet$dataSet$combined.method <- TRUE # FC fix
-          mSet <<- mSet
-          opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
-          lcl$proj_name <<- opts$proj_name
-          lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, lcl$proj_name)
-          lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".db"))
-          lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".csv"))
-          
-          shiny::updateCheckboxInput(session,
-                                     "paired",
-                                     value = mSet$dataSet$paired)
-          
-          uimanager$refresh <- c("general","statspicker",if("adducts" %in% names(opts)) "adds" else NULL, "ml")
-          plotmanager$make <- "general"  
-        }
-      }
-    })
+    filemanager$do <- "load"
   })
   
   shiny::observeEvent(input$debug_metshi, {
@@ -1237,13 +1208,20 @@ omit_unknown = yes')
   observeEvent(input$statistics, { 
     if(!is.null(mSet)){
       if(!is.null(input$statistics)){
+        
         uimanager$refresh <- input$statistics
+        
         if(input$statistics %in% c("venn", "enrich", "heatmap", "network")){
           statsmanager$calculate <- "vennrich"
           tablemanager$make <- "vennrich"
           uimanager$refresh <- "vennrich"
         }
-        if(input$statistics %in% names(mSet$analSet)){
+        
+        checkMe = input$statistics
+        if(checkMe == "meba") checkMe = "MB"
+        if(checkMe == "aov" & "aov2" %in% names(mSet$analSet)) checkMe = "aov2"
+        
+        if(checkMe %in% names(mSet$analSet)){
           shinyjs::show(selector = paste0("div.panel[value=collapse_", input$statistics, "_tables]"))
           tablemanager$make <- input$statistics
           shinyjs::show(selector = paste0("div.panel[value=collapse_", input$statistics, "_plots]"))
@@ -1257,6 +1235,17 @@ omit_unknown = yes')
                                                                                               "_settings")) 
           shinyjs::hide(selector = paste0("div.panel[value=collapse_", input$statistics, "_plots]"))
           shinyjs::hide(selector = paste0("div.panel[value=collapse_", input$statistics, "_tables]"))
+        }
+      }  
+    }
+  })
+  
+  observeEvent(input$reload_plots, {
+    if(!is.null(mSet)){
+      if(!is.null(input$statistics)){
+        uimanager$refresh <- input$statistics
+        if(input$statistics %in% names(mSet$analSet)){
+          plotmanager$make <- input$statistics
         }
       }  
     }
@@ -1322,18 +1311,18 @@ omit_unknown = yes')
   
   shinyjs::runjs("delay=1000;
                   setTimeoutConst = setTimeout(function(){
-                                        $('#loading-page').fadeIn(500);
+                                        $('#loading-page').fadeIn(1000);
                                       }, delay);
                   setInterval(function(){
                     if ($('html').attr('class')=='shiny-busy') {
                       setTimeoutConst = setTimeout(function(){
-                        $('#loading-page').fadeIn(500);
+                        $('#loading-page').fadeIn(1000);
                       }, delay);
                     } else {
                       clearTimeout(setTimeoutConst);
                       $('#loading-page').hide();
                     }
-                  },100)")
+                  },1000)")
   # new version check for either github or docker
   try({
     if(online){

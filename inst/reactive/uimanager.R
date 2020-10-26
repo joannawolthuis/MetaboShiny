@@ -134,7 +134,7 @@ shiny::observe({
                                                                          style = c(rep('text-align:center;',length(subtext))))
                        )
                        
-                       usesCovars <- paste0(c("stats","time","shape","col","txt","subset"), "_var")
+                       usesCovars <- paste0(c("stats","time","shape","col","txt","subset","fill"), "_var")
                        lapply(usesCovars, function(inputId){
                          shiny::updateSelectInput(session, inputId,  
                                                   choices = c("label", 
@@ -226,9 +226,6 @@ shiny::observe({
                      shiny::updateSelectizeInput(session, 
                                                  "intersect_venn", 
                                                  choices =  names(lcl$vectors$venn_lists))
-                   },
-                   vennrich = {
-                     NULL
                    },
                    corr = {
                      output$jqui_ui <- shiny::renderUI(suppressWarnings(shinyjqui::orderInput(inputId = 'corr_seq',

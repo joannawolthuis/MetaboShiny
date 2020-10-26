@@ -132,24 +132,45 @@ observeEvent(input$set_proj_name, {
   lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(lcl$proj_name,".csv"))
 })
 
+
+
 observe({
   if(filemanager$do == "load"){
     fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
-    shiny::showNotification(paste0("Loading existing file: ", fn))
+    shiny::showNotification(paste0("Loading existing file: ", basename(fn)))
     if(file.exists(fn)){
       mSet <- NULL
       mSet <- tryCatch({
         load(fn)
         if(is.list(mSet)){
-          metshiAlert("Old save selected! Please re-import data to use in v2.0. Conversion is not possible.")
-          mSet <- NULL
-          gc()
+          msg = "Old save selected! Conversion isn't possible due to some batch correction methods changing in R 4.0. Please re-normalize your data."
+          metshiAlert(msg)
+          NULL
+          # # fix orig file
+          # orig_fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), "_ORIG.metshi")
+          # mSet_old <- readRDS(orig_fn)
+          # names(mSet_old) <- c("dataSet", "analSet", "settings")
+          # anal.type <<- "stat"
+          # mSet_old <- MetaboAnalystR::Read.TextData(mSet_old,
+          #                                           filePath = lcl$paths$csv_loc,
+          #                                           "rowu",
+          #                                           lbl.type = "disc")  # rows contain samples
+          # 
+          # mSet_old$dataSet$missing <- is.na(mSet$dataSet$orig)
+          # mSet_old$dataSet$start <- mSet$dataSet$orig
+          # mSet_old$metshiParams <- mSet$metshiParams
+          # mSet_old$metshiParams$rf_norm_parallelize <- "no"
+          # mSet_old$metshiParams$rf_norm_ntree <- 5
+          # mSet_old$metshiParams$max.allow <- 5000
+          # mSet_old$metshiParams$orig.count <- nrow(mSet_old$dataSet$orig)
+          # mSet_old$metshiParams$miss_perc <- mSet_old$metshiParams$perc_limit
+          # mSet_old$metshiParams$batch_method_a <- "WaveICA"
         }else{
           stop()
         }
       },
       error = function(cond){
-        mSet <- qs::qload(fn)
+        mSet <- qs::qread(fn)
         mSet
       })
       if(!is.null(mSet)){

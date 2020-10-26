@@ -117,8 +117,6 @@ app.font.css <- function(font.h1 = "Press Start 2P",
                         font.col = "white",
                         online=T){
 
-  print(online)
-  
   size.h1 <- paste0(size.h1, "pt")
   size.h2 <- paste0(size.h2, "pt")
   size.h3 <- paste0(size.h3, "pt")

@@ -17,6 +17,7 @@ getProfile <- function(mSet, varName, title=varName, mode="stat"){
   # ---------------
   if(mode == "multi"){
     if(mSet$settings$exp.type == "t"){
+      print("!")
       translator <- data.table(
         index = 1:length(samp.names),
         Sample = gsub(x = samp.names, pattern = "_T|_t\\d$", replacement=""),
@@ -169,7 +170,6 @@ setHeartLoader <- function(perc){
   jsCode = paste0("div = document.getElementById('loading-fg'); ",
                   "new_height = ", ht, "+'px'; ",
                   "div.style.height = new_height;")
-  print(jsCode)
   shinyjs::runjs(jsCode)
 }
 

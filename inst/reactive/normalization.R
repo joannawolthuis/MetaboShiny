@@ -111,7 +111,7 @@ shiny::observeEvent(input$initialize, {
       
       
       anal.type <<- "stat"
-      mSet$dataSet$paired = F
+      mSet$dataSet$paired <- mSet$settings$ispaired <- F
       
       # load new csv into empty mSet!
       mSet <- MetaboAnalystR::Read.TextData(mSet,
@@ -142,7 +142,6 @@ shiny::observeEvent(input$initialize, {
       mSet$dataSet$missing <- is.na(mSet$dataSet$orig)
       mSet$dataSet$start <- mSet$dataSet$orig
       
-      print(dim(mSet$dataSet$start))
       mSet <- metshiProcess(mSet, session=NULL, init=T)
       
       # save the used adducts to mSet
@@ -155,7 +154,7 @@ shiny::observeEvent(input$initialize, {
                             cls.name = condition,
                             time.var = c(),
                             exp.type =  if(mSet$dataSet$cls.num == 2) "1fb" else "1fm",
-                            paired = F,
+                            ispaired = F,
                             filt.type = input$filt_type,
                             orig.count = nrow(mSet$dataSet$norm))
 

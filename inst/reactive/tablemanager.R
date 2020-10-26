@@ -19,7 +19,7 @@ shiny::observe({
                        analysis = mSet$storage[[name]]$analysis
                        analysis_names = names(analysis)
                        # - - -
-                       exclude = c("tsne", "heatmap", "type", "enrich")
+                       exclude = c("tsne", "heatmap", "type", "enrich", "power", "network", "venn")
                        analysis_names <- setdiff(analysis_names, exclude)
                        if(length(analysis_names) == 0){
                          return(data.table::data.table())

@@ -43,7 +43,9 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                      "volcano",
                      "network",
                      "enrich",
-                     "venn")){ 
+                     "venn",
+                     "meba",
+                     "asca")){ 
     
     if(curr_tab == "ml" & input$ml_results == "roc"){
       attempt = as.numeric(d$key[[1]])
@@ -81,7 +83,7 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                  curr_pw <- rownames(enrich$overview)[d$pointNumber + 1]
                  pw_i <- which(mSet$analSet$enrich$path.nms == curr_pw)
                  cpds = unlist(mSet$analSet$enrich$path.hits[[pw_i]])
-                 hit_tbl = data.table::as.data.table(mSet$analSet$enrich$dataSet$mumResTable)
+                 hit_tbl = data.table::as.data.table(mSet$analSet$enrich$mumResTable)
                  myHits <- hit_tbl[Matched.Compound %in% unlist(cpds)]
                  myHits$Mass.Diff <- as.numeric(myHits$Mass.Diff)/(as.numeric(myHits$Query.Mass)*1e-6)
                  colnames(myHits) <- c("rn", "identifier", "adduct", "dppm")

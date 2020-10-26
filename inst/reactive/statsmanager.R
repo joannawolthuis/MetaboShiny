@@ -81,27 +81,30 @@ shiny::observe({
                    setProgress(0.1)
                    
                    myFile <- tempfile(fileext = ".csv")
-                   tbl = data.table::data.table("m.z" = as.numeric(gsub(flattened[[1]], pattern="+|-", replacement="")),
+                   tbl = data.table::data.table("m.z" = as.numeric(gsub(flattened[[1]], pattern="(\\+|\\-|RT).*$", replacement="")),
                                                 mode = sapply(flattened[[1]], function(mz){
                                                   if(grepl(pattern="-",x=mz)) "negative" else "positive"
                                                 }))
+                   tbl <- tbl[complete.cases(tbl)]
                    
                    hasT = grepl("tt", input$mummi_anal)
                    
-                   anal = gsub(" \\(.*$", "", input$mummi_anal)
+                   anal = gsub(" \\(.*$|", "", input$mummi_anal)
                    subset = gsub("\\(|\\)|.*\\(", "", input$mummi_anal)
                    
                    tbl[, "p.value"] = if(hasP) mSet$storage[[subset]]$analysis[[anal]]$sig.mat[match(flattened[[1]], 
-                                                                                                     rownames(mSet$analSet[[anal]]$sig.mat)),
-                                                                                               "p.value"] else c(0)
+                                                                                                     rownames(mSet$storage[[subset]]$analysis[[anal]]$sig.mat)),
+                                                                                               if(anal == "aov2") "Interaction(adj.p)" else "p.value"] else c(0)
                    tbl[, "t.score"] = if(hasT) mSet$storage[[subset]]$analysis[[anal]]$sig.mat[match(flattened[[1]], 
-                                                                                  rownames(mSet$analSet[[anal]]$sig.mat)),
+                                                                                  rownames(mSet$storage[[subset]]$analysis[[anal]]$sig.mat)),
                                                                             "t.stat"] else c(0)
+                   
+                   if(hasP) if(all(is.na(tbl$p.value))) tbl$p.value <- c(0)
+                   if(hasT) if(all(is.na(tbl$t.score))) tbl$t.score <- c(0)
                    
                    tmpfile <- tempfile()
                    
                    fwrite(tbl, file=tmpfile)
-                   
                    
                    enr_mSet <- MetaboAnalystR::InitDataObjects("mass_all",
                                                "mummichog",
@@ -123,6 +126,7 @@ shiny::observe({
                    shiny::setProgress(0.3)
                    
                    #===
+                   
                    enr_mSet<-MetaboAnalystR::SetPeakEnrichMethod(enr_mSet, if(input$mummi_enr_method | !hasT) "mum" else "gsea", "v2")
                    enr_mSet<-MetaboAnalystR::SetMummichogPval(enr_mSet, if(hasP) as.numeric(gsub(",",".",input$mummi_pval)) else 1)
 
@@ -223,7 +227,7 @@ shiny::observe({
                                                            libVersion = "current",
                                                            permNum = 100) 
                    
-                   filenm <- if(input$mummi_enr_method) "mummichog_matched_compound_all.csv" else "mummichog_fgsea_pathway_enrichment.csv"
+                   filenm <- if(input$mummi_enr_method | !hasT) "mummichog_matched_compound_all.csv" else "mummichog_fgsea_pathway_enrichment.csv"
                    enr_mSet$dataSet$mumResTable <- data.table::fread(filenm)
                    
                    if(!input$mummi_enr_method){
@@ -253,7 +257,13 @@ shiny::observe({
                      mergy = unique(mergy[,c("Query.Mass", "Matched.Compound","adduct","Mass.Diff")])
                      enr_mSet$dataSet$mumResTable <- mergy
                    }
-                   mSet$analSet$enrich <- enr_mSet
+                   
+                   mSet$analSet$enrich <- list(mummi.resmat = enr_mSet$mummi.resmat,
+                                               mummi.gsea.resmat = enr_mSet$mummi.gsea.resmat,
+                                               mumResTable = enr_mSet$dataSet$mumResTable,
+                                               path.nms = enr_mSet$path.nms,
+                                               path.hits = enr_mSet$path.hits)
+                   enr_mSet <- NULL
                  })
                },
                ml = {
@@ -587,14 +597,14 @@ shiny::observe({
                    mSet <- MetaboAnalystR::Ttests.Anal(mSet,
                                                        nonpar = input$tt_nonpar,
                                                        threshp = 0.1, # TODO: make the threshold user defined...
-                                                       paired = mSet$dataSet$paired,
+                                                       paired = mSet$dataSet$ispaired,
                                                        equal.var = input$tt_eqvar
                    )
                  })
                },
                fc = {
                  withProgress({
-                   if(mSet$dataSet$paired){
+                   if(mSet$dataSet$ispaired){
                      mSet <- MetaboAnalystR::FC.Anal.paired(mSet,
                                                              1.5, # TODO: make this threshold user defined
                                                              1)  
@@ -628,7 +638,7 @@ shiny::observe({
                volcano = {
                  shiny::withProgress({
                    mSet <-  MetaboAnalystR::Volcano.Anal(mSet,
-                                                         paired = mSet$dataSet$paired, 
+                                                         paired = mSet$dataSet$ispaired, 
                                                          1.5, 0,
                                                          0.75, F, 0.1,
                                                          TRUE, "raw") # TODO: make thresholds user-defined

@@ -19,8 +19,12 @@ shiny::observe({
         )
         
         for(do in plotmanager$make){
-          #suppressWarnings({
-          toWrap <- getPlots(do, mSet, input, gbl, lcl, venn_yes, my_selection)
+
+          toWrap <- getPlots(do, mSet, 
+                             input, gbl, 
+                             lcl, venn_yes, 
+                             my_selection)
+          
           lcl <<- toWrap$lcl
           toWrap <- toWrap$plots
           
@@ -45,7 +49,8 @@ shiny::observe({
                     )
                   )) 
               }else{
-                visNetwork::visNetworkOutput(paste0(plotName, "_interactive"))
+                visNetwork::visNetworkOutput(paste0(plotName, "_interactive"),
+                                             height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)
               }
             })
             
@@ -89,11 +94,11 @@ shiny::observe({
                       }
                       if(plotName != "heatmap"){
                         myplot <- if(grepl("venn", plotName)) plotly::ggplotly(myplot) %>% plotly::layout(xaxis = emptyax,
-                                                                                        yaxis = emptyax,
-                                                                                        showlegend=F) else myplot %>% plotly::layout(showlegend=F) 
+                                                                                           yaxis = emptyax,
+                                                                                           showlegend=input$legend) else myplot %>% plotly::layout(showlegend=input$legend) 
                       }else{
                         myplot <- plotly::ggplotly(myplot) %>% plotly::layout(height = session$clientData[[empty]]/1.4,
-                                                            width = session$clientData[[empty]])
+                                                               width = session$clientData[[empty]])
                       }
                       
                       if(canBe3D){

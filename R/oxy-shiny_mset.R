@@ -104,7 +104,6 @@ FilterVariableMetshi <- function (mSetObj = NA, filter, qcFilter, rsd, max.allow
       }
     }
   }
-  print(msg)
   mSetObj$dataSet$filt <- int.mat[, remain]
   mSetObj$msgSet$filter.msg <- msg
   MetaboAnalystR:::AddMsg(msg)
@@ -172,7 +171,7 @@ name.mSet <- function(mSet) {
   info_vec = c()
   if (mSet$settings$exp.type %in% c("t1f", "t")) {
     info_vec = c("timeseries")
-  } else if (mSet$settings$paired) {
+  } else if (mSet$settings$ispaired) {
     info_vec = c(info_vec, "paired")
   }
   
@@ -266,7 +265,7 @@ reset.mSet <- function(mSet_new, fn) {
     mSet
   },
   error = function(cond){
-    mSet <- qs::qload(fn)
+    mSet <- qs::qread(fn)
     mSet
   })
   mSet_new$dataSet <- mSet$dataSet
@@ -380,7 +379,7 @@ change.mSet <-
       },
       "t" = {
         mSet <- MetaboAnalystR::SetDesignType(mSet, "time0")
-        mSet$settings$exp.fac <-
+        mSet$settings$exp.fac <- mSet$dataSet$exp.fac <-
           as.factor(mSet$dataSet$covars$individual)
         if (!any(duplicated(mSet$dataSet$exp.fac))) {
           metshiAlert(
@@ -389,13 +388,13 @@ change.mSet <-
           return(NULL)
         }
         mSet$settings$exp.lbl <- "sample"
-        mSet$settings$time.fac <- as.factor(mSet$dataSet$covars[, time_var, with = F][[1]])
+        mSet$settings$time.fac <- mSet$dataSet$time.fac <- as.factor(mSet$dataSet$covars[, time_var, with = F][[1]])
         mSet$settings$exp.type <- "t"
         mSet$dataSet$facA <- mSet$dataSet$facA.orig <- mSet$settings$time.fac
         mSet$dataSet$facA.lbl <- "Time"
         mSet$dataSet$facA.lbl.orig <- time_var
-        mSet$settings$paired <- TRUE
-        mSet$dataSet$paired <- T
+        mSet$settings$ispaired <- TRUE
+        mSet$dataSet$ispaired <- T
         
         mSet
       },
@@ -415,18 +414,17 @@ change.mSet <-
         else
           stats_var
 
-        mSet$dataSet$facA <- mSet$dataSet$facA.orig <-
-          as.factor(mSet$dataSet$covars[, ..change_var, with = F][[1]])
+        mSet$dataSet$facA <- mSet$dataSet$facA.orig <- as.factor(mSet$dataSet$covars[, ..change_var, with = F][[1]])
         mSet$dataSet$facB <- mSet$dataSet$facB.orig <-
           as.factor(mSet$dataSet$covars[, ..time_var, with = F][[1]])
         mSet$dataSet$facA.lbl <- change_var
         mSet$dataSet$facB.lbl <- time_var
-        mSet$settings$exp.fac <- mSet$dataSet$facA
-        mSet$settings$time.fac <- mSet$dataSet$facB
+        mSet$settings$exp.fac <- mSet$dataSet$exp.fac <- mSet$dataSet$facA
+        mSet$settings$time.fac  <- mSet$dataSet$time.fac <- mSet$dataSet$facB
         mSet$settings$exp.type <- "t1f"
         mSet$settings$exp.lbl <- change_var
-        mSet$settings$paired <- TRUE
-        mSet$dataSet$paired <- T
+        mSet$settings$ispaired <- TRUE
+        mSet$dataSet$ispaired <- T
         
         # - - -
         mSet
@@ -644,8 +642,8 @@ pair.mSet <- function(mSet) {
     mSet <- subset_mSet(mSet,
                         subset_var = "sample",
                         subset_group = keep.samp)
-    mSet$settings$paired <- TRUE
-    mSet$dataSet$paired = T
+    mSet$settings$ispaired <- TRUE
+    mSet$dataSet$ispaired = T
     
   } else{
     metshiAlert("Not enough samples for paired analysis!")
@@ -663,7 +661,7 @@ metshiProcess <- function(mSet, session, init=F){
   
   if(!init) mSet$dataSet$missing <- NULL
   
-  if(mSet$metshiParams$filt_type != "none" & (ncol(mSet$dataSet$orig) < mSet$metshiParams$max.allow)){
+  if(mSet$metshiParams$filt_type != "none" & (ncol(mSet$dataSet$orig) > mSet$metshiParams$max.allow)){
     #shiny::showNotification("Filtering dataset...")
     # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
     keep.mz <- colnames(FilterVariableMetshi(mSet,

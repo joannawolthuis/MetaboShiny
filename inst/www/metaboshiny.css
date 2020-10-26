@@ -105,6 +105,10 @@
     margin-top: 5px;
 }
 
+.modal {
+  z-index: 9999;
+}
+
 .navbar-nav {
     margin: 7.5px -5px -10px;
 }

@@ -5,17 +5,21 @@ shiny::fluidPage(theme = "metaboshiny.css",
                  shinyjs::useShinyjs(),
                  shinyjqui::includeJqueryUI(),
                  tags$head(tags$script(src="cursor.js")),
-                 shiny::div(style = 'position:absolute;width:100%;',
+                 shiny::div(style = 'position: absolute;
+                                     left: 79%;
+                                     top: 1%;',
                             class = "plus",
                             shiny::img(src="metshi_gemmo.png", 
                                        id="metshiGem", 
                                        style='position: relative;
-                                                        height: 100px;
-                                                        top: 7%;
-                                                        left: 88%;
-                                                        z-index: 1005;'),
+                                              height: 100px;
+                                              top: 7%;
+                                              left: 88%;
+                                              z-index: 1005;'),
                             shiny::div(id="heartHolder",
-                                style="width:100%;position:absolute;",
+                                style="left: 22%;
+                                       bottom: 4%;
+                                       position: relative;",
                                 MetaboShiny::fadeImageButton("fancy",
                                                              img.path="metshi_heart.png",
                                                              value = F)
@@ -520,6 +524,10 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                                                                                         size = "sm"
                                                                                                                                                                                                                                       )
                                                                                                                                                                                                              ),
+                                                                                                                                                                                                             shinyBS::bsCollapsePanel(title = h2("plots"),value="collapse_meba_plots",
+                                                                                                                                                                                                                                      shiny::uiOutput("meba_plot_wrap")
+                                                                                                                                                                                                                                      
+                                                                                                                                                                                                             ),
                                                                                                                                                                                                              shinyBS::bsCollapsePanel(title = h2("tables"),value="collapse_meba_tables",
                                                                                                                                                                                                                                       shiny::div(DT::dataTableOutput('meba_tab', width="100%"),style='font-size:80%')
                                                                                                                                                                                                              )
@@ -536,6 +544,10 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                                                                                         icon = icon("terminal"),
                                                                                                                                                                                                                                         size = "sm"
                                                                                                                                                                                                                                       )
+                                                                                                                                                                                                             ),
+                                                                                                                                                                                                             shinyBS::bsCollapsePanel(title = h2("plots"),value="collapse_asca_plots",
+                                                                                                                                                                                                                                      shiny::uiOutput("asca_plot_wrap")
+                                                                                                                                                                                                                                      
                                                                                                                                                                                                              ),
                                                                                                                                                                                                              shinyBS::bsCollapsePanel(title = h2("tables"),value="collapse_asca_tables",
                                                                                                                                                                                                                                       shiny::div(DT::dataTableOutput('asca_tab', width="100%"),style='font-size:80%')
@@ -562,7 +574,7 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                           ),
                                                                                                                                                                           shinyBS::bsCollapsePanel(title = h2("plots"),value="collapse_corr_plots",
                                                                                                                                                                                                    shiny::uiOutput("corr_plot_wrap"),
-                                                                                                                                                                                                   shiny::sliderInput('corr_topn',label = "Show top:",min = 5,max=200,value = 25)
+                                                                                                                                                                                                   shiny::sliderInput('corr_topn',label = "Show top:",min = 5,max=200,value = 20)
                                                                                                                                                                           ),
                                                                                                                                                                           shinyBS::bsCollapsePanel(title = h2("tables"),value="collapse_corr_tables",
                                                                                                                                                                                                    shiny::div(DT::dataTableOutput('corr_tab',width="100%"),style='font-size:80%')
@@ -619,7 +631,7 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                                                                                           min = 10,
                                                                                                                                                                                                                                           max = 5000,
                                                                                                                                                                                                                                           step=10,
-                                                                                                                                                                                                                                          value=100)
+                                                                                                                                                                                                                                          value=20)
                                                                                                                                                                                               ))
                                                                                                                                                           )
                                                                                                                                           ),
@@ -644,7 +656,7 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                                                                                                                   min = 10,
                                                                                                                                                                                                                                                                   max = 5000,
                                                                                                                                                                                                                                                                   step=10,
-                                                                                                                                                                                                                                                                  value=100)
+                                                                                                                                                                                                                                                                  value=20)
                                                                                                                                                                                                                        ),
                                                                                                                                                                                                                        shiny::numericInput("network_sign", 
                                                                                                                                                                                                                                            label = "p-value threshhold", 
@@ -839,7 +851,7 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                                                              min = 10, 
                                                                                                                                                                                                              max = 5000, 
                                                                                                                                                                                                              step = 10,
-                                                                                                                                                                                                             value = 500),
+                                                                                                                                                                                                             value = 100),
                                                                                                                                                                                           shinyWidgets::pickerInput(inputId = "mummi_adducts",
                                                                                                                                                                                                                     choices = adducts$Name,
                                                                                                                                                                                                                     label = "Adducts to look for:",
@@ -1349,6 +1361,10 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                                                    title="change plot style and colours",
                                                                                                                                                                                                    trigger = "hover",options=list(container="body")),
                                                                                                                                                            shiny::h2("Plot style"),br(),
+                                                                                                                                                           helpText("Click to reload plot:"),
+                                                                                                                                                           shinyWidgets::circleButton("reload_plots", 
+                                                                                                                                                                                      icon = shiny::icon("paint-brush")),
+                                                                                                                                                           br(),
                                                                                                                                                            helpText("Use ggplot or plotly for plots? (ggplot -> faster, but no interactivity)"),
                                                                                                                                                            shinyWidgets::switchInput(
                                                                                                                                                              inputId = "ggplotly",
@@ -1367,6 +1383,14 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                              onStatus = "warning",
                                                                                                                                                              value = T
                                                                                                                                                            ),
+                                                                                                                                                           shiny::h2("Legend"),br(),
+                                                                                                                                                           shinyWidgets::switchInput(
+                                                                                                                                                             inputId = "legend",
+                                                                                                                                                             size = "mini",
+                                                                                                                                                             onLabel = "show", 
+                                                                                                                                                             offLabel = "hide", 
+                                                                                                                                                             value = FALSE
+                                                                                                                                                           ),
                                                                                                                                                            shiny::selectizeInput("ggplot_sum_style", multiple=T, label = "Style(s)", choices = list("Box" = "box",
                                                                                                                                                                                                                                                     "Violin" = "violin",
                                                                                                                                                                                                                                                     "Beeswarm" = "beeswarm",
@@ -1376,7 +1400,8 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                            shiny::h2("Shape")
                                                                                                                                                            ,shiny::selectInput("shape_var", label="Marker shape based on:", choices = c(" "),width = "80%")
                                                                                                                                                            ,shiny::h2("Color")
-                                                                                                                                                           ,shiny::selectInput("col_var", label="Marker color based on:", choices = c(" "),width = "80%")
+                                                                                                                                                           ,shiny::selectInput("fill_var", label="Marker fill color based on:", choices = c(" "),width = "80%")
+                                                                                                                                                           ,shiny::selectInput("col_var", label="Marker outline color based on:", choices = c(" "),width = "80%")
                                                                                                                                                            ,shiny::h2("Hover text")
                                                                                                                                                            ,shiny::selectInput("txt_var", label="Marker hover text based on:", choices = c(" "),width = "80%"),
                                                                                                                                                            shiny::h2("Plot theme"),

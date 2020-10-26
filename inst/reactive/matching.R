@@ -25,8 +25,8 @@ shiny::observeEvent(input$clear_prematch,{
   RSQLite::dbExecute(conn, "VACUUM")
   mSet$metshiParams$prematched <<- FALSE
   # remove ALL mSet storage that had prematched m/z
-  mSet$storage <<- mSet$storage[!grepl(pattern = "\\(prematched m/z only\\)", names(mSet$storage))]
-  search_button$go <- TRUE
+  #mSet$storage <<- mSet$storage[!grepl(pattern = "\\(prematched m/z only\\)", names(mSet$storage))]
+  search_button$go <- search_button$on <- TRUE
   RSQLite::dbDisconnect(conn)
 })
   

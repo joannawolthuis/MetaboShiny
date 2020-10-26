@@ -46,26 +46,26 @@ shiny::observe({
           
           mSet <- switch(mSetter$do,
                          refresh = {
-                           mSet$dataSet$paired <- mSet.settings$paired
+                           mSet$dataSet$ispaired <- mSet.settings$ispaired
                            mSet
                          },
                          load = {
-                           mSet$dataSet$paired <- mSet.settings$paired
+                           mSet$dataSet$ispaired <- mSet.settings$ispaired
                            mSet
                          },
                          change = {
-                           mSet$dataSet$paired <- if(input$stats_type %in% c("t", "t1f") | input$paired) TRUE else FALSE
+                           mSet$dataSet$ispaired <- if(input$stats_type %in% c("t", "t1f") | input$paired) TRUE else FALSE
                            mSet
                          },
                          subset = {
                            mSet <- subset_mSet(mSet,
                                                subset_var = input$subset_var, 
                                                subset_group = input$subset_group)
-                           mSet$dataSet$paired <- mSet.settings$paired
+                           mSet$dataSet$ispaired <- mSet.settings$ispaired
                            mSet
                          },
                          unsubset = {
-                           mSet$dataSet$paired <- mSet.settings$paired
+                           mSet$dataSet$ispaired <- mSet.settings$ispaired
                            mSet$settings$subset <- list()
                            mSet
                          }) 
@@ -117,11 +117,11 @@ shiny::observe({
           
           mSet$settings$cls.name <- new.name
           
-          if(mSet$dataSet$paired){
-            mSet$settings$paired <- TRUE
+          if(mSet$dataSet$ispaired){
+            mSet$settings$ispaired <- TRUE
             mSet <- pair.mSet(mSet)
           }else{
-            mSet.settings$paired <- FALSE
+            mSet.settings$ispaired <- FALSE
           }
           if(grepl(mSet$settings$exp.type, pattern = "^1f")){
             if(mSet$dataSet$cls.num == 2){

@@ -70,7 +70,7 @@ shiny::observeEvent(input$enrich_tab_rows_selected,{
   curr_pw <- rownames(enrich$overview)[curr_row]
   pw_i <- which(mSet$analSet$enrich$path.nms == curr_pw)
   cpds = unlist(mSet$analSet$enrich$path.hits[[pw_i]])
-  hit_tbl = data.table::as.data.table(mSet$analSet$enrich$dataSet$mumResTable)
+  hit_tbl = data.table::as.data.table(mSet$analSet$enrich$mumResTable)
   myHits <- hit_tbl[Matched.Compound %in% unlist(cpds)]
   myHits$Mass.Diff <- as.numeric(myHits$Mass.Diff)/(as.numeric(myHits$Query.Mass)*1e-6)
   colnames(myHits) <- c("rn", "identifier", "adduct", "dppm")
@@ -139,7 +139,7 @@ shiny::observeEvent(input$browse_tab_rows_selected,{
   curr_def <- browse_content$table[curr_row, description]
   output$desc_ui <- shiny::renderText(curr_def)
   my_selection$struct <- browse_content$table[curr_row,c('structure')][[1]]
-  my_selection$form <- unlist(browse_content$table[curr_row,'formula']) # get current formula
+  #my_selection$form <- unlist(browse_content$table[curr_row,'formula']) # get current formula
 })
 
 # triggers on clicking a row in the reverse hit results table

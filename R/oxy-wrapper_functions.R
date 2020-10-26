@@ -764,8 +764,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                      }
                    },
                    enrich = {
-                     p = ggPlotMummi(mSet$analSet$enrich, 
-                                     if(input$mummi_enr_method) "mummichog" else "gsea",
+                     p = ggPlotMummi(mSet, 
                                      cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                      list(enrich_plot = p)
                    },
@@ -777,6 +776,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                        styles = input$ggplot_sum_style,
                                        add_stats = input$ggplot_sum_stats, 
                                        color.fac = input$col_var, 
+                                       fill.fac = input$fill_var,
                                        text.fac = input$txt_var)
                      
                      list(summary_plot = p)
@@ -787,6 +787,12 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                        cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                      
                      list(corr_plot = p)
+                   },
+                   asca = {
+                     p = ggPlotASCA(mSet,
+                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                     
+                     list(asca_plot = p)
                    },
                    aov = { # render manhattan-like plot for UI
                      p = ggPlotAOV(mSet,
@@ -820,6 +826,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                         mode = mode,
                                         shape.fac = input$shape_var,
                                         col.fac = input$col_var,
+                                        fill.fac = input$fill_var, 
                                         ellipse = input$tsne_ellipse)
                          
                        }else{
@@ -834,6 +841,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                         shape.fac = input$shape_var,
                                         font = lcl$aes$font,
                                         col.fac = input$col_var,
+                                        fill.fac = input$fill_var, 
                                         cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
                                         ellipse = input$tsne_ellipse)
                        }
@@ -860,6 +868,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                           mode = mode,
                                           type = "pca",
                                           col.fac = input$col_var,
+                                          fill.fac = input$fill_var, 
                                           shape.fac = input$shape_var, 
                                           ellipse = input$pca_ellipse)
                          loadings = plotPCAloadings.2d(mSet,pcx = input$pca_x,
@@ -876,6 +885,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                           col.fac = input$col_var,
                                           mode = mode,
                                           cols = lcl$aes$mycols,
+                                          fill.fac = input$fill_var, 
                                           shape.fac = input$shape_var,
                                           font = lcl$aes$font,
                                           cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
@@ -917,6 +927,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                              mode = mode,
                                              col.fac = input$col_var,
                                              shape.fac = input$shape_var,
+                                             fill.fac = input$fill_var, 
                                              cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
                                              ellipse = input$plsda_ellipse)
                          
@@ -934,6 +945,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                              mode = mode,
                                              col.fac = input$col_var,
                                              shape.fac = input$shape_var,
+                                             fill.fac = input$fill_var, 
                                              font = lcl$aes$font, 
                                              cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
                                              ellipse = input$plsda_ellipse)
@@ -978,15 +990,19 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                        cf=gbl$functions$color.functions[[lcl$aes$spectrum]], 
                                        mode = "multi",
                                        styles = input$ggplot_sum_style,
-                                       add_stats = input$ggplot_sum_stats, color.fac = input$col_var, text.fac = input$txt_var)
+                                       add_stats = input$ggplot_sum_stats, 
+                                       color.fac = input$col_var, 
+                                       text.fac = input$txt_var,
+                                       fill.fac = input$fill_var)
                      list(summary_plot = p)
                    },
                    meba = {
-                     p = ggplotMeba(mSet, my_selection$mz,
-                                    draw.average = T,
-                                    cols = lcl$aes$mycols,
-                                    cf=gbl$functions$color.functions[[lcl$aes$spectrum]])
-                     list(summary_plot = p)
+                     p = ggPlotMeba(mSet, 
+                                    #my_selection$mz,
+                                    #draw.average = T,
+                                    #cols = lcl$aes$mycols,
+                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                     list(meba_plot = p)
                    },
                    tt = {
                      # render manhattan-like plot for UI
@@ -1080,44 +1096,43 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                        if(!is.null(mSet$analSet$heatmap$matrix)){
                          # create heatmap object
                          hmap <- suppressWarnings({
+                           
+                           mat = mSet$analSet$heatmap$matrix[1:if(input$heatmap_topn < nrow(mSet$analSet$heatmap$matrix)) input$heatmap_topn else nrow(mSet$analSet$heatmap$matrix),]
+                           
                            if(input$heatlimits){
-                             heatmaply::heatmaply(mSet$analSet$heatmap$matrix[1:if(input$heatmap_topn < nrow(mSet$analSet$heatmap$matrix)) input$heatmap_topn else nrow(mSet$analSet$heatmap$matrix),],
+                             heatmaply::heatmaply(mat,
                                                   Colv = mSet$analSet$heatmap$my_order,
                                                   Rowv = T,
                                                   branches_lwd = 0.3,
                                                   margins = c(60, 0, NA, 50),
                                                   col = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                                  col_side_colors = mSet$analSet$heatmap$translator[,!1],
+                                                  col_side_colors = as.data.frame(mSet$analSet$heatmap$translator[,!1]),
                                                   col_side_palette = mSet$analSet$heatmap$colors,
                                                   subplot_widths = c(.9,.1),
                                                   subplot_heights = if(mSet$analSet$heatmap$my_order) c(.1, .05, .85) else c(.05,.95),
                                                   column_text_angle = 90,
                                                   xlab = "Sample",
                                                   ylab = "m/z",
-                                                  showticklabels = c(T,F),
+                                                  showticklabels = c(if(ncol(mat) <= 31) T else F, if(nrow(mat) <= 31) T else F),
                                                   limits = c(min(mSet$dataSet$norm), max(mSet$dataSet$norm)),
-                                                  #symm=F,symkey=F,
-                                                  symbreaks=T
-                                                  #label_names = c("m/z", "sample", "intensity") #breaks side colours...
+                                                  symbreaks = T
                              )
                            }else{
-                             heatmaply::heatmaply(mSet$analSet$heatmap$matrix[1:if(input$heatmap_topn < nrow(mSet$analSet$heatmap$matrix)) input$heatmap_topn else nrow(mSet$analSet$heatmap$matrix),],
+                             heatmaply::heatmaply(mat,
                                                   Colv = mSet$analSet$heatmap$my_order,
                                                   Rowv = T,
                                                   branches_lwd = 0.3,
                                                   margins = c(60, 0, NA, 50),
                                                   colors = gbl$functions$color.functions[[lcl$aes$spectrum]](256),
-                                                  col_side_colors = mSet$analSet$heatmap$translator[,!1],
+                                                  col_side_colors = as.data.frame(mSet$analSet$heatmap$translator[,!1]),
                                                   col_side_palette = mSet$analSet$heatmap$colors,
                                                   subplot_widths = c(.9,.1),
                                                   subplot_heights = if(mSet$analSet$heatmap$my_order) c(.1, .05, .85) else c(.05,.95),
                                                   column_text_angle = 90,
                                                   xlab = "Sample",
                                                   ylab = "m/z",
-                                                  #showticklabels = c(T,F),
-                                                  #symm=F,symkey=F,
+                                                  showticklabels = c(if(ncol(mat) <= 31) T else F, if(nrow(mat) <= 31) T else F),
                                                   symbreaks=T
-                                                  #label_names = c("m/z", "sample", "intensity") #breaks side colours...
                              )
                            }
                          })
@@ -1166,14 +1181,17 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
   
   finalPlots <- mapply(function(myplot, plotName){
     
-    if(grepl("aov|tt|fc|corr|asca|volcano", plotName)){
-      whichAnal <- stringr::str_match(plotName, "aov|tt|fc|corr|asca|volcano")[,1]
+    targets = "aov|tt|fc|corr|asca|volcano|meba"
+    if(grepl(targets, plotName)){
+      
+      whichAnal <- stringr::str_match(plotName, targets)[,1]
       
       if(whichAnal == "aov"){
         whichAnal = if(mSet$settings$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
       }
+      if(whichAnal == "meba") whichAnal <- "MB"
       
-      if(is.null(mSet$analSet[[whichAnal]][[if(whichAnal != "corr") "sig.mat" else "cor.mat"]])){
+      if(is.null(mSet$analSet[[whichAnal]][[if(whichAnal == "corr") "cor.mat" else if(whichAnal == "asca") "sig.list" else if(whichAnal == "MB") "stats" else "sig.mat"]])){
         data = data.frame(text = "No significant hits!")
         myplot = ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10)
       }
@@ -1192,9 +1210,16 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
     }
     
     if(!is3D){
+      
+      myplot <- myplot + guides(fill = guide_legend(ncol = 2),
+                                shape = guide_legend(ncol = 2),
+                                color = guide_legend(ncol = 2))
       myplot <- myplot + 
         gbl$functions$plot.themes[[lcl$aes$theme]](base_size = 15) + 
-        ggplot2::theme(legend.position="none",
+        ggplot2::theme(legend.position=if(input$legend) "right" else "none",
+                       legend.key.size = unit(.5,"line"),
+                       legend.title = element_text(size=13),
+                       legend.text=element_text(size=10),
                        axis.line = ggplot2::element_line(colour = 'black', size = .5),
                        plot.title = ggplot2::element_text(hjust = 0.5,
                                                           vjust = 0.1,
@@ -1213,7 +1238,6 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
           ggplot2::theme(axis.text.x=ggplot2::element_blank(),
                          axis.ticks.x=ggplot2::element_blank(),
                          text = ggplot2::element_text(family = lcl$aes$font$family))
-        plot(myplot)
       }
       
       if(length(myplot$data) > 0){
@@ -1222,44 +1246,58 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
         data = myplot[["layers"]][[1]][["data"]]
       }
       
-      if(any(mSet$report$mzStarred$star) & any(grepl("mz|m/z", names(data)))){
+      if(any(mSet$report$mzStarred$star) & any(grepl("mz|m/z", names(data))) & !grepl("ml", plotName)){
         #if(grepl("tt|fc|volc|pca_load|plsda_load|ml_bar", plotName)){
         myX = rlang::quo_get_expr(myplot[["layers"]][[1]][["mapping"]][['x']])
         myY = rlang::quo_get_expr(myplot[["layers"]][[1]][["mapping"]][['y']])
-        myText =rlang::quo_get_expr(myplot[["layers"]][[1]][["mapping"]][['text']])
+        myText = rlang::quo_get_expr(myplot[["layers"]][[1]][["mapping"]][['text']])
         myCol=rlang::quo_get_expr(myplot[["layers"]][[1]][["mapping"]][['colour']])
         flip = grepl("tt|fc|aov|var|samp|corr", plotName)
+        matchMe = match(data[[myText]], mSet$report$mzStarred[star == TRUE]$mz)
+        isMatch = which(!is.na(matchMe))
+        xVals = data[[myX]][isMatch]
+        yVals = data[[myY]][isMatch]
+        labelVals = data[[myText]][isMatch]
+        colVals = data[[myCol]][isMatch]
         
-        myplot <- 
-          myplot + 
-          ggplot2::geom_text(ggplot2::aes(x = data[[myX]],
-                                          y = data[[myY]],
-                                          label = sapply(data[[myText]], function(mz){
-                                            ifelse(mz %in% mSet$report$mzStarred[star == TRUE]$mz,
-                                                   as.character(mz), '')
-                                          })),
-                             nudge_y = {if(flip) 0 else .04} * max(data[[myY]]),
-                             nudge_x = {if(flip) .04 else 0} * max(data[[myX]]),
-                             hjust="inward",
-                             vjust="inward",
-                             size=4
-          ) + ggplot2::geom_text(ggplot2::aes(x = data[[myX]],
-                                              y = data[[myY]],
-                                              color = data[[myCol]],
-                                              label = sapply(data[[myText]], function(mz){
-                                                ifelse(mz %in% mSet$report$mzStarred[star == TRUE]$mz,
-                                                       "★", "")
-                                              }),size=2,family = "HiraKakuPro-W3"))
+        data = data.frame(x = xVals,
+                          y = yVals,
+                          text = labelVals,
+                          symb = c("★"),
+                          col = colVals)
         
-        
+        if(is.numeric(xVals[1]) & is.numeric(yVals[1])){
+          myplot <- 
+            myplot + 
+            ggplot2::geom_text(data = data,
+                               aes(x = x,
+                                   y = y,
+                                   label = symb),
+                               color = "black",
+                               show.legend = F,
+                               size=7) + 
+            ggplot2::geom_text(data = data,
+                               aes(x = x,
+                                   y = y,
+                                   color = col,
+                                   label = symb),
+                               show.legend = F,
+                               size=5) +
+            # ggrepel::geom_text_repel(data = data,
+            #                          aes(x = x,# + .04*min(x),
+            #                              y = y,#+ .04*min(y),
+            #                              label = text),point.padding = 1,
+            #                          size=4) 
+          ggplot2::geom_text(data = data,
+                             aes(x = x, #+ 0.04 * max(x),
+                                 y = y,#+ 0.04 * max(x),
+                                 label = text),
+                             position = 	
+                               position_jitter(),
+                             size=4)
+        }
       }
     }
-    # try({
-    #    if(plotName %in% c("heatmap", "network_heatmap")){
-    #      data = data.frame(text = "Currently only available in 'plotly' mode!\nPlease switch in the sidebar.")
-    #      myplot <- ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10) +
-    #        ggplot2::theme(text = ggplot2::element_text(family = lcl$aes$font$family)) + ggplot2::theme_bw()
-    #    }
     #  }, silent = F)
     finalPlot = list(myplot)
     finalPlot
