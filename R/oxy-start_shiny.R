@@ -32,17 +32,13 @@ start_metshi <- function(port=8080, inBrowser=F,
   if(!("ggVennDiagram" %in% rownames(packages))){
     devtools::install_github("joannawolthuis/ggVennDiagram",quiet = T, upgrade=F)
   }
-  # if(!("BatchCorrMetabolomics" %in% rownames(packages))){
-  #   devtools::install_github("rwehrens/BatchCorrMetabolomics",quiet = T, upgrade=F)
-  # }
   
   #library(httr)
   # rjava.so error.. or rdb corrupt.. 'sudo R CMD javareconf'
   requireNamespace("MetaboAnalystR", quietly = TRUE)
   requireNamespace("ggVennDiagram", quietly = TRUE)
   requireNamespace("MetaDBparse", quietly = TRUE)
-  requireNamespace("BatchCorrMetabolomics", quietly = TRUE)
-    
+
   options('unzip.unzip' = getOption("unzip"),
           'download.file.extra' = switch(runmode, 
                                          docker="--insecure",
