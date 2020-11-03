@@ -211,6 +211,7 @@ shiny::observe({
             massspec = "fingerprint",
             chemical = "flask",
             online = "globe",
+            study = "scroll",
             predictive = "magic",
             custom = "cart-plus",
             favorite = "heart")  

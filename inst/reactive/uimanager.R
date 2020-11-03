@@ -250,6 +250,9 @@ shiny::observe({
                      shiny::updateSelectInput(session, "ml_include_covars", 
                                               choices = c(colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "individual"))]))
                      
+                     shiny::updateSelectInput(session, "ml_batch_covars", 
+                                              choices = c(colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "individual"))]))
+                     
                      if("ml" %in% names(mSet$analSet)){
                        shiny::showTab(session = session, 
                                       inputId = "ml2", 

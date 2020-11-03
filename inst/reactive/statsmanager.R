@@ -8,7 +8,7 @@ shiny::observe({
     NULL # if not reloading anything, nevermind
     
   }else{
-
+    
     if(!is.null(mSet)){
       
       mSet.old <- mSet
@@ -31,10 +31,57 @@ shiny::observe({
                  pattern = paste0(pat_order-1, collapse="-")
                  mSet <- MetaboAnalystR::Match.Pattern(mSet, input$corr_corr, pattern)
                },
+               diffcorr = {
+                 library(DGCA, quietly = TRUE)
+                 #data(darmanis)
+                 data(design_mat)
+                 #ddcor_res = ddcorAll(inputMat = darmanis, design = design_mat,
+                 #                     compare = c("oligodendrocyte", "neuron"),
+                 #                     adjust = "none", nPerm = 0, nPairs = 100)
+                 inMat = t(mSet$dataSet$norm)
+                 vars = unique(unlist(mSet$dataSet$covars[,mSet$settings$exp.var,with=F]))
+                 dMat = matrix(ncol = length(vars), 
+                               nrow=nrow(mSet$dataSet$covars), 
+                               data = rep(0, length(vars)),
+                               dimnames = list(mSet$dataSet$covars$sample, vars))
+                 
+                 for(var in vars){
+                   dMat[,var] <- as.numeric(unlist(mSet$dataSet$covars[,mSet$settings$exp.var,with=F] == var))
+                 }
+                 
+                 mSet$analSet$diffcorr = DGCA::ddcorAll(inputMat = inMat, design = dMat,
+                                                        compare = colnames(dMat),
+                                                        adjust = "fdr", nPerm = 0)#10)# nPairs = 100)
+               },
                pca = {
                  shiny::withProgress({
                    mSet <- MetaboAnalystR::PCA.Anal(mSet) # perform PCA analysis
                  })
+                 success = T
+               },
+               ica = {
+                 shiny::withProgress({
+                   # ica package
+                   inTbl = mSet$dataSet$norm
+                   nc = input$ica_ncomp
+                   icaRes = switch(input$ica_method,
+                                   fast = ica::icafast(inTbl, nc = input$ica_ncomp, center = F,maxit = input$ica_maxiter),
+                                   imax = ica::icaimax(inTbl, nc = input$ica_ncomp, center = F,maxit = input$ica_maxiter),
+                                   jade = ica::icajade(inTbl, nc = input$ica_ncomp, center = F,maxit = input$ica_maxiter))
+                   mSet$analSet$ica <- icaRes
+                 })
+                 success = T
+               },
+               umap = {
+                 shiny::withProgress({
+                   # umap package
+                   inTbl = mSet$dataSet$norm
+                   umapRes = umap::umap(d = inTbl,
+                                        method = "naive",
+                                        n_components = input$umap_ncomp,
+                                        n_neighbors = input$umap_neighbors)
+                   mSet$analSet$umap <- umapRes
+                   })
                  success = T
                },
                meba = {
@@ -51,22 +98,22 @@ shiny::observe({
                },
                network = {
                  
-                # aov
-                flattened <- getTopHits(mSet, 
-                                       input$network_table,
-                                       input$network_topn)
-                
-                useHits = flattened[[1]]
-                
-                # ---
-                #TODO: gaussian graphical model
-                # ---
-                rcorrMat = Hmisc::rcorr(x = as.matrix(mSet$dataSet$norm[, useHits]),
-                                        #y = as.matrix(mSet$dataSet$norm[, useHits]),
-                                        type = input$network_corr)
-                mSet$analSet$network <- list(rcorr = rcorrMat,
-                                             order = useHits)
-                output$network_now <- shiny::renderText(input$network_table)
+                 # aov
+                 flattened <- getTopHits(mSet, 
+                                         input$network_table,
+                                         input$network_topn)
+                 
+                 useHits = flattened[[1]]
+                 
+                 # ---
+                 #TODO: gaussian graphical model
+                 # ---
+                 rcorrMat = Hmisc::rcorr(x = as.matrix(mSet$dataSet$norm[, useHits]),
+                                         #y = as.matrix(mSet$dataSet$norm[, useHits]),
+                                         type = input$network_corr)
+                 mSet$analSet$network <- list(rcorr = rcorrMat,
+                                              order = useHits)
+                 output$network_now <- shiny::renderText(input$network_table)
                },
                enrich = {
                  shiny::withProgress({
@@ -96,8 +143,8 @@ shiny::observe({
                                                                                                      rownames(mSet$storage[[subset]]$analysis[[anal]]$sig.mat)),
                                                                                                if(anal == "aov2") "Interaction(adj.p)" else "p.value"] else c(0)
                    tbl[, "t.score"] = if(hasT) mSet$storage[[subset]]$analysis[[anal]]$sig.mat[match(flattened[[1]], 
-                                                                                  rownames(mSet$storage[[subset]]$analysis[[anal]]$sig.mat)),
-                                                                            "t.stat"] else c(0)
+                                                                                                     rownames(mSet$storage[[subset]]$analysis[[anal]]$sig.mat)),
+                                                                                               "t.stat"] else c(0)
                    
                    if(hasP) if(all(is.na(tbl$p.value))) tbl$p.value <- c(0)
                    if(hasT) if(all(is.na(tbl$t.score))) tbl$t.score <- c(0)
@@ -107,17 +154,17 @@ shiny::observe({
                    fwrite(tbl, file=tmpfile)
                    
                    enr_mSet <- MetaboAnalystR::InitDataObjects("mass_all",
-                                               "mummichog",
-                                               FALSE)
+                                                               "mummichog",
+                                                               FALSE)
                    MetaboAnalystR::SetPeakFormat("mpt")
                    enr_mSet <- MetaboAnalystR::UpdateInstrumentParameters(enr_mSet,
-                                                          mSet$ppm,
-                                                          "mixed",
-                                                          "yes",
-                                                          0.02);
+                                                                          mSet$ppm,
+                                                                          "mixed",
+                                                                          "yes",
+                                                                          0.02);
                    
                    enr_mSet <- MetaboAnalystR::Read.PeakListData(enr_mSet, tmpfile);
-
+                   
                    shiny::setProgress(0.2)
                    
                    enr_mSet <- MetaboAnalystR::SanityCheckMummichogData(enr_mSet)
@@ -129,7 +176,7 @@ shiny::observe({
                    
                    enr_mSet<-MetaboAnalystR::SetPeakEnrichMethod(enr_mSet, if(input$mummi_enr_method | !hasT) "mum" else "gsea", "v2")
                    enr_mSet<-MetaboAnalystR::SetMummichogPval(enr_mSet, if(hasP) as.numeric(gsub(",",".",input$mummi_pval)) else 1)
-
+                   
                    #===
                    
                    elecMass = 0.000548579909
@@ -221,7 +268,7 @@ shiny::observe({
                    
                    shiny::setProgress(0.9)
                    enr_mSet$dataSet$N <- 20
-
+                   
                    enr_mSet <- MetaboAnalystR::PerformPSEA(mSetObj = enr_mSet, 
                                                            lib = input$mummi_org,
                                                            libVersion = "current",
@@ -288,7 +335,7 @@ shiny::observe({
                    if(sum(is.qc) > 0){
                      curr <- curr[!is.qc,]
                    }
-
+                   
                    order <- match(rownames(curr), mSet$dataSet$covars$sample)
                    if("label" %in% colnames(mSet$dataSet$covars)){
                      config <- mSet$dataSet$covars[order, -"label"]
@@ -308,9 +355,10 @@ shiny::observe({
                    }
                    
                    needed_for_subset <- c(lcl$vectors$ml_train[1],lcl$vectors$ml_test[1])
-                
-                   config <- config[, c(input$ml_include_covars,
-                                        needed_for_subset),with=F]# reorder so both halves match up later  
+                   
+                   config <- config[, unique(c(input$ml_include_covars,
+                                               if(input$ml_batch_sampling != "none") input$ml_batch_covars else c(),
+                                               needed_for_subset)),with=F]# reorder so both halves match up later  
                    
                    
                    if(mSet$settings$exp.type %in% c("2f", "t1f")){
@@ -332,14 +380,51 @@ shiny::observe({
                      }
                    }
                    
+                   batch_sampling = if(input$ml_batch_sampling == "none") NULL else input$ml_batch_sampling
+                   batches = input$ml_batch_covars
                    
-                   if(!input$ml_random_split & is.null(lcl$vectors$ml_train) & is.null(lcl$vectors$ml_test)){
+                   # batch downsample
+                   if(batch_sampling != "none"){
+                     if(length(batches) > 0){
+                       print("Appling down/upsamping method to balance classes within selected batches.")
+                       
+                       configCols = colnames(config)
+                       
+                       for(b in batches){
+                         mzs = colnames(curr)
+                         curr = data.table::as.data.table(cbind(as.factor(config[,..b][[1]]),
+                                                                as.factor(config[,"label"][[1]]),
+                                                                curr))
+                         colnames(curr) <- c(b, "label", mzs)
+                         spl.curr = split(curr, by = b)
+                         xSampled = lapply(spl.curr, function(t){
+                           r = switch(batch_sampling,
+                                      up = caret::upSample(t, t$label),
+                                      ROSE = ROSE::ROSE(label ~ ., data = t,),
+                                      SMOTE = DMwR::SMOTE(label ~ ., data = t),
+                                      down = caret::downSample(t, t$label))
+                           r[,-ncol(r)]
+                         })
+                         curr = data.table::rbindlist(xSampled)
+                       }
+                       config = curr[,..configCols]
+                       curr = curr[,-configCols,with=F]
+                       keep.config = c("label", setdiff(unique(c(input$ml_include_covars,
+                                                                 needed_for_subset)),"all"))
+                       config = config[, ..keep.config]
+                     }    
+                   }
+                   
+                   if(!input$ml_random_split & 
+                      is.null(lcl$vectors$ml_train) & 
+                      is.null(lcl$vectors$ml_test)){
                      try({
                        shiny::showNotification("Using same train/test split for all repeats...")
                      })
                      # make split for all repeats
                      train_idx = caret::createDataPartition(y = config$label, 
-                                                            p = input$ml_train_perc/100, list = FALSE) # partition data in a balanced way (uses labels)
+                                                            p = input$ml_train_perc/100,
+                                                            list = FALSE) # partition data in a balanced way (uses labels)
                      # add column to config for this split
                      config$split <- c("train")
                      config$split[train_idx] <- "test"
@@ -364,17 +449,15 @@ shiny::observe({
                      }
                    }
                    
+                   config = droplevels(config)
+                   
                    config <- data.table::as.data.table(config)
                    config <- config[,apply(!is.na(config), 2, any), with=FALSE]
                    
                    predictor = config$label
                    predict_idx <- which(colnames(config)== "label")
-                   exact_matches <- which(unlist(lapply(config, function(col) all(col == predictor))))
+                   exact_matches <- which(unlist(lapply(config, function(col) all(as.numeric(as.factor(col)) == as.numeric(as.factor(predictor))))))
                    remove = setdiff(exact_matches, predict_idx)
-                   
-                   # remove ones w/ every row being different(may be used to identify...)
-                   #covariates <- lapply(1:ncol(config), function(i) as.factor(config[,..i][[1]]))
-                   #names(covariates) <- colnames(config)
                    
                    # # remove ones with na present
                    has.na <- apply(config, MARGIN=2, FUN=function(x) any(is.na(x) | tolower(x) == "unknown"))
@@ -392,7 +475,8 @@ shiny::observe({
                    
                    try({
                      shiny::showNotification(paste0("Keeping non-mz variables after NA/unique filtering: ",
-                                                    paste0(names(config)[keep_configs],collapse = ", ")))
+                                                    paste0(names(config)[keep_configs],
+                                                           collapse = ", ")))
                    })
                    
                    config <- config[,..keep_configs,with=F]
@@ -483,19 +567,23 @@ shiny::observe({
                                                            ml_preproc,
                                                            tuneGrid,
                                                            ml_train_perc,
-                                                           sampling){
-                                                   runML(curr,
-                                                                       train_vec = train_vec,
-                                                                       test_vec = test_vec,
-                                                                       config = config,
-                                                                       configCols = configCols,
-                                                                       ml_method = ml_method,
-                                                                       ml_perf_metr = ml_perf_metr,
-                                                                       ml_folds = ml_folds,
-                                                                       ml_preproc = ml_preproc,
-                                                                       tuneGrid = tuneGrid,
-                                                                       ml_train_perc = ml_train_perc,
-                                                                       sampling = sampling)
+                                                           sampling,
+                                                           batch_sampling,
+                                                           batches){
+                                                    runML(curr,
+                                                          train_vec = train_vec,
+                                                          test_vec = test_vec,
+                                                          config = config,
+                                                          configCols = configCols,
+                                                          ml_method = ml_method,
+                                                          ml_perf_metr = ml_perf_metr,
+                                                          ml_folds = ml_folds,
+                                                          ml_preproc = ml_preproc,
+                                                          tuneGrid = tuneGrid,
+                                                          ml_train_perc = ml_train_perc,
+                                                          sampling = sampling,
+                                                          batch_sampling = batch_sampling,
+                                                          batches = batches)
                                                   },
                                                   train_vec = lcl$vectors$ml_train,
                                                   test_vec = lcl$vectors$ml_test,
@@ -507,7 +595,9 @@ shiny::observe({
                                                   ml_preproc = input$ml_preproc,
                                                   tuneGrid = tuneGrid,
                                                   ml_train_perc = input$ml_train_perc,
-                                                  sampling = if(input$ml_sampling == "none") NULL else input$ml_sampling
+                                                  sampling = if(input$ml_sampling == "none") NULL else input$ml_sampling,
+                                                  batch_sampling = if(input$ml_batch_sampling == "none") NULL else input$ml_batch_sampling,
+                                                  batches = input$ml_batch_covars
                      )
                    })
                    
@@ -581,7 +671,7 @@ shiny::observe({
                    mSet$analSet$ml$last <- list(name = input$ml_name,
                                                 method = input$ml_method)
                    
-                   })
+                 })
                },
                heatmap = {
                  # reset
@@ -606,12 +696,12 @@ shiny::observe({
                  withProgress({
                    if(mSet$dataSet$ispaired){
                      mSet <- MetaboAnalystR::FC.Anal.paired(mSet,
-                                                             1.5, # TODO: make this threshold user defined
-                                                             1)  
+                                                            1.5, # TODO: make this threshold user defined
+                                                            1)  
                    }else{
                      mSet <- MetaboAnalystR::FC.Anal.unpaired(mSet,
-                                                               1.5, # TODO: make this threshold user defined
-                                                               1) 
+                                                              1.5, # TODO: make this threshold user defined
+                                                              1) 
                    }
                    if(!is.null(mSet$analSet$fc$sig.mat)){
                      rownames(mSet$analSet$fc$sig.mat) <- gsub(rownames(mSet$analSet$fc$sig.mat), 

@@ -97,5 +97,7 @@ Imports:
   glasso,
   huge,
   ppcor,
-  crmn
+  crmn,
+  umap,
+  ica
 RoxygenNote: 7.1.0

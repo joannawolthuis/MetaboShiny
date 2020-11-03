@@ -105,7 +105,9 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                            list(name = 'pharmgkb_logo', path = 'www/pharmgkb.png', dimensions = c(250, 130)),
                                            list(name = 'reactome_logo', path = 'www/reactome_logo.png', dimensions = c(250, 130)),
                                            list(name = 'knapsack_logo', path = 'www/knapsack_logo.gif', dimensions = c(200, 100)),
-                                           list(name = 'laptop_icon', path = 'www/laptop.png', dimensions = c(150, 150))
+                                           list(name = 'laptop_icon', path = 'www/laptop.png', dimensions = c(150, 150)),
+                                           list(name = 'metabolomicsworkbench_logo', path = 'www/metworkbench_logo.png', dimensions = c(140, 140))
+                                           
                                            
                              ),# all image paths, if you add an image you can add it here
                              default.text = list(list(name='curr_definition', text="No m/z selected"),
@@ -211,6 +213,9 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                reactome = list(title = "Reactome",
                                                description = "Reactome is a free, open-source, curated and peer-reviewed pathway database.",
                                                image_id = "reactome_logo"),
+                               metabolomicsworkbench = list(title = "Metabolomics Workbench",
+                                            description = "The Metabolomics Workbench Metabolite Database contains structures and annotations of biologically relevant metabolites. As of August, 2020, the database contains about 136,000 entries, collected from public sources such as LIPID MAPS, ChEBI, HMDB, PubChem, NP Atlas , CHEMBL and KEGG. The Metabolite Database is integrated with the NMDR data repository, providing links to studies reporting each metabolite. ",
+                                            image_id = "metabolomicsworkbench_logo"),
                                # - - leave magicball last - -
                                cmmmediator = list(title = "CEU Mass Mediator",
                                                   description = "(ONLINE ONLY) CEU Mass Mediator is a tool for searching metabolites in different databases (Kegg, HMDB, LipidMaps, Metlin, MINE and an in-house library).",
@@ -309,7 +314,7 @@ vectors = list(
                   "custom",
                   "pubchem"),
   db_categories = list(versatile = c("wikidata", "dimedb", "metacyc", "chebi", "massbank", "cmmediator"),
-                       verbose = c("hmdb", "chebi", "t3db", "metabolights", "ymdb", "ecmdb", "pamdb"),
+                       verbose = c("hmdb", "chebi", "t3db", "metabolights", "ymdb", "ecmdb", "pamdb", "metabolomicsworkbench"),
                        livestock = c("lmdb", "rmdb", "bmdb", "metacyc", "mcdb"),
                        human = c("hmdb", "metacyc", "expoexplorer", "t3db", "bloodexposome", "pharmgkb"),
                        microbial = c("ymdb", "ecmdb", "pamdb", "vmh", "mvoc"),
@@ -319,6 +324,7 @@ vectors = list(
                        chemical = c("chebi", "massbank", "maconda", "stoff", "lipidmaps", "chemspider"),
                        massspec = c("massbank", "respect", "maconda", "dimedb"),
                        online = c("cmmmediator", "chemspider","pubchem","knapsack","chemidplus","supernatural2"),
+                       studies = c("metabolights","metabolomicsworkbench"),
                        custom = c(),
                        predictive = c("magicball", "chemspider", "pubchem", "supernatural2", "knapsack","chemidplus")
   ),
@@ -355,6 +361,7 @@ vectors = list(
     'anpdb',
     'pharmgkb',
     'reactome',
+    'metabolomicsworkbench',
     'phenolexplorer',
     "magicball",
     'cmmmediator',

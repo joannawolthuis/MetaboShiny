@@ -15,6 +15,16 @@ output$manual_search <- renderUI({
   }
 })
 
+shiny::observeEvent(input$classify_matches, {
+  library(classyfireR)
+  smi = shown_matches$forward_unique$structure
+  names(smi) = smi
+  rand = gsub("file","",basename(tempfile()))
+  cfrid = gsubfn::fn$paste('metaboshiny_$rand')
+  classif = classyfireR::submit_query(label = cfrid, input = smi, type = 'STRUCTURE')
+  classif@classification
+})
+
 shiny::observeEvent(input$clear_prematch,{
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), lcl$paths$patdb) # change this to proper var later
   RSQLite::dbExecute(conn, "DROP INDEX IF EXISTS map_mz")

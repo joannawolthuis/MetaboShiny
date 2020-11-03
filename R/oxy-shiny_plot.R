@@ -1021,6 +1021,10 @@ plotPCAloadings.2d <- function(mSet,
                                pcx,
                                pcy,
                                type = "pca"){
+  
+  pcx = as.numeric(pcx)
+  pcy = as.numeric(pcy)
+  
   switch(type,
          pca = {
            df <- mSet$analSet$pca$rotation
@@ -1035,8 +1039,8 @@ plotPCAloadings.2d <- function(mSet,
            colnames(plsda.table) <- c("PC", "var")
            plsda.table[, "PC"] <- paste0("PC", 1:nrow(plsda.table))
            
-           x.var <- plsda.table[PC == pcx]$var
-           y.var <- plsda.table[PC == pcy]$var
+           x.var <- plsda.table[PC == paste0("PC",pcx)]$var
+           y.var <- plsda.table[PC == paste0("PC",pcy)]$var
            
            # --- coordinates ---
            df <- mSet$analSet$plsr$loadings
@@ -1045,14 +1049,17 @@ plotPCAloadings.2d <- function(mSet,
          })
   
   df = as.data.frame(df)
+
   df$extremity <- apply(df, 1, function(row) max(abs(c(row[[pcx]], 
                                                        row[[pcy]]))))
   
-  #df <- df[order(df$extremity, decreasing=T),]#[1:2000,]
-  
   scaleFUN <- function(x) sprintf("%.4s", x)
   
-  p <- ggplot2::ggplot(df, ggplot2::aes(.data[[pcx]], .data[[pcy]])) +
+  prefix = switch(type, 
+                  pca = "PC",
+                  plsda = "Component ")
+  
+  p <- ggplot2::ggplot(df, ggplot2::aes(.data[[paste0("PC",pcx)]], .data[[paste0("PC",pcy)]])) +
     ggplot2::geom_point(ggplot2::aes(color = extremity,
                                      size = extremity,
                                      text = rownames(df),
@@ -1062,8 +1069,8 @@ plotPCAloadings.2d <- function(mSet,
                         alpha=0.7)+
     
     ggplot2::scale_size_area(max_size = 15) +
-    ggplot2::scale_x_continuous(labels=scaleFUN,name=gsubfn::fn$paste(if(type != "tsne") "$pcx ($x.var%)" else "t-sne dimension 1")) +
-    ggplot2::scale_y_continuous(labels=scaleFUN,name=gsubfn::fn$paste(if(type != "tsne") "$pcy ($y.var%)" else "t-sne dimension 2")) +
+    ggplot2::scale_x_continuous(labels=scaleFUN,name=gsubfn::fn$paste("$prefix$pcx ($x.var%)")) +
+    ggplot2::scale_y_continuous(labels=scaleFUN,name=gsubfn::fn$paste("$prefix$pcy ($y.var%)")) +
     ggplot2::scale_colour_gradientn(colors=cf(20))
   #ggplot2::scale_y_discrete(labels=scaleFUN) +
   #ggplot2::scale_x_discrete(labels=scaleFUN)
@@ -1095,6 +1102,10 @@ plotPCAloadings.3d <- function(mSet,
                                font,
                                type = "pca"){
   
+  pcx <- as.numeric(pcx)
+  pcy <- as.numeric(pcy)
+  pcz <- as.numeric(pcz)
+  
   switch(type,
          pca = {
            df <- mSet$analSet$pca$rotation
@@ -1110,9 +1121,9 @@ plotPCAloadings.3d <- function(mSet,
            colnames(plsda.table) <- c("PC", "var")
            plsda.table[, "PC"] <- paste0("PC", 1:nrow(plsda.table))
            
-           x.var <- plsda.table[PC == pcx]$var
-           y.var <- plsda.table[PC == pcy]$var
-           z.var <- plsda.table[PC == pcz]$var
+           x.var <- plsda.table[PC == paste0("PC",pcx)]$var
+           y.var <- plsda.table[PC == paste0("PC",pcy)]$var
+           z.var <- plsda.table[PC == paste0("PC",pcz)]$var
            
            # --- coordinates ---
            df <- mSet$analSet$plsr$loadings
@@ -1206,7 +1217,24 @@ plotPCA.3d <- function(mSet,
                        fill.fac = "label",
                        mode="normal",cf,
                        ellipse=T){
+  
+  pcx = as.numeric(pcx)
+  pcy = as.numeric(pcy)
+  pcz = as.numeric(pcz)
+  
   switch(type,
+         ica = {
+           df = mSet$analSet$ica$S
+           x.var = ""
+           y.var = ""
+           z.var = ""
+         },
+         umap = {
+           df = mSet$analSet$umap$layout
+           x.var = ""
+           y.var = ""
+           z.var = ""
+         },
          tsne = {
            df = mSet$analSet$tsne$x
            x.var = ""
@@ -1398,6 +1426,13 @@ plotPCA.3d <- function(mSet,
     pca_plot
   })
   
+  title_prefix = switch(type,
+                        tsne = "t-sne dimension ",
+                        umap = "umap dimension ",
+                        ica = "IC",
+                        pca = "PC",
+                        plsda = "Component ")
+  
   basic_scene = list(
     aspectmode="cube",
     aspectratio=list(x=1,y=1,z=1),
@@ -1406,14 +1441,14 @@ plotPCA.3d <- function(mSet,
     ),
     xaxis = list(
       titlefont = list(size = font$ax.txt.size * 1.5),
-      title = if(type != "tsne") gsubfn::fn$paste("$pcx ($x.var%)") else "t-sne dimension 1"),
+      title = paste0(title_prefix, pcx, if(x.var != "") gsubfn::fn$paste("($x.var%)") else "")),
     yaxis = list(
       titlefont = list(size = font$ax.txt.size * 1.5),
-      title = if(type != "tsne") gsubfn::fn$paste("$pcy ($y.var%)") else "t-sne dimension 2"),
+      title =  paste0(title_prefix, pcy, if(y.var != "") gsubfn::fn$paste("($y.var%)") else "")),
     zaxis = list(
       titlefont = list(size = font$ax.txt.size * 1.5),
-      title = if(type != "tsne") gsubfn::fn$paste("$pcz ($z.var%)") else "t-sne dimension 3"))
-  
+      title = paste0(title_prefix, pcz, if(z.var != "") gsubfn::fn$paste("($z.var%)") else ""))
+  ) 
   if(mode == "normal"){
     plots_facet[[1]] %>% layout(font = t, 
                                 scene = basic_scene) %>%
@@ -1494,20 +1529,51 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",  fill
     mSet$dataSet$cls
   }
   
+  pcx = as.numeric(pcx)
+  pcy = as.numeric(pcy)
+  
   switch(type,
+         ica = {
+           df <- mSet$analSet$ica$S
+           x.var <- ""
+           y.var <- ""
+           fac.lvls <- length(levels(mSet$dataSet$cls))
+           
+           xc=df[, pcx]
+           yc=df[, pcy]
+           
+           dat_long <- data.table::data.table(variable = rownames(mSet$dataSet$norm),
+                                              group = classes,
+                                              x = xc,
+                                              y = yc)
+         },
+         umap = {
+           df <- mSet$analSet$umap$layout
+           x.var <- ""
+           y.var <- ""
+           fac.lvls <- length(levels(mSet$dataSet$cls))
+           
+           xc=df[, pcx]
+           yc=df[, pcy]
+           
+           dat_long <- data.table::data.table(variable = rownames(mSet$dataSet$norm),
+                                              group = classes,
+                                              x = xc,
+                                              y = yc)
+         },
          tsne = {
            df <- mSet$analSet$tsne$x
            x.var <- ""
            y.var <- ""
            fac.lvls <- length(levels(mSet$dataSet$cls))
            
-           xc=mSet$analSet$tsne$x[, pcx]
-           yc=mSet$analSet$tsne$x[, pcy]
+           xc=df[, pcx]
+           yc=df[, pcy]
            
-           dat_long <- data.table(variable = rownames(mSet$dataSet$norm),
-                                  group = classes,
-                                  x = xc,
-                                  y = yc)
+           dat_long <- data.table::data.table(variable = rownames(mSet$dataSet$norm),
+                                              group = classes,
+                                              x = xc,
+                                              y = yc)
          },
          pca = {
            df <- mSet$analSet$pca$x
@@ -1532,8 +1598,8 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",  fill
            colnames(plsda.table) <- c("PC", "var")
            plsda.table[, "PC"] <- paste0("PC", 1:nrow(plsda.table))
            
-           x.var <- plsda.table[PC == pcx]$var
-           y.var <- plsda.table[PC == pcy]$var
+           x.var <- plsda.table[PC == paste0("PC", pcx)]$var
+           y.var <- plsda.table[PC == paste0("PC", pcy)]$var
            
            # --- coordinates ---
            df <- mSet$analSet$plsr$scores
@@ -1600,14 +1666,21 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",  fill
   
   ggplot2::scale_shape_manual(values = symbols)
   
+  title_prefix = switch(type,
+                  tsne = "t-sne dimension ",
+                  umap = "umap dimension ",
+                  ica = "IC",
+                  pca = "PC",
+                  plsda = "Component ")
+  
   p <- ggplot2::ggplot(dat_long, ggplot2::aes(x, y,group=group)) +
     ggplot2::geom_point(size=6, ggplot2::aes(
       shape=shape,
       text=variable,
       fill=fill,
       color=color), alpha=0.7,stroke = 1.5)+
-    ggplot2::scale_x_continuous(name=gsubfn::fn$paste(if(type != "tsne") "$pcx ($x.var%)" else "t-sne dimension 1")) +
-    ggplot2::scale_y_continuous(name=gsubfn::fn$paste(if(type != "tsne") "$pcy ($y.var%)" else "t-sne dimension 2")) +
+    ggplot2::scale_x_continuous(name = paste0(title_prefix, pcx, if(x.var != "") gsubfn::fn$paste("($x.var%)") else ""))+
+    ggplot2::scale_y_continuous(name = paste0(title_prefix, pcy, if(y.var != "") gsubfn::fn$paste("($y.var%)") else ""))+
     ggplot2::scale_fill_manual(values = cols) +
     ggplot2::scale_color_manual(values = cols) +
     ggplot2::scale_shape_manual(values = as.numeric(symbols)) +
@@ -1647,7 +1720,7 @@ ggPlotVenn <- function(mSet,
                        cols,
                        cf){
   
-  flattened <- getTopHits (mSet, unlist(venn_yes$now), top)
+  flattened <- getTopHits(mSet, unlist(venn_yes$now), top)
   
   parseFun = function(labels){
     sapply(labels, function(label){

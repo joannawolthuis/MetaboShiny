@@ -39,7 +39,7 @@ shiny::observe({
                                     unlist(ml.names)
                                   },
                                   plsr = {
-                                    c ("plsda - PC1", "plsda - PC2", "plsda - PC3")
+                                    c ("plsda - Component 1", "plsda - Component 2", "plsda - Component 3")
                                   },
                                   pca = {
                                     c ("pca - PC1", "pca - PC2", "pca - PC3")
@@ -132,9 +132,9 @@ shiny::observe({
                        colnames(pca.table) <- c("Principal Component", "% variance")
                        
                        # render PCA loadings tab for UI
-                       pca.loadings <- mSet$analSet$pca$rotation[,c(input$pca_x,
-                                                                    input$pca_y,
-                                                                    input$pca_z)]
+                       pca.loadings <- mSet$analSet$pca$rotation[,as.numeric(c(input$pca_x,
+                                                                               input$pca_y,
+                                                                               input$pca_z))]
                        list(pca_load_tab = pca.loadings,
                             pca_tab = pca.table)
                      }else{
@@ -149,12 +149,12 @@ shiny::observe({
                                                                       * 100.0,
                                                                       digits = 2),
                                                                 keep.rownames = T)
-                       colnames(plsda.table) <- c("Principal Component", "% variance")
-                       plsda.table[, "Principal Component"] <- paste0("PC", 1:nrow(plsda.table))
+                       colnames(plsda.table) <- c("Component", "% variance")
+                       plsda.table[, "Component"] <- paste0("Component ", 1:nrow(plsda.table))
                        # render table with PLS-DA loadings
                        plsda.loadings <- mSet$analSet$plsda$vip.mat
-                       colnames(plsda.loadings) <- paste0("PC", c(1:ncol(plsda.loadings)))
-                       plsda.loadings = plsda.loadings[, c(input$plsda_x, input$plsda_y, input$plsda_z)]
+                       colnames(plsda.loadings) <- paste0("Component ", c(1:ncol(plsda.loadings)))
+                       plsda.loadings = plsda.loadings[, as.numeric(c(input$plsda_x, input$plsda_y, input$plsda_z))]
                        list(plsda_tab = plsda.table, 
                             plsda_load_tab = plsda.loadings)
                      }else{

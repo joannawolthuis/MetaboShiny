@@ -61,10 +61,10 @@ shiny::observeEvent(input$intersect_venn, {
 
     l = lcl$vectors$venn_lists
     # Get the combinations of names of list elements
-    nms <- combn(names(l) , 2 , FUN = paste0 , collapse = "  ~ " , simplify = FALSE)
+    nms <- combn(names(l), 2, FUN = paste0, collapse = "  ~ ", simplify = FALSE)
 
     # Make the combinations of list elements
-    ll <- combn( l , 2 , simplify = FALSE )
+    ll <- combn(l, 2, simplify = FALSE)
 
     # Intersect the list elements
     out <- lapply(ll , function(x) (intersect(x[[1]],

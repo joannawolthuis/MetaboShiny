@@ -117,7 +117,9 @@ runML <- function(curr,
                   ml_preproc,
                   tuneGrid,
                   ml_train_perc,
-                  sampling = "none"){
+                  sampling = "none",
+                  batch_sampling = "none",
+                  batches = c()){
   
   # get user training percentage
   ml_train_perc <- ml_train_perc/100
@@ -128,13 +130,13 @@ runML <- function(curr,
     inTrain = train_idx
     inTest = test_idx
   }else if(unique(train_vec)[1] != "all"){ #ONLY TRAIN IS DEFINED
-    train_idx <- which(config[,train_vec[1], with=F][[1]] == train_vec[2])
+    train_idx <- which(curr[,train_vec[1], with=F][[1]] == train_vec[2])
     test_idx = setdiff(1:nrow(curr), train_idx) # use the other rows for testing
     reTrain <- caret::createDataPartition(y = curr[train_idx, label], p = ml_train_perc) # take a user-defined percentage of the regexed training set
     inTrain <- train_idx[reTrain$Resample1]
     inTest = test_idx
   }else{ # ONLY TEST IS DEFINED
-    test_idx = which(config[,test_vec[1], with=F][[1]] == test_vec[2])
+    test_idx = which(curr[,test_vec[1], with=F][[1]] == test_vec[2])
     train_idx = setdiff(1:nrow(curr), test_idx) # use the other rows for testing
     reTrain <- caret::createDataPartition(y = curr[train_idx, label], p = ml_train_perc) # take a user-defined percentage of the regexed training set
     inTrain <- train_idx[reTrain$Resample1]
@@ -670,7 +672,7 @@ getTopHits <- function(mSet, expnames, top){
                        which.plsda <- gsub(name, pattern = "^.*- | ", replacement="")
                        
                        compounds_pc <- data.table::as.data.table(analysis$plsda$vip.mat,keep.rownames = T)
-                       colnames(compounds_pc) <- c("rn", paste0("PC", 1:(ncol(compounds_pc)-1)))
+                       colnames(compounds_pc) <- c("rn", paste0("Component ", 1:(ncol(compounds_pc)-1)))
                        ordered_pc <- setorderv(compounds_pc, which.plsda, -1)
                        
                        res <- list(ordered_pc$rn)
@@ -808,6 +810,46 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                      
                      list(volcano_plot = p)
                    },
+                   ica = {
+                     mode <- if(mSet$settings$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
+                       "ipca" # interactive PCA (old name, i like tpca more :P )
+                     }else{
+                       "normal" # normal pca
+                     }
+                     
+                     if("ica" %in% names(mSet$analSet)){
+                       if(input$ica_2d3d | !input$ggplotly){ # check if switch button is in 2d or 3d mode
+                         # render 2d plot
+                         p = plotPCA.2d(mSet, 
+                                        cols = lcl$aes$mycols,
+                                        pcx = input$ica_x,
+                                        pcy = input$ica_y,
+                                        type = "ica",
+                                        mode = mode,
+                                        shape.fac = input$shape_var,
+                                        col.fac = input$col_var,
+                                        fill.fac = input$fill_var, 
+                                        ellipse = input$ica_ellipse)
+                         
+                       }else{
+                         # render 3d plot
+                         p = plotPCA.3d(mSet, 
+                                        lcl$aes$mycols,
+                                        pcx = input$ica_x,
+                                        pcy = input$ica_y,
+                                        pcz = input$ica_z,
+                                        type = "ica",
+                                        mode = mode,
+                                        shape.fac = input$shape_var,
+                                        font = lcl$aes$font,
+                                        col.fac = input$col_var,
+                                        fill.fac = input$fill_var, 
+                                        cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                        ellipse = input$ica_ellipse)
+                       }
+                     }
+                     list(ica_plot = p)
+                   },
                    tsne = {
                      mode <- if(mSet$settings$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
                        "ipca" # interactive PCA (old name, i like tpca more :P )
@@ -820,8 +862,8 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                          # render 2d plot
                          p = plotPCA.2d(mSet, 
                                         cols = lcl$aes$mycols,
-                                        pcx = 1,
-                                        pcy = 2, 
+                                        pcx = input$tsne_x,
+                                        pcy = input$tsne_y,
                                         type = "tsne",
                                         mode = mode,
                                         shape.fac = input$shape_var,
@@ -833,9 +875,9 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                          # render 3d plot
                          p = plotPCA.3d(mSet, 
                                         lcl$aes$mycols,
-                                        pcx = 1,
-                                        pcy = 2,
-                                        pcz = 3,
+                                        pcx = input$tsne_x,
+                                        pcy = input$tsne_y,
+                                        pcz = input$tsne_z,
                                         type = "tsne",
                                         mode = mode,
                                         shape.fac = input$shape_var,
@@ -848,6 +890,47 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                      }
                      list(tsne_plot = p)
                    },
+                   umap = {
+                     mode <- if(mSet$settings$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
+                       "ipca" # interactive PCA (old name, i like tpca more :P )
+                     }else{
+                       "normal" # normal pca
+                     }
+                     
+                     if("umap" %in% names(mSet$analSet)){
+                       if(input$umap_2d3d | !input$ggplotly){ # check if switch button is in 2d or 3d mode
+                         # render 2d plot
+                         p = plotPCA.2d(mSet, 
+                                        cols = lcl$aes$mycols,
+                                        pcx = input$umap_x,
+                                        pcy = input$umap_y,
+                                        type = "umap",
+                                        mode = mode,
+                                        shape.fac = input$shape_var,
+                                        col.fac = input$col_var,
+                                        fill.fac = input$fill_var, 
+                                        ellipse = input$umap_ellipse)
+                         
+                       }else{
+                         # render 3d plot
+                         p = plotPCA.3d(mSet, 
+                                        lcl$aes$mycols,
+                                        pcx = input$umap_x,
+                                        pcy = input$umap_y,
+                                        pcz = input$umap_z,
+                                        type = "umap",
+                                        mode = mode,
+                                        shape.fac = input$shape_var,
+                                        font = lcl$aes$font,
+                                        col.fac = input$col_var,
+                                        fill.fac = input$fill_var, 
+                                        cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                        ellipse = input$umap_ellipse)
+                       }
+                     }
+                     list(umap_plot = p)
+                   },
+                   
                    pca = {
                      if("pca" %in% names(mSet$analSet)){
                        scree = ggPlotScree(mSet,
@@ -1019,6 +1102,83 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                      
                      list(fc_plot = p)
                    },
+                   diffcorr = {
+                     
+                     matr = mSet$analSet$diffcorr[,c("Gene1", "Gene2", "zScoreDiff")]
+                     
+                     matr=matr[1:100,]
+                     colnames(matr) <- c("From", "To", "Weight")
+                     mygraph <- igraph::graph.data.frame(matr)
+                     
+                     adjmatr = igraph::get.adjacency(mygraph, 
+                                                     sparse = TRUE, 
+                                                     attr='Weight')
+                     
+                     igr = igraph::graph.adjacency(adjmatrix = adjmatr,
+                                                   weighted = T,
+                                                   diag = F)
+                     
+                     netw = visNetwork::visIgraph(igr)
+                     
+                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]]
+                     
+                     degr = igraph::degree(igr)
+                     cols = cf(max(degr))
+                     
+                     netw$x$nodes$color <- sapply(netw$x$nodes$id, function(id){
+                       cols[degr[names(degr) == id]]
+                     })
+                     
+                     netw$x$nodes$title = netw$x$nodes$label
+                     
+                     netw$x$edges$color <- sapply(netw$x$edges$weight, function(w){
+                       if(w < 0) "red" else "blue"
+                     })
+                     
+                     netw$x$edges$title <- paste0("z-score=",netw$x$edges$weight)
+                     
+                     netw$x$edges$weight <- abs(netw$x$edges$weight)
+                     netw$x$edges$value <- netw$x$edges$weight
+                     
+                     p = netw %>% 
+                       visNetwork::visOptions(highlightNearest = TRUE,
+                                              collapse = T,
+                                              autoResize = T,
+                                              nodesIdSelection = TRUE) %>% 
+                       visNetwork::visNodes(borderWidth = 2,font = list(size=22,
+                                                                        face=lcl$aes$font$family)) %>%
+                       visNetwork::visEdges(scaling = list(min = 3,
+                                                           max = 12)) %>%
+                       visNetwork::visInteraction(#navigationButtons = TRUE,
+                         keyboard = T)
+                     if(!input$network_auto){
+                       if(input$network_style == "hierarchical"){
+                         p = p %>% visNetwork::visHierarchicalLayout()  
+                       }else{
+                         p = p %>% visNetwork::visIgraphLayout(layout = input$network_style)
+                       }
+                     }
+                     # --- heatmap ---
+                     hmap_matr = as.data.frame(as.matrix(adjmatr))
+                     hmap_matr[hmap_matr==0 | lower.tri(hmap_matr)] <- NA
+                     
+                     p2 = heatmaply::heatmaply(hmap_matr,
+                                               Colv = T,
+                                               Rowv = T,
+                                               branches_lwd = 0.3,
+                                               margins = c(0, 0, 0, 0),
+                                               col = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                               column_text_angle = 90,
+                                               ylab = "m/z\n",
+                                               showticklabels = if(ncol(hmap_matr) <= 100) c(T,T) else c(F,F),
+                                               symm=T,
+                                               symbreaks=T,
+                                               dendrogram="none"
+                     )
+                     lcl$vectors$diffcorr_heatmap <- p2$x$layout$yaxis$ticktext
+                     list(diffcorr = p, 
+                          diffcorr_heatmap = p2)
+                   },
                    network = {
                      
                      pval = input$network_sign
@@ -1033,11 +1193,13 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                      netw = visNetwork::visIgraph(igr)
                      
                      cf = gbl$functions$color.functions[[lcl$aes$spectrum]]
-                     cols = cf(nrow(netw$x$nodes))
+                     degr = igraph::degree(igr)
+                     cols = cf(max(degr))
                      
                      netw$x$nodes$color <- sapply(netw$x$nodes$id, function(id){
-                       cols[which(mSet$analSet$network$order == id)]
+                       cols[degr[names(degr) == id]]
                      })
+                     
                      netw$x$nodes$title = netw$x$nodes$label
                      
                      netw$x$edges$value <- netw$x$edges$weight
@@ -1197,13 +1359,13 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
       }
     }
     
-    isSquare <- grepl("pca|plsda|tsne|roc|heatmap|var|samp|network", plotName) & !grepl("scree|cv|perm|venn", plotName)
+    isSquare <- grepl("pca|plsda|tsne|roc|heatmap|var|samp|network|umap|ica", plotName) & !grepl("scree|cv|perm|venn", plotName)
     
     # === WRAPPER ===
     
-    canBe3D <- grepl("pca|plsda|tsne", plotName) & !grepl("scree|perm|cv", plotName)
+    canBe3D <- grepl("pca|plsda|tsne|umap|ica", plotName) & !grepl("scree|perm|cv", plotName)
     if(canBe3D){
-      whichAnal <- stringr::str_match(plotName, "pca|plsda|tsne")[,1]
+      whichAnal <- stringr::str_match(plotName, "pca|plsda|tsne|umap|ica")[,1]
       is3D <- !input[[paste0(whichAnal, "_2d3d")]]
     }else{
       is3D <- plotName %in% c("heatmap", "network", "network_heatmap")

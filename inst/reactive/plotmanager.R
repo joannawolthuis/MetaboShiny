@@ -30,7 +30,7 @@ shiny::observe({
           
           mapply(function(myplot, plotName){
             
-            isSquare <- grepl("pca|plsda|tsne|roc|heatmap|var|samp|network", plotName) & !grepl("scree|cv|perm|venn", plotName)
+            isSquare <- grepl("pca|plsda|tsne|roc|heatmap|var|samp|network|umap|ica", plotName) & !grepl("scree|cv|perm|venn", plotName)
             
             # === WRAPPER ===
             empty <- if(grepl(plotName, pattern="var|samp")) "output_empty2_width" else "output_empty3_width"
@@ -58,9 +58,9 @@ shiny::observe({
             
             observe({
               
-              canBe3D <- grepl("pca|plsda|tsne", plotName) & !grepl("scree|perm|cv", plotName)
+              canBe3D <- grepl("pca|plsda|tsne|umap|ica", plotName) & !grepl("scree|perm|cv", plotName)
               if(canBe3D){
-                whichAnal <- stringr::str_match(plotName, "pca|plsda|tsne")[,1]
+                whichAnal <- stringr::str_match(plotName, "pca|plsda|tsne|umap|ica")[,1]
                 is3D <- !input[[paste0(whichAnal, "_2d3d")]]
               }else{
                 is3D <- plotName %in% c("heatmap", "network", "network_heatmap")
