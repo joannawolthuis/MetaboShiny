@@ -170,8 +170,18 @@ observe({
         }
       },
       error = function(cond){
-        mSet <- qs::qread(fn)
-        mSet
+        tryCatch({
+          mSet <- qs::qread(fn)
+        },
+        error = function(cond){
+          metshiAlert("Corrupt save detected! Reverting to previous state...")
+          fn_bu <- normalizePath(paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), 
+                                        "_BACKUP.metshi"),mustWork = F)
+          fn <- normalizePath(paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), 
+                                     ".metshi"))
+          file.rename(fn_bu, fn)
+          mSet <- qs::qread(fn)
+        })
       })
       if(!is.null(mSet)){
         mSet$mSet <- NULL
@@ -213,6 +223,9 @@ observe({
         file.rename(from = fn_bu, 
                     to = fn)
       }else{
+        save_info$prev_time <- Sys.time()
+        save_info$has_changed <- FALSE
+        
         file.remove(fn_bu)
       }
     } 
@@ -220,3 +233,44 @@ observe({
   filemanager$do <- "nothing"
 })
 
+# "minutes ago saved"
+save_info = shiny::reactiveValues(prev_time = c(),
+                                  now_time = c(),
+                                  has_changed = FALSE)
+
+output$last_saved = shiny::renderText({
+  timeStart <- save_info$prev_time
+  if(length(timeStart) > 0){
+    timeEnd <- save_info$now_time
+    difference <- difftime(timeEnd, timeStart, units='mins')
+    round.min = round(as.numeric(difference),digits = 0)
+    paste("saved", round.min, "min. ago")   
+  }else{
+    "no save since startup"
+  }
+})
+
+observe({
+  # Re-execute this reactive expression after 1000 milliseconds
+  invalidateLater(60000, session)
+  if(length(save_info$prev_time) > 0){
+    save_info$now_time <- Sys.time()
+  }
+})
+
+observe({
+  # Re-execute this reactive expression after 1000 milliseconds
+  invalidateLater(600000, session)
+  if(isolate(save_info$has_changed)){
+    shiny::showNotification("Autosaving...")
+    filemanager$do <- "save"  
+  }
+})
+
+output$has_unsaved_changes <- shiny::renderUI({
+  if(save_info$has_changed){
+    shinyBS::tipify(icon("exclamation-triangle"),title = "you have unsaved changes",placement = "top")
+  }else{
+    ""
+  }
+})

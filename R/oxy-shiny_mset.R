@@ -439,7 +439,7 @@ change.mSet <-
 # subset by mz
 subset_mSet_mz <- function(mSet, keep.mzs) {
   if (length(keep.mzs) > 0) {
-    tables = c("start", "orig", "norm", "proc","preproc","missing")
+    tables = c("start", "orig", "norm", "proc","preproc","missing", "prebatch")
     combi.tbl = data.table::data.table(tbl = tables)
     
     for (i in 1:nrow(combi.tbl)){
@@ -480,8 +480,8 @@ subset_mSet <- function(mSet, subset_var, subset_group) {
     mSet$dataSet$covars <-
       mSet$dataSet$covars[sample %in% keep.samples, ]
     
-    tables = c("start", "orig", "norm", "proc","preproc","missing")
-    clss = c("placeholder", "orig.cls", "cls", "proc.cls", "preproc.cls", "placeholder")
+    tables = c("start", "orig", "norm", "proc","preproc","missing", "prebatch")
+    clss = c("placeholder", "orig.cls", "cls", "proc.cls", "preproc.cls", "placeholder", "placeholder")
     combi.tbl = data.table::data.table(tbl = tables,
                                        cls = clss)
     
@@ -498,7 +498,7 @@ subset_mSet <- function(mSet, subset_var, subset_group) {
         sampOrder = match(rownames(mSet$dataSet[[tbl]]),
                           mSet$dataSet$covars$sample)
         
-        if(!(tbl %in% c("start", "missing"))){
+        if(!(tbl %in% c("start", "missing", "prebatch"))){
           mSet$dataSet[[cls]] <-
             as.factor(mSet$dataSet$covars[sampOrder, mSet$settings$exp.var, with = F][[1]])
           if (cls == "cls") {
@@ -717,7 +717,7 @@ metshiProcess <- function(mSet, session, init=F){
   }
   
   mSet <- MetaboAnalystR::PreparePrenormData(mSet)
-  
+
   # normalize dataset with user settings(result: mSet$dataSet$norm)
   mSet <- MetaboAnalystR::Normalization(mSet,
                                         rowNorm = mSet$metshiParams$norm_type,
@@ -738,17 +738,37 @@ metshiProcess <- function(mSet, session, init=F){
   # lowercase all the covars table column names
   colnames(mSet$dataSet$covars) <- tolower(colnames(mSet$dataSet$covars))
   
-  # === check if it does wrong here... ===
+  mSet$dataSet$prebatch <- mSet$dataSet$norm
   
-  if(length(mSet$metshiParams$batch_var)>0){
+  left_batch_vars = mSet$metshiParams$batch_var
+  
+  batch_method_a = mSet$metshiParams$batch_method_a
+  batch_method_b = mSet$metshiParams$batch_method_b
+  
+  # IN CASE SUBSETTING ELIMINATES BATCH EFFECT (ONLY ONE BATCH SELECTED)
+  # keep var 1 ?
+  keep.batch.1 = length(unique(unlist(mSet$dataSet$covars[, left_batch_vars[1], with=F]))) > 1
+  # keep var 2 ? 
+  keep.batch.2 = length(unique(unlist(mSet$dataSet$covars[, left_batch_vars[2], with=F]))) > 1
+  if(!keep.batch.1 & !keep.batch.2){
+    left_batch_vars = c()
+  }else if(!keep.batch.1 & keep.batch.2){
+    left_batch_vars = left_batch_vars[2]
+    batch_method_a = batch_method_b 
+  }else if(keep.batch.1 & !keep.batch.2){
+    left_batch_vars = left_batch_vars[1]
+  }
+  
+  print(left_batch_vars)
+  
+  if(length(left_batch_vars)>0){
     
     csv_edata <- MetaboShiny::combatCSV(mSet)
-    left_batch_vars = mSet$metshiParams$batch_var
+   
+     # APPLY THE FIRST METHOD ONLY FOR BATCH + INJECTION
     
-    # APPLY THE FIRST METHOD ONLY FOR BATCH + INJECTION
-    
-    if(mSet$metshiParams$batch_method_a == "limma" & 
-       mSet$metshiParams$batch_method_b == "limma" & 
+    if(batch_method_a == "limma" & 
+       batch_method_b == "limma" & 
        length(left_batch_vars) == 2){
       # create a model table
       csv_pheno <- data.frame(sample = 1:nrow(mSet$dataSet$covars),
@@ -763,7 +783,7 @@ metshiProcess <- function(mSet, session, init=F){
       rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
       mSet$dataSet$norm <- as.data.frame(batch_normalized)
     }else{
-      if("batch" %in% mSet$metshiParams$batch_var){# & mSet$metshiParams$batch_use_qcs){# & has.qc){
+      if("batch" %in% left_batch_vars){# & mSet$metshiParams$batch_use_qcs){# & has.qc){
         csv_edata <- MetaboShiny::combatCSV(mSet)
         # get batch for each sample
         batch.idx = as.numeric(as.factor(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"batch"][[1]]))
@@ -772,13 +792,13 @@ metshiProcess <- function(mSet, session, init=F){
         seq.idx = as.numeric(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"injection"][[1]])
         hasRT = any(grepl(pattern = "RT", colnames(mSet$dataSet$proc)))
         
-        if(hasRT & mSet$metshiParams$batch_method_a == "batchCorr"){
+        if(hasRT & batch_method_a == "batchCorr"){
           metshiAlert("Only available for LC-MS data! Defaulting to WaveICA.")
-          mSet$metshiParams$batch_method_a <- "waveica"
+          batch_method_a <- "waveica"
         }
         
         mSet$dataSet$norm <- 
-          switch(mSet$metshiParams$batch_method_a, 
+          switch(batch_method_a, 
                  waveica = {
                    dtNorm <- cbind(name = rownames(mSet$dataSet$norm), 
                                    injection.order = seq.idx,
@@ -853,7 +873,7 @@ metshiProcess <- function(mSet, session, init=F){
                    batch_normalized
                  })
         
-        left_batch_vars <- grep(mSet$metshiParams$batch_var,
+        left_batch_vars <- grep(left_batch_vars,
                                 pattern = "batch|injection|sample",
                                 value = T,
                                 invert = T)
@@ -864,7 +884,7 @@ metshiProcess <- function(mSet, session, init=F){
         NULL # if none left, continue after this
       } else{
           mSet$dataSet$norm <- 
-            switch(mSet$metshiParams$batch_method_b,
+            switch(batch_method_b,
                    combat = {
                      batch_normalized = csv_edata
                      for(var in left_batch_vars){

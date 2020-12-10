@@ -64,6 +64,7 @@ function(input, output, session) {
     lists = list(),
     prev_mz = "",
     prev_struct = "",
+    beep=F,
     tables = list(last_matches = data.table::data.table(query_mz = "none"),
                   prev_pie = data.table::data.table()),
     functions = list(),
@@ -266,7 +267,8 @@ mode = complete
 cores = 1
 apikey =  
 dbfavs =  
-omit_unknown = yes')
+omit_unknown = yes
+beep = no')
         writeLines(contents, lcl$paths$opt.loc)
       }
       
@@ -274,6 +276,10 @@ omit_unknown = yes')
       
       shiny::showNotification("Loading interface...")
       opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
+      
+      if(opts$beep == "yes"){
+        lcl$beep <<- TRUE
+      }
       
       options('unzip.unzip' = getOption("unzip"),
               'download.file.extra' = switch(runmode, 
@@ -697,21 +703,22 @@ omit_unknown = yes')
     }
   })
   
-  shiny::observe({
-    if(!MetaDBparse::is.empty(my_selection$struct)){
-      width = shiny::reactiveValuesToList(session$clientData)$output_empty_width
-      if(width > 300) width = 300
-      output$curr_struct <- shiny::renderPlot({plot_mol(my_selection$struct,
-                                                        style = "cow")},
-                                              width=width, 
-                                              height=width) # plot molecular structure WITH CHEMMINER
-      output$curr_formula <- shiny::renderUI({
-        tags$div(
-          HTML(gsub(my_selection$form,pattern="(\\d+)", replacement="<sub>\\1</sub>",perl = T))
-        )
-      }) # render text of current formula
-    }
-  })
+  output$curr_struct <- renderPlot({
+    width=min(c(300, shiny::reactiveValuesToList(session$clientData)$output_empty4_width))
+    plot_mol(my_selection$struct,
+             style = "cow",
+             width=width, 
+             height=width)
+  },
+  height=reactive(min(c(300, shiny::reactiveValuesToList(session$clientData)$output_empty4_width))),
+  width=reactive(min(c(300, shiny::reactiveValuesToList(session$clientData)$output_empty4_width)))
+  )
+  
+  
+  output$curr_formula <- shiny::renderUI({
+    shiny::tags$div(
+      HTML(gsub(my_selection$form,pattern="(\\d+)", replacement="<sub>\\1</sub>",perl = T))
+    )})
   
   shiny::observeEvent(input$curr_mz, {
     if(input$curr_mz %in% colnames(mSet$dataSet$norm)){
@@ -1109,6 +1116,7 @@ omit_unknown = yes')
   shiny::observeEvent(input$debug_metshi, {
     assign("lcl", lcl, envir = .GlobalEnv)
     assign("mSet", mSet, envir = .GlobalEnv)
+    assign("clientData", shiny::isolate(shiny::reactiveValuesToList(session$clientData)), envir = .GlobalEnv)
     assign("input", shiny::isolate(shiny::reactiveValuesToList(input)), envir = .GlobalEnv)
     assign("enrich", shiny::isolate(shiny::reactiveValuesToList(enrich)), envir = .GlobalEnv)
     assign("shown_matches", shiny::isolate(shiny::reactiveValuesToList(shown_matches)), envir = .GlobalEnv)
@@ -1213,7 +1221,7 @@ omit_unknown = yes')
         
         uimanager$refresh <- input$statistics
         
-        if(input$statistics %in% c("venn", "enrich", "heatmap", "network")){
+        if(input$statistics %in% c("venn", "enrich", "heatmap", "network", "ml")){
           statsmanager$calculate <- "vennrich"
           tablemanager$make <- "vennrich"
           uimanager$refresh <- "vennrich"
@@ -1281,7 +1289,7 @@ omit_unknown = yes')
   }  
   
   observeEvent(input$quit_metshi, {
-    if(!is.null(mSet)){
+    if(!is.null(mSet) & isolate(save_info$has_changed)){
       shinyWidgets::confirmSweetAlert(
         session = session,
         inputId = "save_exit",
@@ -1387,6 +1395,74 @@ omit_unknown = yes')
     }  
   },silent = T)
   
+  output$ml_name <- shiny::renderUI({
+    ml_name = paste0(if(input$ml_run_on_norm) "norm" else "orig",
+                     " ",
+                     input$ml_train_perc, "%train",
+                     " ",
+                     paste0("crossVal-",input$ml_perf_metr,input$ml_folds),
+                     " ",
+                     if(length(input$ml_batch_covars) > 0 & input$ml_batch_sampling != "none"){
+                       paste0("balancedMethod-",
+                         input$ml_batch_sampling, 
+                         "-by-", paste0(input$ml_batch_covars,
+                                        collapse = "+")," ")
+                     }else{""},
+                     if(length(input$ml_include_covars) > 0){
+                       paste0("metadataInclude", paste0(input$ml_include_covars, 
+                                                        collapse="+"), " ")
+                     }else{ "" },
+                     if(input$ml_sampling != "none") paste0("balancedClasses-", input$ml_sampling, ""," ") else "",
+                     if(!(input$ml_samp_distr %in% c(" ", "no"))){
+                       paste0("usePrevTrainTest-", input$ml_samp_distr, " ")
+                     }else{""},
+                     if(!is.null(lcl$vectors$ml_train)){paste0("trainOn-", paste0(lcl$vectors$ml_train, collapse="="))} else "",
+                     if(!is.null(lcl$vectors$ml_test)){paste0("testOn-", paste0(lcl$vectors$ml_test, collapse="="))} else ""
+    )
+    
+    caret.mdls <- caret::getModelInfo()
+    caret.methods <- names(caret.mdls)
+    tune.opts <- lapply(caret.methods, function(mdl) caret.mdls[[mdl]]$parameters)
+    names(tune.opts) <- caret.methods
+    
+    meth.info <- caret.mdls[[input$ml_method]]
+    params = meth.info$parameters
+
+    tuneGrid = expand.grid(
+      {
+        lst = lapply(1:nrow(params), function(i){
+          info = params[i,]
+          inp.val = input[[paste0("ml_", info$parameter)]]
+          # - - check for ranges - -
+          if(grepl(inp.val, pattern=":")){
+            split = strsplit(inp.val,split = ":")[[1]]
+            inp.val <- seq(as.numeric(split[1]),
+                           as.numeric(split[2]),
+                           as.numeric(split[3]))
+          }else if(grepl(inp.val, pattern = ",")){
+            split = strsplit(inp.val,split = ",")[[1]]
+            inp.val <- split
+          }
+          # - - - - - - - - - - - - -
+          switch(as.character(info$class),
+                 numeric = as.numeric(inp.val),
+                 character = as.character(inp.val))
+        })
+        names(lst) = params$parameter
+        #lst <- lst[sapply(lst,function(x)all(!is.na(x)))]
+        lst
+      })
+    ml_settings = paste0(unlist(sapply(colnames(tuneGrid), function(x) if(!is.na(tuneGrid[[x]])) paste0(x,"=",tuneGrid[[x]]) else NULL)), collapse="&")
+    if(ml_settings != ""){
+      ml_name = paste0(ml_name, " ", ml_settings)
+    }
+    
+    ml_name = trimws(ml_name)
+    shiny::textInput("ml_name", 
+                     label=shiny::h3("Name:"), 
+                     value = ml_name)
+  })
+  
   observeEvent(input$fancy, {
     beFancy = !input$fancy
     if(beFancy){
@@ -1401,13 +1477,6 @@ omit_unknown = yes')
       shinyjs::removeClass(id="fancy_pic",
                            class="imagetop")
     }
-  })
-  
-  observe({
-    # Re-execute this reactive expression after 1000 milliseconds
-    invalidateLater(600000, session)
-    shiny::showNotification("Autosaving...")
-    filemanager$do <- "save"
   })
   
   onStop(function() {

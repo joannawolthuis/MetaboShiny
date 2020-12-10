@@ -49,6 +49,7 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
     
     if(curr_tab == "ml" & input$ml_results == "roc"){
       attempt = as.numeric(d$key[[1]])
+      if(length(attempt) > 0){
         xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
         if(attempt > 0){
           output$ml_tab <- DT::renderDataTable({
@@ -62,6 +63,7 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
             MetaboShiny:: metshiTable(lcl$tables$ml_roc)
           })
         }
+      }
     }else{
       if(curr_tab %in% c("heatmap", "enrich","venn","network")){
         switch(curr_tab,

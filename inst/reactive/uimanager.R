@@ -105,6 +105,15 @@ shiny::observe({
                                                        selected = "fa-cat"
                                                        )
                        
+                       shinyWidgets::updatePickerInput(session, 
+                                                       "ml_mzs",
+                                                       choices = colnames(mSet$dataSet$norm), 
+                                                       choicesOpt = list(subtext = c(subtext[newOrder], "select a m/z"),
+                                                                         icon = c(rep('',length(subtext)), "fa-cat"),
+                                                                         style = c(rep('text-align:center;',length(subtext) + 1))),
+                                                       selected = "fa-cat"
+                       )
+                       
                        # -----------------
                        shiny::updateNavbarPage(session, "statistics", selected = "inf")
                        origcount = mSet$settings$orig.count 
@@ -264,7 +273,13 @@ shiny::observe({
                          model.names = names(mSet$analSet$ml[[method]])
                          choices <- c(choices, paste0(method, " - ", paste0(model.names)))
                        }
-                       shiny::updateSelectInput(session, "show_which_ml", choices = choices, selected = paste0(mSet$analSet$ml$last$method, " - ", mSet$analSet$ml$last$name))
+                       
+                       shiny::updateSelectInput(session, "ml_samp_distr", 
+                                                choices = c(" ", choices))
+                       
+                       shiny::updateSelectInput(session, "show_which_ml", 
+                                                choices = choices, 
+                                                selected = paste0(mSet$analSet$ml$last$method, " - ", mSet$analSet$ml$last$name))
                        
                      }else{
                        shiny::hideTab(session = session, inputId = "ml2", target = "res")

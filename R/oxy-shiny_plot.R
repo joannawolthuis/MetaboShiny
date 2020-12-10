@@ -486,7 +486,8 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                ggplot2::scale_fill_manual(values = cols)
       p <- p + ggplot2::xlab(Hmisc::capitalize(gsub(x=mSet$settings$cls.name, pattern = ":.*$", replacement="")))
     }
-    p <- p + ggplot2::scale_shape_manual(values = symbols) + ggplot2::guides(fill = ggplot2::guide_legend(override.aes = list(shape = 21)))
+    p <- p + ggplot2::scale_shape_manual(values = symbols) + ggplot2::guides(fill = ggplot2::guide_legend(override.aes = list(shape = 21)),
+                                                                             color = ggplot2::guide_legend(override.aes = list(shape = 21)))
     p  
   })
 }
@@ -536,6 +537,11 @@ ggPlotMeba <- function(mSet, cf, n=20){
                                      text=`m/z`,
                                      color=`Hotelling-T2`, 
                                      key=`m/z`)) +
+    ggplot2::geom_segment(aes(y = Peak, 
+                              yend = Peak,
+                              color=`Hotelling-T2`,
+                              x = 0,
+                              xend = `Hotelling-T2`)) +
     ggplot2::scale_colour_gradientn(colours = cf(n)) + ggplot2::coord_flip() +
     ggplot2::scale_x_log10(labels = scaleFUN)+
     ggplot2::scale_y_continuous(labels=scaleFUN2)
@@ -587,6 +593,11 @@ ggPlotAOV <- function(mSet, cf, n=20){
                                      text=`m/z`,
                                      color=`-log(p)`, 
                                      key=`m/z`)) +
+    ggplot2::geom_segment(aes(y = Peak, 
+                              yend = Peak,
+                              color=`-log(p)`,
+                              x = 0,
+                              xend = `-log(p)`)) +
     ggplot2::scale_colour_gradientn(colours = cf(n)) + ggplot2::coord_flip() +
     ggplot2::scale_x_continuous(labels=scaleFUN) + 
     ggplot2::scale_y_continuous(labels=scaleFUN2) + 
@@ -625,15 +636,19 @@ ggPlotTT <- function(mSet, cf, n=20){
   xaxis = seq(0,600, 50)
   
   # ---------------------------
-  p <- ggplot2::ggplot(data=profile) +
-    ggplot2::geom_point(ggplot2::aes(y=Peak,
-                                     x=`-log(p)`,
-                                     text=`m/z`,
-                                     color=`-log(p)`, 
-                                     key=`m/z`)) +
-    # ggplot2::scale_y_discrete(breaks = xaxis, 
-    #                           labels=as.character(xaxis)) +
-    ggplot2::scale_colour_gradientn(colours = cf(n)) + ggplot2::coord_flip()
+  p = ggplot2::ggplot(data=profile,ggplot2::aes(y=Peak,
+                                                 x=`-log(p)`,
+                                                 text=`m/z`,
+                                                 color=`-log(p)`, 
+                                                 key=`m/z`)) +
+    ggplot2::geom_point(size=2.5) +
+    ggplot2::geom_segment(aes(y = Peak, 
+                              yend = Peak,
+                              color=`-log(p)`,
+                              x = 0,
+                              xend = `-log(p)`)) +
+    ggplot2::scale_colour_gradientn(colours = cf(n)) + 
+    ggplot2::coord_flip()
   #ggplot2::scale_y_continuous()
   p
 }
@@ -723,6 +738,11 @@ ggPlotFC <- function(mSet, cf, n=20){
                                      color=log2fc, 
                                      key=`m/z`,
                                      text=`m/z`)) +
+    ggplot2::geom_segment(aes(y = Peak, 
+                              yend = Peak,
+                              color=log2fc,
+                              x = 0,
+                              xend = log2fc)) +
     ggplot2::geom_vline(ggplot2::aes(xintercept = 0)) +
     ggplot2::scale_y_continuous(labels=scaleFUN) +
     ggplot2::scale_colour_gradientn(colours = cf(n)) + 
@@ -894,7 +914,7 @@ ggPlotROC <- function(data,
                                                 paste0(comp, " || avg. AUC=", round(means.per.comp[comparison == comp]$AUC_PAIR, digits=3), " ||")
                                               })  
   }else{
-    cols = cf(attempts)
+    cols = cf(max(as.numeric(perf.long$attempt)))
     class_type = "b"
   }
   
@@ -922,9 +942,10 @@ ggPlotROC <- function(data,
     
     ggplot2::stat_summary_bin(#alpha=.6,
       ggplot2::aes(FPR, TPR, 
-                   group = comparison), 
+                   group = comparison,
+                   color = if(class_type == "m") comparison else NULL), 
       fun=mean, geom="line", 
-      cex = 2.3,color="black") +
+      cex = 2.3) + #,color="black") +
     ggplot2::scale_color_manual(values = cols) +
     #scale_y_continuous(limits=c(0,1)) +
     ggplot2::coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE) +
@@ -966,19 +987,20 @@ ggPlotBar <- function(data,
     colnames(data) = c("m/z", "importance.mean", "dummy")
     data.ordered <- data[order(data$importance, decreasing=T),1:2]
   }else{
-    data.norep <- data[,-3]
+    data.norep <- data#[,-3]
     colnames(data.norep)[1] <- "m/z"
     data.ci = Rmisc::group.CI(importance ~ `m/z`, data.norep)
-    data.ordered <- data.ci[order(data.ci$importance.mean, decreasing = T),]
+    data.ordered <- data.ci[order(data.ci$importance.mean, decreasing = T),]      
   }
   
   data.subset <- data.ordered[1:topn,]    
-  data.subset$`m/z` <- gsub("`","",data.subset$`m/z`)
+  data.subset$`m/z` <- gsub("`|^X","",data.subset$`m/z`)
   
-  p <- ggplot2::ggplot(data.subset, ggplot2::aes(x = reorder(`m/z`, -importance.mean),
-                                                 y = importance.mean,
-                                                 text = `m/z`,
-                                                 key = `m/z`)) +
+  p <- ggplot2::ggplot(data.subset, 
+                       ggplot2::aes(x = reorder(`m/z`, -importance.mean),
+                                    y = importance.mean,
+                                    text = `m/z`,
+                                    key = `m/z`)) +
     ggplot2::geom_bar(stat = "identity",
                       ggplot2::aes(fill = importance.mean)) +
     #ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90))+
@@ -988,7 +1010,7 @@ ggPlotBar <- function(data,
   if(topn <= 15){
     p <- p + ggplot2::geom_text(ggplot2::aes(x=`m/z`, 
                                              y=importance.mean + .02*max(importance.mean), 
-                                             label=substr(`m/z`,1,3)
+                                             label=substr(as.character(`m/z`),1,3)
     ), size = 4) + ggplot2::expand_limits(y=max(data.subset$importance.mean) + max(data.subset$importance.mean)*0.1)
   }
   
@@ -996,7 +1018,6 @@ ggPlotBar <- function(data,
   mzdata$`m/z` <- gsub(mzdata$`m/z`, pattern = "`|'", replacement="")
   
   list(mzdata = mzdata, plot = p)
-  
 }
 
 #' @title Generate PCA/PLS-DA loadings plot
@@ -1684,7 +1705,8 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",  fill
     ggplot2::scale_fill_manual(values = cols) +
     ggplot2::scale_color_manual(values = cols) +
     ggplot2::scale_shape_manual(values = as.numeric(symbols)) +
-    ggplot2::guides(fill = ggplot2::guide_legend(override.aes = list(shape = 21)))
+    ggplot2::guides(fill = ggplot2::guide_legend(fill = ggplot2::guide_legend(override.aes = list(shape = 21)),
+                                                 color = ggplot2::guide_legend(override.aes = list(shape = 21))))
   
   if(ellipse){
     p <- p + ggplot2::stat_ellipse(geom = "polygon", ggplot2::aes(fill=group), alpha = 0.3,level = .95, type = "norm",)

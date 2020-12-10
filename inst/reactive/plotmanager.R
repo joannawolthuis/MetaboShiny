@@ -28,6 +28,10 @@ shiny::observe({
           lcl <<- toWrap$lcl
           toWrap <- toWrap$plots
           
+          isHeatmap = grepl("heatmap_", names(toWrap))
+          toWrap$heatmap_plot = toWrap[isHeatmap]
+          toWrap[which(isHeatmap)] <- NULL
+          
           mapply(function(myplot, plotName){
             
             isSquare <- grepl("pca|plsda|tsne|roc|heatmap|var|samp|network|umap|ica", plotName) & !grepl("scree|cv|perm|venn", plotName)
@@ -63,15 +67,17 @@ shiny::observe({
                 whichAnal <- stringr::str_match(plotName, "pca|plsda|tsne|umap|ica")[,1]
                 is3D <- !input[[paste0(whichAnal, "_2d3d")]]
               }else{
-                is3D <- plotName %in% c("heatmap", "network", "network_heatmap")
+                is3D <- plotName %in% c("network", 
+                                        "network_heatmap")
               }
               
               if(!is.null(session$clientData[[empty]])){
-                if(!(plotName %in% c("network","wordcloud"))){
+                if(!(plotName %in% c("network",
+                                     "wordcloud"))){
                   try({
                     output[[plotName]] <- shiny::renderPlot({
                       suppressWarnings({
-                        myplot
+                        if(plotName == "heatmap_plot") myplot$heatmap_static() else myplot
                         })
                     })  
                   }, silent = F)
@@ -87,17 +93,17 @@ shiny::observe({
                     wordcloud2::renderWordcloud2(myplot)
                   }else{
                     plotly::renderPlotly({
-                      if(!is3D){
+                      if(!is3D & plotName != "heatmap_plot"){
                         myplot <- plotly::ggplotly(myplot,
                                                    tooltip = "text", 
                                                    height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)  
                       }
-                      if(plotName != "heatmap"){
+                      if(plotName != "heatmap_plot"){
                         myplot <- if(grepl("venn", plotName)) plotly::ggplotly(myplot) %>% plotly::layout(xaxis = emptyax,
                                                                                            yaxis = emptyax,
                                                                                            showlegend=input$legend) else myplot %>% plotly::layout(showlegend=input$legend) 
                       }else{
-                        myplot <- plotly::ggplotly(myplot) %>% plotly::layout(height = session$clientData[[empty]]/1.4,
+                        myplot <- if(plotName == "heatmap_plot") myplot$heatmap_interactive else plotly::ggplotly(myplot) %>% plotly::layout(height = session$clientData[[empty]]/1.4,
                                                                width = session$clientData[[empty]])
                       }
                       
@@ -127,7 +133,15 @@ shiny::observe({
                 output[[paste0("download_", plotName)]] <- downloadHandler(
                   filename = function() paste0(plotFn, if(input$plotsvg) ".svg" else ".png"),
                   content = function(file){
-                    ggplot2::ggsave(file, plot = myplot)
+                    if(plotName == "heatmap_plot"){
+                      print("plotting heatmap...")
+                      saveFun = if(input$plotsvg) svg else png
+                      saveFun(file=file)
+                      myplot$heatmap_static()
+                      dev.off()  
+                    }else{
+                      ggplot2::ggsave(file, plot = myplot)
+                    }
                   }
                 )
               }

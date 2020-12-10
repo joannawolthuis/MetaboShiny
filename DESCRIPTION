@@ -99,5 +99,7 @@ Imports:
   ppcor,
   crmn,
   umap,
-  ica
+  ica,
+  svglite,
+  beepr
 RoxygenNote: 7.1.0

@@ -149,7 +149,7 @@ shiny::observe({
           print(msg)
         }
         mSet <<- mSet
-        lcl$hasChanged <<- FALSE
+        lcl$has_changed <<- TRUE
         uimanager$refresh <- c("general", "ml")
       }else{
         metshiAlert("Failed! Restoring old mSet...")

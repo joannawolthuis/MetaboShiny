@@ -26,8 +26,8 @@ shiny::observe({
                        }
                        # - - -
                        with.subgroups <- intersect(analysis_names, c("ml", "plsr", "pca"))
-                       if(length(with.subgroups) > 0){
-                         extra_names <- lapply(with.subgroups, function(anal){
+                       extra_names <- if(length(with.subgroups) > 0){
+                         lapply(with.subgroups, function(anal){
                            switch(anal,
                                   ml = {
                                     which.mls <- setdiff(names(analysis$ml),"last")
@@ -45,8 +45,9 @@ shiny::observe({
                                     c ("pca - PC1", "pca - PC2", "pca - PC3")
                                   })
                          })
-                         analysis_names <- c(setdiff(analysis_names, c("ml", "plsr", "plsda", "pca")), unlist(extra_names))
-                       }
+                       }else{ list() }
+                       analysis_names <- c(setdiff(analysis_names, c("ml", "plsr", "plsda", "pca")), unlist(extra_names), "all m/z")
+                       
                        # - - -
                        data.frame(
                          paste0(analysis_names, " (", name, ")")
@@ -56,14 +57,19 @@ shiny::observe({
                      report_no$now <- report_no$start
                      lcl$vectors$analyses <<- unlist(venn_no$start[,1])
                      # ---
-                     lapply(c("mummi_anal", "heattable", "network_table"), function(inputID){
+                     lapply(c("mummi_anal", "heattable", "network_table", "ml_specific_mzs"), function(inputID){
                        shiny::updateSelectInput(session,
                                                 inputID, 
                                                 choices = {
                                                  allChoices = as.character(lcl$vectors$analyses)
-                                                 if(inputID == "heattable" | inputID == "network_table"){
-                                                   allChoices[grepl(mSet$settings$cls.name, allChoices, fixed=TRUE)]  
-                                                 }else{
+                                                 if(inputID %in% c("heattable", "network_table", "ml_specific_mzs")){
+                                                   ch = allChoices[grepl(mSet$settings$cls.name, allChoices, fixed=TRUE)]  
+                                                   if(inputID == "ml_specific_mzs"){
+                                                     c("no", "manual", ch)
+                                                   }else{
+                                                     ch
+                                                   }
+                                                   }else{
                                                    allChoices
                                                  }
                                                 })  
