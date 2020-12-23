@@ -256,21 +256,30 @@ lapply(c("prematch","search_mz"), function(search_type){
             isneg <- grepl(res$adduct, pattern = "\\]\\d\\-")
             ionmapper[isneg] <- "-"
             res$query_mz <- paste0(res$query_mz, ionmapper)
+            isocols = c("n2H", "n13C", "n15N")
+            if("n2H" %in% colnames(res)){
+              extracols=isocols
+            }else{
+              extracols=c()
+            }
+            getCols = c("query_mz",
+                        "compoundname",
+                        "baseformula",
+                        "adduct",
+                        "fullformula",
+                        "finalcharge",
+                        "identifier",
+                        "description",
+                        "structure",
+                        "source",
+                        extracols)
+            
             list(mapper = unique(res[,c("query_mz", 
                                         "baseformula",
                                         "adduct", 
                                         "%iso",
                                         "dppm")]),
-                 content = unique(res[,c("query_mz",
-                                         "compoundname",
-                                         "baseformula",
-                                         "adduct",
-                                         "fullformula",
-                                         "finalcharge",
-                                         "identifier",
-                                         "description",
-                                         "structure",
-                                         "source")])) 
+                 content = unique(res[, ..getCols])) 
           }else{
             list(mapper = data.table::data.table(),
                  content = data.table::data.table())

@@ -474,20 +474,27 @@ beep = no')
     }
   })
   
+  shiny::observeEvent(input$show_iso_labels, {
+    if( my_selection$mz != "" & nrow(shown_matches$forward_full) > 0){
+      search$go <- TRUE
+    }
+  })
+  
   shiny::observe({
     # - - filters - -
     if(search$go){
       shiny::withProgress({
         if(input$tab_iden_2 == "mzmol"){
           if(lcl$prev_mz != my_selection$mz & !identical(lcl$vectors$prev_dbs, lcl$vectors$db_search_list)){
-            matches = data.table::as.data.table(MetaboShiny::get_prematches(who = gsub(my_selection$mz, 
+            matches = data.table::as.data.table(get_prematches(who = gsub(my_selection$mz, 
                                                                                        pattern="/.*$|RT.*$", 
                                                                                        replacement=""),
                                                                             what = "map.query_mz",
                                                                             patdb = lcl$paths$patdb,
                                                                             showadd = c(),
                                                                             showdb = c(),
-                                                                            showiso = c()))
+                                                                            showiso = c(),
+                                                               showIsolabels = input$show_iso_labels))
             
             if(nrow(matches) == 0){
               shown_matches$forward_unique <- data.table::data.table()
@@ -503,12 +510,13 @@ beep = no')
           
           mzMode = if(grepl(my_selection$mz, pattern="\\-")) "negative" else "positive"
           
-          matches = data.table::as.data.table(MetaboShiny::get_prematches(who = gsub(my_selection$mz, pattern="/.*$|RT.*$", replacement=""),
-                                                                          what = "map.query_mz",
-                                                                          patdb = lcl$paths$patdb,
-                                                                          showadd = result_filters$add[[mzMode]],
-                                                                          showdb = result_filters$db,
-                                                                          showiso = result_filters$iso))  
+          matches = data.table::as.data.table(get_prematches(who = gsub(my_selection$mz, pattern="/.*$|RT.*$", replacement=""),
+                                                             what = "map.query_mz",
+                                                             patdb = lcl$paths$patdb,
+                                                             showadd = result_filters$add[[mzMode]],
+                                                             showdb = result_filters$db,
+                                                             showiso = result_filters$iso,
+                                                             showIsolabels = input$show_iso_labels))  
           
           if(nrow(matches)>0){
             
