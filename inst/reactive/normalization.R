@@ -26,14 +26,14 @@ shiny::observeEvent(input$initialize, {
       qc.rows <- which(grepl("QC", metshiCSV$sample))
       
       # for the non-qc samples, check experimental variables. Which have at least 2 different factors, but as little as possible?
-      condition <- MetaboShiny::getDefaultCondition(metshiCSV, 
-                                                    excl.rows = qc.rows, 
-                                                    exp.vars = exp.vars, 
-                                                    excl.cond = c("batch",
-                                                                  "injection",
-                                                                  "sample",
-                                                                  "sampling_date"), 
-                                                    min.lev = 2)
+      condition <- getDefaultCondition(metshiCSV, 
+                                       excl.rows = qc.rows, 
+                                       exp.vars = exp.vars, 
+                                       excl.cond = c("batch",
+                                                     "injection",
+                                                     "sample",
+                                                     "sampling_date"), 
+                                       min.lev = 2)
       
       # =========================================================================
       
