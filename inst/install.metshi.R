@@ -26,5 +26,5 @@ pacman::p_load(ggplot2, data.table, plotly, shinyBS, shinyjs, caret, grDevices,
 devtools::install_github("joannawolthuis/ggVennDiagram")
 devtools::install_github("dengkuistat/WaveICA")
 devtools::install_github("joannawolthuis/MetaDBparse")
-devtools::install_github("joannawolthuis/MetaboShiny", "reporting")
+devtools::install_github("joannawolthuis/MetaboShiny", "dev")
 MetaboShiny::start_metshi(inBrowser=T)
