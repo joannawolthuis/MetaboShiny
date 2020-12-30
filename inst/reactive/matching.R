@@ -393,3 +393,132 @@ shiny::observeEvent(input$search_pubmed,{
   statsmanager$calculate <- "match_wordcloud_pm"
   datamanager$reload <- "match_wordcloud_pm"
 })
+
+shiny::observe({
+  # - - filters - -
+  if(search$go){
+    shiny::withProgress({
+      if(input$tab_iden_2 == "mzmol"){
+        if(lcl$prev_mz != my_selection$mz & !identical(lcl$vectors$prev_dbs, lcl$vectors$db_search_list)){
+          matches = data.table::as.data.table(get_prematches(who = gsub(my_selection$mz, 
+                                                                        pattern="/.*$|RT.*$", 
+                                                                        replacement=""),
+                                                             what = "map.query_mz",
+                                                             patdb = lcl$paths$patdb,
+                                                             showadd = c(),
+                                                             showdb = c(),
+                                                             showiso = c(),
+                                                             showIsolabels = input$show_iso_labels))
+          
+          if(nrow(matches) == 0){
+            shown_matches$forward_unique <- data.table::data.table()
+            shown_matches$forward_full <- data.table::data.table()
+            return(NULL)
+          }
+          lcl$prev_mz <<- my_selection$mz
+          lcl$vectors$prev_dbs <<- lcl$vectors$db_search_list
+          pieinfo$db <- reshape::melt(table(matches$source))
+          pieinfo$add <- reshape::melt(table(matches$adduct))
+          pieinfo$iso <- reshape::melt(table(matches$isocat))
+        }
+        
+        mzMode = if(grepl(my_selection$mz, pattern="\\-")) "negative" else "positive"
+        
+        matches = data.table::as.data.table(get_prematches(who = gsub(my_selection$mz, pattern="/.*$|RT.*$", replacement=""),
+                                                           what = "map.query_mz",
+                                                           patdb = lcl$paths$patdb,
+                                                           showadd = result_filters$add[[mzMode]],
+                                                           showdb = result_filters$db,
+                                                           showiso = result_filters$iso,
+                                                           showIsolabels = input$show_iso_labels))  
+        
+        if(nrow(matches)>0){
+          
+          shiny::setProgress(0.2)
+          
+          matches$compoundname[matches$source != "magicball"] <- tolower(matches$compoundname[matches$source != "magicball"])
+          
+          # =====
+          
+          uniques = data.table::as.data.table(unique(data.table::as.data.table(matches)[, -c("source", 
+                                                                                             "description",
+                                                                                             "identifier"),
+                                                                                        with=F]))
+          shiny::setProgress(0.6)
+          
+          # === aggregate ===
+          
+          info_only = unique(matches[,c("compoundname", 
+                                        "source", 
+                                        "structure", 
+                                        "description",
+                                        "identifier"),with=F])
+          info_only$description <- paste0("Database ID: ", info_only$identifier, ". ", info_only$description)
+          info_only <- unique(info_only[,-"identifier"])
+          
+          info_no_na <- info_only[!is.na(info_only$structure)]
+          info_na <- info_only[is.na(info_only$structure)]
+          
+          info_aggr <- aggregate(info_no_na, by = list(info_no_na$compoundname), FUN = function(x) paste0(x, collapse = "SEPERATOR"))
+          info_aggr <- aggregate(info_aggr, by = list(info_aggr$structure), FUN = function(x) paste0(x, collapse = "SEPERATOR"))
+          
+          info_aggr <- rbind(info_aggr, info_na, fill=T)
+          
+          # fix structures
+          split_structs <- strsplit(info_aggr$structure, split = "SEPERATOR")
+          main_structs <- unlist(lapply(split_structs, function(x) x[[1]]))
+          info_aggr$structure <- main_structs
+          
+          # move extra names to descriptions
+          split_names <- strsplit(info_aggr$compoundname, split = "SEPERATOR")
+          main_names <- unlist(lapply(split_names, function(x) if(length(x) > 1) x[[1]] else x[1]))
+          
+          synonyms <- unlist(lapply(split_names, function(x){
+            if(length(x)>1){
+              paste0("SYNONYMS: ", paste0(unique(x[2:length(x)]), collapse=", "),".SEPERATOR") 
+            }else NA
+          }))
+          
+          info_aggr$compoundname <- main_names
+          has.syn <- which(!is.na(synonyms))
+          
+          info_aggr$description[has.syn] <- paste0(synonyms[has.syn], info_aggr$description[has.syn])
+          info_aggr <- data.table::as.data.table(info_aggr)
+          
+          # =================
+          
+          uniques = uniques[structure %in% info_aggr$structure]
+          
+          is.no.na.uniq <- which(!is.na(uniques$structure))
+          is.no.na.info <- which(!is.na(info_aggr$structure))
+          
+          uniq.to.aggr <- match(uniques[is.no.na.uniq]$structure, 
+                                info_aggr[is.no.na.info]$structure)
+          
+          uniques$compoundname[is.no.na.uniq] <- info_aggr$compoundname[is.no.na.info][uniq.to.aggr]
+          uniques$structure[is.no.na.uniq] <- info_aggr$structure[is.no.na.info][uniq.to.aggr]
+          
+          uniques <- unique(uniques)
+          
+          shown_matches$forward_unique <- uniques[,-grepl(colnames(uniques), pattern = "Group\\.\\d"),with=F]
+          shown_matches$forward_full <- info_aggr[,-grepl(colnames(info_aggr), pattern = "Group\\.\\d"),with=F]
+          
+        }else{
+          shown_matches$forward_unique <- data.table::data.table()
+          shown_matches$forward_full <- data.table::data.table()
+        }
+        
+        my_selection$name <- ""
+        my_selection$form <- ""
+        my_selection$struct <- ""  
+        
+      }else{
+        NULL
+      }
+      
+      shiny::setProgress(0.8)
+      
+    })
+    search$go <- FALSE #reset self
+  }
+})

@@ -165,9 +165,6 @@ function(input, output, session) {
       tmp = tempdir()
       addResourcePath('tmp', tmp)
       
-      # - - - - - - - - - - - - - - - - - - - - - -
-      
-      
       shiny::observeEvent(input$nav_general, {
         if(input$nav_general == "help"){
           if(online){
@@ -277,8 +274,9 @@ beep = no')
       shiny::showNotification("Loading interface...")
       opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
       
-      if(opts$beep == "yes"){
-        lcl$beep <<- TRUE
+      if(!("beep" %in% names(opts))){
+        opts$beep <- "none"
+        MetaboShiny::setOption(lcl$paths$opt.loc, "beep", "none")
       }
       
       options('unzip.unzip' = getOption("unzip"),
@@ -432,7 +430,8 @@ beep = no')
           }
         }
       })
-      
+      shiny::updateSelectInput(session, "beep", 
+                              selected = opts$beep)
       shiny::updateSelectInput(session, "ggplot_theme", 
                                selected = opts$gtheme)
       shiny::updateSelectInput(session, "color_ramp", 
@@ -461,391 +460,6 @@ beep = no')
   
   showtext::showtext_auto() ## Automatically use showtext to render text for future devices
   
-  observe({
-    if(my_selection$mz != ""){
-      for(pie in c("add", "iso","db")){
-        if(pie == "add"){
-          mzMode =if(grepl(my_selection$mz, pattern = "-")) "negative" else "positive"
-          result_filters$add[[mzMode]] <- result_filters$add[[mzMode]][!is.na(result_filters$add[[mzMode]])]
-        }else{
-          result_filters[[pie]] <- result_filters[[pie]][!is.na(result_filters[[pie]])]
-        }
-      }   
-    }
-  })
-  
-  shiny::observeEvent(input$show_iso_labels, {
-    if( my_selection$mz != "" & nrow(shown_matches$forward_full) > 0){
-      search$go <- TRUE
-    }
-  })
-  
-  shiny::observe({
-    # - - filters - -
-    if(search$go){
-      shiny::withProgress({
-        if(input$tab_iden_2 == "mzmol"){
-          if(lcl$prev_mz != my_selection$mz & !identical(lcl$vectors$prev_dbs, lcl$vectors$db_search_list)){
-            matches = data.table::as.data.table(get_prematches(who = gsub(my_selection$mz, 
-                                                                                       pattern="/.*$|RT.*$", 
-                                                                                       replacement=""),
-                                                                            what = "map.query_mz",
-                                                                            patdb = lcl$paths$patdb,
-                                                                            showadd = c(),
-                                                                            showdb = c(),
-                                                                            showiso = c(),
-                                                               showIsolabels = input$show_iso_labels))
-            
-            if(nrow(matches) == 0){
-              shown_matches$forward_unique <- data.table::data.table()
-              shown_matches$forward_full <- data.table::data.table()
-              return(NULL)
-            }
-            lcl$prev_mz <<- my_selection$mz
-            lcl$vectors$prev_dbs <<- lcl$vectors$db_search_list
-            pieinfo$db <- reshape::melt(table(matches$source))
-            pieinfo$add <- reshape::melt(table(matches$adduct))
-            pieinfo$iso <- reshape::melt(table(matches$isocat))
-          }
-          
-          mzMode = if(grepl(my_selection$mz, pattern="\\-")) "negative" else "positive"
-          
-          matches = data.table::as.data.table(get_prematches(who = gsub(my_selection$mz, pattern="/.*$|RT.*$", replacement=""),
-                                                             what = "map.query_mz",
-                                                             patdb = lcl$paths$patdb,
-                                                             showadd = result_filters$add[[mzMode]],
-                                                             showdb = result_filters$db,
-                                                             showiso = result_filters$iso,
-                                                             showIsolabels = input$show_iso_labels))  
-          
-          if(nrow(matches)>0){
-            
-            shiny::setProgress(0.2)
-            
-            matches$compoundname[matches$source != "magicball"] <- tolower(matches$compoundname[matches$source != "magicball"])
-            
-            # =====
-            
-            uniques = data.table::as.data.table(unique(data.table::as.data.table(matches)[, -c("source", 
-                                                                                               "description",
-                                                                                               "identifier"),
-                                                                                          with=F]))
-            shiny::setProgress(0.6)
-            
-            # === aggregate ===
-            
-            info_only = unique(matches[,c("compoundname", 
-                                          "source", 
-                                          "structure", 
-                                          "description",
-                                          "identifier"),with=F])
-            info_only$description <- paste0("Database ID: ", info_only$identifier, ". ", info_only$description)
-            info_only <- unique(info_only[,-"identifier"])
-            
-            info_no_na <- info_only[!is.na(info_only$structure)]
-            info_na <- info_only[is.na(info_only$structure)]
-            
-            info_aggr <- aggregate(info_no_na, by = list(info_no_na$compoundname), FUN = function(x) paste0(x, collapse = "SEPERATOR"))
-            info_aggr <- aggregate(info_aggr, by = list(info_aggr$structure), FUN = function(x) paste0(x, collapse = "SEPERATOR"))
-            
-            info_aggr <- rbind(info_aggr, info_na, fill=T)
-            
-            # fix structures
-            split_structs <- strsplit(info_aggr$structure, split = "SEPERATOR")
-            main_structs <- unlist(lapply(split_structs, function(x) x[[1]]))
-            info_aggr$structure <- main_structs
-            
-            # move extra names to descriptions
-            split_names <- strsplit(info_aggr$compoundname, split = "SEPERATOR")
-            main_names <- unlist(lapply(split_names, function(x) if(length(x) > 1) x[[1]] else x[1]))
-            
-            synonyms <- unlist(lapply(split_names, function(x){
-              if(length(x)>1){
-                paste0("SYNONYMS: ", paste0(unique(x[2:length(x)]), collapse=", "),".SEPERATOR") 
-              }else NA
-            }))
-            
-            info_aggr$compoundname <- main_names
-            has.syn <- which(!is.na(synonyms))
-            
-            info_aggr$description[has.syn] <- paste0(synonyms[has.syn], info_aggr$description[has.syn])
-            info_aggr <- data.table::as.data.table(info_aggr)
-            
-            # =================
-            
-            uniques = uniques[structure %in% info_aggr$structure]
-            
-            is.no.na.uniq <- which(!is.na(uniques$structure))
-            is.no.na.info <- which(!is.na(info_aggr$structure))
-            
-            uniq.to.aggr <- match(uniques[is.no.na.uniq]$structure, 
-                                  info_aggr[is.no.na.info]$structure)
-            
-            uniques$compoundname[is.no.na.uniq] <- info_aggr$compoundname[is.no.na.info][uniq.to.aggr]
-            uniques$structure[is.no.na.uniq] <- info_aggr$structure[is.no.na.info][uniq.to.aggr]
-            
-            uniques <- unique(uniques)
-            
-            shown_matches$forward_unique <- uniques[,-grepl(colnames(uniques), pattern = "Group\\.\\d"),with=F]
-            shown_matches$forward_full <- info_aggr[,-grepl(colnames(info_aggr), pattern = "Group\\.\\d"),with=F]
-            
-          }else{
-            shown_matches$forward_unique <- data.table::data.table()
-            shown_matches$forward_full <- data.table::data.table()
-          }
-          
-          my_selection$name <- ""
-          my_selection$form <- ""
-          my_selection$struct <- ""  
-          
-        }else{
-          NULL
-        }
-        
-        shiny::setProgress(0.8)
-        
-      })
-      search$go <- FALSE #reset self
-    }
-  })
-  
-  shiny::observe({
-    if(my_selection$mz != ""){
-      if(mSet$metshiParams$prematched){
-        search$go <- TRUE
-        my_selection$name <- ""
-      }
-      # update star logo
-      shinyWidgets::updatePrettyToggle(session, 
-                                       "star_mz",
-                                       value =  mSet$report$mzStarred[my_selection$mz]$star)
-    }
-  })
-  
-  shiny::observe({
-    if(my_selection$name != ""){
-      if(nrow(shown_matches$forward_full) > 0 ){
-        subsec = data.table::as.data.table(shown_matches$forward_full)[compoundname == my_selection$name]
-        
-        if(grepl("SYNONYMS:", x = subsec$description)){
-          has_syn = T
-          subsec$source <- paste0("synonymSEPERATOR", subsec$source)
-          subsec$description <- gsub(subsec$description, pattern = "SYNONYMS: ", replacement="")
-        }else{
-          has_syn = F
-        }
-        
-        subsec <- subsec[, .(compoundname, 
-                             source = strsplit(source, split = "SEPERATOR")[[1]], 
-                             structure = structure, 
-                             description = strsplit(description, split = "SEPERATOR")[[1]]
-        )
-        ]
-        
-        subsec <- aggregate(subsec, by = list(subsec$source), FUN=function(x) paste0(unique(x), collapse="."))
-        
-        keep <- which(trimws(subsec$description) %not in% c("","Unknown","unknown", " ",
-                                                            "Involved in pathways: . More specifically: . Also associated with compound classes:"))
-        subsec <- subsec[keep,]
-        
-        if(has_syn){
-          subsec <- subsec[order(as.numeric(grepl(subsec$source, pattern = "synonym")), decreasing = T),]
-        }
-        
-        if(nrow(subsec) > 0){
-          
-          # render descriptions seperately
-          output$desc_ui <- shiny::renderUI({
-            
-            lapply(1:nrow(subsec), function(i){
-              
-              row = subsec[i,]
-              
-              # icon(s) in one row
-              db = row$source
-              desc_id = paste0("curr_desc_", db)
-              desc = row$description
-              #output[[desc_id]] <- shiny::renderText({desc})
-              
-              if(db == "synonym"){
-                ui = shiny::fluidRow(align="center", 
-                                     tags$h3("Synonyms:"),
-                                     helpText(desc),
-                                     shiny::br()
-                )
-              }else{
-                id = gbl$constants$db.build.info[[db]]$image_id
-                address = unlist(sapply(gbl$constants$images, function(item) if(item$name == id) item$path else NULL))
-                ui = shiny::fluidRow(align="center", 
-                                     shiny::tags$button(
-                                       id = paste0(db, "_copy_id"),
-                                       class = "btn btn-default action-button shiny-bound-input",
-                                       shiny::img(src = address,
-                                                  height = "30px"),
-                                       style = "vertical-align: middle;border-radius: 0px;border-width: 0px;background-color: #ff000000;"
-                                     ),
-                                     shiny::br(),
-                                     helpText(desc),
-                                     shiny::br()
-                )
-                
-                shiny::observeEvent(input[[paste0(db, "_copy_id")]], {
-                  shiny::showNotification("Saving database identifier to clipboard!")
-                  dbID = stringr::str_match(desc, "Database ID: (.*?). ")[,2]
-                  clipr::write_clip(dbID, allow_non_interactive = TRUE)
-                  shiny::updateTextInput(session,
-                                         "wordcloud_searchTerm",
-                                         value = dbID)
-                })
-              }
-              return(ui)
-            })
-          })  
-          
-        }else{
-          output$desc_ui <- shiny::renderUI({
-            helpText("No additional info available!")
-          })
-        }
-      }
-    }
-  })
-  
-  output$curr_struct <- renderPlot({
-    width=min(c(300, shiny::reactiveValuesToList(session$clientData)$output_empty4_width))
-    plot_mol(my_selection$struct,
-             style = "cow",
-             width=width, 
-             height=width)
-  },
-  height=reactive(min(c(300, shiny::reactiveValuesToList(session$clientData)$output_empty4_width))),
-  width=reactive(min(c(300, shiny::reactiveValuesToList(session$clientData)$output_empty4_width)))
-  )
-  
-  
-  output$curr_formula <- shiny::renderUI({
-    shiny::tags$div(
-      HTML(gsub(my_selection$form,pattern="(\\d+)", replacement="<sub>\\1</sub>",perl = T))
-    )})
-  
-  shiny::observeEvent(input$curr_mz, {
-    if(input$curr_mz %in% colnames(mSet$dataSet$norm)){
-      my_selection$mz <- input$curr_mz   
-      plotmanager$make <- "summary"
-    }
-  })
-  
-  shiny::observe({
-    if(my_selection$struct != "" & input$tab_iden_2 == "molmz"){
-      if(!mSet$metshiParams$prematched){
-        MetaboShiny::metshiAlert("Please perform pre-matching first to enable this feature!")
-        return(NULL)
-      }else{
-        
-        if(lcl$prev_struct != my_selection$struct){
-          rev_matches = MetaboShiny::get_prematches(who = my_selection$struct,
-                                                    what = "con.structure",
-                                                    patdb = lcl$paths$patdb,
-                                                    showadd = c(),
-                                                    showiso = c(),
-                                                    showdb = c())  
-          lcl$prev_struct <<- my_selection$struct
-          if(nrow(rev_matches) == 0){
-            shown_matches$reverse <- data.table::data.table()
-            return(NULL)
-          }else{
-            pieinfo$db <- reshape::melt(table(rev_matches$source))
-            pieinfo$add <- reshape::melt(table(rev_matches$adduct))
-            pieinfo$iso <- reshape::melt(table(rev_matches$isocat))
-          }
-        }
-        mzMode =if(grepl(my_selection$mz, pattern = "-")) "negative" else "positive"
-        rev_matches = MetaboShiny::get_prematches(who = my_selection$struct,
-                                                  what = "con.structure",
-                                                  patdb = lcl$paths$patdb,
-                                                  showadd = result_filters$add[[mzMode]],
-                                                  showiso = result_filters$iso,
-                                                  showdb = result_filters$db)
-        if(nrow(rev_matches)>0){
-          shown_matches$reverse <- unique(rev_matches[,c("query_mz", "adduct", "%iso", "dppm")])
-        }else{
-          shown_matches$reverse <- data.table::data.table()
-        }
-      }
-    } 
-  })
-  
-  # pie charts
-  lapply(c("add", "iso", "db"), function(which_pie){
-    output[[paste0("match_pie_", which_pie)]] <- plotly::renderPlotly({
-      
-      pievec = pieinfo[[which_pie]]
-      
-      if(nrow(pievec) > 0){
-        
-        m <- list(
-          l = 0,
-          r = 0,
-          b = 30,
-          t = 30)
-        
-        pulls = rep(0, nrow(pievec))
-        lines = rep(1, nrow(pievec))
-        
-        if(!is.null(pievec)){
-          if(which_pie == "add"){
-            mzMode = if(grepl(my_selection$mz, pattern = "-")) "negative" else "positive"
-            targets = result_filters$add[[mzMode]]
-          }else{
-            targets = result_filters[[which_pie]]
-          }
-          pulls[which(as.character(pievec$Var.1) %in% targets)] <- 0.15  
-          lines[which(as.character(pievec$Var.1) %in% targets)] <- 4
-        }
-        
-        myCols <- gbl$functions$color.functions[[lcl$aes$spectrum]](n = nrow(pievec))
-        
-        if(length(pievec)>0){
-          p = plotly::plot_ly(pievec, labels = ~Var.1, 
-                              values = ~value, size=~value*10, type = 'pie',
-                              textposition = 'inside',
-                              textinfo = 'label+percent',
-                              insidetextfont = list(colors = ggdark::invert_color(myCols)),
-                              hoverinfo = 'text',
-                              pull = pulls,
-                              text = ~paste0(Var.1, ": ", value, ' matches'),
-                              marker = list(colors = myCols,
-                                            line = list(color = "gray", 
-                                                        width = lines)),
-                              #The 'pull' attribute can also be used to create space between the sectors
-                              showlegend = FALSE) %>%
-            plotly::layout(autosize = T, margin = m,
-                           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-                           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))  
-        }
-        return(p)          
-      }
-    })
-  })
-  
-  # ===== UI SWITCHER ====
-  
-  shiny::observeEvent(input$heattable,{
-    if(!is.null(input$overview)){
-      if(input$overview == "heatmap"){
-        statsmanager$calculate <- "heatmap"
-        plotmanager$make <- "heatmap"
-        uimanager$refresh <- "heatmap"
-      }  
-    }
-  })
-  
-  shiny::observeEvent(input$network_style, {
-    if("network" %in% names(mSet$analSet)){
-      plotmanager$make <- "network"
-    }
-  })
-  
   # this toggles when 'interface' values change (for example from 'bivar' to 'multivar' etc.)
   shiny::observe({
     # hide all tabs by default, easier to hide them and then make visible selectively
@@ -868,10 +482,6 @@ beep = no')
       list("overview", "enrich"),#16
       list("dimred", "umap"),#17
       list("dimred", "ica")#18
-      # list("main", "dimred"),#17
-      # list("main", "overview"),#18
-      # list("main", "ml"),#19
-      # list("main", "permz")#20
     )
     # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
     # then show the relevent tabs
@@ -935,48 +545,6 @@ beep = no')
     
   })
   
-  # print current compound in sidebar
-  observe({
-    shinyWidgets::updatePickerInput(session, 
-                                    "curr_mz", 
-                                    selected = my_selection$mz)
-  })
-  
-  
-  # make miniplot for sidebar with current compound
-  output$curr_plot <- plotly::renderPlotly({
-    if(my_selection$mz != ""){
-      MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, 
-                                 cols = lcl$aes$mycols, cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                 styles = input$ggplot_sum_style,
-                                 add_stats = input$ggplot_sum_stats, 
-                                 color.fac = input$col_var,
-                                 text.fac = input$txt_var,
-                                 fill.fac = input$fill_var,
-                                 plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                                 font = lcl$aes$font)
-    }
-  })
-  
-  shiny::observeEvent(input$undo_match_filt, {
-    result_filters$add <- list(positive = c(), negative = c())
-    result_filters$db <- c()
-    result_filters$iso <- c()
-    search$go <- T
-  }) 
-  
-  output$curr_add <- shiny::renderText({
-    paste0(unlist(result_filters$add), collapse=", ")
-  })
-  
-  output$curr_iso <- shiny::renderText({
-    paste0(result_filters$iso, collapse=", ")
-  })
-  
-  output$curr_db <- shiny::renderText({
-    paste0(result_filters$db, collapse=", ")
-  })
-  
   shiny::observe({
     if(my_selection$mz != ""){
       scanmode$positive <- F
@@ -987,49 +555,6 @@ beep = no')
       }
     }
   })
-  
-  # triggers when probnorm or compnorm is selected
-  # let user pick a reference condition
-  ref.selector <- reactive({
-    # -------------
-    if(input$norm_type == "ProbNorm" | input$norm_type == "CompNorm"){
-      shiny::fluidRow(
-        shiny::hr(),
-        selectInput('ref_var',
-                    'What is your reference condition?',
-                    choices = c("")),
-        actionButton("check_csv",
-                     "Get options",
-                     icon=shiny::icon("search")),
-        shiny::hr()
-      )
-    }
-  })
-  # shiny::observe({
-  #   if(length(input$curr_mz) > 0){
-  #     if(input$curr_mz != my_selection$mz){
-  #       print(input$curr_mz %in% colnames(mSet$dataSet$norm))
-  #       shinyWidgets::updatePickerInput(session,
-  #                                       "curr_mz",
-  #                                       selected = my_selection$mz)
-  #     }      
-  #   }
-  # })
-  
-  # triggers when check_csv is clicked - get factors usable for normalization
-  shiny::observeEvent(input$check_csv, {
-    req(lcl$paths$csv_loc)
-    switch(input$norm_type,
-           ProbNorm=shiny::updateSelectInput(session, "ref_var",
-                                             choices = get_ref_vars(fac = "label") # please add options for different times later, not difficult
-           ),
-           CompNorm=shiny::updateSelectInput(session, "ref_var",
-                                             choices = get_ref_cpds() # please add options for different times later, not difficult
-           ))
-  })
-  
-  # render the created UI
-  output$ref_select <- shiny::renderUI({ref.selector()})
   
   shiny::observeEvent(input$ncores, {
     if(!is.null(session_cl)){
@@ -1054,53 +579,19 @@ beep = no')
     output$api_set <- shiny::renderText("key saved!")
   })
   
+  shiny::observeEvent(input$beep, {
+    if(input$nav_general == "options"){
+      MetaboShiny::setOption(lcl$paths$opt.loc, "beep", input$beep)
+      beepr::beep(sound = input$beep)
+      lcl$aes$which_beep <<- input$beep
+      lcl$beep <<- if(input$beep != "none") T else F      
+    }
+  },ignoreInit = T)
+  
   shiny::observeEvent(input$omit_unknown, {
     new.val = if(input$omit_unknown) "yes" else "no"
     MetaboShiny::setOption(lcl$paths$opt.loc, "omit_unknown", new.val)
   })
-  
-  shiny::observeEvent(input$ml_top_x, {
-    if(!is.null(mSet)){
-      plotmanager$make <- "ml"
-    }
-  },ignoreInit = T, ignoreNULL = T)
-  
-  shiny::observe({
-    if(!is.null(input$ml_method)){
-      mdl = caret::getModelInfo()[[input$ml_method]]
-      params <- mdl$parameters
-      output$ml_params <- renderUI({
-        list(
-          shiny::helpText(mdl$label),
-          shiny::hr(),
-          h2("Tuning settings"),
-          lapply(1:nrow(params), function(i){
-            row = params[i,]
-            list(
-              shiny::textInput(inputId = paste0("ml_", row$parameter),
-                               label = row$parameter,
-                               value=if(input$ml_method=="glmnet"){
-                                 switch(row$parameter,
-                                        alpha = 1,
-                                        lambda = "0:1:0.01")
-                               }),
-              shiny::helpText(paste0(row$label, " (", row$class, ")."))
-            )
-          })
-        )
-      })
-    }
-  })
-  
-  shiny::observeEvent(input$show_which_ml,{
-    if(!is.null(mSet)){
-      split.name = strsplit(input$show_which_ml, split = " - ")[[1]]
-      mSet$analSet$ml$last$method <<- split.name[[1]]
-      mSet$analSet$ml$last$name <<- split.name[[2]]
-      tablemanager$make <- "ml"
-      plotmanager$make <- "ml"
-    }
-  },ignoreNULL = T, ignoreInit = T)
   
   shiny::observeEvent(input$save_mset, {
     # save mset
@@ -1111,14 +602,14 @@ beep = no')
     }
   })
   
+  shiny::observeEvent(input$load_mset, {
+    filemanager$do <- "load"
+  })
+  
   shiny::observeEvent(input$stats_type,{
     if(!is.null(mSet)){
       uimanager$refresh <- "statspicker"
     }
-  })
-  
-  shiny::observeEvent(input$load_mset, {
-    filemanager$do <- "load"
   })
   
   shiny::observeEvent(input$debug_metshi, {
@@ -1135,49 +626,6 @@ beep = no')
     assign("report_yes",  shiny::isolate(shiny::reactiveValuesToList(report_yes)), envir = .GlobalEnv)
     assign("venn_yes",  shiny::isolate(shiny::reactiveValuesToList(venn_yes)), envir = .GlobalEnv)
   })
-  
-  shiny::observeEvent(input$ml_train_ss, {
-    keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]
-    subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
-    lcl$vectors$ml_train <<- c(input$subset_var,
-                               input$subset_group)
-    output$ml_train_ss <- shiny::renderText(subset.name)
-  })
-  
-  shiny::observeEvent(input$reset_ml_train, {
-    subset.name <- "all"
-    lcl$vectors$ml_train <<- NULL
-    output$ml_train_ss <- shiny::renderText(subset.name)
-  })
-  
-  shiny::observeEvent(input$ml_test_ss, {
-    keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]
-    subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
-    lcl$vectors$ml_test <<- c(input$subset_var, input$subset_group)
-    output$ml_test_ss <- shiny::renderText(subset.name)
-  })
-  
-  shiny::observeEvent(input$reset_ml_test, {
-    subset.name <- "all"
-    lcl$vectors$ml_test <<- NULL
-    output$ml_test_ss <- shiny::renderText(subset.name)
-  })
-  
-  shiny::observeEvent(input$subset_var, {
-    lvls = levels(as.factor(mSet$dataSet$covars[[input$subset_var]]))
-    subtext = sapply(lvls, function(lv){
-      samp.count = sum(unlist(mSet$dataSet$covars[[input$subset_var]]) == lv)
-      paste(samp.count, "samples")
-    })
-    shinyWidgets::updatePickerInput(session, 
-                                    "subset_group",
-                                    selected = if(!is.null(lvls[1])) lvls[1] else c(" "), 
-                                    choices = if(length(lvls) > 0) lvls else c(" "),
-                                    choicesOpt = list(subtext = subtext,
-                                                      style = c(rep('text-align:center;',
-                                                                    length(subtext))))
-    )
-  },ignoreInit = T)
   
   shiny::observeEvent(input$export_plot,{
     success=F
@@ -1196,14 +644,6 @@ beep = no')
                                                 $("#sidePanel").outerWidth($("#panelContainer").innerWidth() - $("#mainPanel").outerWidth());
                                               }
                                             });')
-  
-  observeEvent(c(input$heatsign, input$heatlimits),{
-    if(!is.null(mSet)){
-      if("heatmap" %in% names(mSet$analSet)){
-        plotmanager$make <- "heatmap"  
-      }  
-    }
-  })
   
   observeEvent(input$save_fav_adducts,{
     # save to options
@@ -1253,17 +693,6 @@ beep = no')
                                                                                               "_settings")) 
           shinyjs::hide(selector = paste0("div.panel[value=collapse_", input$statistics, "_plots]"))
           shinyjs::hide(selector = paste0("div.panel[value=collapse_", input$statistics, "_tables]"))
-        }
-      }  
-    }
-  })
-  
-  observeEvent(input$reload_plots, {
-    if(!is.null(mSet)){
-      if(!is.null(input$statistics)){
-        uimanager$refresh <- input$statistics
-        if(input$statistics %in% names(mSet$analSet)){
-          plotmanager$make <- input$statistics
         }
       }  
     }
@@ -1402,74 +831,6 @@ beep = no')
       
     }  
   },silent = T)
-  
-  output$ml_name <- shiny::renderUI({
-    ml_name = paste0(if(input$ml_run_on_norm) "norm" else "orig",
-                     " ",
-                     input$ml_train_perc, "%train",
-                     " ",
-                     paste0("crossVal-",input$ml_perf_metr,input$ml_folds),
-                     " ",
-                     if(length(input$ml_batch_covars) > 0 & input$ml_batch_sampling != "none"){
-                       paste0("balancedMethod-",
-                         input$ml_batch_sampling, 
-                         "-by-", paste0(input$ml_batch_covars,
-                                        collapse = "+")," ")
-                     }else{""},
-                     if(length(input$ml_include_covars) > 0){
-                       paste0("metadataInclude", paste0(input$ml_include_covars, 
-                                                        collapse="+"), " ")
-                     }else{ "" },
-                     if(input$ml_sampling != "none") paste0("balancedClasses-", input$ml_sampling, ""," ") else "",
-                     if(!(input$ml_samp_distr %in% c(" ", "no"))){
-                       paste0("usePrevTrainTest-", input$ml_samp_distr, " ")
-                     }else{""},
-                     if(!is.null(lcl$vectors$ml_train)){paste0("trainOn-", paste0(lcl$vectors$ml_train, collapse="="))} else "",
-                     if(!is.null(lcl$vectors$ml_test)){paste0("testOn-", paste0(lcl$vectors$ml_test, collapse="="))} else ""
-    )
-    
-    caret.mdls <- caret::getModelInfo()
-    caret.methods <- names(caret.mdls)
-    tune.opts <- lapply(caret.methods, function(mdl) caret.mdls[[mdl]]$parameters)
-    names(tune.opts) <- caret.methods
-    
-    meth.info <- caret.mdls[[input$ml_method]]
-    params = meth.info$parameters
-
-    tuneGrid = expand.grid(
-      {
-        lst = lapply(1:nrow(params), function(i){
-          info = params[i,]
-          inp.val = input[[paste0("ml_", info$parameter)]]
-          # - - check for ranges - -
-          if(grepl(inp.val, pattern=":")){
-            split = strsplit(inp.val,split = ":")[[1]]
-            inp.val <- seq(as.numeric(split[1]),
-                           as.numeric(split[2]),
-                           as.numeric(split[3]))
-          }else if(grepl(inp.val, pattern = ",")){
-            split = strsplit(inp.val,split = ",")[[1]]
-            inp.val <- split
-          }
-          # - - - - - - - - - - - - -
-          switch(as.character(info$class),
-                 numeric = as.numeric(inp.val),
-                 character = as.character(inp.val))
-        })
-        names(lst) = params$parameter
-        #lst <- lst[sapply(lst,function(x)all(!is.na(x)))]
-        lst
-      })
-    ml_settings = paste0(unlist(sapply(colnames(tuneGrid), function(x) if(!is.na(tuneGrid[[x]])) paste0(x,"=",tuneGrid[[x]]) else NULL)), collapse="&")
-    if(ml_settings != ""){
-      ml_name = paste0(ml_name, " ", ml_settings)
-    }
-    
-    ml_name = trimws(ml_name)
-    shiny::textInput("ml_name", 
-                     label=shiny::h3("Name:"), 
-                     value = ml_name)
-  })
   
   observeEvent(input$fancy, {
     beFancy = !input$fancy

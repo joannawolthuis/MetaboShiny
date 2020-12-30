@@ -379,6 +379,8 @@ shiny::observe({
                                         adduct_table = adducts,
                                         adduct_rules = adduct_rules, 
                                         silent = T,
+                                        all.isos = input$db_all_iso,
+                                        count.isos = input$db_count_iso,
                                         ext.dbname = "extended") #TODO: figure out the optimal fetch limit... seems 200 for now
               }else{
                 MetaboShiny::metshiAlert("Please build base DB first! (can be changed in settings)")

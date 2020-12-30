@@ -8,34 +8,61 @@ getMissing <- function(peakpath, nrow=NULL){
 
   print("Checking missing values...")
   
-  if(!reallyBig){
-    peaklist <- data.table::fread(peakpath,
-                                  header=T)
+  skipCols=c("sample","label")
+  
+  con = file(peakpath, "r")
+  line = readLines(con, n = 1)
+  cols = stringr::str_split(line, ",")[[1]]
+  
+  if(any(grepl("mass_to_charge", cols))){
+    peaklist = data.table::fread(peakpath)
+    data.table::setnames(peaklist, "mass_to_charge", "mzmed", skip_absent = T)
+    if(!is.na(peaklist$retention_time[1])){
+      hasRT = TRUE
+      peaklist$mzmed <- paste0(peaklist$mzmed,"RT", peaklist$retention_time)
+    }
+    rmcols = c("database_identifier", "chemical_formula", "smiles", "inchi", 
+               "metabolite_identification", "fragmentation", "modifications", 
+               "charge", "retention_time", "taxid", "species", "database", "database_version", 
+               "reliability", "uri", "search_engine", "search_engine_score", 
+               "smallmolecule_abundance_sub", "smallmolecule_abundance_stdev_sub", 
+               "smallmolecule_abundance_std_error_sub")
+    peaklist_melty <- data.table::melt(peaklist[,-..rmcols], id.vars=c("mzmed"), variable.name = "sample", value.name="into")  
+    peaklist <- data.table::dcast(peaklist_melty, sample ~ mzmed, value.var = "into")
+    considerMe=which(!(tolower(colnames(peaklist)) %in% skipCols))
+    peaklist = peaklist[, ..considerMe]
     totalMissing = colSums(peaklist == "0" | peaklist == 0 | peaklist == "" | is.na(peaklist))
   }else{
-    con = file(peakpath, "r")
-    line = readLines(con, n = 1)
-    splRow = stringr::str_split(line, ",")[[1]]
-    mzs = splRow[3:length(splRow)]
-    totalMissing <- rep(0, length(mzs))
-    pb = pbapply::startpb(2, nrow)
-    
-    # get missing count
-    for(i in 1:nrow){
-      pbapply::setpb(pb, i)
-      line = readLines(con, n = 1)
-      splRow = stringr::str_split(line, ",")[[1]]
-      sampName = splRow[1]
-      splRow = splRow[3:length(splRow)]
-      if(i > 1){
-        isMissing = which(splRow == "0" | splRow == 0 | splRow == "" | is.na(splRow))
-        totalMissing[isMissing] <- totalMissing[isMissing] + 1
+    if(!reallyBig){
+      peaklist <- data.table::fread(peakpath,
+                                    header=T)
+      considerMe=which(!(tolower(colnames(peaklist)) %in% skipCols))
+      peaklist = peaklist[, ..considerMe]
+      totalMissing = colSums(peaklist == "0" | peaklist == 0 | peaklist == "" | is.na(peaklist))
+    }else{
+      considerMe=which(!(tolower(cols) %in% skipCols))
+      mzs = cols[considerMe]
+      totalMissing <- rep(0, length(mzs))
+      pb = pbapply::startpb(2, nrow)
+      
+      # get missing count
+      for(i in 1:nrow){
+        pbapply::setpb(pb, i)
+        line = readLines(con, n = 1)
+        splRow = stringr::str_split(line, ",")[[1]]
+        sampName = splRow[1]
+        splRow = splRow[3:length(splRow)]
+        if(i > 1){
+          isMissing = which(splRow == "0" | splRow == 0 | splRow == "" | is.na(splRow))
+          totalMissing[isMissing] <- totalMissing[isMissing] + 1
+        }
       }
+      close.connection(con)
+      names(totalMissing) = mzs
     }
-    close.connection(con)
-    names(totalMissing) = mzs
   }
-  totalMissing
+  
+  list(missPerc = totalMissing, isMz = considerMe, nrows=nrow)
 }
 
 #' @title Merge metadata and peak tables into SQLITE database.
@@ -88,8 +115,25 @@ import.pat.csvs <- function(metapath,
     metadata = unique(metadata[, ..keep.cols])
     if(!("individual" %in% colnames(metadata))) metadata$individual <- metadata$sample
     meta_col_order = colnames(metadata)
-    meta_col_order = meta_col_order[meta_col_order != "sample"]
+    #meta_col_order = meta_col_order[meta_col_order != "sample"]
   },silent = T)
+  
+  if(is.null(metadata)){
+    try({
+      peaklist = data.table::fread(pospath)
+    })
+    try({
+      peaklist = data.table::fread(negpath)
+    })
+    metadata = data.table::data.table(sample = peaklist$Sample,
+                                      individual = peaklist$Sample,
+                                      label = peaklist$Label)
+    metadata$sample <- metadata$individual <- gsub(metadata$sample, 
+                                                   pattern = wipe.regex, 
+                                                   replacement = "", 
+                                                   perl=T)
+    meta_col_order <- c("sample", "individual", "label")
+  }
   
   samplesIn <- metadata$sample
 
@@ -109,6 +153,7 @@ import.pat.csvs <- function(metapath,
     if(length(peakpath) == 0) return(list(ionMode = ionMode, 
                                           peaktbl = data.table::data.table()))
     
+    
     if(length(missList[[ionMode]]) > 0){
       missCounts = missList[[ionMode]]
     }else{
@@ -120,15 +165,16 @@ import.pat.csvs <- function(metapath,
 
     nrows = length(vroom::vroom_lines(peakpath, altrep = TRUE, progress = TRUE)) - 1L
     miss_threshold_mz = ceiling(nrows * (missperc.mz/100))
-    qualifies = which(missCounts <= miss_threshold_mz)
-    missCounts = NULL
-    gc()
+    qualifies = which(missCounts$missPerc <= miss_threshold_mz)
+    # missCounts = NULL
+    # gc()
     
     # get actual data
     print("Subsetting table...")
     write_loc = tempfile()
+    if(file.exists(write_loc)) file.remove(write.loc)
     con_read = base::file(peakpath, "r")
-    cols = stringr::str_split(readLines(con_read, n = 1), ",")[[1]]
+    cols = stringr::str_split(readLines(con_read, n = 1), ",|\\t")[[1]]
     
     # PIVOT IF WRONG SIDE AROUND - METABOLIGHTS DATA
     if(any(grepl("mass_to_charge", cols))){
@@ -146,15 +192,14 @@ import.pat.csvs <- function(metapath,
                  "smallmolecule_abundance_std_error_sub")
       peaklist_melty <- data.table::melt(peaklist[,-..rmcols], id.vars=c("mzmed"), variable.name = "sample", value.name="into")  
       peaklist <- data.table::dcast(peaklist_melty, sample ~ mzmed, value.var = "into")
-      peaklist$sample <- gsub(wipe.regex, "", peaklist$sample)
+      peaklist$sample <- gsub(pattern = wipe.regex, "", peaklist$sample,perl = T)
       meta_row_order = match(metadata$sample, peaklist$sample)
-      peaklist <- cbind(sample = peaklist$sample, 
-                        metadata[meta_row_order,..meta_col_order], 
-                        peaklist[,-"sample"])
+      peaklist <- cbind(metadata[meta_row_order,..meta_col_order], 
+                        peaklist[,-c("sample", "individual")])
     }else{
-      row = c(tolower(c(cols[1], 
-                        if(typeof(metadata) == "list") colnames(metadata[,..meta_col_order]) else cols[2])),
-              cols[if(typeof(metadata) == "list") qualifies else qualifies[3:length(qualifies)]])
+      row = c(tolower(c(colnames(metadata[,..meta_col_order]))),
+                        cols[missCounts$isMz][qualifies])
+      
       write(paste0(row, collapse=","),
             file = write_loc,
             append=TRUE)
@@ -163,14 +208,15 @@ import.pat.csvs <- function(metapath,
         line = readLines(con_read, n = 1)
         splRow = stringr::str_split(line, ",")[[1]]
         sampName = splRow[1]
-        sampName =  gsub(sampName, pattern = wipe.regex, replacement = "", perl=T)
+        sampName =  gsub(sampName, 
+                         pattern = wipe.regex, 
+                         replacement = "", perl=T)
         label = splRow[2]
-        splRow = splRow[3:length(splRow)]
+        splRow = splRow[missCounts$isMz]
         splRow[splRow == "0" | splRow == 0 | splRow == ""] <- NA
         if(sampName %in% if(typeof(metadata) == "list") samplesIn else sampName){
-          row = c(c(sampName, 
-                    tolower(if(typeof(metadata) == "list") metadata[sample == as.character(sampName), ..meta_col_order] else label)),
-                  splRow[if(typeof(metadata) == "list") qualifies else qualifies[3:length(qualifies)]])
+          row = c(tolower(metadata[sample == as.character(sampName), ..meta_col_order]),
+                  splRow[qualifies])
           write(paste0(row, collapse=","),file=write_loc,append=TRUE)
         }else{
           NULL

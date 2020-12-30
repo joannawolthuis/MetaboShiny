@@ -72,12 +72,27 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                 shiny::sliderInput(inputId = "db_mz_range", label = "What mass range can your machine detect?",
                                                                                                                                                    min = 0, max = 3000, value = c(60, 600),
                                                                                                                                                    step = 1,post = "m/z",dragRange = TRUE),
-                                                                                                                                #shiny::conditionalPanel("input.db_mz_range > 700",),
                                                                                                                                 shiny::tags$i("Warning: increasing the upper m/z boundary may drastically increase database build times
                                                                                      - calculating isotopes is more time-consuming for larger molecules!"),
                                                                                                                                 shiny::radioButtons("db_build_mode", label = "Build base database, extended (isotopes+adducts) or both?",
                                                                                                                                                     choices = c("base","extended","both"),selected = "both"),
-                                                                                                                                shiny::tags$i("For example: if you only defined a new adduct, pick 'extended' as the source database doesn't change.")
+                                                                                                                                shiny::tags$i("For example: if you only defined a new adduct, pick 'extended' as the source database doesn't change."),
+                                                                                                                                shiny::helpText("Include minor isotopes?"),
+                                                                                                                                shinyWidgets::switchInput(
+                                                                                                                                  inputId = "db_all_iso",
+                                                                                                                                  size = "mini",
+                                                                                                                                  onLabel = "Yes", 
+                                                                                                                                  offLabel = "No", 
+                                                                                                                                  value = T
+                                                                                                                                ),
+                                                                                                                                shiny::helpText("Include heavy C, N, O count info for each isotope?"),
+                                                                                                                                shinyWidgets::switchInput(
+                                                                                                                                  inputId = "db_count_iso",
+                                                                                                                                  size = "mini",
+                                                                                                                                  onLabel = "Yes", 
+                                                                                                                                  offLabel = "No", 
+                                                                                                                                  value = F
+                                                                                                                                )
                                                    )
                                                    )),
                                                    shiny::uiOutput("db_build_ui")
@@ -90,10 +105,7 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                  shiny::imageOutput("merge_icon",inline = T),br(),
                                                                                  shiny::tags$b("STEP 2: Click buttons to select files"),
                                                                                  br(),br(),
-                                                                                 div(shiny::textInput("wipe_regex",
-                                                                                                      tags$i("Regex to adjust peaklist names to metadata sample names - the match is removed from each name (optional):"), 
-                                                                                                      placeholder = "", 
-                                                                                                      width="50%"), style='font-size:70%'),
+                                                                                 div(shiny::uiOutput("wipe_regex_ui"), style='font-size:70%'),
                                                                                  shinyFiles::shinyFilesButton('metadata', 'metadata', 'Select metadata', FALSE),
                                                                                  br(),
                                                                                  shinyWidgets::checkboxGroupButtons(
@@ -1776,8 +1788,8 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                       #                           col = "BW", type = "YN")
                                                                                       shiny::fluidRow(align="center",
                                                                                                       shiny::sliderInput("ncores", "How many cores can MetShi use?", value=2, min=1, max = parallel::detectCores() - 1),
-                                                                                                      br(),
-                                                                                                      helpText("How to handle samples with missing metadata? (re-checked each subset/switch step)?"),
+                                                                                                      shiny::br(),
+                                                                                                      shiny::helpText("How to handle samples with missing metadata? (re-checked each subset/switch step)?"),
                                                                                                       shinyWidgets::switchInput(
                                                                                                         inputId = "omit_unknown",
                                                                                                         onLabel = "omit",
@@ -1785,7 +1797,24 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                         offStatus = "success", 
                                                                                                         onStatus = "danger",
                                                                                                         value = T
-                                                                                                      )
+                                                                                                      ),
+                                                                                                      shiny::br(),
+                                                                                                      shiny::selectInput("beep", 
+                                                                                                                         label = "Noise to make after task is done:",
+                                                                                                                         choices = list(
+                                                                                                                           "none",
+                                                                                                                           "ping",
+                                                                                                                           "coin",
+                                                                                                                           "fanfare",
+                                                                                                                           "complete",
+                                                                                                                           "treasure",
+                                                                                                                           "ready",
+                                                                                                                           "shotgun",
+                                                                                                                           "mario",
+                                                                                                                           "wilhelm",
+                                                                                                                           "facebook",
+                                                                                                                           "sword"
+                                                                                                                         ), selected = 1)
                                                                                       )
                                                                       ),
                                                                       shiny::tabPanel("Project", icon=shiny::icon("gift"),

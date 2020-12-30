@@ -20,3 +20,43 @@ observeEvent(input$revsearch_mz, {
     my_selection$structure <- browse_content$table[curr_row,c('structure')][[1]]
   }
 })
+
+shiny::observe({
+  if(my_selection$struct != "" & input$tab_iden_2 == "molmz"){
+    if(!mSet$metshiParams$prematched){
+      MetaboShiny::metshiAlert("Please perform pre-matching first to enable this feature!")
+      return(NULL)
+    }else{
+      
+      if(lcl$prev_struct != my_selection$struct){
+        rev_matches = MetaboShiny::get_prematches(who = my_selection$struct,
+                                                  what = "con.structure",
+                                                  patdb = lcl$paths$patdb,
+                                                  showadd = c(),
+                                                  showiso = c(),
+                                                  showdb = c())  
+        lcl$prev_struct <<- my_selection$struct
+        if(nrow(rev_matches) == 0){
+          shown_matches$reverse <- data.table::data.table()
+          return(NULL)
+        }else{
+          pieinfo$db <- reshape::melt(table(rev_matches$source))
+          pieinfo$add <- reshape::melt(table(rev_matches$adduct))
+          pieinfo$iso <- reshape::melt(table(rev_matches$isocat))
+        }
+      }
+      mzMode =if(grepl(my_selection$mz, pattern = "-")) "negative" else "positive"
+      rev_matches = MetaboShiny::get_prematches(who = my_selection$struct,
+                                                what = "con.structure",
+                                                patdb = lcl$paths$patdb,
+                                                showadd = result_filters$add[[mzMode]],
+                                                showiso = result_filters$iso,
+                                                showdb = result_filters$db)
+      if(nrow(rev_matches)>0){
+        shown_matches$reverse <- unique(rev_matches[,c("query_mz", "adduct", "%iso", "dppm")])
+      }else{
+        shown_matches$reverse <- data.table::data.table()
+      }
+    }
+  } 
+})

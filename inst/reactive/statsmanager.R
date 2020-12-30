@@ -798,14 +798,14 @@ shiny::observe({
                    mSet <- MetaboAnalystR::Ttests.Anal(mSet,
                                                        nonpar = input$tt_nonpar,
                                                        threshp = 0.1, # TODO: make the threshold user defined...
-                                                       paired = mSet$dataSet$ispaired,
+                                                       paired = mSet$dataSet$paired,
                                                        equal.var = input$tt_eqvar
                    )
                  })
                },
                fc = {
                  withProgress({
-                   if(mSet$dataSet$ispaired){
+                   if(mSet$dataSet$paired){
                      mSet <- MetaboAnalystR::FC.Anal.paired(mSet,
                                                             1.5, # TODO: make this threshold user defined
                                                             1)  
@@ -839,7 +839,7 @@ shiny::observe({
                volcano = {
                  shiny::withProgress({
                    mSet <-  MetaboAnalystR::Volcano.Anal(mSet,
-                                                         paired = mSet$dataSet$ispaired, 
+                                                         paired = mSet$dataSet$paired, 
                                                          1.5, 0,
                                                          0.75, F, 0.1,
                                                          TRUE, "raw") # TODO: make thresholds user-defined
@@ -926,11 +926,11 @@ shiny::observe({
                                                                                             statsmanager$calculate, 
                                                                                             c("_tables","_plots")))
         if(lcl$beep){
-          beepr::beep(sound = 1)
+          beepr::beep(sound = lcl$aes$which_beep)
           Sys.sleep(0.6)
-          beepr::beep(sound = 1)
+          beepr::beep(sound = lcl$aes$which_beep)
           Sys.sleep(0.6)
-          beepr::beep(sound = 1)
+          beepr::beep(sound = lcl$aes$which_beep)
         }
         
       }else{

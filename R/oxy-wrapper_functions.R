@@ -1565,7 +1565,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
         data = data.frame(x = xVals,
                           y = yVals,
                           text = labelVals,
-                          symb = c("★"),
+                          symb = c("\u2605"),
                           col = colVals)
         
         if(is.numeric(xVals[1]) & is.numeric(yVals[1])){

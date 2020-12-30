@@ -180,7 +180,6 @@ app.font.css <- function(font.h1 = "Press Start 2P",
   line-height: 0.5;
   margin-top: 8px;
   z-index:99998 !important;
-  height: 200px;
   line-height: 60px;
   padding-right: 20px;
   padding-left: 10px;

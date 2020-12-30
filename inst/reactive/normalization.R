@@ -1,3 +1,37 @@
+# triggers when probnorm or compnorm is selected
+# let user pick a reference condition
+ref.selector <- reactive({
+  # -------------
+  if(input$norm_type == "ProbNorm" | input$norm_type == "CompNorm"){
+    shiny::fluidRow(
+      shiny::hr(),
+      selectInput('ref_var',
+                  'What is your reference condition?',
+                  choices = c("")),
+      actionButton("check_csv",
+                   "Get options",
+                   icon=shiny::icon("search")),
+      shiny::hr()
+    )
+  }
+})
+
+# triggers when check_csv is clicked - get factors usable for normalization
+shiny::observeEvent(input$check_csv, {
+  req(lcl$paths$csv_loc)
+  switch(input$norm_type,
+         ProbNorm=shiny::updateSelectInput(session, "ref_var",
+                                           choices = get_ref_vars(fac = "label") # please add options for different times later, not difficult
+         ),
+         CompNorm=shiny::updateSelectInput(session, "ref_var",
+                                           choices = get_ref_cpds() # please add options for different times later, not difficult
+         ))
+})
+
+# render the created UI
+output$ref_select <- shiny::renderUI({ref.selector()})
+
+
 # this triggers when the user wants to normalize their data to proceed to statistics
 shiny::observeEvent(input$initialize, {
   

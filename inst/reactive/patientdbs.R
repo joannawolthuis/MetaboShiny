@@ -43,15 +43,15 @@ missValues <- shiny::reactiveValues(pos = c(),
 
 output$missMzRatio <- shiny::renderUI({
   if(length(missValues$pos) > 0){
-    posTotal = length(missValues$pos)
-    posKeep = length(which(missValues$pos < input$perc_limit_mz))
+    posTotal = length(missValues$pos$missPerc)
+    posKeep = length(which(missValues$pos$missPerc < input$perc_limit_mz))
     posText = paste0("Remaining (+): ", posKeep, " / ", posTotal)
   }else{
     posText = NULL
   }
   if(length(missValues$neg) > 0){
-    negTotal = length(missValues$neg)
-    negKeep = length(which(missValues$neg < input$perc_limit_mz))
+    negTotal = length(missValues$neg$missPerc )
+    negKeep = length(which(missValues$neg$missPerc < input$perc_limit_mz))
     negText = paste0("Remaining (-):", negKeep, " / ", negTotal)
   }else{
     negText = NULL
@@ -61,15 +61,18 @@ output$missMzRatio <- shiny::renderUI({
 })
 
 output$missMzPlot <- shiny::renderPlot({
-  if(length(missValues$pos) > 0 | length(missValues$neg > 0)){
+  if(length(missValues$pos) > 0 | length(missValues$neg) > 0){
     # plot(density(missValues$pos),col="blue",main="Missing value distribution",xlab = "% missing", lwd=2)
     # lines(density(missValues$neg),col="red",lwd=2)
     # abline(v = input$perc_limit_mz, col="black", lwd=1.5, lty=2)
     # text(x = input$perc_limit_mz, y = 0.5, "Current threshold",pos = 4,cex = 1.5)  
-    data = data.table::data.table(variable = c(rep("pos", length(missValues$pos)),
-                                               rep("neg", length(missValues$neg))),
-                                  "Missing percentage" = c(missValues$pos, 
-                                                           missValues$neg))
+    posPerc = if(length(missValues$pos$missPerc) > 0) missValues$pos$missPerc/missValues$pos$nrows * 100 else c()
+    negPerc = if(length(missValues$neg$missPerc) > 0) missValues$neg$missPerc/missValues$neg$nrows * 100 else c()
+    
+    data = data.table::data.table(variable = c(rep("pos", length(posPerc)),
+                                               rep("neg", length(negPerc))),
+                                  "Missing percentage" = c(posPerc, 
+                                                           negPerc))
     ggplot2::ggplot(data = data) + 
       ggplot2::geom_density(aes(x=`Missing percentage`, 
                                 fill=variable, 
@@ -102,13 +105,11 @@ shiny::observeEvent(input$checkMiss, {
   if(files.present){
     if(is.list(input$outlist_pos)){
       nrows = length(vroom::vroom_lines(file.pos, altrep = TRUE, progress = TRUE)) - 1L
-      missPos = getMissing(file.pos, nrow=nrows)
-      missValues$pos = missPos/nrows * 100
+      missValues$pos = getMissing(file.pos, nrow=nrows)
     }
     if(is.list(input$outlist_neg)){
       nrows = length(vroom::vroom_lines(file.neg, altrep = TRUE, progress = TRUE)) - 1L
-      missNeg = getMissing(file.neg, nrow=nrows)
-      missValues$neg = missNeg/nrows * 100
+      missValues$neg = getMissing(file.neg, nrow=nrows)
     }
   }else{
     MetaboShiny::metshiAlert("Please select files first!")
@@ -276,4 +277,31 @@ shiny::observeEvent(input$check_csv, {
                               choices = batch,
                               options = list(maxItems = 3L - (length(input$batch_var)))
   )
+})
+
+output$wipe_regex_ui <- shiny::renderUI({
+  if(length(input$ms_modes) > 0){
+    myPath = lapply(input$ms_modes, function(mode){
+      path=input[[paste0('outlist_',mode)]]
+    })[[1]]
+    if(is.list(myPath)){
+      path = shinyFiles::parseFilePaths(gbl$paths$volumes, 
+                                        myPath)$datapath
+      loadedExample = grepl("MetaboShiny(\\/|\\\\)inst(\\/|\\\\)examples",path)
+      shiny::textInput("wipe_regex",
+                       tags$i("Regex to adjust peaklist names to metadata sample names - the match is removed from each name (optional):"),
+                       value = if(!loadedExample) "" else ".*_(?>POS|NEG)_[0+]*", 
+                       width="50%")
+    }else{
+      shiny::textInput("wipe_regex",
+                       tags$i("Regex to adjust peaklist names to metadata sample names - the match is removed from each name (optional):"), 
+                       value = "",
+                       width="50%")
+    }  
+  }else{
+    shiny::textInput("wipe_regex",
+                     tags$i("Regex to adjust peaklist names to metadata sample names - the match is removed from each name (optional):"), 
+                     value = "",
+                     width="50%")
+  }
 })
