@@ -92,7 +92,21 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                   onLabel = "Yes", 
                                                                                                                                   offLabel = "No", 
                                                                                                                                   value = F
-                                                                                                                                )
+                                                                                                                                ),
+                                                                                                                                shiny::helpText("Queue multiple DB builds?"),
+                                                                                                                                shinyWidgets::switchInput(
+                                                                                                                                  inputId = "db_build_multi",
+                                                                                                                                  size = "mini",
+                                                                                                                                  onLabel = "Yes", 
+                                                                                                                                  offLabel = "No", 
+                                                                                                                                  value = F
+                                                                                                                                ),
+                                                                                                                                shiny::conditionalPanel("input.db_build_multi == true", 
+                                                                                                                                                        shiny::actionButton("db_build_sel_all",
+                                                                                                                                                                            label = "Select all"),
+                                                                                                                                                        shiny::actionButton("db_build_multi_all",
+                                                                                                                                                                           label = "Build selected DBs",
+                                                                                                                                                                           icon=shiny::icon("wrench")))
                                                    )
                                                    )),
                                                    shiny::uiOutput("db_build_ui")

@@ -127,6 +127,8 @@ function(input, output, session) {
   
   db_section = shiny::reactiveValues(load = FALSE)
   
+  dbmanager <- shiny::reactiveValues(build = c("none"))
+  
   search_button = shiny::reactiveValues(on=TRUE)
   
   search = shiny::reactiveValues(go = F)

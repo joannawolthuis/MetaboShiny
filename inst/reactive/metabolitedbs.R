@@ -4,6 +4,89 @@
 
 # ==== DATABASES UI ====
 
+shiny::observe({
+  if(dbmanager$build[1] != "none"){
+    for(db in dbmanager$build){
+      #shiny::withProgress({
+        # send necessary functions and libraries to parallel threads
+        parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
+          "isotopes"
+        )) 
+        pkgs = c("data.table", "enviPat", 
+                 "KEGGREST", "XML", 
+                 "SPARQL", "RCurl", 
+                 "MetaDBparse")
+        parallel::clusterCall(session_cl, function(pkgs) {
+          for (req in pkgs) {
+            library(req, character.only = TRUE)
+          }
+        }, pkgs = pkgs)
+        
+        if(input$db_build_mode %in% c("base", "both")){
+          # check if custom
+          custom_csv = file.path(lcl$paths$db_dir, paste0(db,"_source"), "base.csv")
+          custom = file.exists(custom_csv)
+          # - - - - - - - -
+          MetaDBparse::buildBaseDB(dbname = db,
+                                   outfolder = normalizePath(lcl$paths$db_dir), 
+                                   cl = 0,#session_cl,
+                                   custom_csv_path = if(!custom) NULL else custom_csv,
+                                   silent = F)
+        }
+        
+        if(input$db_build_mode %in% c("extended", "both")){
+          if(!grepl(db, pattern = "maconda")){
+            if(file.exists(file.path(lcl$paths$db_dir, paste0(db, ".db")))){
+              my_range <- input$db_mz_range
+              outfolder <- lcl$paths$db_dir
+              all.isos <- input$db_all_iso
+              count.isos <- input$db_count_iso
+              MetaDBparse::buildExtDB(base.dbname = db,
+                                      outfolder = outfolder,
+                                      cl = session_cl,
+                                      blocksize = 500,
+                                      mzrange = my_range,
+                                      adduct_table = adducts,
+                                      adduct_rules = adduct_rules, 
+                                      silent = T,
+                                      all.isos = all.isos,
+                                      count.isos = count.isos,
+                                      ext.dbname = "extended") #TODO: figure out the optimal fetch limit... seems 200 for now
+            }else{
+              MetaboShiny::metshiAlert("Please build base DB first! (can be changed in settings)")
+            }
+          }
+        } 
+      #})
+    }
+    dbmanager$build <- "none"
+  }  
+})
+
+shiny::observeEvent(input$db_build_sel_all, {
+  for(db in gbl$vectors$db_list){
+    input.id = paste0("build_queue_", db)
+    if(input.id %in% names(input)){
+      shinyWidgets::updatePrettyToggle(session, 
+                                       inputId = input.id,
+                                       value = if(input[[input.id]]) F else T)    
+    }
+  }
+})
+
+shiny::observeEvent(input$db_build_multi_all, {
+  build.me <- unlist(sapply(gbl$vectors$db_list, function(db){
+    input.id = paste0("build_queue_", db)
+    if(input.id %in% names(input)){
+      if(input[[input.id]]) db else NULL
+    }else{
+      NULL
+    }
+  }))
+  if(length(build.me) > 0){
+    dbmanager$build <- build.me
+  }
+})
 
 shiny::observe({
   if(db_section$load){
@@ -129,9 +212,27 @@ shiny::observe({
                                                 label = "",
                                                 icon = icon("check")),
                                               title = "is base database built?"),
-                              shinyBS::tipify(shiny::actionLink(paste0("build_", db),
-                                                label = "",
-                                                icon = icon("wrench")),title = "build this database"),
+                              MetaboShiny::sardine(shiny::conditionalPanel("input.db_build_multi == false", 
+                                                      shinyBS::tipify(shiny::actionLink(paste0("build_", db),
+                                                                                        label = "",
+                                                                                        icon = shiny::icon("wrench")),
+                                                                      title = "build this database")
+                                                      )),
+                              MetaboShiny::sardine(shiny::conditionalPanel("input.db_build_multi == true", 
+                                                      shinyWidgets::prettyToggle(
+                                                        status_off = "default", 
+                                                        status_on = "success",
+                                                        inline=T,bigger=F,
+                                                        animation="pulse",
+                                                        inputId = paste0("build_queue_", db),
+                                                        label_on = "", 
+                                                        label_off = "",
+                                                        outline = TRUE,
+                                                        plain = TRUE,
+                                                        value = db %in% gbl$vectors$db_categories$favorite,
+                                                        icon_on = shiny::icon("wrench",lib ="glyphicon"), 
+                                                        icon_off = shiny::icon("unchecked",lib ="glyphicon")
+                                                      ))),
                               shinyBS::tipify(shinyWidgets::prettyToggle(
                                 status_off = "default", 
                                 status_on = "danger",
@@ -266,7 +367,10 @@ shiny::observe({
           shiny::fluidRow(
             lapply(display, function(db){
               which_idx = grep(sapply(gbl$constants$images, function(x) x$name), pattern = db) # find the matching image (NAME MUST HAVE DB NAME IN IT COMPLETELY)
-              shinyBS::tipify(shiny::div(style="display: inline-block;vertical-align:top;",MetaboShiny::fadeImageButton(inputId = paste0(prefix, "_", db), img.path = gbl$constants$images[[which_idx]]$path)),title = gbl$constants$db.build.info[[db]]$title) # generate fitting html
+              shinyBS::tipify(shiny::div(style="display: inline-block;vertical-align:top;",
+                                         MetaboShiny::fadeImageButton(inputId = paste0(prefix, "_", db), 
+                                                                      img.path = gbl$constants$images[[which_idx]]$path)),
+                              title = gbl$constants$db.build.info[[db]]$title) # generate fitting html
             })
           )
         })
@@ -333,61 +437,7 @@ shiny::observe({
     # these listeners trigger when build_'db' is clicked (loops through dblist in global)
     lapply(c(gbl$vectors$db_list), FUN=function(db){
       shiny::observeEvent(input[[paste0("build_", db)]], {
-        withProgress({
-          # send necessary functions and libraries to parallel threads
-          parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
-            "isotopes"
-          )) 
-          pkgs = c("data.table", "enviPat", 
-                   "KEGGREST", "XML", 
-                   "SPARQL", "RCurl", 
-                   "MetaDBparse")
-          parallel::clusterCall(session_cl, function(pkgs) {
-            for (req in pkgs) {
-              library(req, character.only = TRUE)
-            }
-          }, pkgs = pkgs)
-          
-          shiny::setProgress(session = session, 0.1)
-          
-          if(input$db_build_mode %in% c("base", "both")){
-            # check if custom
-            custom_csv = file.path(lcl$paths$db_dir, paste0(db,"_source"), "base.csv")
-            custom = file.exists(custom_csv)
-            # - - - - - - - -
-            MetaDBparse::buildBaseDB(dbname = db,
-                                     outfolder = normalizePath(lcl$paths$db_dir), 
-                                     cl = 0,#session_cl,
-                                     custom_csv_path = if(!custom) NULL else custom_csv,
-                                     silent = F)
-          }
-          
-          # build base db (differs per db, parsers for downloaded data)
-          shiny::setProgress(session = session, 0.5)
-          
-          if(input$db_build_mode %in% c("extended", "both")){
-            
-            if(!grepl(db, pattern = "maconda")){
-              if(file.exists(file.path(lcl$paths$db_dir, paste0(db, ".db")))){
-                my_range <- input$db_mz_range
-                outfolder <- lcl$paths$db_dir
-                MetaDBparse::buildExtDB(base.dbname = db,
-                                        outfolder = outfolder,
-                                        cl = session_cl,
-                                        blocksize = 500,
-                                        mzrange = my_range,
-                                        adduct_table = adducts,
-                                        adduct_rules = adduct_rules, 
-                                        silent = T,
-                                        all.isos = input$db_all_iso,
-                                        count.isos = input$db_count_iso,
-                                        ext.dbname = "extended") #TODO: figure out the optimal fetch limit... seems 200 for now
-              }else{
-                MetaboShiny::metshiAlert("Please build base DB first! (can be changed in settings)")
-              }
-            }
-          } 
-        })
+        dbmanager$build <- db
       })
     })
     modifyStyle("body", background = "white")
