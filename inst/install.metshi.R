@@ -21,7 +21,8 @@ pacman::p_load(ggplot2, data.table, plotly, shinyBS, shinyjs, caret, grDevices,
                pls, rhandsontable, testthat, shinytest, showtext, sysfonts, colourpicker, 
                reshape, ggdark, ECharts2Shiny, shinyalert, shinybusy, rcdk, RISmed, dplyr, 
                InterpretMSSpectrum, DBI, qdap, reshape2, Hmisc, ggbeeswarm, Rmisc, rgl,
-               stats, pROC, car, doParallel, missForest, ggfortify, fdrtool, plsdepot)
+               stats, pROC, car, doParallel, missForest, ggfortify, fdrtool, plsdepot,
+               vroom, umap, ica, svglite, beepr, showtextdb)
 
 devtools::install_github("joannawolthuis/ggVennDiagram")
 devtools::install_github("dengkuistat/WaveICA")

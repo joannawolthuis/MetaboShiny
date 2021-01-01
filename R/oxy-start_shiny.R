@@ -21,16 +21,16 @@ start_metshi <- function(port=8080, inBrowser=F,
   
   packages = installed.packages()
   if(!("MetaboAnalystR" %in% rownames(packages))){
-    devtools::install_github("xia-lab/MetaboAnalystR",quiet = T, upgrade=F)
+    devtools::install_github("xia-lab/MetaboAnalystR",quiet = F, ref = "0d61192c")
   }
   if(!("MetaDBparse" %in% rownames(packages))){
-    devtools::install_github("UMCUGenetics/MetaDBparse",quiet = T, upgrade=F)
+    devtools::install_github("UMCUGenetics/MetaDBparse",quiet = F, upgrade = F)
   }
   if(!("MetaboShiny" %in% rownames(packages))){
-    devtools::install_github("UMCUGenetics/MetaboShiny",quiet = T, upgrade=F)
+    devtools::install_github("UMCUGenetics/MetaboShiny",quiet = T, upgrade = F)
   }
   if(!("ggVennDiagram" %in% rownames(packages))){
-    devtools::install_github("joannawolthuis/ggVennDiagram",quiet = T, upgrade=F)
+    devtools::install_github("joannawolthuis/ggVennDiagram",quiet = T, upgrade = F)
   }
   
   #library(httr)

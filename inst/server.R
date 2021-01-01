@@ -291,9 +291,13 @@ beep = no')
       shiny::updateSliderInput(session, "ncores", value = as.numeric(opts$cores))
       # send specific functions/packages to other threads
       
+      if("adducts" %in% names(opts)){
+        fav_adducts <- opts$adducts
+        fav_adducts <- stringr::str_split(fav_adducts, pattern = "&")[[1]]  
+      }else{
+        fav_adducts <- adducts$Name
+      }
       
-      fav_adducts <- opts$adducts
-      fav_adducts <- stringr::str_split(fav_adducts, pattern = "&")[[1]]
       for(id in c("mummi_adducts", 
                   "score_adducts",
                   "fav_adducts")){
@@ -301,15 +305,12 @@ beep = no')
       }
       
       # === GOOGLE FONT SUPPORT FOR GGPLOT2 ===
-      
+
       # Download a webfont
       if(online){
         lapply(c(opts[grepl(pattern = "font", names(opts))]), function(font){
           try({
-            sysfonts::font_add_google(name = font,
-                                      family = font,
-                                      regular.wt = 400,
-                                      bold.wt = 700)
+            showtextdb::font_install(showtextdb::google_fonts(font))
           })
         })
       }
