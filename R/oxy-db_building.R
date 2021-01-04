@@ -135,6 +135,19 @@ import.pat.csvs <- function(metapath,
     meta_col_order <- c("sample", "individual", "label")
   }
   
+  # check for all_unique or all_same columns and remove
+  check_meta_cols = setdiff(meta_col_order, c("sample", "individual"))
+  keep_meta_cols_bool = sapply(check_meta_cols, function(var){
+    values = metadata[[var]]
+    uniq_groups = table(values)
+    is.uniq = length(uniq_groups) == nrow(metadata)
+    is.same = length(uniq_groups) == 1
+    !is.uniq & !is.same
+  })
+  
+  keep_meta_cols = c("sample", "individual", names(which(keep_meta_cols)))
+  metadata = metadata[, ..keep_meta_cols]
+  
   samplesIn <- metadata$sample
 
   zeros_after_period <- function(x) {
@@ -144,15 +157,16 @@ import.pat.csvs <- function(metapath,
   
   peaklists = lapply(c("pos", "neg"), function(ionMode){
     
-    print(paste("Importing", ionMode, "mode peaks!"))
-    
     peakpath = switch(ionMode,
                       "pos" = pospath,
                       "neg" = negpath)
     
-    if(length(peakpath) == 0) return(list(ionMode = ionMode, 
-                                          peaktbl = data.table::data.table()))
+    if(length(peakpath) == 0){
+      return( list(ionMode = ionMode, 
+           peaktbl = data.table::data.table()))
+      }
     
+    print(paste("Importing", ionMode, "mode peaks!"))
     
     if(length(missList[[ionMode]]) > 0){
       missCounts = missList[[ionMode]]
@@ -215,7 +229,7 @@ import.pat.csvs <- function(metapath,
         splRow = splRow[missCounts$isMz]
         splRow[splRow == "0" | splRow == 0 | splRow == ""] <- NA
         if(sampName %in% if(typeof(metadata) == "list") samplesIn else sampName){
-          row = c(tolower(metadata[sample == as.character(sampName), ..meta_col_order]),
+          row = c(metadata[sample == as.character(sampName), ..meta_col_order],
                   splRow[qualifies])
           write(paste0(row, collapse=","),file=write_loc,append=TRUE)
         }else{

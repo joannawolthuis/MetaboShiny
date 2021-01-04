@@ -59,7 +59,13 @@ get_prematches <- function(who = NA,
   
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
   
-  if(showIsolabels){
+  check_me = "match_content"
+  fields = RSQLite::dbListFields(conn, check_me)
+  if(!("n2H" %in% fields)){
+    showIsoLabels = F
+  }
+  
+  if(showIsoLabels){
     firstpart = strwrap("SELECT DISTINCT map.query_mz, compoundname,
                                map.baseformula as baseformula,
                                map.adduct as adduct,
@@ -96,6 +102,8 @@ get_prematches <- function(who = NA,
                                AND map.adduct = con.adduct
                                AND map.query_mz = con.query_mz", simplify=T, width=1000) 
   }
+  
+  print(firstpart)
   
   showadd <- if(is.null(showadd)) c() else if(length(showadd) > 0) paste0(showadd, collapse=" OR map.adduct = '", "'") else c()
   showdb <- if(is.null(showdb)) c() else if(length(showdb) > 0) paste0(showdb, collapse=" OR source = '", "'") else c()
