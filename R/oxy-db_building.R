@@ -136,17 +136,17 @@ import.pat.csvs <- function(metapath,
   }
   
   # check for all_unique or all_same columns and remove
-  check_meta_cols = setdiff(meta_col_order, c("sample", "individual"))
-  keep_meta_cols_bool = sapply(check_meta_cols, function(var){
-    values = metadata[[var]]
-    uniq_groups = table(values)
-    is.uniq = length(uniq_groups) == nrow(metadata)
-    is.same = length(uniq_groups) == 1
-    !is.uniq & !is.same
-  })
-  
-  keep_meta_cols = c("sample", "individual", names(which(keep_meta_cols)))
-  metadata = metadata[, ..keep_meta_cols]
+  # check_meta_cols = setdiff(meta_col_order, c("sample", "individual"))
+  # keep_meta_cols_bool = sapply(check_meta_cols, function(var){
+  #   values = metadata[[var]]
+  #   uniq_groups = table(values)
+  #   is.uniq = length(uniq_groups) == nrow(metadata)
+  #   is.same = length(uniq_groups) == 1
+  #   !is.uniq & !is.same
+  # })
+  # 
+  # keep_meta_cols = c("sample", "individual", names(which(keep_meta_cols_bool)))
+  # metadata = metadata[, ..keep_meta_cols]
   
   samplesIn <- metadata$sample
 
