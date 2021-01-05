@@ -23,7 +23,10 @@ function(input, output, session) {
   rlang::env_lock(asNamespace('RJSONIO'))
   
   AddErrMsg <- function(msg){
-    shiny::showNotification(msg)
+    print(msg)
+    try({
+      shiny::showNotification(msg)
+    })
   }
   
   assignInNamespace("AddErrMsg", AddErrMsg, ns="MetaboAnalystR", 

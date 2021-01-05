@@ -143,7 +143,6 @@ shiny::observeEvent(input$initialize, {
                                               anal.type = "stat",
                                               paired = FALSE)
       
-      
       anal.type <<- "stat"
       mSet$dataSet$paired <- mSet$settings$ispaired <- F
       
