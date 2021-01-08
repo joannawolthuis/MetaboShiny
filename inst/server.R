@@ -152,6 +152,7 @@ function(input, output, session) {
       
       old.wd = getwd()
       setwd(lcl$paths$work_dir)
+      
       on.exit({
         setwd(old.wd)
       })

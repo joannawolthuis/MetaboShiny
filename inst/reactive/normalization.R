@@ -141,7 +141,7 @@ shiny::observeEvent(input$initialize, {
       
       # = = = = = = = = = = = = = = =
       
-      if(exists(mSet)){
+      if(exists("mSet")){
         remove(mSet)
       }
       
@@ -149,7 +149,6 @@ shiny::observeEvent(input$initialize, {
                                               anal.type = "stat",
                                               paired = FALSE)
       
-      mSet$dataSet$orig <- qs::qread("data_orig.qs")
       anal.type <<- "stat"
       mSet$dataSet$paired <- mSet$settings$ispaired <- F
       
@@ -159,6 +158,7 @@ shiny::observeEvent(input$initialize, {
                                             "rowu",
                                             lbl.type = "disc")  # rows contain samples
       
+      mSet$dataSet$orig <- qs::qread("data_orig.qs")
       
       mSet$metshiParams <- list(
         filt_type = input$filt_type,
@@ -205,8 +205,7 @@ shiny::observeEvent(input$initialize, {
                                          paste0(lcl$proj_name,"_ORIG.metshi")))
         
         fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
-        qs::qsave(mSet, file = fn)
-        
+        filemanager$do <- "save"
         uimanager$refresh <- c("general","statspicker","ml")
         plotmanager$make <- "general"
       }else{

@@ -310,7 +310,6 @@ paths = list(
                               `Your Files` = file.path(home, "MetaboShiny"),
                               Documents = {
                                 loc = file.path(home, "Documents")
-                                print(loc)
                                 if(dir.exists(loc)) loc else NULL
                               },
                               Downloads = {
