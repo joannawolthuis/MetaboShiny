@@ -1,12 +1,25 @@
-# listener for all the file pickers, trigger a window if they are clicked
 shiny::observe({
   shinyFiles::shinyFileChoose(input, 'metadata_new', roots=gbl$paths$volumes, filetypes=c('xls', 'xlsm', 'xlsx', 'csv', 'tsv', 'txt'))
+})
+shiny::observe({
   shinyFiles::shinyFileChoose(input, 'outlist_pos', roots=gbl$paths$volumes, filetypes=c('csv', 'tsv', 'txt'))
+})
+shiny::observe({
   shinyFiles::shinyFileChoose(input, 'outlist_neg', roots=gbl$paths$volumes, filetypes=c('csv', 'tsv', 'txt'))
+})
+shiny::observe({
   shinyFiles::shinyFileChoose(input, 'custom_db', roots=gbl$paths$volumes, filetypes=c('csv'))
+})
+shiny::observe({
   shinyFiles::shinyFileChoose(input, 'metadata', roots=gbl$paths$volumes, filetypes=c('xls', 'xlsm', 'xlsx', 'csv', 'tsv', 'txt'))
+})
+shiny::observe({
   shinyFiles::shinyFileChoose(input, 'database', roots=gbl$paths$volumes, filetypes=c('sqlite3', 'db', 'sqlite'))
+})
+shiny::observe({
   shinyFiles::shinyFileChoose(input, 'taskbar_image_path', roots=gbl$paths$volumes, filetypes=c('png', 'jpg', 'jpeg', 'bmp'))
+})
+shiny::observe({
   shinyFiles::shinyFileChoose(input, 'custom_db_img_path', roots=gbl$paths$volumes, filetypes=c('png', 'jpg', 'jpeg', 'bmp'))
 })
 
@@ -16,11 +29,12 @@ shiny::observe({
     missValues$pos <- missValues$neg <- c()
     path = shinyFiles::parseFilePaths(gbl$paths$volumes, 
                                       input[[item]])$datapath
-    hadRecent <- "Recent" %in% names(gbl$paths$volumes)
     gbl$paths$volumes$Recent <<- dirname(path)
-    if(!hadRecent){
-      gbl$paths$volumes <<- rev(gbl$paths$volumes)
-    }
+    recentPos = which(names(gbl$paths$volumes) == "Recent")
+    rest = setdiff(1:length(gbl$paths$volumes), recentPos)
+    isolate({
+      gbl$paths$volumes <<- gbl$paths$volumes[c(recentPos, rest)]
+    })
   })
 })
 

@@ -46,6 +46,9 @@ shiny::observeEvent(input$initialize, {
                                      data.table = TRUE,
                                      header = T)
       
+      keep.samps = !duplicated(metshiCSV$sample)
+      metshiCSV = metshiCSV[keep.samps,]
+      
       # create empty mSet with 'stat' as default mode
       shiny::setProgress(session=session, value= .2)
       

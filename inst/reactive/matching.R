@@ -304,8 +304,7 @@ lapply(c("prematch","search_mz"), function(search_type){
         RSQLite::dbExecute(conn, "CREATE INDEX cont_str ON match_content(structure)")
         if(search_type == "prematch"){
           mSet$metshiParams$prematched<<-T
-          fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
-          save(mSet, file = fn)
+          filemanager$do <- "save"
           search_button$on <- FALSE   
         }else{
           search$go <- TRUE
@@ -400,6 +399,9 @@ shiny::observe({
     shiny::withProgress({
       if(input$tab_iden_2 == "mzmol"){
         if(lcl$prev_mz != my_selection$mz & !identical(lcl$vectors$prev_dbs, lcl$vectors$db_search_list)){
+          
+          isoLbls <- if(!is.null(input$show_iso_labels)) F else input$show_iso_labels
+          
           matches = data.table::as.data.table(get_prematches(who = gsub(my_selection$mz, 
                                                                         pattern="/.*$|RT.*$", 
                                                                         replacement=""),
@@ -408,7 +410,7 @@ shiny::observe({
                                                              showadd = c(),
                                                              showdb = c(),
                                                              showiso = c(),
-                                                             showIsolabels = input$show_iso_labels))
+                                                             showIsolabels = isoLbls))
           
           if(nrow(matches) == 0){
             shown_matches$forward_unique <- data.table::data.table()
