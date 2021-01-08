@@ -141,11 +141,15 @@ shiny::observeEvent(input$initialize, {
       
       # = = = = = = = = = = = = = = =
       
-      mSet <- NULL
+      if(exists(mSet)){
+        remove(mSet)
+      }
+      
       mSet <- MetaboAnalystR::InitDataObjects(data.type = "pktable",
                                               anal.type = "stat",
                                               paired = FALSE)
       
+      mSet$dataSet$orig <- qs::qread("data_orig.qs")
       anal.type <<- "stat"
       mSet$dataSet$paired <- mSet$settings$ispaired <- F
       
