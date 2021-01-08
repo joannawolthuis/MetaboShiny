@@ -1,48 +1,61 @@
-shiny::observe({
-  shinyFiles::shinyFileChoose(input, 'metadata_new', roots=gbl$paths$volumes, filetypes=c('xls', 'xlsm', 'xlsx', 'csv', 'tsv', 'txt'))
-})
-shiny::observe({
-  shinyFiles::shinyFileChoose(input, 'outlist_pos', roots=gbl$paths$volumes, filetypes=c('csv', 'tsv', 'txt'))
-})
-shiny::observe({
-  shinyFiles::shinyFileChoose(input, 'outlist_neg', roots=gbl$paths$volumes, filetypes=c('csv', 'tsv', 'txt'))
-})
-shiny::observe({
-  shinyFiles::shinyFileChoose(input, 'custom_db', roots=gbl$paths$volumes, filetypes=c('csv'))
-})
-shiny::observe({
-  shinyFiles::shinyFileChoose(input, 'metadata', roots=gbl$paths$volumes, filetypes=c('xls', 'xlsm', 'xlsx', 'csv', 'tsv', 'txt'))
-})
-shiny::observe({
-  shinyFiles::shinyFileChoose(input, 'database', roots=gbl$paths$volumes, filetypes=c('sqlite3', 'db', 'sqlite'))
-})
-shiny::observe({
-  shinyFiles::shinyFileChoose(input, 'taskbar_image_path', roots=gbl$paths$volumes, filetypes=c('png', 'jpg', 'jpeg', 'bmp'))
-})
-shiny::observe({
-  shinyFiles::shinyFileChoose(input, 'custom_db_img_path', roots=gbl$paths$volumes, filetypes=c('png', 'jpg', 'jpeg', 'bmp'))
-})
+# shiny::fileInput()
+# 
+# shinyFiles::shinyFileChoose(input, 
+#                             'metadata_new',
+#                             roots=exprToFunction(reactiveVolumes),
+#                             filetypes=c('xls', 'xlsm', 'xlsx', 'csv', 'tsv', 'txt'),
+#                             defaultRoot = "Recent",)
+# 
+# 
+# shinyFiles::shinyFileChoose(input,
+#                             'outlist_pos',
+#                             roots=exprToFunction(reactiveVolumes),
+#                             filetypes=c('csv', 'tsv', 'txt'),
+#                             defaultRoot = "Recent")
+# 
+# 
+# shinyFiles::shinyFileChoose(input, 
+#                             'outlist_neg',
+#                             roots=exprToFunction(reactiveVolumes),
+#                             filetypes=c('csv', 'tsv', 'txt'),
+#                             defaultRoot = "Recent")
+# 
+# 
+# shinyFiles::shinyFileChoose(input,
+#                             'custom_db',
+#                             roots=exprToFunction(reactiveVolumes),
+#                             filetypes=c('csv'),
+#                             defaultRoot = "Recent")
+# 
+# 
+# shinyFiles::shinyFileChoose(input, 
+#                             'metadata',
+#                             roots=exprToFunction(reactiveVolumes),
+#                             filetypes=c('xls', 'xlsm', 'xlsx', 'csv', 'tsv', 'txt'),
+#                             defaultRoot = "Recent")
+# 
+# shinyFiles::shinyFileChoose(input,
+#                             'database',
+#                             roots=exprToFunction(reactiveVolumes),
+#                             filetypes=c('sqlite3', 'db', 'sqlite'),
+#                             defaultRoot = "Recent")
+# 
+# shinyFiles::shinyFileChoose(input, 'taskbar_image_path', 
+#                             roots=exprToFunction(reactiveVolumes), 
+#                             filetypes=c('png', 'jpg', 'jpeg', 'bmp'))
+# 
+# shinyFiles::shinyFileChoose(input, 'custom_db_img_path', 
+#                             roots=exprToFunction(reactiveVolumes), 
+#                             filetypes=c('png', 'jpg', 'jpeg', 'bmp'))
+# 
+# reactiveVolumes <- reactiveVal(gbl$paths$volumes)
 
-shiny::observe({
-  lapply(c("outlist_pos", "outlist_neg", "metadata", "metadata_new"), function(item){
-    if(!is.list(input[[item]])) return()
-    missValues$pos <- missValues$neg <- c()
-    path = shinyFiles::parseFilePaths(gbl$paths$volumes, 
-                                      input[[item]])$datapath
-    gbl$paths$volumes$Recent <<- dirname(path)
-    recentPos = which(names(gbl$paths$volumes) == "Recent")
-    rest = setdiff(1:length(gbl$paths$volumes), recentPos)
-    isolate({
-      gbl$paths$volumes <<- gbl$paths$volumes[c(recentPos, rest)]
-    })
-  })
-})
 
 # observes if a new tbl csv is chosen by user
 shiny::observe({
   # - - - -
-  if(!is.list(input$custom_db)) return() # if nothing is chosen, do nothing
-  db_path <- shinyFiles::parseFilePaths(gbl$paths$volumes, input$custom_db)$datapath
+  if(is.null(input$custom_db)) return() # if nothing is chosen, do nothing
+  db_path <- input$custom_db$datapath
   preview <- data.table::fread(db_path, header = T, nrows = 3)
   output$db_example <- DT::renderDataTable({
     DT::datatable(data = preview,
@@ -56,9 +69,8 @@ shiny::observe({
 # observes if a new taskbar image is chosen by user
 shiny::observe({
   # - - - -
-  if(!is.list(input$custom_db_img_path)) return() # if nothing is chosen, do nothing
-  img_path <- shinyFiles::parseFilePaths(gbl$paths$volumes, 
-                                         input$custom_db_img_path)$datapath
+  if(is.null(input$custom_db_img_path)) return() # if nothing is chosen, do nothing
+  img_path <- input$custom_db_img_path$datapath
   new_path <- file.path(getwd(), "www", basename(img_path)) # set path to copy to
   gbl$paths$custom.db.path <<- new_path
   # copy image to the www folder
@@ -73,9 +85,8 @@ shiny::observe({
 
 # observes if a new taskbar image is chosen by user
 shiny::observe({
-  if(!is.list(input$taskbar_image_path)) return() # if nothing is chosen, do nothing
-  img_path <- shinyFiles::parseFilePaths(gbl$paths$volumes, 
-                                         input$taskbar_image_path)$datapath
+  if(is.null(input$taskbar_image_path)) return() # if nothing is chosen, do nothing
+  img_path <- input$taskbar_image_path$datapath
   new_path <- file.path(getwd(), "www", basename(img_path)) # set path to copy to
 
   # copy image to the www folder

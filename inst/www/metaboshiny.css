@@ -165,18 +165,12 @@
 }
 
 .progress-bar {
-  height: 15px;
-  position: absolute;
-  left: 15px;
-  background: linear-gradient(to right, transparent 50%, white 50%), linear-gradient(to right, orange, yellow, green, cyan, blue, violet);
-  background-size: 5px 2px, 100% 1px;
+    color: black;
+    background: -webkit-linear-gradient(left, #ffd27e , #ffff90, #85ff85, #7bffff, #7d7dff, #ec66ec);
+    background: -o-linear-gradient(right, #ffd27e , #ffff90, #85ff85, #7bffff, #7d7dff, #ec66ec);
+    background: -moz-linear-gradient(right, #ffd27e , #ffff90, #85ff85, #7bffff, #7d7dff, #ec66ec);
+    background: linear-gradient(to right, #ffd27e , #ffff90, #85ff85, #7bffff, #7d7dff, #ec66ec);
 }
-
-/*
-.progress-text {
-  display: none;
-}
-*/
 
 .outlined {
  font-size: 1.5em;

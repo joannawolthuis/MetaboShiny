@@ -399,9 +399,6 @@ shiny::observe({
     shiny::withProgress({
       if(input$tab_iden_2 == "mzmol"){
         if(lcl$prev_mz != my_selection$mz & !identical(lcl$vectors$prev_dbs, lcl$vectors$db_search_list)){
-          
-          isoLbls <- if(!is.null(input$show_iso_labels)) F else input$show_iso_labels
-          
           matches = data.table::as.data.table(get_prematches(who = gsub(my_selection$mz, 
                                                                         pattern="/.*$|RT.*$", 
                                                                         replacement=""),
@@ -410,8 +407,7 @@ shiny::observe({
                                                              showadd = c(),
                                                              showdb = c(),
                                                              showiso = c(),
-                                                             showIsolabels = isoLbls))
-          
+                                                             showIsolabels = input$show_iso_labels))
           if(nrow(matches) == 0){
             shown_matches$forward_unique <- data.table::data.table()
             shown_matches$forward_full <- data.table::data.table()

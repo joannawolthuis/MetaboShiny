@@ -101,6 +101,9 @@ import.pat.csvs <- function(metapath,
                             missList = c(pos=c(),neg=c()),
                             roundMz = T){
   
+  #metapath="~/Downloads/Metadata for Troubleshooting.csv"
+  #pospath = "~/Downloads/Peakdata for Troubleshooting.csv"
+  
   ppm = as.numeric(ppm)
 
   metadata = NULL
@@ -186,7 +189,7 @@ import.pat.csvs <- function(metapath,
     # get actual data
     print("Subsetting table...")
     write_loc = tempfile()
-    if(file.exists(write_loc)) file.remove(write.loc)
+    if(file.exists(write_loc)) file.remove(write_loc)
     con_read = base::file(peakpath, "r")
     cols = stringr::str_split(readLines(con_read, n = 1), ",|\\t")[[1]]
     

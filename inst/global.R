@@ -293,7 +293,8 @@ functions = list(# default color functions at startup, will be re-loaded from op
 paths = list(
   # available paths when selecting a new file or folder
   volumes = {
-    vols = c("Your Files",
+    vols = c("Recent",
+            "Your Files",
              "Home",
              "Documents",
              "Downloads",
@@ -303,6 +304,8 @@ paths = list(
     folders = lapply(vols, 
                      FUN = function(folder){
                        switch(folder,
+                              Recent = system.file("examples",
+                                                   package = "MetaboShiny"),
                               Home = home,
                               `Your Files` = file.path(home, "MetaboShiny"),
                               Documents = {
@@ -324,6 +327,7 @@ paths = list(
                               })
                      })
     names(folders) = vols
+    folders[!sapply(folders, is.null)]
     unlist(folders[!sapply(folders, is.null)])
   }
 ),
@@ -411,7 +415,8 @@ vectors = list(
 )
 
 gbl$vectors$db_categories$all <- gbl$vectors$db_list
-
+gbl$vectors$example_sizes <- file.size(list.files(gbl$paths$volumes[["Examples"]],full.names = T))
+gbl$vectors$example_md5s <- tools::md5sum(list.files(gbl$paths$volumes[["Examples"]],full.names = T))
 gbl$vectors$wordcloud$filters <- list(
   stopwords = unique(c(tidytext::stop_words$word, 
                        qdapDictionaries::Top200Words,
@@ -453,12 +458,5 @@ session_cl <- NULL
 debug_mSet <- NULL
 debug_lcl <- NULL
 debug_input <- NULL
-
-try({
-  success=F
-  orca_server <- plotly::orca_serve()
-  success=T
-},silent=T)
-if(!success) print("Orca isn't working, please check your installation. If on Mac, please try starting Rstudio from the command line with the command 'open -a Rstudio'")
 
 msg.vec <- c()

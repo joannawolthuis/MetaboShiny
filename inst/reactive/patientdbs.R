@@ -11,9 +11,9 @@ lapply(c("merge",
                                     merge = {
                                       if(!is.null(input$ms_modes)){
                                         all(sapply(input$ms_modes, function(ionMode){
-                                          is.list(input[[paste0("outlist_", ionMode)]])
-                                        }) & is.list(input$metadata))  
-                                      }else FALSE
+                                          !is.null(input[[paste0("outlist_", ionMode)]])
+                                        }) & !is.null(input$metadata))  
+                                      } else FALSE
                                     },
                                     csv = paste0(input$proj_name_new, ".csv") %in% folder_files,
                                     db = paste0(input$proj_name_new, ".db") %in% folder_files)
@@ -28,14 +28,22 @@ lapply(c("merge",
          })
 
 shiny::observeEvent(input$ms_modes, {
-  pickerUI = lapply(input$ms_modes, function(mode){
-    char=if(mode == "pos") "+" else "-"
-    shinyFiles::shinyFilesButton(paste0('outlist_',mode), 
-                                 gsubfn::fn$paste('upload $char peaks'), 
-                                 gsubfn::fn$paste('Upload $char mode peaks'), 
-                                 FALSE)
-  })
-  output$outlist_pickers <-shiny::renderUI(pickerUI)
+  if(length(input$ms_modes) > 0){
+    eachCol = 12/length(input$ms_modes)
+    pickerUI = lapply(input$ms_modes, function(mode){
+      char=if(mode == "pos") "+" else "-"
+      shiny::column(width = eachCol,
+                    shiny::fileInput(paste0('outlist_',mode), 
+                                     gsubfn::fn$paste('Select $char peaks'), 
+                                     buttonLabel="Browse", accept = c(".csv",".tsv"))
+                    )
+      # shinyFiles::shinyFilesButton(paste0('outlist_',mode), 
+      #                              gsubfn::fn$paste('upload $char peaks'), 
+      #                              gsubfn::fn$paste('Upload $char mode peaks'), 
+      #                              FALSE)
+    })
+    output$outlist_pickers <- shiny::renderUI(shiny::fluidRow(align="center",pickerUI)) 
+  }
 })
 
 # create reactive object
@@ -98,18 +106,18 @@ output$missMzPlot <- shiny::renderPlot({
 # triggers when user wants to check missing values profile
 shiny::observeEvent(input$checkMiss, {
   files.present = all(sapply(input$ms_modes, function(ionMode){
-    is.list(input[[paste0("outlist_", ionMode)]])
+    !is.null(input[[paste0("outlist_", ionMode)]])
   }))
   
-  file.pos = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath
-  file.neg = shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath
+  file.pos = input$outlist_pos$datapath
+  file.neg = input$outlist_neg$datapath
   
   if(files.present){
-    if(is.list(input$outlist_pos)){
+    if(!is.null(input$outlist_pos)){
       nrows = length(vroom::vroom_lines(file.pos, altrep = TRUE, progress = TRUE)) - 1L
       missValues$pos = getMissing(file.pos, nrow=nrows)
     }
-    if(is.list(input$outlist_neg)){
+    if(!is.null(input$outlist_neg)){
       nrows = length(vroom::vroom_lines(file.neg, altrep = TRUE, progress = TRUE)) - 1L
       missValues$neg = getMissing(file.neg, nrow=nrows)
     }
@@ -123,8 +131,8 @@ shiny::observeEvent(input$checkMiss, {
 shiny::observeEvent(input$create_csv,{
   
   files.present = all(sapply(input$ms_modes, function(ionMode){
-    is.list(input[[paste0("outlist_", ionMode)]])
-  }))# & is.list(input$metadata))
+    !is.null(input[[paste0("outlist_", ionMode)]])
+  }))# & !is.null(input$metadata))
   
   if(!files.present) return(NULL)
   
@@ -181,9 +189,9 @@ shiny::observeEvent(input$create_csv,{
       
       # if loading in .csv files...
       import.pat.csvs(ppm = input$ppm,
-                      pospath = if(hasPos) shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath else c(),
-                      negpath = if(hasNeg) shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath else c(),
-                      metapath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath,
+                      pospath = if(hasPos) input$outlist_pos$datapath else c(),
+                      negpath = if(hasNeg) input$outlist_neg$datapath else c(),
+                      metapath = input$metadata$datapath,
                       wipe.regex = input$wipe_regex,
                       missperc.mz = input$perc_limit_mz,
                       missperc.samp = input$perc_limit_samp,
@@ -207,23 +215,10 @@ shiny::observeEvent(input$create_csv,{
   })
 })
 
-# imports existing db file
-# TODO: is deprecated, fix!!
-shiny::observeEvent(input$import_db, {
-  lcl$paths$patdb <<- input$pat_db$datapath
-  output$db_upload_check <- shiny::renderImage({
-    # When input$n is 3, filename is ./images/image3.jpeg
-    filename <- normalizePath('www/yes.png')
-    # Return a list containing the filename and alt text
-    list(src = filename, width = 20,
-         height = 20)
-  }, deleteFile = FALSE)
-})
-
 
 shiny::observeEvent(input$metadata_new_add, {
   
-  meta_path <- shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata_new)$datapath
+  meta_path <- input$metadata_new$datapath
   success = F
   try({
     new_meta <- data.table::fread(meta_path)
@@ -284,22 +279,36 @@ shiny::observeEvent(input$check_csv, {
 output$wipe_regex_ui <- shiny::renderUI({
   if(length(input$ms_modes) > 0){
     myPath = lapply(input$ms_modes, function(mode){
-      path=input[[paste0('outlist_',mode)]]
+      inp = paste0('outlist_',mode)
+      if(!is.null(inp)){
+        path=input[[inp]]$datapath  
+      }else{
+        path=NULL
+      }
+      path
     })[[1]]
-    if(is.list(myPath)){
-      path = shinyFiles::parseFilePaths(gbl$paths$volumes, 
-                                        myPath)$datapath
-      loadedExample = grepl("MetaboShiny(\\/|\\\\)inst(\\/|\\\\)examples",path)
-      shiny::textInput("wipe_regex",
-                       tags$i("Regex to adjust peaklist names to metadata sample names - the match is removed from each name (optional):"),
-                       value = if(!loadedExample) "" else ".*_(?>POS|NEG)_[0+]*", 
-                       width="50%")
+    if(!is.null(myPath)){
+      exampleSizes = gbl$vectors$example_sizes
+      sameSize = file.size(myPath) %in% exampleSizes
+      if(sameSize){
+        exampleSums = gbl$vectors$example_md5s
+        loadedExample = tools::md5sum(myPath) %in% exampleSums
+        shiny::textInput("wipe_regex",
+                         tags$i("Regex to adjust peaklist names to metadata sample names - the match is removed from each name (optional):"),
+                         value = if(!loadedExample) "" else ".*_(?>POS|NEG)_[0+]*", 
+                         width="50%")      
+      }else{
+        shiny::textInput("wipe_regex",
+                         tags$i("Regex to adjust peaklist names to metadata sample names - the match is removed from each name (optional):"), 
+                         value = "",
+                         width="50%")   
+      }
     }else{
       shiny::textInput("wipe_regex",
                        tags$i("Regex to adjust peaklist names to metadata sample names - the match is removed from each name (optional):"), 
                        value = "",
-                       width="50%")
-    }  
+                       width="50%")  
+    }
   }else{
     shiny::textInput("wipe_regex",
                      tags$i("Regex to adjust peaklist names to metadata sample names - the match is removed from each name (optional):"), 
