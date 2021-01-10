@@ -82,7 +82,7 @@ RUN R -e 'BiocManager::install("RBGL")'
 RUN R -e 'pacman::p_load(crmn)'
 
                          
-RUN R -e 'devtools::install_github("xia-lab/MetaboAnalystR")'
+RUN R -e 'devtools::install_github("xia-lab/MetaboAnalystR", "0d61192")'
 RUN R -e 'devtools::install_github("yixuan/showtext")'
 RUN R -e 'devtools::install_github("joannawolthuis/ggVennDiagram")'
 RUN R -e 'devtools::install_github("dengkuistat/WaveICA")'

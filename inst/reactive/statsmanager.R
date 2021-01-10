@@ -483,46 +483,128 @@ shiny::observe({
                    curr = as.data.table(curr)
                    
                    if(length(batches) > 0){
-                     # make "joined" label of batch and group for sampling
-                     config$split_label = paste0(config$label, 
-                                                "AND", 
-                                                config[,..batches][[1]]) 
                      
                      if(batch_sampling != "none"){
                        print("resampling classes per batch group")
                        # RESAMPLE BASED ON BATCH VARIABLE
                        t = as.data.table(cbind(config, curr))
-                       t$split_label <- as.factor(t$split_label)
+                       split_label = paste0(t$label,"AND",t[,..batches][[1]])
+                       size_per_group = if(batch_sampling == "down") min(table(split_label)) else max(table(split_label))
+                       configCols = 1:ncol(config)
+                       mzCols = setdiff(1:ncol(t), configCols)
+                       mzs=colnames(t)[mzCols]
+                       colnames(t)[mzCols]=paste0("mz",1:length(mzCols))
+                       spl.t = split(t, t[,..batches])
                        if(input$ml_batch_size_sampling){
                          # balance within and between countries
-                         r = switch(batch_sampling,
-                                    up = caret::upSample(t, t$split_label),
-                                    ROSE = ROSE::ROSE(split_label ~ ., data = t),
-                                    SMOTE = smotefamily::SMOTE(X = t, target = t$split_label),
-                                    down = caret::downSample(t, t$split_label))
-                         r$Class <- NULL
-                         r <- as.data.table(r)
+                         library(plyr)
+                         balanced.spl.t <- lapply(spl.t, function(l){
+                           r = switch(batch_sampling,
+                                      up = upsample.adj(l, l$label, maxClass = size_per_group),
+                                      rose = {
+                                        resampled = ROSE::ROSE(label ~ ., 
+                                                               data = {
+                                                                 dat = l[, c(labelCol, mzCols), with=F]
+                                                                 cols = colnames(dat)[2:ncol(dat)]
+                                                                 dat[, (cols) := lapply(.SD, as.numeric), 
+                                                                     .SDcols = cols]
+                                                                 dat
+                                                               }, 
+                                                               N = size_per_group * 2)
+                                        resampled.data = resampled$data
+                                        colnames(resampled.data) <- c("label", mzs)
+                                        keep.config = sapply(configCols, function(i){
+                                          length(unique(l[[i]] )) == 1
+                                        })
+                                        resampled.config = data.table::as.data.table(lapply(which(keep.config), 
+                                                                                            function(i){
+                                          c(rep(unique(l[[i]]), nrow(resampled.data)))
+                                        }))
+                                        colnames(resampled.config) <- colnames(l)[which(keep.config)]
+                                        joined.data = cbind(resampled.config, resampled.data)
+                                        joined.data
+                                      },
+                                      # smote = {
+                                      #   resampled = smotefamily::SMOTE(X = {
+                                      #     dat = l[, c(labelCol, mzCols), with=F]
+                                      #     #l_subset$label = lbls_num
+                                      #     cols = colnames(dat)[2:ncol(dat)]
+                                      #     dat[, (cols) := lapply(.SD, as.numeric), .SDcols = cols]
+                                      #     dat[,2:ncol(dat)]
+                                      #   }, 
+                                      #   target = l$label,
+                                      #   dup_size = round(size_per_group/min(table(l$label))*2,digits = 0))
+                                      #   # restore to old format (colnames, re-add batch column)
+                                      # },
+                                      down = downsample.adj(l, l$label, minClass = size_per_group))
+                           if("Class" %in% names(r)){
+                             r$Class <- NULL  
+                           }
+                           as.data.table(r)   
+                         })
+                         r = rbindlist(balanced.spl.t)
                        }else if(length(batches)==1){
                          # balance within countries
-                         spl.t = split(t, t[,..batches])
-                         balanced.spl.t <- lapply(spl.t, function(t){
+                         balanced.spl.t <- lapply(spl.t, function(l){
+                           size_per_group = if(batch_sampling == "down") min(table(l$label)) else max(table(l$label))
                            r = switch(batch_sampling,
-                                      up = caret::upSample(t, t$label),
-                                      ROSE = ROSE::ROSE(label ~ ., data = t),
-                                      SMOTE = smotefamily::SMOTE(X = t, target = t$label),
-                                      down = caret::downSample(t, t$label))
-                           r$Class <- NULL
-                           as.data.table(r)   
+                                      up = upsample.adj(l, l$label, maxClass = size_per_group),
+                                      rose = {
+                                        resampled = ROSE::ROSE(label ~ ., 
+                                                               data = {
+                                                                 dat = l[, c(labelCol, mzCols), with=F]
+                                                                 cols = colnames(dat)[2:ncol(dat)]
+                                                                 dat[, (cols) := lapply(.SD, as.numeric), 
+                                                                     .SDcols = cols]
+                                                                 dat
+                                                               }, 
+                                                               N = size_per_group * 2)
+                                        resampled.data = resampled$data
+                                        colnames(resampled.data) <- c("label", mzs)
+                                        keep.config = sapply(configCols, function(i){
+                                          length(unique(l[[i]] )) == 1
+                                        })
+                                        resampled.config = data.table::as.data.table(lapply(which(keep.config), 
+                                                                                            function(i){
+                                                                                              c(rep(unique(l[[i]]), 
+                                                                                                    nrow(resampled.data)))
+                                                                                            }))
+                                        colnames(resampled.config) <- colnames(l)[which(keep.config)]
+                                        joined.data = cbind(resampled.config, resampled.data)
+                                        joined.data
+                                      },
+                                      # smote = {
+                                      #   resampled = smotefamily::SMOTE(X = {
+                                      #     dat = l[, c(labelCol, mzCols), with=F]
+                                      #     #l_subset$label = lbls_num
+                                      #     cols = colnames(dat)[2:ncol(dat)]
+                                      #     dat[, (cols) := lapply(.SD, as.numeric), .SDcols = cols]
+                                      #     dat[,2:ncol(dat)]
+                                      #   }, 
+                                      #   target = l$label,
+                                      #   dup_size = round(size_per_group/min(table(l$label))*2,digits = 0))
+                                      #   # restore to old format (colnames, re-add batch column)
+                                      # },
+                                      down = downsample.adj(l, l$label, minClass = size_per_group))
+                           if("Class" %in% names(r)){
+                             r$Class <- NULL  
+                           }
+                           as.data.table(r) 
                          })
                         r = rbindlist(balanced.spl.t)
                        }else{
                         r = as.data.table(cbind(config, curr))
                        }
                        configCols = colnames(config)
+                       configCols = intersect(configCols, colnames(r))
                        config = r[, ..configCols]
+                       config$split_label = paste0(r$label, 
+                                                   "AND", 
+                                                   r[,..batches][[1]]) 
                        curr = r[, -..configCols]
-                       config$split <- NULL  
-                       #curr$label = unlist(lapply(stringr::str_split(curr$split_label, "AND"), function(x) x[1]))
+                       if("split" %in% colnames(config)){
+                         config$split <- NULL  
+                       }
                      }
                      
                      if(lcl$vectors$ml_test[1] %in% c("split", "all") & 
