@@ -18,7 +18,7 @@ shiny::observe({
           
           oldSettings <- mSet$settings
           
-          mSet_r <- reset.mSet(mSet,
+          mSet <- reset.mSet(mSet,
                              fn = file.path(lcl$paths$proj_dir, 
                                             paste0(lcl$proj_name,
                                                    "_ORIG.metshi")))
