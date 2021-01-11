@@ -160,6 +160,12 @@
              }
 */
 
+.progress-bar.active, .progress.active .progress-bar {
+    -webkit-animation: none;
+    -o-animation: none;
+    animation: none;
+}
+
 .progress-text {
 	display:none;
 }

@@ -995,6 +995,7 @@ ggPlotBar <- function(data,
   
   data.subset <- data.ordered[1:topn,]    
   data.subset$`m/z` <- gsub("`|^X","",data.subset$`m/z`)
+  data.subset$`m/z` <- gsub("\\.$","-",data.subset$`m/z`)
   
   p <- ggplot2::ggplot(data.subset, 
                        ggplot2::aes(x = reorder(`m/z`, -importance.mean),

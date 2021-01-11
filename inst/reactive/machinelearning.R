@@ -42,12 +42,13 @@ shiny::observe({
 })
 
 output$ml_name <- shiny::renderUI({
-  ml_name = paste0(if(input$ml_run_on_norm) "norm" else "orig",
+  ml_name = trimws(paste0(if(input$ml_run_on_norm) "norm" else "orig",
                    " ",
                    input$ml_train_perc, "%train",
                    " ",
                    paste0("crossVal-",input$ml_perf_metr,input$ml_folds),
                    " ",
+                   if(length(input$ml_batch_covars) > 0) paste0("batchSplit-", paste0(input$ml_batch_covars, collapse="AND")),
                    if(length(input$ml_batch_covars) > 0 & input$ml_batch_sampling != "none"){
                      paste0("balancedMethod-",
                             input$ml_batch_sampling, 
@@ -58,13 +59,13 @@ output$ml_name <- shiny::renderUI({
                      paste0("metadataInclude", paste0(input$ml_include_covars, 
                                                       collapse="+"), " ")
                    }else{ "" },
-                   if(input$ml_sampling != "none") paste0("balancedClasses-", input$ml_sampling, ""," ") else "",
+                   #if(input$ml_sampling != "none") paste0("balancedClasses-", input$ml_sampling, ""," ") else "",
                    if(!(input$ml_samp_distr %in% c(" ", "no"))){
                      paste0("usePrevTrainTest-", input$ml_samp_distr, " ")
                    }else{""},
                    if(!is.null(lcl$vectors$ml_train)){paste0("trainOn-", paste0(lcl$vectors$ml_train, collapse="="))} else "",
                    if(!is.null(lcl$vectors$ml_test)){paste0("testOn-", paste0(lcl$vectors$ml_test, collapse="="))} else ""
-  )
+  ))
   
   caret.mdls <- caret::getModelInfo()
   caret.methods <- names(caret.mdls)

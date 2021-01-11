@@ -97,7 +97,7 @@ shiny::observe({
                                         n_components = input$umap_ncomp,
                                         n_neighbors = input$umap_neighbors)
                    mSet$analSet$umap <- umapRes
-                   })
+                 })
                  success = T
                },
                meba = {
@@ -343,16 +343,17 @@ shiny::observe({
                    curr <- data.table::as.data.table(mSet$dataSet[[pickedTbl]])
                    
                    if(input$ml_specific_mzs != "no"){
-                      shiny::showNotification("Using user-specified m/z set.")
-                      if(!is.null(input$ml_mzs)){
-                        curr <- curr[,input$ml_mzs, with=F]
-                      }else{
-                        mzs = getTopHits(mSet, 
-                                         input$ml_specific_mzs, 
-                                         input$ml_mzs_topn)[[1]]
-                        mzs = gsub("^X|\\.$", "", mzs)
-                        curr <- curr[,..mzs]
-                      }
+                     shiny::showNotification("Using user-specified m/z set.")
+                     if(!is.null(input$ml_mzs)){
+                       curr <- curr[,input$ml_mzs, with=F]
+                     }else{
+                       mzs = getTopHits(mSet, 
+                                        input$ml_specific_mzs, 
+                                        input$ml_mzs_topn)[[1]]
+                       mzs = gsub("^X", "", mzs)
+                       mzs = gsub("\\.$", "-", mzs)
+                       curr <- curr[,..mzs]
+                     }
                    }
                    
                    # replace NA's with zero
@@ -391,7 +392,7 @@ shiny::observe({
                    
                    batch_sampling = input$ml_batch_sampling
                    batches = input$ml_batch_covars
-                  
+                   
                    if(input$ml_samp_distr != " "){
                      spl.name = stringr::str_split(input$ml_samp_distr, " - ")[[1]]
                      ml.method = spl.name[1]
@@ -408,8 +409,6 @@ shiny::observe({
                        vec = rep("train", nrow(mSet$dataSet$covars))
                        vec[as.numeric(ml.dist$test)] <- "test"
                        config$split <- vec
-                       lcl$vectors$ml_train <- c("split", "train")
-                       lcl$vectors$ml_test <- c("split", "test")
                      }else{
                        shiny::showNotification("Not available in this model (pre-update). Defaulting to selected settings!")
                      }
@@ -417,6 +416,9 @@ shiny::observe({
                    
                    needed_for_subset <- c(lcl$vectors$ml_train[1],
                                           lcl$vectors$ml_test[1])
+                   
+                   label = unlist(config[,mSet$settings$exp.var,with=F])
+                   #table(paste0(config$country,"AND",config$group_from_fcs_12vs345))
                    
                    config <- config[, unique(c(input$ml_include_covars,
                                                if(length(batches)>0) input$ml_batch_covars else c(),
@@ -433,48 +435,182 @@ shiny::observe({
                        config <- cbind(config, label=mSet$dataSet[[paste0(cls,"facA")]]) # add current experimental condition
                      }
                    }else{
-                     cls <- "cls"#if(input$ml_run_on_norm) "cls" else "orig.cls"
+                     cls <- "cls" #if(input$ml_run_on_norm) "cls" else "orig.cls"
                      if(nrow(config)==0){
-                       config <- data.frame(label=mSet$dataSet[[cls]])
+                       config <- data.frame(label=label)
                      }else{
                        config <- cbind(config, 
-                                       label=mSet$dataSet[[cls]]) # add current experimental condition
+                                       label=label) # add current experimental condition
                      }
                    }
                    
-                   if(!input$ml_random_split & 
-                      is.null(lcl$vectors$ml_train) & 
-                      is.null(lcl$vectors$ml_test)){
-                     try({
-                       shiny::showNotification("Using same train/test split for all repeats...")
-                     })
-                     # make split for all repeats
-                     train_idx = caret::createDataPartition(y = config$label, 
+                   # TRAIN/TEST SPLIT
+                   #lcl$vectors$ml_train
+                   #lcl$vectors$ml_test
+                   t = as.data.table(cbind(config, curr))
+                   
+                   if(!is.null(lcl$vectors$ml_train) | !is.null(lcl$vectors$ml_test)){
+                     # add clause for same train_test
+                     test_idx = NULL
+                     train_idx = NULL
+                     if(!is.null(lcl$vectors$ml_test)){
+                       test_idx = which(t[[lcl$vectors$ml_test[1]]] == lcl$vectors$ml_test[2])
+                     }
+                     if(!is.null(lcl$vectors$ml_train)){
+                       train_idx = which(t[[lcl$vectors$ml_train[1]]] == lcl$vectors$ml_train[2])
+                     }
+                     if(is.null(train_idx)){
+                       train_idx = setdiff(1:nrow(t), test_idx)  
+                     }else if(is.null(test_idx)){
+                       test_idx = setdiff(1:nrow(t), train_idx)
+                     }
+                   }else{
+                     split_label = if(length(batches) == 1){
+                       print("splitting tr/te % per batch")
+                       #table(paste0(mSet$dataSet$covars$country,"AND",t[,"label"][[1]]))
+                       paste0(t$label,"AND",t[,..batches][[1]])
+                     }else{
+                       print("unbiased split over pool")
+                       t$label
+                     }
+                     train_idx = caret::createDataPartition(y = split_label, 
                                                             p = input$ml_train_perc/100,
                                                             list = FALSE) # partition data in a balanced way (uses labels)
-                     # add column to config for this split
-                     config$split <- c("test")
-                     config$split[train_idx] <- "train"
-                     # set test_vec and train_vec c(split, train), c(split, test)
+                     test_idx = setdiff(1:nrow(t), train_idx)
+                   }
+                   
+                   training_data = t[train_idx,]
+                   testing_data = t[-train_idx,]
+                   
+                   configCols = 1:ncol(config)
+                   mzCols = setdiff(1:ncol(training_data), configCols)
+                   
+                   ## ONLY APPLY TO TRAINING
+                   ## IF BATCHES ARE PRESENT 
+                   if(length(batches) > 0 & batch_sampling != "none"){
+                     #if(batch_sampling != "none"){
+                     print("resampling classes per batch group")
+                     # RESAMPLE BASED ON BATCH VARIABLE
+                     mzs=colnames(training_data)[mzCols]
+                     colnames(training_data)[mzCols]=paste0("mz",1:length(mzCols))
+                     labelCol = which(colnames(training_data) == "label")
+                     spl.t = split(training_data, training_data[,..batches])
+                     if(input$ml_batch_size_sampling){
+                       #### RESAMPLE TO EQUALIZE BATCH CATEGORY SIZE (ALL COUNTRIES IN TRAIN SAME SIZE EACH)
+                       library(plyr)
+                       batch_sizes = sapply(spl.t, nrow)
+                       size_per_group = if(batch_sampling == "down") min(batch_sizes) else max(batch_sizes)
+                       balanced.spl.t <- lapply(spl.t, function(l){
+                         r = switch(batch_sampling,
+                                    up = upsample.adj(l, as.factor(l$label), maxClass = size_per_group),
+                                    rose = {
+                                      resampled = ROSE::ROSE(label ~ ., 
+                                                             data = {
+                                                               dat = l[, c(labelCol, mzCols), with=F]
+                                                               cols = colnames(dat)[2:ncol(dat)]
+                                                               dat[, (cols) := lapply(.SD, as.numeric), 
+                                                                   .SDcols = cols]
+                                                               dat
+                                                             }, 
+                                                             N = size_per_group * 2)
+                                      resampled.data = resampled$data
+                                      colnames(resampled.data) <- c("label", mzs)
+                                      keep.config = sapply(configCols, function(i){
+                                        length(unique(l[[i]] )) == 1
+                                      })
+                                      resampled.config = data.table::as.data.table(lapply(which(keep.config), 
+                                                                                          function(i){
+                                                                                            c(rep(unique(l[[i]]), 
+                                                                                                  nrow(resampled.data)))
+                                                                                          }))
+                                      colnames(resampled.config) <- colnames(l)[which(keep.config)]
+                                      joined.data = cbind(resampled.config, resampled.data)
+                                      joined.data
+                                    },
+                                    down = downsample.adj(l, as.factor(l$label), minClass = size_per_group))
+                         if("Class" %in% names(r)){
+                           r$Class <- NULL  
+                         }
+                         as.data.table(r)   
+                       })
+                       r = rbindlist(balanced.spl.t)
+                     }else if(length(batches)==1){
+                       ### BALANCE LABELS WITHIN BATCHES, BUT DON'T MAKE THEM ALL THE SAME SIZE
+                       balanced.spl.t <- lapply(spl.t, function(l){
+                         size_per_group = if(batch_sampling == "down") min(table(l$label)) else max(table(l$label))
+                         r = switch(batch_sampling,
+                                    up = upsample.adj(l, l$label, maxClass = size_per_group),
+                                    rose = {
+                                      resampled = ROSE::ROSE(label ~ ., 
+                                                             data = {
+                                                               dat = l[, c(labelCol, mzCols), with=F]
+                                                               cols = colnames(dat)[2:ncol(dat)]
+                                                               dat[, (cols) := lapply(.SD, as.numeric), 
+                                                                   .SDcols = cols]
+                                                               dat
+                                                             }, 
+                                                             N = size_per_group * 2)
+                                      resampled.data = resampled$data
+                                      colnames(resampled.data) <- c("label", mzs)
+                                      keep.config = sapply(configCols, function(i){
+                                        length(unique(l[[i]] )) == 1
+                                      })
+                                      resampled.config = data.table::as.data.table(lapply(which(keep.config), 
+                                                                                          function(i){
+                                                                                            c(rep(unique(l[[i]]), 
+                                                                                                  nrow(resampled.data)))
+                                                                                          }))
+                                      colnames(resampled.config) <- colnames(l)[which(keep.config)]
+                                      joined.data = cbind(resampled.config, resampled.data)
+                                      joined.data
+                                    },
+                                    down = downsample.adj(l, l$label, minClass = size_per_group))
+                         if("Class" %in% names(r)){
+                           r$Class <- NULL  
+                         }
+                         as.data.table(r) 
+                       })
+                       r = rbindlist(balanced.spl.t)
+                     }else{
+                       r = as.data.table(cbind(config, curr))
+                     }
+                     configCols = colnames(config)
+                     configCols = intersect(configCols, colnames(r))
+                     config_adj = r[, ..configCols]
+                     training_data_adj = r[, -..configCols]
+                     colnames(training_data_adj) <- mzs
+                     training_cleaned = cbind(config_adj, training_data_adj)
+                     ### CANNOT DO RANDOM SPLITS FOR EACH REP
                      lcl$vectors$ml_train <- c("split", "train")
                      lcl$vectors$ml_test <- c("split", "test")
-                   }else{
-                     if(is.null(lcl$vectors$ml_train)){
-                       lcl$vectors$ml_train <- c("all", "all")
-                     }
-                     if(is.null(lcl$vectors$ml_test)){
-                       lcl$vectors$ml_test <- c("all", "all")
-                     }
+                     #}
                      
-                     if(all(lcl$vectors$ml_test == lcl$vectors$ml_train)){
-                       if(unique(lcl$vectors$ml_test) == "all"){
-                         shiny::showNotification("No subset selected... continuing in normal non-subset mode")
-                       }else{
-                         MetaboShiny::metshiAlert("Cannot test on the training set!")
-                         return(NULL)
-                       }
+                     testing_data_adj = cbind(split = "test", testing_data)
+                     training_data_cleaned_adj = cbind(split = "train", training_cleaned)
+                     curr = rbind(testing_data_adj, 
+                                  training_data_cleaned_adj)
+                     config = curr[,..configCols]
+                   }else{
+                     train.config = training_data[,..configCols]
+                     train.mzs = training_data[,..mzCols]
+                     test.config = testing_data[,..configCols]
+                     test.mzs = testing_data[,..mzCols]
+                     test.config$split = "test"
+                     train.config$split = "train"
+                     # add the right columns and define curr
+                     curr = rbind(test.mzs, 
+                                  train.mzs)
+                     config = rbind(test.config, 
+                                    train.config)
+                     removeCols = setdiff(needed_for_subset, input$ml_include_covars)
+                     if(length(removeCols) > 0){
+                       t = t[,-removeCols,with=F]
+                       config = config[,-removeCols, with=F]
                      }
                    }
+                   
+                   lcl$vectors$ml_train = c("split","train")
+                   lcl$vectors$ml_test = c("split","test")
                    
                    config = droplevels(config)
                    config <- data.table::as.data.table(config)
@@ -482,149 +618,8 @@ shiny::observe({
                    
                    curr = as.data.table(curr)
                    
-                   if(length(batches) > 0){
-                     
-                     if(batch_sampling != "none"){
-                       print("resampling classes per batch group")
-                       # RESAMPLE BASED ON BATCH VARIABLE
-                       t = as.data.table(cbind(config, curr))
-                       split_label = paste0(t$label,"AND",t[,..batches][[1]])
-                       size_per_group = if(batch_sampling == "down") min(table(split_label)) else max(table(split_label))
-                       configCols = 1:ncol(config)
-                       mzCols = setdiff(1:ncol(t), configCols)
-                       mzs=colnames(t)[mzCols]
-                       colnames(t)[mzCols]=paste0("mz",1:length(mzCols))
-                       spl.t = split(t, t[,..batches])
-                       if(input$ml_batch_size_sampling){
-                         # balance within and between countries
-                         library(plyr)
-                         balanced.spl.t <- lapply(spl.t, function(l){
-                           r = switch(batch_sampling,
-                                      up = upsample.adj(l, l$label, maxClass = size_per_group),
-                                      rose = {
-                                        resampled = ROSE::ROSE(label ~ ., 
-                                                               data = {
-                                                                 dat = l[, c(labelCol, mzCols), with=F]
-                                                                 cols = colnames(dat)[2:ncol(dat)]
-                                                                 dat[, (cols) := lapply(.SD, as.numeric), 
-                                                                     .SDcols = cols]
-                                                                 dat
-                                                               }, 
-                                                               N = size_per_group * 2)
-                                        resampled.data = resampled$data
-                                        colnames(resampled.data) <- c("label", mzs)
-                                        keep.config = sapply(configCols, function(i){
-                                          length(unique(l[[i]] )) == 1
-                                        })
-                                        resampled.config = data.table::as.data.table(lapply(which(keep.config), 
-                                                                                            function(i){
-                                          c(rep(unique(l[[i]]), nrow(resampled.data)))
-                                        }))
-                                        colnames(resampled.config) <- colnames(l)[which(keep.config)]
-                                        joined.data = cbind(resampled.config, resampled.data)
-                                        joined.data
-                                      },
-                                      # smote = {
-                                      #   resampled = smotefamily::SMOTE(X = {
-                                      #     dat = l[, c(labelCol, mzCols), with=F]
-                                      #     #l_subset$label = lbls_num
-                                      #     cols = colnames(dat)[2:ncol(dat)]
-                                      #     dat[, (cols) := lapply(.SD, as.numeric), .SDcols = cols]
-                                      #     dat[,2:ncol(dat)]
-                                      #   }, 
-                                      #   target = l$label,
-                                      #   dup_size = round(size_per_group/min(table(l$label))*2,digits = 0))
-                                      #   # restore to old format (colnames, re-add batch column)
-                                      # },
-                                      down = downsample.adj(l, l$label, minClass = size_per_group))
-                           if("Class" %in% names(r)){
-                             r$Class <- NULL  
-                           }
-                           as.data.table(r)   
-                         })
-                         r = rbindlist(balanced.spl.t)
-                       }else if(length(batches)==1){
-                         # balance within countries
-                         balanced.spl.t <- lapply(spl.t, function(l){
-                           size_per_group = if(batch_sampling == "down") min(table(l$label)) else max(table(l$label))
-                           r = switch(batch_sampling,
-                                      up = upsample.adj(l, l$label, maxClass = size_per_group),
-                                      rose = {
-                                        resampled = ROSE::ROSE(label ~ ., 
-                                                               data = {
-                                                                 dat = l[, c(labelCol, mzCols), with=F]
-                                                                 cols = colnames(dat)[2:ncol(dat)]
-                                                                 dat[, (cols) := lapply(.SD, as.numeric), 
-                                                                     .SDcols = cols]
-                                                                 dat
-                                                               }, 
-                                                               N = size_per_group * 2)
-                                        resampled.data = resampled$data
-                                        colnames(resampled.data) <- c("label", mzs)
-                                        keep.config = sapply(configCols, function(i){
-                                          length(unique(l[[i]] )) == 1
-                                        })
-                                        resampled.config = data.table::as.data.table(lapply(which(keep.config), 
-                                                                                            function(i){
-                                                                                              c(rep(unique(l[[i]]), 
-                                                                                                    nrow(resampled.data)))
-                                                                                            }))
-                                        colnames(resampled.config) <- colnames(l)[which(keep.config)]
-                                        joined.data = cbind(resampled.config, resampled.data)
-                                        joined.data
-                                      },
-                                      # smote = {
-                                      #   resampled = smotefamily::SMOTE(X = {
-                                      #     dat = l[, c(labelCol, mzCols), with=F]
-                                      #     #l_subset$label = lbls_num
-                                      #     cols = colnames(dat)[2:ncol(dat)]
-                                      #     dat[, (cols) := lapply(.SD, as.numeric), .SDcols = cols]
-                                      #     dat[,2:ncol(dat)]
-                                      #   }, 
-                                      #   target = l$label,
-                                      #   dup_size = round(size_per_group/min(table(l$label))*2,digits = 0))
-                                      #   # restore to old format (colnames, re-add batch column)
-                                      # },
-                                      down = downsample.adj(l, l$label, minClass = size_per_group))
-                           if("Class" %in% names(r)){
-                             r$Class <- NULL  
-                           }
-                           as.data.table(r) 
-                         })
-                        r = rbindlist(balanced.spl.t)
-                       }else{
-                        r = as.data.table(cbind(config, curr))
-                       }
-                       configCols = colnames(config)
-                       configCols = intersect(configCols, colnames(r))
-                       config = r[, ..configCols]
-                       config$split_label = paste0(r$label, 
-                                                   "AND", 
-                                                   r[,..batches][[1]]) 
-                       curr = r[, -..configCols]
-                       if("split" %in% colnames(config)){
-                         config$split <- NULL  
-                       }
-                     }
-                     
-                     if(lcl$vectors$ml_test[1] %in% c("split", "all") & 
-                        lcl$vectors$ml_train[1] %in% c("split","all")){
-                       print("distributing batches equally over train/test")  
-                       train_idx = caret::createDataPartition(y = config$split_label, 
-                                                              p = input$ml_train_perc/100,
-                                                              list = FALSE) # partition data in a balanced way (uses labels)
-                       
-                       config$split <- "test"
-                       config$split[train_idx] <- "train"
-                     }
-                     config$split_label <- NULL
-                   }
-                   
-                   print(lcl$vectors$ml_test)
-                   print(lcl$vectors$ml_train)
-                   
                    predictor = config$label
-                   predict_idx <- which(colnames(config)== "label")
+                   predict_idx <- which(colnames(config) == "label")
                    exact_matches <- which(unlist(lapply(config, function(col) all(as.numeric(as.factor(col)) == as.numeric(as.factor(predictor))))))
                    remove = setdiff(exact_matches, predict_idx)
                    
@@ -636,11 +631,10 @@ shiny::observe({
                    outersect = function(a,b) setdiff(union(a,b), intersect(a,b))
                    
                    if(length(batches) > 0 ){
-                     
                      alsoRemove = outersect(input$ml_batch_covars, 
                                             input$ml_include_covars)
                      
-                     alsoRemove = outersect(alsoRemove, needed_for_subset)
+                     #alsoRemove = outersect(alsoRemove, needed_for_subset)
                      remove = c(remove, alsoRemove)
                    }
                    
@@ -651,6 +645,7 @@ shiny::observe({
                                       colnames(config)[caret::nearZeroVar(config)]))
                    
                    remove = setdiff(remove, "label")
+                   remove = setdiff(remove, "split")
                    
                    keep_configs <- which(!(colnames(config) %in% remove))
                    
@@ -737,6 +732,7 @@ shiny::observe({
                    
                    # ============ LOOP HERE ============
                    
+                   #colnames(curr) <- paste0("X", gsub("\\-","min",colnames(curr)))
                    colnames(curr) <- make.names(colnames(curr))
                    
                    # get results for the amount of attempts chosen
@@ -783,7 +779,7 @@ shiny::observe({
                                                   ml_preproc = input$ml_preproc,
                                                   tuneGrid = tuneGrid,
                                                   ml_train_perc = input$ml_train_perc,
-                                                  sampling = if(input$ml_sampling == "none") NULL else input$ml_sampling,
+                                                  sampling = NULL,#if(input$ml_sampling == "none") NULL else input$ml_sampling,
                                                   batch_sampling = if(input$ml_batch_sampling == "none") NULL else input$ml_batch_sampling,
                                                   batches = input$ml_batch_covars
                      )

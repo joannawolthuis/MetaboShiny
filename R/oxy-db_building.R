@@ -100,10 +100,6 @@ import.pat.csvs <- function(metapath,
                             missperc.samp = 100,
                             missList = c(pos=c(),neg=c()),
                             roundMz = T){
-  
-  #metapath="~/Downloads/Metadata for Troubleshooting.csv"
-  #pospath = "~/Downloads/Peakdata for Troubleshooting.csv"
-  
   ppm = as.numeric(ppm)
 
   metadata = NULL
@@ -221,11 +217,11 @@ import.pat.csvs <- function(metapath,
             file = write_loc,
             append=TRUE)
       
-      pbapply::pbsapply(2:nrows, function(i, con, qualifies){
+      pbapply::pbsapply(1:nrows, function(i, con, qualifies){
         line = readLines(con_read, n = 1)
         splRow = stringr::str_split(line, ",")[[1]]
         sampName = splRow[1]
-        sampName =  gsub(sampName, 
+        sampName = gsub(sampName, 
                          pattern = wipe.regex, 
                          replacement = "", perl=T)
         label = splRow[2]

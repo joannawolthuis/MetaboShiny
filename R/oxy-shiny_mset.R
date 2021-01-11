@@ -658,7 +658,7 @@ metshiProcess <- function(mSet, session, init=F){
   sums = colSums(mSet$dataSet$missing)
   good.inx <- sums/nrow(mSet$dataSet$missing) < (mSet$metshiParams$miss_perc/100)
   mSet$dataSet$orig <- as.data.frame(mSet$dataSet$orig[, good.inx, drop = FALSE])
-  
+  qs::qsave(mSet$dataSet$orig, "data_orig.qs")
   if(!init) mSet$dataSet$missing <- NULL
   
   if(mSet$metshiParams$filt_type != "none" & (ncol(mSet$dataSet$orig) > mSet$metshiParams$max.allow)){
@@ -673,6 +673,8 @@ metshiProcess <- function(mSet, session, init=F){
     mSet$dataSet$orig <- mSet$dataSet$orig[,keep.mz]
     mSet$dataSet$filt <- NULL
   }
+  
+  qs::qsave(mSet$dataSet$orig, "data_orig.qs")
   
   # sanity check data
   mSet <- MetaboAnalystR::SanityCheckData(mSet)
