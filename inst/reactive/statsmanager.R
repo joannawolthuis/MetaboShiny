@@ -475,9 +475,11 @@ shiny::observe({
                      }
                      train_idx = caret::createDataPartition(y = split_label, 
                                                             p = input$ml_train_perc/100,
-                                                            list = FALSE) # partition data in a balanced way (uses labels)
+                                                            list = FALSE)[,1] # partition data in a balanced way (uses labels)
                      test_idx = setdiff(1:nrow(t), train_idx)
                    }
+                   
+                   test_sampnames = rownames(curr)[test_idx]
                    
                    training_data = t[train_idx,]
                    testing_data = t[-train_idx,]
@@ -580,17 +582,59 @@ shiny::observe({
                      training_data_adj = r[, -..configCols]
                      colnames(training_data_adj) <- mzs
                      training_cleaned = cbind(config_adj, training_data_adj)
-                     ### CANNOT DO RANDOM SPLITS FOR EACH REP
-                     lcl$vectors$ml_train <- c("split", "train")
-                     lcl$vectors$ml_test <- c("split", "test")
-                     #}
-                     
                      testing_data_adj = cbind(split = "test", testing_data)
                      training_data_cleaned_adj = cbind(split = "train", training_cleaned)
                      curr = rbind(testing_data_adj, 
                                   training_data_cleaned_adj)
                      config = curr[,..configCols]
                    }else{
+                     if(input$ml_sampling != "none"){
+                       print('resampling based on class...')
+                       l = training_data
+                       mzs = colnames(l)[mzCols]
+                       colnames(l)[mzCols]=paste0("mz",1:length(mzCols))
+                       labelCol = which(colnames(training_data) == "label")
+                       size_per_group = if(input$ml_sampling == "down") min(table(l[[labelCol]])) else max(table(l[[labelCol]]))
+                       r = switch(input$ml_sampling,
+                                  up = upsample.adj(l, as.factor(l$label), maxClass = size_per_group),
+                                  rose = {
+                                    resampled = ROSE::ROSE(label ~ ., 
+                                                           data = {
+                                                             dat = l[, c(labelCol, mzCols), with=F]
+                                                             cols = colnames(dat)[2:ncol(dat)]
+                                                             dat[, (cols) := lapply(.SD, as.numeric), 
+                                                                 .SDcols = cols]
+                                                             dat
+                                                           }, 
+                                                           N = size_per_group * 2)
+                                    resampled.data = resampled$data
+                                    colnames(resampled.data) <- c("label", mzs)
+                                    keep.config = sapply(configCols, function(i){
+                                      length(unique(l[[i]] )) == 1
+                                    })
+                                    resampled.config = data.table::as.data.table(lapply(which(keep.config), 
+                                                                                        function(i){
+                                                                                          c(rep(unique(l[[i]]), 
+                                                                                                nrow(resampled.data)))
+                                                                                        }))
+                                    colnames(resampled.config) <- colnames(l)[which(keep.config)]
+                                    joined.data = cbind(resampled.config, resampled.data)
+                                    joined.data
+                                  },
+                                  down = downsample.adj(l, as.factor(l$label), minClass = size_per_group))
+                       configCols = colnames(config)
+                       configCols = intersect(configCols, colnames(r))
+                       r = as.data.table(r)
+                       if("Class" %in% names(r)){
+                         r$Class <- NULL  
+                       }
+                       config_adj = r[, ..configCols]
+                       training_data_adj = r[, -..configCols]
+                       colnames(training_data_adj) <- mzs
+                       training_data = cbind(config_adj, training_data_adj)
+                     }
+                     
+                     # ========
                      train.config = training_data[,..configCols]
                      train.mzs = training_data[,..mzCols]
                      test.config = testing_data[,..configCols]
@@ -604,7 +648,7 @@ shiny::observe({
                                     train.config)
                      removeCols = setdiff(needed_for_subset, input$ml_include_covars)
                      if(length(removeCols) > 0){
-                       t = t[,-removeCols,with=F]
+                       curr = curr[,-removeCols,with=F]
                        config = config[,-removeCols, with=F]
                      }
                    }
@@ -785,8 +829,6 @@ shiny::observe({
                      )
                    })
                    
-                   repeats <<- repeats
-                   
                    # check if a storage list for machine learning results already exists
                    if(!("ml" %in% names(mSet$analSet))){
                      mSet$analSet$ml <- list() # otherwise make it
@@ -827,7 +869,12 @@ shiny::observe({
                    
                    roc_data <- list(m_auc = mean.auc,
                                     perf = perf.long,
-                                    imp = mz.imp)
+                                    imp = mz.imp,
+                                    pred = pred,
+                                    inTest = test_sampnames)
+                   
+                   #ggPlotMLMistakes(pred, test_sampnames, c("sample","country"), 2)
+                   
                    bar_data <- data.table::rbindlist(lapply(1:length(repeats), function(i){
                      x = repeats[[i]]
                      tbl = data.table::as.data.table(x$importance, keep.rownames=T)[,1:2]

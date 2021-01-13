@@ -876,6 +876,31 @@ ggPlotPerm <- function(mSet,
   p
 }
 
+ggPlotMLMistakes <- function(pred, test_sampnames, metadata_focus = c("sample"), rep=1){
+  # miss metadata plot
+  predict_test = pred@predictions[[rep]]
+  labels = pred@labels[[rep]]
+  cutoffs = pred@cutoffs[[rep]]
+  metadata_focus = c("sample", "country")
+  wrong_hits = pbapply::pblapply(cutoffs, function(x){
+    predicted_labels = sapply(predict_test, function(y) if(y < x) "classFcs12" else 'classFcs345')
+    correct = predicted_labels == labels
+    test_meta = mSet$dataSet$covars[sample %in% test_sampnames, ..metadata_focus]
+    incorrect = test_sampnames[which(!correct)]
+    tbl = data.table(mistaken = incorrect,
+                     country = test_meta[sample %in% incorrect,"country"][[1]],
+                     cutoff = rep(x, length(incorrect)))
+    tbl$country_total = sapply(tbl$country, function(cntr) nrow(test_meta[country == cntr]))
+    tbl$wrong_perc_country = sapply(tbl$country, function(cntr) (nrow(tbl[country == cntr])/tbl[country == cntr,"country_total"][[1]][1])*100)
+    tbl
+  })
+  res = data.table::rbindlist(wrong_hits)
+  res = res[cutoff != Inf]
+  ggplot2::ggplot(data = res) + geom_line(aes(x = cutoff, 
+                                              y = wrong_perc_country, 
+                                              color = country), cex = 1)
+  
+}
 #' @title Generate ROC plot
 #' @description Function to generate ggplot or plotly ROC plot for machine learning
 #' @param data Model data
