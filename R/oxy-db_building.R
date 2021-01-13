@@ -1,3 +1,70 @@
+getMissing <- function(peakpath, nrow=NULL){
+  bigFile = utils:::format.object_size(file.info(peakpath)$size, "GB")
+  reallyBig = if(bigFile == "0 Gb") F else T
+  
+  if(is.null(nrow)){
+    nrow = length(vroom::vroom_lines(peakpath, altrep = TRUE, progress = TRUE)) - 1L
+  }
+
+  print("Checking missing values...")
+  
+  skipCols=c("sample","label")
+  
+  con = file(peakpath, "r")
+  line = readLines(con, n = 1)
+  cols = stringr::str_split(line, ",")[[1]]
+  
+  if(any(grepl("mass_to_charge", cols))){
+    peaklist = data.table::fread(peakpath)
+    data.table::setnames(peaklist, "mass_to_charge", "mzmed", skip_absent = T)
+    if(!is.na(peaklist$retention_time[1])){
+      hasRT = TRUE
+      peaklist$mzmed <- paste0(peaklist$mzmed,"RT", peaklist$retention_time)
+    }
+    rmcols = c("database_identifier", "chemical_formula", "smiles", "inchi", 
+               "metabolite_identification", "fragmentation", "modifications", 
+               "charge", "retention_time", "taxid", "species", "database", "database_version", 
+               "reliability", "uri", "search_engine", "search_engine_score", 
+               "smallmolecule_abundance_sub", "smallmolecule_abundance_stdev_sub", 
+               "smallmolecule_abundance_std_error_sub")
+    peaklist_melty <- data.table::melt(peaklist[,-..rmcols], id.vars=c("mzmed"), variable.name = "sample", value.name="into")  
+    peaklist <- data.table::dcast(peaklist_melty, sample ~ mzmed, value.var = "into")
+    considerMe=which(!(tolower(colnames(peaklist)) %in% skipCols))
+    peaklist = peaklist[, ..considerMe]
+    totalMissing = colSums(peaklist == "0" | peaklist == 0 | peaklist == "" | is.na(peaklist))
+  }else{
+    if(!reallyBig){
+      peaklist <- data.table::fread(peakpath,
+                                    header=T)
+      considerMe=which(!(tolower(colnames(peaklist)) %in% skipCols))
+      peaklist = peaklist[, ..considerMe]
+      totalMissing = colSums(peaklist == "0" | peaklist == 0 | peaklist == "" | is.na(peaklist))
+    }else{
+      considerMe=which(!(tolower(cols) %in% skipCols))
+      mzs = cols[considerMe]
+      totalMissing <- rep(0, length(mzs))
+      pb = pbapply::startpb(2, nrow)
+      
+      # get missing count
+      for(i in 1:nrow){
+        pbapply::setpb(pb, i)
+        line = readLines(con, n = 1)
+        splRow = stringr::str_split(line, ",")[[1]]
+        sampName = splRow[1]
+        splRow = splRow[3:length(splRow)]
+        if(i > 1){
+          isMissing = which(splRow == "0" | splRow == 0 | splRow == "" | is.na(splRow))
+          totalMissing[isMissing] <- totalMissing[isMissing] + 1
+        }
+      }
+      close.connection(con)
+      names(totalMissing) = mzs
+    }
+  }
+  
+  list(missPerc = totalMissing, isMz = considerMe, nrows=nrow)
+}
+
 #' @title Merge metadata and peak tables into SQLITE database.
 #' @description Wrapper function to integrate user data into the format used in MetaboShiny.
 #' @param metapath Path to metadata csv
@@ -28,22 +95,57 @@ import.pat.csvs <- function(metapath,
                             ppm = 2,
                             inshiny = F,
                             csvpath = lcl$paths$csv_loc,
-                            wipe.regex = ".*_(?>POS|NEG)_[0+]*",
+                            wipe.regex = ".*_",
                             missperc.mz = 99,
                             missperc.samp = 100,
+                            missList = c(pos=c(),neg=c()),
                             roundMz = T){
-  
   ppm = as.numeric(ppm)
 
   metadata = NULL
   try({
     metadata <- data.table::fread(metapath)
-    metadata <- reformat.metadata(metadata)  
+    metadata <- reformat.metadata(metadata)
     keep.cols = colSums(is.na(metadata)) < nrow(metadata) & sapply(colnames(metadata), function(x) length(unique(metadata[,..x][[1]])) > 1) 
-    metadata$sample <- gsub(metadata$sample, pattern = wipe.regex, replacement = "", perl=T)
+    metadata$sample <- gsub(metadata$sample, 
+                            pattern = wipe.regex, 
+                            replacement = "", 
+                            perl=T)
     metadata = unique(metadata[, ..keep.cols])
     if(!("individual" %in% colnames(metadata))) metadata$individual <- metadata$sample
+    meta_col_order = colnames(metadata)
+    #meta_col_order = meta_col_order[meta_col_order != "sample"]
   },silent = T)
+  
+  if(is.null(metadata)){
+    try({
+      peaklist = data.table::fread(pospath)
+    })
+    try({
+      peaklist = data.table::fread(negpath)
+    })
+    metadata = data.table::data.table(sample = peaklist$Sample,
+                                      individual = peaklist$Sample,
+                                      label = peaklist$Label)
+    metadata$sample <- metadata$individual <- gsub(metadata$sample, 
+                                                   pattern = wipe.regex, 
+                                                   replacement = "", 
+                                                   perl=T)
+    meta_col_order <- c("sample", "individual", "label")
+  }
+  
+  # check for all_unique or all_same columns and remove
+  # check_meta_cols = setdiff(meta_col_order, c("sample", "individual"))
+  # keep_meta_cols_bool = sapply(check_meta_cols, function(var){
+  #   values = metadata[[var]]
+  #   uniq_groups = table(values)
+  #   is.uniq = length(uniq_groups) == nrow(metadata)
+  #   is.same = length(uniq_groups) == 1
+  #   !is.uniq & !is.same
+  # })
+  # 
+  # keep_meta_cols = c("sample", "individual", names(which(keep_meta_cols_bool)))
+  # metadata = metadata[, ..keep_meta_cols]
   
   samplesIn <- metadata$sample
 
@@ -52,87 +154,44 @@ import.pat.csvs <- function(metapath,
     y <- log10(abs(x)-floor(abs(x)))   
     ifelse(isTRUE(all.equal(round(y),y)), -y-1, -ceiling(y))}
   
-  peaklists <- lapply(c("pos", "neg"), function(ionMode){
+  peaklists = lapply(c("pos", "neg"), function(ionMode){
     
     peakpath = switch(ionMode,
                       "pos" = pospath,
                       "neg" = negpath)
     
-    if(length(peakpath) == 0) return(list(ionMode = ionMode, 
-                                          peaktbl = data.table::data.table()))
+    if(length(peakpath) == 0){
+      return( list(ionMode = ionMode, 
+           peaktbl = data.table::data.table()))
+      }
+    
+    print(paste("Importing", ionMode, "mode peaks!"))
+    
+    if(length(missList[[ionMode]]) > 0){
+      missCounts = missList[[ionMode]]
+    }else{
+      missCounts = getMissing(peakpath)
+    }
     
     bigFile = utils:::format.object_size(file.info(peakpath)$size, "GB")
     reallyBig = if(bigFile == "0 Gb") F else T
-    nrows = length(count.fields(peakpath, sep = ","))
+
+    nrows = length(vroom::vroom_lines(peakpath, altrep = TRUE, progress = TRUE)) - 1L
+    miss_threshold_mz = ceiling(nrows * (missperc.mz/100))
+    qualifies = which(missCounts$missPerc <= miss_threshold_mz)
+    # missCounts = NULL
+    # gc()
     
-    print(paste("Importing", ionMode, "mode peaks!"))
-    if(!reallyBig){
-      peaklist <- data.table::fread(peakpath,
-                                   header=T)
-    }else{
-      # === POSITIVE MODE ===
-      con = file(peakpath, "r")
-      # get missing count
-      missRes = lapply(1:nrows, function(i, con){
-        line = readLines(con, n = 1)
-        splRow = stringr::str_split(line, ",")[[1]]
-        sampName = splRow[1]
-        sampName =  gsub(sampName, pattern = wipe.regex, replacement = "")
-        splRow = splRow[3:length(splRow)]
-        if(i > 1 & sampName %in% samplesIn){
-          as.list(splRow == "0" | splRow == 0 | splRow == "" | is.na(splRow))
-        }else{
-          NULL
-        }
-      }, con = con)
-      close.connection(con)
-      missTable = data.table::rbindlist(missRes[!sapply(missRes, is.null)])
-      miss_threshold_mz = ceiling(nrows * (missperc.mz/100))
-      qualifies = which(colSums(missTable) <= miss_threshold_mz)
-      missTable <- NULL
-      missRes <- NULL
-      gc()
-      
-      # get actual data
-      con = file(peakpath, "r")
-      cols= readLines(con, n = 1)
-      filtRes = lapply(2:nrows, function(i, con, qualifies){
-        line = readLines(con, n = 1)
-        splRow = stringr::str_split(line, ",")[[1]]
-        sampName = splRow[1]
-        sampName =  gsub(sampName, pattern = wipe.regex, replacement = "", perl=T)
-        label =splRow[2]
-        splRow = splRow[3:length(splRow)]
-        if(sampName %in% samplesIn){
-          as.list(c(sampName, label, splRow[qualifies]))
-        }else{
-          NULL
-        }
-      }, con = con, qualifies = qualifies)
-      close.connection(con)
-      peaklist = data.table::rbindlist(filtRes[!sapply(filtRes, is.null)])
-      colnames(peaklist) <- stringr::str_split(cols, ",")[[1]][c(1,2,qualifies)]
-      filtRes <- NULL
-      gc()
-    }
-    colnames(peaklist)[1:2] <- tolower(colnames(peaklist)[1:2])
-    
-    print(peaklist[1:5,1:5])
-    
-    hasRT=F
-    
-    if(is.null(metadata)){
-      if("label" %in% tolower(colnames(peaklists[[1]])[1:5])){
-        premeta = peaklist[,1:30]
-        colnames(premeta) <- tolower(colnames(premeta))
-        metadata = premeta[,c("sample", "label")]
-      }else{
-        stop("Requires either metadata uploaded OR a label/Label column!")
-      }
-    }
+    # get actual data
+    print("Subsetting table...")
+    write_loc = tempfile()
+    if(file.exists(write_loc)) file.remove(write_loc)
+    con_read = base::file(peakpath, "r")
+    cols = stringr::str_split(readLines(con_read, n = 1), ",|\\t")[[1]]
     
     # PIVOT IF WRONG SIDE AROUND - METABOLIGHTS DATA
-    if(any(grepl("mass_to_charge", colnames(peaklist)))){
+    if(any(grepl("mass_to_charge", cols))){
+      peaklist = data.table::fread(peakpath)
       data.table::setnames(peaklist, "mass_to_charge", "mzmed", skip_absent = T)
       if(!is.na(peaklist$retention_time[1])){
         hasRT = TRUE
@@ -146,23 +205,64 @@ import.pat.csvs <- function(metapath,
                  "smallmolecule_abundance_std_error_sub")
       peaklist_melty <- data.table::melt(peaklist[,-..rmcols], id.vars=c("mzmed"), variable.name = "sample", value.name="into")  
       peaklist <- data.table::dcast(peaklist_melty, sample ~ mzmed, value.var = "into")
+      peaklist$sample <- gsub(pattern = wipe.regex, "", peaklist$sample,perl = T)
+      meta_row_order = match(metadata$sample, peaklist$sample)
+      peaklist <- cbind(metadata[meta_row_order,..meta_col_order], 
+                        peaklist[,-c("sample", "individual")])
     }else{
-      hasRT=any(grepl(colnames(peaklist), pattern = "RT\\d+"))
-    }
-    
-    if("label" %in% colnames(peaklist)[1:5]){
-      peaklist[,label:=NULL]
-    }
-    
-    # miss values
-    if(!any(is.na(unlist(peaklist[1:5,10:20])))){
-      peaklist[,(2:ncol(peaklist)) := lapply(.SD,function(x){ ifelse(x == 0, NA, x)}), .SDcols = 2:ncol(peaklist)]
+      row = c(tolower(c(colnames(metadata[,..meta_col_order]))),
+                        cols[missCounts$isMz][qualifies])
+      
+      write(paste0(row, collapse=","),
+            file = write_loc,
+            append=TRUE)
+      
+      pbapply::pbsapply(1:nrows, function(i, con, qualifies){
+        line = readLines(con_read, n = 1)
+        splRow = stringr::str_split(line, ",")[[1]]
+        sampName = splRow[1]
+        sampName = gsub(sampName, 
+                         pattern = wipe.regex, 
+                         replacement = "", perl=T)
+        label = splRow[2]
+        splRow = splRow[missCounts$isMz]
+        splRow[splRow == "0" | splRow == 0 | splRow == ""] <- NA
+        if(sampName %in% if(typeof(metadata) == "list") samplesIn else sampName){
+          row = c(metadata[sample == as.character(sampName), ..meta_col_order],
+                  splRow[qualifies])
+          write(paste0(row, collapse=","),file=write_loc,append=TRUE)
+        }else{
+          NULL
+        }
+      }, con = con_read, qualifies = qualifies)
+      
+      close.connection(con_read)
+      
+      peaklist = data.table::fread(file = write_loc, 
+                                   sep = ",",
+                                   key = "sample",
+                                   header = T)
     }
     
     if(missperc.samp < 100){
-      miss_threshold_samp = ceiling(ncol(peaklist) * (missperc.samp/100))
-      keep.samps.peak = which(rowSums(is.na(peaklist)) <= miss_threshold_samp)
-      peaklist <- peaklist[,keep.samps.peak, with=F] # at least one sample with non-na
+      miss_threshold_samp = ceiling((ncol(peaklist)-1) * (missperc.samp/100))
+      rs = rowSums(is.na(peaklist))
+      keep.samps.peak = which(rs <= miss_threshold_samp)
+      if(length(keep.samps.peak) == 0){
+        lowerMe = seq(missperc.samp, 100, 5)
+        for(missPerc in lowerMe){
+          miss_threshold_samp = ceiling(ncol(peaklist) * (missPerc/100))
+          keep.samps.peak = which(rs <= miss_threshold_samp)
+          if(length(keep.samps.peak) > 1){
+            try({
+              shiny::showNotification(paste0("No samples qualify with original missing m/z threshold! Changed to ", missPerc, " percent"))
+            }, silent = T)
+            break
+          }
+        }
+      }
+      peaklist <- peaklist[keep.samps.peak, ] # at least one sample with non-na
+      gc()
       try({
         shiny::showNotification(paste0("Remaining samples:", nrow(peaklist)))
       }, silent=T)
@@ -174,23 +274,15 @@ import.pat.csvs <- function(metapath,
     }
     
     try({
-      shiny::showNotification(paste0("Remaining m/z:", ncol(peaklist)))
+      msg=paste0("Remaining m/z:", ncol(peaklist))
+      print(msg)
+      shiny::showNotification(msg)
     }, silent=T)
     
-    # REGEX SAMPLE NAMES if applicable
-    if(wipe.regex != ""){
-      peaklist[, sample := gsub(wipe.regex, replacement = "", sample, perl=T)]
-    } 
-    
-    peaklist$sample <- as.character(peaklist$sample)
-    metadata$sample <- as.character(metadata$sample)
-    unique.samples = unique(metadata$sample)
-    
     # CHECK SAMPLES THAT ARE IN METADATA
-    keep.samples.peak <- intersect(peaklist$sample, unique.samples)
+    keep.samples.peak <- if(typeof(metadata) == "list") intersect(peaklist$sample, samplesIn) else peaklist$sample
+    missing.samples = if(typeof(metadata) == "list") samplesIn[which(!(samplesIn %in% keep.samples.peak))] else c()
 
-    missing.samples = unique.samples[which(!(unique.samples %in% keep.samples.peak))]
-    
     if(length(missing.samples) > 0 ){
       if(inshiny){
         shiny::showNotification(paste0("Missing samples: ", paste0(missing.samples, collapse = ","), ". Please check your peak table < > metadata for naming mismatches!"))
@@ -199,6 +291,7 @@ import.pat.csvs <- function(metapath,
       }
     }
     
+    hasRT = any(grepl(colnames(peaklist), pattern = "\\d+RT\\d+"))
     # CHECK IF CUSTOM PPMVALUE
     hasPPM = any(grepl(colnames(peaklist), pattern = "/"))
     
@@ -208,7 +301,8 @@ import.pat.csvs <- function(metapath,
     ismz <- suppressWarnings(which(!is.na(as.numeric(subbed))))
     
     if(roundMz){
-      colnames(peaklist)[ismz] <- sapply(colnames(peaklist)[ismz], function(mz){
+      print("Rounding m/z to appropriate decimal for given ppm value...")
+      colnames(peaklist)[ismz] <- pbapply::pbsapply(colnames(peaklist)[ismz], function(mz){
         if(hasPPM | hasRT){
           split.mz <- stringr::str_split(mz, "/|RT")[[1]]
           mz = split.mz[1]
@@ -227,14 +321,15 @@ import.pat.csvs <- function(metapath,
     }
     
     peaklist <- peaklist[sample %in% keep.samples.peak,]
+    print(colnames(peaklist)[1:30])
+    gc()
     
     # replace commas with dots
-    if(any(grepl(unlist(peaklist[1:5,10:20]), pattern = ","))){
-      for(j in seq_along(peaklist)){
-        data.table::set(peaklist, i=which(grepl(pattern=",",peaklist[[j]])), j=j, value=gsub(",",".",peaklist[[j]]))
-      }
-    }
-    
+    # if(any(grepl(unlist(peaklist[1:5,10:20]), pattern = ","))){
+    #   for(j in seq_along(peaklist)){
+    #     data.table::set(peaklist, i=which(grepl(pattern=",",peaklist[[j]])), j=j, value=gsub(",",".",peaklist[[j]]))
+    #   }
+    # }
     return(list(ionMode = ionMode, peaktbl = peaklist))
   })
   
@@ -242,17 +337,15 @@ import.pat.csvs <- function(metapath,
 
   if(all(isNonEmpty)){
     tbl1 = peaklists[[1]]$peaktbl
-    data.table::setkey(tbl1, sample)
     tbl2 = peaklists[[2]]$peaktbl
-    data.table::setkey(tbl2, sample)  
-    mzlist <- merge(tbl1, tbl2, by = "sample")
+    tbl.meta <- getColDistribution(tbl1)
+    tbl.exp.vars = tbl.meta$meta
+    mzlist <- merge(tbl1, tbl2, by = colnames(tbl1)[tbl.exp.vars])
   }else{
     mzlist = peaklists[[which(isNonEmpty)]]$peaktbl
   }
   
-  data.table::setkey(metadata, sample)
-  
-  mzlist <- merge(metadata, mzlist, by = "sample")
+  hasRT=any(grepl(colnames(mzlist), pattern = "RT\\d+"))
 
   mz.meta <- getColDistribution(mzlist)
   exp.vars = mz.meta$meta
@@ -260,8 +353,12 @@ import.pat.csvs <- function(metapath,
                                                        "unknown",
                                                        x)}), .SDcols = exp.vars]
   
+  colnames(mzlist)[exp.vars] <- gsub("\\.x$", "", colnames(mzlist)[exp.vars])
   colnames(mzlist)[which(colnames(mzlist) == "time")] <- "Time"
   mzlist$sample <- gsub("[^[:alnum:]./_-]", "", mzlist$sample)
+  
+  print("Preview:")
+  print(mzlist[1:2,1:40])
   # - - - - - - - - - - - - - - - - - - 
   data.table::fwrite(mzlist, csvpath)
 

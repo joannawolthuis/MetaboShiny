@@ -16,7 +16,8 @@ globalVariables(c("-log(p)", "-log10P", "..change_var", "..col.fac", "..count.."
 calcHeatMap <- function(mSet, signif.only, 
                         source.anal, 
                         top.hits, 
-                        cols){
+                        cols,
+                        which.data){
   sigvals = NULL
   
   #similarly to venn diagram
@@ -31,16 +32,23 @@ calcHeatMap <- function(mSet, signif.only,
   if(!is.null(sigvals)){
     # reorder matrix used
     
-    x <- mSet$dataSet$norm[,sigvals]
+    inTbl = switch(which.data, 
+                   original = mSet$dataSet$prog,
+                   "pre-batch correction" = mSet$dataSet$prebatch,
+                   normalized = mSet$dataSet$norm)
+    
+    x <- inTbl[,as.character(sigvals)]
     final_matrix <- t(x) # transpose so samples are in columns
     
     # check if the sample order is correct - mSet$..$ norm needs to match the matrix
     sample_order <- match(colnames(final_matrix), rownames(mSet$dataSet$norm))
     
-    if(mSet$dataSet$exp.type %in% c("2f", "t1f", "t")){
+    if(mSet$settings$exp.type %in% c("2f", "t1f", "t")){
       
       # create convenient table with the ncessary info
-      translator <- data.table::data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],GroupA=mSet$dataSet$facA[sample_order], GroupB=mSet$dataSet$facB[sample_order])
+      translator <- data.table::data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],
+                                           GroupA=mSet$dataSet$facA[sample_order], 
+                                           GroupB=mSet$dataSet$facB[sample_order])
       hmap.lvls <- c(levels(mSet$dataSet$facA), levels(mSet$dataSet$facB))
       
       # reorder first by time, then by sample
@@ -117,7 +125,9 @@ runML <- function(curr,
                   ml_preproc,
                   tuneGrid,
                   ml_train_perc,
-                  sampling = "none"){
+                  sampling = "none",
+                  batch_sampling = "none",
+                  batches = c()){
   
   # get user training percentage
   ml_train_perc <- ml_train_perc/100
@@ -128,22 +138,22 @@ runML <- function(curr,
     inTrain = train_idx
     inTest = test_idx
   }else if(unique(train_vec)[1] != "all"){ #ONLY TRAIN IS DEFINED
-    train_idx <- which(config[,train_vec[1], with=F][[1]] == train_vec[2])
+    train_idx <- which(curr[,train_vec[1], with=F][[1]] == train_vec[2])
     test_idx = setdiff(1:nrow(curr), train_idx) # use the other rows for testing
-    reTrain <- caret::createDataPartition(y = curr[train_idx, label], p = ml_train_perc) # take a user-defined percentage of the regexed training set
-    inTrain <- train_idx[reTrain$Resample1]
+    inTrain <- train_idx
     inTest = test_idx
   }else{ # ONLY TEST IS DEFINED
-    test_idx = which(config[,test_vec[1], with=F][[1]] == test_vec[2])
+    test_idx = which(curr[,test_vec[1], with=F][[1]] == test_vec[2])
     train_idx = setdiff(1:nrow(curr), test_idx) # use the other rows for testing
-    reTrain <- caret::createDataPartition(y = curr[train_idx, label], p = ml_train_perc) # take a user-defined percentage of the regexed training set
-    inTrain <- train_idx[reTrain$Resample1]
+    inTrain = train_idx
     inTest <- test_idx
   }
   
-  if("split" %in% colnames(curr)){
-    curr <- curr[,-"split"]
-  }
+  trainSamps = rownames(curr)[inTrain]
+  testSamps = rownames(curr)[inTest]
+  
+  need.rm = unique(c(train_vec[1],test_vec[1],"split"))
+  curr <- curr[,-..need.rm]
   
   # choose predictor "label" (some others are also included but cross validation will be done on this)
   predictor = "label"
@@ -157,46 +167,55 @@ runML <- function(curr,
   training <- curr[inTrain,]
   testing <- curr[inTest,]
   
-  if(ml_folds == "LOOCV"){
-    trainCtrl <- caret::trainControl(verboseIter = T,
-                                     allowParallel = F,
-                                     method="LOOCV",
-                                     trim=TRUE, 
-                                     returnData = FALSE,
-                                     sampling = sampling) # need something here...
-    
+  hasProb = !is.null(caret::getModelInfo(paste0("^",ml_method,"$"),regex = T)[[1]]$prob)
+  
+  trainCtrl <- caret::trainControl(verboseIter = T,
+                                   allowParallel = F,
+                                   method= if(ml_folds == "LOOCV") "LOOCV" else as.character(ml_perf_metr),
+                                   number = as.numeric(ml_folds),
+                                   repeats = 3,
+                                   trim=TRUE, 
+                                   returnData = FALSE,
+                                   classProbs= if(!hasProb) FALSE else TRUE,
+                                   sampling = sampling)
+  
+  if(ml_method %in% c("rpartScore")){
+    fit <- caret::train(
+      label ~ .,
+      data = training,
+      method = ml_method,
+      ## Center and scale the predictors for the training
+      ## set and all future samples.
+      preProc = ml_preproc,
+      tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
+      trControl = trainCtrl
+    )
   }else{
-    trainCtrl <- caret::trainControl(verboseIter = T,
-                                     allowParallel = F,
-                                     method = as.character(ml_perf_metr),
-                                     number = as.numeric(ml_folds),
-                                     repeats=3,
-                                     trim=TRUE, 
-                                     returnData = FALSE,
-                                     sampling = sampling) # need something here...
+    fit <- caret::train(
+      label ~ .,
+      data = training,
+      method = ml_method,
+      ## Center and scale the predictors for the training
+      ## set and all future samples.
+      preProc = ml_preproc,
+      importance = if(ml_method %in% c("ranger")) 'permutation' else TRUE,
+      tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
+      trControl = trainCtrl
+    )
   }
   
-  fit <- caret::train(
-    label ~ .,
-    data = training,
-    method = ml_method,
-    ## Center and scale the predictors for the training
-    ## set and all future samples.
-    preProc = ml_preproc,
-    tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
-    trControl = trainCtrl
-  )
-  
-  result.predicted.prob <- stats::predict(fit, testing, type="prob") # Prediction
+  result.predicted.prob <- stats::predict(fit, 
+                                          testing,
+                                          type = if(hasProb) "prob" else "raw") # Prediction
   
   # train and cross validate model
   # return list with mode, prediction on test data etc.s
   list(type = ml_method,
        # model = fit,
        importance = caret::varImp(fit)$importance,
-       prediction = result.predicted.prob[,2],
-       labels = testing$label)
-  
+       prediction = result.predicted.prob,
+       labels = testing$label,
+       distr = list(train = trainSamps, test = testSamps))
 }
 
 #' @title Get performance for multi-comparison ML model
@@ -210,14 +229,33 @@ runML <- function(curr,
 #' @export 
 #' @importFrom pROC multiclass.roc auc
 #' @importFrom data.table rbindlist
-getMultiMLperformance <- function(model){
-  roc = pROC::multiclass.roc(model$labels, model$prediction)
-  data.table::rbindlist(lapply(roc$rocs, function(roc.pair){
-    data.table(FPR = sapply(roc.pair$specificities, function(x) 1-x),
-               TPR = roc.pair$sensitivities,
-               AUC_AVG = as.numeric(roc$auc),
-               AUC_PAIR = as.numeric(pROC::auc(roc.pair)),
-               comparison = paste0(roc.pair$levels,collapse=" vs. "))
+getMultiMLperformance <- function(x){
+  
+  try({
+    mroc = pROC::multiclass.roc(x$labels, 
+                                x$prediction)
+  },silent = T)
+  try({
+    mroc = pROC::multiclass.roc(x$labels, factor(x$prediction,
+                                                 ordered = T))
+  }, silent=T)
+  
+  data.table::rbindlist(lapply(mroc$rocs, function(roc.pair){
+    try({
+      dt = data.table(FPR = sapply(roc.pair$specificities, function(x) 1-x),
+                      TPR = roc.pair$sensitivities,
+                      AUC_AVG = as.numeric(mroc$auc),
+                      AUC_PAIR = as.numeric(pROC::auc(roc.pair)),
+                      comparison = paste0(roc.pair$levels,collapse=" vs. "))
+    },silent=T)
+    try({
+      dt = data.table(FPR = sapply(roc.pair[[1]]$specificities, function(x) 1-x),
+                      TPR = roc.pair[[1]]$sensitivities,
+                      AUC_AVG = as.numeric(mroc$auc),
+                      AUC_PAIR = as.numeric(pROC::auc(roc.pair[[1]])),
+                      comparison = paste0(roc.pair[[1]]$levels,collapse=" vs. "))  
+    },silent=T)
+    dt
   })) 
 }
 
@@ -284,10 +322,11 @@ getDefaultCondition <- function(csv, exp.vars, excl.rows, excl.cond, min.lev){
     length(lvls)
   })
   unique.levels <- unique.levels[!(names(unique.levels) %in% excl.cond)]
-  min.grpsize = apply(csv[,names(unique.levels), with=F],2,function(x)min(table(x)))
+  min.grpsize = apply(csv[,names(unique.levels), with=F], 2,function(x) min(table(x)))
   # use this as the default selected experimental variable (user can change later)
-  which.default <- unique.levels[which(unique.levels == min(unique.levels[which(unique.levels > min.lev)]) &
-                                       min.grpsize >= 3)][1]
+  good.grpsize = min.grpsize >= 3
+  unique.levels = unique.levels[good.grpsize]
+  which.default <- unique.levels[which(unique.levels == min(unique.levels[which(unique.levels >= min.lev)]))][1]
   condition = names(which.default)
   condition
 }
@@ -382,15 +421,17 @@ tooEmptySamps <- function(mSet, max.missing.per.samp){
 #' @importFrom data.table as.data.table
 #' @importFrom pbapply startpb setpb
 replRowMin <- function(mSet){
-  samples <- rownames(mSet$dataSet$preproc)
-  w.missing <- data.table::as.data.table(mSet$dataSet$preproc)
-  pb <- pbapply::startpb(0, ncol(w.missing))
-  i=0
-  w.missing = w.missing[,as.data.table(apply(.SD, 2, function(x) {i<<-i+1; pbapply::setpb(pb, i); x[is.na(x)] <- mean(x, na.rm=T)/2; x}))]
-  w.missing <- as.data.frame(w.missing)
-  rownames(w.missing) <- samples
-  return(w.missing)
-  }
+  int.mat <- qs::qread("preproc.qs")
+  mSet$dataSet$proc <- pbapply::pbapply(int.mat, 1, function(x) {
+    if (sum(is.na(x)) > 0) {
+      x[is.na(x)] <- min(x, na.rm = T)/2
+    }
+    x
+  })
+  mSet$dataSet$proc <- t(mSet$dataSet$proc)
+  return(mSet)
+}
+
 
 #' @title Impute missing values with Random Forest
 #' @description Uses the missForest package to impute missing values. The most time-consuming but accurate imputation function.
@@ -407,17 +448,17 @@ replRowMin <- function(mSet){
 #' @importFrom doParallel registerDoParallel
 #' @importFrom missForest missForest
 replRF <- function(mSet, parallelMode, ntree, cl){
-  samples <- rownames(mSet$dataSet$preproc)
+  w.missing <- qs::qread("preproc.qs")
+  samples <- rownames(w.missing)
   # convert all to as numeric
   # TODO: remove, should be automatic
-  w.missing <- mSet$dataSet$preproc
   w.missing <- apply(w.missing, 2, as.numeric)
   
   # register other threads as parallel threads
   doParallel::registerDoParallel(cl)
   
   # set amount of tries (defined by missforest package)
-  auto.mtry <- floor(sqrt(ncol(mSet$dataSet$preproc)))
+  auto.mtry <- floor(sqrt(ncol(w.missing)))
   
   mtry <- ifelse(auto.mtry > 100, 
                  100, 
@@ -483,10 +524,16 @@ batchCorrQC <- function(mSet){
 hideQC <- function(mSet){
   smps <- rownames(mSet$dataSet$norm)
   # get which rows are QC samples
-  qc_rows <- which(grepl(pattern = "QC", x = smps))
+  qc_rows <- grep(pattern = "QC", x = smps)
+  # save QCs (may need for dimred)
+  mSet$dataSet$qc_norm <- mSet$dataSet$norm[qc_rows,]
+  mSet$dataSet$qc_cls <- mSet$dataSet$cls[qc_rows, drop = TRUE]
+  mSet$dataSet$qc_covars <- mSet$dataSet$covars[grep("QC",sample),]
+  
+  # hide from stats
   mSet$dataSet$norm <- mSet$dataSet$norm[-qc_rows,]
   mSet$dataSet$cls <- mSet$dataSet$cls[-qc_rows, drop = TRUE]
-  mSet$dataSet$covars <- mSet$dataSet$covars[-grep("QC", mSet$dataSet$covars$sample),]
+  mSet$dataSet$covars <- mSet$dataSet$covars[grep("QC",sample,invert = T),]
   mSet$dataSet$cls.num <- length(levels(mSet$dataSet$cls))
   mSet
 }
@@ -578,141 +625,163 @@ metshiTable <- function(content, options=NULL, rownames= T){
 getTopHits <- function(mSet, expnames, top){
   
   experiments <- stringr::str_match(expnames, 
-                                    pattern = "\\(.*\\)")[,1]
+                                    pattern = "(all m\\/z)|\\(.*\\)")[,1]
   
   experiments <- unique(gsub(experiments, pattern = "\\(\\s*(.+)\\s*\\)", replacement="\\1"))
-  
+
   table_list <- lapply(experiments, function(experiment){
-    
-    analysis = mSet$storage[[experiment]]$analysis
-    
-    rgx_exp <- gsub(experiment, pattern = "\\(", replacement = "\\\\(")
-    rgx_exp <- gsub(rgx_exp, pattern = "\\)", replacement = "\\\\)")
-    rgx_exp <- gsub(rgx_exp, pattern = "\\-", replacement = "\\\\-")
-    rgx_exp <- gsub(rgx_exp, pattern = "\\+", replacement = "\\\\+")
-    
-    categories = grep(unlist(expnames),
-                      pattern = paste0("\\(",rgx_exp, "\\)"), value = T)
-    
-    categories = gsub(categories, pattern = " \\(\\s*(.+)\\s*\\)", replacement = "")
-    
-    # go through the to include analyses
-    
-    tables <- lapply(categories, function(name){
+    if(experiment == "all m/z"){
+      flattened = list(colnames(mSet$dataSet$norm))
+      names(flattened) = c("all m/z")
+      flattened
+    }else{
+      analysis = mSet$storage[[experiment]]$analysis
       
-      base_name <- search_name <- gsub(name, pattern = " -.*$| ", replacement="")
+      rgx_exp <- gsub(experiment, pattern = "\\(", replacement = "\\\\(")
+      rgx_exp <- gsub(rgx_exp, pattern = "\\)", replacement = "\\\\)")
+      rgx_exp <- gsub(rgx_exp, pattern = "\\-", replacement = "\\\\-")
+      rgx_exp <- gsub(rgx_exp, pattern = "\\+", replacement = "\\\\+")
       
-      if(base_name %in% gbl$constants$ml.models){
-        search_name <- "ml"
-      }
+      categories = grep(unlist(expnames),
+                        pattern = paste0("\\(",rgx_exp, "\\)"), value = T)
       
-      # fetch involved mz values
-      tbls <- switch(search_name,
-                     ml = {
-                       which.ml <- gsub(name, pattern = "^.*- | ", replacement="")
-                       mzvals = analysis$ml[[base_name]][[which.ml]]$bar[order(analysis$ml[[base_name]][[which.ml]]$bar$importance,
-                                                                               decreasing = T),]$mz
-                       mzvals <- type.convert(gsub(mzvals, pattern = "'|`", replacement=""))
-                       res <- list(mzvals)
-                       names(res) <- paste0(which.ml, " (", base_name, ")")
-                       # - - -
-                       res
-                     },
-                     aov = {
-                       res = list(rownames(analysis$aov$sig.mat[order(analysis$aov$sig.mat[,2],
-                                                                                 decreasing = F),]))
-                       names(res) = base_name
-                       res
-                     },
-                     aov2 = {
-                       res = list(rownames(analysis$aov2$sig.mat[order(analysis$aov2$sig.mat[,"Interaction(adj.p)"],
-                                                                                  decreasing = F),]))
-                       names(res) = base_name
-                       res
-                     },
-                     asca = {
-                       res = list(rownames(analysis$asca$sig.list$Model.ab[order(analysis$asca$sig.list$Model.ab[,1],
-                                                                                            decreasing = T),]))
-                       names(res) = base_name
-                       res
-                     },
-                     MB = {
-                       res = list(rownames(analysis$MB$stats)[order(analysis$MB$stats[,1],
-                                                                                decreasing = T)])
-                       names(res) = base_name
-                       res
-                     },
-                     tt = {
-                       res = list(rownames(analysis$tt$sig.mat[order(analysis$tt$sig.mat[,2],
-                                                                                decreasing = F),]))
-                       names(res) = base_name
-                       res
-                     },
-                     fc = {
-                       res = list(rownames(analysis$fc$sig.mat[order(abs(analysis$fc$sig.mat[,2]),
-                                                                                decreasing = F),]))
-                       names(res) = base_name
-                       res
-                     },
-                     volcano = {
-                       res = list(rownames(analysis$volcano$sig.mat))
-                       names(res) = base_name
-                       res
-                     },
-                     plsda = {
-                       which.plsda <- gsub(name, pattern = "^.*- | ", replacement="")
-                       
-                       compounds_pc <- data.table::as.data.table(analysis$plsda$vip.mat,keep.rownames = T)
-                       colnames(compounds_pc) <- c("rn", paste0("PC", 1:(ncol(compounds_pc)-1)))
-                       ordered_pc <- setorderv(compounds_pc, which.plsda, -1)
-                       
-                       res <- list(ordered_pc$rn)
-                       names(res) <- paste0(which.plsda, " (PLS-DA)")
-                       # - - -
-                       res
-                     },
-                     pca = {
-                       which.pca <- gsub(name, pattern = "^.*- | ", replacement="")
-                       
-                       compounds_pc <- data.table::as.data.table(analysis$pca$rotation,keep.rownames = T)
-                       ordered_pc <- setorderv(compounds_pc, which.pca, -1)
-                       res <- list(ordered_pc$rn)
-                       names(res) <- paste0(which.pca, " (PCA)")
-                       # - - -
-                       res
-                     },
-                     volc = {
-                       res <- list(rownames(analysis$volcano$sig.mat))
-                       names(res) = base_name
-                       res
-                     },
-                     {metshiAlert("Not currently supported...")
-                       return(NULL)})
+      categories = gsub(categories, pattern = " \\(\\s*(.+)\\s*\\)", replacement = "")
       
-      if(is.null(tbls)) return(NULL)
+      # go through the to include analyses
       
-      # user specified top hits only
-      tbls_top <- lapply(tbls, function(tbl){
-        if(length(tbl) < top){
-          tbl
-        }else{
-          tbl[1:top]
+      tables <- lapply(categories, function(name){
+        
+        base_name <- search_name <- gsub(name, pattern = " -.*$| ", replacement="")
+        
+        if(base_name %in% gbl$constants$ml.models){
+          search_name <- "ml"
         }
+        
+        # fetch involved mz values
+        tbls <- switch(search_name,
+                       ml = {
+                         which.ml <- gsub(name, pattern = "^.*- ", replacement="")
+                         
+                         data = analysis$ml[[base_name]][[which.ml]]$bar
+                         
+                         if(base_name == "glmnet"){
+                           colnames(data) = c("m/z", "importance.mean", "dummy")
+                           data.ordered <- data[order(data$importance, decreasing=T),1:2]
+                         }else{
+                           data.norep <- data[,-3]
+                           colnames(data.norep)[1] <- "m/z"
+                           data.ci = Rmisc::group.CI(importance ~ `m/z`, data.norep)
+                           data.ordered <- data.ci[order(data.ci$importance.mean, decreasing = T),]
+                         }
+                         
+                         data.ordered$`m/z` <- gsub("`","",data.ordered$`m/z`)
+                         
+                         res = list(data.ordered$`m/z`)
+                         names(res) <- paste0(which.ml, " (", base_name, ")")
+                         res
+                       },
+                       corr = {
+                         res = list(rownames(analysis$corr$cor.mat[order(abs(analysis$corr$cor.mat[,1]),
+                                                                         decreasing = F),]))
+                         names(res) = base_name
+                         res
+                       },
+                       aov = {
+                         res = list(rownames(analysis$aov$sig.mat[order(analysis$aov$sig.mat[,2],
+                                                                        decreasing = F),]))
+                         names(res) = base_name
+                         res
+                       },
+                       aov2 = {
+                         res = list(rownames(analysis$aov2$sig.mat[order(analysis$aov2$sig.mat[,"Interaction(adj.p)"],
+                                                                         decreasing = F),]))
+                         names(res) = base_name
+                         res
+                       },
+                       asca = {
+                         res = list(rownames(analysis$asca$sig.list$Model.ab[order(analysis$asca$sig.list$Model.ab[,1],
+                                                                                   decreasing = T),]))
+                         names(res) = base_name
+                         res
+                       },
+                       MB = {
+                         res = list(rownames(analysis$MB$stats)[order(analysis$MB$stats[,1],
+                                                                      decreasing = T)])
+                         names(res) = base_name
+                         res
+                       },
+                       tt = {
+                         res = list(rownames(analysis$tt$sig.mat[order(analysis$tt$sig.mat[,2],
+                                                                       decreasing = F),]))
+                         names(res) = base_name
+                         res
+                       },
+                       fc = {
+                         res = list(rownames(analysis$fc$sig.mat[order(abs(analysis$fc$sig.mat[,2]),
+                                                                       decreasing = F),]))
+                         names(res) = base_name
+                         res
+                       },
+                       volcano = {
+                         res = list(rownames(analysis$volcano$sig.mat))
+                         names(res) = base_name
+                         res
+                       },
+                       plsda = {
+                         which.plsda <- gsub(name, pattern = "^.*- | ", replacement="")
+                         
+                         compounds_pc <- data.table::as.data.table(analysis$plsda$vip.mat,keep.rownames = T)
+                         colnames(compounds_pc) <- c("rn", paste0("Component ", 1:(ncol(compounds_pc)-1)))
+                         ordered_pc <- setorderv(compounds_pc, which.plsda, -1)
+                         
+                         res <- list(ordered_pc$rn)
+                         names(res) <- paste0(which.plsda, " (PLS-DA)")
+                         # - - -
+                         res
+                       },
+                       pca = {
+                         which.pca <- gsub(name, pattern = "^.*- | ", replacement="")
+                         
+                         compounds_pc <- data.table::as.data.table(analysis$pca$rotation,keep.rownames = T)
+                         ordered_pc <- setorderv(compounds_pc, which.pca, -1)
+                         res <- list(ordered_pc$rn)
+                         names(res) <- paste0(which.pca, " (PCA)")
+                         # - - -
+                         res
+                       },
+                       volcano = {
+                         res <- list(rownames(analysis$volcano$sig.mat))
+                         names(res) = base_name
+                         res
+                       },
+                       {metshiAlert("Not currently supported...")
+                         return(NULL)})
+        
+        if(is.null(tbls)) return(NULL)
+        
+        # user specified top hits only
+        tbls_top <- lapply(tbls, function(tbl){
+          if(length(tbl) < top){
+            tbl
+          }else{
+            tbl[1:top]
+          }
+        })
+        names(tbls_top) <- paste0(experiment, ": ", names(tbls_top))
+        tbls_top
       })
-      names(tbls_top) <- paste0(experiment, ": ", names(tbls_top))
-      tbls_top
-    })
-    
-    # unnest the nested lists
-    flattened <- flattenlist(tables)
-    
-    # remove NAs
-    flattened <- lapply(flattened, function(x) x[!is.na(x)])
-    
-    #rename and remove regex-y names
-    names(flattened) <- gsub(x = names(flattened), pattern = "(.*\\.)(.*$)", replacement = "\\2")
-    # return
-    flattened
+      
+      # unnest the nested lists
+      flattened <- flattenlist(tables)
+      
+      # remove NAs
+      flattened <- lapply(flattened, function(x) x[!is.na(x)])
+      
+      #rename and remove regex-y names
+      names(flattened) <- gsub(x = names(flattened), pattern = "(.*\\.)(.*$)", replacement = "\\2")
+      # return
+      flattened      
+    }
   })
   
   flattened <- flattenlist(table_list)
@@ -721,31 +790,815 @@ getTopHits <- function(mSet, expnames, top){
   return(flattened)
 }
 
-# # old remotes field
-# Remotes:
-#   github::UMCUGenetics/MetaDBparse,
-# github::xia-lab/MetaboAnalystR,
-# github::rwehrens/BatchCorrMetabolomics,
-# github::yixuan/showtext,
-# github::joannawolthuis/ggVennDiagram,
-# bioc::xcms, 
-# bioc::CAMERA, 
-# bioc::MSnbase,
-# bioc::impute, 
-# bioc::pcaMethods, 
-# bioc::siggenes, 
-# bioc::globaltest, 
-# bioc::GlobalAncova, 
-# bioc::Rgraphviz, 
-# bioc::KEGGgraph, 
-# bioc::preprocessCore, 
-# bioc::genefilter, 
-# bioc::SSPA, 
-# bioc::sva, 
-# bioc::ChemmineR, 
-# bioc::KEGGREST,
-# bioc::fgsea,
-# bioc::Rdisop,
-# bioc::Biostrings,
-# bioc::GOSemSim,
-# bioc::fmcsR
+getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
+  toWrap <- switch(do,
+                   general = {
+                     # make sidebar
+                     # make pca, plsda, ml(make plotmanager do that)
+                     # update select input bars with current variable and covariables defined in excel
+                     if(!is.null(mSet)){
+                       varNormPlots <- ggplotNormSummary(mSet = mSet,
+                                                         cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       
+                       sampNormPlots <- ggplotSampleNormSummary(mSet,
+                                                                cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       
+                       list(var1=varNormPlots$tl, var2=varNormPlots$bl,
+                            var3=varNormPlots$tr, var4=varNormPlots$br,
+                            samp1=sampNormPlots$tl, samp2=sampNormPlots$bl, 
+                            samp3=sampNormPlots$tr, samp4=sampNormPlots$br)
+                       
+                     }},
+                   venn = {
+                     # get user input for how many top values to use for venn
+                     top = input$venn_tophits
+                     if(nrow(venn_yes$now) > 4 | nrow(venn_yes$now) <= 1){
+                       metshiAlert("Can only take more than 2 and less than five analyses!")
+                       list()
+                     }else{
+                       p <- ggPlotVenn(mSet = mSet,
+                                       venn_yes = as.list(venn_yes),
+                                       top = input$venn_tophits,
+                                       cols = lcl$aes$mycols,
+                                       cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       lcl$vectors$venn_lists <- p$info
+                       list(venn_plot = p$plot)
+                     }
+                   },
+                   enrich = {
+                     p = ggPlotMummi(mSet, 
+                                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                     list(enrich_plot = p)
+                   },
+                   summary = {
+                     p = ggplotSummary(mSet, my_selection$mz, 
+                                       shape.fac = input$shape_var, 
+                                       cols = lcl$aes$mycols, 
+                                       cf=gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                       styles = input$ggplot_sum_style,
+                                       add_stats = input$ggplot_sum_stats, 
+                                       color.fac = input$col_var, 
+                                       fill.fac = input$fill_var,
+                                       text.fac = input$txt_var)
+                     
+                     list(summary_plot = p)
+                   },
+                   corr = {
+                     p = ggPlotPattern(mSet,
+                                       n = input$corr_topn,
+                                       cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                     
+                     list(corr_plot = p)
+                   },
+                   asca = {
+                     p = ggPlotASCA(mSet,
+                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                     
+                     list(asca_plot = p)
+                   },
+                   aov = { # render manhattan-like plot for UI
+                     p = ggPlotAOV(mSet,
+                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 20)
+                     
+                     list(aov_plot = p)
+                   },
+                   volcano = {
+                     # render volcano plot with user defined colours
+                     p = ggPlotVolc(mSet,
+                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                    20)
+                     
+                     list(volcano_plot = p)
+                   },
+                   ica = {
+                     mode <- if(mSet$settings$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
+                       "ipca" # interactive PCA (old name, i like tpca more :P )
+                     }else{
+                       "normal" # normal pca
+                     }
+                     
+                     if("ica" %in% names(mSet$analSet)){
+                       if(input$ica_2d3d | !input$ggplotly){ # check if switch button is in 2d or 3d mode
+                         # render 2d plot
+                         p = plotPCA.2d(mSet, 
+                                        cols = lcl$aes$mycols,
+                                        pcx = input$ica_x,
+                                        pcy = input$ica_y,
+                                        type = "ica",
+                                        mode = mode,
+                                        shape.fac = input$shape_var,
+                                        col.fac = input$col_var,
+                                        fill.fac = input$fill_var, 
+                                        ellipse = input$ica_ellipse)
+                         
+                       }else{
+                         # render 3d plot
+                         p = plotPCA.3d(mSet, 
+                                        lcl$aes$mycols,
+                                        pcx = input$ica_x,
+                                        pcy = input$ica_y,
+                                        pcz = input$ica_z,
+                                        type = "ica",
+                                        mode = mode,
+                                        shape.fac = input$shape_var,
+                                        font = lcl$aes$font,
+                                        col.fac = input$col_var,
+                                        fill.fac = input$fill_var, 
+                                        cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                        ellipse = input$ica_ellipse)
+                       }
+                     }
+                     list(ica_plot = p)
+                   },
+                   tsne = {
+                     mode <- if(mSet$settings$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
+                       "ipca" # interactive PCA (old name, i like tpca more :P )
+                     }else{
+                       "normal" # normal pca
+                     }
+                     
+                     if("tsne" %in% names(mSet$analSet)){
+                       if(input$tsne_2d3d | !input$ggplotly){ # check if switch button is in 2d or 3d mode
+                         # render 2d plot
+                         p = plotPCA.2d(mSet, 
+                                        cols = lcl$aes$mycols,
+                                        pcx = input$tsne_x,
+                                        pcy = input$tsne_y,
+                                        type = "tsne",
+                                        mode = mode,
+                                        shape.fac = input$shape_var,
+                                        col.fac = input$col_var,
+                                        fill.fac = input$fill_var, 
+                                        ellipse = input$tsne_ellipse)
+                         
+                       }else{
+                         # render 3d plot
+                         p = plotPCA.3d(mSet, 
+                                        lcl$aes$mycols,
+                                        pcx = input$tsne_x,
+                                        pcy = input$tsne_y,
+                                        pcz = input$tsne_z,
+                                        type = "tsne",
+                                        mode = mode,
+                                        shape.fac = input$shape_var,
+                                        font = lcl$aes$font,
+                                        col.fac = input$col_var,
+                                        fill.fac = input$fill_var, 
+                                        cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                        ellipse = input$tsne_ellipse)
+                       }
+                     }
+                     list(tsne_plot = p)
+                   },
+                   umap = {
+                     mode <- if(mSet$settings$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
+                       "ipca" # interactive PCA (old name, i like tpca more :P )
+                     }else{
+                       "normal" # normal pca
+                     }
+                     
+                     if("umap" %in% names(mSet$analSet)){
+                       if(input$umap_2d3d | !input$ggplotly){ # check if switch button is in 2d or 3d mode
+                         # render 2d plot
+                         p = plotPCA.2d(mSet, 
+                                        cols = lcl$aes$mycols,
+                                        pcx = input$umap_x,
+                                        pcy = input$umap_y,
+                                        type = "umap",
+                                        mode = mode,
+                                        shape.fac = input$shape_var,
+                                        col.fac = input$col_var,
+                                        fill.fac = input$fill_var, 
+                                        ellipse = input$umap_ellipse)
+                         
+                       }else{
+                         # render 3d plot
+                         p = plotPCA.3d(mSet, 
+                                        lcl$aes$mycols,
+                                        pcx = input$umap_x,
+                                        pcy = input$umap_y,
+                                        pcz = input$umap_z,
+                                        type = "umap",
+                                        mode = mode,
+                                        shape.fac = input$shape_var,
+                                        font = lcl$aes$font,
+                                        col.fac = input$col_var,
+                                        fill.fac = input$fill_var, 
+                                        cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                        ellipse = input$umap_ellipse)
+                       }
+                     }
+                     list(umap_plot = p)
+                   },
+                   
+                   pca = {
+                     if("pca" %in% names(mSet$analSet)){
+                       scree = ggPlotScree(mSet,
+                                           cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       # chekc which mode we're in
+                       mode <- if(mSet$settings$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
+                         "ipca" # interactive PCA (old name, i like tpca more :P )
+                       }else{
+                         "normal" # normal pca
+                       }
+                       
+                       if(input$pca_2d3d | !input$ggplotly){ # check if switch button is in 2d or 3d mode
+                         # render 2d plot
+                         pca = plotPCA.2d(mSet, 
+                                          cols = lcl$aes$mycols,
+                                          pcx = input$pca_x,
+                                          pcy = input$pca_y, 
+                                          mode = mode,
+                                          type = "pca",
+                                          col.fac = input$col_var,
+                                          fill.fac = input$fill_var, 
+                                          shape.fac = input$shape_var, 
+                                          ellipse = input$pca_ellipse)
+                         loadings = plotPCAloadings.2d(mSet,pcx = input$pca_x,
+                                                       pcy = input$pca_y, 
+                                                       type = "pca",
+                                                       cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       }else{
+                         # render 3d plot
+                         pca = plotPCA.3d(mSet, 
+                                          pcx = input$pca_x,
+                                          pcy = input$pca_y,
+                                          pcz = input$pca_z, 
+                                          type = "pca",
+                                          col.fac = input$col_var,
+                                          mode = mode,
+                                          cols = lcl$aes$mycols,
+                                          fill.fac = input$fill_var, 
+                                          shape.fac = input$shape_var,
+                                          font = lcl$aes$font,
+                                          cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                          ellipse = input$pca_ellipse)
+                         loadings = plotPCAloadings.3d(mSet,
+                                                       pcx = input$pca_x,
+                                                       pcy = input$pca_y,
+                                                       pcz = input$pca_z, 
+                                                       type = "pca",
+                                                       font = lcl$aes$font,
+                                                       cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       }
+                       list(plot_pca = pca, plot_pca_loadings = loadings, pca_scree = scree)
+                     }else{
+                       NULL
+                     }
+                   },
+                   plsda = {
+                     
+                     if("plsda" %in% names(mSet$analSet)){ # if plsda has been performed...
+                       
+                       mode <- if(mSet$settings$exp.type %in% c("2f", "t", "t1f")){ # if time series mode
+                         "ipca" # interactive PCA (old name, i like tpca more :P )
+                       }else{
+                         "normal" # normal pca
+                       }
+                       
+                       # render cross validation plot
+                       cv <- ggPlotClass(mSet, cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       # render permutation plot
+                       perm <- ggPlotPerm(mSet,cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       # see PCA - render 2d or 3d plots, just with plsda as mode instead
+                       if(input$plsda_2d3d | !input$ggplotly){
+                         # 2d
+                         plsda <- plotPCA.2d(mSet, lcl$aes$mycols,
+                                             pcx = input$plsda_x,
+                                             pcy = input$plsda_y, 
+                                             type = "plsda",
+                                             mode = mode,
+                                             col.fac = input$col_var,
+                                             shape.fac = input$shape_var,
+                                             fill.fac = input$fill_var, 
+                                             cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                             ellipse = input$plsda_ellipse)
+                         
+                         loadings <- plotPCAloadings.2d(mSet,pcx = input$plsda_x,
+                                                        pcy = input$plsda_y, 
+                                                        type = "plsda",
+                                                        cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       }else{
+                         # 3d
+                         plsda <- plotPCA.3d(mSet, lcl$aes$mycols,
+                                             pcx = input$plsda_x,
+                                             pcy = input$plsda_y,
+                                             pcz = input$plsda_z, 
+                                             type = "plsda",
+                                             mode = mode,
+                                             col.fac = input$col_var,
+                                             shape.fac = input$shape_var,
+                                             fill.fac = input$fill_var, 
+                                             font = lcl$aes$font, 
+                                             cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                             ellipse = input$plsda_ellipse)
+                         
+                         loadings <- plotPCAloadings.3d(mSet,
+                                                        pcx = input$plsda_x,
+                                                        pcy = input$plsda_y,
+                                                        pcz = input$plsda_z, 
+                                                        type = "plsda",
+                                                        font = lcl$aes$font,
+                                                        cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       }
+                       list(plot_plsda = plsda, 
+                            plot_plsda_loadings = loadings,
+                            plsda_cv_plot = cv,
+                            plsda_perm_plot = perm)
+                     }else{NULL}
+                   },
+                   ml = {
+                     if("ml" %in% names(mSet$analSet)){
+                       ml_roc = ggPlotROC(data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc,
+                                          attempts = input$ml_attempts,
+                                          cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       
+                       barplot_data <- ggPlotBar(data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar,
+                                                 attempts = input$ml_attempts,
+                                                 cf =gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                                 topn = input$ml_top_x,
+                                                 ml_name = mSet$analSet$ml$last$name,
+                                                 ml_type = mSet$analSet$ml$last$method)
+                       
+                       ml_barplot <- barplot_data$plot
+                       lcl$tables$ml_bar <- barplot_data$mzdata
+                     }
+                     list(ml_roc = ml_roc, 
+                          ml_bar = ml_barplot)
+                   },
+                   multigroup = {
+                     p = ggplotSummary(mSet, my_selection$mz, 
+                                       shape.fac = input$shape_var, 
+                                       cols = lcl$aes$mycols, 
+                                       cf=gbl$functions$color.functions[[lcl$aes$spectrum]], 
+                                       mode = "multi",
+                                       styles = input$ggplot_sum_style,
+                                       add_stats = input$ggplot_sum_stats, 
+                                       color.fac = input$col_var, 
+                                       text.fac = input$txt_var,
+                                       fill.fac = input$fill_var)
+                     list(summary_plot = p)
+                   },
+                   meba = {
+                     p = ggPlotMeba(mSet, 
+                                    #my_selection$mz,
+                                    #draw.average = T,
+                                    #cols = lcl$aes$mycols,
+                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                     list(meba_plot = p)
+                   },
+                   tt = {
+                     # render manhattan-like plot for UI
+                     p = ggPlotTT(mSet,
+                                  cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 
+                                  20)
+                     
+                     list(tt_plot = p)
+                   },
+                   fc = {
+                     # render manhattan-like plot for UI
+                     p <- ggPlotFC(mSet,
+                                   gbl$functions$color.functions[[lcl$aes$spectrum]], 20)
+                     
+                     list(fc_plot = p)
+                   },
+                   diffcorr = {
+                     
+                     matr = mSet$analSet$diffcorr[,c("Gene1", "Gene2", "zScoreDiff")]
+                     
+                     matr=matr[1:100,]
+                     colnames(matr) <- c("From", "To", "Weight")
+                     mygraph <- igraph::graph.data.frame(matr)
+                     
+                     adjmatr = igraph::get.adjacency(mygraph, 
+                                                     sparse = TRUE, 
+                                                     attr='Weight')
+                     
+                     igr = igraph::graph.adjacency(adjmatrix = adjmatr,
+                                                   weighted = T,
+                                                   diag = F)
+                     
+                     netw = visNetwork::visIgraph(igr)
+                     
+                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]]
+                     
+                     degr = igraph::degree(igr)
+                     cols = cf(max(degr))
+                     
+                     netw$x$nodes$color <- sapply(netw$x$nodes$id, function(id){
+                       cols[degr[names(degr) == id]]
+                     })
+                     
+                     netw$x$nodes$title = netw$x$nodes$label
+                     
+                     netw$x$edges$color <- sapply(netw$x$edges$weight, function(w){
+                       if(w < 0) "red" else "blue"
+                     })
+                     
+                     netw$x$edges$title <- paste0("z-score=",netw$x$edges$weight)
+                     
+                     netw$x$edges$weight <- abs(netw$x$edges$weight)
+                     netw$x$edges$value <- netw$x$edges$weight
+                     
+                     p = netw %>% 
+                       visNetwork::visOptions(highlightNearest = TRUE,
+                                              collapse = T,
+                                              autoResize = T,
+                                              nodesIdSelection = TRUE) %>% 
+                       visNetwork::visNodes(borderWidth = 2,font = list(size=22,
+                                                                        face=lcl$aes$font$family)) %>%
+                       visNetwork::visEdges(scaling = list(min = 3,
+                                                           max = 12)) %>%
+                       visNetwork::visInteraction(#navigationButtons = TRUE,
+                         keyboard = T)
+                     if(!input$network_auto){
+                       if(input$network_style == "hierarchical"){
+                         p = p %>% visNetwork::visHierarchicalLayout()  
+                       }else{
+                         p = p %>% visNetwork::visIgraphLayout(layout = input$network_style)
+                       }
+                     }
+                     # --- heatmap ---
+                     hmap_matr = as.data.frame(as.matrix(adjmatr))
+                     hmap_matr[hmap_matr==0 | lower.tri(hmap_matr)] <- NA
+                     
+                     p2 = heatmaply::heatmaply(hmap_matr,
+                                               Colv = T,
+                                               Rowv = T,
+                                               branches_lwd = 0.3,
+                                               margins = c(0, 0, 0, 0),
+                                               col = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                               column_text_angle = 90,
+                                               ylab = "m/z\n",
+                                               showticklabels = if(ncol(hmap_matr) <= 100) c(T,T) else c(F,F),
+                                               symm=T,
+                                               symbreaks=T,
+                                               dendrogram="none"
+                     )
+                     lcl$vectors$diffcorr_heatmap <- p2$x$layout$yaxis$ticktext
+                     list(diffcorr = p, 
+                          diffcorr_heatmap = p2)
+                   },
+                   network = {
+                     
+                     pval = input$network_sign
+                     
+                     mat = mSet$analSet$network$rcorr
+                     matp = mat$P
+                     matr = mat$r
+                     matr[matp < pval] <- 0
+                     
+                     #palette = colorRampPalette(c("green", "white", "red")) (20)
+                     #heatmap(x = matr, col = palette, symm = TRUE)
+                     # #
+                     # justMZ = matr[,"240.04920"]
+                     # #
+                     
+                     igr = igraph::graph.adjacency(adjmatrix = matr,
+                                                   weighted = T,
+                                                   diag = F)
+                     netw = visNetwork::visIgraph(igr)
+                     
+                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]]
+                     degr = igraph::degree(igr)
+                     cols = cf(max(degr))
+                     
+                     netw$x$nodes$color <- sapply(netw$x$nodes$id, function(id){
+                       cols[degr[names(degr) == id]]
+                     })
+                     
+                     netw$x$nodes$title = netw$x$nodes$label
+                     
+                     netw$x$edges$value <- netw$x$edges$weight
+                     netw$x$edges$title <- paste0("r=",netw$x$edges$weight)
+                     
+                     netw$x$edges$color <- c("black")
+                     
+                     p = netw %>% 
+                       visNetwork::visOptions(highlightNearest = TRUE,
+                                              collapse = T,
+                                              autoResize = T,
+                                              nodesIdSelection = TRUE) %>% 
+                       visNetwork::visNodes(borderWidth = 2,font = list(size=22,
+                                                                        face=lcl$aes$font$family)) %>%
+                       visNetwork::visEdges(scaling = list(min = 0.5,
+                                                           max = 6)) %>%
+                       visNetwork::visInteraction(#navigationButtons = TRUE,
+                         keyboard = T)
+                     if(!input$network_auto){
+                       if(input$network_style == "hierarchical"){
+                         p = p %>% visNetwork::visHierarchicalLayout()  
+                       }else{
+                         p = p %>% visNetwork::visIgraphLayout(layout = input$network_style)
+                       }
+                     }
+                     # - - - - - - -
+                     matr[matr==1 | lower.tri(matr)] <- NA
+                     
+                     p2 = heatmaply::heatmaply(matr,
+                                               Colv = T,
+                                               Rowv = T,
+                                               branches_lwd = 0.3,
+                                               margins = c(0, 0, 0, 0),
+                                               col = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                               column_text_angle = 90,
+                                               ylab = "m/z\n",
+                                               showticklabels = if(ncol(matr) <= 95) c(F,T) else c(F,F),
+                                               symm=T,
+                                               symbreaks=T,
+                                               dendrogram="none"
+                     )
+                     lcl$vectors$network_heatmap <- p2$x$layout$yaxis$ticktext
+                     
+                     # - - - - - - - 
+                     list(network = p, 
+                          network_heatmap = p2)
+                   },
+                   heatmap = {
+                     
+                     breaks = seq(min(mSet$dataSet$norm), 
+                                  max(mSet$dataSet$norm), 
+                                  length = 256/2)
+                     
+                     mat = mSet$analSet$heatmap$matrix[1:if(input$heatmap_topn < nrow(mSet$analSet$heatmap$matrix)) input$heatmap_topn else nrow(mSet$analSet$heatmap$matrix),]
+                     
+                     sideLabels = if(input$fill_var == "label"){
+                       as.data.frame(mSet$analSet$heatmap$translator[,!1])
+                     }else{
+                       varOrder = match(mSet$dataSet$covars$sample, colnames(mat))
+                       as.data.frame(mSet$dataSet$covars[, input$fill_var, with=F])
+                     }
+                     
+                     sidePalette = if(input$fill_var == "label"){
+                       mSet$analSet$heatmap$colors
+                     }else{
+                       hmap.lvls = unlist(unique(sideLabels))
+                       cols = if(length(hmap.lvls) < length(lcl$aes$mycols)) lcl$aes$mycols else gbl$functions$color.functions[[lcl$aes$spectrum]](length(hmap.lvls))
+                       color.mapper <- {
+                         classes <- hmap.lvls
+                         cols <- sapply(1:length(classes), function(i) cols[i]) # use user-defined colours
+                         names(cols) <- classes
+                         # - - -
+                         cols
+                       }
+                       color.mapper
+                     }
+                     
+                     p1 = {
+                       
+                       if(!is.null(mSet$analSet$heatmap$matrix)){
+                         if(input$heatmap_topn > 2000){
+                           data = data.frame(text = "Huge heatmap!\nDeactivating interactivity to avoid crashing.\nPlease apply a filter.")
+                           hmap_int <- ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10) +
+                             ggplot2::theme(text = ggplot2::element_text(family = lcl$aes$font$family)) + ggplot2::theme_bw()
+                          hmap_int
+                          }else{
+                           hmap_int <- suppressWarnings({
+                             
+                             if(input$heatlimits){
+                               heatmaply::heatmaply(mat,
+                                                    Colv = mSet$analSet$heatmap$my_order,
+                                                    Rowv = T,
+                                                    branches_lwd = 0.3,
+                                                    margins = c(60, 0, NA, 50),
+                                                    col = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                                    col_side_colors = sideLabels,
+                                                    col_side_palette = sidePalette,
+                                                    subplot_widths = c(.9,.1),
+                                                    subplot_heights = if(mSet$analSet$heatmap$my_order) c(.1, .05, .85) else c(.05,.95),
+                                                    column_text_angle = 90,
+                                                    xlab = "Sample",
+                                                    ylab = "m/z",
+                                                    showticklabels = c(if(ncol(mat) <= 31) T else F, if(nrow(mat) <= 31) T else F),
+                                                    limits = c(min(mSet$dataSet$norm), max(mSet$dataSet$norm)),
+                                                    symbreaks = T
+                               )
+                             }else{
+                               heatmaply::heatmaply(mat,
+                                                    Colv = mSet$analSet$heatmap$my_order,
+                                                    Rowv = T,
+                                                    branches_lwd = 0.3,
+                                                    margins = c(60, 0, NA, 50),
+                                                    colors = gbl$functions$color.functions[[lcl$aes$spectrum]](256),
+                                                    col_side_colors = sideLabels,
+                                                    col_side_palette = sidePalette,
+                                                    subplot_widths = c(.9,.1),
+                                                    subplot_heights = if(mSet$analSet$heatmap$my_order) c(.1, .05, .85) else c(.05,.95),
+                                                    column_text_angle = 90,
+                                                    xlab = "Sample",
+                                                    ylab = "m/z",
+                                                    showticklabels = c(if(ncol(mat) <= 31) T else F, if(nrow(mat) <= 31) T else F),
+                                                    symbreaks=T
+                               )
+                             }
+                           })
+                           # create heatmap object
+                           hmap_int$x$layout$annotations[[1]]$text <- ""
+                           # save the order of mzs for later clicking functionality
+                           lcl$vectors$heatmap <- hmap_int$x$layout[[if(mSet$settings$exp.type %in% c("2f", "t", "t1f")) "yaxis2" else "yaxis3"]]$ticktext 
+                           
+                           }
+                         # return
+                         hmap_int
+                       }else{
+                         data = data.frame(text = "No significant hits available!\nPlease try alternative source statistics below.")
+                         ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10) +
+                           ggplot2::theme(text = ggplot2::element_text(family = lcl$aes$font$family)) + ggplot2::theme_bw()
+                       }
+                     }
+                     
+                     p2 = 
+                       function(){
+                         if(!is.null(mSet$analSet$heatmap$matrix)){
+                           suppressWarnings({
+                             colSide = sideLabels
+                             colnames(colSide) <- ""
+                             pal = sidePalette
+                             samples = as.character(colSide[[1]])
+                             sampCols = as.character(sapply(samples, function(x) pal[names(pal) == x]))
+                             hmap_stat = heatmap3::heatmap3(mat,
+                                                            Colv = mSet$analSet$heatmap$my_order,
+                                                            Rowv = T,
+                                                            col = gbl$functions$color.functions[[lcl$aes$spectrum]](256),
+                                                            ColSideColors = sampCols,
+                                                            xlab = "Sample",
+                                                            ColSideLabs = colnames(sideLabels),
+                                                            ylab = "m/z",
+                                                            balanceColor = if(input$heatlimits) T else F,
+                                                            labRow = if(nrow(mat) <= 31) rownames(mat) else rep("", nrow(mat)),
+                                                            labCol = if(ncol(mat) <= 31) colnames(mat) else rep("", ncol(mat)),
+                                                            scale = "none",
+                                                            legendfun = function() plot(0, xaxt = "n", bty = "n", yaxt = "n", type = "n", xlab = "", 
+                                                                                        ylab = "")
+                             )
+                           })
+                           # create heatmap object
+                           # save the order of mzs for later clicking functionality
+                           #lcl$vectors$heatmap <- c()
+                           # return
+                           hmap_stat
+                         }else{
+                           data = data.frame(text = "No significant hits available!\nPlease try alternative source statistics below.")
+                           ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10) +
+                             ggplot2::theme(text = ggplot2::element_text(family = lcl$aes$font$family)) + ggplot2::theme_bw()
+                         }
+                       }
+                     
+                     list(heatmap_interactive = p1,
+                          heatmap_static = p2)
+                   }, 
+                   power = {
+                     p = {
+                       if("power" %in% names(mSet$analSet)){
+                         ggPlotPower(mSet, 
+                                     max_samples = max(mSet$analSet$power[[1]]$Jpred),
+                                     comparisons = names(mSet$analSet$power),
+                                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       }else{
+                         NULL
+                       }
+                     }
+                     list(power_plot = p)
+                   },
+                   wordcloud = {
+                     if(nrow(lcl$tables$wordcloud_filt) > 0){
+                       topWords = if(input$wordcloud_topWords > nrow(lcl$tables$wordcloud_filt)) nrow(lcl$tables$wordcloud_filt) else input$wordcloud_topWords
+                       wordcloud = wordcloud2::wordcloud2(data.table::as.data.table(lcl$tables$wordcloud_filt)[order(n, decreasing = T)][1:topWords,], color = "random-light", size=.7, shape = "circle")
+                       wordbar = {
+                         wcdata = data.table::as.data.table(lcl$tables$wordcloud_filt)[order(n, decreasing = T)][1:topWords,]
+                         colnames(wcdata)[2] <- "freq"
+                         ggPlotWordBar(wcdata = wcdata,
+                                       cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       }
+                     }
+                     list(
+                       wordcloud = wordcloud, 
+                       wordbar = wordbar)
+                   }
+  )
+  
+  finalPlots <- mapply(function(myplot, plotName){
+    
+    targets = "aov|tt|fc|corr|asca|volcano|meba"
+    if(grepl(targets, plotName)){
+      
+      whichAnal <- stringr::str_match(plotName, targets)[,1]
+      
+      if(whichAnal == "aov"){
+        whichAnal = if(mSet$settings$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
+      }
+      if(whichAnal == "meba") whichAnal <- "MB"
+      
+      if(is.null(mSet$analSet[[whichAnal]][[if(whichAnal == "corr") "cor.mat" else if(whichAnal == "asca") "sig.list" else if(whichAnal == "MB") "stats" else "sig.mat"]])){
+        data = data.frame(text = "No significant hits!")
+        myplot = ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10)
+      }
+    }
+    
+    isSquare <- grepl("pca|plsda|tsne|roc|heatmap|var|samp|network|umap|ica", plotName) & !grepl("scree|cv|perm|venn", plotName)
+    
+    # === WRAPPER ===
+    
+    canBe3D <- grepl("pca|plsda|tsne|umap|ica", plotName) & !grepl("scree|perm|cv", plotName)
+    if(canBe3D){
+      whichAnal <- stringr::str_match(plotName, "pca|plsda|tsne|umap|ica")[,1]
+      is3D <- !input[[paste0(whichAnal, "_2d3d")]]
+    }else{
+      is3D <- plotName %in% c("network")
+    }
+    
+    if(!is3D & !grepl("heatmap", plotName)){
+      
+      myplot <- myplot + guides(fill = guide_legend(ncol = 2),
+                                shape = guide_legend(ncol = 2),
+                                color = guide_legend(ncol = 2))
+      myplot <- myplot + 
+        gbl$functions$plot.themes[[lcl$aes$theme]](base_size = 15) + 
+        ggplot2::theme(legend.position=if(input$legend) "right" else "none",
+                       legend.key.size = unit(.5,"line"),
+                       legend.title = element_text(size=13),
+                       legend.text=element_text(size=10),
+                       axis.line = ggplot2::element_line(colour = 'black', size = .5),
+                       plot.title = ggplot2::element_text(hjust = 0.5,
+                                                          vjust = 0.1,
+                                                          size=lcl$aes$font$title.size*1.2),
+                       text = ggplot2::element_text(family = lcl$aes$font$family))
+      if(grepl("venn", plotName)){
+        myplot <- myplot + 
+          ggplot2::theme_void() +
+          ggplot2::theme(panel.grid = ggplot2::element_blank(),
+                         legend.position="none",
+                         text = ggplot2::element_text(family = lcl$aes$font$family))
+        
+      }
+      if(grepl("ml_bar", plotName)){
+        myplot <- myplot + 
+          ggplot2::theme(axis.text.x=ggplot2::element_blank(),
+                         axis.ticks.x=ggplot2::element_blank(),
+                         text = ggplot2::element_text(family = lcl$aes$font$family))
+      }
+      
+      if(length(myplot$data) > 0){
+        data = myplot$data
+      }else{
+        data = myplot[["layers"]][[1]][["data"]]
+      }
+      
+      if(any(mSet$report$mzStarred$star) & any(grepl("mz|m/z", names(data))) & !grepl("ml", plotName)){
+        #if(grepl("tt|fc|volc|pca_load|plsda_load|ml_bar", plotName)){
+        myX = rlang::quo_get_expr(myplot[["layers"]][[1]][["mapping"]][['x']])
+        myY = rlang::quo_get_expr(myplot[["layers"]][[1]][["mapping"]][['y']])
+        myText = rlang::quo_get_expr(myplot[["layers"]][[1]][["mapping"]][['text']])
+        myCol=rlang::quo_get_expr(myplot[["layers"]][[1]][["mapping"]][['colour']])
+        flip = grepl("tt|fc|aov|var|samp|corr", plotName)
+        matchMe = match(data[[myText]], mSet$report$mzStarred[star == TRUE]$mz)
+        isMatch = which(!is.na(matchMe))
+        xVals = data[[myX]][isMatch]
+        yVals = data[[myY]][isMatch]
+        labelVals = data[[myText]][isMatch]
+        colVals = data[[myCol]][isMatch]
+        
+        data = data.frame(x = xVals,
+                          y = yVals,
+                          text = labelVals,
+                          symb = c("\u2605"),
+                          col = colVals)
+        
+        if(is.numeric(xVals[1]) & is.numeric(yVals[1])){
+          myplot <- 
+            myplot + 
+            ggplot2::geom_text(data = data,
+                               aes(x = x,
+                                   y = y,
+                                   label = symb),
+                               color = "black",
+                               show.legend = F,
+                               size=7) + 
+            ggplot2::geom_text(data = data,
+                               aes(x = x,
+                                   y = y,
+                                   color = col,
+                                   label = symb),
+                               show.legend = F,
+                               size=5) +
+            # ggrepel::geom_text_repel(data = data,
+            #                          aes(x = x,# + .04*min(x),
+            #                              y = y,#+ .04*min(y),
+            #                              label = text),point.padding = 1,
+            #                          size=4) 
+          ggplot2::geom_text(data = data,
+                             aes(x = x, #+ 0.04 * max(x),
+                                 y = y,#+ 0.04 * max(x),
+                                 label = text),
+                             position = 	
+                               position_jitter(),
+                             size=4)
+        }
+      }
+    }
+    finalPlot = list(myplot)
+    finalPlot
+  }, toWrap, names(toWrap))
+  res = list(lcl = lcl, plots = finalPlots)
+  res
+}

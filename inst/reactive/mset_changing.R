@@ -3,28 +3,56 @@ observeEvent(input$change_cls, {
     shiny::updateCheckboxInput(session, "paired", value = T) # auto set for time series 
   }
   mSetter$do <- "change"
-  uimanager$refresh <- "general"
+  #uimanager$refresh <- "general"
 })
 
 shiny::observeEvent(input$change_subset, {
   mSetter$do <- "subset"
-  uimanager$refresh <- "general"
+  #uimanager$refresh <- "general"
   })
 
 shiny::observeEvent(input$reset_subset, {
   mSetter$do <- "unsubset"
-  uimanager$refresh <- "general"
+  #uimanager$refresh <- "general"
 })
 
 shiny::observeEvent(input$load_storage, {
   mSetter$do <- "load"
-  uimanager$refresh <- "general"
+  #uimanager$refresh <- "general"
 })
-
 
 observeEvent(input$show_prematched_mz_only, {
   if(mSet$metshiParams$prematched){
     mSetter$do <- "refresh"
-    uimanager$refresh <- "general"  
+   # uimanager$refresh <- "general"  
   }
 },ignoreInit = T)
+
+observeEvent(input$remove_storage, {
+  if(!is.null(input$storage_choice)){
+    exp = input$storage_choice
+    shinyWidgets::confirmSweetAlert(
+      session = session,
+      inputId = "remove_confirm",
+      text = tags$div(
+        tags$b("Click upper right ", icon("times"), " button to cancel."),br(),
+        shiny::img(#class = "rotategem", 
+          src = "gemmy_rainbow.png", 
+          width = "70px", height = "70px"),
+        br()
+      ),
+      btn_labels = c("No", "Yes"),
+      title = gsubfn::fn$paste("Are you sure you want to remove sub-experiment '$exp'?"),
+      #showCloseButton = T,
+      html = TRUE
+    )
+  }
+})
+
+observeEvent(input$remove_confirm,{
+  if(isTRUE(input$remove_confirm)){
+    mSet$storage[[input$storage_choice]] <- NULL
+    mSet <<- mSet
+    uimanager$refresh <- "general"
+  }
+},ignoreNULL = T)

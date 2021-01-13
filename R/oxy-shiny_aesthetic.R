@@ -117,8 +117,6 @@ app.font.css <- function(font.h1 = "Press Start 2P",
                         font.col = "white",
                         online=T){
 
-  print(online)
-  
   size.h1 <- paste0(size.h1, "pt")
   size.h2 <- paste0(size.h2, "pt")
   size.h3 <- paste0(size.h3, "pt")
@@ -176,12 +174,15 @@ app.font.css <- function(font.h1 = "Press Start 2P",
   #appHeader {
   margin: 2px;
   font-family: "$font.h1";
-  color: $font.col !important;
+  color: $font.col;
   $font.h1.w
   font-size: $size.h1;
   line-height: 0.5;
   margin-top: 8px;
   z-index:99998 !important;
+  line-height: 60px;
+  padding-right: 20px;
+  padding-left: 10px;
   }
   
   h1 {
@@ -211,10 +212,25 @@ app.font.css <- function(font.h1 = "Press Start 2P",
   font-family: "$font.body";
   $font.body.w
   font-size: $size.body;
+  background-color: black;
   }'
 
   no.na <- gsub(x = base, pattern = "\\n", replacement = "")
   filled <- gsubfn::fn$paste(no.na)
   # -----
   filled
-  }
+}
+
+#https://stackoverflow.com/questions/31425841/css-for-each-page-in-r-shiny
+## Modify the CSS style of a given selector
+modifyStyle <- function(selector, ...) {
+  
+  values <- as.list(substitute(list(...)))[-1L]
+  parameters <- names(values)
+  
+  args <- Map(function(p, v) paste0("'", p,"': '", v,"'"), parameters, values)
+  jsc <- paste0("$('",selector,"').css({", paste(args, collapse = ", "),"});")
+  
+  shinyjs::runjs(code = jsc)
+  
+}

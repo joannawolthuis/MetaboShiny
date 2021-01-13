@@ -8,8 +8,12 @@
 #' @export 
 #' @importFrom data.table fread
 get_exp_vars <- function(patcsv){
-  header = data.table::fread(patcsv, nrows = 5, header=T)
-  return(header[getColDistribution(header)$meta])
+  #patcsv="~/MetaboShiny/saves/admin/DSM_OWNCALLER/DSM_OWNCALLER.csv"
+  header_raw <- readLines(patcsv,n=1)
+  header_split <- strsplit(header_raw,",")[[1]][1:200]
+  header <- t(data.table::as.data.table(rep(0,length(header_split))))
+  colnames(header) <- header_split
+  return(header_split[getColDistribution(header)$meta])
 }
 
 #' @title Browse a base database
@@ -50,11 +54,39 @@ get_prematches <- function(who = NA,
                            patdb,
                            showdb=c(),
                            showadd=c(),
-                           showiso=c()){
+                           showiso=c(),
+                           showIsolabels=FALSE){
   
   conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
   
-  firstpart = strwrap("SELECT DISTINCT map.query_mz, compoundname,
+  check_me = "match_content"
+  fields = RSQLite::dbListFields(conn, check_me)
+  if(!("n2H" %in% fields)){
+    showIsolabels = F
+  }
+  
+  if(showIsolabels){
+    firstpart = strwrap("SELECT DISTINCT map.query_mz, compoundname,
+                               map.baseformula as baseformula,
+                               map.adduct as adduct,
+                               con.identifier,
+                               `%iso`,
+                               fullformula,
+                               finalcharge,
+                               dppm,
+                               description, 
+                               con.structure as structure,
+                               con.n2H,
+                               con.n13C,
+                               con.n15N,
+                               source
+                               FROM match_mapper map
+                               JOIN match_content con
+                               ON map.baseformula = con.baseformula
+                               AND map.adduct = con.adduct
+                               AND map.query_mz = con.query_mz", simplify=T, width=1000)
+  }else{
+    firstpart = strwrap("SELECT DISTINCT map.query_mz, compoundname,
                                map.baseformula as baseformula,
                                map.adduct as adduct,
                                con.identifier,
@@ -68,7 +100,8 @@ get_prematches <- function(who = NA,
                                JOIN match_content con
                                ON map.baseformula = con.baseformula
                                AND map.adduct = con.adduct
-                               AND map.query_mz = con.query_mz", simplify=T, width=1000)
+                               AND map.query_mz = con.query_mz", simplify=T, width=1000) 
+  }
   
   showadd <- if(is.null(showadd)) c() else if(length(showadd) > 0) paste0(showadd, collapse=" OR map.adduct = '", "'") else c()
   showdb <- if(is.null(showdb)) c() else if(length(showdb) > 0) paste0(showdb, collapse=" OR source = '", "'") else c()

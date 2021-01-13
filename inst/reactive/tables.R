@@ -21,7 +21,7 @@ output$match_tab <- DT::renderDataTable({
               rownames = F)
 }, server = F)
 
-output$enrich_tab <-DT::renderDataTable({
+output$enrich_tab <- DT::renderDataTable({
   MetaboShiny::metshiTable(content = enrich$overview)
 }, server = F)
 
@@ -111,7 +111,7 @@ lapply(c("adducts", "adduct_rules"), function(prefix){
            })
     
     output[[paste0(prefix, "_tab")]] <- rhandsontable::renderRHandsontable({
-      if (!is.null(show.tbl))
+      if (!is.null(show.tab))
         rhandsontable::rhandsontable(show.tab, stretchH = "all", useTypes = TRUE)
     })
   })
@@ -171,6 +171,7 @@ shiny::observeEvent(input$save_adducts, {
                         paste0(prefix,".csv")),
               overwrite = T)  
   }
+  
   adducts <<- data.table::fread(file.path(lcl$paths$work_dir, "adducts.csv"))
   adduct_rules <<- data.table::fread(file.path(lcl$paths$work_dir, "adduct_rules.csv"))
   selAdd = intersect(input$score_add, 

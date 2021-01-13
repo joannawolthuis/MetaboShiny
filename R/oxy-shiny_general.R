@@ -16,7 +16,7 @@ getProfile <- function(mSet, varName, title=varName, mode="stat"){
   samp.names <- rownames(sourceTable)
   # ---------------
   if(mode == "multi"){
-    if(mSet$dataSet$exp.type == "t"){
+    if(mSet$settings$exp.type == "t"){
       translator <- data.table(
         index = 1:length(samp.names),
         Sample = gsub(x = samp.names, pattern = "_T|_t\\d$", replacement=""),
@@ -162,6 +162,16 @@ internetWorks <- function(testsite = "http://www.google.com"){
   works
 }
 
+setHeartLoader <- function(perc){
+  # empty: 100px height on loading-fg
+  # full: 0px height on loading-fg
+  ht = 100 - perc
+  jsCode = paste0("div = document.getElementById('loading-fg'); ",
+                  "new_height = ", ht, "+'px'; ",
+                  "div.style.height = new_height;")
+  shinyjs::runjs(jsCode)
+}
+
 #' @title Show alert in MetaboShiny
 #' @description Function to create a SweetAlert in MetaboShiny with user message.
 #' @param message User message
@@ -179,20 +189,26 @@ internetWorks <- function(testsite = "http://www.google.com"){
 metshiAlert <- function(content,
                         session = shiny::getDefaultReactiveDomain(),
                         title = "Error",
-                        myImg = "gemmy_rainbow.png"){
+                        myImg = "metshi_heart_bezel.png",
+                        doBeep=F){
   if(typeof(content) == "character"){
     content = h3(content)
+  }
+  
+  if(doBeep & title == "Error"){
+    beepr::beep(sound=9)
   }
   
   shinyWidgets::sendSweetAlert(
     session = session,
     title = title,
     text = tags$div(
-      shiny::img(#class = "rotategem", 
+      br(),
+      shiny::img(class = "imagetop", 
                  src = myImg, 
                  #width = "30px", 
                  height = "30px"),
-      br(),
+      br(),br(),
       content
     ),
     html = TRUE
@@ -206,12 +222,16 @@ metshiAlert <- function(content,
 #' @rdname reformat.metadata
 #' @export 
 reformat.metadata <- function(metadata){
+  keep = !duplicated(colnames(metadata))
+  metadata = metadata[, ..keep]
   colnames(metadata) <- tolower(colnames(metadata))
   colnames(metadata) <- tolower(gsub(x=colnames(metadata), pattern = "\\.$|\\.\\.$|\\]", replacement = ""))
   colnames(metadata) <- gsub(x=colnames(metadata), pattern = "\\[|\\.|\\.\\.| ", replacement = "_")
   colnames(metadata) <- gsub(colnames(metadata), pattern = "characteristics_|factor_value_", replacement="")
   metadata[metadata == "" | is.na(metadata)] <- c("unknown")
   setnames(metadata, old = c("sample_name", "source_name"), new = c("sample", "individual"), skip_absent = T)
+  cols = colnames(metadata)   # define which columns to work with
+  metadata[ , (cols) := lapply(.SD, function(x) {gsub(",", ".", x)}), .SDcols = cols]
   
   # - - - 
   return(metadata)

@@ -8,7 +8,7 @@ shiny::observe({
     NULL # if not reloading anything, nevermind
     
   }else{
-
+    
     if(!is.null(mSet)){
       
       mSet.old <- mSet
@@ -23,18 +23,80 @@ shiny::observe({
                  # TODO: use this in venn diagram creation
                  mSet <- MetaboShiny::store.mSet(mSet)
                },
-               pattern = {
+               corr = {
                  # pearson kendall spearman
                  lvls = levels(mSet$dataSet$cls)
-                 pat = input$pattern_seq_order
+                 pat = input$corr_seq_order
                  pat_order = match(lvls,pat)
                  pattern = paste0(pat_order-1, collapse="-")
-                 mSet <- MetaboAnalystR::Match.Pattern(mSet, input$pattern_corr, pattern)
-                 names(mSet$analSet)[names(mSet$analSet) == "corr"] <- "pattern" 
+                 mSet <- MetaboAnalystR::Match.Pattern(mSet, input$corr_corr, pattern)
+               },
+               diffcorr = {
+                 library(DGCA, quietly = TRUE)
+                 #data(darmanis)
+                 data(design_mat)
+                 #ddcor_res = ddcorAll(inputMat = darmanis, design = design_mat,
+                 #                     compare = c("oligodendrocyte", "neuron"),
+                 #                     adjust = "none", nPerm = 0, nPairs = 100)
+                 inMat = t(mSet$dataSet$norm)
+                 vars = unique(unlist(mSet$dataSet$covars[,mSet$settings$exp.var,with=F]))
+                 dMat = matrix(ncol = length(vars), 
+                               nrow=nrow(mSet$dataSet$covars), 
+                               data = rep(0, length(vars)),
+                               dimnames = list(mSet$dataSet$covars$sample, vars))
+                 
+                 for(var in vars){
+                   dMat[,var] <- as.numeric(unlist(mSet$dataSet$covars[,mSet$settings$exp.var,with=F] == var))
+                 }
+                 
+                 mSet$analSet$diffcorr = DGCA::ddcorAll(inputMat = inMat, design = dMat,
+                                                        compare = colnames(dMat),
+                                                        adjust = "fdr", nPerm = 0)#10)# nPairs = 100)
                },
                pca = {
                  shiny::withProgress({
-                   mSet <- MetaboAnalystR::PCA.Anal(mSet) # perform PCA analysis
+                   if(input$pca_source != "normalized"){
+                     mSet_orig = mSet
+                     mSet$dataSet$norm <- switch(input$pca_source,
+                                                 "pre-batch correction" = mSet$dataSet$prebatch,
+                                                 original = mSet$dataSet$proc)
+                     pcaRes <- MetaboAnalystR::PCA.Anal(mSet)$analSet$pca # perform PCA analysis
+                     mSet = mSet_orig
+                     mSet$analSet$pca <- pcaRes  
+                   }else{
+                     mSet <- MetaboAnalystR::PCA.Anal(mSet) # perform PCA analysis
+                   }
+                 })
+                 success = T
+               },
+               ica = {
+                 shiny::withProgress({
+                   # ica package
+                   inTbl = switch(input$ica_source, 
+                                  original = mSet$dataSet$proc,
+                                  "pre-batch correction" = mSet$dataSet$prebatch,
+                                  normalized = mSet$dataSet$norm)
+                   nc = input$ica_ncomp
+                   icaRes = switch(input$ica_method,
+                                   fast = ica::icafast(inTbl, nc = input$ica_ncomp, center = F,maxit = input$ica_maxiter),
+                                   imax = ica::icaimax(inTbl, nc = input$ica_ncomp, center = F,maxit = input$ica_maxiter),
+                                   jade = ica::icajade(inTbl, nc = input$ica_ncomp, center = F,maxit = input$ica_maxiter))
+                   mSet$analSet$ica <- icaRes
+                 })
+                 success = T
+               },
+               umap = {
+                 shiny::withProgress({
+                   # umap package
+                   inTbl = switch(input$umap_source, 
+                                  original = mSet$dataSet$proc,
+                                  "pre-batch correction" = mSet$dataSet$prebatch,
+                                  normalized = mSet$dataSet$norm)
+                   umapRes = umap::umap(d = inTbl,
+                                        method = "naive",
+                                        n_components = input$umap_ncomp,
+                                        n_neighbors = input$umap_neighbors)
+                   mSet$analSet$umap <- umapRes
                  })
                  success = T
                },
@@ -52,62 +114,77 @@ shiny::observe({
                },
                network = {
                  
-                # aov
-                flattened <- getTopHits(mSet, 
-                                       input$network_table,
-                                       input$network_topn)
-                
-                useHits = flattened[[1]]
-                
-                # ---
-                #TODO: gaussian graphical model
-                # ---
-                rcorrMat = Hmisc::rcorr(x = as.matrix(mSet$dataSet$norm[, useHits]),
-                                        #y = as.matrix(mSet$dataSet$norm[, useHits]),
-                                        type = input$network_corr)
-                mSet$analSet$network <- list(rcorr = rcorrMat,
-                                             order = useHits)
-                output$network_now <- shiny::renderText(input$network_table)
+                 if(input$network_sel){
+                   useHits = colnames(mSet$dataSet$norm)
+                 }else{
+                   # aov
+                   flattened <- getTopHits(mSet, 
+                                           input$network_table,
+                                           input$network_topn)
+                   
+                   useHits = flattened[[1]]  
+                 }
+                 
+                 
+                 # ---
+                 #TODO: gaussian graphical model
+                 # ---
+                 rcorrMat = Hmisc::rcorr(x = as.matrix(mSet$dataSet$norm[, useHits]),
+                                         #y = as.matrix(mSet$dataSet$norm[, useHits]),
+                                         type = input$network_corr)
+                 mSet$analSet$network <- list(rcorr = rcorrMat,
+                                              order = useHits)
+                 output$network_now <- shiny::renderText(input$network_table)
                },
                enrich = {
                  shiny::withProgress({
-                   
-                   enr_mSet <- MetaboAnalystR::InitDataObjects("mass_all", 
-                                                               "mummichog",
-                                                               FALSE)
-                   
-                   MetaboAnalystR::SetPeakFormat("rmp")
-                   
-                   enr_mSet <- MetaboAnalystR::UpdateInstrumentParameters(enr_mSet, 
-                                                                          mSet$ppm, 
-                                                                          "mixed");
                    
                    #similarly to venn diagram
                    flattened <- getTopHits(mSet, 
                                            input$mummi_anal,
                                            input$mummi_topn)
                    
+                   hasP = grepl("tt|aov|asca",input$mummi_anal)
+                   
                    setProgress(0.1)
                    
                    myFile <- tempfile(fileext = ".csv")
-                   tbl = data.table::data.table("m.z" = as.numeric(gsub(flattened[[1]], pattern="+|-", replacement="")),
+                   tbl = data.table::data.table("m.z" = as.numeric(gsub(flattened[[1]], pattern="(\\+|\\-|RT).*$", replacement="")),
                                                 mode = sapply(flattened[[1]], function(mz){
                                                   if(grepl(pattern="-",x=mz)) "negative" else "positive"
                                                 }))
+                   tbl <- tbl[complete.cases(tbl)]
                    
-                   tbl[, "p.value"] = c(0)
-                   tbl[, "t.score"] = c(0)
+                   hasT = grepl("tt", input$mummi_anal)
                    
-                   enr_mSet$dataSet$mummi.orig <- cbind(tbl$p.value,
-                                                        tbl$m.z,
-                                                        tbl$t.score)
-                   colnames(enr_mSet$dataSet$mummi.orig) = c("p.value", 
-                                                             "m.z", 
-                                                             "t.score")
-                   enr_mSet$dataSet$pos_inx <- tbl$mode == "positive"
-                   enr_mSet$dataSet$mumType <- "list"
-                   enr_mSet$dataSet$mumRT <- FALSE
-                   mumDataContainsPval <<- 0#if(grepl(input$mummi_anal, pattern = "tt|aov|aov2")) 1 else 0
+                   anal = gsub(" \\(.*$|", "", input$mummi_anal)
+                   subset = gsub("\\(|\\)|.*\\(", "", input$mummi_anal)
+                   
+                   tbl[, "p.value"] = if(hasP) mSet$storage[[subset]]$analysis[[anal]]$sig.mat[match(flattened[[1]], 
+                                                                                                     rownames(mSet$storage[[subset]]$analysis[[anal]]$sig.mat)),
+                                                                                               if(anal == "aov2") "Interaction(adj.p)" else "p.value"] else c(0)
+                   tbl[, "t.score"] = if(hasT) mSet$storage[[subset]]$analysis[[anal]]$sig.mat[match(flattened[[1]], 
+                                                                                                     rownames(mSet$storage[[subset]]$analysis[[anal]]$sig.mat)),
+                                                                                               "t.stat"] else c(0)
+                   
+                   if(hasP) if(all(is.na(tbl$p.value))) tbl$p.value <- c(0)
+                   if(hasT) if(all(is.na(tbl$t.score))) tbl$t.score <- c(0)
+                   
+                   tmpfile <- tempfile()
+                   
+                   fwrite(tbl, file=tmpfile)
+                   
+                   enr_mSet <- MetaboAnalystR::InitDataObjects("mass_all",
+                                                               "mummichog",
+                                                               FALSE)
+                   MetaboAnalystR::SetPeakFormat("mpt")
+                   enr_mSet <- MetaboAnalystR::UpdateInstrumentParameters(enr_mSet,
+                                                                          mSet$ppm,
+                                                                          "mixed",
+                                                                          "yes",
+                                                                          0.02);
+                   
+                   enr_mSet <- MetaboAnalystR::Read.PeakListData(enr_mSet, tmpfile);
                    
                    shiny::setProgress(0.2)
                    
@@ -116,7 +193,12 @@ shiny::observe({
                    
                    shiny::setProgress(0.3)
                    
-                   require(enviPat)
+                   #===
+                   
+                   enr_mSet<-MetaboAnalystR::SetPeakEnrichMethod(enr_mSet, if(input$mummi_enr_method | !hasT) "mum" else "gsea", "v2")
+                   enr_mSet<-MetaboAnalystR::SetMummichogPval(enr_mSet, if(hasP) as.numeric(gsub(",",".",input$mummi_pval)) else 1)
+                   
+                   #===
                    
                    elecMass = 0.000548579909
                    mummi_adducts <- adducts[Name %in% input$mummi_adducts]
@@ -126,8 +208,8 @@ shiny::observe({
                      if(is.na(row$AddEx)) row$AddEx <- ""
                      if(is.na(row$RemAt)) row$RemAt <- ""
                      if(is.na(row$RemEx)) row$RemEx <- ""
-                     addForm <- mergeform(row$AddAt, row$AddEx)
-                     remForm <- mergeform(row$RemAt, row$RemEx)
+                     addForm <- enviPat::mergeform(row$AddAt, row$AddEx)
+                     remForm <- enviPat::mergeform(row$RemAt, row$RemEx)
                      addMass <- enviPat::check_chemform(isotopes, addForm)$monoisotopic_mass
                      remMass <- enviPat::check_chemform(isotopes, remForm)$monoisotopic_mass
                      if(addMass < 0) addMass <- 0
@@ -159,51 +241,7 @@ shiny::observe({
                    
                    enr_mSet$add.map <- match.values
                    
-                   shiny::setProgress(0.5)
-                   
-                   # === GETLIB ===
-                   lib = input$mummi_org
-                   libVersion <- "current"#input$mummi_db_ver
-                   
-                   filenm <- paste(lib, ".rds", sep = "")
-                   biocyc <- grepl("biocyc", lib)
-                   
-                   if (!is.null(enr_mSet$curr.cust)) {
-                     if (biocyc) {
-                       user.curr <- enr_mSet$curr.map$BioCyc
-                     }else {
-                       user.curr <- enr_mSet$curr.map$KEGG
-                     }
-                     currency <<- user.curr
-                     if (length(currency) > 0) {
-                       shiny::showNotification("Currency metabolites were successfully uploaded!")
-                     }else {
-                       shiny::showNotification("Errors in currency metabolites uploading!")
-                     }
-                   }
-                   if (libVersion == "old" && end.with(lib, "kegg")) {
-                     mum.url <- paste("https://www.metaboanalyst.ca/resources/libs/mummichog/kegg_2018/", 
-                                      filenm, sep = "")
-                   }else {
-                     mum.url <- paste("https://www.metaboanalyst.ca/resources/libs/mummichog/", 
-                                      filenm, sep = "")
-                   }
-                   download.file(mum.url, destfile = filenm, method = "libcurl", 
-                                 mode = "wb")
-                   mummichog.lib <- readRDS(filenm)
-                   
                    shiny::setProgress(0.6)
-                   
-                   prematchies <- MetaboShiny::get_prematches(if(biocyc) "metacyc" else "kegg", 
-                                                              "source", 
-                                                              lcl$paths$patdb)
-                   
-                   iden.vs.add <- unique(prematchies[,c("identifier", "adduct")])
-                   iden.vs.add$i <- match(iden.vs.add$identifier,mummichog.lib$cpd.lib$id)
-                   iden.vs.add <- data.table::as.data.table(iden.vs.add[complete.cases(iden.vs.add),])
-                   iden.vs.add <- iden.vs.add[adduct %in% mummi_adducts$Name]
-                   
-                   shiny::setProgress(0.7)
                    
                    # ==== NEW_ADDUCT_MZLIST ===
                    
@@ -224,16 +262,15 @@ shiny::observe({
                      mass.user.neg <- lapply(mass.list.neg, function(x) eval(parse(text = paste(gsub("PROTON", 
                                                                                                      1.007825, x)))))
                      mw_modified.neg <- do.call(cbind, mass.user.neg)
-                     colnames(mw_modified.neg) <- ion.name.neg
+                     if(!is.null(mw_modified.neg)) colnames(mw_modified.neg) <- ion.name.neg
                      mass.list.pos <- as.list(ion.mass.pos)
                      mass.user.pos <- lapply(mass.list.pos, function(x) eval(parse(text = paste(gsub("PROTON", 
                                                                                                      1.007825, x)))))
                      mw_modified.pos <- do.call(cbind, mass.user.pos)
-                     colnames(mw_modified.pos) <- ion.name.pos
+                     if(!is.null(mw_modified.pos)) colnames(mw_modified.pos) <- ion.name.pos
                      mw_modified <- list(mw_modified.neg, mw_modified.pos)
                      
                      if(use.rules){
-                       print("rules")
                        mw_modified <- lapply(mw_modified, function(mw_adds){
                          for(i in 1:nrow(mw_adds)){
                            ok.adducts <- iden.vs.add[i,]$adduct
@@ -247,127 +284,421 @@ shiny::observe({
                    
                    shiny::setProgress(0.8)
                    
-                   #unlockBinding("new_adduct_mzlist", as.environment("package:MetaboAnalystR"))
                    assignInNamespace("new_adduct_mzlist", new_adduct_mzlist, ns="MetaboAnalystR", 
                                      envir=as.environment("package:MetaboAnalystR"))
                    
-                   enr_mSet <- MetaboAnalystR::SetPeakEnrichMethod(enr_mSet, 
-                                                                   if(input$mummi_enr_method) "mum" else "gsea")
-                   
                    shiny::setProgress(0.9)
                    enr_mSet$dataSet$N <- 20
-                   enr_mSet <- MetaboAnalystR::SetMummichogPval(enr_mSet, input$mummi_pval)
                    
                    enr_mSet <- MetaboAnalystR::PerformPSEA(mSetObj = enr_mSet, 
-                                                           lib = lib, 
-                                                           libVersion = libVersion, 
+                                                           lib = input$mummi_org,
+                                                           libVersion = "current",
                                                            permNum = 100) 
                    
-                   mSet$analSet$enrich <- enr_mSet
+                   filenm <- if(input$mummi_enr_method | !hasT) "mummichog_matched_compound_all.csv" else "mummichog_fgsea_pathway_enrichment.csv"
+                   enr_mSet$dataSet$mumResTable <- data.table::fread(filenm)
+                   
+                   if(!input$mummi_enr_method){
+                     tbl.rows <- lapply(1:length(enr_mSet$path.hits), function(i){
+                       l = enr_mSet$path.hits[[i]]
+                       row = enr_mSet$dataSet$mumResTable[i,]
+                       row$Cpd.Hits <- paste0(l, collapse=";")
+                       row
+                     })
+                     tbl <- data.table::rbindlist(tbl.rows)
+                     tbl <- tidyr::separate_rows(tbl,
+                                                 "Cpd.Hits",
+                                                 sep = ";")
+                     tbl <- as.data.frame(tbl)
+                     tbl$Matched.Compound <- tbl$Cpd.Hits
+                     
+                     add.tbl = data.frame(Matched.Compound = names(unlist(enr_mSet$cpd_form_dict)),
+                                          adduct = unlist(enr_mSet$cpd_form_dict))
+                     mz.tbl = data.frame(Query.Mass = names(unlist(enr_mSet$mz2cpd_dict)),
+                                         Matched.Compound = unlist(enr_mSet$mz2cpd_dict))
+                     mzorig.tbl = data.frame(Matched.Compound = names(unlist(enr_mSet$cpd2mz_dict)),
+                                             Orig.Mass = unlist(enr_mSet$cpd2mz_dict))
+                     mergy = merge(tbl, add.tbl)
+                     mergy = merge(mergy, mz.tbl)
+                     mergy = merge(mergy, mzorig.tbl)
+                     mergy$Mass.Diff = abs(as.numeric(mergy$Query.Mass) - as.numeric(mergy$Orig.Mass))
+                     mergy = unique(mergy[,c("Query.Mass", "Matched.Compound","adduct","Mass.Diff")])
+                     enr_mSet$dataSet$mumResTable <- mergy
+                   }
+                   
+                   mSet$analSet$enrich <- list(mummi.resmat = enr_mSet$mummi.resmat,
+                                               mummi.gsea.resmat = enr_mSet$mummi.gsea.resmat,
+                                               mumResTable = enr_mSet$dataSet$mumResTable,
+                                               path.nms = enr_mSet$path.nms,
+                                               path.hits = enr_mSet$path.hits)
+                   enr_mSet <- NULL
                  })
                },
                ml = {
                  try({
                    shiny::setProgress(value = 0)
                    
+                   pickedTbl <- if(input$ml_run_on_norm) "norm" else "orig"
                    # get base table to use for process
-                   curr <- data.table::as.data.table(mSet$dataSet$proc)
+                   curr <- data.table::as.data.table(mSet$dataSet[[pickedTbl]])
+                   
+                   if(input$ml_specific_mzs != "no"){
+                     shiny::showNotification("Using user-specified m/z set.")
+                     if(!is.null(input$ml_mzs)){
+                       curr <- curr[,input$ml_mzs, with=F]
+                     }else{
+                       mzs = getTopHits(mSet, 
+                                        input$ml_specific_mzs, 
+                                        input$ml_mzs_topn)[[1]]
+                       mzs = gsub("^X", "", mzs)
+                       mzs = gsub("\\.$", "-", mzs)
+                       curr <- curr[,..mzs]
+                     }
+                   }
                    
                    # replace NA's with zero
-                   curr <- curr[,(1:ncol(curr)) := lapply(.SD,function(x){ifelse(is.na(x),0,x)})]
+                   for (j in seq_len(ncol(curr))){
+                     set(curr,which(is.na(curr[[j]])),j,0)
+                   }
                    
                    # conv to data frame
                    curr <- as.data.frame(curr)
-                   rownames(curr) <- rownames(mSet$dataSet$proc)
+                   rownames(curr) <- rownames(mSet$dataSet[[pickedTbl]])
                    
                    # find the qc rows and remove them
                    is.qc <- grepl("QC|qc", rownames(curr))
                    if(sum(is.qc) > 0){
                      curr <- curr[!is.qc,]
                    }
-                   # reorder according to covars table (will be used soon)
                    
                    order <- match(rownames(curr), mSet$dataSet$covars$sample)
+                   
                    if("label" %in% colnames(mSet$dataSet$covars)){
                      config <- mSet$dataSet$covars[order, -"label"]
                    }else{
                      config <- mSet$dataSet$covars[order, ]
                    }
                    
-                   config <- config[, input$ml_include_covars,with=F]# reorder so both halves match up later
+                   if(!is.null(lcl$vectors$ml_train)){
+                     if(unique(lcl$vectors$ml_train) %in% c("split","all")){
+                       lcl$vectors$ml_train <- NULL
+                     }
+                   }
+                   if(!is.null(lcl$vectors$ml_test)){
+                     if(unique(lcl$vectors$ml_test)%in% c("split","all")){
+                       lcl$vectors$ml_test <- NULL
+                     }
+                   }
                    
-                   if(mSet$dataSet$exp.type %in% c("2f", "t1f")){
+                   batch_sampling = input$ml_batch_sampling
+                   batches = input$ml_batch_covars
+                   
+                   if(input$ml_samp_distr != " "){
+                     spl.name = stringr::str_split(input$ml_samp_distr, " - ")[[1]]
+                     ml.method = spl.name[1]
+                     ml.name = spl.name[2]
+                     ml.anal = mSet$analSet$ml[[ml.method]][[ml.name]]
+                     if("distr" %in% names(ml.anal)){
+                       batch_sampling <- "none"
+                       distrs = unique(ml.anal$distr)
+                       if(length(distrs) > 1){
+                         shiny::showNotification("You selected a model with multiple repeats with random split every repeat!
+                                               Will only use the first.")
+                       }
+                       ml.dist = distrs[[1]]
+                       vec = rep("train", nrow(mSet$dataSet$covars))
+                       vec[as.numeric(ml.dist$test)] <- "test"
+                       config$split <- vec
+                     }else{
+                       shiny::showNotification("Not available in this model (pre-update). Defaulting to selected settings!")
+                     }
+                   }
+                   
+                   needed_for_subset <- c(lcl$vectors$ml_train[1],
+                                          lcl$vectors$ml_test[1])
+                   
+                   label = unlist(config[,mSet$settings$exp.var,with=F])
+                   #table(paste0(config$country,"AND",config$group_from_fcs_12vs345))
+                   
+                   config <- config[, unique(c(input$ml_include_covars,
+                                               if(length(batches)>0) input$ml_batch_covars else c(),
+                                               needed_for_subset)),with=F]# reorder so both halves match up later  
+                   
+                   
+                   if(mSet$settings$exp.type %in% c("2f", "t1f")){
+                     cls <- if(input$ml_run_on_norm) "" else "orig."
+                     
                      # just set to facA for now..
                      if(nrow(config)==0){
-                       config <- data.frame(label=mSet$dataSet$facA)
+                       config <- data.frame(label=mSet$dataSet[[paste0(cls,"facA")]])
                      }else{
-                       config <- cbind(config, label=mSet$dataSet$facA) # add current experimental condition
+                       config <- cbind(config, label=mSet$dataSet[[paste0(cls,"facA")]]) # add current experimental condition
                      }
                    }else{
+                     cls <- "cls" #if(input$ml_run_on_norm) "cls" else "orig.cls"
                      if(nrow(config)==0){
-                       config <- data.frame(label=mSet$dataSet$cls)
+                       config <- data.frame(label=label)
                      }else{
                        config <- cbind(config, 
-                                       label=mSet$dataSet$cls) # add current experimental condition
+                                       label=label) # add current experimental condition
                      }
                    }
                    
-                   if(!input$ml_random_split){
-                     try({
-                       shiny::showNotification("Using same train/test split for all repeats...")
-                     })
-                     # make split for all repeats
-                     train_idx = caret::createDataPartition(y = config$label, p = input$ml_train_perc/100, list = FALSE) # partition data in a balanced way (uses labels)
-                     # add column to config for this split
-                     config$split <- c("train")
-                     config$split[train_idx] <- "test"
-                     # set test_vec and train_vec c(split, train), c(split, test)
-                     lcl$vectors$ml_train <<- c("split", "train")
-                     lcl$vectors$ml_test <<- c("split", "test")
+                   # TRAIN/TEST SPLIT
+                   #lcl$vectors$ml_train
+                   #lcl$vectors$ml_test
+                   t = as.data.table(cbind(config, curr))
+                   
+                   if(!is.null(lcl$vectors$ml_train) | !is.null(lcl$vectors$ml_test)){
+                     # add clause for same train_test
+                     test_idx = NULL
+                     train_idx = NULL
+                     if(!is.null(lcl$vectors$ml_test)){
+                       test_idx = which(t[[lcl$vectors$ml_test[1]]] == lcl$vectors$ml_test[2])
+                     }
+                     if(!is.null(lcl$vectors$ml_train)){
+                       train_idx = which(t[[lcl$vectors$ml_train[1]]] == lcl$vectors$ml_train[2])
+                     }
+                     if(is.null(train_idx)){
+                       train_idx = setdiff(1:nrow(t), test_idx)  
+                     }else if(is.null(test_idx)){
+                       test_idx = setdiff(1:nrow(t), train_idx)
+                     }
                    }else{
-                     if(is.null(lcl$vectors$ml_train)){
-                       lcl$vectors$ml_train <<- c("all", "all")
+                     split_label = if(length(batches) == 1){
+                       print("splitting tr/te % per batch")
+                       #table(paste0(mSet$dataSet$covars$country,"AND",t[,"label"][[1]]))
+                       paste0(t$label,"AND",t[,..batches][[1]])
+                     }else{
+                       print("unbiased split over pool")
+                       t$label
                      }
-                     if(is.null(lcl$vectors$ml_test)){
-                       lcl$vectors$ml_test <<- c("all", "all")
+                     train_idx = caret::createDataPartition(y = split_label, 
+                                                            p = input$ml_train_perc/100,
+                                                            list = FALSE)[,1] # partition data in a balanced way (uses labels)
+                     test_idx = setdiff(1:nrow(t), train_idx)
+                   }
+                   
+                   test_sampnames = rownames(curr)[test_idx]
+                   
+                   training_data = t[train_idx,]
+                   testing_data = t[-train_idx,]
+                   
+                   configCols = 1:ncol(config)
+                   mzCols = setdiff(1:ncol(training_data), configCols)
+                   
+                   ## ONLY APPLY TO TRAINING
+                   ## IF BATCHES ARE PRESENT 
+                   if(length(batches) > 0 & batch_sampling != "none"){
+                     #if(batch_sampling != "none"){
+                     print("resampling classes per batch group")
+                     # RESAMPLE BASED ON BATCH VARIABLE
+                     mzs=colnames(training_data)[mzCols]
+                     colnames(training_data)[mzCols]=paste0("mz",1:length(mzCols))
+                     labelCol = which(colnames(training_data) == "label")
+                     spl.t = split(training_data, training_data[,..batches])
+                     if(input$ml_batch_size_sampling){
+                       #### RESAMPLE TO EQUALIZE BATCH CATEGORY SIZE (ALL COUNTRIES IN TRAIN SAME SIZE EACH)
+                       library(plyr)
+                       batch_sizes = sapply(spl.t, nrow)
+                       size_per_group = if(batch_sampling == "down") min(batch_sizes) else max(batch_sizes)
+                       balanced.spl.t <- lapply(spl.t, function(l){
+                         r = switch(batch_sampling,
+                                    up = upsample.adj(l, as.factor(l$label), maxClass = size_per_group),
+                                    rose = {
+                                      resampled = ROSE::ROSE(label ~ ., 
+                                                             data = {
+                                                               dat = l[, c(labelCol, mzCols), with=F]
+                                                               cols = colnames(dat)[2:ncol(dat)]
+                                                               dat[, (cols) := lapply(.SD, as.numeric), 
+                                                                   .SDcols = cols]
+                                                               dat
+                                                             }, 
+                                                             N = size_per_group * 2)
+                                      resampled.data = resampled$data
+                                      colnames(resampled.data) <- c("label", mzs)
+                                      keep.config = sapply(configCols, function(i){
+                                        length(unique(l[[i]] )) == 1
+                                      })
+                                      resampled.config = data.table::as.data.table(lapply(which(keep.config), 
+                                                                                          function(i){
+                                                                                            c(rep(unique(l[[i]]), 
+                                                                                                  nrow(resampled.data)))
+                                                                                          }))
+                                      colnames(resampled.config) <- colnames(l)[which(keep.config)]
+                                      joined.data = cbind(resampled.config, resampled.data)
+                                      joined.data
+                                    },
+                                    down = downsample.adj(l, as.factor(l$label), minClass = size_per_group))
+                         if("Class" %in% names(r)){
+                           r$Class <- NULL  
+                         }
+                         as.data.table(r)   
+                       })
+                       r = rbindlist(balanced.spl.t)
+                     }else if(length(batches)==1){
+                       ### BALANCE LABELS WITHIN BATCHES, BUT DON'T MAKE THEM ALL THE SAME SIZE
+                       balanced.spl.t <- lapply(spl.t, function(l){
+                         size_per_group = if(batch_sampling == "down") min(table(l$label)) else max(table(l$label))
+                         r = switch(batch_sampling,
+                                    up = upsample.adj(l, l$label, maxClass = size_per_group),
+                                    rose = {
+                                      resampled = ROSE::ROSE(label ~ ., 
+                                                             data = {
+                                                               dat = l[, c(labelCol, mzCols), with=F]
+                                                               cols = colnames(dat)[2:ncol(dat)]
+                                                               dat[, (cols) := lapply(.SD, as.numeric), 
+                                                                   .SDcols = cols]
+                                                               dat
+                                                             }, 
+                                                             N = size_per_group * 2)
+                                      resampled.data = resampled$data
+                                      colnames(resampled.data) <- c("label", mzs)
+                                      keep.config = sapply(configCols, function(i){
+                                        length(unique(l[[i]] )) == 1
+                                      })
+                                      resampled.config = data.table::as.data.table(lapply(which(keep.config), 
+                                                                                          function(i){
+                                                                                            c(rep(unique(l[[i]]), 
+                                                                                                  nrow(resampled.data)))
+                                                                                          }))
+                                      colnames(resampled.config) <- colnames(l)[which(keep.config)]
+                                      joined.data = cbind(resampled.config, resampled.data)
+                                      joined.data
+                                    },
+                                    down = downsample.adj(l, l$label, minClass = size_per_group))
+                         if("Class" %in% names(r)){
+                           r$Class <- NULL  
+                         }
+                         as.data.table(r) 
+                       })
+                       r = rbindlist(balanced.spl.t)
+                     }else{
+                       r = as.data.table(cbind(config, curr))
                      }
-                     if(all(lcl$vectors$ml_test == lcl$vectors$ml_train)){
-                       if(unique(lcl$vectors$ml_test) == "all"){
-                         shiny::showNotification("No subset selected... continuing in normal non-subset mode")
-                       }else{
-                         MetaboShiny::metshiAlert("Cannot test on the training set!")
-                         return(NULL)
+                     configCols = colnames(config)
+                     configCols = intersect(configCols, colnames(r))
+                     config_adj = r[, ..configCols]
+                     training_data_adj = r[, -..configCols]
+                     colnames(training_data_adj) <- mzs
+                     training_cleaned = cbind(config_adj, training_data_adj)
+                     testing_data_adj = cbind(split = "test", testing_data)
+                     training_data_cleaned_adj = cbind(split = "train", training_cleaned)
+                     curr = rbind(testing_data_adj, 
+                                  training_data_cleaned_adj)
+                     config = curr[,..configCols]
+                   }else{
+                     if(input$ml_sampling != "none"){
+                       print('resampling based on class...')
+                       l = training_data
+                       mzs = colnames(l)[mzCols]
+                       colnames(l)[mzCols]=paste0("mz",1:length(mzCols))
+                       labelCol = which(colnames(training_data) == "label")
+                       size_per_group = if(input$ml_sampling == "down") min(table(l[[labelCol]])) else max(table(l[[labelCol]]))
+                       r = switch(input$ml_sampling,
+                                  up = upsample.adj(l, as.factor(l$label), maxClass = size_per_group),
+                                  rose = {
+                                    resampled = ROSE::ROSE(label ~ ., 
+                                                           data = {
+                                                             dat = l[, c(labelCol, mzCols), with=F]
+                                                             cols = colnames(dat)[2:ncol(dat)]
+                                                             dat[, (cols) := lapply(.SD, as.numeric), 
+                                                                 .SDcols = cols]
+                                                             dat
+                                                           }, 
+                                                           N = size_per_group * 2)
+                                    resampled.data = resampled$data
+                                    colnames(resampled.data) <- c("label", mzs)
+                                    keep.config = sapply(configCols, function(i){
+                                      length(unique(l[[i]] )) == 1
+                                    })
+                                    resampled.config = data.table::as.data.table(lapply(which(keep.config), 
+                                                                                        function(i){
+                                                                                          c(rep(unique(l[[i]]), 
+                                                                                                nrow(resampled.data)))
+                                                                                        }))
+                                    colnames(resampled.config) <- colnames(l)[which(keep.config)]
+                                    joined.data = cbind(resampled.config, resampled.data)
+                                    joined.data
+                                  },
+                                  down = downsample.adj(l, as.factor(l$label), minClass = size_per_group))
+                       configCols = colnames(config)
+                       configCols = intersect(configCols, colnames(r))
+                       r = as.data.table(r)
+                       if("Class" %in% names(r)){
+                         r$Class <- NULL  
                        }
+                       config_adj = r[, ..configCols]
+                       training_data_adj = r[, -..configCols]
+                       colnames(training_data_adj) <- mzs
+                       training_data = cbind(config_adj, training_data_adj)
+                     }
+                     
+                     # ========
+                     train.config = training_data[,..configCols]
+                     train.mzs = training_data[,..mzCols]
+                     test.config = testing_data[,..configCols]
+                     test.mzs = testing_data[,..mzCols]
+                     test.config$split = "test"
+                     train.config$split = "train"
+                     # add the right columns and define curr
+                     curr = rbind(test.mzs, 
+                                  train.mzs)
+                     config = rbind(test.config, 
+                                    train.config)
+                     removeCols = setdiff(needed_for_subset, input$ml_include_covars)
+                     if(length(removeCols) > 0){
+                       curr = curr[,-removeCols,with=F]
+                       config = config[,-removeCols, with=F]
                      }
                    }
                    
+                   lcl$vectors$ml_train = c("split","train")
+                   lcl$vectors$ml_test = c("split","test")
+                   
+                   config = droplevels(config)
                    config <- data.table::as.data.table(config)
                    config <- config[,apply(!is.na(config), 2, any), with=FALSE]
                    
-                   predictor = config$label
-                   predict_idx <- which(colnames(config)== "label")
-                   exact_matches <- which(unlist(lapply(config, function(col) all(col == predictor))))
-                   remove = setdiff(exact_matches, predict_idx)
+                   curr = as.data.table(curr)
                    
-                   # remove ones w/ every row being different(may be used to identify...)
-                   #covariates <- lapply(1:ncol(config), function(i) as.factor(config[,..i][[1]]))
-                   #names(covariates) <- colnames(config)
+                   predictor = config$label
+                   predict_idx <- which(colnames(config) == "label")
+                   exact_matches <- which(unlist(lapply(config, function(col) all(as.numeric(as.factor(col)) == as.numeric(as.factor(predictor))))))
+                   remove = setdiff(exact_matches, predict_idx)
                    
                    # # remove ones with na present
                    has.na <- apply(config, MARGIN=2, FUN=function(x) any(is.na(x) | tolower(x) == "unknown"))
                    has.all.unique <- apply(config, MARGIN=2, FUN=function(x) length(unique(x)) == length(x))
                    remove = colnames(config)[which(has.na | has.all.unique)]
                    
+                   outersect = function(a,b) setdiff(union(a,b), intersect(a,b))
+                   
+                   if(length(batches) > 0 ){
+                     alsoRemove = outersect(input$ml_batch_covars, 
+                                            input$ml_include_covars)
+                     
+                     #alsoRemove = outersect(alsoRemove, needed_for_subset)
+                     remove = c(remove, alsoRemove)
+                   }
+                   
                    #keep_configs <- which(names(config) == "label")
-                   remove <- unique(c(remove, "sample",  
+                   remove <- unique(c(remove, 
+                                      "sample",  
                                       "individual", 
                                       colnames(config)[caret::nearZeroVar(config)]))
+                   
+                   remove = setdiff(remove, "label")
+                   remove = setdiff(remove, "split")
                    
                    keep_configs <- which(!(colnames(config) %in% remove))
                    
                    try({
-                     shiny::showNotification(paste0("Keeping non-mz variables after NA/unique filtering: ",
-                                                    paste0(names(config)[keep_configs],collapse = ", ")))
+                     msg = paste0("Keeping non-mz variables after NA/unique filtering: ",
+                                  paste0(names(config)[keep_configs],
+                                         collapse = ", "))
+                     print(msg)
+                     shiny::showNotification(msg)
                    })
                    
                    config <- config[,..keep_configs,with=F]
@@ -440,7 +771,13 @@ shiny::observe({
                        lst
                      })
                    
+                   levels(curr$label) <- paste0("class",  Hmisc::capitalize(levels(curr$label)))
+                   levels(curr$label) <- ordered(levels(curr$label))
+                   
                    # ============ LOOP HERE ============
+                   
+                   #colnames(curr) <- paste0("X", gsub("\\-","min",colnames(curr)))
+                   colnames(curr) <- make.names(colnames(curr))
                    
                    # get results for the amount of attempts chosen
                    
@@ -458,19 +795,23 @@ shiny::observe({
                                                            ml_preproc,
                                                            tuneGrid,
                                                            ml_train_perc,
-                                                           sampling){
-                                                    MetaboShiny::runML(curr,
-                                                                       train_vec = train_vec,
-                                                                       test_vec = test_vec,
-                                                                       config = config,
-                                                                       configCols = configCols,
-                                                                       ml_method = ml_method,
-                                                                       ml_perf_metr = ml_perf_metr,
-                                                                       ml_folds = ml_folds,
-                                                                       ml_preproc = ml_preproc,
-                                                                       tuneGrid = tuneGrid,
-                                                                       ml_train_perc = ml_train_perc,
-                                                                       sampling = sampling)
+                                                           sampling,
+                                                           batch_sampling,
+                                                           batches){
+                                                    runML(curr,
+                                                          train_vec = train_vec,
+                                                          test_vec = test_vec,
+                                                          config = config,
+                                                          configCols = configCols,
+                                                          ml_method = ml_method,
+                                                          ml_perf_metr = ml_perf_metr,
+                                                          ml_folds = ml_folds,
+                                                          ml_preproc = ml_preproc,
+                                                          tuneGrid = tuneGrid,
+                                                          ml_train_perc = ml_train_perc,
+                                                          sampling = sampling,
+                                                          batch_sampling = batch_sampling,
+                                                          batches = batches)
                                                   },
                                                   train_vec = lcl$vectors$ml_train,
                                                   test_vec = lcl$vectors$ml_test,
@@ -482,21 +823,24 @@ shiny::observe({
                                                   ml_preproc = input$ml_preproc,
                                                   tuneGrid = tuneGrid,
                                                   ml_train_perc = input$ml_train_perc,
-                                                  sampling = if(input$ml_sampling == "none") NULL else input$ml_sampling
+                                                  sampling = NULL,#if(input$ml_sampling == "none") NULL else input$ml_sampling,
+                                                  batch_sampling = if(input$ml_batch_sampling == "none") NULL else input$ml_batch_sampling,
+                                                  batches = input$ml_batch_covars
                      )
                    })
                    
                    # check if a storage list for machine learning results already exists
-                   if(!"ml" %in% names(mSet$analSet)){
+                   if(!("ml" %in% names(mSet$analSet))){
                      mSet$analSet$ml <- list() # otherwise make it
                    }
                    
+                   samp.distr <- lapply(repeats, function(x) x$distr)
                    mz.imp <- lapply(repeats, function(x) x$importance)
                    # aucs
                    if(length(levels(mSet$dataSet$cls)) > 2){
                      perf <- lapply(1:length(repeats), function(i){
                        x = repeats[[i]]
-                       res = MetaboShiny::getMultiMLperformance(x)
+                       res = getMultiMLperformance(x)
                        res$attempt = c(i)
                        res
                      })
@@ -504,7 +848,7 @@ shiny::observe({
                      mean.auc <- mean(perf.long$AUC_AVG)
                    }else{
                      # save the summary of all repeats (will be used in plots) TOO MEMORY HEAVY
-                     pred <- ROCR::prediction(lapply(repeats, function(x) x$prediction), 
+                     pred <- ROCR::prediction(lapply(repeats, function(x) x$prediction[[2]]), 
                                               lapply(repeats, function(x) x$labels))
                      perf <- ROCR::performance(pred, "tpr", "fpr")
                      perf_auc <- ROCR::performance(pred, "auc")
@@ -525,11 +869,15 @@ shiny::observe({
                    
                    roc_data <- list(m_auc = mean.auc,
                                     perf = perf.long,
-                                    imp = mz.imp)
+                                    imp = mz.imp,
+                                    pred = pred,
+                                    inTest = test_sampnames)
+                   
+                   #ggPlotMLMistakes(pred, test_sampnames, c("sample","country"), 2)
                    
                    bar_data <- data.table::rbindlist(lapply(1:length(repeats), function(i){
                      x = repeats[[i]]
-                     tbl = data.table::as.data.table(x$importance, keep.rownames=T)
+                     tbl = data.table::as.data.table(x$importance, keep.rownames=T)[,1:2]
                      tbl$rep = c(i)
                      colnames(tbl) = c("mz",
                                        "importance",
@@ -547,25 +895,27 @@ shiny::observe({
                      bar_data <- tbl
                    }
                    # save results to mset
-                   if(input$ml_method %not in% mSet$analSet$ml){
+                   if(input$ml_method %not in% names(mSet$analSet$ml)){
                      mSet$analSet$ml[[input$ml_method]] <- list()
                    }
                    
                    mSet$analSet$ml[[input$ml_method]][[input$ml_name]] <- list("roc" = roc_data,
-                                                                               "bar" = bar_data)
+                                                                               "bar" = bar_data,
+                                                                               "distr" = samp.distr)
                    mSet$analSet$ml$last <- list(name = input$ml_name,
                                                 method = input$ml_method)
                    
-                   #mSet_ml <<- mSet
-                   })
+                   lcl$vectors$ml_train <- lcl$vectors$ml_train <<- NULL
+                 })
                },
                heatmap = {
                  # reset
-                 mSet <- MetaboShiny::calcHeatMap(mSet, 
-                                                  signif.only = input$heatsign,
-                                                  source.anal = input$heattable,
-                                                  top.hits = input$heatmap_topn,
-                                                  cols = lcl$aes$mycols)
+                 mSet <- calcHeatMap(mSet, 
+                                     signif.only = input$heatsign,
+                                     source.anal = input$heattable,
+                                     top.hits = input$heatmap_topn,
+                                     cols = lcl$aes$mycols,
+                                     which.data = input$heatmap_source)
                  output$heatmap_now <- shiny::renderText(input$heattable)
                },
                tt = {
@@ -582,12 +932,12 @@ shiny::observe({
                  withProgress({
                    if(mSet$dataSet$paired){
                      mSet <- MetaboAnalystR::FC.Anal.paired(mSet,
-                                                             1.5, # TODO: make this threshold user defined
-                                                             1)  
+                                                            1.5, # TODO: make this threshold user defined
+                                                            1)  
                    }else{
                      mSet <- MetaboAnalystR::FC.Anal.unpaired(mSet,
-                                                               1.5, # TODO: make this threshold user defined
-                                                               1) 
+                                                              1.5, # TODO: make this threshold user defined
+                                                              1) 
                    }
                    if(!is.null(mSet$analSet$fc$sig.mat)){
                      rownames(mSet$analSet$fc$sig.mat) <- gsub(rownames(mSet$analSet$fc$sig.mat), 
@@ -599,11 +949,11 @@ shiny::observe({
                  })
                },
                aov = {
-                 aovtype = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
+                 aovtype = if(mSet$settings$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
                  redo = aovtype %not in% names(mSet$analSet)
                  if(redo){ # if done, don't redo
                    shiny::withProgress({
-                     mSet <- switch(mSet$dataSet$exp.type,
+                     mSet <- switch(mSet$settings$exp.type,
                                     "1fm"=MetaboAnalystR::ANOVA.Anal(mSet, thresh=0.1,post.hoc = "fdr",nonpar = F),
                                     "2f"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.1, "fdr", "", 1, 1),
                                     "t"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.1, "fdr", "time0", 1, 1),
@@ -611,7 +961,7 @@ shiny::observe({
                    })
                  }
                },
-               volc = {
+               volcano = {
                  shiny::withProgress({
                    mSet <-  MetaboAnalystR::Volcano.Anal(mSet,
                                                          paired = mSet$dataSet$paired, 
@@ -622,7 +972,11 @@ shiny::observe({
                },
                tsne = {
                  shiny::withProgress({
-                   coords = tsne::tsne(mSet$dataSet$norm, k = 3,
+                   inTbl = switch(input$tsne_source, 
+                                  original = mSet$dataSet$prog,
+                                  "pre-batch correction" = mSet$dataSet$prebatch,
+                                  normalized = mSet$dataSet$norm)
+                   coords = tsne::tsne(inTbl, k = 3,
                                        initial_dims = input$tsne_dims,
                                        perplexity = input$tsne_perplex,
                                        max_iter = input$tsne_maxiter)
@@ -690,14 +1044,22 @@ shiny::observe({
       
       if(success){
         mSet <<- mSet
-        lcl$hasChanged <<- TRUE
+        save_info$has_changed <- TRUE
         shinyjs::show(selector = paste0("div.panel[value=collapse_", statsmanager$calculate, "_plots]"))
         shinyjs::show(selector = paste0("div.panel[value=collapse_", statsmanager$calculate, "_tables]"))
         shinyBS::updateCollapse(session, paste0("collapse_",input$statistics),open = paste0("collapse_", 
                                                                                             statsmanager$calculate, 
                                                                                             c("_tables","_plots")))
+        if(lcl$beep){
+          beepr::beep(sound = lcl$aes$which_beep)
+          Sys.sleep(0.6)
+          beepr::beep(sound = lcl$aes$which_beep)
+          Sys.sleep(0.6)
+          beepr::beep(sound = lcl$aes$which_beep)
+        }
+        
       }else{
-        MetaboShiny::metshiAlert(paste0("Analysis failed!\n", msg.vec))
+        MetaboShiny::metshiAlert("Analysis failed!")
         #shiny::showNotification(msg.vec)
         mSet <<- mSet.old
       }

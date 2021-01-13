@@ -39,14 +39,17 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                      "fc", 
                      "rf", 
                      "aov", 
-                     "pattern",
-                     "volc",
+                     "corr",
+                     "volcano",
                      "network",
                      "enrich",
-                     "venn")){ 
+                     "venn",
+                     "meba",
+                     "asca")){ 
     
     if(curr_tab == "ml" & input$ml_results == "roc"){
       attempt = as.numeric(d$key[[1]])
+      if(length(attempt) > 0){
         xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
         if(attempt > 0){
           output$ml_tab <- DT::renderDataTable({
@@ -60,6 +63,7 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
             MetaboShiny:: metshiTable(lcl$tables$ml_roc)
           })
         }
+      }
     }else{
       if(curr_tab %in% c("heatmap", "enrich","venn","network")){
         switch(curr_tab,
@@ -78,11 +82,11 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                  }
                },
                enrich = {
-                 curr_pw <- rownames(mSet$analSet$enrich$mummi.resmat)[d$pointNumber + 1]
+                 curr_pw <- rownames(enrich$overview)[d$pointNumber + 1]
                  pw_i <- which(mSet$analSet$enrich$path.nms == curr_pw)
-                 cpds = mSet$analSet$enrich$path.hits[[pw_i]]
-                 hit_tbl = data.table::as.data.table(mSet$analSet$enrich$dataSet$mumResTable)
-                 myHits <- hit_tbl[Matched.Compound %in% cpds]
+                 cpds = unlist(mSet$analSet$enrich$path.hits[[pw_i]])
+                 hit_tbl = data.table::as.data.table(mSet$analSet$enrich$mumResTable)
+                 myHits <- hit_tbl[Matched.Compound %in% unlist(cpds)]
                  myHits$Mass.Diff <- as.numeric(myHits$Mass.Diff)/(as.numeric(myHits$Query.Mass)*1e-6)
                  colnames(myHits) <- c("rn", "identifier", "adduct", "dppm")
                  enrich$current <- myHits

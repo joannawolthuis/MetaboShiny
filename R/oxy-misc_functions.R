@@ -106,6 +106,8 @@ joanna_debugger <- function(){
   browse_content <- shiny::isolate({shiny::reactiveValuesToList(debug_browse_content)})
   pieinfo <- shiny::isolate({shiny::reactiveValuesToList(debug_pieinfo)})
   result_filters <- shiny::isolate({shiny::reactiveValuesToList(debug_result_filters)})
+  report_yes <- shiny::isolate({shiny::reactiveValuesToList(debug_report_yes)})
+  venn_yes <- shiny::isolate({shiny::reactiveValuesToList(debug_venn_yes)})
   
   assign("lcl", debug_lcl, envir = .GlobalEnv)
   assign("mSet", debug_mSet, envir = .GlobalEnv)
@@ -116,6 +118,8 @@ joanna_debugger <- function(){
   assign("browse_content", browse_content, envir = .GlobalEnv)
   assign("pieinfo", pieinfo, envir = .GlobalEnv)
   assign("result_filters", result_filters, envir = .GlobalEnv)
+  assign("report_yes", report_yes, envir = .GlobalEnv)
+  assign("venn_yes", venn_yes, envir = .GlobalEnv)
   
 }
 
@@ -304,7 +308,7 @@ fadeImageButton <- function(inputId, img.path=NULL,value=FALSE) {
                       shiny::tags$input(type="checkbox", class="fadebox", id=inputId, checked="")
                     },
                     shiny::tags$label(class="btn", "for"=inputId,
-                                      shiny::tags$img(src=img.path, id="btnLeft"))
+                                      shiny::tags$img(src=img.path, id=paste0(inputId,"_pic")))
     )
   )
 }
@@ -331,14 +335,20 @@ sardine <- function(content) shiny::div(style="display: inline-block;vertical-al
 #' @importFrom shiny modalDialog fluidRow br h3 img
 loadModal <- function() {
   shiny::modalDialog(
+    style="top:25%;", 
     shiny::fluidRow(align="center",
-             shiny::br(),shiny::br(),
-             shiny::h3("Starting MetaboShiny..."),
-             shiny::br(),shiny::br(),
-             #shiny::helpText("ଘ(੭ˊᵕˋ)੭* ੈ✩‧₊˚"), 
-             #shiny::br(),shiny::br(),
-             shiny::img(class="rotategem", src="gemmy_rainbow.png", width="70px", height="70px"),
-             shiny::br(),shiny::br(),shiny::br()
+                    shiny::br(),shiny::br(),
+                    shiny::h3("Initializing MetaboShiny..."),
+                    shiny::br(),shiny::br(),
+                    shiny::div(style="position:absolute; width:53%;",
+                               shiny::img(src="metshi_gemmo.png", height="90px",
+                                          style="position: relative;
+                                          left: 50%;"),
+                               shiny::img(class="imagetop", src="metshi_heart.png", height="36px",
+                                          style="position: relative;
+                                          left: 25%;")
+                    ),
+                    br(),br(),shiny::br(),shiny::br(),shiny::br()
     )
   )
 }
@@ -443,4 +453,97 @@ escape = function(str){
   cat(str_adj)
 }
 
+# source:
+# https://stackoverflow.com/questions/3369959/moving-columns-within-a-data-frame-without-retyping/18540144#18540144
+moveme <- function (invec, movecommand) {
+  movecommand <- lapply(strsplit(strsplit(movecommand, ";")[[1]], 
+                                 ",|\\s+"), function(x) x[x != ""])
+  movelist <- lapply(movecommand, function(x) {
+    Where <- x[which(x %in% c("before", "after", "first", 
+                              "last")):length(x)]
+    ToMove <- setdiff(x, Where)
+    list(ToMove, Where)
+  })
+  myVec <- invec
+  for (i in seq_along(movelist)) {
+    temp <- setdiff(myVec, movelist[[i]][[1]])
+    A <- movelist[[i]][[2]][1]
+    if (A %in% c("before", "after")) {
+      ba <- movelist[[i]][[2]][2]
+      if (A == "before") {
+        after <- match(ba, temp) - 1
+      }
+      else if (A == "after") {
+        after <- match(ba, temp)
+      }
+    }
+    else if (A == "first") {
+      after <- 0
+    }
+    else if (A == "last") {
+      after <- length(myVec)
+    }
+    myVec <- append(temp, values = movelist[[i]][[1]], after = after)
+  }
+  myVec
+}
 
+downsample.adj = function (x, y, list = FALSE, yname = "Class", minClass=min(table(y))) 
+{
+  if (!is.data.frame(x)) {
+    x <- as.data.frame(x, stringsAsFactors = TRUE)
+  }
+  if (!is.factor(y)) {
+    warning("Down-sampling requires a factor variable as the response. The original data was returned.")
+    return(list(x = x, y = y))
+  }
+  x$.outcome <- y
+  x <- plyr::ddply(x, .(y), function(dat, n) dat[sample(seq(along = dat$.outcome), 
+                                                  n), , drop = FALSE], n = minClass)
+  y <- x$.outcome
+  x <- x[, !(colnames(x) %in% c("y", ".outcome")), drop = FALSE]
+  if (list) {
+    if (inherits(x, "matrix")) {
+      x <- as.matrix(x)
+    }
+    out <- list(x = x, y = y)
+  }
+  else {
+    out <- cbind(x, y)
+    colnames(out)[ncol(out)] <- yname
+  }
+  out
+}
+
+upsample.adj = function (x, y, list = FALSE, yname = "Class", maxClass=max(table(y))) 
+{
+  if (!is.data.frame(x)) {
+    x <- as.data.frame(x, stringsAsFactors = TRUE)
+  }
+  if (!is.factor(y)) {
+    warning("Up-sampling requires a factor variable as the response. The original data was returned.")
+    return(list(x = x, y = y))
+  }
+  x$.outcome <- y
+  x <- plyr::ddply(x, .(y), function(x, top = maxClass) {
+    if (nrow(x) < top) {
+      ind <- sample(1:nrow(x), size = top - nrow(x), replace = TRUE)
+      ind <- c(1:nrow(x), ind)
+      x <- x[ind, , drop = FALSE]
+    }
+    x
+  })
+  y <- x$.outcome
+  x <- x[, !(colnames(x) %in% c("y", ".outcome")), drop = FALSE]
+  if (list) {
+    if (inherits(x, "matrix")) {
+      x <- as.matrix(x)
+    }
+    out <- list(x = x, y = y)
+  }
+  else {
+    out <- cbind(x, y)
+    colnames(out)[ncol(out)] <- yname
+  }
+  out
+}

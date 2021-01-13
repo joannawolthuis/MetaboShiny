@@ -1,14 +1,20 @@
 # reload plots (pca/plsda) if the 2d/3d button is triggered
-shiny::observeEvent(input$pca_2d3d, {
-  plotmanager$make <- "pca"
-}, ignoreNULL = T)
+scatters = c("pca", "plsda", "tsne", "umap", "ica")
 
-shiny::observeEvent(input$plsda_2d3d, {
-  plotmanager$make <- "plsda"
-}, ignoreNULL = T)
+lapply(scatters, function(anal){
+  refreshers = c("2d3d", "ellipse", "x", "y", "z")
+  lapply(refreshers, function(r){
+    input_id = paste0(anal,"_",r)
+    shiny::observeEvent(input[[input_id]], {
+      plotmanager$make <- anal
+    }, 
+    ignoreNULL = T, 
+    ignoreInit = T)    
+  })
+})
 
-shiny::observeEvent(input$tsne_2d3d, {
-  plotmanager$make <- "tsne"
+shiny::observeEvent(input$corr_topn, {
+  plotmanager$make <- "corr"
 }, ignoreNULL = T)
 
 update_heatmap = shiny::reactive({
@@ -29,18 +35,7 @@ shiny::observeEvent(update_ml(), {
   if(!is.null(mSet$analSet$ml)){
     plotmanager$make <- "ml" # just reload
   }
-}) #%>% shiny::debounce(1000)
-
- 
-# shiny::observeEvent(input$db_only, {
-#   if(input$db_only){
-#     MetaboShiny::setOption(lcl$paths$opt.loc, "mode", "dbonly")
-#     logged$status <- "dbonly"
-#   }else{
-#     MetaboShiny::setOption(lcl$paths$opt.loc, "mode", "complete")
-#     logged$status <- "logged"
-#   }
-# },ignoreInit = F, ignoreNULL = T)
+})
 
 
 

@@ -15,19 +15,19 @@ shiny::observe({
                    vennrich = {
                      # - - - - -
                      analyses = names(mSet$storage)
-                     venn_no$start <- data.table::rbindlist(lapply(analyses, function(name){
+                     venn_no$start <- report_no$start <- data.table::rbindlist(lapply(analyses, function(name){
                        analysis = mSet$storage[[name]]$analysis
                        analysis_names = names(analysis)
                        # - - -
-                       exclude = c("tsne", "heatmap", "type", "enrich")
+                       exclude = c("tsne", "heatmap", "type", "enrich", "power", "network", "venn")
                        analysis_names <- setdiff(analysis_names, exclude)
                        if(length(analysis_names) == 0){
                          return(data.table::data.table())
                        }
                        # - - -
                        with.subgroups <- intersect(analysis_names, c("ml", "plsr", "pca"))
-                       if(length(with.subgroups) > 0){
-                         extra_names <- lapply(with.subgroups, function(anal){
+                       extra_names <- if(length(with.subgroups) > 0){
+                         lapply(with.subgroups, function(anal){
                            switch(anal,
                                   ml = {
                                     which.mls <- setdiff(names(analysis$ml),"last")
@@ -39,30 +39,37 @@ shiny::observe({
                                     unlist(ml.names)
                                   },
                                   plsr = {
-                                    c ("plsda - PC1", "plsda - PC2", "plsda - PC3")
+                                    c ("plsda - Component 1", "plsda - Component 2", "plsda - Component 3")
                                   },
                                   pca = {
                                     c ("pca - PC1", "pca - PC2", "pca - PC3")
                                   })
                          })
-                         analysis_names <- c(setdiff(analysis_names, c("ml", "plsr", "plsda", "pca")), unlist(extra_names))
-                       }
+                       }else{ list() }
+                       analysis_names <- c(setdiff(analysis_names, c("ml", "plsr", "plsda", "pca")), unlist(extra_names), "all m/z")
+                       
                        # - - -
                        data.frame(
                          paste0(analysis_names, " (", name, ")")
                        )
                      }))
                      venn_no$now <- venn_no$start
+                     report_no$now <- report_no$start
                      lcl$vectors$analyses <<- unlist(venn_no$start[,1])
                      # ---
-                     lapply(c("mummi_anal", "heattable", "network_table"), function(inputID){
+                     lapply(c("mummi_anal", "heattable", "network_table", "ml_specific_mzs"), function(inputID){
                        shiny::updateSelectInput(session,
                                                 inputID, 
                                                 choices = {
                                                  allChoices = as.character(lcl$vectors$analyses)
-                                                 if(inputID == "heattable" | inputID == "network_table"){
-                                                   allChoices[grepl(mSet$dataSet$cls.name, allChoices, fixed=TRUE)]  
-                                                 }else{
+                                                 if(inputID %in% c("heattable", "network_table", "ml_specific_mzs")){
+                                                   ch = allChoices[grepl(mSet$settings$cls.name, allChoices, fixed=TRUE)]  
+                                                   if(inputID == "ml_specific_mzs"){
+                                                     c("no", "manual", ch)
+                                                   }else{
+                                                     ch
+                                                   }
+                                                   }else{
                                                    allChoices
                                                  }
                                                 })  
@@ -71,19 +78,23 @@ shiny::observe({
                      list()
                    },
                    enrich = {
-                     enrich$overview <- mSet$analSet$enrich$mummi.resmat  
+                     enrich$overview <<- if("mummi.resmat" %in% names(mSet$analSet$enrich)){
+                       mSet$analSet$enrich$mummi.resmat 
+                     }else{
+                       mSet$analSet$enrich$mummi.gsea.resmat
+                     } 
                      list()
                    },
-                   pattern = {
+                   corr = {
                      res =if(is.null(mSet$analSet$corr$cor.mat)){
                        data.table::data.table("No significant hits found")
                      }else{
                        res = mSet$analSet$corr$cor.mat
                      }
-                     list(pattern_tab = res)
+                     list(corr_tab = res)
                    },
                    aov = {
-                     which_aov = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
+                     which_aov = if(mSet$settings$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
                      
                      if(which_aov %in% names(mSet$analSet)){
                        
@@ -107,13 +118,13 @@ shiny::observe({
                        list()
                      }
                    },
-                   volc = {
+                   volcano = {
                      # render results table
-                     res <- if(is.null(mSet$analSet$volc$sig.mat)) data.table::data.table("No significant hits found") else{
-                       rownames(mSet$analSet$volc$sig.mat) <<- gsub(rownames(mSet$analSet$volc$sig.mat), pattern = "^X", replacement = "")
-                       rownames(mSet$analSet$volc$sig.mat) <<- gsub(rownames(mSet$analSet$volc$sig.mat), pattern = "(\\d+\\.\\d+)(\\.+)", replacement = "\\1/")
-                       mSet$analSet$volc$sig.mat}
-                     list(volc_tab = res)
+                     res <- if(is.null(mSet$analSet$volcano$sig.mat)) data.table::data.table("No significant hits found") else{
+                       rownames(mSet$analSet$volcano$sig.mat) <- gsub(rownames(mSet$analSet$volcano$sig.mat), pattern = "^X", replacement = "")
+                       rownames(mSet$analSet$volcano$sig.mat) <- gsub(rownames(mSet$analSet$volcano$sig.mat), pattern = "(\\d+\\.\\d+)(\\.+)", replacement = "\\1/")
+                       mSet$analSet$volcano$sig.mat}
+                     list(volcano_tab = res)
                    },
                    tsne = {
                      NULL
@@ -127,9 +138,9 @@ shiny::observe({
                        colnames(pca.table) <- c("Principal Component", "% variance")
                        
                        # render PCA loadings tab for UI
-                       pca.loadings <- mSet$analSet$pca$rotation[,c(input$pca_x,
-                                                                    input$pca_y,
-                                                                    input$pca_z)]
+                       pca.loadings <- mSet$analSet$pca$rotation[,as.numeric(c(input$pca_x,
+                                                                               input$pca_y,
+                                                                               input$pca_z))]
                        list(pca_load_tab = pca.loadings,
                             pca_tab = pca.table)
                      }else{
@@ -144,12 +155,12 @@ shiny::observe({
                                                                       * 100.0,
                                                                       digits = 2),
                                                                 keep.rownames = T)
-                       colnames(plsda.table) <- c("Principal Component", "% variance")
-                       plsda.table[, "Principal Component"] <- paste0("PC", 1:nrow(plsda.table))
+                       colnames(plsda.table) <- c("Component", "% variance")
+                       plsda.table[, "Component"] <- paste0("Component ", 1:nrow(plsda.table))
                        # render table with PLS-DA loadings
                        plsda.loadings <- mSet$analSet$plsda$vip.mat
-                       colnames(plsda.loadings) <- paste0("PC", c(1:ncol(plsda.loadings)))
-                       plsda.loadings = plsda.loadings[, c(input$plsda_x, input$plsda_y, input$plsda_z)]
+                       colnames(plsda.loadings) <- paste0("Component ", c(1:ncol(plsda.loadings)))
+                       plsda.loadings = plsda.loadings[, as.numeric(c(input$plsda_x, input$plsda_y, input$plsda_z))]
                        list(plsda_tab = plsda.table, 
                             plsda_load_tab = plsda.loadings)
                      }else{
@@ -218,11 +229,19 @@ shiny::observe({
       })
       
       if(!success){
-        MetaboShiny::metshiAlert("Table rendering failed!")
+        metshiAlert("Table rendering failed!")
       }else{
         mapply(function(mytable, tableName){
           output[[tableName]] <- DT::renderDataTable({
-            MetaboShiny::metshiTable(content = mytable)
+            subbed = gsub("\\+", "", rownames(mytable))
+            rns = rownames(mytable)
+            if(subbed[1] %in% colnames(mSet$dataSet$norm)){ # check if a mz table
+              stars = sapply(mSet$report$mzStarred[subbed]$star, 
+                             function(hasStar) if(hasStar) "★" else "")
+              starCol = data.table::data.table("★" = stars)
+              mytable = cbind(starCol, mytable)
+            }
+            metshiTable(content = mytable, rownames = rns)
           }, server = FALSE)
         }, toWrap, names(toWrap)) 
       } 

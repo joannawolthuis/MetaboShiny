@@ -85,5 +85,21 @@ Imports:
   pROC,
   car,
   doParallel,
-  missForest
+  missForest,
+  ggfortify, 
+  fdrtool, 
+  plsdepot,
+  vroom,
+  qs,
+  WaveICA,
+  ctc,
+  gdata,
+  glasso,
+  huge,
+  ppcor,
+  crmn,
+  umap,
+  ica,
+  svglite,
+  beepr
 RoxygenNote: 7.1.0

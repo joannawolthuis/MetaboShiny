@@ -1,4 +1,21 @@
-.bootstrap-select>.dropdown-toggle {
+#shiny-modal {
+  top:25%;
+  z-index: 9950;
+}
+
+.modal-backdrop {
+  z-index: 9945;
+}
+
+.shinybusy {
+  z-index: 9935;
+}
+
+.pretty {
+    margin-right: 0em;
+}
+
+.mzpicker .bootstrap-select>.dropdown-toggle {
   width: auto;
   background-color: transparent;
   border-color: transparent;
@@ -6,7 +23,11 @@
   width: 100%;
 }
 
-.bootstrap-select .dropdown-toggle .caret {
+.mzpicker .bootstrap-select .dropdown-toggle .filter-option {
+    text-align: center;
+}
+
+.mzpicker .bootstrap-select .dropdown-toggle .caret {
   top: 100%;
 }
 
@@ -19,7 +40,7 @@
 }
 
 .hidden {
-  display: none !important;
+  display: none;
 }
 
 .modal { 
@@ -38,15 +59,15 @@
 
 .dropdown-menu {
     align-content: center;
-    z-index: 2000;
+    z-index: 1002;
     float: left;
     text-align: center;
     min-width: 0px;
     margin-top: -1px;
-    left: 50% !important;
-    right: auto !important;
-    text-align: center !important;
-    transform: translate(-50%, 0) !important;
+    left: 50%;
+    right: auto;
+    text-align: center;
+    transform: translate(-50%, 0);
 }
 
 
@@ -69,10 +90,9 @@
 
 .atom-spinner .spinner-inner:after {
   content: '♥';
-  font-size: calc(60px * 0.20) !important;
+  font-size: calc(60px * 0.30);
   display: block;
   position: absolute;
-  font-size: calc(60px * 0.24);
   top: 52%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -85,15 +105,27 @@
     margin-top: 5px;
 }
 
+.modal {
+  z-index: 9999;
+}
+
 .navbar-nav {
     margin: 7.5px -5px -10px;
 }
 
+.navbar-brand {
+    padding: 0px 0px !important; 
+}
+
 .caret {
     position: absolute;
-    top: 90%;
+    top: 92% !important;
     left: 49%;
     margin-left: 0px;
+}
+
+.filter-option {
+  margin-bottom: 4px;
 }
 
 .fa-fw {
@@ -113,12 +145,12 @@
 
 .modal-backdrop.in
 {
-    opacity:0.99 !important;
+    opacity:0.99;
     position:fixed;
     height:100%;
 }
 
-.selectize-dropdown, .selectize-dropdown.form-control{z-index:99998 !important;}
+.selectize-dropdown, .selectize-dropdown.form-control{z-index:1001;}
 
 /*
 .shiny-notification {
@@ -128,23 +160,23 @@
              }
 */
 
+.progress-bar.active, .progress.active .progress-bar {
+    -webkit-animation: none;
+    -o-animation: none;
+    animation: none;
+}
+
 .progress-text {
 	display:none;
 }
 
 .progress-bar {
-  height: 15px;
-  position: absolute;
-  left: 15px;
-  background: linear-gradient(to right, transparent 50%, white 50%), linear-gradient(to right, orange, yellow, green, cyan, blue, violet) !important;
-  background-size: 5px 2px, 100% 1px !important;
+    color: black;
+    background: -webkit-linear-gradient(left, #ffd27e , #ffff90, #85ff85, #7bffff, #7d7dff, #ec66ec);
+    background: -o-linear-gradient(right, #ffd27e , #ffff90, #85ff85, #7bffff, #7d7dff, #ec66ec);
+    background: -moz-linear-gradient(right, #ffd27e , #ffff90, #85ff85, #7bffff, #7d7dff, #ec66ec);
+    background: linear-gradient(to right, #ffd27e , #ffff90, #85ff85, #7bffff, #7d7dff, #ec66ec);
 }
-
-/*
-.progress-text {
-  display: none;
-}
-*/
 
 .outlined {
  font-size: 1.5em;
@@ -376,6 +408,9 @@
   opacity: 0.25;
 }
 
+#fancy:checked + label > img {
+  opacity: 0.85;
+}
 
 /* SPINNING INTRO THINGY */
 .rotategem
@@ -395,21 +430,30 @@
 .spinnylocation1
 {
   position: absolute;
-  top: 0px;
-  right: -70px;
+  top: 25px;
+  right: -30px;
   animation-fill-mode: forwards;
-  z-index:99998 !important;
+  z-index:1000;
 }
 
 .imagetop
 {
-  -webkit-animation:spin 30s linear infinite;
-  -moz-animation:spin 30s linear infinite;
-  animation:spin 30s linear infinite;
-  -webkit-filter: drop-shadow(2px 1px 0 white)
-                  drop-shadow(-1px -1px 0 gray);
-  ilter: drop-shadow(2px 1px 0 white) drop-shadow(-1px -1px 0 gray);
+  animation-name: heartFadeInOut; 
+  animation-iteration-count: infinite;
+  animation-duration: 2s;
 }
+
+ @keyframes heartFadeInOut {
+  0% {transform: scale(1);}
+  25% {transform: scale(.97);}
+  35% {transform: scale(.9);}
+  45% {transform: scale(1.1);}
+  55% {transform: scale(.9);}
+  65% {transform: scale(1.1);}
+  75% {transform: scale(1.03);}
+  100% {transform: scale(1);}
+}
+
 
 .plus
 {
@@ -526,52 +570,49 @@ a {
   text-align: center;
 }
 
-/* sparkle stuff https://codepen.io/maxspeicher/details/zrVKLE */
-@-moz-keyframes my-sparkle {
-  0%   {
-    opacity: 0;
-    -moz-transform: rotate(0deg) scale(0);
-  }
-  50%  {
-    opacity: 1;
-    -moz-transform: rotate(360deg) scale(1);
-  }
-  100% {
-    opacity: 0;
-    -moz-transform: rotate(720deg) scale(0);
-  }
-}
-
-@-webkit-keyframes my-sparkle {
-  0%   {
-    opacity: 0;
-    -webkit-transform: rotate(0deg) scale(0);
-  }
-  50%  {
-    opacity: 1;
-    -webkit-transform: rotate(360deg) scale(1);
-  }
-  100% {
-    opacity: 0;
-    -webkit-transform: rotate(720deg) scale(0);
-  }
-}
-
-@keyframes my-sparkle {
-  0%   {
-    opacity: 0;
-    transform: rotate(0deg) scale(0);
-  }
-  50%  {
-    opacity: 1;
-    transform: rotate(360deg) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: rotate(720deg) scale(0);
-  }
-}
-
 .swal2-icon.swal2-question {
     display: none !important;
+}
+
+/* Animation rainbow background */
+@keyframes animatedBackground {
+    0% { background-position: 0; }
+    100% { background-position: 1000px; }
+}
+@-moz-keyframes animatedBackground {
+    0% { background-position: 0; }
+    100% { background-position: 1000px; }
+}
+@-webkit-keyframes animatedBackground {
+    0% { background-position: 0; }
+    100% { background-position: 1000px; }
+}
+@-o-keyframes animatedBackground {
+    0% { background-position: 0; }
+    100% { background-position: 1000px; }
+}
+
+#heartHolder .shiny-input-container {
+    position: relative;
+    left: 91.5%;
+    z-index: 1006;
+    height: 30px;
+    bottom: 74px;
+}
+
+.rainbow {
+  background-image: -webkit-gradient( linear, left top, right top, color-stop(0, #fb8a8a), color-stop(0.15, #ff8dc7), color-stop(0.3, #8484ff), color-stop(0.45, #a8ffff), color-stop(0.6, #a0ffa0),color-stop(0.75, #91ff91), color-stop(0.9, #ffffa8), color-stop(1, #f99292) );
+  background-image: gradient( linear, left top, right top, color-stop(0, #fb8a8a), color-stop(0.15, #ff8dc7), color-stop(0.3, #8484ff), color-stop(0.45, #a8ffff), color-stop(0.6, #a0ffa0),color-stop(0.75, #91ff91), color-stop(0.9, #ffffa8), color-stop(1, #f99292) );
+  color:transparent !important;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: animatedBackground 20s linear infinite;
+    -moz-animation: animatedBackground 20s linear infinite;
+    -webkit-animation: animatedBackground 20s linear infinite;
+    -ms-animation: animatedBackground 20s linear infinite;
+    -o-animation: animatedBackground 20s linear infinite;
+}
+
+.smallsparkle {
+  pointer-events: none
 }

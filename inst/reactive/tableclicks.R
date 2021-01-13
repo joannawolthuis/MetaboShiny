@@ -9,14 +9,14 @@ shiny::observe({
 lapply(c("tt",
          "fc",
          "aov",
-         "volc",
+         "volcano",
          "asca",
          "meba",
          "pca_load",
          "plsda_load",
          "enrich_pw",
          "ml",
-         "pattern",
+         "corr",
          "mummi_detail",
          "venn"), FUN=function(table){
 
@@ -28,13 +28,13 @@ lapply(c("tt",
     
     if (is.null(curr_row)) return()
 
-    which_aov = if(mSet$dataSet$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
+    which_aov = if(mSet$settings$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
     
     res_tbl <- data.table::as.data.table(switch(table,
-                                                pattern = mSet$analSet$corr$cor.mat,
+                                                corr = mSet$analSet$corr$cor.mat,
                                                 tt = mSet$analSet$tt$sig.mat,
                                                 fc = mSet$analSet$fc$sig.mat,
-                                                volc = mSet$analSet$volcano$sig.mat,
+                                                volcano = mSet$analSet$volcano$sig.mat,
                                                 pca_load = mSet$analSet$pca$rotation,
                                                 plsda_load = mSet$analSet$plsda$vip.mat,
                                                 ml = lcl$tables$ml_roc, #TODO: fix this, now in global
@@ -67,11 +67,11 @@ shiny::observeEvent(input$enrich_tab_rows_selected,{
   curr_row <- input$enrich_tab_rows_selected
   if (is.null(curr_row)) return()
   # -----------------------------
-  curr_pw <- rownames(mSet$analSet$enrich$mummi.resmat)[curr_row]
+  curr_pw <- rownames(enrich$overview)[curr_row]
   pw_i <- which(mSet$analSet$enrich$path.nms == curr_pw)
-  cpds = mSet$analSet$enrich$path.hits[[pw_i]]
-  hit_tbl = data.table::as.data.table(mSet$analSet$enrich$dataSet$mumResTable)
-  myHits <- hit_tbl[Matched.Compound %in% cpds]
+  cpds = unlist(mSet$analSet$enrich$path.hits[[pw_i]])
+  hit_tbl = data.table::as.data.table(mSet$analSet$enrich$mumResTable)
+  myHits <- hit_tbl[Matched.Compound %in% unlist(cpds)]
   myHits$Mass.Diff <- as.numeric(myHits$Mass.Diff)/(as.numeric(myHits$Query.Mass)*1e-6)
   colnames(myHits) <- c("rn", "identifier", "adduct", "dppm")
   enrich$current <- myHits
@@ -83,7 +83,6 @@ shiny::observeEvent(input$match_tab_rows_selected,{
   if (is.null(curr_row)) return()
   # - - - - - - - - - - - - - - - - - - - - - -
   my_selection$name <- shown_matches$forward_unique[curr_row,'compoundname'][[1]] # get current structure
- 
   my_selection$form <- unlist(shown_matches$forward_unique[curr_row,'baseformula']) # get current formula
   my_selection$struct <- unlist(shown_matches$forward_unique[curr_row,'structure']) # get current formula
 
@@ -140,7 +139,7 @@ shiny::observeEvent(input$browse_tab_rows_selected,{
   curr_def <- browse_content$table[curr_row, description]
   output$desc_ui <- shiny::renderText(curr_def)
   my_selection$struct <- browse_content$table[curr_row,c('structure')][[1]]
-  my_selection$form <- unlist(browse_content$table[curr_row,'formula']) # get current formula
+  #my_selection$form <- unlist(browse_content$table[curr_row,'formula']) # get current formula
 })
 
 # triggers on clicking a row in the reverse hit results table

@@ -49,6 +49,7 @@ output$venn_selected <- DT::renderDataTable({
 # triggers on clicking the 'go' button on the venn diagram sidebar panel
 shiny::observeEvent(input$venn_build, {
   plotmanager$make <- "venn"
+  uimanager$refresh <- "venn"
 })
 
 # triggers when users pick which intersecting hits they want
@@ -60,10 +61,10 @@ shiny::observeEvent(input$intersect_venn, {
 
     l = lcl$vectors$venn_lists
     # Get the combinations of names of list elements
-    nms <- combn(names(l) , 2 , FUN = paste0 , collapse = "  ~ " , simplify = FALSE)
+    nms <- combn(names(l), 2, FUN = paste0, collapse = "  ~ ", simplify = FALSE)
 
     # Make the combinations of list elements
-    ll <- combn( l , 2 , simplify = FALSE )
+    ll <- combn(l, 2, simplify = FALSE)
 
     # Intersect the list elements
     out <- lapply(ll , function(x) (intersect(x[[1]],

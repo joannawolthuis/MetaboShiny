@@ -1,3 +1,115 @@
+FilterVariableMetshi <- function (mSetObj = NA, filter, qcFilter, rsd, max.allow = 20000) 
+{
+  mSetObj <- MetaboAnalystR:::.get.mSet(mSetObj)
+  mSetObj$dataSet$filt <- mSetObj$dataSet$prenorm <- NULL
+  int.mat <- as.matrix(mSetObj$dataSet$orig)
+  cls <- sapply(mSetObj$dataSet$covars$sample, function(samp) if(grepl("QC", tolower(samp))) "qc" else "normal")
+  # mSetObj$dataSet$filt.cls <- cls
+  # if (substring(mSetObj$dataSet$format, 4, 5) == "ts") {
+  #   mSetObj$dataSet$filt.facA <- mSetObj$dataSet$proc.facA
+  #   mSetObj$dataSet$filt.facB <- mSetObj$dataSet$proc.facB
+  # }
+  msg <- ""
+  if (qcFilter == "T") {
+    rsd <- rsd/100
+    qc.hits <- tolower(as.character(cls)) %in% "qc"
+    if (sum(qc.hits) > 2) {
+      qc.mat <- int.mat[qc.hits, ]
+      sds <- apply(qc.mat, 2, sd, na.rm = T)
+      mns <- apply(qc.mat, 2, mean, na.rm = T)
+      rsd.vals <- abs(sds/mns)
+      gd.inx <- rsd.vals < rsd
+      int.mat <- int.mat[, gd.inx]
+      msg <- paste("Removed ", sum(!gd.inx), " features based on QC RSD values. QC samples are still kept. You can remove them later.")
+    }
+    else if (sum(qc.hits) > 0) {
+      MetaboAnalystR::AddErrMsg("RSD requires at least 3 QC samples, and only non-QC based filtering can be applied.")
+      return(0)
+    }
+    else {
+      MetaboAnalystR::AddErrMsg("No QC Samples (with class label: QC) found.  Please use non-QC based filtering.")
+      return(0)
+    }
+  }
+  feat.num <- ncol(int.mat)
+  feat.nms <- colnames(int.mat)
+  nm <- NULL
+  if (filter == "none" && feat.num < 5000) {
+    remain <- rep(TRUE, feat.num)
+    msg <- paste(msg, "No non-QC based data filtering was applied")
+  }
+  else {
+    if (filter == "rsd") {
+      sds <- apply(int.mat, 2, sd, na.rm = T)
+      mns <- apply(int.mat, 2, mean, na.rm = T)
+      filter.val <- abs(sds/mns)
+      nm <- "Relative standard deviation"
+    }
+    else if (filter == "nrsd") {
+      mads <- apply(int.mat, 2, mad, na.rm = T)
+      meds <- apply(int.mat, 2, median, na.rm = T)
+      filter.val <- abs(mads/meds)
+      nm <- "Non-paramatric relative standard deviation"
+    }
+    else if (filter == "mean") {
+      filter.val <- apply(int.mat, 2, mean, na.rm = T)
+      nm <- "mean"
+    }
+    else if (filter == "sd") {
+      filter.val <- apply(int.mat, 2, sd, na.rm = T)
+      nm <- "standard deviation"
+    }
+    else if (filter == "mad") {
+      filter.val <- apply(int.mat, 2, mad, na.rm = T)
+      nm <- "Median absolute deviation"
+    }
+    else if (filter == "median") {
+      filter.val <- apply(int.mat, 2, median, na.rm = T)
+      nm <- "median"
+    }
+    else {
+      filter.val <- apply(int.mat, 2, IQR, na.rm = T)
+      nm <- "Interquantile Range"
+    }
+    rk <- rank(-filter.val, ties.method = "random")
+    var.num <- ncol(int.mat)
+    if (var.num < 250) {
+      remain <- rk < var.num * 0.95
+      msg <- paste(msg, "Further feature filtering based on", 
+                   nm)
+    }
+    else if (ncol(int.mat) < 500) {
+      remain <- rk < var.num * 0.9
+      msg <- paste(msg, "Further feature filtering based on", 
+                   nm)
+    }
+    else if (ncol(int.mat) < 1000) {
+      remain <- rk < var.num * 0.75
+      msg <- paste(msg, "Further feature filtering based on", 
+                   nm)
+    }
+    else {
+      remain <- rk < var.num * 0.6
+      msg <- paste(msg, "Further feature filtering based on", 
+                   nm)
+      #max.allow <- 5000
+      if (mSetObj$analSet$type == "power") {
+        #max.allow <- 2500
+        max.allow <- max.allow / 2
+      }
+      if (sum(remain) > max.allow) {
+        remain <- rk < max.allow
+        msg <- paste(msg, paste("Reduced to", max.allow, 
+                                "features based on", nm))
+      }
+    }
+  }
+  mSetObj$dataSet$filt <- int.mat[, remain]
+  mSetObj$msgSet$filter.msg <- msg
+  MetaboAnalystR:::AddMsg(msg)
+  return( MetaboAnalystR:::.set.mSet(mSetObj))
+}
+
 #' @title Check if mSet sample order in peaktable data and metadata are the same
 #' @param mSet mSet object
 #' @return TRUE/FALSE
@@ -5,12 +117,12 @@
 #' @export 
 is.ordered.mSet <- function(mSet) {
   covarsMatch = all(mSet$dataSet$covars$sample == rownames(mSet$dataSet$norm))
-  mSet$dataSet$exp.type <-
-    gsub("^1f.",  "1f", mSet$dataSet$exp.type)
+  exp.type <-
+    gsub("^1f.",  "1f", mSet$settings$exp.type)
   expVarsMatch <- switch(
-    mSet$dataSet$exp.type,
+   exp.type,
     "1f" = {
-      all(mSet$dataSet$cls == mSet$dataSet$covars[, mSet$dataSet$exp.fac, with =
+      all(mSet$dataSet$cls == mSet$dataSet$covars[, mSet$settings$exp.fac, with =
                                                     F][[1]])
     },
     "2f" = {
@@ -24,9 +136,9 @@ is.ordered.mSet <- function(mSet) {
     "t" = {
       all(
         mSet$dataSet$exp.fac == mSet$dataSet$covars$individual &&
-        mSet$dataSet$time.fac == mSet$dataSet$covars[, mSet$dataSet$facA.lbl.orig, with = 
-                                                       F][[1]] && 
-        mSet$dataSet$facA == mSet$dataSet$time.fac
+          mSet$dataSet$time.fac == mSet$dataSet$covars[, mSet$dataSet$facA.lbl.orig, with = 
+                                                         F][[1]] && 
+          mSet$dataSet$facA == mSet$dataSet$time.fac
       )
     },
     "t1f" = {
@@ -57,9 +169,9 @@ is.ordered.mSet <- function(mSet) {
 #' @export 
 name.mSet <- function(mSet) {
   info_vec = c()
-  if (mSet$dataSet$exp.type %in% c("t1f", "t")) {
+  if (mSet$settings$exp.type %in% c("t1f", "t")) {
     info_vec = c("timeseries")
-  } else if (mSet$settings$paired) {
+  } else if (mSet$settings$ispaired) {
     info_vec = c(info_vec, "paired")
   }
   
@@ -91,23 +203,23 @@ name.mSet <- function(mSet) {
     extra_info <- ""
   }
   
-  if (grepl(mSet$dataSet$exp.type, pattern = "^1f")) {
-    mSet$dataSet$exp.type <- "1f"
+  if (grepl(mSet$settings$exp.type, pattern = "^1f")) {
+    mSet$settings$exp.type <- "1f"
   }
   
   prefix.name <- switch(
-    mSet$dataSet$exp.type,
+    mSet$settings$exp.type,
     "1f" = {
       change_var <-
-        if (length(mSet$dataSet$exp.var) > 1)
-          mSet$dataSet$exp.var[1]
+        if (length(mSet$settings$exp.var) > 1)
+          mSet$settings$exp.var[1]
       else
-        mSet$dataSet$exp.var
+        mSet$settings$exp.var
       change_var
     },
     "2f" = {
       # facB should be time if it is there...
-      time.check = grepl("time", mSet$dataSet$exp.var)
+      time.check = grepl("time", mSet$settings$exp.var)
       is.time = any(time.check)
       if (is.time) {
         print("time series potential")
@@ -117,7 +229,7 @@ name.mSet <- function(mSet) {
         idx1 = 1
         idx2 = 2
       }
-      paste0(mSet$dataSet$exp.var[c(idx1, idx2)], collapse =
+      paste0(mSet$settings$exp.var[c(idx1, idx2)], collapse =
                "+")
     },
     "t" = {
@@ -125,10 +237,10 @@ name.mSet <- function(mSet) {
     },
     "t1f" = {
       change_var <-
-        if (length(mSet$dataSet$exp.var) > 1)
-          mSet$dataSet$exp.var[1]
+        if (length(mSet$settings$exp.var) > 1)
+          mSet$settings$exp.var[1]
       else
-        mSet$dataSet$exp.var
+        mSet$settings$exp.var
       change_var
     }
   )
@@ -137,7 +249,6 @@ name.mSet <- function(mSet) {
                        tolower(paste0(":", subsetgroups, collapse = ","))
                      else
                        "")
-  print(mset_name)
   mset_name
 }
 
@@ -148,25 +259,36 @@ name.mSet <- function(mSet) {
 #' @return mSet object
 #' @rdname reset.mSet
 #' @export 
-reset.mSet <- function(mSet, fn) {
-  origItem <-
-    readRDS(file = fn)
-  mSet$dataSet <- origItem$data
-  mSet$analSet <- origItem$analysis
-  mSet$settings <- origItem$settings
-  return(mSet)
+reset.mSet <- function(mSet_new, fn) {
+  mSet <- tryCatch({
+    load(fn)
+    mSet
+  },
+  error = function(cond){
+    mSet <- qs::qread(fn)
+    mSet
+  })
+  mSet_new$dataSet <- mSet$dataSet
+  mSet_new$analSet <- mSet$analSet
+  mSet_new$settings <- mSet$settings
+  mSet_new$report <- mSet$report
+  return(mSet_new)
 }
 
 #' @title Load mSet from mSet internal storage
 #' @description MetShi mSets store previous dataset results and settings in the mSet storage. This loads one of those datasets.
 #' @param mSet mSet object
-#' @param name Name of subexperiemnt to load, Default: mSet$dataSet$cls.name
+#' @param name Name of subexperiemnt to load, Default: mSet$dataSet$cls.names
 #' @return mSet object
 #' @rdname load.mSet
 #' @export 
 load.mSet <- function(mSet, name = mSet$dataSet$cls.name) {
+  if(!is.null(mSet$storage[[name]]$data)){
+    mSet$dataSet <- mSet$storage[[name]]$data
+  }
   mSet$analSet <- mSet$storage[[name]]$analysis
   mSet$settings <- mSet$storage[[name]]$settings
+  mSet$report <- mSet$storage[[name]]$report
   return(mSet)
 }
 
@@ -177,9 +299,14 @@ load.mSet <- function(mSet, name = mSet$dataSet$cls.name) {
 #' @return Name of current subexperiment
 #' @rdname store.mSet
 #' @export 
-store.mSet <- function(mSet, name = mSet$dataSet$cls.name) {
+store.mSet <- function(mSet, name = mSet$settings$cls.name) {
+  mSet$storage[[name]] <- list()
+  try({
+    mSet$storage[[name]]$data <- mSet$dataSet
+  })
   mSet$storage[[name]]$analysis <- mSet$analSet
   mSet$storage[[name]]$settings <- mSet$settings
+  mSet$storage[[name]]$report <- mSet$report
   return(mSet)
 }
 
@@ -202,33 +329,34 @@ change.mSet <-
            stats_type,
            stats_var = NULL,
            time_var = NULL) {
-    mSet$dataSet$exp.type <- stats_type
-    mSet$dataSet$exp.var <- stats_var
-    mSet$dataSet$exp.fac <- stats_var
-    mSet$dataSet$time.var <- time_var
-    if (grepl(mSet$dataSet$exp.type, pattern = "^1f")) {
-      mSet$dataSet$exp.type <- "1f"
+    mSet$settings$exp.type <- stats_type
+    mSet$settings$exp.var <- stats_var
+    mSet$settings$exp.fac <- stats_var
+    mSet$settings$time.var <- time_var
+    if (grepl(mSet$settings$exp.type, pattern = "^1f")) {
+      mSet$settings$exp.type <- "1f"
     }
     
     mSet <- switch(
-      mSet$dataSet$exp.type,
+      mSet$settings$exp.type,
       "1f" = {
         change_var <- if (length(stats_var) > 1)
           stats_var[1]
         else
           stats_var
-        mSet$dataSet$exp.lbl <- change_var
+        mSet$settings$exp.lbl <- change_var
         # change current variable of interest to user pick from covars table
-        mSet$dataSet$cls <-
+        mSet$dataSet$cls <- mSet$dataSet$orig.cls <-
           as.factor(mSet$dataSet$covars[, ..change_var, with = F][[1]])
+        
         # adjust bivariate/multivariate (2, >2)...
-        mSet$dataSet$cls.num <-
+        mSet$dataSet$cls.num <- mSet$dataSet$orig.cls.num <-
           length(levels(mSet$dataSet$cls))
         # - - -
         mSet
       },
       "2f" = {
-        time.check = grepl("time", mSet$dataSet$exp.var)
+        time.check = grepl("time", mSet$settings$exp.var)
         is.time = any(time.check)
         if (is.time) {
           shiny::showNotification("One variable may be time-related. Using for visualisation...")
@@ -238,20 +366,20 @@ change.mSet <-
           idx1 = 1
           idx2 = 2
         }
-        mSet$dataSet$facA <-
+        mSet$dataSet$facA <- mSet$dataSet$facA.orig <-
           as.factor(mSet$dataSet$covars[, stats_var, with = F][[idx1]])
-        mSet$dataSet$facB <-
+        mSet$dataSet$facB <- mSet$dataSet$facB.orig <-
           as.factor(mSet$dataSet$covars[, stats_var, with = F][[idx2]])
         mSet$dataSet$facA.lbl <- stats_var[idx1]
         mSet$dataSet$facB.lbl <- stats_var[idx2]
-        mSet$dataSet$exp.type <- "2f"
-        mSet$dataSet$exp.lbl <- stats_var
+        mSet$settings$exp.type <- "2f"
+        mSet$settings$exp.lbl <- stats_var
         # - - -
         mSet
       },
       "t" = {
         mSet <- MetaboAnalystR::SetDesignType(mSet, "time0")
-        mSet$dataSet$exp.fac <-
+        mSet$settings$exp.fac <- mSet$dataSet$exp.fac <-
           as.factor(mSet$dataSet$covars$individual)
         if (!any(duplicated(mSet$dataSet$exp.fac))) {
           metshiAlert(
@@ -259,14 +387,15 @@ change.mSet <-
           )
           return(NULL)
         }
-        mSet$dataSet$exp.lbl <- "sample"
-        mSet$dataSet$time.fac <- as.factor(mSet$dataSet$covars[, time_var, with = F][[1]])
-        mSet$dataSet$exp.type <- "t"
-        mSet$dataSet$facA <- mSet$dataSet$time.fac
+        mSet$settings$exp.lbl <- "sample"
+        mSet$settings$time.fac <- mSet$dataSet$time.fac <- as.factor(mSet$dataSet$covars[, time_var, with = F][[1]])
+        mSet$settings$exp.type <- "t"
+        mSet$dataSet$facA <- mSet$dataSet$facA.orig <- mSet$settings$time.fac
         mSet$dataSet$facA.lbl <- "Time"
         mSet$dataSet$facA.lbl.orig <- time_var
-        mSet$dataSet$paired <- TRUE
-        # - - -
+        mSet$settings$ispaired <- TRUE
+        mSet$dataSet$ispaired <- T
+        
         mSet
       },
       "t1f" = {
@@ -284,31 +413,25 @@ change.mSet <-
             stats_var[1]
         else
           stats_var
-        print(time_var)
-        
-        mSet$dataSet$facA <-
-          as.factor(mSet$dataSet$covars[, ..change_var, with = F][[1]])
-        mSet$dataSet$facB <-
+
+        mSet$dataSet$facA <- mSet$dataSet$facA.orig <- as.factor(mSet$dataSet$covars[, ..change_var, with = F][[1]])
+        mSet$dataSet$facB <- mSet$dataSet$facB.orig <-
           as.factor(mSet$dataSet$covars[, ..time_var, with = F][[1]])
         mSet$dataSet$facA.lbl <- change_var
         mSet$dataSet$facB.lbl <- time_var
-        mSet$dataSet$exp.fac <- mSet$dataSet$facA
-        mSet$dataSet$time.fac <- mSet$dataSet$facB
-        mSet$dataSet$exp.type <- "t1f"
-        mSet$dataSet$exp.lbl <- change_var
-        mSet$dataSet$paired <- TRUE
+        mSet$settings$exp.fac <- mSet$dataSet$exp.fac <- mSet$dataSet$facA
+        mSet$settings$time.fac  <- mSet$dataSet$time.fac <- mSet$dataSet$facB
+        mSet$settings$exp.type <- "t1f"
+        mSet$settings$exp.lbl <- change_var
+        mSet$settings$ispaired <- TRUE
+        mSet$dataSet$ispaired <- T
         
         # - - -
         mSet
       }
     )
-    mSet$settings$exp.type = mSet$dataSet$exp.type
-    mSet$settings$exp.var = mSet$dataSet$exp.var
-    mSet$settings$exp.fac = mSet$dataSet$exp.fac
-    mSet$settings$time.var = mSet$dataSet$time.var
-    mSet$settings$paired = mSet$dataSet$paired
     # - - - - - - - - - -
-    mSet$analSet <- NULL
+    mSet$analSet <- list(type = "stat")
     return(mSet)
   }
 
@@ -316,8 +439,7 @@ change.mSet <-
 # subset by mz
 subset_mSet_mz <- function(mSet, keep.mzs) {
   if (length(keep.mzs) > 0) {
-    tables = c("norm", "proc")
-    clss = c("cls", "proc.cls")
+    tables = c("start", "orig", "norm", "proc","preproc","missing", "prebatch")
     combi.tbl = data.table::data.table(tbl = tables)
     
     for (i in 1:nrow(combi.tbl)){
@@ -358,8 +480,8 @@ subset_mSet <- function(mSet, subset_var, subset_group) {
     mSet$dataSet$covars <-
       mSet$dataSet$covars[sample %in% keep.samples, ]
     
-    tables = c("norm", "proc")
-    clss = c("cls", "proc.cls")
+    tables = c("start", "orig", "norm", "proc","preproc","missing", "prebatch")
+    clss = c("placeholder", "orig.cls", "cls", "proc.cls", "preproc.cls", "placeholder", "placeholder")
     combi.tbl = data.table::data.table(tbl = tables,
                                        cls = clss)
     
@@ -373,30 +495,34 @@ subset_mSet <- function(mSet, subset_var, subset_group) {
         cls = combi.tbl$cls[i]
         keep = which(rownames(mSet$dataSet[[tbl]]) %in% keep.samples)
         mSet$dataSet[[tbl]] <- mSet$dataSet[[tbl]][keep, ]
-        sampOrder = match(rownames(mSet$dataSet[[tbl]]), mSet$dataSet$covars$sample)
-        mSet$dataSet[[cls]] <-
-          as.factor(mSet$dataSet$covars[sampOrder, mSet$dataSet$exp.lbl, with = F][[1]])
-        if (cls == "cls") {
-          mSet$dataSet$cls.num <- length(levels(mSet$dataSet[[cls]]))
-          if ("facA" %in% names(mSet$dataSet)) {
-            mSet$dataSet$facA <-
-              as.factor(mSet$dataSet$covars[sampOrder, mSet$dataSet$facA.lbl, with =
-                                              F][[1]])
-            mSet$dataSet$facB <-
-              as.factor(mSet$dataSet$covars[sampOrder, mSet$dataSet$facB.lbl, with =
-                                              F][[1]])
-          }
-          if ("time.fac" %in% names(mSet$dataSet)) {
-            mSet$dataSet$time.fac <-
-              as.factor(mSet$dataSet$covars[sampOrder, mSet$dataSet$time.var, with =
-                                              F][[1]])
-            mSet$dataSet$exp.fac <-
-              as.factor(mSet$dataSet$covars[sampOrder, mSet$dataSet$exp.var, with = F][[1]])
-          }
+        sampOrder = match(rownames(mSet$dataSet[[tbl]]),
+                          mSet$dataSet$covars$sample)
+        
+        if(!(tbl %in% c("start", "missing", "prebatch"))){
+          mSet$dataSet[[cls]] <-
+            as.factor(mSet$dataSet$covars[sampOrder, mSet$settings$exp.var, with = F][[1]])
+          if (cls == "cls") {
+            mSet$dataSet$cls.num <- length(levels(mSet$dataSet[[cls]]))
+            if ("facA" %in% names(mSet$dataSet)) {
+              mSet$dataSet$facA <-
+                as.factor(mSet$dataSet$covars[sampOrder, mSet$dataSet$facA.lbl, with =
+                                                F][[1]])
+              mSet$dataSet$facB <-
+                as.factor(mSet$dataSet$covars[sampOrder, mSet$dataSet$facB.lbl, with =
+                                                F][[1]])
+            }
+            if ("time.fac" %in% names(mSet$dataSet)) {
+              mSet$settings$time.fac <-
+                as.factor(mSet$dataSet$covars[sampOrder, mSet$settings$time.var, with =
+                                                F][[1]])
+              mSet$settings$exp.fac <-
+                as.factor(mSet$dataSet$covars[sampOrder, mSet$settings$exp.var, with = F][[1]])
+            }
+          }  
         }
+        
       }, silent = T)
     }
-    mSet$dataSet$subset[[subset_var]] <- subset_group
     mSet$settings$subset[[subset_var]] <- subset_group
   }
   mSet
@@ -416,8 +542,8 @@ subset_mSet <- function(mSet, subset_var, subset_group) {
 #' @importFrom pbapply pbsapply
 #' @importFrom caret downSample
 pair.mSet <- function(mSet) {
-  stats_var = mSet$dataSet$exp.var
-  time_var = mSet$dataSet$time.var
+  stats_var = mSet$settings$exp.var
+  time_var = mSet$settings$time.var
   
   overview.tbl <-
     data.table::as.data.table(
@@ -443,7 +569,7 @@ pair.mSet <- function(mSet) {
   
   # B: we want to balance the classes...
   # DOWNSAMPLE invidiv
-  if (mSet$dataSet$exp.type == "t1f") {
+  if (mSet$settings$exp.type == "t1f") {
     indiv.times = unique(data.table::as.data.table(
       cbind(
         individual = mSet$dataSet$covars$individual,
@@ -457,7 +583,7 @@ pair.mSet <- function(mSet) {
                           indiv.no.cat.change,
                           indiv.all.times)
     times = unique(mSet$dataSet$covars[, ..time_var][[1]])
-  } else if (mSet$dataSet$exp.type == "t") {
+  } else if (mSet$settings$exp.type == "t") {
     considerations = list(indiv.present.multiple)
     times = unique(mSet$dataSet$covars[, ..time_var][[1]])
   } else{
@@ -468,13 +594,13 @@ pair.mSet <- function(mSet) {
   keep.indiv <- Reduce(f = intersect, considerations)
   
   req.groups <- unique(mSet$dataSet$covars[, ..stats_var][[1]])
-  time_var = mSet$dataSet$time.var
+  time_var = mSet$settings$time.var
   
   keep.samp <- pbapply::pbsapply(keep.indiv, function(indiv) {
     # get samples matching
     # if multiple for each, only pick one
     overv = overview.tbl[individual == indiv]
-    if (mSet$dataSet$exp.type %in% c("t", "t1f")) {
+    if (mSet$settings$exp.type %in% c("t", "t1f")) {
       # all time points need a sample, otherwise nvm (TODO: add a check for if only one sample has timepoint 4 and the rest has 3, majority vote...)
       ind.times = unique(mSet$dataSet$covars[individual == indiv, ..time_var][[1]])
       if (length(ind.times) == length(times)) {
@@ -502,7 +628,7 @@ pair.mSet <- function(mSet) {
   keep.samp = keep.samp[sapply(keep.samp, function(x)
     ! is.null(x))]
   
-  if (mSet$dataSet$exp.type == c("t1f")) {
+  if (mSet$settings$exp.type == c("t1f")) {
     indiv.final = unique(overview.tbl[sample %in% unlist(keep.samp), c("individual", "variable")])
     downsampled = caret::downSample(indiv.final$individual, as.factor(indiv.final$variable))
     keep.indiv = downsampled$x
@@ -516,11 +642,316 @@ pair.mSet <- function(mSet) {
     mSet <- subset_mSet(mSet,
                         subset_var = "sample",
                         subset_group = keep.samp)
-    mSet$settings$paired <- TRUE
-    mSet$dataSet$paired <- TRUE
+    mSet$settings$ispaired <- TRUE
+    mSet$dataSet$ispaired = T
+    
   } else{
     metshiAlert("Not enough samples for paired analysis!")
     return(NULL)
   }
+  mSet
+}
+
+metshiProcess <- function(mSet, session, init=F){
+  #shiny::withProgress(session=session, expr={
+
+  sums = colSums(mSet$dataSet$missing)
+  good.inx <- sums/nrow(mSet$dataSet$missing) < (mSet$metshiParams$miss_perc/100)
+  mSet$dataSet$orig <- as.data.frame(mSet$dataSet$orig[, good.inx, drop = FALSE])
+  qs::qsave(mSet$dataSet$orig, "data_orig.qs")
+  if(!init) mSet$dataSet$missing <- NULL
+  
+  if(mSet$metshiParams$filt_type != "none" & (ncol(mSet$dataSet$orig) > mSet$metshiParams$max.allow)){
+    #shiny::showNotification("Filtering dataset...")
+    # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
+    keep.mz <- colnames(FilterVariableMetshi(mSet,
+                                             filter = mSet$metshiParams$filt_type,
+                                             qcFilter = "F", #TODO: mSet$metshiParams$useQCs
+                                             rsd = 25,
+                                             max.allow = mSet$metshiParams$max.allow
+    )$dataSet$filt)  
+    mSet$dataSet$orig <- mSet$dataSet$orig[,keep.mz]
+    mSet$dataSet$filt <- NULL
+  }
+  
+  qs::qsave(mSet$dataSet$orig, "data_orig.qs")
+  
+  # sanity check data
+  mSet <- MetaboAnalystR::SanityCheckData(mSet)
+  
+  #shiny::setProgress(session=session, value= .6)
+  
+  # missing value imputation
+  if(req(mSet$metshiParams$miss_type) != "none"){
+    if(req(mSet$metshiParams$miss_type) == "rowmin"){ # use sample minimum
+      mSet <- replRowMin(mSet)
+    }
+    else if(req(mSet$metshiParams$miss_type ) == "pmm"){ # use predictive mean matching
+      # TODO: re-enable, it's very slow
+      base <- mSet$dataSet$orig
+      imp <- mice::mice(base, printFlag = TRUE)
+      
+    }else if(req(mSet$metshiParams$miss_type ) == "rf"){ # random forest
+      mSet$dataSet$proc <- MetaboShiny::replRF(mSet, 
+                                               parallelMode = mSet$metshiParams$rf_norm_parallelize, 
+                                               ntree = mSet$metshiParams$rf_norm_ntree,
+                                               cl = session_cl)
+      rownames(mSet$dataSet$proc) <- rownames(mSet$dataSet$preproc)
+      # - - - - - - - - - - - -
+    }else{
+      # use built in imputation methods, knn means etc.
+      mSet <- MetaboAnalystR::ImputeVar(mSet,
+                                        method = mSet$metshiParams$miss_type
+      )
+    }
+  }
+  
+  #shiny::setProgress(session=session, value= .7)
+  
+  # if normalizing by a factor, do the below
+  if(req(mSet$metshiParams$norm_type) == "SpecNorm"){
+    norm.vec <<- mSet$dataSet$covars[match(mSet$dataSet$covars$sample,
+                                           rownames(mSet$dataSet$preproc)
+    ),][[mSet$metshiParams$samp_var]]
+    norm.vec <<- scale(x = norm.vec, center = 1)[,1] # normalize scaling factor
+  }else{
+    norm.vec <<- rep(1, length(mSet$dataSet$cls)) # empty
+  }
+  
+  mSet <- MetaboAnalystR::PreparePrenormData(mSet)
+
+  # normalize dataset with user settings(result: mSet$dataSet$norm)
+  mSet <- MetaboAnalystR::Normalization(mSet,
+                                        rowNorm = mSet$metshiParams$norm_type,
+                                        transNorm = mSet$metshiParams$trans_type,
+                                        scaleNorm = mSet$metshiParams$scale_type,
+                                        ref = mSet$metshiParams$ref_var)
+  
+  mSet$dataSet$prenorm <- NULL
+  
+  #shiny::setProgress(session=session, value= .8)
+  
+  # get sample names
+  smps <- rownames(mSet$dataSet$norm)
+  # get which rows are QC samples
+  qc_rows <- which(grepl(pattern = "QC", x = smps))
+  # if at least one row has a QC in it, batch correct
+  has.qc <- length(qc_rows) > 0
+  # lowercase all the covars table column names
+  colnames(mSet$dataSet$covars) <- tolower(colnames(mSet$dataSet$covars))
+  
+  mSet$dataSet$prebatch <- mSet$dataSet$norm
+  
+  left_batch_vars = mSet$metshiParams$batch_var
+  
+  batch_method_a = mSet$metshiParams$batch_method_a
+  batch_method_b = mSet$metshiParams$batch_method_b
+  
+  # IN CASE SUBSETTING ELIMINATES BATCH EFFECT (ONLY ONE BATCH SELECTED)
+  # keep var 1 ?
+  keep.batch.1 = length(unique(unlist(mSet$dataSet$covars[, left_batch_vars[1], with=F]))) > 1
+  # keep var 2 ? 
+  keep.batch.2 = length(unique(unlist(mSet$dataSet$covars[, left_batch_vars[2], with=F]))) > 1
+  if(!keep.batch.1 & !keep.batch.2){
+    left_batch_vars = c()
+  }else if(!keep.batch.1 & keep.batch.2){
+    left_batch_vars = left_batch_vars[2]
+    batch_method_a = batch_method_b 
+  }else if(keep.batch.1 & !keep.batch.2){
+    left_batch_vars = left_batch_vars[1]
+  }
+  
+  print(left_batch_vars)
+  
+  if(length(left_batch_vars)>0){
+    
+    csv_edata <- MetaboShiny::combatCSV(mSet)
+   
+     # APPLY THE FIRST METHOD ONLY FOR BATCH + INJECTION
+    
+    if(batch_method_a == "limma" & 
+       batch_method_b == "limma" & 
+       length(left_batch_vars) == 2){
+      # create a model table
+      csv_pheno <- data.frame(sample = 1:nrow(mSet$dataSet$covars),
+                              batch1 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample), left_batch_vars[1], with=FALSE][[1]],
+                              batch2 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample), left_batch_vars[2], with=FALSE][[1]]
+                              #,outcome = as.factor(exp_lbl)
+      )
+      # batch correct with limma and two batches
+      batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
+                                                    batch = csv_pheno$batch1,
+                                                    batch2 = csv_pheno$batch2))
+      rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
+      mSet$dataSet$norm <- as.data.frame(batch_normalized)
+    }else{
+      if("batch" %in% left_batch_vars){# & mSet$metshiParams$batch_use_qcs){# & has.qc){
+        csv_edata <- MetaboShiny::combatCSV(mSet)
+        # get batch for each sample
+        batch.idx = as.numeric(as.factor(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"batch"][[1]]))
+        if(length(batch.idx) == 0) return(mSet$dataSet$norm)
+        # get injection order for samples
+        seq.idx = as.numeric(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"injection"][[1]])
+        hasRT = any(grepl(pattern = "RT", colnames(mSet$dataSet$proc)))
+        
+        if(hasRT & batch_method_a == "batchCorr"){
+          metshiAlert("Only available for LC-MS data! Defaulting to WaveICA.")
+          batch_method_a <- "waveica"
+        }
+        
+        mSet$dataSet$norm <- 
+          switch(batch_method_a, 
+                 waveica = {
+                   dtNorm <- cbind(name = rownames(mSet$dataSet$norm), 
+                                   injection.order = seq.idx,
+                                   batch = batch.idx,
+                                   group = rep(1, nrow(mSet$dataSet$norm)),
+                                   mSet$dataSet$norm)
+                   
+                   dtNorm_merge_order <- dtNorm[order(dtNorm$batch,
+                                                      dtNorm$injection.order),]
+                   dtNorm_stat_order <- dtNorm_merge_order[,-c(1:4)]
+                   
+                   waveCorr = WaveICA::WaveICA(dtNorm_stat_order, batch = dtNorm_merge_order$batch)
+                   waveCorr = waveCorr$data_wave
+                   old.order = rownames(mSet$dataSet$norm)
+                   new.order = rownames(waveCorr)
+                   reorder = match(old.order, new.order)
+                   reorderedCorr = as.data.frame(waveCorr[reorder,])
+                   rownames(reorderedCorr) = old.order
+                   data.frame(lapply(reorderedCorr, function(x) as.numeric(as.character(x))),
+                              check.names=F, row.names = rownames(reorderedCorr))
+                 }, 
+                 batchCorr = {
+                   ## Perform batch alignment
+                   # Extract peakinfo (i.e. m/z and rt of features)
+                   peakIn <- batchCorr::peakInfo(PT = mSet$dataSet$proc,
+                                                 sep = 'PLACEHOLDER',
+                                                 start = 0) # These column names have 2 leading characters describing LC-MS mode -> start at 3
+
+
+                   spl.mzrt = stringr::str_split(colnames(mSet$dataSet$proc), "RT")
+                   mzs = sapply(spl.mzrt, function(x) x[[1]])
+                   rts = sapply(spl.mzrt, function(x) x[[2]])
+                   peakIn = data.frame(mz = as.numeric(gsub("\\+|-","",mzs)),
+                                       rt = as.numeric(rts))
+
+                   qc.or.samp = sapply(grepl(pattern = "QC|qc", rownames(mSet$dataSet$proc)), function(x) if(x) "qc" else "sample")
+
+                   alignBat <- batchCorr::alignBatches(peakInfo = peakIn,
+                                                       PeakTabNoFill = mSet$dataSet$orig,
+                                                       PeakTabFilled = mSet$dataSet$norm,
+                                                       batches = as.numeric(as.factor(mSet$dataSet$covars$batch)),
+                                                       sampleGroups = qc.or.samp,
+                                                       selectGroup = 'qc')
+
+                   # Extract new peak table
+                   PT=alignBat$PTalign
+                   },
+                 limma = {
+                   # create a model table
+                   csv_pheno <- data.frame(sample = 1:nrow(mSet$dataSet$covars),
+                                           batch1 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample), left_batch_vars[1], with=FALSE][[1]]
+                   )
+                   # batch correct with limma and two batches
+                   batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
+                                                                 #design = mod.pheno,
+                                                                 batch = csv_pheno$batch1,
+                                                                 batch2 = csv_pheno$batch2))
+                   rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
+                   as.data.frame(batch_normalized)
+                 },
+                 combat = {
+                   csv_pheno <- data.frame(sample = 1:nrow(mSet$dataSet$covars),
+                                           batch1 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample),
+                                                                        left_batch_vars[1], with=FALSE][[1]]
+                   )
+                   # batch correct with comBat
+                   batch_normalized = t(sva::ComBat(dat = csv_edata,
+                                                    batch = csv_pheno$batch1)
+                   )
+                   # fix row names
+                   rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
+                   batch_normalized
+                 })
+        
+        left_batch_vars <- grep(left_batch_vars,
+                                pattern = "batch|injection|sample",
+                                value = T,
+                                invert = T)
+      }
+      
+      # check which batch values are left after initial correction
+      if(length(left_batch_vars) == 0){
+        NULL # if none left, continue after this
+      } else{
+          mSet$dataSet$norm <- 
+            switch(batch_method_b,
+                   combat = {
+                     batch_normalized = csv_edata
+                     for(var in left_batch_vars){
+                       # create a model table
+                       csv_pheno <- data.frame(sample = 1:nrow(mSet$dataSet$covars),
+                                               batch1 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample),
+                                                                            var, with=FALSE][[1]]
+                       )
+                       # batch correct with comBat
+                       batch_normalized = sva::ComBat(dat = batch_normalized,
+                                                        batch = csv_pheno$batch1
+                       )
+                     }
+                     batch_normalized = t(batch_normalized)
+                     rownames(batch_normalized) <- rownames(mSet$dataSet$norm) 
+                     batch_normalized
+                   },
+                   limma = {
+                     # create a model table
+                     csv_pheno <- data.frame(sample = 1:nrow(mSet$dataSet$covars),
+                                             batch1 = mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample), left_batch_vars[1], with=FALSE][[1]],
+                                             batch2 = if(length(left_batch_vars)==2) 
+                                               mSet$dataSet$covars[match(smps,mSet$dataSet$covars$sample), left_batch_vars[2], with=FALSE][[1]] else NULL
+                     )
+                     # batch correct with limma and two batches
+                     if(length(left_batch_vars)==2){
+                       batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
+                                                                     #design = mod.pheno,
+                                                                     batch = csv_pheno$batch1,
+                                                                     batch2 = csv_pheno$batch2))
+                     }else{
+                       batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
+                                                                     #design = mod.pheno,
+                                                                     batch = csv_pheno$batch1))  
+                     }
+                     rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
+                     as.data.frame(batch_normalized)
+                   })  
+        
+      }}
+    }
+  
+  #shiny::setProgress(session=session, value= .9)
+  
+  mSet$dataSet$cls.num <- length(levels(mSet$dataSet$cls))
+  
+  # make sure covars order is consistent with mset$..$norm order
+  rematch = match(
+    rownames(mSet$dataSet$norm),
+    mSet$dataSet$covars$sample
+                  )
+  mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
+
+  mSet$report <- list(mzStarred = data.table::data.table(mz = colnames(mSet$dataSet$norm),
+                                                         star = c(FALSE)))  
+  data.table::setkey(mSet$report$mzStarred, mz)
+  
+  if(has.qc & !init){
+    mSet <- hideQC(mSet)
+  }
+
+  if(!init){
+    mSet$dataSet$missing <- mSet$dataSet$start <- NULL 
+  }
+  
+  mSet$analSet <- list(type = "stat")
   mSet
 }
