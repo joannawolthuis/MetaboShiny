@@ -46,6 +46,8 @@ shiny::observeEvent(input$initialize, {
                                      data.table = TRUE,
                                      header = T)
       
+      if("label" %in% colnames(metshiCSV)) colnames(metshiCSV)[colnames(metshiCSV) == "label"] <- "orig_label"
+      
       keep.samps = !duplicated(metshiCSV$sample)
       metshiCSV = metshiCSV[keep.samps,]
       
@@ -102,6 +104,7 @@ shiny::observeEvent(input$initialize, {
       metshiCSV <- cbind(metshiCSV[,..exp.vars, with=FALSE], # if 'label' is in excel file remove it, it will clash with the metaboanalystR 'label'
                          "label" = metshiCSV[, ..condition][[1]], # set label as the initial variable of interest
                          metshiCSV[,..mz.vars, with=FALSE])
+      
       
       # remove outliers by making a boxplot and going from there
       if(input$remove_outliers){

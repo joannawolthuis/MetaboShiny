@@ -357,7 +357,10 @@ shiny::observeEvent(input$score_iso, {
                               intprec = as.numeric(input$int_prec),
                               rtmode = input$iso_use_rt,
                               rtperc = input$iso_rt_perc,
-                              useint = input$iso_use_int)
+                              useint = input$iso_use_int,
+                              corronly = input$score_use_corr,
+                              corrmin = input$score_corr_min,
+                              corrmethod = input$score_corr_meth)
     colnames(score_table)[ colnames(score_table) == "score"] <- "isoScore"
     })
   shown_matches$forward_unique <- shown_matches$forward_unique[unique(score_table), on = c("fullformula")]
@@ -382,7 +385,10 @@ shiny::observeEvent(input$score_add, {
                             rtmode=input$add_use_rt,
                             mzppm = mSet$ppm,
                             dbdir = lcl$paths$db_dir,
-                            inshiny = T)
+                            inshiny = T,
+                            corronly = input$score_use_corr,
+                            corrmin = input$score_corr_min,
+                            corrmethod = input$score_corr_meth)
   })
   colnames(score_table)[ colnames(score_table) == "score"] <- "addScore"
   shown_matches$forward_unique <- shown_matches$forward_unique[score_table, on = c("structure")]

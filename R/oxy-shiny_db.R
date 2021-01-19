@@ -165,7 +165,8 @@ get_prematches <- function(who = NA,
 #' @importFrom data.table data.table rbindlist
 score.isos <- function(qmz, table, mSet, method="mscore", inshiny=TRUE, 
                        session=0, intprec, ppm, dbdir,
-                       rtmode=F, rtperc=0.1, useint=T){
+                       rtmode=F, rtperc=0.1, useint=T,
+                       corronly = F, corrmin = 0.9, corrmethod = "pearson"){
   
   if(is.null(rtmode)) rtmode = F
   
@@ -192,27 +193,43 @@ score.isos <- function(qmz, table, mSet, method="mscore", inshiny=TRUE,
   isotopies <- unique(isotopies)
   ionMode = if(grepl("\\-", qmz)) "neg" else "pos"
   
+  if(corronly){
+    qmzcol = which(colnames(mSet$dataSet$norm) == qmz)
+    corr = stats::cor(mSet$dataSet$norm[,qmzcol], 
+                      mSet$dataSet$norm[,-qmzcol],method = corrmethod) 
+    correnough = colnames(corr)[which(corr > corrmin)]
+    if(length(correnough) == 0){
+      print("No m/z is correlated enough! Ignoring correlation threshold for now.")
+      print(paste0("Max corr found: ", max(corr)))
+    }else{
+      sourcetable = mSet$dataSet$norm[,correnough]
+    }
+  }else{
+    sourcetable = mSet$dataSet$norm
+  }
+  
   if(rtmode){
     rt = as.numeric(gsub("(.*RT)", "", qmz))
     rtRange = c(rt - rtperc/100 * rt, rt + rtperc/100 * rt)  
-    splitMzRt=stringr::str_split(colnames(mSet$dataSet$proc), "RT")
+    splitMzRt=stringr::str_split(colnames(sourcetable), "RT")
   }else{
     if(grepl("RT", qmz)){
-      splitMzRt=stringr::str_split(colnames(mSet$dataSet$proc), "RT")
+      splitMzRt=stringr::str_split(colnames(sourcetable), "RT")
     }else{
-      splitMzRt=lapply(colnames(mSet$dataSet$proc), function(mz) list(mz, NA))
+      splitMzRt=lapply(colnames(sourcetable), function(mz) list(mz, NA))
     }
   }
   
   mzRtTable = data.table::as.data.table(do.call("rbind", splitMzRt))
   
   colnames(mzRtTable) = c("mz", "rt")
-  mzRtTable$mzfull = colnames(mSet$dataSet$proc)
+  mzRtTable$mzfull = colnames(sourcetable)
   mzRtTable$mzmode = sapply(mzRtTable$mz, function(mz) if(grepl("\\-", mz)) "neg" else "pos")
-  mzRtTable <- mzRtTable[mzmode == ionMode]
+  #mzRtTable <- mzRtTable[mzmode == ionMode]
   mzRtTable$mz = gsub("\\+|\\-", "", mzRtTable$mz)
   mzRtTable$mz <- as.numeric(mzRtTable$mz) 
   mzRtTable$rt <- as.numeric(mzRtTable$rt) 
+  
   
   if(rtmode){
     mzRtTable <- mzRtTable[mzRtTable$rt %between% rtRange,]
@@ -491,7 +508,8 @@ getSampInt <- function(conn, filename, all_mz){
 #' @export
 score.add <- function(qmz, table, mSet, inshiny=TRUE, 
                      session=0, mzppm, rtperc=0.1, rtmode=F, dbdir, 
-                     adducts_considered = adducts$Name){
+                     adducts_considered = adducts$Name,
+                     corronly = F, corrmin = 0.9, corrmethod = "pearson"){
   
   if(is.null(rtmode)) rtmode = F
   
@@ -512,13 +530,28 @@ score.add <- function(qmz, table, mSet, inshiny=TRUE,
   
   ionMode = if(grepl("\\-", qmz)) "neg" else "pos"
   
+  if(corronly){
+    qmzcol = which(colnames(mSet$dataSet$norm) == qmz)
+    corr = stats::cor(mSet$dataSet$norm[,qmzcol], 
+                      mSet$dataSet$norm[,-qmzcol],method = corrmethod) 
+    correnough = colnames(corr)[which(corr > corrmin)]
+    if(length(correnough) == 0){
+      print("No m/z is correlated enough! Ignoring correlation threshold for now.")
+      print(paste0("Max corr found: ", max(corr)))
+    }else{
+      sourcetable = mSet$dataSet$norm[,correnough]
+    }
+  }else{
+    sourcetable = mSet$dataSet$norm
+  }
+  
   if(rtmode){
     rt = as.numeric(gsub("(.*RT)", "", qmz))
     rtRange = c(rt - rtperc/100 * rt, rt + rtperc/100 * rt)
-    splitMzRt=stringr::str_split(colnames(mSet$dataSet$proc), "RT")
+    splitMzRt=stringr::str_split(colnames(sourcetable), "RT")
     mzRtTable = data.table::as.data.table(do.call("rbind", splitMzRt))
     colnames(mzRtTable) = c("mz", "rt")
-    mzRtTable$mzfull = colnames(mSet$dataSet$proc)
+    mzRtTable$mzfull = colnames(sourcetable)
     mzRtTable <- mzRtTable[mzmode == ionMode]
     mzRtTable$mz = gsub("\\+|\\-", "", mzRtTable$mz)
     mzRtTable$mz <- as.numeric(mzRtTable$mz) 
@@ -526,7 +559,7 @@ score.add <- function(qmz, table, mSet, inshiny=TRUE,
     mzRtTable <- mzRtTable[mzRtTable$rt %between% rtRange,] 
   }else{
     mzRtTable <- data.table::data.table(mz = gsub("(RT.*)-?$", "",
-                                                  colnames(mSet$dataSet$proc)))
+                                                  colnames(sourcetable)))
   }
   
   mzRtTable$mzmode = sapply(mzRtTable$mz, function(mz) if(grepl("\\-", mz)) "neg" else "pos")

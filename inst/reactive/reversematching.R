@@ -37,7 +37,7 @@ shiny::observe({
                                                   showdb = c())  
         lcl$prev_struct <<- my_selection$struct
         if(nrow(rev_matches) == 0){
-          shown_matches$reverse <- data.table::data.table()
+          shown_matches$reverse <- data.table::data.table(result = "No matches found.")
           return(NULL)
         }else{
           pieinfo$db <- reshape::melt(table(rev_matches$source))
@@ -51,11 +51,20 @@ shiny::observe({
                                                 patdb = lcl$paths$patdb,
                                                 showadd = result_filters$add[[mzMode]],
                                                 showiso = result_filters$iso,
-                                                showdb = result_filters$db)
+                                                showdb = result_filters$db,
+                                                showIsolabels = input$show_iso_labels)
       if(nrow(rev_matches)>0){
-        shown_matches$reverse <- unique(rev_matches[,c("query_mz", "adduct", "%iso", "dppm")])
+        isocols = c("n2H", "n13C", "n15N")
+        if("n2H" %in% colnames(rev_matches)){
+          extracols=isocols
+        }else{
+          extracols=c()
+        }
+        shown_matches$reverse <- unique(rev_matches[,c("query_mz", "adduct",
+                                                       "%iso", "dppm", 
+                                                       extracols)])
       }else{
-        shown_matches$reverse <- data.table::data.table()
+        shown_matches$reverse <- data.table::data.table(result = "No matches found.")
       }
     }
   } 

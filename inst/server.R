@@ -681,7 +681,7 @@ beep = no')
         if(input$statistics %in% c("venn", "enrich", "heatmap", "network", "ml")){
           statsmanager$calculate <- "vennrich"
           tablemanager$make <- "vennrich"
-          uimanager$refresh <- "vennrich"
+          uimanager$refresh <- c(input$statistics,"vennrich")
         }
         
         checkMe = input$statistics

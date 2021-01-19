@@ -876,57 +876,96 @@ ggPlotPerm <- function(mSet,
   p
 }
 
-ggPlotMLMistakes <- function(pred, test_sampnames, metadata_focus = c("sample"), rep=1){
+ggPlotMLMistakes <- function(predictions,
+                             labels,
+                             test_sampnames, 
+                             cutoffs,
+                             covars,
+                             metadata_focus = c(), cf=rainbow, 
+                             show_reps=F,smooth_line=T){
   # miss metadata plot
-  predict_test = pred@predictions[[rep]]
-  labels = pred@labels[[rep]]
-  cutoffs = pred@cutoffs[[rep]]
-  metadata_focus = c("sample", "country")
-  wrong_hits = pbapply::pblapply(cutoffs, function(x){
-    predicted_labels = sapply(predict_test, function(y) if(y < x) "classFcs12" else 'classFcs345')
-    correct = predicted_labels == labels
-    test_meta = mSet$dataSet$covars[sample %in% test_sampnames, ..metadata_focus]
-    incorrect = test_sampnames[which(!correct)]
-    tbl = data.table(mistaken = incorrect,
-                     country = test_meta[sample %in% incorrect,"country"][[1]],
-                     cutoff = rep(x, length(incorrect)))
-    tbl$country_total = sapply(tbl$country, function(cntr) nrow(test_meta[country == cntr]))
-    tbl$wrong_perc_country = sapply(tbl$country, function(cntr) (nrow(tbl[country == cntr])/tbl[country == cntr,"country_total"][[1]][1])*100)
-    tbl
-  })
-  res = data.table::rbindlist(wrong_hits)
-  res = res[cutoff != Inf]
-  ggplot2::ggplot(data = res) + geom_line(aes(x = cutoff, 
-                                              y = wrong_perc_country, 
-                                              color = country), cex = 1)
+  metadata_with_sample = c("sample", metadata_focus)
+  test_meta = covars[sample %in% test_sampnames, ..metadata_with_sample]
+  uniqvars = unique(test_meta[[2]])
   
+  lvls = levels(labels[[1]])
+  if(length(lvls) > 2){
+    data = data.frame(text = "Only available for data with 2 groups!")
+    ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10) +
+      ggplot2::theme(text = ggplot2::element_text(family = lcl$aes$font$family)) + ggplot2::theme_bw()
+  }else{
+    pred <- ROCR::prediction(lapply(predictions, function(l) l[[1]]), labels)
+    cutoffs = pred@cutoffs
+    predictions = pred@predictions
+    
+    all_reps = pbapply::pblapply(1:length(predictions), function(rep){
+      predict_test = predictions[[rep]]#[[1]]
+      labels = labels[[rep]]
+      cutoffs = cutoffs[[rep]]
+      classes = levels(labels)
+      wrong_hits = lapply(cutoffs, function(x){
+        predicted_labels = sapply(predict_test, function(y) if(y < x) classes[1] else classes[2])
+        correct = predicted_labels == labels
+        incorrect = test_sampnames[which(!correct)]
+        tbl = data.table(mistaken = incorrect,
+                         meta_var = test_meta[sample %in% incorrect, ..metadata_with_sample][[2]],
+                         cutoff = rep(x, length(incorrect)))
+        for(unique_var in uniqvars){
+          ntotal = sum(test_meta[[metadata_focus]] == unique_var)
+          tbl[meta_var == unique_var, "var_total"] <- ntotal
+          in_missing = nrow(tbl[meta_var == unique_var])
+          miss_perc = in_missing/tbl[meta_var == unique_var,"var_total"][[1]][1]*100
+          tbl[meta_var == unique_var, "wrong_perc_var"] <- miss_perc  
+        }
+        tbl
+      })
+      res = data.table::rbindlist(wrong_hits)
+      res$rep = rep
+      res[cutoff != Inf] 
+    })
+    res = data.table::rbindlist(all_reps)
+    
+    line_fun = if(smooth_line) geom_smooth else geom_line
+    p = ggplot2::ggplot(data = res,aes(x = cutoff, 
+                                       y = wrong_perc_var,
+                                       text = meta_var,
+                                       color = meta_var)) + 
+      #geom_point() +
+      line_fun(cex = 1,se = FALSE ) +
+      ggplot2::scale_color_manual(name = metadata_focus, 
+                                  values=cf(20)) +
+      ggplot2::xlab("Cutoff") + ggplot2::ylab("% of testing mistakes")
+    if(show_reps) p + facet_grid("rep") else p
+  }
 }
-#' @title Generate ROC plot
-#' @description Function to generate ggplot or plotly ROC plot for machine learning
+#' @title Generate ROC/PrecRec plot
+#' @description Function to generate ggplot or plotly ROC/PrecRec plot for machine learning
 #' @param data Model data
 #' @param attempts Number of models that were created, Default: 50
 #' @param cf Function to get plot colors from
+#' @param curve_type roc or precrec. Default: 'roc'
 #' @param class_type Binary or multivariate? (b/m), Default: 'b'
 #' @return GGPLOT or PLOTLY object(s)
-#' @seealso 
+#' @seealso
 #'  \code{\link[shiny]{showNotification}}
 #'  \code{\link[pbapply]{pbapply}}
 #'  \code{\link[ggplot2]{geom_path}},\code{\link[ggplot2]{annotate}},\code{\link[ggplot2]{stat_summary_bin}},\code{\link[ggplot2]{scale_manual}},\code{\link[ggplot2]{coord_fixed}},\code{\link[ggplot2]{coord_cartesian}}
-#' @rdname ggPlotROC
+#' @rdname ggPlotCurves
 #' @export 
 #' @importFrom shiny showNotification
 #' @importFrom pbapply pbsapply
 #' @importFrom ggplot2 geom_path annotate stat_summary_bin scale_color_manual coord_fixed coord_cartesian
-ggPlotROC <- function(data,
-                      attempts = 50,
-                      cf,
-                      class_type="b"){
-  
-  mean.auc <- data$m_auc
-  perf.long <- data$perf
-  
-  means.per.comp=perf.long[, lapply(.SD, mean), by = comparison]
-  
+ggPlotCurves <- function(perf.long,
+                         #labels,
+                         #predictions,
+                         attempts = 50,
+                         cf,
+                         curve_type="roc",#roc, precrec
+                         class_type="b"){
+  perf.long <- data.table::as.data.table(perf.long)
+  perf.long <- perf.long[metric == curve_type, -"metric"]
+  mean.auc = mean(perf.long$AVG_AUC)
+  means.per.comp = perf.long[, lapply(.SD, mean), by = comparison]
   ncomp = length(unique(means.per.comp$comparison))
   if(ncomp > 2){
     cols = cf(ncomp + 1)
@@ -934,16 +973,17 @@ ggPlotROC <- function(data,
     try({
       shiny::showNotification("Calculating AUCs per comparison...")
     })
-    perf.long$comparison <- pbapply::pbsapply(perf.long$comparison,
-                                              function(comp){
-                                                paste0(comp, " || avg. AUC=", round(means.per.comp[comparison == comp]$AUC_PAIR, digits=3), " ||")
-                                              })  
+    for(comp in unique(perf.long$comparison)){
+      new.name = paste0(comp, " || avg. AUC=", round(means.per.comp[comparison == comp]$AUC_PAIR, digits=3), " ||")
+      perf.long[comparison == comp]$comparison <- c(new.name)
+    } 
   }else{
     cols = cf(max(as.numeric(perf.long$attempt)))
     class_type = "b"
   }
   
-  p <- ggplot2::ggplot(perf.long, ggplot2::aes(FPR,TPR,
+  p <- ggplot2::ggplot(perf.long, ggplot2::aes(x, # x = FPR or Precision
+                                               y, # y = TPR or Recall
                                                key = attempt,
                                                text = attempt)) +
     ggplot2::geom_path(alpha=.5,
@@ -952,6 +992,23 @@ ggPlotROC <- function(data,
                                     text = if(class_type == "m") comparison else as.factor(attempt),
                                     key = if(class_type == "m") comparison else as.factor(attempt),
                                     group = attempt)) +
+    ggplot2::labs(color = if(class_type == "m") "Class" else "Attempt",
+                  text = if(class_type == "m") "Class" else "Attempt",
+                  key = if(class_type == "m") "Class" else "Attempt") +
+    
+    ggplot2::stat_summary_bin(#alpha=.6,
+      ggplot2::aes(x, 
+                   y, 
+                   group = comparison,
+                   color = if(class_type == "m") comparison else NULL), 
+      fun=mean, geom="line", 
+      cex = 2.3) + #,color="black") +
+    ggplot2::scale_color_manual(values = cols) +
+    #scale_y_continuous(limits=c(0,1)) +
+    ggplot2::coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE) +
+    ggplot2::coord_cartesian(xlim = c(.04,.96), ylim = c(.04,.96)) +
+    ggplot2::xlab(if(curve_type == "roc") "FPR" else "Precision") + 
+    ggplot2::ylab(if(curve_type == "roc") "TPR" else "Recall") +
     ggplot2::annotate("text",
                       label = paste0("Average AUC: ",
                                      format(mean.auc,
@@ -960,22 +1017,7 @@ ggPlotROC <- function(data,
                                             digits = 2)),
                       size = 8,
                       x = 0.77,
-                      y = 0.03) +
-    ggplot2::labs(color = if(class_type == "m") "Comparison" else "Attempt",
-                  text = if(class_type == "m") "Comparison" else "Attempt",
-                  key = if(class_type == "m") "Comparison" else "Attempt") +
-    
-    ggplot2::stat_summary_bin(#alpha=.6,
-      ggplot2::aes(FPR, TPR, 
-                   group = comparison,
-                   color = if(class_type == "m") comparison else NULL), 
-      fun=mean, geom="line", 
-      cex = 2.3) + #,color="black") +
-    ggplot2::scale_color_manual(values = cols) +
-    #scale_y_continuous(limits=c(0,1)) +
-    ggplot2::coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE) +
-    ggplot2::coord_cartesian(xlim = c(.04,.96), ylim = c(.04,.96))
-  
+                      y = 0.03)
   p
 }
 
@@ -1041,8 +1083,7 @@ ggPlotBar <- function(data,
   }
   
   mzdata <- p$data
-  mzdata$`m/z` <- gsub(mzdata$`m/z`, pattern = "`|'", replacement="")
-  
+
   list(mzdata = mzdata, plot = p)
 }
 

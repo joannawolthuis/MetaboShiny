@@ -42,69 +42,71 @@ shiny::observe({
 })
 
 output$ml_name <- shiny::renderUI({
-  ml_name = trimws(paste0(if(input$ml_run_on_norm) "norm" else "orig",
-                   " ",
-                   input$ml_train_perc, "%train",
-                   " ",
-                   paste0("crossVal-",input$ml_perf_metr,input$ml_folds),
-                   " ",
-                   if(length(input$ml_batch_covars) > 0) paste0("batchSplit-", paste0(input$ml_batch_covars, collapse="AND")),
-                   if(length(input$ml_batch_covars) > 0 & input$ml_batch_sampling != "none"){
-                     paste0("balancedMethod-",
-                            input$ml_batch_sampling, 
-                            "-by-", paste0(input$ml_batch_covars,
-                                           collapse = "+")," ")
-                   }else{""},
-                   if(length(input$ml_include_covars) > 0){
-                     paste0("metadataInclude", paste0(input$ml_include_covars, 
-                                                      collapse="+"), " ")
-                   }else{ "" },
-                   #if(input$ml_sampling != "none") paste0("balancedClasses-", input$ml_sampling, ""," ") else "",
-                   if(!(input$ml_samp_distr %in% c(" ", "no"))){
-                     paste0("usePrevTrainTest-", input$ml_samp_distr, " ")
-                   }else{""},
-                   if(!is.null(lcl$vectors$ml_train)){paste0("trainOn-", paste0(lcl$vectors$ml_train, collapse="="))} else "",
-                   if(!is.null(lcl$vectors$ml_test)){paste0("testOn-", paste0(lcl$vectors$ml_test, collapse="="))} else ""
-  ))
-  
-  caret.mdls <- caret::getModelInfo()
-  caret.methods <- names(caret.mdls)
-  tune.opts <- lapply(caret.methods, function(mdl) caret.mdls[[mdl]]$parameters)
-  names(tune.opts) <- caret.methods
-  
-  meth.info <- caret.mdls[[input$ml_method]]
-  params = meth.info$parameters
-  
-  tuneGrid = expand.grid(
-    {
-      lst = lapply(1:nrow(params), function(i){
-        info = params[i,]
-        inp.val = input[[paste0("ml_", info$parameter)]]
-        # - - check for ranges - -
-        if(grepl(inp.val, pattern=":")){
-          split = strsplit(inp.val,split = ":")[[1]]
-          inp.val <- seq(as.numeric(split[1]),
-                         as.numeric(split[2]),
-                         as.numeric(split[3]))
-        }else if(grepl(inp.val, pattern = ",")){
-          split = strsplit(inp.val,split = ",")[[1]]
-          inp.val <- split
-        }
-        # - - - - - - - - - - - - -
-        switch(as.character(info$class),
-               numeric = as.numeric(inp.val),
-               character = as.character(inp.val))
+  ml_name = ""
+  try({
+    ml_name = trimws(paste0(if(input$ml_run_on_norm) "norm" else "orig",
+                            " ",
+                            input$ml_train_perc, "%train",
+                            " ",
+                            paste0("crossVal-",input$ml_perf_metr,input$ml_folds),
+                            " ",
+                            if(length(input$ml_batch_covars) > 0) paste0("batchSplit-", paste0(input$ml_batch_covars, collapse="AND")),
+                            if(length(input$ml_batch_covars) > 0 & input$ml_batch_sampling != "none"){
+                              paste0("balancedMethod-",
+                                     input$ml_batch_sampling, 
+                                     "-by-", paste0(input$ml_batch_covars,
+                                                    collapse = "+")," ")
+                            }else{""},
+                            if(length(input$ml_include_covars) > 0){
+                              paste0("metadataInclude", paste0(input$ml_include_covars, 
+                                                               collapse="+"), " ")
+                            }else{ "" },
+                            #if(input$ml_sampling != "none") paste0("balancedClasses-", input$ml_sampling, ""," ") else "",
+                            if(!(input$ml_samp_distr %in% c(" ", "no"))){
+                              paste0("usePrevTrainTest-", input$ml_samp_distr, " ")
+                            }else{""},
+                            if(!is.null(lcl$vectors$ml_train)){paste0("trainOn-", paste0(lcl$vectors$ml_train, collapse="="))} else "",
+                            if(!is.null(lcl$vectors$ml_test)){paste0("testOn-", paste0(lcl$vectors$ml_test, collapse="="))} else ""
+    ))
+    
+    caret.mdls <- caret::getModelInfo()
+    caret.methods <- names(caret.mdls)
+    tune.opts <- lapply(caret.methods, function(mdl) caret.mdls[[mdl]]$parameters)
+    names(tune.opts) <- caret.methods
+    
+    meth.info <- caret.mdls[[input$ml_method]]
+    params = meth.info$parameters
+    
+    tuneGrid = expand.grid(
+      {
+        lst = lapply(1:nrow(params), function(i){
+          info = params[i,]
+          inp.val = input[[paste0("ml_", info$parameter)]]
+          # - - check for ranges - -
+          if(grepl(inp.val, pattern=":")){
+            split = strsplit(inp.val,split = ":")[[1]]
+            inp.val <- seq(as.numeric(split[1]),
+                           as.numeric(split[2]),
+                           as.numeric(split[3]))
+          }else if(grepl(inp.val, pattern = ",")){
+            split = strsplit(inp.val,split = ",")[[1]]
+            inp.val <- split
+          }
+          # - - - - - - - - - - - - -
+          switch(as.character(info$class),
+                 numeric = as.numeric(inp.val),
+                 character = as.character(inp.val))
+        })
+        names(lst) = params$parameter
+        #lst <- lst[sapply(lst,function(x)all(!is.na(x)))]
+        lst
       })
-      names(lst) = params$parameter
-      #lst <- lst[sapply(lst,function(x)all(!is.na(x)))]
-      lst
-    })
-  ml_settings = paste0(unlist(sapply(colnames(tuneGrid), function(x) if(!is.na(tuneGrid[[x]])) paste0(x,"=",tuneGrid[[x]]) else NULL)), collapse="&")
-  if(ml_settings != ""){
-    ml_name = paste0(ml_name, " ", ml_settings)
-  }
-  
-  ml_name = trimws(ml_name)
+    ml_settings = paste0(unlist(sapply(colnames(tuneGrid), function(x) if(!is.na(tuneGrid[[x]])) paste0(x,"=",tuneGrid[[x]]) else NULL)), collapse="&")
+    if(ml_settings != ""){
+      ml_name = paste0(ml_name, " ", ml_settings)
+    }
+  }, silent=T)
+
   shiny::textInput("ml_name", 
                    label=shiny::h3("Name:"), 
                    value = ml_name)

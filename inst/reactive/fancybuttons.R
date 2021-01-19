@@ -27,13 +27,20 @@ shiny::observeEvent(update_heatmap(), {
   }
 })
 
+shiny::observeEvent(input$plot_ml_mistake, {
+  if(!is.null(mSet$analSet$ml)){
+    plotmanager$make <- "ml_mistake" # just reload  
+  }
+},ignoreInit = T, ignoreNULL = T)
+
 update_ml = shiny::reactive({
   input$ml_top_x
+  input$ml_curve_type
 }) %>% shiny::debounce(1000)
 
 shiny::observeEvent(update_ml(), {
   if(!is.null(mSet$analSet$ml)){
-    plotmanager$make <- "ml" # just reload
+    plotmanager$make <- tablemanager$make <- "ml" # just reload
   }
 })
 

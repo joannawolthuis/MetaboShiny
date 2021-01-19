@@ -44,20 +44,22 @@ output$browse_tab <-DT::renderDataTable({
 # adduct table editing from settings tab
 
 output$ml_tab <- DT::renderDataTable({
-  MetaboShiny::metshiTable(content = data.table::data.table("nothing selected"="Please select a model from ROC plot or left-hand table!"))
+  MetaboShiny::metshiTable(content = data.table::data.table("nothing selected" = "Please select a model from ROC plot or left-hand table!"))
 }, server = F)
 
 shiny::observeEvent(input$ml_overview_tab_rows_selected, {
-  attempt = lcl$tables$ml_roc_all[input$ml_overview_tab_rows_selected,]$attempt
-  xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
+  attempt <- lcl$tables$ml_roc_all[input$ml_overview_tab_rows_selected,]$attempt
+  data <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
+  xvals <- data$roc
   output$ml_tab <- DT::renderDataTable({
-    imp <- data.table::as.data.table(xvals$imp[[attempt]], keep.rownames = T)
-    colnames(imp) <- c("mz", "importance")
+    imp <- xvals$imp[[attempt]]
+    imp <- data.table::data.table(mz = rownames(imp),
+                                  importance = imp[[1]])
     imp <- imp[importance > 0,]
+    fixed.mzs = gsub("^X", "", imp$mz)
+    fixed.mzs = gsub("\\.$", "-", fixed.mzs)
     lcl$tables$ml_roc <<- data.frame(importance = imp$importance,
-                                     row.names = gsub(imp$mz,
-                                                      pattern = "`|`",
-                                                      replacement=""))
+                                    row.names = fixed.mzs)
     MetaboShiny::metshiTable(content = lcl$tables$ml_roc)
   }, server = F)
 })

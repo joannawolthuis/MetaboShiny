@@ -170,8 +170,8 @@ shiny::observe({
                    ml = {
                      if("ml" %in% names(mSet$analSet)){
                        roc_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
-                       roc_data$perf <- data.table::as.data.table(roc_data$perf)
-                       res = unique(roc_data$perf[,c("AUC_PAIR", "comparison", "attempt")])
+                       curve_type = if(input$ml_curve_type) "roc" else "precrec"
+                       res = unique(roc_data$perf[metric == curve_type,c("AUC_PAIR", "comparison", "attempt")])
                        lcl$tables$ml_roc_all <<- res
                        list(ml_overview_tab = res)
                      }else{

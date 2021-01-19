@@ -143,10 +143,10 @@ shiny::observe({
                                                                          style = c(rep('text-align:center;',length(subtext))))
                        )
                        
-                       usesCovars <- paste0(c("stats","time","shape","col","txt","subset","fill"), "_var")
+                       usesCovars <- paste0(c("stats","time","shape","col","txt","subset","fill","ml_mistake"), "_var")
                        lapply(usesCovars, function(inputId){
                          shiny::updateSelectInput(session, inputId,  
-                                                  choices = c("label", 
+                                                  choices = c(#"label", 
                                                               colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, 
                                                                                                         MARGIN = 2, 
                                                                                                         function(col) length(unique(col)) < gbl$constants$max.cols))]))

@@ -229,16 +229,16 @@ runML <- function(curr,
 #' @export 
 #' @importFrom pROC multiclass.roc auc
 #' @importFrom data.table rbindlist
-getMultiMLperformance <- function(x){
+getMultiMLperformance <- function(x, type="roc"){
   
   try({
-    mroc = pROC::multiclass.roc(x$labels, 
+    mroc = pROC::multiclass.roc(x$labels,
                                 x$prediction)
-  },silent = T)
-  try({
-    mroc = pROC::multiclass.roc(x$labels, factor(x$prediction,
-                                                 ordered = T))
-  }, silent=T)
+  },silent = F)
+  # try({
+  #   mroc = pROC::multiclass.roc(x$labels, factor(x$prediction,
+  #                                                ordered = T))
+  # }, silent=F)
   
   data.table::rbindlist(lapply(mroc$rocs, function(roc.pair){
     try({
@@ -1109,22 +1109,44 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                    },
                    ml = {
                      if("ml" %in% names(mSet$analSet)){
-                       ml_roc = ggPlotROC(data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc,
-                                          attempts = input$ml_attempts,
-                                          cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-                       
-                       barplot_data <- ggPlotBar(data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar,
-                                                 attempts = input$ml_attempts,
-                                                 cf =gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                                 topn = input$ml_top_x,
-                                                 ml_name = mSet$analSet$ml$last$name,
-                                                 ml_type = mSet$analSet$ml$last$method)
-                       
-                       ml_barplot <- barplot_data$plot
-                       lcl$tables$ml_bar <- barplot_data$mzdata
-                     }
-                     list(ml_roc = ml_roc, 
-                          ml_bar = ml_barplot)
+                       if(length(mSet$analSet$ml) > 0){
+                         data =  mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
+                         ml_roc = ggPlotCurves(perf.long = data$roc$perf,
+                                               #labels = data$roc$labels,
+                                               #predictions = data$roc$predictions, 
+                                               attempts = input$ml_attempts,
+                                               cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                               curve_type=if(input$ml_curve_type) "roc" else "precrec")
+                         barplot_data <- ggPlotBar(data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar,
+                                                   attempts = input$ml_attempts,
+                                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                                   topn = input$ml_top_x,
+                                                   ml_name = mSet$analSet$ml$last$name,
+                                                   ml_type = mSet$analSet$ml$last$method)
+                         
+                         ml_barplot <- barplot_data$plot
+                         
+                         lcl$tables$ml_bar <- barplot_data$mzdata
+                         list(ml_roc = ml_roc, 
+                              ml_bar = ml_barplot)
+                       }} else list()
+                   },
+                   ml_mistake = {
+                     if("ml" %in% names(mSet$analSet)){
+                       if(length(mSet$analSet$ml) > 0){
+                         data =  mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
+                         mistake_plot <- if(input$ml_mistake_var != "") ggPlotMLMistakes(labels = data$roc$labels,
+                                                                                         predictions = data$roc$predictions,
+                                                                                         test_sampnames = data$roc$inTest,
+                                                                                         covars = mSet$dataSet$covars,
+                                                                                         metadata_focus = input$ml_mistake_var,
+                                                                                         cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                                                                         smooth_line = input$ml_mistake_smooth,
+                                                                                         show_reps = input$ml_mistake_per_rep#,show_reps = T
+                         ) else NULL
+                         list(ml_mistake = mistake_plot)
+                       }
+                      }else list()
                    },
                    multigroup = {
                      p = ggplotSummary(mSet, my_selection$mz, 

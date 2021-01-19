@@ -834,46 +834,100 @@ shiny::observe({
                      mSet$analSet$ml <- list() # otherwise make it
                    }
                    
-                   samp.distr <- lapply(repeats, function(x) x$distr)
-                   mz.imp <- lapply(repeats, function(x) x$importance)
-                   # aucs
-                   if(length(levels(mSet$dataSet$cls)) > 2){
-                     perf <- lapply(1:length(repeats), function(i){
-                       x = repeats[[i]]
-                       res = getMultiMLperformance(x)
-                       res$attempt = c(i)
-                       res
-                     })
-                     perf.long <- data.table::rbindlist(perf)
-                     mean.auc <- mean(perf.long$AUC_AVG)
-                   }else{
-                     # save the summary of all repeats (will be used in plots) TOO MEMORY HEAVY
-                     pred <- ROCR::prediction(lapply(repeats, function(x) x$prediction[[2]]), 
-                                              lapply(repeats, function(x) x$labels))
-                     perf <- ROCR::performance(pred, "tpr", "fpr")
-                     perf_auc <- ROCR::performance(pred, "auc")
-                     perf.long <- data.table::rbindlist(lapply(1:length(perf@x.values), function(i){
-                       xvals <- perf@x.values[[i]]
-                       yvals <- perf@y.values[[i]]
-                       aucs <- signif(perf_auc@y.values[[i]][[1]], digits = 2)
-                       res <- data.table::data.table(attempt = c(i),
-                                                     FPR = xvals,
-                                                     TPR = yvals,
-                                                     AUC_AVG = aucs,
-                                                     AUC_PAIR = aucs)
-                       res
-                     }))
-                     perf.long$comparison <- paste0(levels(mSet$dataSet$cls),collapse=" vs. ")
-                     mean.auc <- mean(unlist(perf_auc@y.values))
-                   }
+                   # ---------
                    
-                   roc_data <- list(m_auc = mean.auc,
-                                    perf = perf.long,
-                                    imp = mz.imp,
-                                    pred = pred,
+                   labels = lapply(repeats, function(x) x$labels)
+                   predictions = lapply(repeats, function(x) x$prediction)
+                   
+                   perf.per.curve = lapply(c("roc", "precrec"), function(curve_type){
+                     if(length(levels(mSet$dataSet$cls)) > 2){
+                       #curve_type = "roc" # don't have precrec here implemented yet
+                       perf <- lapply(1:length(labels), function(i){
+                         prediction = predictions[[i]]
+                         classes = labels[[i]]
+                         #x = list(prediction=predictions[[i]],
+                         #         labels=as.factor(labels[[i]]))
+                         colnames(prediction) <- paste0(colnames(prediction), "_pred_m1")
+                         samprows = lapply(1:length(classes),function(i){
+                           default = rep(0, length(levels(classes)))
+                           default = data.table::as.data.table(t(data.table::data.table(default)))
+                           colnames(default) = paste0(levels(classes), "_true")
+                           lbl = as.character(classes[i])
+                           match_lbl = paste0(lbl,"_true") 
+                           default[, match_lbl] <- 1
+                           default
+                         })
+                         true_cols = data.table::rbindlist(samprows)
+                         my_data = cbind(true_cols, prediction)
+                         multi_performance <- if(curve_type == "roc") multiROC::multi_roc(my_data) else multiROC::multi_pr(my_data)
+                         plottable = if(curve_type == "roc"){
+                           data.table::as.data.table(multiROC::plot_roc_data(multi_performance))
+                         }else{
+                           data.table::as.data.table(multiROC::plot_pr_data(multi_performance)) 
+                         }
+                         res = plottable[Method == "m1", -"Method"]
+                         #res = getMultiMLperformance(x)
+                         res$attempt = c(i)
+                         res
+                       })
+                       perf.long <- data.table::rbindlist(perf)
+                       perf.long <- perf.long[!(Group %in% c("Micro", "Macro")),]
+                       #TPR is sensitivity
+                       #FPR = 1 - specificity
+                       if(curve_type == "roc"){
+                         TPR = perf.long$Sensitivity
+                         FPR = 1 - perf.long$Specificity
+                         perf.long[[1]] <- FPR
+                         perf.long[[2]] <- TPR
+                       }
+                       colnames(perf.long) <- c("x", "y", 
+                                                "comparison", 
+                                                "AUC_PAIR", 
+                                                "attempt")
+                       mean.auc <- mean(unique(perf.long$AUC_PAIR))
+                       perf.long$AVG_AUC <- c(mean.auc)
+                       
+                     }else{
+                       # save the summary of all repeats (will be used in plots) TOO MEMORY HEAVY
+                       pred <- ROCR::prediction(predictions = lapply(predictions, function(x) x[[2]]), 
+                                                labels = labels)
+                       y = switch(curve_type, roc = "tpr", precrec = "prec")
+                       x = switch(curve_type, roc = "fpr", precrec = "rec")
+                       
+                       perf <- ROCR::performance(prediction.obj = pred, 
+                                                 measure = y, 
+                                                 x.measure=x)
+                       perf_auc <- ROCR::performance(pred, switch(curve_type, 
+                                                                  roc = "auc", 
+                                                                  precrec = "aucpr"))
+                       perf.long <- data.table::rbindlist(lapply(1:length(perf@x.values), function(i){
+                         xvals <- perf@x.values[[i]]
+                         yvals <- perf@y.values[[i]]
+                         aucs <- signif(perf_auc@y.values[[i]][[1]], digits = 2)
+                         res = data.table::data.table(attempt = c(i),
+                                                      x = xvals,
+                                                      y = yvals,
+                                                      AUC_AVG = aucs,
+                                                      AUC_PAIR = aucs)
+                         res
+                       }))
+                       perf.long$comparison <- paste0(levels(mSet$dataSet$cls),collapse=" vs. ")
+                       mean.auc <- mean(unlist(perf_auc@y.values))
+                       perf.long$AVG_AUC <- c(mean.auc)
+                     }
+                     perf.long$metric = curve_type
+                     perf.long
+                   })
+                   
+                   perf.long <- data.table::rbindlist(perf.per.curve)
+                   
+                   # ---------
+                   
+                   roc_data <- list(perf = perf.long,
+                                    labels = lapply(repeats, function(x) x$labels),
+                                    predictions = lapply(repeats, function(x) x$prediction),
+                                    imp = lapply(repeats, function(x) x$importance),
                                     inTest = test_sampnames)
-                   
-                   #ggPlotMLMistakes(pred, test_sampnames, c("sample","country"), 2)
                    
                    bar_data <- data.table::rbindlist(lapply(1:length(repeats), function(i){
                      x = repeats[[i]]
@@ -882,6 +936,9 @@ shiny::observe({
                      colnames(tbl) = c("mz",
                                        "importance",
                                        "rep")
+                     tbl$mz <- gsub("^X","",tbl$mz)
+                     tbl$mz <- gsub("\\.$","-",tbl$mz)
+                     
                      # - - - - - - -
                      tbl
                    }))
@@ -901,7 +958,7 @@ shiny::observe({
                    
                    mSet$analSet$ml[[input$ml_method]][[input$ml_name]] <- list("roc" = roc_data,
                                                                                "bar" = bar_data,
-                                                                               "distr" = samp.distr)
+                                                                               "distr" = lapply(repeats, function(x) x$distr))
                    mSet$analSet$ml$last <- list(name = input$ml_name,
                                                 method = input$ml_method)
                    

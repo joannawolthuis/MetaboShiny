@@ -230,7 +230,8 @@ import.pat.csvs <- function(metapath,
         if(sampName %in% if(typeof(metadata) == "list") samplesIn else sampName){
           row = c(metadata[sample == as.character(sampName), ..meta_col_order],
                   splRow[qualifies])
-          write(paste0(row, collapse=","),file=write_loc,append=TRUE)
+          write(paste0(row, collapse=","),
+                file = write_loc,append=TRUE)
         }else{
           NULL
         }
