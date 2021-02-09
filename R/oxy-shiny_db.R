@@ -117,7 +117,7 @@ get_prematches <- function(who = NA,
                                          main = "AND `%iso` > 99.9999", 
                                          minor = "AND `%iso` < 99.9999") else ""
   
-  who = gsub("0+$", "", who)
+  #who = gsub("0+$", "", who)
   query = gsubfn::fn$paste("$firstpart WHERE $what = '$who' $dbfrag $addfrag $isofrag")
 
   res = RSQLite::dbGetQuery(conn, query)
@@ -199,14 +199,22 @@ score.isos <- function(qmz, table, mSet, method="mscore", inshiny=TRUE,
                       mSet$dataSet$norm[,-qmzcol],method = corrmethod) 
     correnough = colnames(corr)[which(corr > corrmin)]
     if(length(correnough) == 0){
-      print("No m/z is correlated enough! Ignoring correlation threshold for now.")
+      print("No m/z is correlated enough! Ignoring correlation requirement.")
       print(paste0("Max corr found: ", max(corr)))
+      sourcetable = mSet$dataSet$norm
     }else{
-      sourcetable = mSet$dataSet$norm[,correnough]
+      if(length(correnough) > 1){
+        sourcetable = mSet$dataSet$norm[,correnough]
+      }else{
+        sourcetable = data.table::data.table(mSet$dataSet$norm[,correnough])
+        colnames(sourcetable) = correnough
+      }
     }
   }else{
     sourcetable = mSet$dataSet$norm
   }
+  
+  print(dim(sourcetable))
   
   if(rtmode){
     rt = as.numeric(gsub("(.*RT)", "", qmz))
@@ -230,14 +238,14 @@ score.isos <- function(qmz, table, mSet, method="mscore", inshiny=TRUE,
   mzRtTable$mz <- as.numeric(mzRtTable$mz) 
   mzRtTable$rt <- as.numeric(mzRtTable$rt) 
   
-  
   if(rtmode){
     mzRtTable <- mzRtTable[mzRtTable$rt %between% rtRange,]
   }
   
   if(nrow(mzRtTable) == 0){
     if(inshiny) shiny::showNotification("No isotopes within RT range...")
-    return(data.table::data.table(fullformula = mini.table$fullformula, score = c(0)))
+    return(data.table::data.table(fullformula = mini.table$fullformula,
+                                  score = c(0)))
   }
   
   score_rows = pbapply::pblapply(isotopies, function(l){
@@ -263,7 +271,6 @@ score.isos <- function(qmz, table, mSet, method="mscore", inshiny=TRUE,
     
     bound = do.call("cbind", per_mz_cols)
     colnames(bound) = mzs
-    
     
     theor = matrix(c(l$fullmz, l$isoprevalence), nrow=2, byrow = T)
 

@@ -1,7 +1,7 @@
 # nonselected
 
 venn_yes = shiny::reactiveValues(start = data.frame(),
-                          now = data.frame())
+                                 now = data.frame())
 
 venn_no = shiny::reactiveValues(
                         start = data.frame(c("a", "b", "c")),

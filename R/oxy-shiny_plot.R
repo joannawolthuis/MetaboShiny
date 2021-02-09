@@ -636,18 +636,20 @@ ggPlotTT <- function(mSet, cf, n=20){
   xaxis = seq(0,600, 50)
   
   # ---------------------------
-  p = ggplot2::ggplot(data=profile,ggplot2::aes(y=Peak,
-                                                 x=`-log(p)`,
-                                                 text=`m/z`,
-                                                 color=`-log(p)`, 
-                                                 key=`m/z`)) +
-    ggplot2::geom_point(size=2.5) +
-    ggplot2::geom_segment(aes(y = Peak, 
+  
+  p = ggplot2::ggplot() +
+    ggplot2::geom_point(data=profile,ggplot2::aes(y=Peak,
+                                                  x=`-log(p)`,
+                                                  text=`m/z`,
+                                                  color=`-log(p)`, 
+                                                  key=`m/z`),
+                        size=2.5) +
+    ggplot2::geom_segment(data=profile,aes(y = Peak,
                               yend = Peak,
                               color=`-log(p)`,
                               x = 0,
                               xend = `-log(p)`)) +
-    ggplot2::scale_colour_gradientn(colours = cf(n)) + 
+    ggplot2::scale_colour_gradientn(colours = cf(n)) +
     ggplot2::coord_flip()
   #ggplot2::scale_y_continuous()
   p
@@ -751,6 +753,48 @@ ggPlotFC <- function(mSet, cf, n=20){
   p
 }
 
+#' @importFrom ggplot2 ggplot geom_point aes scale_colour_gradientn
+ggPlotCombi <- function(mSet,
+                        cf,
+                        n=20){
+  
+    dt = mSet$analSet$combi$sig.mat
+    anal1_trans = mSet$analSet$combi$trans$x
+    anal2_trans = mSet$analSet$combi$trans$y
+    
+    anal1 = mSet$analSet$combi$source$x
+    anal2 = mSet$analSet$combi$source$y
+    
+    anal1_col = colnames(dt)[2]
+    anal2_col = colnames(dt)[3]
+    
+    colnames(dt) <- c("m/z", "x", "y")#anal1_col, anal2_col)
+    dt$col <- abs(dt[,2]*dt[,3])
+    
+    scaleFUN <- function(x) sprintf("%.2f", x)
+    
+    anal1_col = if(anal1_trans != "none") paste0(anal1_trans,"(", anal1_col,")") else anal1_col
+    anal2_col = if(anal2_trans != "none") paste0(anal2_trans,"(", anal2_col,")") else anal2_col
+    
+    p <- ggplot2::ggplot() +
+      ggplot2::geom_point(data=dt, ggplot2::aes(x=x,
+                                                y=y,
+                                                color=col,
+                                                text=`m/z`,
+                                                key=`m/z`),cex=3) +
+      ggplot2::geom_segment(data=dt,aes(y = 0,
+                                        yend = y,
+                                        x = 0,
+                                        xend = x,
+                                        color = col 
+      ),alpha=0.2,linetype=6) +
+      ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE) +
+      ggplot2::scale_x_continuous(labels=scaleFUN) + 
+      ggplot2::xlab(paste0(anal1, ": ", anal1_col)) + 
+      ggplot2::ylab(paste0(anal2, ": ", anal2_col))
+    p
+}
+
 #' @title Generate volcano plot
 #' @description Function to generate ggplot or plotly plot for volcano plot
 #' @param mSet mSet object
@@ -767,7 +811,7 @@ ggPlotFC <- function(mSet, cf, n=20){
 ggPlotVolc <- function(mSet,
                        cf,
                        n=20){
-  
+
   vcn<-mSet$analSet$volcano;
   
   if(nrow(vcn$sig.mat)==0){
@@ -780,14 +824,22 @@ ggPlotVolc <- function(mSet,
   colnames(dt) <- c("m/z", "log2FC", "-log10P")
   dt$col <- with(dt, abs(log2FC*`-log10P`))
   
+  scaleFUN <- function(x) sprintf("%.2f", x)
+  
   p <- ggplot2::ggplot() +
     ggplot2::geom_point(data=dt, ggplot2::aes(x=log2FC,
                                               y=`-log10P`,
                                               color=col,
                                               text=`m/z`,
-                                              key=`m/z`)) +
-    
-    ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE) 
+                                              key=`m/z`),cex=3) +
+    ggplot2::geom_segment(data=dt,aes(y = 0,
+                              yend = `-log10P`,
+                              x = 0,
+                              xend = `log2FC`,
+                              color = col 
+                              ),alpha=0.2,linetype=6) +
+    ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE) +
+    ggplot2::scale_x_continuous(labels=scaleFUN)
   
   p
 }
@@ -933,7 +985,7 @@ ggPlotMLMistakes <- function(predictions,
       #geom_point() +
       line_fun(cex = 1,se = FALSE ) +
       ggplot2::scale_color_manual(name = metadata_focus, 
-                                  values=cf(20)) +
+                                  values=cf(length(unique(res$meta_var)))) +
       ggplot2::xlab("Cutoff") + ggplot2::ylab("% of testing mistakes")
     if(show_reps) p + facet_grid("rep") else p
   }
@@ -961,10 +1013,11 @@ ggPlotCurves <- function(perf.long,
                          attempts = 50,
                          cf,
                          curve_type="roc",#roc, precrec
-                         class_type="b"){
+                         class_type="b",
+                         forceorigin=F){
   perf.long <- data.table::as.data.table(perf.long)
   perf.long <- perf.long[metric == curve_type, -"metric"]
-  mean.auc = mean(perf.long$AVG_AUC)
+  mean.auc = mean(perf.long$AUC_AVG)
   means.per.comp = perf.long[, lapply(.SD, mean), by = comparison]
   ncomp = length(unique(means.per.comp$comparison))
   if(ncomp > 2){
@@ -982,33 +1035,47 @@ ggPlotCurves <- function(perf.long,
     class_type = "b"
   }
   
-  p <- ggplot2::ggplot(perf.long, ggplot2::aes(x, # x = FPR or Precision
-                                               y, # y = TPR or Recall
-                                               key = attempt,
-                                               text = attempt)) +
-    ggplot2::geom_path(alpha=.5,
+  #if(curve_type == "precrec") forceorigin <- T
+  
+  if(forceorigin){
+      origin_rows = lapply(1:length(unique(perf.long$attempt)), function(i){
+        data.table::data.table(attempt = i, 
+                               y = if(curve_type == "precrec") 1 else 0,
+                               x = if(curve_type == "precrec") 0 else 1, 
+                               AUC_AVG = unique(perf.long[attempt == i]$AUC_AVG),
+                               AUC_PAIR = unique(perf.long[attempt == i]$AUC_PAIR),
+                               comparison = unique(perf.long[attempt == i]$comparison))
+      })
+      perf.long = rbind(data.table::rbindlist(origin_rows),perf.long)
+  }
+  
+  p <- ggplot2::ggplot() +
+    ggplot2::geom_path(data = perf.long, 
+                       alpha=.5,
                        cex=.7,
-                       ggplot2::aes(color = if(class_type == "m") comparison else as.factor(attempt),
+                       ggplot2::aes(x = x,
+                                    y = y,
+                                    color = if(class_type == "m") comparison else as.factor(attempt),
                                     text = if(class_type == "m") comparison else as.factor(attempt),
                                     key = if(class_type == "m") comparison else as.factor(attempt),
                                     group = attempt)) +
     ggplot2::labs(color = if(class_type == "m") "Class" else "Attempt",
                   text = if(class_type == "m") "Class" else "Attempt",
                   key = if(class_type == "m") "Class" else "Attempt") +
-    
-    ggplot2::stat_summary_bin(#alpha=.6,
-      ggplot2::aes(x, 
-                   y, 
-                   group = comparison,
-                   color = if(class_type == "m") comparison else NULL), 
-      fun=mean, geom="line", 
-      cex = 2.3) + #,color="black") +
+    ggplot2::stat_summary_bin(data = perf.long,
+                              #alpha=.6,
+                              ggplot2::aes(x,
+                                           y,
+                                           group = comparison,
+                                           color = if(class_type == "m") comparison else NULL),
+                              fun=mean, geom="line",
+                              cex = 2.3) + #,color="black") +
     ggplot2::scale_color_manual(values = cols) +
     #scale_y_continuous(limits=c(0,1)) +
     ggplot2::coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE) +
     ggplot2::coord_cartesian(xlim = c(.04,.96), ylim = c(.04,.96)) +
-    ggplot2::xlab(if(curve_type == "roc") "FPR" else "Precision") + 
-    ggplot2::ylab(if(curve_type == "roc") "TPR" else "Recall") +
+    ggplot2::xlab(if(curve_type == "roc") "FPR" else "Recall") + 
+    ggplot2::ylab(if(curve_type == "roc") "TPR" else "Precision") +
     ggplot2::annotate("text",
                       label = paste0("Average AUC: ",
                                      format(mean.auc,
@@ -1018,6 +1085,7 @@ ggPlotCurves <- function(perf.long,
                       size = 8,
                       x = 0.77,
                       y = 0.03)
+  
   p
 }
 
@@ -1067,10 +1135,11 @@ ggPlotBar <- function(data,
   p <- ggplot2::ggplot(data.subset, 
                        ggplot2::aes(x = reorder(`m/z`, -importance.mean),
                                     y = importance.mean,
+                                    fill = importance.mean,
+                                    colour = importance.mean,
                                     text = `m/z`,
                                     key = `m/z`)) +
-    ggplot2::geom_bar(stat = "identity",
-                      ggplot2::aes(fill = importance.mean)) +
+    ggplot2::geom_bar(stat = "identity") +
     #ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90))+
     ggplot2::scale_fill_gradientn(colors=cf(20)) +
     ggplot2::labs(x="Top hits (m/z)",y=if(ml_type == "glmnet") "Times included in final model" else "Relative importance (%)")

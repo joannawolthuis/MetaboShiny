@@ -490,6 +490,7 @@ moveme <- function (invec, movecommand) {
 
 downsample.adj = function (x, y, list = FALSE, yname = "Class", minClass=min(table(y))) 
 {
+  library(plyr)
   if (!is.data.frame(x)) {
     x <- as.data.frame(x, stringsAsFactors = TRUE)
   }
@@ -517,6 +518,7 @@ downsample.adj = function (x, y, list = FALSE, yname = "Class", minClass=min(tab
 
 upsample.adj = function (x, y, list = FALSE, yname = "Class", maxClass=max(table(y))) 
 {
+  library(plyr)
   if (!is.data.frame(x)) {
     x <- as.data.frame(x, stringsAsFactors = TRUE)
   }
@@ -546,4 +548,16 @@ upsample.adj = function (x, y, list = FALSE, yname = "Class", maxClass=max(table
     colnames(out)[ncol(out)] <- yname
   }
   out
+}
+
+img2clip <- function(pngloc){
+  if(".dockerenv" %in% list.files("/", all.files=T)){
+    print("clipboard access not available in Docker!")
+  }else{
+  system(switch(MetaboShiny::get_os(), 
+                osx = gsubfn::fn$paste("osascript -e 'set the clipboard to (read (POSIX file \"$pngloc\") as JPEG picture)'"),
+                win = gsubfn::fn$paste('clipboard copyimage "$pngloc"'),
+                linux = gsubfn::fn$paste("xclip -selection clipboard -t image/png -i $pngloc")
+  ))  
+  }
 }

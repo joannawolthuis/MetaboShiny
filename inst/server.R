@@ -7,6 +7,8 @@ function(input, output, session) {
   library(ggplot2)
   library(SPARQL)
   library(MetaboShiny)
+  library(MetaDBparse)
+  library(dplyr)
   
   options(shiny.maxRequestSize=50000*1024^2)
   
@@ -621,6 +623,24 @@ beep = no')
     }
   })
   
+  output$combi_anal1_picker <- shiny::renderUI({
+    if(!is.null(input$combi_anal1)){
+      anal = mSet$analSet[[input$combi_anal1]]
+      target.mat = grep("\\.mat", names(anal),value = T)
+      choices = colnames(anal[[target.mat]])
+      shiny::selectInput("combi_anal1_var",label = "A result column:", choices=choices,selected = 1)
+      }else{list()}
+  })
+  
+  output$combi_anal2_picker <- shiny::renderUI({
+    if(!is.null(input$combi_anal2)){
+      anal = mSet$analSet[[input$combi_anal2]]
+      target.mat = grep("\\.mat", names(anal),value = T)
+      choices = colnames(anal[[target.mat]])
+      shiny::selectInput("combi_anal2_var",label = "B result column:", choices=choices,selected = 1)
+    }else{list()}
+    })
+  
   shiny::observeEvent(input$debug_metshi, {
     assign("lcl", lcl, envir = .GlobalEnv)
     assign("mSet", mSet, envir = .GlobalEnv)
@@ -663,15 +683,6 @@ beep = no')
     uimanager$refresh <- "adducts"
   })
   
-  observeEvent(input$nav_general, {
-    if(!is.null(mSet)){
-      if(input$nav_general == "report"){
-        statsmanager$calculate <- "vennrich"
-        tablemanager$make <- "vennrich"
-        uimanager$refresh <- "vennrich"
-      }}
-  })
-  
   observeEvent(input$statistics, { 
     if(!is.null(mSet)){
       if(!is.null(input$statistics)){
@@ -681,7 +692,7 @@ beep = no')
         if(input$statistics %in% c("venn", "enrich", "heatmap", "network", "ml")){
           statsmanager$calculate <- "vennrich"
           tablemanager$make <- "vennrich"
-          uimanager$refresh <- c(input$statistics,"vennrich")
+          uimanager$refresh <- c(input$statistics, "vennrich")
         }
         
         checkMe = input$statistics
@@ -708,7 +719,7 @@ beep = no')
   })
   
   analyses <- c("ml", "wordcloud", "plsda", 
-                "pca", "tsne", "tt", "aov",
+                "pca", "tsne", "tt", "aov","combi",
                 "fc", "volcano", "heatmap", 
                 "meba", "asca", "corr", 
                 "enrich", "network", "power",

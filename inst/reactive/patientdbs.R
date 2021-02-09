@@ -54,14 +54,16 @@ missValues <- shiny::reactiveValues(pos = c(),
 output$missMzRatio <- shiny::renderUI({
   if(length(missValues$pos) > 0){
     posTotal = length(missValues$pos$missPerc)
-    posKeep = length(which(missValues$pos$missPerc < input$perc_limit_mz))
+    posPerc = missValues$pos$missPerc/missValues$pos$nrows * 100
+    posKeep = length(which(posPerc < input$perc_limit_mz))
     posText = paste0("Remaining (+): ", posKeep, " / ", posTotal)
   }else{
     posText = NULL
   }
   if(length(missValues$neg) > 0){
-    negTotal = length(missValues$neg$missPerc )
-    negKeep = length(which(missValues$neg$missPerc < input$perc_limit_mz))
+    negTotal = length(missValues$neg$missPerc)
+    negPerc = missValues$neg$missPerc/missValues$neg$nrows * 100
+    negKeep = length(which(negPerc < input$perc_limit_mz))
     negText = paste0("Remaining (-):", negKeep, " / ", negTotal)
   }else{
     negText = NULL
@@ -316,3 +318,19 @@ output$wipe_regex_ui <- shiny::renderUI({
                      width="50%")
   }
 })
+
+shiny::observeEvent(input$check_ref_mzs, {
+  firstRow = data.table::fread(lcl$paths$csv_loc,nrows = 1)
+  distr = MetaboShiny::getColDistribution(firstRow)
+  refMzs = colnames(firstRow)[distr$mz]
+  shinyWidgets::updatePickerInput(session, 
+                                  "ref_mz",
+                                  choices = append(refMzs, 
+                                                   list("select a m/z")), 
+                                  # choicesOpt = list(subtext = c(subtext[newOrder], "select a m/z"),
+                                  #                   icon = c(rep('',length(subtext)), "fa-cat"),
+                                  #                   style = c(rep('text-align:center;',length(subtext) + 1))),
+                                  selected = "select a m/z"
+  )  
+})
+

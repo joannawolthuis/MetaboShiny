@@ -149,7 +149,8 @@ shiny::observe({
                                                   choices = c(#"label", 
                                                               colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, 
                                                                                                         MARGIN = 2, 
-                                                                                                        function(col) length(unique(col)) < gbl$constants$max.cols))]))
+                                                                                                        function(col) length(unique(col)) < gbl$constants$max.cols))]),
+                                                  selected = mSet$settings$exp.var)
                          
                        })
                      }
@@ -229,6 +230,17 @@ shiny::observe({
                                  "score_adducts",
                                  "fav_adducts")){
                        shinyWidgets::updatePickerInput(session, id, selected = intersect(fav_adducts,adducts$Name))
+                     }
+                   },
+                   combi = {
+                     combi_opts = setdiff(names(mSet$analSet)[sapply(mSet$analSet,function(anal) any(grepl("\\.mat", names(anal))))], "combi")
+                     if(length(combi_opts)>1){
+                       shiny::updateSelectInput(session, "combi_anal1",  
+                                                choices = combi_opts,
+                                                selected = combi_opts[1])
+                       shiny::updateSelectInput(session, "combi_anal2",  
+                                                choices = combi_opts,
+                                                selected = combi_opts[2])
                      }
                    },
                    venn = {

@@ -153,7 +153,8 @@ shiny::observeEvent(input$initialize, {
                                               paired = FALSE)
       
       anal.type <<- "stat"
-      mSet$dataSet$paired <- mSet$settings$ispaired <- F
+      
+      mSet$dataSet$paired <-  mSet$dataSet$ispaired <- mSet$settings$ispaired <- F
       
       # load new csv into empty mSet!
       mSet <- MetaboAnalystR::Read.TextData(mSet,
@@ -170,7 +171,7 @@ shiny::observeEvent(input$initialize, {
         trans_type = input$trans_type,
         scale_type = input$scale_type,
         max.allow = input$maxMz,
-        ref_var = input$ref_var,
+        ref_var = input$ref_mz,
         batch_var = input$batch_var,
         batch_method_a = input$batch_method_a,
         batch_method_b = input$batch_method_b,

@@ -26,7 +26,7 @@ pacman::p_load(BiocParallel, IRanges, plyr, preprocessCore, vsn,
                          digest, lattice, ggplot2, XML, scales, MASS, Rcpp)
 
 pacman::p_load(multtest, siggenes, KEGGgraph, SSPA, preprocessCore,
-                         Rgraphviz, GlobalAncova, globaltest, pcaMethods, impute)
+                         Rgraphviz, GlobalAncova, globaltest, pcaMethods, impute, pmp)
 
 pacman::p_load(MSnbase)
 pacman::p_load(fgsea)
@@ -38,6 +38,9 @@ devtools::install_github("xia-lab/MetaboAnalystR","0d61192")
 devtools::install_github("yixuan/showtext")
 devtools::install_github("joannawolthuis/ggVennDiagram")
 devtools::install_github("dengkuistat/WaveICA")
+
+# covbat
+devtools::install_github("andy1764/CovBat_Harmonization/R")
 
 install.packages("rJava", type="source")
 

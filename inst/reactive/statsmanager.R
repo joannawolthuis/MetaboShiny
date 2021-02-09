@@ -339,6 +339,7 @@ shiny::observe({
                    shiny::setProgress(value = 0)
                    
                    pickedTbl <- if(input$ml_run_on_norm) "norm" else "orig"
+                   
                    # get base table to use for process
                    curr <- data.table::as.data.table(mSet$dataSet[[pickedTbl]])
                    
@@ -418,7 +419,11 @@ shiny::observe({
                                           lcl$vectors$ml_test[1])
                    
                    label = unlist(config[,mSet$settings$exp.var,with=F])
-                   #table(paste0(config$country,"AND",config$group_from_fcs_12vs345))
+                   
+                   if(input$ml_label_shuffle){
+                     print("Shuffling labels...")
+                     label = sample(label)
+                   }
                    
                    config <- config[, unique(c(input$ml_include_covars,
                                                if(length(batches)>0) input$ml_batch_covars else c(),
@@ -445,8 +450,6 @@ shiny::observe({
                    }
                    
                    # TRAIN/TEST SPLIT
-                   #lcl$vectors$ml_train
-                   #lcl$vectors$ml_test
                    t = as.data.table(cbind(config, curr))
                    
                    if(!is.null(lcl$vectors$ml_train) | !is.null(lcl$vectors$ml_test)){
@@ -467,7 +470,6 @@ shiny::observe({
                    }else{
                      split_label = if(length(batches) == 1){
                        print("splitting tr/te % per batch")
-                       #table(paste0(mSet$dataSet$covars$country,"AND",t[,"label"][[1]]))
                        paste0(t$label,"AND",t[,..batches][[1]])
                      }else{
                        print("unbiased split over pool")
@@ -481,27 +483,38 @@ shiny::observe({
                    
                    test_sampnames = rownames(curr)[test_idx]
                    
+                   if(length(batches) > 0){
+                     batch_sizes = table(t[,..batches][[1]])
+                     size_per_group = if(batch_sampling == "down") min(batch_sizes) else max(batch_sizes)
+                     n_batches = length(unique(t[,..batches][[1]]))
+                     #size_per_group = round(size_per_group / length(unique(config$label)), digits = 0)
+                   }
+                   
                    training_data = t[train_idx,]
                    testing_data = t[-train_idx,]
                    
                    configCols = 1:ncol(config)
                    mzCols = setdiff(1:ncol(training_data), configCols)
                    
+                   
                    ## ONLY APPLY TO TRAINING
                    ## IF BATCHES ARE PRESENT 
                    if(length(batches) > 0 & batch_sampling != "none"){
+                     
+                     batch_is_label = all(t[[batches]] == t$label)
+                     
                      #if(batch_sampling != "none"){
                      print("resampling classes per batch group")
                      # RESAMPLE BASED ON BATCH VARIABLE
                      mzs=colnames(training_data)[mzCols]
                      colnames(training_data)[mzCols]=paste0("mz",1:length(mzCols))
                      labelCol = which(colnames(training_data) == "label")
-                     spl.t = split(training_data, training_data[,..batches])
+                     
+                     spl.t = if(!batch_is_label) split(training_data, training_data[,..batches]) else list(training_data)
+                     
                      if(input$ml_batch_size_sampling){
                        #### RESAMPLE TO EQUALIZE BATCH CATEGORY SIZE (ALL COUNTRIES IN TRAIN SAME SIZE EACH)
                        library(plyr)
-                       batch_sizes = sapply(spl.t, nrow)
-                       size_per_group = if(batch_sampling == "down") min(batch_sizes) else max(batch_sizes)
                        balanced.spl.t <- lapply(spl.t, function(l){
                          r = switch(batch_sampling,
                                     up = upsample.adj(l, as.factor(l$label), maxClass = size_per_group),
@@ -514,7 +527,47 @@ shiny::observe({
                                                                    .SDcols = cols]
                                                                dat
                                                              }, 
-                                                             N = size_per_group * 2)
+                                                             N = size_per_group * n_batches) # TODO MAKE THIS LEVELS OF CONFIG
+                                      resampled.data = resampled$data
+                                      colnames(resampled.data) <- c("label", mzs)
+                                      keep.config = sapply(configCols, function(i){
+                                        length(unique(l[[i]] )) == 1
+                                      })
+                                      resampled.config = data.table::as.data.table(lapply(which(keep.config), 
+                                                                                          function(i){
+                                                                                            c(rep(unique(l[[i]]), 
+                                                                                                  nrow(resampled.data)))
+                                                                                          }))
+                                      colnames(resampled.config) <- colnames(l)[which(keep.config)]
+                                      joined.data = cbind(resampled.config, resampled.data)
+                                      joined.data
+                                    },
+                                    down = downsample.adj(l, as.factor(l$label), minClass = size_per_group))
+                        as.data.table(r)   
+                       })
+                       r = rbindlist(balanced.spl.t)
+                       
+                       if("Class" %in% names(r)){
+                         r$Class <- NULL  
+                       }
+                       
+                     }else if(length(batches)==1){
+                       
+                       ### BALANCE LABELS WITHIN BATCHES, BUT DON'T MAKE THEM ALL THE SAME SIZE
+                       balanced.spl.t <- lapply(spl.t, function(l){
+                         size_per_group = if(batch_sampling == "down") min(table(l$label)) else max(table(l$label))
+                         r = switch(batch_sampling,
+                                    up = upsample.adj(l, as.factor(l$label), maxClass = size_per_group),
+                                    rose = {
+                                      resampled = ROSE::ROSE(label ~ ., 
+                                                             data = {
+                                                               dat = l[, c(labelCol, mzCols), with=F]
+                                                               cols = colnames(dat)[2:ncol(dat)]
+                                                               dat[, (cols) := lapply(.SD, as.numeric), 
+                                                                   .SDcols = cols]
+                                                               dat
+                                                             }, 
+                                                             N = size_per_group)
                                       resampled.data = resampled$data
                                       colnames(resampled.data) <- c("label", mzs)
                                       keep.config = sapply(configCols, function(i){
@@ -533,43 +586,6 @@ shiny::observe({
                          if("Class" %in% names(r)){
                            r$Class <- NULL  
                          }
-                         as.data.table(r)   
-                       })
-                       r = rbindlist(balanced.spl.t)
-                     }else if(length(batches)==1){
-                       ### BALANCE LABELS WITHIN BATCHES, BUT DON'T MAKE THEM ALL THE SAME SIZE
-                       balanced.spl.t <- lapply(spl.t, function(l){
-                         size_per_group = if(batch_sampling == "down") min(table(l$label)) else max(table(l$label))
-                         r = switch(batch_sampling,
-                                    up = upsample.adj(l, l$label, maxClass = size_per_group),
-                                    rose = {
-                                      resampled = ROSE::ROSE(label ~ ., 
-                                                             data = {
-                                                               dat = l[, c(labelCol, mzCols), with=F]
-                                                               cols = colnames(dat)[2:ncol(dat)]
-                                                               dat[, (cols) := lapply(.SD, as.numeric), 
-                                                                   .SDcols = cols]
-                                                               dat
-                                                             }, 
-                                                             N = size_per_group * 2)
-                                      resampled.data = resampled$data
-                                      colnames(resampled.data) <- c("label", mzs)
-                                      keep.config = sapply(configCols, function(i){
-                                        length(unique(l[[i]] )) == 1
-                                      })
-                                      resampled.config = data.table::as.data.table(lapply(which(keep.config), 
-                                                                                          function(i){
-                                                                                            c(rep(unique(l[[i]]), 
-                                                                                                  nrow(resampled.data)))
-                                                                                          }))
-                                      colnames(resampled.config) <- colnames(l)[which(keep.config)]
-                                      joined.data = cbind(resampled.config, resampled.data)
-                                      joined.data
-                                    },
-                                    down = downsample.adj(l, l$label, minClass = size_per_group))
-                         if("Class" %in% names(r)){
-                           r$Class <- NULL  
-                         }
                          as.data.table(r) 
                        })
                        r = rbindlist(balanced.spl.t)
@@ -582,11 +598,16 @@ shiny::observe({
                      training_data_adj = r[, -..configCols]
                      colnames(training_data_adj) <- mzs
                      training_cleaned = cbind(config_adj, training_data_adj)
+                     
                      testing_data_adj = cbind(split = "test", testing_data)
                      training_data_cleaned_adj = cbind(split = "train", training_cleaned)
+                     
+                     configCols = c(configCols, "split")
                      curr = rbind(testing_data_adj, 
                                   training_data_cleaned_adj)
                      config = curr[,..configCols]
+                     curr = curr[,-configCols,with=F]
+                     
                    }else{
                      if(input$ml_sampling != "none"){
                        print('resampling based on class...')
@@ -647,6 +668,18 @@ shiny::observe({
                      config = rbind(test.config, 
                                     train.config)
                      removeCols = setdiff(needed_for_subset, input$ml_include_covars)
+                     
+                     folds = NULL
+                     if(length(batches) == 1){
+                       if(input$ml_folds != "LOOCV"){
+                         if(as.numeric(input$ml_folds) <= 5){
+                           group_fac = config[split == "train",][[batches]]
+                           ml_folds = min(c(as.numeric(input$ml_folds), length(unique(group_fac))))
+                           folds = caret::groupKFold(group_fac, k = ml_folds)
+                         }
+                       }  
+                     }
+                     
                      if(length(removeCols) > 0){
                        curr = curr[,-removeCols,with=F]
                        config = config[,-removeCols, with=F]
@@ -656,16 +689,16 @@ shiny::observe({
                    lcl$vectors$ml_train = c("split","train")
                    lcl$vectors$ml_test = c("split","test")
                    
-                   config = droplevels(config)
+                   config <- droplevels(config)
                    config <- data.table::as.data.table(config)
                    config <- config[,apply(!is.na(config), 2, any), with=FALSE]
                    
-                   curr = as.data.table(curr)
+                   curr <- as.data.table(curr)
                    
-                   predictor = config$label
+                   predictor <- config$label
                    predict_idx <- which(colnames(config) == "label")
                    exact_matches <- which(unlist(lapply(config, function(col) all(as.numeric(as.factor(col)) == as.numeric(as.factor(predictor))))))
-                   remove = setdiff(exact_matches, predict_idx)
+                   remove <- setdiff(exact_matches, predict_idx)
                    
                    # # remove ones with na present
                    has.na <- apply(config, MARGIN=2, FUN=function(x) any(is.na(x) | tolower(x) == "unknown"))
@@ -675,10 +708,9 @@ shiny::observe({
                    outersect = function(a,b) setdiff(union(a,b), intersect(a,b))
                    
                    if(length(batches) > 0 ){
-                     alsoRemove = outersect(input$ml_batch_covars, 
-                                            input$ml_include_covars)
+                     alsoRemove = input$ml_batch_covars[sapply(input$ml_batch_covars, function(b)
+                       !(b %in% input$ml_include_covars))]
                      
-                     #alsoRemove = outersect(alsoRemove, needed_for_subset)
                      remove = c(remove, alsoRemove)
                    }
                    
@@ -700,6 +732,12 @@ shiny::observe({
                      print(msg)
                      shiny::showNotification(msg)
                    })
+                   
+                   # remove duplicated config columns
+                   
+                   config = config[,!duplicated(colnames(config)),with=F]
+                   
+                   # ================================
                    
                    config <- config[,..keep_configs,with=F]
                    
@@ -797,7 +835,8 @@ shiny::observe({
                                                            ml_train_perc,
                                                            sampling,
                                                            batch_sampling,
-                                                           batches){
+                                                           batches,
+                                                           folds){
                                                     runML(curr,
                                                           train_vec = train_vec,
                                                           test_vec = test_vec,
@@ -811,7 +850,8 @@ shiny::observe({
                                                           ml_train_perc = ml_train_perc,
                                                           sampling = sampling,
                                                           batch_sampling = batch_sampling,
-                                                          batches = batches)
+                                                          batches = batches,
+                                                          folds = folds)
                                                   },
                                                   train_vec = lcl$vectors$ml_train,
                                                   test_vec = lcl$vectors$ml_test,
@@ -825,7 +865,8 @@ shiny::observe({
                                                   ml_train_perc = input$ml_train_perc,
                                                   sampling = NULL,#if(input$ml_sampling == "none") NULL else input$ml_sampling,
                                                   batch_sampling = if(input$ml_batch_sampling == "none") NULL else input$ml_batch_sampling,
-                                                  batches = input$ml_batch_covars
+                                                  batches = input$ml_batch_covars,
+                                                  folds = folds
                      )
                    })
                    
@@ -845,6 +886,11 @@ shiny::observe({
                        perf <- lapply(1:length(labels), function(i){
                          prediction = predictions[[i]]
                          classes = labels[[i]]
+                         rmv.classes = setdiff(levels(classes), unique(as.character(classes)))
+                         if(length(rmv.classes) > 0){
+                           prediction = prediction[,!(colnames(prediction) %in% rmv.classes)]
+                           classes = droplevels(classes)
+                         }
                          #x = list(prediction=predictions[[i]],
                          #         labels=as.factor(labels[[i]]))
                          colnames(prediction) <- paste0(colnames(prediction), "_pred_m1")
@@ -870,8 +916,10 @@ shiny::observe({
                          res$attempt = c(i)
                          res
                        })
+                       
                        perf.long <- data.table::rbindlist(perf)
                        perf.long <- perf.long[!(Group %in% c("Micro", "Macro")),]
+                       
                        #TPR is sensitivity
                        #FPR = 1 - specificity
                        if(curve_type == "roc"){
@@ -885,18 +933,17 @@ shiny::observe({
                                                 "AUC_PAIR", 
                                                 "attempt")
                        mean.auc <- mean(unique(perf.long$AUC_PAIR))
-                       perf.long$AVG_AUC <- c(mean.auc)
-                       
+                       perf.long$AUC_AVG <- c(mean.auc)
                      }else{
                        # save the summary of all repeats (will be used in plots) TOO MEMORY HEAVY
                        pred <- ROCR::prediction(predictions = lapply(predictions, function(x) x[[2]]), 
-                                                labels = labels)
+                                                labels = lapply(labels, function(x) x))
                        y = switch(curve_type, roc = "tpr", precrec = "prec")
                        x = switch(curve_type, roc = "fpr", precrec = "rec")
                        
                        perf <- ROCR::performance(prediction.obj = pred, 
                                                  measure = y, 
-                                                 x.measure=x)
+                                                 x.measure = x)
                        perf_auc <- ROCR::performance(pred, switch(curve_type, 
                                                                   roc = "auc", 
                                                                   precrec = "aucpr"))
@@ -913,7 +960,7 @@ shiny::observe({
                        }))
                        perf.long$comparison <- paste0(levels(mSet$dataSet$cls),collapse=" vs. ")
                        mean.auc <- mean(unlist(perf_auc@y.values))
-                       perf.long$AVG_AUC <- c(mean.auc)
+                       perf.long$AUC_AVG <- c(mean.auc)
                      }
                      perf.long$metric = curve_type
                      perf.long
@@ -1018,13 +1065,65 @@ shiny::observe({
                    })
                  }
                },
+               combi = {
+                 
+                 anal1 = input$combi_anal1 #"corr"
+                 anal2 = input$combi_anal2 #"aov"
+                 anal1_col = input$combi_anal1_var #"correlation"
+                 anal2_col = input$combi_anal2_var #"-log10(p)"
+                 anal1_res = mSet$analSet[[anal1]]
+                 anal2_res = mSet$analSet[[anal2]]
+                 anal1_res_table = data.table::as.data.table(anal1_res[grepl("\\.mat", names(anal1_res))][[1]],keep.rownames=T)
+                 anal2_res_table = data.table::as.data.table(anal2_res[grepl("\\.mat", names(anal2_res))][[1]],keep.rownames=T)
+                 
+                 anal1_trans = "none"
+                 if(input$combi_anal1_trans != "none"){
+                   try({
+                     transFun= switch(input$combi_anal1_trans,
+                                      "log10"=log10,
+                                      "-log10"=function(x) -log10(x),
+                                      "abs"=abs) 
+                     anal1_res_table[[anal1_col]] <- transFun(anal1_res_table[[anal1_col]])
+                     anal1_trans = input$combi_anal1_trans
+                   })
+                 }
+                 
+                 anal2_trans = "none"
+                 if(input$combi_anal2_trans != "none"){
+                   try({
+                     transFun= switch(input$combi_anal2_trans,
+                                      "log10"=log10,
+                                      "-log10"=function(x) -log10(x),
+                                      "abs"=abs) 
+                     anal2_res_table[[anal2_col]] <- transFun(anal2_res_table[[anal2_col]])
+                     anal2_trans = input$combi_anal2_trans
+                   })
+                 }
+                 
+                 mzInBoth = intersect(rownames(anal1_res_table),rownames(anal2_res_table))
+                 if(length(mzInBoth) > 0){
+                   combined_anal = merge(
+                     anal1_res_table,
+                     anal2_res_table,
+                     by = "rn"
+                   )
+                   keep.cols = c(1, which(colnames(combined_anal) %in% c(anal1_col,anal2_col)))
+                   dt <- as.data.frame(combined_anal)[,keep.cols]
+                   mSet$analSet$combi <<- list(sig.mat = dt, 
+                                               trans = list(x=anal1_trans, y=anal2_trans),
+                                               source = list(x=anal1, y=anal2))
+                 }
+                 
+                 },
                volcano = {
                  shiny::withProgress({
-                   mSet <-  MetaboAnalystR::Volcano.Anal(mSet,
-                                                         paired = mSet$dataSet$paired, 
-                                                         1.5, 0,
-                                                         0.75, F, 0.1,
-                                                         TRUE, "raw") # TODO: make thresholds user-defined
+                   mSet <- MetaboAnalystR::Volcano.Anal(mSetObj = mSet,
+                                                        paired = mSet$dataSet$paired, 
+                                                        fcthresh = 1.1, cmpType = 0,
+                                                        percent.thresh = 0.75,
+                                                        nonpar = F, threshp = 0.1,
+                                                        equal.var = TRUE,
+                                                        pval.type = "fdr") # TODO: make thresholds user-defined
                  })
                },
                tsne = {

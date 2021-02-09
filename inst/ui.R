@@ -57,6 +57,7 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                 #           margin-top: -100px;")
                             )
                  ),
+                 shiny::div(
                  shiny::navbarPage(windowTitle='MetaboShiny',
                                    # use this for title
                                    # https://codepen.io/maxspeicher/pen/zrVKLE
@@ -172,12 +173,14 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                             label = "Batch correction method if machine batch and injection order are present:",
                                                                                                             choices = list("WaveICA - WaveICA" = "waveica",
                                                                                                                            "limma - removeBatchEffect" = "limma",
-                                                                                                                           "ComBat" = "combat"),
+                                                                                                                           "ComBat" = "combat",
+                                                                                                                           "CovBat" = "covbat"),
                                                                                                             selected="waveica"),
                                                                                          shiny::selectInput(inputId = "batch_method_b",
                                                                                                             label = "Batch correction method for other variables",
                                                                                                             choices = list("limma - removeBatchEffect" = "limma",
-                                                                                                                           "ComBat" = "combat"),
+                                                                                                                           "ComBat" = "combat",
+                                                                                                                           "CovBat" = "covbat"),
                                                                                                             selected="combat"),
                                                                                          shiny::actionButton("check_csv", "Get options", icon=shiny::icon("refresh")),
                                                                                          shiny::hr(),
@@ -195,6 +198,7 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                     min = 1000, max = 50000, step = 1000,
                                                                                                                                     value = 20000)),
                                                                                          shiny::selectInput(width = "80%",'norm_type', 'What type of normalization do you want to do?', choices = list("Quantile normalization" = "QuantileNorm",
+                                                                                                                                                                                                       "QCs per batch normalization" = "QcNorm",
                                                                                                                                                                                                        "By reference feature" = "ProbNorm",
                                                                                                                                                                                                        "By reference compound" = "CompNorm",
                                                                                                                                                                                                        "By sample specific factor" = "SpecNorm",
@@ -202,7 +206,21 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                                                        "Median" = "MedianNorm",
                                                                                                                                                                                                        "None" = "NULL"), 
                                                                                                             selected="QuantileNorm"),
-                                                                                         shiny::uiOutput("ref_select"),
+                                                                                         # ref 	289.18874-
+                                                                                         shiny::conditionalPanel("input.norm_type == 'ProbNorm'",
+                                                                                                                 div(shinyWidgets::pickerInput(
+                                                                                                                   inputId = "ref_mz",
+                                                                                                                   label = div(icon("search"), style="font-size: xx-large;margin-top: -30px;color: black;-webkit-text-fill-color: white;-webkit-text-stroke-width: 1.5px;-webkit-text-stroke-color: #DFDCDC"), 
+                                                                                                                   choices = "click below button",
+                                                                                                                   choicesOpt = list(
+                                                                                                                     subtext = "",
+                                                                                                                     style='text-align:center;'),
+                                                                                                                   options = list(
+                                                                                                                     `live-search` = TRUE,
+                                                                                                                     size = 10)
+                                                                                                                 ),class = "mzpicker"),
+                                                                                                                 shiny::actionButton("check_ref_mzs", "Get options", icon=shiny::icon("refresh"))
+                                                                                                                 ),
                                                                                          shiny::selectInput(width = "80%",'trans_type', 'How will you transform your data?', choices = list("Log transform" = "LogNorm",
                                                                                                                                                                                             "Cubic root transform" = "CrNorm",
                                                                                                                                                                                             "None" = "NULL"), 
@@ -800,7 +818,7 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                                                                                           shiny::selectInput("corr_corr", 
                                                                                                                                                                                                                                                              "Correlation metric:", 
                                                                                                                                                                                                                                                              choices = c("pearson", "spearman", "kendall"), 
-                                                                                                                                                                                                                                                             selected = "pearson"),
+                                                                                                                                                                                                                                                             selected = "spearman"),
                                                                                                                                                                                                                                           shinyWidgets::actionBttn(
                                                                                                                                                                                                                                             inputId = "do_corr",
                                                                                                                                                                                                                                             label = "click to start pattern finding", 
@@ -821,23 +839,42 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                           )
                                                                                                                         ),
                                                                                                                         shiny::navbarMenu("overview analyses", icon=shiny::icon("globe", "fa-2x"), menuName = "overview",
-                                                                                                                                          shiny::tabPanel("volcano plot", value="volcano",
+                                                                                                                                          shiny::tabPanel("intersection plot", value="combi",
                                                                                                                                                           shiny::fluidRow(align="center",
-                                                                                                                                                                          shinyBS::bsCollapse(multiple=T, id="collapse_volc",
-                                                                                                                                                                                              shinyBS::bsCollapsePanel(title = h2("settings"),value="collapse_volcano_settings",
+                                                                                                                                                                          shinyBS::bsCollapse(multiple=T, id="collapse_combi",
+                                                                                                                                                                                              shinyBS::bsCollapsePanel(title = h2("settings"),value="collapse_combi_settings",
+                                                                                                                                                                                                                       shiny::fluidRow(align="center",
+                                                                                                                                                                                                                                       column(6, shiny::selectInput("combi_anal1",label = "Analysis A:", choices=c()),
+                                                                                                                                                                                                                                              shiny::uiOutput("combi_anal1_picker"),
+                                                                                                                                                                                                                                              shiny::selectInput("combi_anal1_trans",label = "Transformation:", choices=c(
+                                                                                                                                                                                                                                                "none",
+                                                                                                                                                                                                                                                "log10",
+                                                                                                                                                                                                                                                "-log10",
+                                                                                                                                                                                                                                                "abs"
+                                                                                                                                                                                                                                              ),selected = "none")
+                                                                                                                                                                                                                                              ),
+                                                                                                                                                                                                                                       column(6, shiny::selectInput("combi_anal2",label = "Analysis B:", choices=c()),
+                                                                                                                                                                                                                                              shiny::uiOutput("combi_anal2_picker"),
+                                                                                                                                                                                                                                              shiny::selectInput("combi_anal2_trans",label = "Transformation:", choices=c(
+                                                                                                                                                                                                                                                "none",
+                                                                                                                                                                                                                                                "log10",
+                                                                                                                                                                                                                                                "-log10",
+                                                                                                                                                                                                                                                "abs"
+                                                                                                                                                                                                                                              ),selected = "none"))
+                                                                                                                                                                                                                       ),
                                                                                                                                                                                                                        shinyWidgets::actionBttn(
-                                                                                                                                                                                                                         inputId = "do_volcano",
-                                                                                                                                                                                                                         label = "click to make volcano plot", 
+                                                                                                                                                                                                                         inputId = "do_combi",
+                                                                                                                                                                                                                         label = "click to make combi plot",
                                                                                                                                                                                                                          style = "bordered",
                                                                                                                                                                                                                          icon = icon("terminal"),
                                                                                                                                                                                                                          size = "sm"
                                                                                                                                                                                                                        )
                                                                                                                                                                                               ),
-                                                                                                                                                                                              shinyBS::bsCollapsePanel(title = h2("plots"),value="collapse_volcano_plots",
-                                                                                                                                                                                                                       shiny::uiOutput("volcano_plot_wrap")
+                                                                                                                                                                                              shinyBS::bsCollapsePanel(title = h2("plots"),value="collapse_combi_plots",
+                                                                                                                                                                                                                       shiny::uiOutput("combi_plot_wrap")
                                                                                                                                                                                               ),
-                                                                                                                                                                                              shinyBS::bsCollapsePanel(title = h2("tables"),value="collapse_volcano_tables",
-                                                                                                                                                                                                                       shiny::div(DT::dataTableOutput('volcano_tab',width="100%"),style='font-size:80%')                
+                                                                                                                                                                                              shinyBS::bsCollapsePanel(title = h2("tables"),value="collapse_combi_tables",
+                                                                                                                                                                                                                       shiny::div(DT::dataTableOutput('combi_tab',width="100%"),style='font-size:80%')                
                                                                                                                                                                                               ))
                                                                                                                                                           )
                                                                                                                                           ),
@@ -1139,13 +1176,13 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                                                                           "LOOCV", "LGOCV", "none", "oob",
                                                                                                                                                                                                                           "timeslice", "addaptive_cv", 
                                                                                                                                                                                                                           "adaptive_boot","adaptive_LGOCV"),
-                                                                                                                                                                                                              multiple = F, selected = "repeatedcv"),
+                                                                                                                                                                                                              multiple = F, selected = "cv"),
                                                                                                                                                                                            shiny::sliderInput("ml_train_perc",
                                                                                                                                                                                                               label = shiny::h2("Percentage in training"),
                                                                                                                                                                                                               min = 1,
                                                                                                                                                                                                               max = 100,
                                                                                                                                                                                                               step = 1,
-                                                                                                                                                                                                              value = 60,
+                                                                                                                                                                                                              value = 80,
                                                                                                                                                                                                               post = "%"),
                                                                                                                                                                                            shiny::selectInput("ml_folds", label=shiny::h2("Fold CV"),choices = c("5",
                                                                                                                                                                                                                                                                  "10",
@@ -1158,7 +1195,7 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                                                               min = 1,
                                                                                                                                                                                                               max = 100,
                                                                                                                                                                                                               step = 1,
-                                                                                                                                                                                                              value = 20,
+                                                                                                                                                                                                              value = 5,
                                                                                                                                                                                                               post = "x")
                                                                                                                                                                              ),
                                                                                                                                                                              shiny::column(width=6,align="center",
@@ -1197,6 +1234,14 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                                            shiny::helpText("Make all batches same size in TOTAL? Otherwise each batch will have the right percentage train/test but one batch may be larger than another.:"),
                                                                                                                                                                                            shinyWidgets::switchInput(
                                                                                                                                                                                              inputId = "ml_batch_size_sampling",
+                                                                                                                                                                                             size = "mini",
+                                                                                                                                                                                             onLabel = "Yes", 
+                                                                                                                                                                                             offLabel = "No", 
+                                                                                                                                                                                             value = FALSE
+                                                                                                                                                                                           ),br(),
+                                                                                                                                                                                           shiny::helpText("Randomize labels?"),
+                                                                                                                                                                                           shinyWidgets::switchInput(
+                                                                                                                                                                                             inputId = "ml_label_shuffle",
                                                                                                                                                                                              size = "mini",
                                                                                                                                                                                              onLabel = "Yes", 
                                                                                                                                                                                              offLabel = "No", 
@@ -1465,7 +1510,7 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                                                                                                                      shiny::selectInput(width = "80%","score_corr_method",
                                                                                                                                                                                                                                                                                         "Which correlation method used?",
                                                                                                                                                                                                                                                                                         selected="pearson",
-                                                                                                                                                                                                                                                                                        choices=list("person",
+                                                                                                                                                                                                                                                                                        choices=list("pearson",
                                                                                                                                                                                                                                                                                                      "spearman",
                                                                                                                                                                                                                                                                                                      "kendall"
                                                                                                                                                                                                                                                                                         )),
@@ -1762,6 +1807,9 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                            ,shiny::selectInput("col_var", label="Marker outline color based on:", choices = c(" "),width = "80%")
                                                                                                                                                            ,shiny::h2("Hover text")
                                                                                                                                                            ,shiny::selectInput("txt_var", label="Marker hover text based on:", choices = c(" "),width = "80%"),
+                                                                                                                                                           # input$plot_mzlabels
+                                                                                                                                                           shiny::h2("M/z labels"),
+                                                                                                                                                           shinyWidgets::switchInput("plot_mzlabels", value = T, onLabel = "show", offLabel="hide", size = "small"),
                                                                                                                                                            shiny::h2("Plot theme"),
                                                                                                                                                            shiny::selectInput("ggplot_theme", label = "Theme", choices = list("Grid, white bg" = "bw",
                                                                                                                                                                                                                               "No grid, white bg" = "classic",
@@ -1997,7 +2045,7 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                   label = "Use which chemical formula rules?", 
                                                                                                                   choices = c("senior", "lewis", "hc", "chnops", "nops"), 
                                                                                                                   multiple = T, 
-                                                                                                                  selected = c("hc", "chnops", "nops")),
+                                                                                                                  selected = c()),
                                                                                                       selectInput("predict_elements", label = "Consider which atoms? (including adducts!)", 
                                                                                                                   choices = c("C","H","N","O","P","S"), selected = c("C","H","N","O","P","S"), multiple = T),
                                                                                                       MetaboShiny::switchButton(inputId = "predict_details",
@@ -2070,5 +2118,5 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                 span(shiny::uiOutput("has_unsaved_changes",inline = T), style="margin-left: 10px;")
                                                                 )
                                                 )
-                 )
+                 ), style="margin-bottom:100px;")
   )

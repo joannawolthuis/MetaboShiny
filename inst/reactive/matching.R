@@ -10,7 +10,14 @@ output$manual_search <- renderUI({
     fluidRow(align="center", 
              shiny::img(src = "pawprint.png",height = "50px"),
              br(),
-             tags$h2("pre-matched")
+             tags$h2("pre-matched"),
+             br(),
+             tags$button(
+               id = "search_mz",
+               class = "btn btn-default action-button",
+               img(src = "detective.png",
+                   height = "50px")
+             )
     )
   }
 })
@@ -150,11 +157,14 @@ lapply(c("prematch","search_mz"), function(search_type){
                 ppm <- as.numeric(mSet$ppm)
               }
               
-              res.predict = MetaDBparse::getPredicted(mz = as.numeric(mz),
-                                                      ppm = ppm,
-                                                      mode = ionmode,
-                                                      rules = input$predict_rules,
-                                                      elements = input$predict_elements)
+              res.predict = getPredicted(mz = as.numeric(mz),
+                                         ppm = ppm,
+                                         mode = ionmode,
+                                         calc_adducts = adducts[Ion_mode == ionmode]$Name,
+                                         rules = input$predict_rules,
+                                         elements = input$predict_elements,
+                                         adduct_table = adducts)
+              
               if(length(pred_dbs) == 1){
                 if(pred_dbs == "magicball"){
                   search_db = F
@@ -294,18 +304,28 @@ lapply(c("prematch","search_mz"), function(search_type){
         
         RSQLite::dbWriteTable(conn, 
                               "match_mapper", 
-                              mapper, overwrite=T, use.names = T)
+                              mapper, 
+                              overwrite = !mSet$metshiParams$prematched, 
+                              append = mSet$metshiParams$prematched, 
+                              use.names = T)
         RSQLite::dbWriteTable(conn, 
                               "match_content", 
-                              content, overwrite=T, use.names = T)
-        RSQLite::dbExecute(conn, "CREATE INDEX map_mz ON match_mapper(query_mz)")
-        RSQLite::dbExecute(conn, "CREATE INDEX map_ba ON match_mapper(baseformula, adduct)")
-        RSQLite::dbExecute(conn, "CREATE INDEX cont_ba ON match_content(baseformula, adduct)")
-        RSQLite::dbExecute(conn, "CREATE INDEX cont_str ON match_content(structure)")
+                              content, 
+                              overwrite = !mSet$metshiParams$prematched,
+                              append = mSet$metshiParams$prematched,
+                              use.names = T)
+        
+        if(!mSet$metshiParams$prematched){
+          RSQLite::dbExecute(conn, "CREATE INDEX map_mz ON match_mapper(query_mz)")
+          RSQLite::dbExecute(conn, "CREATE INDEX map_ba ON match_mapper(baseformula, adduct)")
+          RSQLite::dbExecute(conn, "CREATE INDEX cont_ba ON match_content(baseformula, adduct)")
+          RSQLite::dbExecute(conn, "CREATE INDEX cont_str ON match_content(structure)")  
+        }
+        
         if(search_type == "prematch"){
-          mSet$metshiParams$prematched<<-T
+          mSet$metshiParams$prematched <<- T
           filemanager$do <- "save"
-          search_button$on <- FALSE   
+          search_button$on <- TRUE #FALSE
         }else{
           search$go <- TRUE
         }

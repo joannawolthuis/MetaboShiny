@@ -1,19 +1,18 @@
 getMissing <- function(peakpath, nrow=NULL){
+  
   bigFile = utils:::format.object_size(file.info(peakpath)$size, "GB")
   reallyBig = if(bigFile == "0 Gb") F else T
   
-  if(is.null(nrow)){
-    nrow = length(vroom::vroom_lines(peakpath, altrep = TRUE, progress = TRUE)) - 1L
-  }
-
+  nrow = length(vroom::vroom_lines(peakpath)) - 1L
+  
   print("Checking missing values...")
   
   skipCols=c("sample","label")
   
-  con = file(peakpath, "r")
-  line = readLines(con, n = 1)
-  cols = stringr::str_split(line, ",")[[1]]
-  
+  con <- file(peakpath, "r", blocking = FALSE)
+  header = readLines(con, n = 1) # empty
+  cols = stringi::stri_split(header, fixed=",")[[1]]
+
   if(any(grepl("mass_to_charge", cols))){
     peaklist = data.table::fread(peakpath)
     data.table::setnames(peaklist, "mass_to_charge", "mzmed", skip_absent = T)
@@ -41,27 +40,20 @@ getMissing <- function(peakpath, nrow=NULL){
       totalMissing = colSums(peaklist == "0" | peaklist == 0 | peaklist == "" | is.na(peaklist))
     }else{
       considerMe=which(!(tolower(cols) %in% skipCols))
-      mzs = cols[considerMe]
+      mzs = cols[3:length(cols)]
       totalMissing <- rep(0, length(mzs))
-      pb = pbapply::startpb(2, nrow)
-      
-      # get missing count
-      for(i in 1:nrow){
-        pbapply::setpb(pb, i)
-        line = readLines(con, n = 1)
-        splRow = stringr::str_split(line, ",")[[1]]
+      names(totalMissing) = mzs
+      pbapply::pbsapply(2:nrow, function(i){
+        line = readLines(con, n = 1) # empty
+        splRow = stringi::stri_split(line, fixed=",")[[1]]
         sampName = splRow[1]
         splRow = splRow[3:length(splRow)]
-        if(i > 1){
-          isMissing = which(splRow == "0" | splRow == 0 | splRow == "" | is.na(splRow))
-          totalMissing[isMissing] <- totalMissing[isMissing] + 1
-        }
-      }
-      close.connection(con)
-      names(totalMissing) = mzs
+        isMissing = splRow %in% c("0", "NA", "")
+        totalMissing[isMissing] <<- totalMissing[isMissing] + 1
+        NULL
+      })
     }
   }
-  
   list(missPerc = totalMissing, isMz = considerMe, nrows=nrow)
 }
 

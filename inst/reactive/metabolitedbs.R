@@ -453,20 +453,21 @@ shiny::observeEvent(input$build_custom_db, {
   if(dir.exists(cust_dir)) unlink(cust_dir)
   dir.create(cust_dir)
   
-  # copy csv and imageto said folder
-  img_path <- shinyFiles::parseFilePaths(gbl$paths$volumes, input$custom_db_img_path)$datapath
-  file.copy(img_path, file.path(cust_dir, "logo.png"))
+  # copy csv and image to said folder
+  img_path <- input$custom_db_img_path$datapath
+  file.copy(img_path, normalizePath(file.path(cust_dir, "logo.png"),mustWork = F))
   
-  csv_path <- shinyFiles::parseFilePaths(gbl$paths$volumes, input$custom_db)$datapath
-  file.copy(csv_path, file.path(cust_dir, "base.csv"))
+  csv_path <- input$custom_db$datapath
+  file.copy(csv_path, normalizePath(file.path(cust_dir, "base.csv"),mustWork = F))
   
   dbinfo = list(title = input$my_db_name,
                 description = input$my_db_description,
                 image_id = paste0(input$my_db_short, "_logo"))
   
-  save(dbinfo, file = file.path(cust_dir, "info.RData"))
+  save(dbinfo, file = normalizePath(file.path(cust_dir, "info.RData"),mustWork = F))
   # print OK message and ask to restart
-  shiny::showNotification("Import OK! Please restart MetaboShiny to view and build your database.")
+  shiny::showNotification("Import OK! Reloading DB screen...")
+  db_section$load <- TRUE
   
   shiny::removeModal()
   

@@ -127,7 +127,8 @@ runML <- function(curr,
                   ml_train_perc,
                   sampling = "none",
                   batch_sampling = "none",
-                  batches = c()){
+                  batches = c(),
+                  folds){
   
   # get user training percentage
   ml_train_perc <- ml_train_perc/100
@@ -171,13 +172,14 @@ runML <- function(curr,
   
   trainCtrl <- caret::trainControl(verboseIter = T,
                                    allowParallel = F,
-                                   method= if(ml_folds == "LOOCV") "LOOCV" else as.character(ml_perf_metr),
+                                   method = if(ml_folds == "LOOCV") "LOOCV" else as.character(ml_perf_metr),
                                    number = as.numeric(ml_folds),
                                    repeats = 3,
-                                   trim=TRUE, 
+                                   trim = TRUE, 
                                    returnData = FALSE,
                                    classProbs= if(!hasProb) FALSE else TRUE,
-                                   sampling = sampling)
+                                   sampling = sampling,
+                                   index = folds)
   
   if(ml_method %in% c("rpartScore")){
     fit <- caret::train(
@@ -547,19 +549,13 @@ hideQC <- function(mSet){
 #' @rdname combatCSV
 #' @export 
 #' @importFrom data.table as.data.table
-combatCSV <- function(mSet){
+combatCSV <- function(mSet, tbl="norm"){
   # get sample names and classes
-  smp <- rownames(mSet$dataSet$norm)
+  smp <- rownames(mSet$dataSet[[tbl]])
   exp_lbl <- mSet$dataSet$cls
-  
-  # create csv for comBat
-  csv <- data.table::as.data.table(cbind(sample = smp,
-                                         label = mSet$dataSet$cls,
-                                         mSet$dataSet$norm))
-  
-  # transpose for combat
-  csv_edata <-t(csv[,!c(1,2)])
-  colnames(csv_edata) <- csv$sample
+  csv = mSet$dataSet[[tbl]]
+  csv_edata <- t(csv)
+  colnames(csv_edata) <- rownames(mSet$dataSet[[tbl]])
   csv_edata
 }
 
@@ -724,6 +720,11 @@ getTopHits <- function(mSet, expnames, top){
                        },
                        volcano = {
                          res = list(rownames(analysis$volcano$sig.mat))
+                         names(res) = base_name
+                         res
+                       },
+                       combi = {
+                         res = list(analysis$combi$sig.mat$rn)
                          names(res) = base_name
                          res
                        },
@@ -1482,6 +1483,17 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                      }
                      list(power_plot = p)
                    },
+                   combi = {
+                     p = {
+                       if("combi" %in% names(mSet$analSet)){
+                         ggPlotCombi(mSet,
+                                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       }else{
+                         NULL
+                      }
+                     }
+                     list(combi_plot = p)
+                   },
                    wordcloud = {
                      if(nrow(lcl$tables$wordcloud_filt) > 0){
                        topWords = if(input$wordcloud_topWords > nrow(lcl$tables$wordcloud_filt)) nrow(lcl$tables$wordcloud_filt) else input$wordcloud_topWords
@@ -1502,6 +1514,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
   finalPlots <- mapply(function(myplot, plotName){
     
     targets = "aov|tt|fc|corr|asca|volcano|meba"
+    
     if(grepl(targets, plotName)){
       
       whichAnal <- stringr::str_match(plotName, targets)[,1]
@@ -1530,21 +1543,23 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
     }
     
     if(!is3D & !grepl("heatmap", plotName)){
-      
       myplot <- myplot + guides(fill = guide_legend(ncol = 2),
                                 shape = guide_legend(ncol = 2),
                                 color = guide_legend(ncol = 2))
+   
       myplot <- myplot + 
         gbl$functions$plot.themes[[lcl$aes$theme]](base_size = 15) + 
-        ggplot2::theme(legend.position=if(input$legend) "right" else "none",
+        ggplot2::theme(legend.position = if(input$legend) "right" else "none",
                        legend.key.size = unit(.5,"line"),
                        legend.title = element_text(size=13),
-                       legend.text=element_text(size=10),
-                       axis.line = ggplot2::element_line(colour = 'black', size = .5),
+                       legend.text = element_text(size=10),
+                       axis.line = ggplot2::element_line(colour = 'black',
+                                                         size = .5),
                        plot.title = ggplot2::element_text(hjust = 0.5,
                                                           vjust = 0.1,
-                                                          size=lcl$aes$font$title.size*1.2),
+                                                          size=lcl$aes$font$title.size * 1.2),
                        text = ggplot2::element_text(family = lcl$aes$font$family))
+      
       if(grepl("venn", plotName)){
         myplot <- myplot + 
           ggplot2::theme_void() +
@@ -1553,6 +1568,8 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                          text = ggplot2::element_text(family = lcl$aes$font$family))
         
       }
+      
+      
       if(grepl("ml_bar", plotName)){
         myplot <- myplot + 
           ggplot2::theme(axis.text.x=ggplot2::element_blank(),
@@ -1623,4 +1640,247 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
   }, toWrap, names(toWrap))
   res = list(lcl = lcl, plots = finalPlots)
   res
+}
+
+metshiProcess <- function(mSet, session, init=F){
+  
+  sums = colSums(mSet$dataSet$missing)
+  missing.per.mz.perc = sums/nrow(mSet$dataSet$missing)*100
+  good.inx <- missing.per.mz.perc < mSet$metshiParams$miss_perc
+  mSet$dataSet$orig <- as.data.frame(mSet$dataSet$orig[, good.inx, drop = FALSE])
+  
+  qs::qsave(mSet$dataSet$orig, "data_orig.qs")
+  
+  if(!init) mSet$dataSet$missing <- NULL
+  
+  if(mSet$metshiParams$filt_type != "none" & (ncol(mSet$dataSet$orig) > mSet$metshiParams$max.allow)){
+    
+    # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
+    keep.mz <- colnames(FilterVariableMetshi(mSet,
+                                             filter = mSet$metshiParams$filt_type,
+                                             qcFilter = "F", #TODO: mSet$metshiParams$useQCs
+                                             rsd = 25,
+                                             max.allow = mSet$metshiParams$max.allow
+    )$dataSet$filt)  
+    if(mSet$metshiParams$norm_type == "ProbNorm"){
+      keep.mz = unique(c(keep.mz, mSet$metshiParams$ref_var))
+    }
+    mSet$dataSet$orig <- mSet$dataSet$orig[,keep.mz]
+    mSet$dataSet$filt <- NULL
+  }
+  
+  qs::qsave(mSet$dataSet$orig, "data_orig.qs")
+  
+  # sanity check data
+  mSet <- MetaboAnalystR::SanityCheckData(mSet)
+  
+  #shiny::setProgress(session=session, value= .6)
+  
+  # missing value imputation
+  if(req(mSet$metshiParams$miss_type) != "none"){
+    if(req(mSet$metshiParams$miss_type) == "rowmin"){ # use sample minimum
+      mSet <- replRowMin(mSet)
+    }
+    else if(req(mSet$metshiParams$miss_type ) == "pmm"){ # use predictive mean matching
+      # TODO: re-enable, it's very slow
+      base <- mSet$dataSet$orig
+      imp <- mice::mice(base, printFlag = TRUE)
+      
+    }else if(req(mSet$metshiParams$miss_type ) == "rf"){ # random forest
+      mSet$dataSet$proc <- MetaboShiny::replRF(mSet, 
+                                               parallelMode = mSet$metshiParams$rf_norm_parallelize, 
+                                               ntree = mSet$metshiParams$rf_norm_ntree,
+                                               cl = session_cl)
+      rownames(mSet$dataSet$proc) <- rownames(mSet$dataSet$preproc)
+      # - - - - - - - - - - - -
+    }else{
+      # use built in imputation methods, knn means etc.
+      mSet <- MetaboAnalystR::ImputeMissingVar(mSet,
+                                               method = mSet$metshiParams$miss_type
+      )
+    }
+  }
+  
+  # if normalizing by a factor, do the below
+  if(req(mSet$metshiParams$norm_type) == "SpecNorm"){
+    rematch = match(
+      rownames(mSet$dataSet$preproc),
+      mSet$dataSet$covars$sample
+    )
+    mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
+    
+    norm.vec <<- mSet$dataSet$covars[[mSet$metshiParams$samp_var]]
+    norm.vec <<- scale(x = norm.vec, center = 1)[,1] # normalize scaling factor
+  }else{
+    norm.vec <<- rep(1, length(mSet$dataSet$cls)) # empty
+  }
+  
+  mSet <- MetaboAnalystR::PreparePrenormData(mSet)
+  
+  if(mSet$metshiParams$norm_type == "QcNorm"){
+    data <- qs::qread("prenorm.qs")
+    
+    rematch = match(
+      rownames(data),
+      mSet$dataSet$covars$sample
+    )
+    mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
+    
+    batches = mSet$dataSet$covars$batch
+    normalized_blocks = pbapply::pblapply(unique(batches),function(lvl){
+      rows = data[which(batches == lvl),]
+      is_qc = grep("^qc", tolower(rownames(rows)))
+      if(length(is_qc) == nrow(rows)){
+        rows
+      }else{
+        qcs = rows[is_qc,]
+        avg_qc_sample = colMeans(qcs)
+        non_qcs = rows[-is_qc,]
+        qc_norm_rows = lapply(1:nrow(non_qcs), function(i){
+          x = non_qcs[i,]
+          as.list(x/median(as.numeric(x/avg_qc_sample), na.rm = T))
+          #as.list(non_qcs[i,]/avg_qc_sample)
+        })
+        res = as.data.frame(data.table::rbindlist(qc_norm_rows, use.names = T))
+        rownames(res) = rownames(non_qcs)
+        rbind(qcs, res)  
+      }
+    })
+    qc_norm_table = do.call("rbind", normalized_blocks)
+    mSet$dataSet$norm <- qc_norm_table
+  }else{
+    # normalize dataset with user settings(result: mSet$dataSet$norm)
+    mSet <- MetaboAnalystR::Normalization(mSet,
+                                          rowNorm = mSet$metshiParams$norm_type,
+                                          transNorm = mSet$metshiParams$trans_type,
+                                          scaleNorm = mSet$metshiParams$scale_type,
+                                          ref = mSet$metshiParams$ref_var) 
+  }
+  
+  mSet$dataSet$prenorm <- NULL
+  
+  #shiny::setProgress(session=session, value= .8)
+  
+  # get sample names
+  smps <- rownames(mSet$dataSet$norm)
+  # get which rows are QC samples
+  qc_rows <- which(grepl(pattern = "QC", x = smps))
+  # if at least one row has a QC in it, batch correct
+  has.qc <- length(qc_rows) > 0
+  
+  rematch = match(
+    rownames(mSet$dataSet$norm),
+    mSet$dataSet$covars$sample
+  )
+  mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
+  
+  # lowercase all the covars table column names
+  colnames(mSet$dataSet$covars) <- tolower(colnames(mSet$dataSet$covars))
+  
+  mSet$dataSet$prebatch <- mSet$dataSet$norm
+  
+  left_batch_vars = mSet$metshiParams$batch_var
+  
+  batch_method_a = mSet$metshiParams$batch_method_a
+  batch_method_b = mSet$metshiParams$batch_method_b
+  
+  # IN CASE SUBSETTING ELIMINATES BATCH EFFECT (ONLY ONE BATCH SELECTED)
+  # keep var 1 ?
+  keep.batch.1 = length(unique(unlist(mSet$dataSet$covars[, left_batch_vars[1], with=F]))) > 1
+  # keep var 2 ? 
+  keep.batch.2 = if(length(left_batch_vars) > 1) length(unique(unlist(mSet$dataSet$covars[, left_batch_vars[2], with=F]))) > 1 else F
+  if(!keep.batch.1 & !keep.batch.2){
+    left_batch_vars = c()
+  }else if(!keep.batch.1 & keep.batch.2){
+    left_batch_vars = left_batch_vars[2]
+    batch_method_a = batch_method_b 
+  }else if(keep.batch.1 & !keep.batch.2){
+    left_batch_vars = left_batch_vars[1]
+  }
+  
+  if(length(left_batch_vars)>0){
+    
+    # APPLY THE FIRST METHOD ONLY FOR BATCH + INJECTION
+    
+    if(batch_method_a == "limma" & 
+       batch_method_b == "limma" & 
+       length(left_batch_vars) == 2){
+      # create a model table
+      csv_pheno <- data.frame(sample = 1:nrow(mSet$dataSet$covars),
+                              batch1 = mSet$dataSet$covars[, left_batch_vars[1], with=FALSE][[1]],
+                              batch2 = mSet$dataSet$covars[, left_batch_vars[2], with=FALSE][[1]]
+                              #,outcome = as.factor(exp_lbl)
+      )
+      
+      csv_edata <- combatCSV(mSet, tbl = "norm")
+      
+      # batch correct with limma and two batches
+      batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
+                                                    batch = csv_pheno$batch1,
+                                                    batch2 = csv_pheno$batch2))
+      rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
+      mSet$dataSet$norm <- as.data.frame(batch_normalized)
+    }else{
+      if("batch" %in% left_batch_vars){# & mSet$metshiParams$batch_use_qcs){# & has.qc){
+        
+        # get batch for each sample
+        batch.idx = as.numeric(as.factor(mSet$dataSet$covars$batch))
+        
+        if(length(batch.idx) == 0) return(mSet$dataSet$norm)
+        # get injection order for samples
+        hasRT = any(grepl(pattern = "RT", colnames(mSet$dataSet$proc)))
+        
+        if(hasRT & batch_method_a == "batchCorr"){
+          metshiAlert("Only available for LC-MS data! Defaulting to WaveICA.")
+          batch_method_a <- "waveica"
+        }
+        
+        mSet$dataSet$norm <- batchCorr_mSet(mSet, batch_method_a, batch_var = left_batch_vars)
+        
+        left_batch_vars <- grep(left_batch_vars,
+                                pattern = "batch|injection|sample",
+                                value = T,
+                                invert = T)
+      }
+      
+      # check which batch values are left after initial correction
+      if(length(left_batch_vars) == 0){
+        NULL # if none left, continue after this
+      } else{
+        mSet$dataSet$norm <- batchCorr_mSet(mSet, batch_method_b, batch_var = left_batch_vars) 
+      }}
+  }
+  
+  #shiny::setProgress(session=session, value= .9)
+  
+  mSet$dataSet$cls.num <- length(levels(mSet$dataSet$cls))
+  
+  # make sure covars order is consistent with mset$..$norm order
+  rematch = match(
+    rownames(mSet$dataSet$norm),
+    mSet$dataSet$covars$sample
+  )
+  mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
+  
+  mSet$report <- list(mzStarred = data.table::data.table(mz = colnames(mSet$dataSet$norm),
+                                                         star = c(FALSE)))  
+  data.table::setkey(mSet$report$mzStarred, mz)
+  
+  if(has.qc & !init){
+    mSet <- hideQC(mSet)
+  }
+  
+  rematch = match(
+    rownames(mSet$dataSet$norm),
+    mSet$dataSet$covars$sample
+  )
+  
+  mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
+  
+  if(!init){
+    mSet$dataSet$missing <- mSet$dataSet$start <- NULL 
+  }
+  
+  mSet$analSet <- list(type = "stat")
+  mSet
 }

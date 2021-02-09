@@ -45,6 +45,7 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                      "enrich",
                      "venn",
                      "meba",
+                     "combi",
                      "asca")){ 
     
     if(curr_tab == "ml" & input$ml_results == "roc"){

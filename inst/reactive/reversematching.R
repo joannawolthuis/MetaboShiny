@@ -27,14 +27,13 @@ shiny::observe({
       MetaboShiny::metshiAlert("Please perform pre-matching first to enable this feature!")
       return(NULL)
     }else{
-      
       if(lcl$prev_struct != my_selection$struct){
-        rev_matches = MetaboShiny::get_prematches(who = my_selection$struct,
-                                                  what = "con.structure",
-                                                  patdb = lcl$paths$patdb,
-                                                  showadd = c(),
-                                                  showiso = c(),
-                                                  showdb = c())  
+        rev_matches = get_prematches(who = my_selection$struct,
+                                     what = "con.structure",
+                                     patdb = lcl$paths$patdb,
+                                     showadd = c(),
+                                     showiso = c(),
+                                     showdb = c())  
         lcl$prev_struct <<- my_selection$struct
         if(nrow(rev_matches) == 0){
           shown_matches$reverse <- data.table::data.table(result = "No matches found.")
@@ -46,7 +45,7 @@ shiny::observe({
         }
       }
       mzMode =if(grepl(my_selection$mz, pattern = "-")) "negative" else "positive"
-      rev_matches = MetaboShiny::get_prematches(who = my_selection$struct,
+      rev_matches = get_prematches(who = my_selection$struct,
                                                 what = "con.structure",
                                                 patdb = lcl$paths$patdb,
                                                 showadd = result_filters$add[[mzMode]],

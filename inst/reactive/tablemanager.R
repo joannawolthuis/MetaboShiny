@@ -55,9 +55,14 @@ shiny::observe({
                      }))
                      venn_no$now <- venn_no$start
                      report_no$now <- report_no$start
-                     lcl$vectors$analyses <<- unlist(venn_no$start[,1])
+                     if(ncol(venn_no$start) > 0){
+                       lcl$vectors$analyses <<- unlist(venn_no$start[,1])
+                     }else{
+                       lcl$vectors$analyses <<- c()
+                     }
                      # ---
                      lapply(c("mummi_anal", "heattable", "network_table", "ml_specific_mzs"), function(inputID){
+                       print(inputID)
                        shiny::updateSelectInput(session,
                                                 inputID, 
                                                 choices = {
@@ -205,6 +210,19 @@ shiny::observe({
                      }
                      # set buttons to proper thingy
                      list(tt_tab = res)
+                   },
+                   combi = {
+                     # save results to table
+                     res <- mSet$analSet$combi$sig.mat
+                     if(is.null(res)){
+                       res <- data.table::data.table("No significant hits found")
+                       mSet$analSet$combi <- NULL
+                     }
+                     res = as.data.frame(res)
+                     rownames(res) <- res$rn
+                     res$rn <- NULL
+                     # set buttons to proper thingy
+                     list(combi_tab = res)
                    },
                    fc = {
                      # if none found, give the below table...

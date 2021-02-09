@@ -82,6 +82,7 @@ Imports:
   Rmisc,
   rgl,
   stats,
+  pmp,
   pROC,
   car,
   doParallel,
