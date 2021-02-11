@@ -644,7 +644,7 @@ beep = no')
   shiny::observeEvent(input$debug_metshi, {
     assign("lcl", lcl, envir = .GlobalEnv)
     assign("mSet", mSet, envir = .GlobalEnv)
-    assign("clientData", shiny::isolate(shiny::reactiveValuesToList(session$clientData)), envir = .GlobalEnv)
+    #assign("clientData", shiny::isolate(shiny::reactiveValuesToList(session$clientData)), envir = .GlobalEnv)
     assign("input", shiny::isolate(shiny::reactiveValuesToList(input)), envir = .GlobalEnv)
     assign("enrich", shiny::isolate(shiny::reactiveValuesToList(enrich)), envir = .GlobalEnv)
     assign("shown_matches", shiny::isolate(shiny::reactiveValuesToList(shown_matches)), envir = .GlobalEnv)
@@ -655,6 +655,12 @@ beep = no')
     assign("report_yes",  shiny::isolate(shiny::reactiveValuesToList(report_yes)), envir = .GlobalEnv)
     assign("venn_yes",  shiny::isolate(shiny::reactiveValuesToList(venn_yes)), envir = .GlobalEnv)
   })
+  
+  # for(obj in names(mSet$storage$animal$data)){
+  #   print("---")
+  #   print(obj)
+  #   print(format(object.size(mSet$storage$animal$data[[obj]]), "Mb"))
+  # }
   
   shiny::observeEvent(input$export_plot,{
     success=F

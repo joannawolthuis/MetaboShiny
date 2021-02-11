@@ -9,7 +9,7 @@ getMissing <- function(peakpath, nrow=NULL){
   
   skipCols=c("sample","label")
   
-  con <- file(peakpath, "r", blocking = FALSE)
+  con <- file(peakpath, "r")#, blocking = FALSE)
   header = readLines(con, n = 1) # empty
   cols = stringi::stri_split(header, fixed=",")[[1]]
 
@@ -45,10 +45,10 @@ getMissing <- function(peakpath, nrow=NULL){
       names(totalMissing) = mzs
       pbapply::pbsapply(2:nrow, function(i){
         line = readLines(con, n = 1) # empty
-        splRow = stringi::stri_split(line, fixed=",")[[1]]
+        splRow = stringr::str_split(line, pattern=",")[[1]]
         sampName = splRow[1]
         splRow = splRow[3:length(splRow)]
-        isMissing = splRow %in% c("0", "NA", "")
+        isMissing = splRow == "0" | splRow == 0 | splRow == "" | is.na(splRow)
         totalMissing[isMissing] <<- totalMissing[isMissing] + 1
         NULL
       })

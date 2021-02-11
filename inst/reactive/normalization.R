@@ -204,11 +204,12 @@ shiny::observeEvent(input$initialize, {
 
       if(typeof(mSet) != "double"){
         success = T
-        mSet <<- mSet
         qs::qsave(mSet, file = file.path(lcl$paths$proj_dir, 
                                          paste0(lcl$proj_name,"_ORIG.metshi")))
         
         fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
+        mSet$dataSet$missing <- mSet$dataSet$start <- NULL
+        mSet <<- mSet
         filemanager$do <- "save"
         uimanager$refresh <- c("general","statspicker","ml")
         plotmanager$make <- "general"

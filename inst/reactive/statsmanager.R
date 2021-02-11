@@ -478,6 +478,14 @@ shiny::observe({
                      train_idx = caret::createDataPartition(y = split_label, 
                                                             p = input$ml_train_perc/100,
                                                             list = FALSE)[,1] # partition data in a balanced way (uses labels)
+                    
+                     # == just borrowing this func for nested cv ==
+                     # covar_tbl = mSet$dataSet$covars
+                     # covar_tbl$cv_nest <- c("ml")
+                     # covar_tbl$cv_nest[train_idx] <- "ttfc"
+                     # data.table::fwrite(covar_tbl, "~/Desktop/dsm_farms_metadata_feb21.csv")
+                     # ============================================
+                     
                      test_idx = setdiff(1:nrow(t), train_idx)
                    }
                    
@@ -607,6 +615,15 @@ shiny::observe({
                                   training_data_cleaned_adj)
                      config = curr[,..configCols]
                      curr = curr[,-configCols,with=F]
+                     if(length(batches) == 1){
+                       if(input$ml_folds != "LOOCV"){
+                         if(as.numeric(input$ml_folds) <= 5){
+                           group_fac = config[split == "train",][[batches]]
+                           ml_folds = min(c(as.numeric(input$ml_folds), length(unique(group_fac))))
+                           folds = caret::groupKFold(group_fac, k = ml_folds)
+                         }
+                       }  
+                     }
                      
                    }else{
                      if(input$ml_sampling != "none"){
@@ -1076,29 +1093,40 @@ shiny::observe({
                  anal1_res_table = data.table::as.data.table(anal1_res[grepl("\\.mat", names(anal1_res))][[1]],keep.rownames=T)
                  anal2_res_table = data.table::as.data.table(anal2_res[grepl("\\.mat", names(anal2_res))][[1]],keep.rownames=T)
                  
-                 anal1_trans = "none"
-                 if(input$combi_anal1_trans != "none"){
-                   try({
-                     transFun= switch(input$combi_anal1_trans,
-                                      "log10"=log10,
-                                      "-log10"=function(x) -log10(x),
-                                      "abs"=abs) 
-                     anal1_res_table[[anal1_col]] <- transFun(anal1_res_table[[anal1_col]])
-                     anal1_trans = input$combi_anal1_trans
-                   })
-                 }
+                 translator=list(
+                      "t.stat" = "t.score",
+                      "p.value" = "p.value",
+                      "-log10(p)" = "p.log",
+                      "Fold Change" = "fc.all",
+                      "log2(FC)" = "fc.log"
+                 )
                  
+                 anal1_all_res = anal1_res[[translator[[anal1_col]]]]
+                 anal2_all_res = anal2_res[[translator[[anal2_col]]]]
+                 
+                 anal1_trans = "none"
                  anal2_trans = "none"
-                 if(input$combi_anal2_trans != "none"){
-                   try({
-                     transFun= switch(input$combi_anal2_trans,
-                                      "log10"=log10,
-                                      "-log10"=function(x) -log10(x),
-                                      "abs"=abs) 
-                     anal2_res_table[[anal2_col]] <- transFun(anal2_res_table[[anal2_col]])
-                     anal2_trans = input$combi_anal2_trans
-                   })
-                 }
+                 
+                 # if(input$combi_anal1_trans != "none"){
+                 #   try({
+                 #     transFun= switch(input$combi_anal1_trans,
+                 #                      "log10"=log10,
+                 #                      "-log10"=function(x) -log10(x),
+                 #                      "abs"=abs) 
+                 #     anal1_res_table[[anal1_col]] <- transFun(anal1_res_table[[anal1_col]])
+                 #     anal1_trans = input$combi_anal1_trans
+                 #   })
+                 # }
+                 # if(input$combi_anal2_trans != "none"){
+                 #   try({
+                 #     transFun= switch(input$combi_anal2_trans,
+                 #                      "log10"=log10,
+                 #                      "-log10"=function(x) -log10(x),
+                 #                      "abs"=abs) 
+                 #     anal2_res_table[[anal2_col]] <- transFun(anal2_res_table[[anal2_col]])
+                 #     anal2_trans = input$combi_anal2_trans
+                 #   })
+                 # }
                  
                  mzInBoth = intersect(rownames(anal1_res_table),rownames(anal2_res_table))
                  if(length(mzInBoth) > 0){
@@ -1109,9 +1137,10 @@ shiny::observe({
                    )
                    keep.cols = c(1, which(colnames(combined_anal) %in% c(anal1_col,anal2_col)))
                    dt <- as.data.frame(combined_anal)[,keep.cols]
-                   mSet$analSet$combi <<- list(sig.mat = dt, 
-                                               trans = list(x=anal1_trans, y=anal2_trans),
-                                               source = list(x=anal1, y=anal2))
+                   mSet$analSet$combi <- list(sig.mat = dt, 
+                                              all.vals = list(x=anal1_all_res, y=anal2_all_res),
+                                              trans = list(x=anal1_trans, y=anal2_trans),
+                                              source = list(x=anal1, y=anal2))
                  }
                  
                  },

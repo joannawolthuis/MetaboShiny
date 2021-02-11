@@ -758,7 +758,7 @@ ggPlotCombi <- function(mSet,
                         cf,
                         n=20){
   
-    dt = mSet$analSet$combi$sig.mat
+    dt = data.table::as.data.table(mSet$analSet$combi$sig.mat)
     anal1_trans = mSet$analSet$combi$trans$x
     anal2_trans = mSet$analSet$combi$trans$y
     
@@ -770,6 +770,25 @@ ggPlotCombi <- function(mSet,
     
     colnames(dt) <- c("m/z", "x", "y")#anal1_col, anal2_col)
     dt$col <- abs(dt[,2]*dt[,3])
+    dt$significant <- "YES"
+    
+    if(length(mSet$analSet$combi$all.vals$x) > 0 & length(mSet$analSet$combi$all.vals$y) > 0){
+      x.all = mSet$analSet$combi$all.vals$x
+      x.tbl = data.table::data.table("m/z" = names(x.all),
+                                     x = x.all)
+      y.all = mSet$analSet$combi$all.vals$y
+      y.tbl = data.table::data.table("m/z" = names(y.all),
+                                     x = y.all)
+      dt.merged = merge(x.tbl, y.tbl, by.x="m/z", by.y="m/z")
+      
+      dt.all = data.table::data.table("m/z" = dt.merged$`m/z`,
+                                         x = dt.merged$x.x,
+                                         y = dt.merged$x.y,
+                                         col = c(0),
+                                         significant = "NO")
+      dt.all[`m/z` %in% dt$`m/z`]$significant <- "YES"
+      dt = dt.all
+    }
     
     scaleFUN <- function(x) sprintf("%.2f", x)
     
@@ -779,16 +798,19 @@ ggPlotCombi <- function(mSet,
     p <- ggplot2::ggplot() +
       ggplot2::geom_point(data=dt, ggplot2::aes(x=x,
                                                 y=y,
-                                                color=col,
+                                                color=significant,#col,
                                                 text=`m/z`,
                                                 key=`m/z`),cex=3) +
-      ggplot2::geom_segment(data=dt,aes(y = 0,
+                          #,alpha = sapply(dt$sig, function(x) ifelse(x=="YES",1,0.2))) +
+      ggplot2::geom_segment(data=dt[significant=="YES"],aes(y = 0,
                                         yend = y,
                                         x = 0,
                                         xend = x,
-                                        color = col 
+                                        color = significant#col 
       ),alpha=0.2,linetype=6) +
-      ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE) +
+      scale_color_manual(values=c("YES" = "red",
+                                  "NO" = "darkgray")) +
+      #ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE) +
       ggplot2::scale_x_continuous(labels=scaleFUN) + 
       ggplot2::xlab(paste0(anal1, ": ", anal1_col)) + 
       ggplot2::ylab(paste0(anal2, ": ", anal2_col))

@@ -98,8 +98,14 @@ shiny::observe({
                               myplot$data = myplot$layers[[1]]$data  
                             }
                             
+                            if("significant" %in% colnames(myplot$data)){
+                              plotdata = myplot$data[significant == "YES"]
+                            }else{
+                              plotdata = myplot$data
+                            }
                             
-                            myplot = myplot + ggrepel::geom_label_repel(aes_string(y = myY,
+                            myplot = myplot + ggrepel::geom_label_repel(data = plotdata,
+                                                                        aes_string(y = myY,
                                                                                    x = myX,
                                                                                    label = myText),
                                                                         color="black",

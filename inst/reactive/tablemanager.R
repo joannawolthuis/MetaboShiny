@@ -62,21 +62,19 @@ shiny::observe({
                      }
                      # ---
                      lapply(c("mummi_anal", "heattable", "network_table", "ml_specific_mzs"), function(inputID){
-                       print(inputID)
                        shiny::updateSelectInput(session,
                                                 inputID, 
                                                 choices = {
-                                                 allChoices = as.character(lcl$vectors$analyses)
-                                                 if(inputID %in% c("heattable", "network_table", "ml_specific_mzs")){
+                                                 ch = allChoices = as.character(lcl$vectors$analyses)
+                                                 if(inputID %in% c("heattable", "network_table")){
                                                    ch = allChoices[grepl(mSet$settings$cls.name, allChoices, fixed=TRUE)]  
+                                                   }else{
+                                                   ch = allChoices
                                                    if(inputID == "ml_specific_mzs"){
-                                                     c("no", "manual", ch)
-                                                   }else{
-                                                     ch
+                                                     ch = c("no", "manual", ch)
                                                    }
-                                                   }else{
-                                                   allChoices
-                                                 }
+                                                   }
+                                                 ch
                                                 })  
                      })
                      # --- 
