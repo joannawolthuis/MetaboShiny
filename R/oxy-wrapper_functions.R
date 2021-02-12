@@ -128,7 +128,8 @@ runML <- function(curr,
                   sampling = "none",
                   batch_sampling = "none",
                   batches = c(),
-                  folds){
+                  folds,
+                  maximize=T){
   
   # get user training percentage
   ml_train_perc <- ml_train_perc/100
@@ -188,6 +189,7 @@ runML <- function(curr,
       method = ml_method,
       ## Center and scale the predictors for the training
       ## set and all future samples.
+      maximize = maximize,
       preProc = ml_preproc,
       tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
       trControl = trainCtrl
@@ -859,7 +861,8 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                    },
                    aov = { # render manhattan-like plot for UI
                      p = ggPlotAOV(mSet,
-                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 20)
+                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 20,
+                                   topn=input$aov_topn)
                      
                      list(aov_plot = p)
                    },
@@ -1121,7 +1124,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                          barplot_data <- ggPlotBar(data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar,
                                                    attempts = input$ml_attempts,
                                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                                   topn = input$ml_top_x,
+                                                   topn = input$ml_topn,
                                                    ml_name = mSet$analSet$ml$last$name,
                                                    ml_type = mSet$analSet$ml$last$method)
                          
@@ -1167,21 +1170,23 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                     #my_selection$mz,
                                     #draw.average = T,
                                     #cols = lcl$aes$mycols,
-                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                    topn=input$meba_topn)
                      list(meba_plot = p)
                    },
                    tt = {
                      # render manhattan-like plot for UI
                      p = ggPlotTT(mSet,
                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 
-                                  20)
+                                  20,topn=input$tt_topn)
                      
                      list(tt_plot = p)
                    },
                    fc = {
                      # render manhattan-like plot for UI
                      p <- ggPlotFC(mSet,
-                                   gbl$functions$color.functions[[lcl$aes$spectrum]], 20)
+                                   gbl$functions$color.functions[[lcl$aes$spectrum]], 20, 
+                                   topn=input$fc_topn)
                      
                      list(fc_plot = p)
                    },
@@ -1816,8 +1821,8 @@ metshiProcess <- function(mSet, session, init=F){
       
       # batch correct with limma and two batches
       batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
-                                                    batch = csv_pheno$batch1,
-                                                    batch2 = csv_pheno$batch2))
+                                                    batch = csv_pheno$batch1
+                                                    ,batch2 = csv_pheno$batch2))
       rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
       mSet$dataSet$norm <- as.data.frame(batch_normalized)
     }else{

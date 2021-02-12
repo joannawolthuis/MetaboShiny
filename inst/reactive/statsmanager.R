@@ -853,7 +853,8 @@ shiny::observe({
                                                            sampling,
                                                            batch_sampling,
                                                            batches,
-                                                           folds){
+                                                           folds, 
+                                                           maximize){
                                                     runML(curr,
                                                           train_vec = train_vec,
                                                           test_vec = test_vec,
@@ -868,7 +869,8 @@ shiny::observe({
                                                           sampling = sampling,
                                                           batch_sampling = batch_sampling,
                                                           batches = batches,
-                                                          folds = folds)
+                                                          folds = folds,
+                                                          maximize = maximize)
                                                   },
                                                   train_vec = lcl$vectors$ml_train,
                                                   test_vec = lcl$vectors$ml_test,
@@ -883,7 +885,8 @@ shiny::observe({
                                                   sampling = NULL,#if(input$ml_sampling == "none") NULL else input$ml_sampling,
                                                   batch_sampling = if(input$ml_batch_sampling == "none") NULL else input$ml_batch_sampling,
                                                   batches = input$ml_batch_covars,
-                                                  folds = folds
+                                                  folds = folds,
+                                                  maximize = input$ml_maximize
                      )
                    })
                    
@@ -1053,11 +1056,11 @@ shiny::observe({
                  withProgress({
                    if(mSet$dataSet$paired){
                      mSet <- MetaboAnalystR::FC.Anal.paired(mSet,
-                                                            1.5, # TODO: make this threshold user defined
+                                                            as.numeric(input$fc_thresh),
                                                             1)  
                    }else{
                      mSet <- MetaboAnalystR::FC.Anal.unpaired(mSet,
-                                                              1.5, # TODO: make this threshold user defined
+                                                              as.numeric(input$fc_thresh), # TODO: make this threshold user defined
                                                               1) 
                    }
                    if(!is.null(mSet$analSet$fc$sig.mat)){

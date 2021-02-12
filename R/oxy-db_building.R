@@ -311,6 +311,8 @@ import.pat.csvs <- function(metapath,
                          if(hasPPM|hasRT) paste0(if(hasPPM) "/" else "RT", roundedPpm) else "") 
         return(newName)
       })
+    }else{
+      colnames(peaklist)[ismz] <- paste0(colnames(peaklist)[ismz], ifelse(ionMode == "pos", "+", "-"))
     }
     
     peaklist <- peaklist[sample %in% keep.samples.peak,]

@@ -520,12 +520,18 @@ ggPlotASCA <- function(mSet, cf, n=20){
 }
 
 #' @export 
-ggPlotMeba <- function(mSet, cf, n=20){
+ggPlotMeba <- function(mSet, cf, n=20, topn=NULL){
   profile = data.table::as.data.table(mSet$analSet$MB$stats, keep.rownames = T)
   if(nrow(profile)==0){
     shiny::showNotification("No significant hits")
     return(NULL)
   }
+  
+  if(!is.null(topn)){
+    profile = profile[order(abs(V2), decreasing = T)]
+    profile = profile[1:min(topn, nrow(profile)),]
+  }
+  
   profile$Peak <- c(1:nrow(profile))
   colnames(profile)[1:2] <- c("m/z", "Hotelling-T2")
   scaleFUN <- function(x) sprintf("%.1f", x)
@@ -564,7 +570,7 @@ ggPlotMeba <- function(mSet, cf, n=20){
 #' @importFrom data.table as.data.table
 #' @importFrom shiny showNotification
 #' @importFrom ggplot2 ggplot geom_point aes scale_x_discrete scale_colour_gradientn scale_y_continuous
-ggPlotAOV <- function(mSet, cf, n=20){
+ggPlotAOV <- function(mSet, cf, n=20, topn=NULL){
   
   which_aov = if(mSet$settings$exp.type %in% c("t","2f", "t1f")) "aov2" else "aov"
   
@@ -579,6 +585,11 @@ ggPlotAOV <- function(mSet, cf, n=20){
   if(nrow(profile)==0){
     shiny::showNotification("No significant hits")
     return(NULL)
+  }
+  
+  if(!is.null(topn)){
+    profile = profile[order(abs(V2), decreasing = if(which_aov == "aov") T else F)]
+    profile = profile[1:min(topn, nrow(profile)),]
   }
   
   #profile[,2] <- round(profile[,2], digits = 2)
@@ -620,12 +631,17 @@ ggPlotAOV <- function(mSet, cf, n=20){
 #' @importFrom data.table as.data.table
 #' @importFrom shiny showNotification
 #' @importFrom ggplot2 ggplot geom_point aes scale_colour_gradientn
-ggPlotTT <- function(mSet, cf, n=20){
+ggPlotTT <- function(mSet, cf, n=20, topn=NULL){
   profile <- data.table::as.data.table(mSet$analSet$tt$p.log[mSet$analSet$tt$inx.imp],keep.rownames = T)
   
   if(nrow(profile)==0){
     shiny::showNotification("No significant hits")
     return(NULL)
+  }
+  
+  if(!is.null(topn)){
+    profile = profile[order(abs(V2), decreasing = T)]
+    profile = profile[1:min(topn, nrow(profile)),]
   }
   
   profile[,2] <- round(profile[,2], digits = 2)
@@ -722,12 +738,17 @@ ggPlotPattern <- function(mSet, cf, n=20){
 #' @importFrom data.table as.data.table
 #' @importFrom shiny showNotification
 #' @importFrom ggplot2 ggplot geom_point aes geom_vline scale_y_continuous scale_colour_gradientn
-ggPlotFC <- function(mSet, cf, n=20){
+ggPlotFC <- function(mSet, cf, n=20, topn=NULL){
   profile <- data.table::as.data.table(mSet$analSet$fc$fc.log[mSet$analSet$fc$inx.imp],keep.rownames = T)
   
   if(nrow(profile)==0){
     shiny::showNotification("No significant hits")
     return(NULL)
+  }
+  
+  if(!is.null(topn)){
+    profile = profile[order(abs(V2), decreasing = T)]
+    profile = profile[1:min(topn, nrow(profile)),]
   }
   
   colnames(profile) <- c("m/z", "log2fc")

@@ -747,6 +747,8 @@ batchCorr_mSet <- function(mSet, method, batch_var){
            batch_normalized
          },
          combat = {
+           csv_edata <- combatCSV(mSet, tbl = "norm")
+           
            csv_pheno <- data.frame(sample = 1:nrow(mSet$dataSet$covars),
                                    batch1 = mSet$dataSet$covars[, batch_var, with=FALSE][[1]]
            )
