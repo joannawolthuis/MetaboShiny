@@ -396,7 +396,11 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                                                                                                               shape = Shape,
                                                                                                               color = Color,
                                                                                                               fill = Fill), 
-                                                               position = position_jitterdodge())
+                                                               position = position_jitterdodge()),
+                             sina = p + ggforce::geom_sina(data = prof, position = "identity", ggplot2::aes(x = Group,
+                                                                                                            y = Abundance,
+                                                                                                            color = Color,
+                                                                                                            fill = Fill))
                  )
                },
                multi = {
@@ -413,6 +417,12 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                                                                                                                            text = Text,
                                                                                                                            color = Color,
                                                                                                                            fill = Fill)),#GroupB)),
+                             sina = p + ggforce::geom_sina(data = prof, position = "identity", ggplot2::aes(x = GroupB,
+                                                                                                            y = Abundance,
+                                                                                                            group = GroupB,
+                                                                                                            text = Text,
+                                                                                                            color = Color,
+                                                                                                            fill = Fill)),#GroupB)),
                              beeswarm = {
                                p + ggbeeswarm::geom_beeswarm(data = prof, alpha=0.7, size = 2, position = ggplot2::position_dodge(width=.3), ggplot2::aes(x = GroupB,
                                                                                                                                                           y = Abundance,
@@ -1874,21 +1884,27 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",  fill
                   plsda = "Component ")
   
   p <- ggplot2::ggplot(dat_long, ggplot2::aes(x, y,group=group)) +
-    ggplot2::geom_point(size=6, ggplot2::aes(
+    ggplot2::geom_point(size=5, ggplot2::aes(
       shape=shape,
       text=variable,
       fill=fill,
-      color=color), alpha=0.7,stroke = 1.5)+
+      color=color), alpha=0.7,stroke = 1)+
     ggplot2::scale_x_continuous(name = paste0(title_prefix, pcx, if(x.var != "") gsubfn::fn$paste("($x.var%)") else ""))+
     ggplot2::scale_y_continuous(name = paste0(title_prefix, pcy, if(y.var != "") gsubfn::fn$paste("($y.var%)") else ""))+
     ggplot2::scale_fill_manual(values = cols) +
     ggplot2::scale_color_manual(values = cols) +
     ggplot2::scale_shape_manual(values = as.numeric(symbols)) +
     ggplot2::guides(fill = ggplot2::guide_legend(fill = ggplot2::guide_legend(override.aes = list(shape = 21)),
-                                                 color = ggplot2::guide_legend(override.aes = list(shape = 21))))
-  
+                                                 color = ggplot2::guide_legend(override.aes = list(shape = 21)))
+                    )
+
   if(ellipse){
-    p <- p + ggplot2::stat_ellipse(geom = "polygon", ggplot2::aes(fill=group), alpha = 0.3,level = .95, type = "norm",)
+    p <- p + ggplot2::stat_ellipse(geom = "polygon", 
+                                   ggplot2::aes(group=fill, 
+                                                fill=fill), 
+                                   alpha = 0.3,
+                                   level = .95,
+                                   type = "norm")
   }
   
   if(mode == "ipca"){

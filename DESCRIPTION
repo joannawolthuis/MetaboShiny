@@ -102,5 +102,6 @@ Imports:
   umap,
   ica,
   svglite,
-  beepr
+  beepr,
+  ggforce
 RoxygenNote: 7.1.0

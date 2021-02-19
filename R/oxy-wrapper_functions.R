@@ -45,15 +45,17 @@ calcHeatMap <- function(mSet, signif.only,
     
     if(mSet$settings$exp.type %in% c("2f", "t1f", "t")){
       
-      # create convenient table with the ncessary info
+      # create convenient table with the necessary info
       translator <- data.table::data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],
                                            GroupA=mSet$dataSet$facA[sample_order], 
                                            GroupB=mSet$dataSet$facB[sample_order])
+      colnames(translator) <- c("Sample", mSet$dataSet$facA.lbl, mSet$dataSet$facB.lbl)
+      
       hmap.lvls <- c(levels(mSet$dataSet$facA), levels(mSet$dataSet$facB))
       
       # reorder first by time, then by sample
-      split.translator <- split(translator, by = c("GroupB"))
-      split.translator.ordered <- lapply(split.translator, function(tbl) tbl[order(tbl$GroupA)])
+      split.translator <- split(translator, by = c(mSet$dataSet$facB.lbl))
+      split.translator.ordered <- lapply(split.translator, function(tbl) tbl[order(tbl[[mSet$dataSet$facA.lbl]])])
       translator <- data.table::rbindlist(split.translator.ordered)
       
       # ensure correct sample order
@@ -178,7 +180,7 @@ runML <- function(curr,
                                    repeats = 3,
                                    trim = TRUE, 
                                    returnData = FALSE,
-                                   classProbs= if(!hasProb) FALSE else TRUE,
+                                   classProbs = if(!hasProb) FALSE else TRUE,
                                    sampling = sampling,
                                    index = folds)
   
@@ -195,6 +197,9 @@ runML <- function(curr,
       trControl = trainCtrl
     )
   }else{
+    
+    def_scoring = ifelse(ifelse(is.factor(training[["label"]]), "Accuracy", "RMSE") %in% c("RMSE", "logLoss", "MAE"), FALSE, TRUE)
+    
     fit <- caret::train(
       label ~ .,
       data = training,
@@ -202,6 +207,7 @@ runML <- function(curr,
       ## Center and scale the predictors for the training
       ## set and all future samples.
       preProc = ml_preproc,
+      maximize = if(maximize) def_scoring else !def_scoring,
       importance = if(ml_method %in% c("ranger")) 'permutation' else TRUE,
       tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
       trControl = trainCtrl
@@ -1259,8 +1265,8 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                                column_text_angle = 90,
                                                ylab = "m/z\n",
                                                showticklabels = if(ncol(hmap_matr) <= 100) c(T,T) else c(F,F),
-                                               symm=T,
-                                               symbreaks=T,
+                                               symm = T,
+                                               symbreaks = T,
                                                dendrogram="none"
                      )
                      lcl$vectors$diffcorr_heatmap <- p2$x$layout$yaxis$ticktext
@@ -1350,14 +1356,14 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                      
                      mat = mSet$analSet$heatmap$matrix[1:if(input$heatmap_topn < nrow(mSet$analSet$heatmap$matrix)) input$heatmap_topn else nrow(mSet$analSet$heatmap$matrix),]
                      
-                     sideLabels = if(input$fill_var == "label"){
+                     sideLabels = if(mSet$settings$exp.type %in% c("2f", "t1f")){
                        as.data.frame(mSet$analSet$heatmap$translator[,!1])
                      }else{
                        varOrder = match(mSet$dataSet$covars$sample, colnames(mat))
                        as.data.frame(mSet$dataSet$covars[, input$fill_var, with=F])
                      }
                      
-                     sidePalette = if(input$fill_var == "label"){
+                     sidePalette = if(mSet$settings$exp.type %in% c("2f", "t1f")){
                        mSet$analSet$heatmap$colors
                      }else{
                        hmap.lvls = unlist(unique(sideLabels))
@@ -1382,7 +1388,6 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                           hmap_int
                           }else{
                            hmap_int <- suppressWarnings({
-                             
                              if(input$heatlimits){
                                heatmaply::heatmaply(mat,
                                                     Colv = mSet$analSet$heatmap$my_order,

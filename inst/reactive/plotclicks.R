@@ -50,7 +50,7 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
     
     if(curr_tab == "ml" & input$ml_results == "roc"){
       attempt = as.numeric(d$key[[1]])
-      if(length(attempt) > 0){
+      if(length(attempt) > 0 & !is.na(attempt)){
         xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
         if(attempt > 0){
           output$ml_tab <- DT::renderDataTable({

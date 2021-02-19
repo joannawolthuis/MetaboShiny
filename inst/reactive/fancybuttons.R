@@ -20,6 +20,9 @@ lapply(topn_sliders, function(anal){
     input[[paste0(anal,"_topn")]]
   }) %>% shiny::debounce(2000)
   shiny::observeEvent(r(), { # so it doesn't constantly update
+    if(anal == "heatmap"){
+      statsmanager$calculate <- anal
+    }
     plotmanager$make <- anal
   }, ignoreNULL = T)
 })

@@ -30,6 +30,16 @@ shiny::observe({
                  pat_order = match(lvls,pat)
                  pattern = paste0(pat_order-1, collapse="-")
                  mSet <- MetaboAnalystR::Match.Pattern(mSet, input$corr_corr, pattern)
+                 # == filter ===
+                 dt = mSet$analSet$corr$cor.mat
+                 pthresh = input$corr_p_thresh #0.1
+                 corrthresh = input$corr_r_thresh #0.1
+                 for(col in colnames(dt)){
+                   mSet$analSet$corr[[col]] <- dt[,col]
+                 }
+                 keepMe = abs(mSet$analSet$corr$cor.mat[,'correlation']) >= corrthresh & 
+                          mSet$analSet$corr$cor.mat[,'p-value'] <= pthresh
+                 mSet$analSet$corr$cor.mat <- mSet$analSet$corr$cor.mat[keepMe,]
                },
                diffcorr = {
                  library(DGCA, quietly = TRUE)
@@ -1101,11 +1111,23 @@ shiny::observe({
                       "p.value" = "p.value",
                       "-log10(p)" = "p.log",
                       "Fold Change" = "fc.all",
-                      "log2(FC)" = "fc.log"
+                      "log2(FC)" = "fc.log",
+                      "correlation" = "correlation"
                  )
                  
-                 anal1_all_res = anal1_res[[translator[[anal1_col]]]]
-                 anal2_all_res = anal2_res[[translator[[anal2_col]]]]
+                 if(anal1_col %in% names(translator)){
+                   anal1_all_res = anal1_res[[translator[[anal1_col]]]]
+                 }else{
+                   anal1_all_res = anal1_res_table[[anal1_col]]
+                   names(anal1_all_res) <- anal1_res_table$rn
+                 }
+                 
+                 if(anal2_col %in% names(translator)){
+                   anal2_all_res = anal2_res[[translator[[anal2_col]]]]
+                 }else{
+                   anal2_all_res = anal2_res_table[[anal2_col]]
+                   names(anal2_all_res) <- anal2_res_table$rn
+                 }
                  
                  anal1_trans = "none"
                  anal2_trans = "none"
