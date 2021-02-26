@@ -327,7 +327,7 @@ score.isos <- function(qmz, table, mSet, method="mscore", inshiny=TRUE,
     meanScore = mean(scores_persamp, na.rm = T)
     data.table::data.table(fullformula = formula, score = meanScore)
   })
-  data.table::rbindlist(score_rows)
+  data.table::rbindlist(score_rows, fill=T)
 }
 
 
@@ -594,7 +594,7 @@ score.add <- function(qmz, table, mSet, inshiny=TRUE,
     list(structure = unique(l$smi), 
          score = sum(per_mz_cols)/length(adducts_considered) * 100)
   })
-  data.table::rbindlist(score_rows)
+  data.table::rbindlist(score_rows, fill=T)
 }
 
 metshiRevSearch = function(mSet, structure, ext.dbname, db_dir){
@@ -644,6 +644,6 @@ metshiRevSearch = function(mSet, structure, ext.dbname, db_dir){
     }else{
       data.table::data.table()
     }
-  }))
+  }), fill=T)
 }
 
