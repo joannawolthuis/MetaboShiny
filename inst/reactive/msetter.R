@@ -57,6 +57,17 @@ shiny::observe({
                            mSet$dataSet$ispaired <- if(input$stats_type %in% c("t", "t1f") | input$paired) TRUE else FALSE
                            mSet
                          },
+                         subset_mz = {
+                           if(input$subset_mzs == "prematched"){
+                             keep.mzs = get_prematched_mz(patdb = lcl$paths$patdb,
+                                                          mainisos = input$subset_mz_iso)
+                           }
+                           
+                           mSet2 <- subset_mSet_mz(mSet,
+                                                  keep.mzs = keep.mzs)
+                           mSet$dataSet$ispaired <- mSet.settings$ispaired
+                           mSet
+                         },
                          subset = {
                            mSet <- subset_mSet(mSet,
                                                subset_var = input$subset_var, 

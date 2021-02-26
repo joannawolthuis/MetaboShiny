@@ -36,7 +36,7 @@ output$hits_tab <- DT::renderDataTable({
 output$browse_tab <-DT::renderDataTable({
   MetaboShiny::metshiTable(content = browse_content$table,
               options = list(columnDefs = list(list(visible=FALSE, 
-                                                    targets=which(colnames(browse_content$table) %in% c("description", "structure", "formula", "charge"))))
+                                                    targets=which(colnames(browse_content$table) %in% c("description", "structure", "formula", "charge", "source"))))
               ))
 }, server=T)
 

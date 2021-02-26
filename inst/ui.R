@@ -1410,7 +1410,7 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                            icon("box-open","fa-5x"),
                                                                                                                                                            shiny::br(),shiny::br(),shiny::br(),
                                                                                                                                                            shiny::br(),shiny::br()),
-                                                                                                                                           shiny::tabPanel(value="switchset", 
+                                                                                                                                           shiny::tabPanel(value="switch", 
                                                                                                                                                            title=shinyBS::tipify(shiny::icon("exchange"),
                                                                                                                                                                                  title = "switch to different variable and/or subset based on variable",
                                                                                                                                                                                  trigger = "hover",options=list(container="body"))
@@ -1447,7 +1447,12 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                              icon = icon("magic"),
                                                                                                                                                              size = "sm"
                                                                                                                                                            )
-                                                                                                                                                           ,shiny::hr()
+                                                                                                                                           ),
+                                                                                                                                           shiny::tabPanel(value="subset", 
+                                                                                                                                                           title=shinyBS::tipify(shiny::icon("filter"),
+                                                                                                                                                                                 title = "Subset based on variable or m/z(s)",
+                                                                                                                                                                                 trigger = "hover",options=list(container="body")),
+                                                                                                                                                           shiny::hr()
                                                                                                                                                            ,shiny::h2("Subset data")
                                                                                                                                                            ,helpText("Current sample count:")
                                                                                                                                                            ,h2(shiny::textOutput("samp_count"))
@@ -1459,14 +1464,39 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                              choices = c(" "),
                                                                                                                                                              choicesOpt = list(
                                                                                                                                                                subtext = c(" ")
-                                                                                                                                                           ),multiple = T)
+                                                                                                                                                             ),multiple = T)
                                                                                                                                                            ,shinyWidgets::actionBttn(
                                                                                                                                                              inputId = "change_subset",
-                                                                                                                                                             label = "click to subset", 
+                                                                                                                                                             label = "click to subset by metadata", 
                                                                                                                                                              style = "bordered",
                                                                                                                                                              icon = icon("filter"),
                                                                                                                                                              size = "sm"
                                                                                                                                                            ),br(),br()
+                                                                                                                                                           # ,shinyWidgets::pickerInput(
+                                                                                                                                                           #   inputId = "subset_mzs",
+                                                                                                                                                           #   label = "Subset by m/z(s):", 
+                                                                                                                                                           #   choices = c("M/z with prematches"="prematched"),
+                                                                                                                                                           #   choicesOpt = list(
+                                                                                                                                                           #     subtext = c(" ")
+                                                                                                                                                           #   )),
+                                                                                                                                                           # shiny::conditionalPanel("input.subset_mzs == 'prematched'",
+                                                                                                                                                           #                         shiny::helpText("Only use matches with main isotopes??"),
+                                                                                                                                                           #                         shinyWidgets::switchInput(
+                                                                                                                                                           #                           inputId = "subset_mz_iso",
+                                                                                                                                                           #                           size = "mini",
+                                                                                                                                                           #                           onLabel = "Yes", 
+                                                                                                                                                           #                           offLabel = "No", 
+                                                                                                                                                           #                           value = TRUE
+                                                                                                                                                           #                         )
+                                                                                                                                                           #                         ),
+                                                                                                                                                           # shinyWidgets::actionBttn(
+                                                                                                                                                           #   inputId = "change_subset_mz",
+                                                                                                                                                           #   label = "click to subset by m/z", 
+                                                                                                                                                           #   style = "bordered",
+                                                                                                                                                           #   icon = icon("filter"),
+                                                                                                                                                           #   size = "sm"
+                                                                                                                                                           # ),
+                                                                                                                                                           # br(),br()
                                                                                                                                                            ,shinyWidgets::pickerInput(
                                                                                                                                                              inputId = "storage_choice",
                                                                                                                                                              label = "Load existing meta-dataset:", 

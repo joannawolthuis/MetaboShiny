@@ -33,6 +33,16 @@ browse_db <- function(chosen.db){
   result
 }
 
+get_prematched_mz = function(patdb, mainisos){
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
+  query = "SELECT DISTINCT map.query_mz 
+                                      FROM match_mapper map"
+  if(mainisos){
+    query = paste(query, "WHERE `%iso` > 99.9999")
+  }
+  RSQLite::dbGetQuery(conn, query)[[1]]
+}
+
 #' @title Get results of a m/z search
 #' @description Search results are stored in a SQLITE table, which can be returned through this function with filters.
 #' @param who Which m/z to return, Default: NA
@@ -586,3 +596,54 @@ score.add <- function(qmz, table, mSet, inshiny=TRUE,
   })
   data.table::rbindlist(score_rows)
 }
+
+metshiRevSearch = function(mSet, structure, ext.dbname, db_dir){
+  rev_all_matches = MetaDBparse::searchRev(structure, ext.dbname, db_dir)
+  user_mzs = list()
+  user_mzs$neg = grep("\\-", colnames(mSet$dataSet$norm))
+  if(length(user_mzs$neg) > 0){
+    user_mzs$pos = setdiff(1:ncol(mSet$dataSet$norm), user_mzs$neg)
+  }else{
+    user_mzs$pos = 1:ncol(mSet$dataSet$norm)
+  }
+  
+  #Mm = measured m/Q.
+  #Me = exact m/Q.
+  #Mass Accuracy = 1e6 * (Mm-Me)/Me.
+  keep_rows = data.table::rbindlist(lapply(1:nrow(rev_all_matches), function(i){
+    row = rev_all_matches[i,]
+    ionmode = if(row$finalcharge > 0) "pos" else "neg" 
+    check_mz_cols = user_mzs[[ionmode]]
+    matches = colnames(mSet$dataSet$norm)[check_mz_cols]
+    sumnum = as.numeric(gsub("\\-","",matches))
+    in_range = which(sumnum %between% ppm_range(row$fullmz, mSet$ppm))
+    if(length(in_range) > 0){
+      isocols = c("n2H", "n13C", "n15N")
+      if(all(isocols %in% colnames(row))){
+        data.table::data.table(query_mz = matches[in_range],
+                               dppm = sapply(sumnum[in_range], function(mz) 1e6 * abs(sumnum[in_range]-row$fullmz)/row$fullmz),
+                               structure=structure,
+                               adduct = row$adduct,
+                               `%iso`=row$isoprevalence,
+                               isocat = if(row$isoprevalence < 100) "minor" else "main",
+                               fullformula = row$fullformula,
+                               finalcharge = row$finalcharge,
+                               n2H = row$n2H,
+                               n13C = row$n13C,
+                               n15N = row$n15N)
+      }else{
+        data.table::data.table(query_mz = matches[in_range],
+                               dppm = sapply(sumnum[in_range], function(mz) 1e6 * abs(sumnum[in_range]-row$fullmz)/row$fullmz),
+                               structure=structure,
+                               adduct = row$adduct,
+                               `%iso`=row$isoprevalence,
+                               isocat = if(row$isoprevalence < 100) "minor" else "main",
+                               fullformula = row$fullformula,
+                               finalcharge = row$finalcharge,)
+      }
+    }else{
+      data.table::data.table()
+    }
+  }))
+}
+

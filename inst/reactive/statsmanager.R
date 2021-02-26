@@ -828,6 +828,7 @@ shiny::observe({
                                 character = as.character(inp.val))
                        })
                        names(lst) = params$parameter
+                       print(lst)
                        if(any(sapply(lst,function(x)all(is.na(x))))){
                          cat("Missing param, auto-tuning...")
                          lst <- list()
@@ -935,14 +936,23 @@ shiny::observe({
                          })
                          true_cols = data.table::rbindlist(samprows)
                          my_data = cbind(true_cols, prediction)
-                         multi_performance <- if(curve_type == "roc") multiROC::multi_roc(my_data) else multiROC::multi_pr(my_data)
+                         multi_performance <- if(curve_type == "roc") multiROC::multi_roc(my_data,force_diag = T) else multiROC::multi_pr(my_data)
+                         print(multi_performance)
                          plottable = if(curve_type == "roc"){
                            data.table::as.data.table(multiROC::plot_roc_data(multi_performance))
                          }else{
                            data.table::as.data.table(multiROC::plot_pr_data(multi_performance)) 
                          }
+                         
+                         # ggplot2::ggplot(data = plottable, aes(x = Specificity, 
+                         #                                       y = Sensitivity,
+                         #                                       color=Group)) + geom_line()
+                         # res2 = getMultiMLperformance(list(labels = labels[[1]], prediction = predictions[[1]]))
+                         # ggplot2::ggplot(data = res2, aes(x=FPR, y = TPR, color=comparison)) + 
+                         #   geom_line()
+                         
                          res = plottable[Method == "m1", -"Method"]
-                         #res = getMultiMLperformance(x)
+                         
                          res$attempt = c(i)
                          res
                        })

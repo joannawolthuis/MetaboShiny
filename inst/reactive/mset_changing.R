@@ -21,10 +21,12 @@ shiny::observeEvent(input$load_storage, {
   #uimanager$refresh <- "general"
 })
 
-observeEvent(input$show_prematched_mz_only, {
+observeEvent(input$change_subset_mz, {
   if(mSet$metshiParams$prematched){
-    mSetter$do <- "refresh"
-   # uimanager$refresh <- "general"  
+    mSetter$do <- "subset_mz"
+   #uimanager$refresh <- "general"  
+  }else{
+    shiny::showNotification("No can do, please prematch first!")
   }
 },ignoreInit = T)
 

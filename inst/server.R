@@ -525,16 +525,16 @@ beep = no')
       for(bigtab in c("dimred", "permz", "overview", "ml")){
         shiny::showTab("statistics", bigtab)  
       }
-      for(bigtab in c("search", "plot_aes", "switchset", "metadata")){
+      for(bigtab in c("search", "plot_aes", "switch", "subset", "metadata")){
         shiny::showTab("anal_sidebar", bigtab)  
       }
       shiny::hideTab("anal_sidebar", "start")
-      shiny::updateTabsetPanel(session, "anal_sidebar", "switchset")
+      shiny::updateTabsetPanel(session, "anal_sidebar", "switch")
     }else{
       for(bigtab in c("dimred", "permz", "overview", "ml")){
         shiny::hideTab("statistics", bigtab)  
       }
-      for(bigtab in c("search", "plot_aes", "switchset", "metadata")){
+      for(bigtab in c("search", "plot_aes", "switch", "subset", "metadata")){
         shiny::hideTab("anal_sidebar", bigtab)
       }
     }
