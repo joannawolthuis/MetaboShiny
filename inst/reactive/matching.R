@@ -297,8 +297,8 @@ lapply(c("prematch","search_mz"), function(search_type){
         })
       }, min=0, max=length(blocks))
       
-      mapper = unique(data.table::rbindlist(lapply(matches, function(x) x$mapper)))
-      content = unique(data.table::rbindlist(lapply(matches, function(x) x$content)))
+      mapper = unique(data.table::rbindlist(lapply(matches, function(x) x$mapper),fill = T))
+      content = unique(data.table::rbindlist(lapply(matches, function(x) x$content),fill = T))
       
       if(nrow(mapper)>0){
         
