@@ -62,7 +62,8 @@ shiny::observeEvent(input$initialize, {
       batches <- input$batch_var
       
       # locate qc containing rows in csv
-      qc.rows <- which(grepl("QC", metshiCSV$sample))
+      qc.rows <- which(grepl("QC", 
+                             metshiCSV$sample))
       
       # for the non-qc samples, check experimental variables. Which have at least 2 different factors, but as little as possible?
       condition <- getDefaultCondition(metshiCSV, 
@@ -179,12 +180,16 @@ shiny::observeEvent(input$initialize, {
         rf_norm_parallelize = input$rf_norm_parallel,
         rf_norm_ntree = input$rf_norm_ntree,
         miss_perc = input$miss_perc_2,
-        orig.count = length(grep("qc",tolower(rownames(mSet$dataSet$orig)),invert = T))
+        orig.count = length(grep("qc",tolower(rownames(mSet$dataSet$orig)),invert = T)),
+        pca_corr = input$pca_corr,
+        keep_pcs = input$keep_pcs,
+        renorm = input$redo_upon_change
       )
       
       mSet$dataSet$covars <- data.table::as.data.table(covar_table)
       mSet$dataSet$missing <- is.na(mSet$dataSet$orig)
       mSet$dataSet$start <- mSet$dataSet$orig
+      
       
       mSet <- metshiProcess(mSet, session=NULL, init=T)
       

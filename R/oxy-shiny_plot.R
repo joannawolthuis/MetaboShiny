@@ -1129,16 +1129,13 @@ ggPlotCurves <- function(perf.long,
     ggplot2::coord_cartesian(xlim = c(.04,.96), ylim = c(.04,.96)) +
     ggplot2::xlab(if(curve_type == "roc") "FPR" else "Recall") + 
     ggplot2::ylab(if(curve_type == "roc") "TPR" else "Precision") +
-    ggplot2::annotate("text",
-                      label = paste0("Average AUC: ",
-                                     format(mean.auc,
-                                            2,
-                                            drop0trailing = TRUE,
-                                            digits = 2)),
-                      size = 8,
-                      x = 0.77,
-                      y = 0.03)
-  
+    annotation_compass(paste0("avg. AUC: ",
+                              format(mean.auc,
+                                     2,
+                                     drop0trailing = TRUE,
+                                     digits = 2)),
+                       position = "SE",
+                       size=20)
   p
 }
 
@@ -1901,7 +1898,9 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",  fill
   if(ellipse){
     p <- p + ggplot2::stat_ellipse(geom = "polygon", 
                                    ggplot2::aes(group=fill, 
-                                                fill=fill), 
+                                                fill=fill,
+                                                x=x,
+                                                y=y), 
                                    alpha = 0.3,
                                    level = .95,
                                    type = "norm")
@@ -1939,33 +1938,35 @@ ggPlotVenn <- function(mSet,
   
   flattened <- getTopHits(mSet, unlist(venn_yes$now), top)
   
-  parseFun = function(labels){
-    sapply(labels, function(label){
-      if(grepl(label, pattern=":")){
-        split = trimws(stringr::str_split(label, ":")[[1]])
-        stats_on = toupper(split[1])
-        which_stats = split[length(split)]
-        subset = grep("=", split, value=T)
-        paste0(stats_on, "\n", if(length(subset)>0) paste0(subset, collapse="\n", "\n") else "", paste0(">> ", which_stats, " <<\n\n"))
-      }else{
-        label
-      }
-    })
-  }
-  
   p = ggVennDiagram::ggVennDiagram(flattened,
                                    label_alpha = 1, 
                                    cf = cf,
-                                   parseFun = parseFun) + ggplot2::lims(x = switch(as.character(length(flattened)),
-                                                                                   "2"= c(-7,11),
-                                                                                   "3"= c(-5,9),
-                                                                                   "4"= c(-.05,1.13)),
-                                                                        y = switch(as.character(length(flattened)),
-                                                                                   "2"= c(-5.5,7.5),
-                                                                                   "3"= c(-4,10),
-                                                                                   "4"= c(.15,1)))
-  list(plot = p, info = flattened)
+                                   show_intersect = T,
+                                   label = "count",
+                                   label_geom = ggplot2::geom_text)
   
+  groups = p$layers[[2]]$data
+  translator = data.table::data.table(abcd = LETTERS[1:nrow(groups)], 
+                                      group = groups$label)
+  
+  abcd.combi = unique(p$layers[[1]]$data$group)
+  
+  for(lettergroup in abcd.combi){
+    spl.letters = stringr::str_split(lettergroup, "")[[1]]
+    new.group = paste(translator[abcd %in% spl.letters]$group, collapse="<br />")
+    p$layers[[1]]$data[p$layers[[1]]$data$group == lettergroup, "group"] = new.group 
+    p$plot_env$data[p$plot_env$data$group == lettergroup, "group"] = new.group 
+    p$layers[[3]]$data[p$layers[[3]]$data$group == lettergroup,"group"] = new.group
+  }
+  
+  p$plot_env$data$text = p$plot_env$data$group 
+  p$layers[[1]]$data$text = p$layers[[1]]$data$group
+  p$layers[[1]]$mapping[['key']] <- p$layers[[1]]$mapping[['text']]
+  p$layers[[1]]$mapping[['key']]
+  p$layers[[1]]$data$key = p$layers[[1]]$data$text
+  
+  p = p + scale_fill_gradient(low = "white", high = "gray2")
+  list(plot = p, info = flattened)
 }
 
 #' @title Generate PCA Scree plot
@@ -1984,12 +1985,61 @@ ggPlotScree <- function(mSet, cf, pcs=20){
   df <- data.table::data.table(
     pc = 1:length(names(mSet$analSet$pca$variance)),
     var = round(mSet$analSet$pca$variance*100,digits = 1))
-  p <- ggplot2::ggplot(data=df[1:20,]) + 
+  
+  # == attempt 2 ==
+  d1 <- diff(df$var)
+  k <- which.max(abs(diff(d1) / d1[-1]))
+  elbow=list(x=k)
+  # == attempt 1 ==
+  # elbow = akmedoids::elbowPoint(df$pc, df$var)
+  # elbow$x = ceiling(elbow$x)
+  
+  # sumvar
+  cum.var.list = data.frame()
+  for(i in 1:nrow(df)){
+    row = data.frame(pc = df$pc[i], var_exp = if(i==1) df$var[i] else df$var[i] + cum.var.list$var[i-1])
+    cum.var.list = rbind(cum.var.list, row)
+  }
+  
+  #fiftypoint_diff = abs(50 - cum.var.list$var_exp)
+  #fiftypoint = which(fiftypoint_diff == min(fiftypoint_diff))
+  
+  eightypoint_diff = abs(80 - cum.var.list$var_exp)
+  eightypoint = which(eightypoint_diff == min(eightypoint_diff))
+  
+  ninetypoint_diff = abs(90 - cum.var.list$var_exp)
+  ninetypoint = which(ninetypoint_diff == min(ninetypoint_diff))
+  
+  axisorder=seq(1,max(df$pc),by=ceiling(max(df$pc)/5))
+  axisorder=unique(c(axisorder,elbow$x, eightypoint, ninetypoint))
+  
+  vlines=data.frame(xintercept = as.numeric(c(elbow$x,
+                                   #fiftypoint,
+                                   eightypoint,
+                                   ninetypoint)),
+                    threshold=c(paste0("PC", elbow, ":elbow"), 
+                                #paste0("PC", fiftypoint, ":50%"), 
+                                paste0("PC", eightypoint, ":80%"),
+                                paste0("PC", ninetypoint, ":90%")))
+  p <- ggplot2::ggplot(data=df) + 
     ggplot2::geom_line(mapping = ggplot2::aes(x=pc, y=var), cex=1, color="black") +
     ggplot2::geom_point(mapping = ggplot2::aes(x=pc, y=var, color=var), cex=3) +
     ggplot2::scale_colour_gradientn(colours = cf(200)) + 
     ggplot2::xlab("Principal components") +
-    ggplot2::ylab("% Variance")
+    ggplot2::ylab("% Variance") +
+    ggplot2::geom_segment(data = vlines,
+                        aes(x=xintercept,
+                            xend=xintercept,
+                            y=0,
+                            yend=.5*max(df$var),
+                            group = threshold)) +
+    ggrepel::geom_label_repel(data=vlines,
+                            aes(x=xintercept,
+                               y=.5*max(df$var),
+                               label=threshold
+                               ),min.segment.length = 0)+
+    ggplot2::scale_x_continuous(breaks=axisorder)
+  
   # - - - - -
   p
 }

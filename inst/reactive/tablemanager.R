@@ -172,11 +172,19 @@ shiny::observe({
                    },
                    ml = {
                      if("ml" %in% names(mSet$analSet)){
-                       roc_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
+                       data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
+                       roc_data = data$roc
                        curve_type = if(input$ml_curve_type) "roc" else "precrec"
                        res = unique(roc_data$perf[metric == curve_type,c("AUC_PAIR", "comparison", "attempt")])
                        lcl$tables$ml_roc_all <<- res
-                       list(ml_overview_tab = res)
+                       # params 
+                       if("params" %in% names(data)){
+                         params = data.table::data.table(param = gsub("ml_", "", names(data$params)), value = data$params)
+                       }else{
+                         params = data.table::data.table(unavailable = "No parameters saved for this model...")
+                       }
+                       list(ml_overview_tab = res,
+                            ml_param_tab = params)
                      }else{
                        list()
                      }

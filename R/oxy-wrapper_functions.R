@@ -182,7 +182,8 @@ runML <- function(curr,
                                    returnData = FALSE,
                                    classProbs = if(!hasProb) FALSE else TRUE,
                                    sampling = sampling,
-                                   index = folds)
+                                   index = folds,
+                                   savePredictions = "all")
   
   if(ml_method %in% c("rpartScore")){
     fit <- caret::train(
@@ -196,10 +197,23 @@ runML <- function(curr,
       tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
       trControl = trainCtrl
     )
-  }else{
-    
+  }else if(ml_method == "glm"){
     def_scoring = ifelse(ifelse(is.factor(training[["label"]]), "Accuracy", "RMSE") %in% c("RMSE", "logLoss", "MAE"), FALSE, TRUE)
-    
+    success=F
+    fit <- caret::train(
+      label ~ .,
+      data = training,
+      method = ml_method,
+      ## Center and scale the predictors for the training
+      ## set and all future samples.
+      preProc = ml_preproc,
+      maximize = if(maximize) def_scoring else !def_scoring,
+      tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
+      trControl = trainCtrl
+    )
+  }else{
+    def_scoring = ifelse(ifelse(is.factor(training[["label"]]), "Accuracy", "RMSE") %in% c("RMSE", "logLoss", "MAE"), FALSE, TRUE)
+    success=F
     fit <- caret::train(
       label ~ .,
       data = training,
@@ -1571,7 +1585,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                        text = ggplot2::element_text(family = lcl$aes$font$family))
       
       if(grepl("venn", plotName)){
-        myplot <- myplot + 
+        myplot <- myplot +
           ggplot2::theme_void() +
           ggplot2::theme(panel.grid = ggplot2::element_blank(),
                          legend.position="none",
@@ -1782,6 +1796,7 @@ metshiProcess <- function(mSet, session, init=F){
     rownames(mSet$dataSet$norm),
     mSet$dataSet$covars$sample
   )
+  
   mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
   
   # lowercase all the covars table column names
@@ -1861,6 +1876,17 @@ metshiProcess <- function(mSet, session, init=F){
       }}
   }
   
+  if(mSet$metshiParams$pca_corr){
+    print("Performing PCA and subtracting PCs...")
+    res <- prcomp(mSet$dataSet$norm, 
+                  center = F,
+                  scale = F)
+    
+    pc.use <- as.numeric(mSet$metshiParams$keep_pcs[1]:mSet$metshiParams$keep_pcs[2]) # explains 93% of variance
+    trunc <- res$x[,pc.use] %*% t(res$rotation[,pc.use])
+    mSet$dataSet$norm <- as.data.frame(trunc)
+  }
+  
   #shiny::setProgress(session=session, value= .9)
   
   mSet$dataSet$cls.num <- length(levels(mSet$dataSet$cls))
@@ -1870,6 +1896,7 @@ metshiProcess <- function(mSet, session, init=F){
     rownames(mSet$dataSet$norm),
     mSet$dataSet$covars$sample
   )
+  
   mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
   
   mSet$report <- list(mzStarred = data.table::data.table(mz = colnames(mSet$dataSet$norm),

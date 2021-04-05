@@ -36,7 +36,7 @@ pacman::p_load(crmn)
 # 0d61192
 devtools::install_github("xia-lab/MetaboAnalystR","0d61192")
 #devtools::install_github("yixuan/showtext")
-devtools::install_github("joannawolthuis/ggVennDiagram")
+devtools::install_github("gaospecial/ggVennDiagram")
 devtools::install_github("dengkuistat/WaveICA")
 
 # covbat
@@ -46,6 +46,5 @@ install.packages("rJava", type="source", configure.args=c("--disable-jri"))
 
 devtools::install_github("joannawolthuis/MetaDBparse")
 devtools::install_github("joannawolthuis/MetaboShiny", "dev")
-
 
 MetaboShiny::start_metshi(inBrowser=T)

@@ -187,6 +187,8 @@ shiny::observe({
                        uimanager$refresh <- "adds"
                      }
                      
+                     ml_queue$jobs = list()
+                     
                      shiny::updateNavbarPage(session, "statistics", selected = "inf")
                    },
                    wordcloud = {

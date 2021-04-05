@@ -40,6 +40,9 @@ output$browse_tab <-DT::renderDataTable({
               ))
 }, server=T)
 
+output$ml_queue <- DT::renderDataTable({
+  MetaboShiny::metshiTable(content = data.table::data.table(name = names(ml_queue$jobs)))
+}, server = F)
 
 # adduct table editing from settings tab
 

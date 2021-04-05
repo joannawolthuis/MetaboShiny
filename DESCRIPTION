@@ -103,5 +103,6 @@ Imports:
   ica,
   svglite,
   beepr,
-  ggforce
+  ggforce,
+  akmedoids
 RoxygenNote: 7.1.0

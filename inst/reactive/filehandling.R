@@ -160,15 +160,14 @@ observe({
         mSet$dataSet$combined.method <- TRUE # FC fix
         mSet <<- mSet
         opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
+        ml_queue$jobs = list()
         lcl$proj_name <<- opts$proj_name
         lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, lcl$proj_name)
         lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".db"))
         lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".csv"))
-        
         shiny::updateCheckboxInput(session,
                                    "paired",
                                    value = mSet$dataSet$paired)
-        
         uimanager$refresh <- c("general","statspicker",if("adducts" %in% names(opts)) "adds" else NULL, "ml")
         plotmanager$make <- "general"  
       }

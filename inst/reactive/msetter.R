@@ -17,7 +17,7 @@ shiny::observe({
         }else{
           
           oldSettings <- mSet$settings
-          
+
           mSet <- reset.mSet(mSet,
                              fn = file.path(lcl$paths$proj_dir, 
                                             paste0(lcl$proj_name,
@@ -84,12 +84,6 @@ shiny::observe({
           mSet$analSet <- list(type = "stat")
           mSet$analSet$type <- "stat"
           
-          if(input$redo_upon_change){
-            mSet$dataSet$orig <- mSet$dataSet$start
-            mSet$dataSet$start <- mSet$dataSet$preproc <- mSet$dataSet$proc <- mSet$dataSet$prenorm <- NULL
-            mSet <- metshiProcess(mSet)
-          }
-          
           if(mSetter$do == "change"){
             if(input$omit_unknown & grepl("^1f", input$stats_type)){
               shiny::showNotification("omitting 'unknown' labeled samples...")
@@ -99,6 +93,8 @@ shiny::observe({
                                     subset_var = "sample", 
                                     subset_group = knowns) 
               }
+            }else{
+              knowns = mSet$dataSet$covars$sample
             }
             mSet <- change.mSet(mSet, 
                                 stats_var = input$stats_var, 
@@ -113,11 +109,46 @@ shiny::observe({
                                     subset_var = "sample", 
                                     subset_group = knowns) 
               }
+            }else{
+              knowns = mSet$dataSet$covars$sample
             }
             mSet <- change.mSet(mSet, 
                                 stats_var = mSet.settings$exp.var, 
                                 time_var =  mSet.settings$time.var,
                                 stats_type = mSet.settings$exp.type)
+          }
+          
+          samps = mSet$dataSet$covars$sample
+          # CHECK IF DATASET WITH SAME SAMPLES ALREADY THERE
+          matching.samps = sapply(mSet$storage, function(saved){
+            samplist = saved$data$covars$sample
+            if(length(samps) == length(samplist)){
+              all(knowns == samplist)  
+            }else{
+              F
+            }
+          })
+          
+          if(!("renorm" %in% names(mSet$metshiParams))){
+            mSet$metshiParams$renorm <- TRUE
+          }
+          
+          already.normalized = any(matching.samps)
+          
+          if(already.normalized){
+            tables = c("orig", "norm", "proc", "prebatch", "covars")
+            print("recycling from another meta-dataset!")
+            use.dataset = names(which(matching.samps))[1]
+            for(tbl in tables){
+              mSet$dataSet[[tbl]] <- mSet$storage[[use.dataset]]$data[[tbl]]
+            }
+            mSet$report <- mSet$storage[[use.dataset]]$report
+          }else{
+            if(mSet$metshiParams$renorm){
+              mSet$dataSet$orig <- mSet$dataSet$start
+              mSet$dataSet$start <- mSet$dataSet$preproc <- mSet$dataSet$proc <- mSet$dataSet$prenorm <- NULL
+              mSet <- metshiProcess(mSet)
+            }  
           }
           
           new.name = if(mSetter$do == "load") input$storage_choice else name.mSet(mSet)

@@ -93,6 +93,7 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                  enrich$current <- myHits
                },
                venn = {
+                 print(d)
                  if("key" %in% colnames(d)){
                    picked_intersection = d$key[[1]]
                    groups = stringr::str_split(picked_intersection, "<br />")[[1]]

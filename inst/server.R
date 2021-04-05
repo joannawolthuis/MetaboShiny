@@ -8,6 +8,7 @@ function(input, output, session) {
   library(SPARQL)
   library(MetaboShiny)
   library(MetaDBparse)
+  library(plyr)
   library(dplyr)
   
   options(shiny.maxRequestSize=50000*1024^2)
@@ -110,13 +111,15 @@ function(input, output, session) {
                                          forward_unique = data.table::data.table(),
                                          reverse = data.table::data.table())
   
+  ml_queue <- shiny::reactiveValues(jobs = list())
+  
   enrich <- shiny::reactiveValues(overview =data.table::data.table("not run" = "run enrichment in sidebar :)"),
                                   current = data.table::data.table("nothing selected" = "please select a pathway to see selected m/z!"))
   
   browse_content <- shiny::reactiveValues(table = data.table::data.table())
   
   result_filters <- shiny::reactiveValues(add = list(positive = c(),
-                                                     negative = c()), 
+                                                     negative = c()),
                                           db = c(), 
                                           iso = c())
   
@@ -288,6 +291,16 @@ beep = no')
         opts$beep <- "none"
         MetaboShiny::setOption(lcl$paths$opt.loc, "beep", "none")
       }
+      
+      seeb = 1337
+      if("seed" %in% names(opts)){
+        print("Setting user-defined seed...")
+        seeb <- as.numeric(opts$seed)
+      }
+      
+      set.seed(seeb)
+      lcl$seed <<- seeb
+      shiny::updateNumericInput(session, "seed", value = seeb)
       
       options('unzip.unzip' = getOption("unzip"),
               'download.file.extra' = switch(runmode, 
@@ -590,6 +603,14 @@ beep = no')
     output$api_set <- shiny::renderText("key saved!")
   })
   
+  shiny::observeEvent(input$set_seed, {
+    print("Setting RNG seed...")
+    MetaboShiny::setOption(lcl$paths$opt.loc, "seed", input$seed)
+    lcl$seed <<- input$seed
+    set.seed(as.numeric(lcl$seed))
+    output$curr_seed <- shiny::renderText(as.character(lcl$seed))
+  })
+  
   shiny::observeEvent(input$beep, {
     if(input$nav_general == "options"){
       MetaboShiny::setOption(lcl$paths$opt.loc, "beep", input$beep)
@@ -654,6 +675,7 @@ beep = no')
     assign("result_filters",  shiny::isolate(shiny::reactiveValuesToList(result_filters)), envir = .GlobalEnv)
     assign("report_yes",  shiny::isolate(shiny::reactiveValuesToList(report_yes)), envir = .GlobalEnv)
     assign("venn_yes",  shiny::isolate(shiny::reactiveValuesToList(venn_yes)), envir = .GlobalEnv)
+    assign("ml_queue",  shiny::isolate(shiny::reactiveValuesToList(ml_queue)), envir = .GlobalEnv)
   })
   
   # for(obj in names(mSet$storage$animal$data)){

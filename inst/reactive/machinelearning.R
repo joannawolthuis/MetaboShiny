@@ -44,7 +44,7 @@ shiny::observe({
 output$ml_name <- shiny::renderUI({
   ml_name = ""
   try({
-    ml_name = trimws(paste0(if(input$ml_run_on_norm) "norm" else "orig",
+    ml_name = trimws(paste0(ml_run_on_norm,
                             " ",
                             input$ml_train_perc, "%train",
                             " ",
@@ -106,7 +106,6 @@ output$ml_name <- shiny::renderUI({
       ml_name = paste0(ml_name, " ", ml_settings)
     }
   }, silent=T)
-
   shiny::textInput("ml_name", 
                    label=shiny::h3("Name:"), 
                    value = ml_name)
@@ -137,4 +136,19 @@ shiny::observeEvent(input$reset_ml_test, {
   subset.name <- "all"
   lcl$vectors$ml_test <<- NULL
   output$ml_test_ss <- shiny::renderText(subset.name)
+})
+
+shiny::observeEvent(input$queue_ml, {
+  imp = shiny::isolate(shiny::reactiveValuesToList(input))
+  ml_args = imp[grep(names(imp),pattern = "^ml_")]
+  ml_args = ml_args[grep("clicked|current|rows|ss|tab_|mistake|curve|results", names(ml_args),invert = T)]
+  ml_args$ml_train_subset <- lcl$vectors$ml_train
+  ml_args$ml_test_subset <- lcl$vectors$ml_test
+  # save to queue
+  ml_queue$jobs[[ml_args$ml_name]] <- ml_args
+})
+
+shiny::observeEvent(input$queue_ml_del, {
+  row = input$ml_queue_rows_selected
+  ml_queue$jobs = ml_queue$jobs[-row]
 })
