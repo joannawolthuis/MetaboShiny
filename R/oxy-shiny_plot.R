@@ -1964,8 +1964,8 @@ ggPlotVenn <- function(mSet,
   p$layers[[1]]$mapping[['key']] <- p$layers[[1]]$mapping[['text']]
   p$layers[[1]]$mapping[['key']]
   p$layers[[1]]$data$key = p$layers[[1]]$data$text
+  p = p + scale_fill_gradient(low = "white", high = "#6F6F6F")
   
-  p = p + scale_fill_gradient(low = "white", high = "gray2")
   list(plot = p, info = flattened)
 }
 

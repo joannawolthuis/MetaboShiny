@@ -344,6 +344,7 @@ change.mSet <-
         mSet$dataSet$cls <- mSet$dataSet$orig.cls <-
           as.factor(mSet$dataSet$covars[, ..change_var, with = F][[1]])
         
+        print(mSet$dataSet$cls)
         # adjust bivariate/multivariate (2, >2)...
         mSet$dataSet$cls.num <- mSet$dataSet$orig.cls.num <-
           length(levels(mSet$dataSet$cls))

@@ -1,3 +1,5 @@
+install.packages("pacman")
+
 # METADBPARSE REQUIREMENTS
 pacman::p_load(pacman, rcdk, rJava, parallel, pbapply, enviPat, data.table,
                RSQLite, DBI, gsubfn, utils, RCurl, XML, base, 
