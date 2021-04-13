@@ -348,6 +348,7 @@ shiny::observe({
                  try({
                    shiny::setProgress(value = 0)
                    
+                   print(ml_queue$jobs)
                    ### save args ###
                    for(settings in ml_queue$jobs){
                      
@@ -362,6 +363,19 @@ shiny::observe({
                                                              orig = mSet$dataSet$orig,
                                                              norm = mSet$dataSet$norm,
                                                              pca = mSet$analSet$pca$x))
+                     
+                     # -- pc correction --
+                     if(settings$ml_pca_corr & pickedTbl != 'pca'){
+                       print("Performing PCA and subtracting PCs...")
+                       res <- prcomp(curr, 
+                                     center = if(pickedTbl == "norm") F else T,
+                                     scale = if(pickedTbl == "norm") F else T)
+                       pc.use <- as.numeric(settings$ml_keep_pcs[1]:settings$ml_keep_pcs[2]) # explains 93% of variance
+                       trunc <- res$x[,pc.use] %*% t(res$rotation[,pc.use])
+                       curr <- as.data.frame(trunc)
+                     }
+                     
+                     # -------------------
                      
                      if(pickedTbl != "pca"){
                        if(settings$ml_specific_mzs != "no"){
