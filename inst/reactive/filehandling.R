@@ -67,7 +67,7 @@ observe({
   if(is.null(given_dir)) return()
   # change db storage directory in user options file
   MetaboShiny::setOption(lcl$paths$opt.loc, key="db_dir", value=given_dir)
-
+  lcl$paths$db_dir <- given_dir
   # render current db location in text
   output$curr_db_dir <- shiny::renderText({getOptions(lcl$paths$opt.loc)$db_dir})
 })

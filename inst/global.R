@@ -299,11 +299,13 @@ paths = list(
              "Documents",
              "Downloads",
              "Desktop",
-             "Examples")
+             "Examples",
+             "System Root")
     home = normalizePath("~")
     folders = lapply(vols, 
                      FUN = function(folder){
                        switch(folder,
+                              `System Root` = "/",
                               Recent = system.file("examples",
                                                    package = "MetaboShiny"),
                               Home = home,

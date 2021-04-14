@@ -1,4 +1,8 @@
+install.packages("devtools")
+install.packages("BiocManager")
+BiocManager::install("org.Hs.eg.db")
 install.packages("pacman")
+library(pacman)
 
 # METADBPARSE REQUIREMENTS
 pacman::p_load(pacman, rcdk, rJava, parallel, pbapply, enviPat, data.table,
@@ -13,7 +17,7 @@ pacman::p_load(ggplot2, data.table, plotly, shinyBS, shinyjs, caret, grDevices,
                BiocManager, pacman, devtools, classyfireR, httr, jsonlite, RCurl, shinyFiles,
                DT, RSQLite, pbapply, stringr, gsubfn, shinyWidgets, parallel,
                mice, sva, limma, tools, plyr, heatmaply, wordcloud2, shinyjqui, rmarkdown,
-               enviPat, ROCR, tsne, e1071)
+               enviPat, ROCR, tsne, e1071, genefilter)
 
 pacman::p_load(pls, rhandsontable, testthat, shinytest, showtext, sysfonts, colourpicker,
                reshape, ggdark, ECharts2Shiny, shinyalert, shinybusy, rcdk, RISmed, dplyr,
@@ -28,25 +32,20 @@ pacman::p_load(BiocParallel, IRanges, plyr, preprocessCore, vsn,
                          digest, lattice, ggplot2, XML, scales, MASS, Rcpp)
 
 pacman::p_load(multtest, siggenes, KEGGgraph, SSPA, preprocessCore,
-                         Rgraphviz, GlobalAncova, globaltest, pcaMethods, impute, pmp)
+                         Rgraphviz, GlobalAncova, globaltest, pcaMethods, impute)
 
 pacman::p_load(MSnbase)
 pacman::p_load(fgsea)
 BiocManager::install("RBGL")
 pacman::p_load(crmn)
 
-# 0d61192
-devtools::install_github("xia-lab/MetaboAnalystR","0d61192")
-#devtools::install_github("yixuan/showtext")
+devtools::install_github("xia-lab/MetaboAnalystR", "0d61192")
+devtools::install_github("yixuan/showtext")
 devtools::install_github("gaospecial/ggVennDiagram")
 devtools::install_github("dengkuistat/WaveICA")
 
-# covbat
-devtools::install_github("andy1764/CovBat_Harmonization/R")
+install.packages("rJava", type="source")
 
-install.packages("rJava", type="source", configure.args=c("--disable-jri"))
+devtools::install_github("UMCUGenetics/MetaDBparse")
+devtools::install_github("UMCUGenetics/MetaboShiny", "dev")
 
-devtools::install_github("joannawolthuis/MetaDBparse")
-devtools::install_github("joannawolthuis/MetaboShiny", "dev")
-
-MetaboShiny::start_metshi(inBrowser=T)

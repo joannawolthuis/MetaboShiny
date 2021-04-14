@@ -9,7 +9,8 @@ shiny::observe({
     for(db in dbmanager$build){
       #shiny::withProgress({
         # send necessary functions and libraries to parallel threads
-        parallel::clusterExport(session_cl, envir = .GlobalEnv, varlist = list(
+        print(session_cl)
+        parallel::clusterExport(cl = session_cl, envir = .GlobalEnv, varlist = list(
           "isotopes"
         )) 
         pkgs = c("data.table", "enviPat", 
@@ -29,7 +30,7 @@ shiny::observe({
           # - - - - - - - -
           MetaDBparse::buildBaseDB(dbname = db,
                                    outfolder = normalizePath(lcl$paths$db_dir), 
-                                   cl = 0,#session_cl,
+                                   cl = session_cl,
                                    custom_csv_path = if(!custom) NULL else custom_csv,
                                    silent = F)
         }

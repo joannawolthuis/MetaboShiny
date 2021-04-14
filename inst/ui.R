@@ -2001,7 +2001,13 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                       #                           value = F,
                                                                                       #                           col = "BW", type = "YN")
                                                                                       shiny::fluidRow(align="center",
-                                                                                                      shiny::sliderInput("ncores", "How many cores can MetShi use?", value=2, min=1, max = parallel::detectCores() - 1),
+                                                                                                      # work folder
+                                                                                                      shinyFiles::shinyDirButton("get_work_dir",label = "Change projects folder",title = "Pick projects directory"),
+                                                                                                      shiny::textOutput("curr_exp_dir"),
+                                                                                                      # db folder
+                                                                                                      shinyFiles::shinyDirButton("get_db_dir",label = "Change database folder", title = "Pick database directory"),
+                                                                                                      shiny::textOutput("curr_db_dir"),
+                                                                                                      shiny::uiOutput("ncore_ui"),
                                                                                                       shiny::br(),
                                                                                                       shiny::numericInput("seed", "Which seed do you want to use for randomization?",value = 1337),
                                                                                                       shiny::actionButton("set_seed",label = "apply"),

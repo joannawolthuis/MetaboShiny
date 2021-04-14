@@ -148,16 +148,68 @@ function(input, output, session) {
     
     if(exists("lcl")){
       # - - - 
-      userfolder = "~/MetaboShiny/saves/admin"
-      dbdir = "~/MetaboShiny/databases"
+      # create dir for options
+      basedir="~/MetaboShiny"
+      if(!dir.exists(basedir)) dir.create(basedir,recursive = T)
+      
+      lcl$paths$opt.loc <<- file.path(basedir, "options.txt")
+      old.wd = getwd()
+      
+      # == LOAD OPTIONS ==
+      # look for existing source folder that DOESN'T MATCH the files
+      if(!file.exists(lcl$paths$opt.loc)){
+        shiny::showNotification("Welcome! Creating new user options file...")
+        contents = gsubfn::fn$paste('db_dir = "~/MetaboShiny/databases"
+work_dir = "~/MetaboShiny/saves/admin"
+proj_name = MY_METSHI
+ppm = 2
+packages_installed = Y
+font1 = Dosis
+font2 = Dosis
+font3 = Open Sans
+font4 = Open Sans
+col1 = #1961AB
+col2 = #FFFFFF
+col3 = #FFFFFF
+col4 = #000000
+size1 = 40
+size2 = 20
+size3 = 15
+size4 = 11
+taskbar_image = metshi_logo.png
+gtheme = classic
+gcols = #1C1400&#FFE552&#D49C1A&#EBC173&#8A00ED&#00E0C2&#95C200&#FF6BE4&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF
+gspec = RdBu
+mode = complete
+cores = 1
+apikey =  
+dbfavs =  
+omit_unknown = yes
+beep = no')
+        writeLines(contents, lcl$paths$opt.loc)
+      }
+      
+      opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
+      # ==================
+      
+      if(opts$work_dir == ""){
+        userfolder = "~/MetaboShiny/saves/admin"  
+      }else{
+        userfolder = opts$work_dir
+      }
+      
+      if(opts$db_dir == ""){
+        dbdir = "~/MetaboShiny/databases"  
+      }else{
+        dbdir = opts$db_dir
+      }
+      
       # - - - 
       if(!dir.exists(userfolder)) dir.create(userfolder,recursive = T)
       if(!dir.exists(dbdir)) dir.create(dbdir,recursive = T)
-      lcl$paths$opt.loc <<- file.path(userfolder, "options.txt")
       lcl$paths$work_dir <<- userfolder
       lcl$paths$db_dir <<- dbdir
       
-      old.wd = getwd()
       setwd(lcl$paths$work_dir)
       
       on.exit({
@@ -249,44 +301,6 @@ function(input, output, session) {
       
       db_section$load <- TRUE
       
-      # look for existing source folder that DOESN'T MATCH the files
-      if(!file.exists(lcl$paths$opt.loc)){
-        shiny::showNotification("Welcome! Creating new user options file...")
-        contents = gsubfn::fn$paste('db_dir = $dbdir
-work_dir = $userfolder
-proj_name = MY_METSHI
-ppm = 2
-packages_installed = Y
-font1 = Dosis
-font2 = Dosis
-font3 = Open Sans
-font4 = Open Sans
-col1 = #1961AB
-col2 = #FFFFFF
-col3 = #FFFFFF
-col4 = #000000
-size1 = 40
-size2 = 20
-size3 = 15
-size4 = 11
-taskbar_image = metshi_logo.png
-gtheme = classic
-gcols = #1C1400&#FFE552&#D49C1A&#EBC173&#8A00ED&#00E0C2&#95C200&#FF6BE4&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF
-gspec = RdBu
-mode = complete
-cores = 1
-apikey =  
-dbfavs =  
-omit_unknown = yes
-beep = no')
-        writeLines(contents, lcl$paths$opt.loc)
-      }
-      
-      # = = = = = = =
-      
-      shiny::showNotification("Loading interface...")
-      opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
-      
       if(!("beep" %in% names(opts))){
         opts$beep <- "none"
         MetaboShiny::setOption(lcl$paths$opt.loc, "beep", "none")
@@ -309,8 +323,16 @@ beep = no')
               'download.file.method' = 'curl',
               width = 1200, height=800)
       
-      shiny::updateSliderInput(session, "ncores", value = as.numeric(opts$cores))
-      # send specific functions/packages to other threads
+      maxcores = if(Sys.getenv("SLURM_CPUS_ON_NODE") != ""){
+        as.numeric(Sys.getenv("SLURM_CPUS_ON_NODE"))
+      }else parallel::detectCores()
+      
+      output$ncore_ui <- shiny::renderUI({
+        shiny::sliderInput("ncores", "How many cores can MetShi use?", 
+                           value = min(maxcores-1, as.numeric(opts$cores)), min = 1, 
+                           max = maxcores - 1)
+      })
+            # send specific functions/packages to other threads
       
       if("adducts" %in% names(opts)){
         fav_adducts <- opts$adducts
@@ -593,7 +615,8 @@ beep = no')
       library(data.table)
       library(iterators)
       library(MetaboShiny)
-      library(MetaDBparse)})
+      library(MetaDBparse)
+      })
     MetaboShiny::setOption(lcl$paths$opt.loc, "cores", input$ncores)
   })
   
