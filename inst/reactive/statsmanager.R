@@ -346,14 +346,14 @@ shiny::observe({
                },
                ml = {
                  try({
-                   shiny::setProgress(value = 0)
                    
                    print(ml_queue$jobs)
-                   ### save args ###
-                   for(settings in ml_queue$jobs){
-                     
-                     print(settings$ml_name)
-                     
+                   
+                   # paralellize
+                   ml_queue_res = pbapply::pblapply(ml_queue$jobs,
+                                                    cl = if(length(ml_queue$jobs) == 1) 0 else session_cl, 
+                                                    function(settings, mSet, input, within_cl){
+                                                      
                      pickedTbl <- settings$ml_used_table
                      if(pickedTbl == "pca" & !("pca" %in% names(mSet$analSet))){
                        stop("Please run PCA first!")
@@ -836,7 +836,7 @@ shiny::observe({
                        {
                          lst = lapply(1:nrow(params), function(i){
                            info = params[i,]
-                           inp.val = input[[paste0("ml_", info$parameter)]]
+                           inp.val = settings[[paste0("ml_", info$parameter)]]
                            # - - check for ranges - -
                            if(grepl(inp.val, pattern=":")){
                              split = strsplit(inp.val,split = ":")[[1]]
@@ -872,9 +872,9 @@ shiny::observe({
                      
                      # get results for the amount of attempts chosen
                      
-                     shiny::withProgress(message = "Running...", {
+                     #shiny::withProgress(message = "Running...", {
                        repeats <- pbapply::pblapply(1:goes,
-                                                    cl = session_cl,
+                                                    cl = within_cl,
                                                     function(i, 
                                                              train_vec,
                                                              test_vec,
@@ -924,7 +924,6 @@ shiny::observe({
                                                     folds = folds,
                                                     maximize = settings$ml_maximize
                        )
-                     })
                      
                      # check if a storage list for machine learning results already exists
                      if(!("ml" %in% names(mSet$analSet))){
@@ -1068,10 +1067,20 @@ shiny::observe({
                        mSet$analSet$ml[[settings$ml_method]] <- list()
                      }
                      
-                     mSet$analSet$ml[[settings$ml_method]][[settings$ml_name]] <- list("roc" = roc_data,
-                                                                                       "bar" = bar_data,
-                                                                                       "distr" = lapply(repeats, function(x) x$distr),
-                                                                                       "params" = settings)
+                     list("roc" = roc_data,
+                          "bar" = bar_data,
+                          "distr" = lapply(repeats, function(x) x$distr),
+                          "params" = settings)
+                     
+                   },
+                   mSet=mSet, 
+                   input=input, 
+                   within_cl=if(length(ml_queue$jobs)==1) session_cl else 0)
+                   
+                   print("Gathering results...")
+                   for(res in ml_queue_res){
+                     mSet$analSet$ml[[res$params$ml_method]][[res$params$ml_name]] <- res
+                     settings <- res$params
                    }
                    mSet$analSet$ml$last <- list(name = settings$ml_name,
                                                 method = settings$ml_method)
