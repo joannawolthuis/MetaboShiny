@@ -42,7 +42,7 @@ pacman::p_load(crmn)
 devtools::install_github("xia-lab/MetaboAnalystR", "0d61192")
 devtools::install_github("yixuan/showtext")
 devtools::install_github("gaospecial/ggVennDiagram")
-devtools::install_github("dengkuistat/WaveICA")
+devtools::install_github("joannawolthuis/WaveICA")
 
 install.packages("rJava", type="source")
 

@@ -648,7 +648,7 @@ pair.mSet <- function(mSet) {
   mSet
 }
 
-batchCorr_mSet <- function(mSet, method, batch_var){
+batchCorr_mSet <- function(mSet, method, batch_var, cl=0){
   switch(method, 
          pmp = {
            batch.idx <- as.numeric(as.factor(mSet$dataSet$covars$batch))
@@ -683,7 +683,7 @@ batchCorr_mSet <- function(mSet, method, batch_var){
                                               dtNorm$injection.order),]
            dtNorm_stat_order <- dtNorm_merge_order[,-c(1:4)]
            
-           waveCorr = WaveICA::WaveICA(dtNorm_stat_order, batch = dtNorm_merge_order$batch)
+           waveCorr = WaveICA::WaveICA(dtNorm_stat_order, batch = dtNorm_merge_order$batch, cl=cl)
            waveCorr = waveCorr$data_wave
            old.order = rownames(mSet$dataSet$norm)
            new.order = rownames(waveCorr)

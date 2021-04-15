@@ -1666,7 +1666,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
   res
 }
 
-metshiProcess <- function(mSet, session, init=F){
+metshiProcess <- function(mSet, session, init=F, cl=0){
   
   sums = colSums(mSet$dataSet$missing)
   missing.per.mz.perc = sums/nrow(mSet$dataSet$missing)*100
@@ -1714,7 +1714,7 @@ metshiProcess <- function(mSet, session, init=F){
       mSet$dataSet$proc <- MetaboShiny::replRF(mSet, 
                                                parallelMode = mSet$metshiParams$rf_norm_parallelize, 
                                                ntree = mSet$metshiParams$rf_norm_ntree,
-                                               cl = session_cl)
+                                               cl = cl)
       rownames(mSet$dataSet$proc) <- rownames(mSet$dataSet$preproc)
       # - - - - - - - - - - - -
     }else{
@@ -1860,7 +1860,7 @@ metshiProcess <- function(mSet, session, init=F){
           batch_method_a <- "waveica"
         }
         
-        mSet$dataSet$norm <- batchCorr_mSet(mSet, batch_method_a, batch_var = left_batch_vars)
+        mSet$dataSet$norm <- batchCorr_mSet(mSet, batch_method_a, batch_var = left_batch_vars, cl=cl)
         
         left_batch_vars <- grep(left_batch_vars,
                                 pattern = "batch|injection|sample",
@@ -1872,7 +1872,7 @@ metshiProcess <- function(mSet, session, init=F){
       if(length(left_batch_vars) == 0){
         NULL # if none left, continue after this
       } else{
-        mSet$dataSet$norm <- batchCorr_mSet(mSet, batch_method_b, batch_var = left_batch_vars) 
+        mSet$dataSet$norm <- batchCorr_mSet(mSet, batch_method_b, batch_var = left_batch_vars, cl=cl) 
       }}
   }
   

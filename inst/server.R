@@ -327,11 +327,16 @@ beep = no')
         as.numeric(Sys.getenv("SLURM_CPUS_ON_NODE"))
       }else parallel::detectCores()
       
-      output$ncore_ui <- shiny::renderUI({
-        shiny::sliderInput("ncores", "How many cores can MetShi use?", 
-                           value = min(maxcores-1, as.numeric(opts$cores)), min = 1, 
-                           max = maxcores - 1)
-      })
+      # output$ncore_ui <- shiny::renderUI({
+      #   shiny::sliderInput("ncores", "How many cores can MetShi use?", 
+      #                      value = min(maxcores-1, as.numeric(opts$cores)), min = 1, 
+      #                      max = maxcores - 1)
+      # })
+      
+      shiny::updateSliderInput(session, "ncores",
+                               value = min(maxcores-1, as.numeric(opts$cores)), 
+                               min = 1, 
+                               max = maxcores - 1)
             # send specific functions/packages to other threads
       
       if("adducts" %in% names(opts)){
@@ -608,7 +613,6 @@ beep = no')
       parallel::stopCluster(session_cl)
     }
     shiny::showNotification("Starting new threads...")
-    
     session_cl <<- parallel::makeCluster(input$ncores)#,outfile="")#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
     # send specific functions/packages to other threads
     parallel::clusterEvalQ(session_cl, {
