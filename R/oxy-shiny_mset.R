@@ -343,8 +343,6 @@ change.mSet <-
         # change current variable of interest to user pick from covars table
         mSet$dataSet$cls <- mSet$dataSet$orig.cls <-
           as.factor(mSet$dataSet$covars[, ..change_var, with = F][[1]])
-        
-        print(mSet$dataSet$cls)
         # adjust bivariate/multivariate (2, >2)...
         mSet$dataSet$cls.num <- mSet$dataSet$orig.cls.num <-
           length(levels(mSet$dataSet$cls))
@@ -435,7 +433,7 @@ change.mSet <-
 # subset by mz
 subset_mSet_mz <- function(mSet, keep.mzs) {
   if (length(keep.mzs) > 0) {
-    tables = c("start", "orig", "norm", "proc","preproc","missing", "prebatch")
+    tables = c("start", "orig", "norm", "proc","preproc","missing", "prebatch", "prenorm")
     combi.tbl = data.table::data.table(tbl = tables)
     
     for (i in 1:nrow(combi.tbl)){
@@ -476,8 +474,8 @@ subset_mSet <- function(mSet, subset_var, subset_group) {
     mSet$dataSet$covars <-
       mSet$dataSet$covars[sample %in% keep.samples, ]
     
-    tables = c("start", "orig", "norm", "proc","preproc","missing", "prebatch")
-    clss = c("placeholder", "orig.cls", "cls", "proc.cls", "preproc.cls", "placeholder", "placeholder")
+    tables = c("start", "orig", "norm", "proc","preproc","missing", "prebatch", "prenorm")
+    clss = c("placeholder", "orig.cls", "cls", "proc.cls", "preproc.cls", "placeholder", "placeholder", "prenorm.cls")
     combi.tbl = data.table::data.table(tbl = tables,
                                        cls = clss)
     
@@ -491,32 +489,41 @@ subset_mSet <- function(mSet, subset_var, subset_group) {
         cls = combi.tbl$cls[i]
         keep = which(rownames(mSet$dataSet[[tbl]]) %in% keep.samples)
         mSet$dataSet[[tbl]] <- mSet$dataSet[[tbl]][keep, ]
-        sampOrder = match(rownames(mSet$dataSet[[tbl]]),
-                          mSet$dataSet$covars$sample)
+        # sampOrder = match(rownames(mSet$dataSet[[tbl]]),
+        #                   mSet$dataSet$covars$sample)
+        # reorder table
+        sampOrder = match(
+          mSet$dataSet$covars$sample,
+          rownames(mSet$dataSet[[tbl]]))
+        is_there = tbl %in% names(mSet$dataSet)
         
-        if(!(tbl %in% c("start", "missing", "prebatch"))){
-          mSet$dataSet[[cls]] <-
-            as.factor(mSet$dataSet$covars[sampOrder, mSet$settings$exp.var, with = F][[1]])
-          if (cls == "cls") {
-            mSet$dataSet$cls.num <- length(levels(mSet$dataSet[[cls]]))
-            if ("facA" %in% names(mSet$dataSet)) {
-              mSet$dataSet$facA <-
-                as.factor(mSet$dataSet$covars[sampOrder, mSet$dataSet$facA.lbl, with =
-                                                F][[1]])
-              mSet$dataSet$facB <-
-                as.factor(mSet$dataSet$covars[sampOrder, mSet$dataSet$facB.lbl, with =
-                                                F][[1]])
-            }
-            if ("time.fac" %in% names(mSet$dataSet)) {
-              mSet$settings$time.fac <-
-                as.factor(mSet$dataSet$covars[sampOrder, mSet$settings$time.var, with =
-                                                F][[1]])
-              mSet$settings$exp.fac <-
-                as.factor(mSet$dataSet$covars[sampOrder, mSet$settings$exp.var, with = F][[1]])
-            }
+        if(is_there){
+          mSet$dataSet[[tbl]] <- mSet$dataSet[[tbl]][sampOrder, ] #reorder
+          
+          if(!(tbl %in% c("start", "missing", "prebatch"))){
+            mSet$dataSet[[cls]] <-
+              as.factor(mSet$dataSet$covars[, mSet$settings$exp.var, 
+                                            with = F][[1]])
+            if (cls == "cls") {
+              mSet$dataSet$cls.num <- length(levels(mSet$dataSet[[cls]]))
+              if ("facA" %in% names(mSet$dataSet)) {
+                mSet$dataSet$facA <-
+                  as.factor(mSet$dataSet$covars[, mSet$dataSet$facA.lbl, with =
+                                                  F][[1]])
+                mSet$dataSet$facB <-
+                  as.factor(mSet$dataSet$covars[, mSet$dataSet$facB.lbl, with =
+                                                  F][[1]])
+              }
+              if ("time.fac" %in% names(mSet$dataSet)) {
+                mSet$settings$time.fac <-
+                  as.factor(mSet$dataSet$covars[, mSet$settings$time.var, with =
+                                                  F][[1]])
+                mSet$settings$exp.fac <-
+                  as.factor(mSet$dataSet$covars[, mSet$settings$exp.var, with = F][[1]])
+              }
+            }  
           }  
         }
-        
       }, silent = T)
     }
     mSet$settings$subset[[subset_var]] <- subset_group

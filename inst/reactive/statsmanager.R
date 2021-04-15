@@ -347,8 +347,6 @@ shiny::observe({
                ml = {
                  try({
                    
-                   print(ml_queue$jobs)
-                   
                    # paralellize
                    ml_queue_res = pbapply::pblapply(ml_queue$jobs,
                                                     cl = if(length(ml_queue$jobs) == 1) 0 else session_cl, 
@@ -1077,14 +1075,14 @@ shiny::observe({
                    input=input, 
                    within_cl=if(length(ml_queue$jobs)==1) session_cl else 0)
                    
-                   print("Gathering results...")
+                   shiny::showNotification("Gathering results...")
                    for(res in ml_queue_res){
                      mSet$analSet$ml[[res$params$ml_method]][[res$params$ml_name]] <- res
                      settings <- res$params
                    }
                    mSet$analSet$ml$last <- list(name = settings$ml_name,
                                                 method = settings$ml_method)
-                   print("Done!")
+                   shiny::showNotification("Done!")
                    lcl$vectors$ml_train <- lcl$vectors$ml_train <<- NULL
                  })
                },

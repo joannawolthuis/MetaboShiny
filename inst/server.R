@@ -308,7 +308,7 @@ beep = no')
       
       seeb = 1337
       if("seed" %in% names(opts)){
-        print("Setting user-defined seed...")
+        shiny::showNotification("Setting user-defined seed...")
         seeb <- as.numeric(opts$seed)
       }
       
@@ -631,7 +631,7 @@ beep = no')
   })
   
   shiny::observeEvent(input$set_seed, {
-    print("Setting RNG seed...")
+    shiny::showNotification("Setting RNG seed...")
     MetaboShiny::setOption(lcl$paths$opt.loc, "seed", input$seed)
     lcl$seed <<- input$seed
     set.seed(as.numeric(lcl$seed))

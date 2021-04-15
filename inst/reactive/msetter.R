@@ -147,7 +147,7 @@ shiny::observe({
             if(mSet$metshiParams$renorm){
               mSet$dataSet$orig <- mSet$dataSet$start
               mSet$dataSet$start <- mSet$dataSet$preproc <- mSet$dataSet$proc <- mSet$dataSet$prenorm <- NULL
-              mSet <- metshiProcess(mSet)
+              mSet <- metshiProcess(mSet, cl = session_cl) #mSet1
             }  
           }
           
@@ -183,16 +183,16 @@ shiny::observe({
             shiny::showNotification(msg) 
           })
           print(msg)
+          mSet <<- mSet
+          lcl$has_changed <<- TRUE
+          uimanager$refresh <- c("general", "ml")
         }else{
-          msg = "ordering went wrong with the mset sample order! :("
+          msg = "mSet class label order incorrect! Restoring... :("
           try({
             shiny::showNotification(msg)
           })
           print(msg)
         }
-        mSet <<- mSet
-        lcl$has_changed <<- TRUE
-        uimanager$refresh <- c("general", "ml")
       }else{
         metshiAlert("Failed! Restoring old mSet...")
       }

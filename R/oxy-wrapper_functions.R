@@ -1740,10 +1740,9 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
   }
   
   mSet <- MetaboAnalystR::PreparePrenormData(mSet)
-  
+
   if(mSet$metshiParams$norm_type == "QcNorm"){
-    data <- qs::qread("prenorm.qs")
-    
+    data <- qs::qread("prenorm.qs")  
     rematch = match(
       rownames(data),
       mSet$dataSet$covars$sample
@@ -1773,12 +1772,14 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
     qc_norm_table = do.call("rbind", normalized_blocks)
     mSet$dataSet$norm <- qc_norm_table
   }else{
+    data <- qs::qread("prenorm.qs")  
     # normalize dataset with user settings(result: mSet$dataSet$norm)
     mSet <- MetaboAnalystR::Normalization(mSet,
                                           rowNorm = mSet$metshiParams$norm_type,
                                           transNorm = mSet$metshiParams$trans_type,
                                           scaleNorm = mSet$metshiParams$scale_type,
                                           ref = mSet$metshiParams$ref_var) 
+
   }
   
   mSet$dataSet$prenorm <- NULL
@@ -1920,4 +1921,5 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
   
   mSet$analSet <- list(type = "stat")
   mSet
+  # TODO: WHERE IS THE REORDERING FAILING?
 }
