@@ -613,7 +613,7 @@ beep = no')
       parallel::stopCluster(session_cl)
     }
     shiny::showNotification("Starting new threads...")
-    session_cl <<- parallel::makeCluster(input$ncores)#,outfile="")#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
+    session_cl <<- parallel::makeCluster(input$ncores,outfile="")#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
     # send specific functions/packages to other threads
     parallel::clusterEvalQ(session_cl, {
       library(data.table)

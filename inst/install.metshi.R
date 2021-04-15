@@ -32,7 +32,8 @@ pacman::p_load(BiocParallel, IRanges, plyr, preprocessCore, vsn,
                          digest, lattice, ggplot2, XML, scales, MASS, Rcpp)
 
 pacman::p_load(multtest, siggenes, KEGGgraph, SSPA, preprocessCore,
-                         Rgraphviz, GlobalAncova, globaltest, pcaMethods, impute)
+                         Rgraphviz, GlobalAncova, globaltest, pcaMethods, impute,
+               multiROC)
 
 pacman::p_load(MSnbase)
 pacman::p_load(fgsea)
