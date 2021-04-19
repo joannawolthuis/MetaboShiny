@@ -1934,9 +1934,14 @@ ggPlotVenn <- function(mSet,
                        venn_yes,
                        top = 100,
                        cols,
+                       filter_mode="top",
                        cf){
   
-  flattened <- getTopHits(mSet, unlist(venn_yes$now), top)
+  flattened <- getTopHits(mSet,
+                          unlist(venn_yes$now$name), 
+                          top, 
+                          thresholds = if(filter_mode == "top") c("") else venn_yes$now$threshold,
+                          filter_mode = filter_mode)
   
   p = ggVennDiagram::ggVennDiagram(flattened,
                                    label_alpha = 1, 

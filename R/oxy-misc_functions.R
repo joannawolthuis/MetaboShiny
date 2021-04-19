@@ -633,3 +633,37 @@ annotation_compass <- function(label,
                                    y=grid::unit(y,"npc") + f2*padding[2],
                                    hjust=hjust,vjust=vjust, ...))
 }
+
+#' @export 
+venn_sample_3 <- function(nrepl, intersectn, n, a, b, c){
+  # https://stats.stackexchange.com/questions/199654/p-value-for-intersection-of-three-circle-venn-diagram
+  res = pbapply::pblapply(1:nrepl, function(i){
+    w <- sample(n,a)
+    x <- sample(n,b)
+    y <- sample(n,c)
+    m <- c(c(w,x)[duplicated(c(w,x))],
+           y)
+    sum(duplicated(m))
+  })
+  expected = sum(unlist(res) > intersectn)
+  p = expected / nrepl
+  p
+}
+
+#' @export
+venn_sample_4 <- function(nrepl, intersectn, n, a, b, c, d){
+  res = pbapply::pblapply(1:nrepl, function(i){
+    w <- sample(n,a)
+    x <- sample(n,b)
+    y <- sample(n,c)
+    z <- sample(n,d)
+    m <- c(c(w,x)[duplicated(c(w,x))],
+           c(x,y)[duplicated(c(x,y))],
+           z)
+    sum(duplicated(m))
+  })
+  expected = sum(unlist(res) > intersectn)
+  p = expected / nrepl
+  p
+}
+

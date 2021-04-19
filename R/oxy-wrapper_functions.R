@@ -640,13 +640,15 @@ metshiTable <- function(content, options=NULL, rownames= T){
 #' @export 
 #' @importFrom stringr str_match
 #' @importFrom data.table as.data.table
-getTopHits <- function(mSet, expnames, top){
+getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
   
   experiments <- stringr::str_match(expnames, 
                                     pattern = "(all m\\/z)|\\(.*\\)")[,1]
   
   experiments <- unique(gsub(experiments, pattern = "\\(\\s*(.+)\\s*\\)", replacement="\\1"))
 
+  exp_table = data.frame(name = expnames, threshold = thresholds)
+  
   table_list <- lapply(experiments, function(experiment){
     if(experiment == "all m/z"){
       flattened = list(colnames(mSet$dataSet$norm))
@@ -663,11 +665,16 @@ getTopHits <- function(mSet, expnames, top){
       categories = grep(unlist(expnames),
                         pattern = paste0("\\(",rgx_exp, "\\)"), value = T)
       
-      categories = gsub(categories, pattern = " \\(\\s*(.+)\\s*\\)", replacement = "")
-      
       # go through the to include analyses
       
       tables <- lapply(categories, function(name){
+        
+        name_orig = name
+        filter = exp_table[exp_table$name == name_orig, "threshold"]
+        sign = stringr::str_extract(filter,pattern = ">|<|=")
+        thresh = as.numeric(gsub(sign, "", filter))
+        
+        name = gsub(name, pattern = " \\(\\s*(.+)\\s*\\)", replacement = "")
         
         base_name <- search_name <- gsub(name, pattern = " -.*$| ", replacement="")
         
@@ -694,54 +701,71 @@ getTopHits <- function(mSet, expnames, top){
                          
                          data.ordered$`m/z` <- gsub("`","",data.ordered$`m/z`)
                          
-                         res = list(data.ordered$`m/z`)
+                         res = list(data.frame(`m/z`=data.ordered$`m/z`,
+                                          value=data.ordered$"importance.mean"))
                          names(res) <- paste0(which.ml, " (", base_name, ")")
                          res
                        },
                        corr = {
-                         res = list(rownames(analysis$corr$cor.mat[order(abs(analysis$corr$cor.mat[,1]),
-                                                                         decreasing = F),]))
+                         values = analysis$corr$cor.mat[order(abs(analysis$corr$cor.mat[,1]),
+                                                                         decreasing = F),]
+                         res = list(data.frame(`m/z` = rownames(values),
+                                               value = values[,2])
+                         )
                          names(res) = base_name
                          res
                        },
                        aov = {
-                         res = list(rownames(analysis$aov$sig.mat[order(analysis$aov$sig.mat[,2],
-                                                                        decreasing = F),]))
+                         values = analysis$aov$sig.mat[order(analysis$aov$sig.mat[,2],
+                                                             decreasing = F),]
+                         res = list(data.frame(`m/z` = rownames(values),
+                                               value = values[,2])
+                         )
                          names(res) = base_name
                          res
                        },
                        aov2 = {
-                         res = list(rownames(analysis$aov2$sig.mat[order(analysis$aov2$sig.mat[,"Interaction(adj.p)"],
-                                                                         decreasing = F),]))
+                         values = analysis$aov2$sig.mat[order(analysis$aov2$sig.mat[,"Interaction(adj.p)"],
+                                                              decreasing = F),]
+                         res = list(data.frame(`m/z` = rownames(values),
+                                               value = values[,2])
+                         )
                          names(res) = base_name
                          res
                        },
                        asca = {
-                         res = list(rownames(analysis$asca$sig.list$Model.ab[order(analysis$asca$sig.list$Model.ab[,1],
-                                                                                   decreasing = T),]))
+                         values = analysis$asca$sig.list$Model.ab[order(analysis$asca$sig.list$Model.ab[,1],
+                                                                        decreasing = T),]
+                         res = list(data.frame(`m/z` = rownames(values),
+                                               value = values[,2])
+                         )
                          names(res) = base_name
                          res
                        },
                        MB = {
-                         res = list(rownames(analysis$MB$stats)[order(analysis$MB$stats[,1],
-                                                                      decreasing = T)])
+                         values = analysis$MB$stats[order(analysis$MB$stats[,1],
+                                                            decreasing = F),]
+                         res = list(data.frame(`m/z` = rownames(values),
+                                               value = values[,2])
+                         )
                          names(res) = base_name
                          res
                        },
                        tt = {
-                         res = list(rownames(analysis$tt$sig.mat[order(analysis$tt$sig.mat[,2],
-                                                                       decreasing = F),]))
+                         values = analysis$tt$sig.mat[order(analysis$tt$sig.mat[,2],
+                                                          decreasing = F),]
+                         res = list(data.frame(`m/z` = rownames(values),
+                                               value = values[,2])
+                                    )
                          names(res) = base_name
                          res
                        },
                        fc = {
-                         res = list(rownames(analysis$fc$sig.mat[order(abs(analysis$fc$sig.mat[,2]),
-                                                                       decreasing = F),]))
-                         names(res) = base_name
-                         res
-                       },
-                       volcano = {
-                         res = list(rownames(analysis$volcano$sig.mat))
+                         values = analysis$tt$sig.mat[order(analysis$fc$sig.mat[,2],
+                                                            decreasing = F),]
+                         res = list(data.frame(`m/z` = rownames(values),
+                                               value = values[,2])
+                         )
                          names(res) = base_name
                          res
                        },
@@ -764,7 +788,6 @@ getTopHits <- function(mSet, expnames, top){
                        },
                        pca = {
                          which.pca <- gsub(name, pattern = "^.*- | ", replacement="")
-                         
                          compounds_pc <- data.table::as.data.table(analysis$pca$rotation,keep.rownames = T)
                          ordered_pc <- setorderv(compounds_pc, which.pca, -1)
                          res <- list(ordered_pc$rn)
@@ -772,26 +795,35 @@ getTopHits <- function(mSet, expnames, top){
                          # - - -
                          res
                        },
-                       volcano = {
-                         res <- list(rownames(analysis$volcano$sig.mat))
-                         names(res) = base_name
-                         res
-                       },
                        {metshiAlert("Not currently supported...")
                          return(NULL)})
         
         if(is.null(tbls)) return(NULL)
         
+        print(top)
+        print(filter_mode)
         # user specified top hits only
         tbls_top <- lapply(tbls, function(tbl){
-          if(length(tbl) < top){
-            tbl
-          }else{
-            tbl[1:top]
-          }
+          filt_tbl = switch(filter_mode,
+                 top = if(nrow(tbl) < top){
+                   tbl[,1]
+                 }else{
+                   tbl[1:top, 1]
+                 },
+                 threshold = tbl[switch(sign,
+                                        ">" = {tbl$value > thresh},
+                                        "=" = {tbl$value == thresh},
+                                        "<" = {tbl$value < thresh}),1])
+          
         })
-        names(tbls_top) <- paste0(experiment, ": ", names(tbls_top))
-        tbls_top
+        keep_tbls = unlist(lapply(tbls_top, function(t) length(t)>0))
+        tbls_top=tbls_top[keep_tbls]
+        if(length(tbls_top)>0){
+          names(tbls_top) <- paste0(experiment, ": ", names(tbls_top))  
+          tbls_top
+        }else{
+          list()
+        }
       })
       
       # unnest the nested lists
@@ -806,7 +838,6 @@ getTopHits <- function(mSet, expnames, top){
       flattened      
     }
   })
-  
   flattened <- flattenlist(table_list)
   names(flattened) <- gsub(x = names(flattened), pattern = "(.*\\.)(.*$)", replacement = "\\2")
   flattened <- lapply(flattened, function(x) x[!is.na(x)])
@@ -841,6 +872,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                      }else{
                        p <- ggPlotVenn(mSet = mSet,
                                        venn_yes = as.list(venn_yes),
+                                       filter_mode = input$venn_filter_mode,
                                        top = input$venn_tophits,
                                        cols = lcl$aes$mycols,
                                        cf = gbl$functions$color.functions[[lcl$aes$spectrum]])

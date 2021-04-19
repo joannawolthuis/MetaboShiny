@@ -50,7 +50,8 @@ shiny::observe({
                        
                        # - - -
                        data.frame(
-                         paste0(analysis_names, " (", name, ")")
+                         name = paste0(analysis_names, " (", name, ")"),
+                         threshold = c("any")
                        )
                      }))
                      venn_no$now <- venn_no$start
