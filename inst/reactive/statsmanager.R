@@ -346,12 +346,22 @@ shiny::observe({
                },
                ml = {
                  try({
+                   # split over queue
+                   ml_queue_cl = parallel::makeCluster(length(ml_queue$jobs), outfile="")
+                   parallel::clusterExport(ml_queue_cl, c("input", "ml_queue"))
+                   parallel::clusterEvalQ(ml_queue_cl, {
+                     library(parallel)
+                     cores_per_job = floor(input$ncores/length(ml_queue$jobs))
+                     job_cl <- makeCluster(cores_per_job, outfile="")
+                     parallel::clusterExport(job_cl, c("input", "ml_queue"))
+                     doParallel::registerDoParallel(job_cl)
+                     print(job_cl)
+                   })
                    
-                   
-                   # paralellize
+                   # parallelize
                    ml_queue_res = pbapply::pblapply(ml_queue$jobs,
-                                                    #cl = if(length(ml_queue$jobs) == 1) 0 else session_cl, 
-                                                    function(settings, mSet, input, within_cl){
+                                                    cl = ml_queue_cl,#if(length(ml_queue$jobs) == 1) 0 else session_cl, 
+                                                    function(settings, mSet, input){
                                                       
                      pickedTbl <- settings$ml_used_table
                      if(pickedTbl == "pca" & !("pca" %in% names(mSet$analSet))){
@@ -373,9 +383,7 @@ shiny::observe({
                        trunc <- res$x[,pc.use] %*% t(res$rotation[,pc.use])
                        curr <- as.data.frame(trunc)
                      }
-                     
-                     # -------------------
-                     
+                    
                      if(pickedTbl != "pca"){
                        if(settings$ml_specific_mzs != "no"){
                          shiny::showNotification("Using user-specified m/z set.")
@@ -513,13 +521,6 @@ shiny::observe({
                        train_idx = caret::createDataPartition(y = split_label, 
                                                               p = settings$ml_train_perc/100,
                                                               list = FALSE)[,1] # partition data in a balanced way (uses labels)
-                       
-                       # == just borrowing this func for nested cv ==
-                       # covar_tbl = mSet$dataSet$covars
-                       # covar_tbl$cv_nest <- c("ml")
-                       # covar_tbl$cv_nest[train_idx] <- "ttfc"
-                       # data.table::fwrite(covar_tbl, "~/Desktop/dsm_farms_metadata_feb21.csv")
-                       # ============================================
                        
                        test_idx = setdiff(1:nrow(t), train_idx)
                      }
@@ -865,72 +866,29 @@ shiny::observe({
                      levels(curr$label) <- ordered(levels(curr$label))
                      
                      # ============ LOOP HERE ============
-                     
-                     #colnames(curr) <- paste0("X", gsub("\\-","min",colnames(curr)))
                      colnames(curr) <- make.names(colnames(curr))
-                     
-                     # parallel
-                     doParallel::registerDoParallel(session_cl)
-                     
-                     #shiny::withProgress(message = "Running...", {
-                     repeats <- pbapply::pblapply(1:goes,
-                                                    #cl = within_cl,
-                                                    function(i, 
-                                                             train_vec,
-                                                             test_vec,
-                                                             config,
-                                                             configCols,
-                                                             ml_method,
-                                                             ml_perf_metr,
-                                                             ml_folds,
-                                                             ml_preproc,
-                                                             tuneGrid,
-                                                             ml_train_perc,
-                                                             sampling,
-                                                             batch_sampling,
-                                                             batches,
-                                                             folds, 
-                                                             maximize){
-                                                      runML(curr,
-                                                            train_vec = train_vec,
-                                                            test_vec = test_vec,
-                                                            config = config,
-                                                            configCols = configCols,
-                                                            ml_method = ml_method,
-                                                            ml_perf_metr = ml_perf_metr,
-                                                            ml_folds = ml_folds,
-                                                            ml_preproc = ml_preproc,
-                                                            tuneGrid = tuneGrid,
-                                                            ml_train_perc = ml_train_perc,
-                                                            sampling = sampling,
-                                                            batch_sampling = batch_sampling,
-                                                            batches = batches,
-                                                            folds = folds,
-                                                            maximize = maximize)
-                                                    },
-                                                    train_vec = settings$ml_train_subset,
-                                                    test_vec = settings$ml_test_subset,
-                                                    config = config,
-                                                    configCols = configCols,
-                                                    ml_method = settings$ml_method,
-                                                    ml_perf_metr = settings$ml_perf_metr,
-                                                    ml_folds = settings$ml_folds,
-                                                    ml_preproc = settings$ml_preproc,
-                                                    tuneGrid = tuneGrid,
-                                                    ml_train_perc = settings$ml_train_perc,
-                                                    sampling = NULL,#if(settings$ml_sampling == "none") NULL else settings$ml_sampling,
-                                                    batch_sampling = if(settings$ml_batch_sampling == "none") NULL else settings$ml_batch_sampling,
-                                                    batches = settings$ml_batch_covars,
-                                                    folds = folds,
-                                                    maximize = settings$ml_maximize
-                       )
-                     
+                
+                     repeats = list(runML(curr,
+                                          train_vec = settings$ml_train_subset,
+                                          test_vec = settings$ml_test_subset,
+                                          config = config,
+                                          configCols = configCols,
+                                          ml_method = settings$ml_method,
+                                          ml_perf_metr = settings$ml_perf_metr,
+                                          ml_folds = settings$ml_folds,
+                                          ml_preproc = settings$ml_preproc,
+                                          tuneGrid = tuneGrid,
+                                          ml_train_perc = settings$ml_train_perc,
+                                          sampling = NULL,#if(settings$ml_sampling == "none") NULL else settings$ml_sampling,
+                                          batch_sampling = if(settings$ml_batch_sampling == "none") NULL else settings$ml_batch_sampling,
+                                          batches = settings$ml_batch_covars,
+                                          folds = folds,
+                                          maximize = settings$ml_maximize))
+                                                    
                      # check if a storage list for machine learning results already exists
                      if(!("ml" %in% names(mSet$analSet))){
                        mSet$analSet$ml <- list() # otherwise make it
                      }
-                     
-                     # ---------
                      
                      labels = lapply(repeats, function(x) x$labels)
                      predictions = lapply(repeats, function(x) x$prediction)
@@ -1075,8 +1033,12 @@ shiny::observe({
                    },
                    mSet=mSet, 
                    input=input
-                   #,within_cl=if(length(ml_queue$jobs)==1) session_cl else 0
                    )
+                   
+                   parallel::clusterEvalQ(ml_queue_cl, {
+                     parallel::stopCluster(job_cl)
+                   })
+                   parallel::stopCluster(ml_queue_cl)
                    
                    shiny::showNotification("Gathering results...")
                    for(res in ml_queue_res){
