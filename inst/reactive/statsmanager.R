@@ -347,9 +347,10 @@ shiny::observe({
                ml = {
                  try({
                    
+                   
                    # paralellize
                    ml_queue_res = pbapply::pblapply(ml_queue$jobs,
-                                                    cl = if(length(ml_queue$jobs) == 1) 0 else session_cl, 
+                                                    #cl = if(length(ml_queue$jobs) == 1) 0 else session_cl, 
                                                     function(settings, mSet, input, within_cl){
                                                       
                      pickedTbl <- settings$ml_used_table
@@ -868,11 +869,12 @@ shiny::observe({
                      #colnames(curr) <- paste0("X", gsub("\\-","min",colnames(curr)))
                      colnames(curr) <- make.names(colnames(curr))
                      
-                     # get results for the amount of attempts chosen
+                     # parallel
+                     doParallel::registerDoParallel(session_cl)
                      
                      #shiny::withProgress(message = "Running...", {
-                       repeats <- pbapply::pblapply(1:goes,
-                                                    cl = within_cl,
+                     repeats <- pbapply::pblapply(1:goes,
+                                                    #cl = within_cl,
                                                     function(i, 
                                                              train_vec,
                                                              test_vec,
@@ -1072,8 +1074,9 @@ shiny::observe({
                      
                    },
                    mSet=mSet, 
-                   input=input, 
-                   within_cl=if(length(ml_queue$jobs)==1) session_cl else 0)
+                   input=input
+                   #,within_cl=if(length(ml_queue$jobs)==1) session_cl else 0
+                   )
                    
                    shiny::showNotification("Gathering results...")
                    for(res in ml_queue_res){

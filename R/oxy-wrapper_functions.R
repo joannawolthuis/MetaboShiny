@@ -131,7 +131,8 @@ runML <- function(curr,
                   batch_sampling = "none",
                   batches = c(),
                   folds,
-                  maximize=T){
+                  maximize=T,
+                  cl=0){
   
   # get user training percentage
   ml_train_perc <- ml_train_perc/100
@@ -173,8 +174,12 @@ runML <- function(curr,
   
   hasProb = !is.null(caret::getModelInfo(paste0("^",ml_method,"$"),regex = T)[[1]]$prob)
   
+  if(cl != 0){
+    doParallel::registerDoParallel(cl)
+  }
+  
   trainCtrl <- caret::trainControl(verboseIter = T,
-                                   allowParallel = F,
+                                   allowParallel = T,
                                    method = if(ml_folds == "LOOCV") "LOOCV" else as.character(ml_perf_metr),
                                    number = as.numeric(ml_folds),
                                    repeats = 3,

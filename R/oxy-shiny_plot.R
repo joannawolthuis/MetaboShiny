@@ -1168,13 +1168,20 @@ ggPlotBar <- function(data,
     lname <- "all"
   }
   
+  reps = max(data$rep)
+
   if(ml_type == "glmnet"){
     colnames(data) = c("m/z", "importance.mean", "dummy")
     data.ordered <- data[order(data$importance, decreasing=T),1:2]
   }else{
     data.norep <- data#[,-3]
     colnames(data.norep)[1] <- "m/z"
-    data.ci = Rmisc::group.CI(importance ~ `m/z`, data.norep)
+    if(reps > 1){
+      data.ci = Rmisc::group.CI(importance ~ `m/z`, data.norep)
+    }else{
+      data.ci = data.norep
+      data.ci$importance.mean <- data.ci$importance
+    }
     data.ordered <- data.ci[order(data.ci$importance.mean, decreasing = T),]      
   }
   
