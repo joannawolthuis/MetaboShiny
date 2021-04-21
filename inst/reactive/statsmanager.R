@@ -347,11 +347,13 @@ shiny::observe({
                ml = {
                  try({
                    # split over queue
-                   ml_queue_cl = parallel::makeCluster(length(ml_queue$jobs), outfile="")
+                   ml_queue_cl = parallel::makeCluster(min(input$ncores, length(ml_queue$jobs)), outfile="")
                    parallel::clusterExport(ml_queue_cl, c("input", "ml_queue"))
                    parallel::clusterEvalQ(ml_queue_cl, {
                      library(parallel)
-                     cores_per_job = floor(input$ncores/length(ml_queue$jobs))
+                     library(data.table)
+                     library(MetaboShiny)
+                     cores_per_job = max(1, floor(input$ncores/length(ml_queue$jobs)))
                      job_cl <- makeCluster(cores_per_job, outfile="")
                      parallel::clusterExport(job_cl, c("input", "ml_queue"))
                      doParallel::registerDoParallel(job_cl)
