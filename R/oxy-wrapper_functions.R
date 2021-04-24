@@ -106,8 +106,6 @@ calcHeatMap <- function(mSet, signif.only,
 #' @param ml_folds Cross validation folds
 #' @param ml_preproc Preproc table object
 #' @param tuneGrid Table of settings to try out to optimize parameters
-#' @param ml_train_perc Percentage in training
-#' @param sampling Up- or downsampling settings, Default: 'none'
 #' @return List of machine learning model, importance, labels and prediction.
 #' @seealso 
 #'  \code{\link[caret]{createDataPartition}},\code{\link[caret]{trainControl}},\code{\link[caret]{train}},\code{\link[caret]{varImp}}
@@ -120,29 +118,17 @@ runML <- function(curr,
                   config,
                   train_vec,
                   test_vec,
-                  configCols,
                   ml_method,
                   ml_perf_metr,
                   ml_folds,
                   ml_preproc,
                   tuneGrid,
-                  ml_train_perc,
-                  sampling = "none",
-                  batch_sampling = "none",
-                  batches = c(),
                   folds,
                   maximize=T,
                   cl=0){
   
   # get user training percentage
-  ml_train_perc <- ml_train_perc/100
-  
-  if(unique(train_vec)[1] == "all" & unique(test_vec)[1] == "all"){ # BOTH ARE NOT DEFINED
-    test_idx = caret::createDataPartition(y = curr$label, p = ml_train_perc, list = FALSE) # partition data in a balanced way (uses labels)
-    train_idx = setdiff(1:nrow(curr), test_idx) #use the other rows for testing
-    inTrain = train_idx
-    inTest = test_idx
-  }else if(unique(train_vec)[1] != "all"){ #ONLY TRAIN IS DEFINED
+  if(unique(train_vec)[1] != "all"){ #ONLY TRAIN IS DEFINED
     train_idx <- which(curr[,train_vec[1], with=F][[1]] == train_vec[2])
     test_idx = setdiff(1:nrow(curr), train_idx) # use the other rows for testing
     inTrain <- train_idx
@@ -186,7 +172,6 @@ runML <- function(curr,
                                    trim = TRUE, 
                                    returnData = FALSE,
                                    classProbs = if(!hasProb) FALSE else TRUE,
-                                   sampling = sampling,
                                    index = folds,
                                    savePredictions = "all")
   
