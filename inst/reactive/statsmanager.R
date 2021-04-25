@@ -514,23 +514,23 @@ shiny::observe({
                                                                                                 as.factor(config.subset$label), 
                                                                                                 maxClass = group.size) 
                                                                      config.subset = new_data[,1:nconfig]
-                                                                     curr.subset = new_data[,(nconfig+1):ncol(new_data)]
+                                                                     curr.subset = new_data[,!(colnames(new_data) %in% c("Class", colnames(config.subset)))]
                                                                    },
                                                                    adasyn = {
                                                                      resampled = smotefamily::ADAS(X = curr.subset, 
                                                                                                    target = config.subset$label,
                                                                                                    K = K)
                                                                      new_data = resampled$data
-                                                                     curr.subset = new_data[,1:(ncol(new_data)-1)]
-                                                                     config.subset = data.table(label = new_data[[1]])
+                                                                     curr.subset = new_data[, colnames(new_data) != "class"]
+                                                                     config.subset = data.table(label = new_data$class)
                                                                    },
                                                                    smote = {
                                                                      resampled = smotefamily::SMOTE(X = curr.subset, 
                                                                                                     target = config.subset$label,
                                                                                                     K = K)
                                                                      new_data = resampled$data
-                                                                     curr.subset = new_data[,1:(ncol(new_data)-1)]
-                                                                     config.subset = data.table(label = new_data[[1]])
+                                                                     curr.subset = new_data[, colnames(new_data) != "class"]
+                                                                     config.subset = data.table(label = new_data$class)
                                                                    },
                                                                    rose = {
                                                                      resampled = ROSE::ROSE(label ~ ., 
@@ -542,11 +542,12 @@ shiny::observe({
                                                                    },
                                                                    down = {
                                                                      nconfig = ncol(config.subset)
-                                                                     new_data = downsample.adj(curr.subset, 
-                                                                                               as.factor(config.subset$label),
-                                                                                               minClass = group.size)
+                                                                     new_data = downsample.adj(cbind(config.subset, curr.subset), 
+                                                                                               as.factor(config.subset$label), 
+                                                                                               minClass = group.size) 
                                                                      config.subset = new_data[,1:nconfig]
-                                                                     curr.subset = new_data[,(nconfig+1):ncol(new_data)]
+                                                                     curr.subset = new_data[,!(colnames(new_data) %in% c("Class", colnames(config.subset)))]
+                                                                     
                                                                    }
                                                             )
                                                             colnames(curr.subset) <- mz.names
@@ -578,8 +579,10 @@ shiny::observe({
                                                         }
                                                         
                                                         # merge back into one
-                                                        merged.training = cbind(training_data$config, training_data$curr)
-                                                        merged.testing = cbind(testing_data$config[,colnames(training_data$config),with=F], testing_data$curr)
+                                                        merged.training = cbind(training_data$config,
+                                                                                training_data$curr)
+                                                        merged.testing = cbind(testing_data$config[,colnames(training_data$config),with=F],
+                                                                               testing_data$curr)
                                                         curr = rbind(merged.training,
                                                                      merged.testing)
                                                         
@@ -635,16 +638,18 @@ shiny::observe({
                                                         }
                                                         
                                                         # run ML
-                                                        runML(curr,
-                                                              train_vec = settings$ml_train_subset,
-                                                              test_vec = settings$ml_test_subset,
-                                                              ml_method = settings$ml_method,
-                                                              ml_perf_metr = settings$ml_perf_metr,
-                                                              ml_folds = settings$ml_folds,
-                                                              ml_preproc = settings$ml_preproc,
-                                                              tuneGrid = tuneGrid,
-                                                              folds = folds,
-                                                              maximize = T)
+                                                        ml_res = runML(curr,
+                                                                       train_vec = settings$ml_train_subset,
+                                                                       test_vec = settings$ml_test_subset,
+                                                                       ml_method = settings$ml_method,
+                                                                       ml_perf_metr = settings$ml_perf_metr,
+                                                                       ml_folds = settings$ml_folds,
+                                                                       ml_preproc = settings$ml_preproc,
+                                                                       tuneGrid = tuneGrid,
+                                                                       folds = folds,
+                                                                       maximize = T)
+                                                        
+                                                        ml_res
                                                       }
                    },
                    mSet=mSet, 
@@ -661,6 +666,15 @@ shiny::observe({
                      mSet$analSet$ml[[res$params$ml_method]][[res$params$ml_name]] <- res
                      settings <- res$params
                    }
+                   
+                   # PLOT #
+                   ml_performance = getMLperformance(ml_res, 
+                                                     x.metric="cutoff", 
+                                                     y.metric="acc")
+                   
+                   p=ggPlotCurves(ml_performance)
+                   
+                   ########
                    mSet$analSet$ml$last <- list(name = settings$ml_name,
                                                 method = settings$ml_method)
                    shiny::showNotification("Done!")

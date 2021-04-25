@@ -101,5 +101,6 @@ Imports:
   svglite,
   beepr,
   ggforce,
-  akmedoids
+  akmedoids,
+  pracma
 RoxygenNote: 7.1.0

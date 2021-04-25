@@ -1045,99 +1045,50 @@ ggPlotMLMistakes <- function(predictions,
 }
 #' @title Generate ROC/PrecRec plot
 #' @description Function to generate ggplot or plotly ROC/PrecRec plot for machine learning
-#' @param data Model data
-#' @param attempts Number of models that were created, Default: 50
-#' @param cf Function to get plot colors from
-#' @param curve_type roc or precrec. Default: 'roc'
-#' @param class_type Binary or multivariate? (b/m), Default: 'b'
-#' @return GGPLOT or PLOTLY object(s)
-#' @seealso
-#'  \code{\link[shiny]{showNotification}}
-#'  \code{\link[pbapply]{pbapply}}
-#'  \code{\link[ggplot2]{geom_path}},\code{\link[ggplot2]{annotate}},\code{\link[ggplot2]{stat_summary_bin}},\code{\link[ggplot2]{scale_manual}},\code{\link[ggplot2]{coord_fixed}},\code{\link[ggplot2]{coord_cartesian}}
 #' @rdname ggPlotCurves
 #' @export 
-#' @importFrom shiny showNotification
-#' @importFrom pbapply pbsapply
-#' @importFrom ggplot2 geom_path annotate stat_summary_bin scale_color_manual coord_fixed coord_cartesian
-ggPlotCurves <- function(perf.long,
-                         #labels,
-                         #predictions,
-                         attempts = 50,
-                         cf,
-                         curve_type="roc",#roc, precrec
-                         class_type="b",
-                         forceorigin=F){
-  perf.long <- data.table::as.data.table(perf.long)
-  perf.long <- perf.long[metric == curve_type, -"metric"]
-  mean.auc = mean(perf.long$AUC_AVG)
-  means.per.comp = perf.long[, lapply(.SD, mean), by = comparison]
-  ncomp = length(unique(means.per.comp$comparison))
-  if(ncomp > 2){
-    cols = cf(ncomp + 1)
-    class_type = "m"
-    try({
-      shiny::showNotification("Calculating AUCs per comparison...")
-    })
-    for(comp in unique(perf.long$comparison)){
-      new.name = paste0(comp, " || avg. AUC=", round(means.per.comp[comparison == comp]$AUC_PAIR, digits=3), " ||")
-      perf.long[comparison == comp]$comparison <- c(new.name)
-    } 
-  }else{
-    cols = cf(max(as.numeric(perf.long$attempt)))
-    class_type = "b"
-  }
+ggPlotCurves = function(ml_performance){
   
-  #if(curve_type == "precrec") forceorigin <- T
+  perf.long = data.table::data.table(
+    cutoff = ml_performance$cutoff,
+    x = ml_performance$x$values,
+    y = ml_performance$y$values
+  )
   
-  if(forceorigin){
-      origin_rows = lapply(1:length(unique(perf.long$attempt)), function(i){
-        data.table::data.table(attempt = i, 
-                               y = if(curve_type == "precrec") 1 else 0,
-                               x = if(curve_type == "precrec") 0 else 1, 
-                               AUC_AVG = unique(perf.long[attempt == i]$AUC_AVG),
-                               AUC_PAIR = unique(perf.long[attempt == i]$AUC_PAIR),
-                               comparison = unique(perf.long[attempt == i]$comparison))
-      })
-      perf.long = rbind(data.table::rbindlist(origin_rows),perf.long)
-  }
+  AUC = pracma::trapz(perf.long$x, 
+                      perf.long$y)
+  
+  class_type = "b"
+  scaleFUN <- function(x) sprintf("%.5s", x)
   
   p <- ggplot2::ggplot() +
     ggplot2::geom_path(data = perf.long, 
-                       alpha=.5,
-                       cex=.7,
+                       cex=1.5,
+                       color="black",
                        ggplot2::aes(x = x,
-                                    y = y,
-                                    color = if(class_type == "m") comparison else as.factor(attempt),
-                                    text = if(class_type == "m") comparison else as.factor(attempt),
-                                    key = if(class_type == "m") comparison else as.factor(attempt),
-                                    group = attempt)) +
-    ggplot2::labs(color = if(class_type == "m") "Class" else "Attempt",
-                  text = if(class_type == "m") "Class" else "Attempt",
-                  key = if(class_type == "m") "Class" else "Attempt") +
-    ggplot2::stat_summary_bin(data = perf.long,
-                              #alpha=.6,
-                              ggplot2::aes(x,
-                                           y,
-                                           group = comparison,
-                                           color = if(class_type == "m") comparison else NULL),
-                              fun=mean, geom="line",
-                              cex = 2.3) + #,color="black") +
-    ggplot2::scale_color_manual(values = cols) +
-    #scale_y_continuous(limits=c(0,1)) +
-    ggplot2::coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE) +
-    ggplot2::coord_cartesian(xlim = c(.04,.96), ylim = c(.04,.96)) +
-    ggplot2::xlab(if(curve_type == "roc") "FPR" else "Recall") + 
-    ggplot2::ylab(if(curve_type == "roc") "TPR" else "Precision") +
-    annotation_compass(paste0("avg. AUC: ",
-                              format(mean.auc,
-                                     2,
-                                     drop0trailing = TRUE,
-                                     digits = 2)),
-                       position = "SE",
-                       size=20)
+                                    y = y,,
+                                    key = cutoff)) +
+    #ggplot2::geom_abline(intercept = 0, slope = 1, alpha=0.2)+
+    # ggplot2::labs(color = if(class_type == "m") "Class" else "Attempt",
+    #               text = if(class_type == "m") "Class" else "Attempt",
+    #               key = if(class_type == "m") "Class" else "Attempt") +
+    #ggplot2::coord_cartesian(xlim = c(.04,.96), ylim = c(.04,.96)) +
+    ggplot2::xlab(ml_performance$x$name) + 
+    ggplot2::ylab(ml_performance$y$name) +
+    ggplot2::scale_x_continuous(labels=scaleFUN) +
+    ggplot2::scale_y_continuous(labels=scaleFUN) +
+    annotation_compass(if(!is.nan(AUC)){
+      paste0("AUC: ",
+             format(AUC,
+                    2,
+                    drop0trailing = TRUE,
+                    digits = 2))
+    }else{""},
+    position = "SE",
+    size=20)
   p
 }
+
 
 #' @title Generate machine learning importance bar plot
 #' @description Function to generate ggplot or plotly variable importance barplot for machine learning
