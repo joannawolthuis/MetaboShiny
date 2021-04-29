@@ -56,13 +56,16 @@ shiny::observe({
                      }))
                      venn_no$now <- venn_no$start
                      report_no$now <- report_no$start
-                     if(ncol(venn_no$start) > 0){
-                       lcl$vectors$analyses <<- unlist(venn_no$start[,1])
-                     }else{
-                       lcl$vectors$analyses <<- c()
-                     }
+                     #if(ncol(venn_no$start) > 0){
+                     
+                     lcl$vectors$analyses <<- unlist(venn_no$start[,1])
+                     
+                     #}else{
+                     #  lcl$vectors$analyses <<- c()
+                     #}
                      # ---
                      lapply(c("mummi_anal", "heattable", "network_table", "ml_specific_mzs"), function(inputID){
+                       print(inputID)
                        shiny::updateSelectInput(session,
                                                 inputID, 
                                                 choices = {
@@ -174,9 +177,19 @@ shiny::observe({
                    ml = {
                      if("ml" %in% names(mSet$analSet)){
                        data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
-                       roc_data = data$roc
-                       curve_type = if(input$ml_curve_type) "roc" else "precrec"
-                       res = unique(roc_data$perf[metric == curve_type,c("AUC_PAIR", "comparison", "attempt")])
+                       
+                       ml_performance = getMLperformance(data$res, 
+                                                         pos.class = colnames(data$res$prediction)[2],
+                                                         x.metric=input$ml_plot_x,
+                                                         y.metric=input$ml_plot_y)
+                       
+                       ml_tbl_rows = lapply(unique(ml_performance$coords$`Test set`), function(test_set){
+                         data.table::data.table(AUC = 
+                                                  pracma::trapz(ml_performance$coords[`Test set` == test_set]$x, 
+                                                                ml_performance$coords[`Test set` == test_set]$y),
+                                                "Test set" = test_set)
+                       })
+                       res = data.table::rbindlist(ml_tbl_rows)
                        lcl$tables$ml_roc_all <<- res
                        # params 
                        if("params" %in% names(data)){
@@ -184,8 +197,16 @@ shiny::observe({
                        }else{
                          params = data.table::data.table(unavailable = "No parameters saved for this model...")
                        }
+                       
+                       res2 = data$res$importance
+                       rownames(res2) = gsub("^X", "", rownames(res2))
+                       rownames(res2) = gsub("\\.$", "-", rownames(res2))
+                       res2 = data.frame(importance=res2[,1], row.names=rownames(res2))
+                       lcl$tables$ml_imp <<- res2
+                       
                        list(ml_overview_tab = res,
-                            ml_param_tab = params)
+                            ml_param_tab = params,
+                            ml_importance_tab = res2)
                      }else{
                        list()
                      }

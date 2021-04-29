@@ -347,7 +347,9 @@ shiny::observe({
                ml = {
                  try({
                    # split over queue
-                   ml_queue_cl = parallel::makeCluster(min(input$ncores, length(ml_queue$jobs)), outfile="")
+                   ml_queue_cl = parallel::makeCluster(min(input$ncores,
+                                                           length(ml_queue$jobs)),
+                                                       outfile="")
                    parallel::clusterExport(ml_queue_cl, c("input", "ml_queue"))
                    parallel::clusterEvalQ(ml_queue_cl, {
                      library(parallel)
@@ -357,7 +359,6 @@ shiny::observe({
                      job_cl <- makeCluster(cores_per_job, outfile="")
                      parallel::clusterExport(job_cl, c("input", "ml_queue"))
                      doParallel::registerDoParallel(job_cl)
-                     print(job_cl)
                    })
                    
                    # parallelize
@@ -373,15 +374,14 @@ shiny::observe({
                                                           stop("Please run PCA first!")
                                                         }
                                                         
-                                                        curr = as.data.frame(switch(pickedTbl, 
+                                                         curr = as.data.frame(switch(pickedTbl, 
                                                                                     orig = mSet$dataSet$orig,
                                                                                     norm = mSet$dataSet$norm,
                                                                                     pca = mSet$analSet$pca$x))
                                                         
                                                         # covars needed
-                                                        keep.config = unique(c(settings$ml_include_covars, settings$ml_batch_covars))
-                                                        keep.config = setdiff(keep.config, "label")
-                                                        config = mSet$dataSet$covars[, ..keep.config]
+                                                        keep.config = setdiff(c(settings$ml_include_covars, settings$ml_batch_covars), "label")
+                                                        config = mSet$dataSet$covars[,..keep.config]
                                                         config$label = mSet$dataSet$cls
                                                         
                                                         # PCA correct
@@ -573,6 +573,11 @@ shiny::observe({
                                                         training_data$config$split <- "train"
                                                         testing_data$config$split <- "test"
                                                         
+                                                        # remove columns that should not be in prediction
+                                                        keep.config = unique(c("label", "split", settings$ml_include_covars))
+                                                        testing_data$config = testing_data$config[, ..keep.config]
+                                                        training_data$config = training_data$config[, ..keep.config]
+                                                        
                                                         # shuffle
                                                         if(settings$ml_label_shuffle){
                                                           training_data$config$label <- sample(training_data$config$label)
@@ -585,6 +590,9 @@ shiny::observe({
                                                                                testing_data$curr)
                                                         curr = rbind(merged.training,
                                                                      merged.testing)
+                                                        
+                                                        print("Preview of data going into machine learning:")
+                                                        print(curr[1:10,1:10])
                                                         
                                                         # CARET SETTINGS
                                                         caret.mdls <- caret::getModelInfo()
@@ -616,7 +624,6 @@ shiny::observe({
                                                                      character = as.character(inp.val))
                                                             })
                                                             names(lst) = params$parameter
-                                                            print(lst)
                                                             if(any(sapply(lst,function(x)all(is.na(x))))){
                                                               cat("Missing param, auto-tuning...")
                                                               lst <- list()

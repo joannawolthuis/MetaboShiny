@@ -5,7 +5,6 @@ lapply(c("merge",
            # creates listener for if the 'check db' button is pressed
            shiny::observe({
              # see which db files are present in folder
-             print(lcl$paths$proj_dir)
              if(!is.null(lcl$paths$proj_dir)){
                if(dir.exists(lcl$paths$proj_dir)){
                  folder_files <- list.files(lcl$paths$proj_dir)

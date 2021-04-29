@@ -213,7 +213,6 @@ beep = no')
       lcl$paths$work_dir <<- userfolder
       lcl$paths$db_dir <<- dbdir
 
-      print(lcl$paths$work_dir)
       
       if("adducts.csv" %in% basename(list.files(lcl$paths$work_dir))){
         adducts <<- data.table::fread(file.path(lcl$paths$work_dir, "adducts.csv"))
@@ -746,6 +745,7 @@ beep = no')
         uimanager$refresh <- input$statistics
         
         if(input$statistics %in% c("venn", "enrich", "heatmap", "network", "ml")){
+          print("venn refresh")
           statsmanager$calculate <- "vennrich"
           tablemanager$make <- "vennrich"
           uimanager$refresh <- c(input$statistics, "vennrich")

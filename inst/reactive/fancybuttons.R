@@ -27,6 +27,14 @@ lapply(topn_sliders, function(anal){
   }, ignoreNULL = T)
 })
 
+lapply(c("x", "y", "posclass"), function(axis){
+  shiny::observeEvent(input[[paste0("ml_plot_", axis)]], {
+    if(!is.null(mSet$analSet$ml)){
+      plotmanager$make <- "ml" # just reload  
+    }
+  })  
+})
+
 shiny::observeEvent(input$plot_ml_mistake, {
   if(!is.null(mSet$analSet$ml)){
     plotmanager$make <- "ml_mistake" # just reload  

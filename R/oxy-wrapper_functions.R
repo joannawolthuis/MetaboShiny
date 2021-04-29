@@ -708,6 +708,7 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
 }
 
 getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
+                  toWrap <- switch(do,
                    general = {
                      # make sidebar
                      # make pca, plsda, ml(make plotmanager do that)
@@ -725,7 +726,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                             samp3=sampNormPlots$tr, samp4=sampNormPlots$br)
                        
                      }},
-                   venn = {
+                    venn = {
                      # get user input for how many top values to use for venn
                      top = input$venn_tophits
                      if(nrow(venn_yes$now) > 4 | nrow(venn_yes$now) <= 1){
@@ -1029,13 +1030,13 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                      if("ml" %in% names(mSet$analSet)){
                        if(length(mSet$analSet$ml) > 0){
                          
-                         data =  mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
+                         data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
                          
                          # PLOT #
                          ml_performance = getMLperformance(data$res, 
-                                                           pos.class = colnames(data$res$prediction)[2],
-                                                           x.metric="fpr",
-                                                           y.metric="tpr")
+                                                           pos.class = input$ml_plot_posclass,
+                                                           x.metric=input$ml_plot_x,
+                                                           y.metric=input$ml_plot_y)
                          
                          ml_roc = ggPlotCurves(ml_performance,
                                                cf = gbl$functions$color.functions[[lcl$aes$spectrum]])

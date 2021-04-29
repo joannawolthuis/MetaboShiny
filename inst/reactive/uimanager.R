@@ -281,6 +281,12 @@ shiny::observe({
                                       inputId = "ml2", 
                                       target = "res")
                        
+                       ###
+                       data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
+                       classes = colnames(data$res$prediction)
+                       shiny::updateSelectInput(session, "ml_plot_posclass", choices = classes, selected = classes[2])
+                       ###
+                       
                        choices = c()
                        methods <- setdiff(names(mSet$analSet$ml), "last")
                        for(method in methods){

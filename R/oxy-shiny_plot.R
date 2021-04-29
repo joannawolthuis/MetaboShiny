@@ -1060,20 +1060,21 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
   colMap = cf(length(uniq))
   names(colMap) = uniq
   colMap['Test'] = "black"
+  
   p <- ggplot2::ggplot() +
     ggplot2::geom_path(data = perf.long, 
-                       cex=0.3,
+                       cex = 1,
+                       alpha=0.3,
                        ggplot2::aes(x = x,
                                     y = y,
                                     color = `Test set`,
                                     group = `Test set`,
-                                    key = cutoff)) +
+                                    text = paste0(`Test set`, " - Cutoff:", cutoff),
+                                    key = paste0(`Test set`, " - Cutoff:", cutoff))) +
     ggplot2::geom_path(data = perf.long[`Test set` == "Test"], 
-                       cex=1.5,
-                       color="black",
+                       cex=2,
                        ggplot2::aes(x = x,
-                                    y = y,
-                                    key = cutoff)) +
+                                    y = y)) +
     ggplot2::xlab(ml_performance$names$x) + 
     ggplot2::ylab(ml_performance$names$y) +
     ggplot2::scale_x_continuous(labels=scaleFUN) +
@@ -1122,14 +1123,12 @@ ggPlotBar <- function(data,
   }
 
   data = data.table::as.data.table(data, keep.rownames=T)[,1:2]
-  print(data)
   colnames(data) = c("m/z", "importance")
   
   if(ml_type == "glmnet"){
     colnames(data) = c("m/z", "importance.mean", "dummy")
     data.ordered <- data[order(data$importance, decreasing=T),1:2]
   }else{
-    print(head(data))
     data.norep <- data#[,-3]
     colnames(data.norep)[1] <- "m/z"
     data.ci = data.norep
@@ -1152,6 +1151,7 @@ ggPlotBar <- function(data,
     ggplot2::geom_bar(stat = "identity") +
     #ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90))+
     ggplot2::scale_fill_gradientn(colors=cf(20)) +
+    ggplot2::scale_color_gradientn(colors=cf(20)) +
     ggplot2::labs(x = "Top hits (m/z)",
                   y = if(ml_type == "glmnet") "Times included in final model" else "Relative importance (%)")
   

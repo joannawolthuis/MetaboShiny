@@ -48,23 +48,29 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                      "combi",
                      "asca")){ 
     
+    print(d)
+    d <<- d
+    
     if(curr_tab == "ml" & input$ml_results == "roc"){
-      attempt = as.numeric(d$key[[1]])
-      if(length(attempt) > 0 & !is.na(attempt)){
-        xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
-        if(attempt > 0){
-          output$ml_tab <- DT::renderDataTable({
-            imp <- data.table::as.data.table(xvals$imp[[attempt]], keep.rownames = T)
-            colnames(imp) <- c("mz", "importance")
-            imp <- imp[importance > 0,]
-            lcl$tables$ml_roc <<- data.frame(importance = imp$importance,
-                                             row.names = gsub(imp$mz,
-                                                              pattern = "`|`",
-                                                              replacement=""))
-            MetaboShiny:: metshiTable(lcl$tables$ml_roc)
-          })
-        }
-      }
+      # test_set = trimws(gsub("-.*$", "", d$key))
+      # xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
+      # imp.vals = if(test_set == "Test") xvals$res$importance else xvals$res$train.importance 
+      # if(length(attempt) > 0 & !is.na(attempt)){
+      #   xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
+      #   if(attempt > 0){
+      #     output$ml_tab <- DT::renderDataTable({
+      #       imp <- data.table::as.data.table(xvals$imp[[attempt]], keep.rownames = T)
+      #       colnames(imp) <- c("mz", "importance")
+      #       imp <- imp[importance > 0,]
+      #       lcl$tables$ml_roc <<- data.frame(importance = imp$importance,
+      #                                        row.names = gsub(imp$mz,
+      #                                                         pattern = "`|`",
+      #                                                         replacement=""))
+      #       MetaboShiny:: metshiTable(lcl$tables$ml_roc)
+      #     })
+      #   }
+      # }
+      NULL
     }else{
       if(curr_tab %in% c("heatmap", "enrich","venn","network")){
         switch(curr_tab,

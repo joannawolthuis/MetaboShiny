@@ -34,7 +34,8 @@ pacman::p_load(pacman, rcdk, rJava, parallel, pbapply, enviPat, data.table,
                crmn,
                smotefamily,
                ROSE,
-               DGCA
+               DGCA,
+               heatmap3
                )
 
 BiocManager::install("RBGL")
