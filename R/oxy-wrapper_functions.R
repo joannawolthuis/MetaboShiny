@@ -1,4 +1,15 @@
-globalVariables(c("-log(p)", "-log10P", "..change_var", "..col.fac", "..count..", "..exp.vars", "..keep.cols", "..matches", "..predictor", "..rmcols", "..scaled..", "..shape.fac", "..stats_var", "..time_var", "..x", "Abundance", "Color", "FPR", "Group", "GroupA", "GroupB", "Individual", "Label", "Metric", "PC", "Peak", "Sample", "Shape", "TPR", "Text", "Value", "abstract", "acc", "adduct", "aes", "attempt", "color", "comparison", "coord_flip", "correlation", "count", "debug_browse_content", "debug_enrich", "debug_input", "debug_lcl", "debug_mSet", "debug_matches", "debug_pieinfo", "debug_result_filters", "debug_selection", "exp.vars", "expand_limits", "extremity", "facet_grid", "facet_wrap", "freq", "fullformula", "gbl", "geom_point", "ggplot", "ggtitle", "group", "importance.mean", "individual", "label", "labs", "lcl", "log2FC", "log2fc", "m/z", "p-value", "pathway", "pc", "position_dodge", "position_jitterdodge", "samples", "scale_size_area", "scale_x_discrete", "scale_y_discrete", "searchRev", "shape", "value", "variable", "x", "xlab", "y"))
+globalVariables(c("-log(p)", "-log10P", "..change_var", "..col.fac", "..count..", "..exp.vars", 
+                  "..keep.cols", "..matches", "..predictor", "..rmcols", "..scaled..", "..shape.fac", 
+                  "..stats_var", "..time_var", "..x", "Abundance", "Color", "FPR", "Group", "GroupA", 
+                  "GroupB", "Individual", "Label", "Metric", "PC", "Peak", "Sample", "Shape", "TPR", 
+                  "Text", "Value", "abstract", "acc", "adduct", "aes", "attempt", "color", "comparison", 
+                  "coord_flip", "correlation", "count", "debug_browse_content", "debug_enrich", "debug_input", 
+                  "debug_lcl", "debug_mSet", "debug_matches", "debug_pieinfo", "debug_result_filters", "debug_selection", 
+                  "exp.vars", "expand_limits", "extremity", "facet_grid", "facet_wrap", "freq", "fullformula", "gbl", 
+                  "geom_point", "ggplot", "ggtitle", "group", "importance.mean", "individual", "label", "labs", "lcl", 
+                  "log2FC", "log2fc", "m/z", "p-value", "pathway", "pc", "position_dodge", "position_jitterdodge", 
+                  "samples", "scale_size_area", "scale_x_discrete", "scale_y_discrete", "searchRev", "shape",
+                  "value", "variable", "x", "xlab", "y"))
 
 #' @title Collect info needed for heatmap
 #' @description Given an mSet and an analysis of interest, generates the matrix etc. needed for heatmap creation later on.
@@ -697,7 +708,6 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
 }
 
 getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
-  toWrap <- switch(do,
                    general = {
                      # make sidebar
                      # make pca, plsda, ml(make plotmanager do that)
@@ -1018,23 +1028,27 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                    ml = {
                      if("ml" %in% names(mSet$analSet)){
                        if(length(mSet$analSet$ml) > 0){
+                         
                          data =  mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
-                         ml_roc = ggPlotCurves(perf.long = data$roc$perf,
-                                               #labels = data$roc$labels,
-                                               #predictions = data$roc$predictions, 
-                                               attempts = input$ml_attempts,
-                                               cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                               curve_type=if(input$ml_curve_type) "roc" else "precrec")
-                         barplot_data <- ggPlotBar(data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar,
-                                                   attempts = input$ml_attempts,
+                         
+                         # PLOT #
+                         ml_performance = getMLperformance(data$res, 
+                                                           pos.class = colnames(data$res$prediction)[2],
+                                                           x.metric="fpr",
+                                                           y.metric="tpr")
+                         
+                         ml_roc = ggPlotCurves(ml_performance,
+                                               cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                         
+                         barplot_data <- ggPlotBar(data = data$res$importance,
                                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
                                                    topn = input$ml_topn,
-                                                   ml_name = mSet$analSet$ml$last$name,
-                                                   ml_type = mSet$analSet$ml$last$method)
+                                                   ml_name = data$params$ml_name,
+                                                   ml_type = data$params$ml_method)
                          
                          ml_barplot <- barplot_data$plot
-                         
                          lcl$tables$ml_bar <- barplot_data$mzdata
+                         
                          list(ml_roc = ml_roc, 
                               ml_bar = ml_barplot)
                        }} else list()

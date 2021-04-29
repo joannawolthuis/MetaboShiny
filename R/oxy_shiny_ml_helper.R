@@ -7,53 +7,43 @@ pcaCorr <- function(curr, center, scale, start_end_pcs){
   as.data.frame(trunc)
 }
 
-getMLperformance = function(ml_res, x.metric, y.metric){
+getMLperformance = function(ml_res, pos.class, x.metric, y.metric){
+  spl.fold.performance = split(ml_res$train.performance, ml_res$train.performance$Resample)
   
-  prediction = ROCR::prediction(ml_res$prediction[,1], 
+  coord.collection = lapply(spl.fold.performance, function(l){
+    
+    prediction = l[[pos.class]]
+    labels = l[["obs"]]
+    prediction = ROCR::prediction(prediction,
+                                  labels)
+    coords = ROCR::performance(prediction,
+                               x.measure = x.metric,
+                               measure = y.metric)
+    coords
+  })
+  
+  prediction = ROCR::prediction(ml_res$prediction[,pos.class], 
                                 ml_res$labels)
-  if(x.metric == y.metric){
-    stop("Please pick different x and y metrics!")
-  }
   
-  if(x.metric != "cutoff"){
-    x = ROCR::performance(prediction,
-                          measure = x.metric)  
-  }else{
-    x = NULL
-  }
+  coords = ROCR::performance(prediction,
+                             x.measure = x.metric,
+                             measure = y.metric) 
   
-  if(y.metric != "cutoff"){
-    y = ROCR::performance(prediction,
-                          measure = y.metric)
-  }else{
-    y = NULL
-  }
+  coord.collection$Test = coords
   
-  print(y)
+  coords.dt = data.table::rbindlist(lapply(1:length(coord.collection), function(i){
+    coords = coord.collection[[i]]
+    which.test = names(coord.collection)[[i]]
+    data.table::data.table(x = coords@x.values[[1]],
+                           y = coords@y.values[[1]],
+                           cutoff = coords@alpha.values[[1]],
+                           `Test set` = c(which.test))
+  }))
   
-  if(is.null(x)){
-    x.values = y@x.values
-    cutoffs = x.values
-    x.axis.name = "Cutoff"
-  }else{
-    x.values = x@y.values
-    cutoffs = x@x.values
-    x.axis.name = x@y.name
-  }
-  if(is.null(y)){
-    y.values = x@x.values
-    cutoffs = y.values
-    y.axis.name = "Cutoff"
-  }else{
-    y.values = y@y.values
-    cutoffs = y@x.values
-    y.axis.name = y@y.name
-  }
-  list(x = list(values = x.values[[1]],
-                name = x.axis.name),
-       y = list(values = y.values[[1]],
-                name = y.axis.name),
-       cutoff = cutoffs[[1]])
+  list(coords = coords.dt,
+       names = list(x = coords@x.name,
+                    y = coords@y.name,
+                    alpha = "Cutoff"))
 }
 
 #' @title Run machine learning

@@ -5,25 +5,27 @@ lapply(c("merge",
            # creates listener for if the 'check db' button is pressed
            shiny::observe({
              # see which db files are present in folder
-             if(dir.exists(lcl$paths$proj_dir)){
-               folder_files <- list.files(lcl$paths$proj_dir)
-               is.present <- switch(col,
-                                    merge = {
-                                      if(!is.null(input$ms_modes)){
-                                        all(sapply(input$ms_modes, function(ionMode){
-                                          !is.null(input[[paste0("outlist_", ionMode)]])
-                                        }) & !is.null(input$metadata))  
-                                      } else FALSE
-                                    },
-                                    csv = paste0(input$proj_name_new, ".csv") %in% folder_files,
-                                    db = paste0(input$proj_name_new, ".db") %in% folder_files)
-               check_pic <- if(is.present) "yes.png" else "no.png"
-               # generate checkmark image objects
-               output[[paste0("proj_", col, "_check")]] <- shiny::renderImage({
-                 filename <- normalizePath(file.path('www', check_pic))
-                 list(src = filename, height = "70px")
-               }, deleteFile = FALSE)# <- this is important or the checkmark file is deleted, haha  
-             }
+             print(lcl$paths$proj_dir)
+             if(!is.null(lcl$paths$proj_dir)){
+               if(dir.exists(lcl$paths$proj_dir)){
+                 folder_files <- list.files(lcl$paths$proj_dir)
+                 is.present <- switch(col,
+                                      merge = {
+                                        if(!is.null(input$ms_modes)){
+                                          all(sapply(input$ms_modes, function(ionMode){
+                                            !is.null(input[[paste0("outlist_", ionMode)]])
+                                          }) & !is.null(input$metadata))  
+                                        } else FALSE
+                                      },
+                                      csv = paste0(input$proj_name_new, ".csv") %in% folder_files,
+                                      db = paste0(input$proj_name_new, ".db") %in% folder_files)
+                 check_pic <- if(is.present) "yes.png" else "no.png"
+                 # generate checkmark image objects
+                 output[[paste0("proj_", col, "_check")]] <- shiny::renderImage({
+                   filename <- normalizePath(file.path('www', check_pic))
+                   list(src = filename, height = "70px")
+                 }, deleteFile = FALSE)# <- this is important or the checkmark file is deleted, haha  
+               }}
            })
          })
 

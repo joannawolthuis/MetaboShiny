@@ -6,59 +6,81 @@
 
 shiny::observe({
   if(dbmanager$build[1] != "none"){
-    for(db in dbmanager$build){
-      #shiny::withProgress({
-        # send necessary functions and libraries to parallel threads
-        print(session_cl)
-        parallel::clusterExport(cl = session_cl, envir = .GlobalEnv, varlist = list(
-          "isotopes"
-        )) 
-        pkgs = c("data.table", "enviPat", 
-                 "KEGGREST", "XML", 
-                 "SPARQL", "RCurl", 
-                 "MetaDBparse")
-        parallel::clusterCall(session_cl, function(pkgs) {
-          for (req in pkgs) {
-            library(req, character.only = TRUE)
-          }
-        }, pkgs = pkgs)
-        
-        if(input$db_build_mode %in% c("base", "both")){
+    
+    # send necessary functions and libraries to parallel threads
+    parallel::clusterExport(cl = session_cl, envir = .GlobalEnv, varlist = list(
+      "isotopes"
+    )) 
+    pkgs = c("data.table", "enviPat", 
+             "KEGGREST", "XML", 
+             "SPARQL", "RCurl", 
+             "MetaDBparse")
+    parallel::clusterCall(session_cl, function(pkgs) {
+      for (req in pkgs) {
+        library(req, character.only = TRUE)
+      }
+    }, pkgs = pkgs)
+    
+    if(input$db_build_mode %in% c("base", "both")){
+      pbapply::pblapply(dbmanager$build, cl=session_cl, function(db, input){
+        try({
+          print(paste("trying to build", db))
+          success=F
           # check if custom
           custom_csv = file.path(lcl$paths$db_dir, paste0(db,"_source"), "base.csv")
           custom = file.exists(custom_csv)
           # - - - - - - - -
           MetaDBparse::buildBaseDB(dbname = db,
                                    outfolder = normalizePath(lcl$paths$db_dir), 
-                                   cl = session_cl,
+                                   cl = 0,
                                    custom_csv_path = if(!custom) NULL else custom_csv,
-                                   silent = F)
+                                   silent = F)  
+          success=T
+        })
+        if(success){
+          print(paste("successfully built BASE", db))
+        }else{
+          print(paste("building BASE", db, "failed"))
         }
-        
-        if(input$db_build_mode %in% c("extended", "both")){
+      }, 
+      input = shiny::isolate(shiny::reactiveValuesToList(input)))
+    }
+    
+    if(input$db_build_mode %in% c("extended", "both")){
+      # extended, slightly different approach
+      for(db in dbmanager$build){
+        success = F
+        try({
           if(!grepl(db, pattern = "maconda")){
             if(file.exists(file.path(lcl$paths$db_dir, paste0(db, ".db")))){
               my_range <- input$db_mz_range
               outfolder <- lcl$paths$db_dir
               all.isos <- input$db_all_iso
               count.isos <- input$db_count_iso
-              MetaDBparse::buildExtDB(base.dbname = db,
-                                      outfolder = outfolder,
-                                      cl = session_cl,
-                                      blocksize = 500,
-                                      mzrange = my_range,
-                                      adduct_table = adducts,
-                                      adduct_rules = adduct_rules, 
-                                      silent = T,
-                                      all.isos = all.isos,
-                                      count.isos = count.isos,
-                                      ext.dbname = "extended") #TODO: figure out the optimal fetch limit... seems 200 for now
+              buildExtDB(base.dbname = db,
+                         outfolder = outfolder,
+                         cl = session_cl,
+                         blocksize = 500,
+                         mzrange = my_range,
+                         adduct_table = adducts,
+                         adduct_rules = adduct_rules, 
+                         silent = T,
+                         all.isos = all.isos,
+                         count.isos = count.isos,
+                         ext.dbname = basename("extended")) #TODO: figure out the optimal fetch limit... seems 200 for now
+              success = T
             }else{
               MetaboShiny::metshiAlert("Please build base DB first! (can be changed in settings)")
             }
           }
-        } 
-      #})
+          
+        })
+        if(success){
+          print(paste("successfully built EXTENDED", db))
+        }else{
+          print(paste("building EXTENDED", db, "failed"))
+        }
+      }
     }
     dbmanager$build <- "none"
   }  

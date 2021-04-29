@@ -148,8 +148,10 @@ function(input, output, session) {
     
     if(exists("lcl")){
       # - - - 
+      home = path.expand('~')
+
       # create dir for options
-      basedir="~/MetaboShiny"
+      basedir=gsubfn::fn$paste("$home/MetaboShiny")
       if(!dir.exists(basedir)) dir.create(basedir,recursive = T)
       
       lcl$paths$opt.loc <<- file.path(basedir, "options.txt")
@@ -159,8 +161,8 @@ function(input, output, session) {
       # look for existing source folder that DOESN'T MATCH the files
       if(!file.exists(lcl$paths$opt.loc)){
         shiny::showNotification("Welcome! Creating new user options file...")
-        contents = gsubfn::fn$paste('db_dir = "~/MetaboShiny/databases"
-work_dir = "~/MetaboShiny/saves/admin"
+        contents = gsubfn::fn$paste('db_dir = $home/MetaboShiny/databases
+work_dir = $home/MetaboShiny/saves/admin
 proj_name = MY_METSHI
 ppm = 2
 packages_installed = Y
@@ -190,16 +192,17 @@ beep = no')
       }
       
       opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
+
       # ==================
       
       if(opts$work_dir == ""){
-        userfolder = "~/MetaboShiny/saves/admin"  
+        userfolder = file.path(home, "/MetaboShiny/saves")
       }else{
         userfolder = opts$work_dir
       }
       
       if(opts$db_dir == ""){
-        dbdir = "~/MetaboShiny/databases"  
+        dbdir = file.path(home, "/MetaboShiny/saves")
       }else{
         dbdir = opts$db_dir
       }
@@ -209,12 +212,8 @@ beep = no')
       if(!dir.exists(dbdir)) dir.create(dbdir,recursive = T)
       lcl$paths$work_dir <<- userfolder
       lcl$paths$db_dir <<- dbdir
-      
-      setwd(lcl$paths$work_dir)
-      
-      on.exit({
-        setwd(old.wd)
-      })
+
+      print(lcl$paths$work_dir)
       
       if("adducts.csv" %in% basename(list.files(lcl$paths$work_dir))){
         adducts <<- data.table::fread(file.path(lcl$paths$work_dir, "adducts.csv"))
@@ -613,7 +612,9 @@ beep = no')
       parallel::stopCluster(session_cl)
     }
     shiny::showNotification("Starting new threads...")
-    session_cl <<- parallel::makeCluster(input$ncores,outfile="")#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
+    logfile = file.path(lcl$paths$work_dir, "metshiLog.txt")
+    if(file.exists(logfile)) file.remove(logfile)
+    session_cl <<- parallel::makeCluster(input$ncores,outfile=logfile)#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
     # send specific functions/packages to other threads
     parallel::clusterEvalQ(session_cl, {
       library(data.table)

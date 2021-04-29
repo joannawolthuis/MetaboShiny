@@ -649,7 +649,7 @@ shiny::observe({
                                                                        folds = folds,
                                                                        maximize = T)
                                                         
-                                                        ml_res
+                                                        list(res = ml_res, params = settings)
                                                       }
                    },
                    mSet=mSet, 
@@ -662,17 +662,11 @@ shiny::observe({
                    parallel::stopCluster(ml_queue_cl)
                    
                    shiny::showNotification("Gathering results...")
+                   
                    for(res in ml_queue_res){
                      mSet$analSet$ml[[res$params$ml_method]][[res$params$ml_name]] <- res
                      settings <- res$params
                    }
-                   
-                   # PLOT #
-                   ml_performance = getMLperformance(ml_res, 
-                                                     x.metric="cutoff", 
-                                                     y.metric="acc")
-                   
-                   p=ggPlotCurves(ml_performance)
                    
                    ########
                    mSet$analSet$ml$last <- list(name = settings$ml_name,

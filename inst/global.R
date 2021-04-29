@@ -8,7 +8,7 @@ library(shinyBS)
 if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
 # set the home path
-home = normalizePath("~")
+home = path.expand('~')
 
 #TODO: add option to put user custom tables in user directory
 if("adducts.csv" %in% list.files(file.path(home, "MetaboShiny", "saves", "admin"))){
@@ -301,7 +301,7 @@ paths = list(
              "Desktop",
              "Examples",
              "System Root")
-    home = normalizePath("~")
+    home = path.expand('~')
     folders = lapply(vols, 
                      FUN = function(folder){
                        switch(folder,

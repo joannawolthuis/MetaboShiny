@@ -1047,36 +1047,38 @@ ggPlotMLMistakes <- function(predictions,
 #' @description Function to generate ggplot or plotly ROC/PrecRec plot for machine learning
 #' @rdname ggPlotCurves
 #' @export 
-ggPlotCurves = function(ml_performance){
+ggPlotCurves = function(ml_performance, cf = rainbow){
   
-  perf.long = data.table::data.table(
-    cutoff = ml_performance$cutoff,
-    x = ml_performance$x$values,
-    y = ml_performance$y$values
-  )
-  
-  AUC = pracma::trapz(perf.long$x, 
-                      perf.long$y)
+  perf.long = ml_performance$coords
+  AUC = pracma::trapz(perf.long[`Test set` == "Test"]$x, 
+                      perf.long[`Test set` == "Test"]$y)
   
   class_type = "b"
   scaleFUN <- function(x) sprintf("%.5s", x)
   
+  uniq = unique(perf.long$`Test set`)
+  colMap = cf(length(uniq))
+  names(colMap) = uniq
+  colMap['Test'] = "black"
   p <- ggplot2::ggplot() +
     ggplot2::geom_path(data = perf.long, 
+                       cex=0.3,
+                       ggplot2::aes(x = x,
+                                    y = y,
+                                    color = `Test set`,
+                                    group = `Test set`,
+                                    key = cutoff)) +
+    ggplot2::geom_path(data = perf.long[`Test set` == "Test"], 
                        cex=1.5,
                        color="black",
                        ggplot2::aes(x = x,
-                                    y = y,,
+                                    y = y,
                                     key = cutoff)) +
-    #ggplot2::geom_abline(intercept = 0, slope = 1, alpha=0.2)+
-    # ggplot2::labs(color = if(class_type == "m") "Class" else "Attempt",
-    #               text = if(class_type == "m") "Class" else "Attempt",
-    #               key = if(class_type == "m") "Class" else "Attempt") +
-    #ggplot2::coord_cartesian(xlim = c(.04,.96), ylim = c(.04,.96)) +
-    ggplot2::xlab(ml_performance$x$name) + 
-    ggplot2::ylab(ml_performance$y$name) +
+    ggplot2::xlab(ml_performance$names$x) + 
+    ggplot2::ylab(ml_performance$names$y) +
     ggplot2::scale_x_continuous(labels=scaleFUN) +
     ggplot2::scale_y_continuous(labels=scaleFUN) +
+    ggplot2::scale_color_manual(values=colMap) +
     annotation_compass(if(!is.nan(AUC)){
       paste0("AUC: ",
              format(AUC,
@@ -1118,21 +1120,21 @@ ggPlotBar <- function(data,
   }else{
     lname <- "all"
   }
-  
-  reps = max(data$rep)
 
+  data = data.table::as.data.table(data, keep.rownames=T)[,1:2]
+  print(data)
+  colnames(data) = c("m/z", "importance")
+  
   if(ml_type == "glmnet"){
     colnames(data) = c("m/z", "importance.mean", "dummy")
     data.ordered <- data[order(data$importance, decreasing=T),1:2]
   }else{
+    print(head(data))
     data.norep <- data#[,-3]
     colnames(data.norep)[1] <- "m/z"
-    if(reps > 1){
-      data.ci = Rmisc::group.CI(importance ~ `m/z`, data.norep)
-    }else{
-      data.ci = data.norep
-      data.ci$importance.mean <- data.ci$importance
-    }
+    data.ci = data.norep
+    data.ci$importance.mean <- data.ci$importance
+    print(head(data.ci))
     data.ordered <- data.ci[order(data.ci$importance.mean, decreasing = T),]      
   }
   
@@ -1150,7 +1152,8 @@ ggPlotBar <- function(data,
     ggplot2::geom_bar(stat = "identity") +
     #ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90))+
     ggplot2::scale_fill_gradientn(colors=cf(20)) +
-    ggplot2::labs(x="Top hits (m/z)",y=if(ml_type == "glmnet") "Times included in final model" else "Relative importance (%)")
+    ggplot2::labs(x = "Top hits (m/z)",
+                  y = if(ml_type == "glmnet") "Times included in final model" else "Relative importance (%)")
   
   if(topn <= 15){
     p <- p + ggplot2::geom_text(ggplot2::aes(x=`m/z`, 
