@@ -76,7 +76,6 @@ shiny::observe({
                            })
                          }
                        }
-                       
                        # --- MZ PICKER ---
                        neededForChoices = lapply(colnames(mSet$dataSet$norm), function(mzfull){
                          if(grepl("RT", mzfull)){
@@ -275,6 +274,9 @@ shiny::observe({
                      
                      shiny::updateSelectInput(session, "ml_batch_covars", 
                                               choices = c(colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "individual"))]))
+                     # --- ML PCA ---
+                     npc = nrow(mSet$dataSet$norm) - 1
+                     shiny::updateSliderInput(session, "ml_keep_pcs", max = npc)
                      
                      if("ml" %in% names(mSet$analSet)){
                        shiny::showTab(session = session, 

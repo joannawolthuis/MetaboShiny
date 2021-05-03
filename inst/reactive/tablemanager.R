@@ -10,12 +10,12 @@ shiny::observe({
       success = F
       try({
         for(do in tablemanager$make){
-          suppressWarnings({
+          #suppressWarnings({
             toWrap <- switch(do,
                    vennrich = {
                      # - - - - -
                      analyses = names(mSet$storage)
-                     venn_no$start <- report_no$start <- data.table::rbindlist(lapply(analyses, function(name){
+                     analyses_table = data.table::rbindlist(lapply(analyses, function(name){
                        analysis = mSet$storage[[name]]$analysis
                        analysis_names = names(analysis)
                        # - - -
@@ -54,18 +54,14 @@ shiny::observe({
                          threshold = c("any")
                        )
                      }))
-                     venn_no$now <- venn_no$start
-                     report_no$now <- report_no$start
                      #if(ncol(venn_no$start) > 0){
                      
-                     lcl$vectors$analyses <<- unlist(venn_no$start[,1])
-                     
+                     lcl$vectors$analyses <<- unlist(analyses_table[,1])
                      #}else{
                      #  lcl$vectors$analyses <<- c()
                      #}
                      # ---
                      lapply(c("mummi_anal", "heattable", "network_table", "ml_specific_mzs"), function(inputID){
-                       print(inputID)
                        shiny::updateSelectInput(session,
                                                 inputID, 
                                                 choices = {
@@ -82,6 +78,10 @@ shiny::observe({
                                                 })  
                      })
                      # --- 
+                     venn_no$start <- report_no$start <- analyses_table
+                     venn_no$now <- venn_no$start
+                     report_no$now <- report_no$start
+                     
                      list()
                    },
                    enrich = {
@@ -184,9 +184,8 @@ shiny::observe({
                                                          y.metric=input$ml_plot_y)
                        
                        ml_tbl_rows = lapply(unique(ml_performance$coords$`Test set`), function(test_set){
-                         data.table::data.table(AUC = 
-                                                  pracma::trapz(ml_performance$coords[`Test set` == test_set]$x, 
-                                                                ml_performance$coords[`Test set` == test_set]$y),
+                         data.table::data.table(AUC = pracma::trapz(ml_performance$coords[`Test set` == test_set]$x, 
+                                                                    ml_performance$coords[`Test set` == test_set]$y),
                                                 "Test set" = test_set)
                        })
                        res = data.table::rbindlist(ml_tbl_rows)
@@ -269,7 +268,7 @@ shiny::observe({
                      NULL
                    }
             )
-          })
+          #})
         }
         success = T
       })

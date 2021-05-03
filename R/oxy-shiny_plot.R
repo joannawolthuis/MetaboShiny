@@ -1062,19 +1062,19 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
   colMap['Test'] = "black"
   
   p <- ggplot2::ggplot() +
+    ggplot2::geom_path(data = perf.long[`Test set` == "Test"], 
+                       cex=2,
+                       ggplot2::aes(x = x,
+                                    y = y)) +
     ggplot2::geom_path(data = perf.long, 
-                       cex = 1,
-                       alpha=0.3,
+                       cex = 0.5,
+                       #alpha=0.3,
                        ggplot2::aes(x = x,
                                     y = y,
                                     color = `Test set`,
                                     group = `Test set`,
                                     text = paste0(`Test set`, " - Cutoff:", cutoff),
                                     key = paste0(`Test set`, " - Cutoff:", cutoff))) +
-    ggplot2::geom_path(data = perf.long[`Test set` == "Test"], 
-                       cex=2,
-                       ggplot2::aes(x = x,
-                                    y = y)) +
     ggplot2::xlab(ml_performance$names$x) + 
     ggplot2::ylab(ml_performance$names$y) +
     ggplot2::scale_x_continuous(labels=scaleFUN) +
@@ -1133,7 +1133,6 @@ ggPlotBar <- function(data,
     colnames(data.norep)[1] <- "m/z"
     data.ci = data.norep
     data.ci$importance.mean <- data.ci$importance
-    print(head(data.ci))
     data.ordered <- data.ci[order(data.ci$importance.mean, decreasing = T),]      
   }
   

@@ -663,8 +663,6 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
         
         if(is.null(tbls)) return(NULL)
         
-        print(top)
-        print(filter_mode)
         # user specified top hits only
         tbls_top <- lapply(tbls, function(tbl){
           filt_tbl = switch(filter_mode,

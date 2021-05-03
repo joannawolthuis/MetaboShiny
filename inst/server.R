@@ -611,7 +611,7 @@ beep = no')
       parallel::stopCluster(session_cl)
     }
     shiny::showNotification("Starting new threads...")
-    logfile = file.path(lcl$paths$work_dir, "metshiLog.txt")
+    logfile <<- file.path(lcl$paths$work_dir, "metshiLog.txt")
     if(file.exists(logfile)) file.remove(logfile)
     session_cl <<- parallel::makeCluster(input$ncores,outfile=logfile)#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
     # send specific functions/packages to other threads
@@ -745,7 +745,6 @@ beep = no')
         uimanager$refresh <- input$statistics
         
         if(input$statistics %in% c("venn", "enrich", "heatmap", "network", "ml")){
-          print("venn refresh")
           statsmanager$calculate <- "vennrich"
           tablemanager$make <- "vennrich"
           uimanager$refresh <- c(input$statistics, "vennrich")

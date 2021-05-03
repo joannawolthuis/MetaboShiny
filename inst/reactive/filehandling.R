@@ -229,6 +229,10 @@ observe({
   }
 })
 
+#for(i in 1:length(ml_queue$jobs)){
+#  ml_queue$jobs[[i]]$ml_mtry = 20
+#}
+
 observe({
   # Re-execute this reactive expression after 1000 milliseconds
   invalidateLater(600000, session)

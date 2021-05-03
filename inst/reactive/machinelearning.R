@@ -9,7 +9,7 @@ shiny::observeEvent(input$show_which_ml,{
     split.name = strsplit(input$show_which_ml, split = " - ")[[1]]
     mSet$analSet$ml$last$method <<- split.name[[1]]
     mSet$analSet$ml$last$name <<- split.name[[2]]
-    tablemanager$make <- "ml"
+    tablemanager$make <- c("vennrich", "ml")
     plotmanager$make <- "ml"
   }
 },ignoreNULL = T, ignoreInit = T)

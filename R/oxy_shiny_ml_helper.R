@@ -8,19 +8,32 @@ pcaCorr <- function(curr, center, scale, start_end_pcs){
 }
 
 getMLperformance = function(ml_res, pos.class, x.metric, y.metric){
-  spl.fold.performance = split(ml_res$train.performance, ml_res$train.performance$Resample)
   
-  coord.collection = lapply(spl.fold.performance, function(l){
+  if(!("Resample" %in% names(ml_res$train.performance))){
+    is.loocv = TRUE
+  }else{
+    is.loocv = FALSE
+  }
+
+  if(is.loocv){
+    print("Cannot estimate ROC for LOOCV 'folds'.")
+    coord.collection = list()
+  }else{
+    spl.fold.performance = split(ml_res$train.performance, ml_res$train.performance$Resample)
     
-    prediction = l[[pos.class]]
-    labels = l[["obs"]]
-    prediction = ROCR::prediction(prediction,
-                                  labels)
-    coords = ROCR::performance(prediction,
-                               x.measure = x.metric,
-                               measure = y.metric)
-    coords
-  })
+    coord.collection = lapply(spl.fold.performance, function(l){
+      
+      prediction = l[[pos.class]]
+      labels = l[["obs"]]
+      prediction = ROCR::prediction(prediction,
+                                    labels)
+      coords = ROCR::performance(prediction,
+                                 x.measure = x.metric,
+                                 measure = y.metric)
+      coords
+    })  
+  }
+  
   
   prediction = ROCR::prediction(ml_res$prediction[,pos.class], 
                                 ml_res$labels)

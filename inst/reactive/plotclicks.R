@@ -48,29 +48,28 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                      "combi",
                      "asca")){ 
     
-    print(d)
-    d <<- d
-    
     if(curr_tab == "ml" & input$ml_results == "roc"){
-      # test_set = trimws(gsub("-.*$", "", d$key))
-      # xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
-      # imp.vals = if(test_set == "Test") xvals$res$importance else xvals$res$train.importance 
-      # if(length(attempt) > 0 & !is.na(attempt)){
-      #   xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
-      #   if(attempt > 0){
-      #     output$ml_tab <- DT::renderDataTable({
-      #       imp <- data.table::as.data.table(xvals$imp[[attempt]], keep.rownames = T)
-      #       colnames(imp) <- c("mz", "importance")
-      #       imp <- imp[importance > 0,]
-      #       lcl$tables$ml_roc <<- data.frame(importance = imp$importance,
-      #                                        row.names = gsub(imp$mz,
-      #                                                         pattern = "`|`",
-      #                                                         replacement=""))
-      #       MetaboShiny:: metshiTable(lcl$tables$ml_roc)
-      #     })
-      #   }
-      # }
-      NULL
+      test_set = trimws(gsub("-.*$", "", d$key))
+      threshold = trimws(gsub(".*Cutoff:", "", d$key))
+      xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
+      
+      if(test_set == "Test"){
+        probsTest <- xvals$res$prediction
+        lbl = xvals$res$labels
+      }else{
+        subset = xvals$res$train.performance[xvals$res$train.performance$Resample == test_set,]
+        probsTest <- subset[,3:4]
+        lbl = subset$obs
+      }
+      otherClass = setdiff(colnames(probsTest), input$ml_plot_posclass)
+      pred <- factor(ifelse(probsTest[, input$ml_plot_posclass] > threshold, 
+                            input$ml_plot_posclass, otherClass))
+      conf = caret::confusionMatrix(pred, lbl)
+      output$conf_matr_plot <- shiny::renderPlot({
+        fourfoldplot(conf$table, color = c("#d8031c",
+                                           "#6497bf"),
+                     conf.level = 0, margin = 1, main=d$key)
+      })
     }else{
       if(curr_tab %in% c("heatmap", "enrich","venn","network")){
         switch(curr_tab,
