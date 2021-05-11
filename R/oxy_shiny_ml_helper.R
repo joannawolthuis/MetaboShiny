@@ -20,7 +20,6 @@ getMLperformance = function(ml_res, pos.class, x.metric, y.metric){
     coord.collection = list()
   }else{
     spl.fold.performance = split(ml_res$train.performance, ml_res$train.performance$Resample)
-    
     coord.collection = lapply(spl.fold.performance, function(l){
       
       prediction = l[[pos.class]]
@@ -90,7 +89,9 @@ runML <- function(curr,
                   tuneGrid,
                   folds,
                   maximize=T,
-                  cl=0){
+                  cl=0,
+                  shuffle = F,
+                  n_permute = 10){
   
   # get user training percentage
   if(unique(train_vec)[1] != "all"){ #ONLY TRAIN IS DEFINED
@@ -140,33 +141,16 @@ runML <- function(curr,
                                    index = folds,
                                    savePredictions = "all")
   
-  if(ml_method %in% c("rpartScore")){
-    fit <- caret::train(
-      label ~ .,
-      data = training,
-      method = ml_method,
-      ## Center and scale the predictors for the training
-      ## set and all future samples.
-      maximize = maximize,
-      preProc = ml_preproc,
-      tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
-      trControl = trainCtrl
-    )
-  }else if(ml_method == "glm"){
-    def_scoring = ifelse(ifelse(is.factor(training[["label"]]), "Accuracy", "RMSE") %in% c("RMSE", "logLoss", "MAE"), FALSE, TRUE)
-    success=F
-    fit <- caret::train(
-      label ~ .,
-      data = training,
-      method = ml_method,
-      ## Center and scale the predictors for the training
-      ## set and all future samples.
-      preProc = ml_preproc,
-      maximize = if(maximize) def_scoring else !def_scoring,
-      tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
-      trControl = trainCtrl
-    )
-  }else{
+  # shuffle if shuffle
+  trainOrders = list(1:nrow(training))
+  if(shuffle){
+    for(i in 1:n_permute){
+      trainOrders = append(trainOrders, list(sample(1:nrow(training))))
+    }
+  }
+  # ------------------
+  reps = pbapply::pblapply(trainOrders, function(ordr){
+    training[['label']] = training[['label']][ordr]
     def_scoring = ifelse(ifelse(is.factor(training[["label"]]), "Accuracy", "RMSE") %in% c("RMSE", "logLoss", "MAE"), FALSE, TRUE)
     success=F
     fit <- caret::train(
@@ -181,18 +165,18 @@ runML <- function(curr,
       tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
       trControl = trainCtrl
     )
-  }
-  
-  result.predicted.prob <- stats::predict(fit, 
-                                          testing,
-                                          type = if(hasProb) "prob" else "raw") # Prediction
-  
+    result.predicted.prob <- stats::predict(fit, 
+                                            testing,
+                                            type = if(hasProb) "prob" else "raw") # Prediction
+    list(type = ml_method,
+         train.performance = fit$pred,
+         importance = caret::varImp(fit)$importance,
+         prediction = result.predicted.prob,
+         labels = testing$label,
+         distr = list(train = trainSamps, test = testSamps),
+         shuffled = !all(ordr == 1:nrow(training)))
+  })
   # train and cross validate model
   # return list with mode, prediction on test data etc.s
-  list(type = ml_method,
-       train.performance = fit$pred,
-       importance = caret::varImp(fit)$importance,
-       prediction = result.predicted.prob,
-       labels = testing$label,
-       distr = list(train = trainSamps, test = testSamps))
+  reps
 }

@@ -363,7 +363,7 @@ shiny::observe({
                    assign("ml_queue", shiny::isolate(shiny::reactiveValuesToList(ml_queue)), envir = .GlobalEnv)
                    assign("input", shiny::isolate(shiny::reactiveValuesToList(input)), envir = .GlobalEnv)
                    
-                   parallel::clusterExport(ml_queue_cl, c("input", "ml_queue", "logfile", "manager_cl_n"))
+                   parallel::clusterExport(ml_queue_cl, c("input", "ml_queue", "logfile", "manager_cl_n", "gbl"))
                    
                    parallel::clusterEvalQ(ml_queue_cl, {
                      library(parallel)
@@ -374,16 +374,44 @@ shiny::observe({
                        job_cl <- makeCluster(cores_per_job, outfile=logfile)
                        parallel::clusterExport(job_cl, c("input", "ml_queue", "logfile"))
                        doParallel::registerDoParallel(job_cl)
+                     }else{
+                       job_cl = NULL
                      }
                    })
                    
                    # make subsetted mset for ML so it's not as huge in memory
                    small_mSet = mSet
-                   small_mSet$analSet = small_mSet$analSet[c("pca")]#, "ml")]
-                   small_mSet$storage = NULL
+                   #small_mSet$analSet = small_mSet$analSet[c("pca")]#, "ml")]
+                   #small_mSet$storage = NULL
                    small_mSet$dataSet = small_mSet$dataSet[c("cls", "orig.cls", "orig", "norm", "covars")]
                    
+                   # for(i in 1:length(ml_queue$jobs)){
+                   #   ml_queue$jobs[[i]]$ml_name = paste( ml_queue$jobs[[i]]$ml_name, "shuffle")
+                   #   ml_queue$jobs[[i]]$ml_label_shuffle = TRUE 
+                   # }
+                   # ---------------------------------------------------------------------------
+                   # countries = unique(mSet$dataSet$covars$country)
+                   # adj.queue = lapply(countries, function(country){
+                   #   placeholder.queue = ml_queue$jobs
+                   #   for(i in 1:length(placeholder.queue)){
+                   #     placeholder.queue[[i]]$ml_name = gsub("aus", tolower(country), placeholder.queue[[i]]$ml_name)
+                   #     placeholder.queue[[i]]$ml_test_subset = c("country", country)
+                   #     names(placeholder.queue)[[i]] = placeholder.queue[[i]]$ml_name
+                   #   }
+                   #   placeholder.queue
+                   # })
+                   # new.queue = unlist(adj.queue, recursive = F)
+                   # ml_queue$jobs = new.queue\
+                   #
+                   #  bu_jobs = ml_queue$jobs
+                   #  for(i in 1:length(ml_queue$jobs)){
+                   #     ml_queue$jobs[[i]]$ml_name = paste( ml_queue$jobs[[i]]$ml_name, "pc3-114")
+                   #     ml_queue$jobs[[i]]$ml_pca_corr = TRUE
+                   #     ml_queue$jobs[[i]]$ml_keep_pcs = c(3, 114)
+                   #     
+                   # }
                    # setup foeach with progressbar
+                   
                    pb <- pbapply::timerProgressBar(min=0, max = length(ml_queue$jobs))
                    progress <- function(n) pbapply::setpb(pb, n)
                    opts <- list(progress = progress)
@@ -413,8 +441,6 @@ shiny::observe({
                          config = mSet$dataSet$covars[,..keep.config]
                          config$label = mSet$dataSet$cls
                          
-                         mSet = NULL
-                         
                          # PCA correct
                          if(settings$ml_pca_corr & pickedTbl != 'pca'){
                            print("Performing PCA and subtracting PCs...")
@@ -427,7 +453,9 @@ shiny::observe({
                          # subset to specific m/z values used
                          if(pickedTbl != "pca"){
                            if(settings$ml_specific_mzs != "no"){
-                             shiny::showNotification("Using user-specified m/z set.")
+                             try({
+                               shiny::showNotification("Using user-specified m/z set.")
+                             })
                              if(!is.null(settings$ml_mzs)){
                                curr <- curr[,settings$ml_mzs, with=F]
                              }else{
@@ -440,6 +468,8 @@ shiny::observe({
                              }
                            }   
                          }
+                         
+                         mSet = NULL
                          
                          # train/test split
                          ## get indices
@@ -697,7 +727,9 @@ shiny::observe({
                                         ml_preproc = settings$ml_preproc,
                                         tuneGrid = tuneGrid,
                                         folds = folds,
-                                        maximize = T)
+                                        maximize = T,
+                                        shuffle = settings$ml_label_shuffle,
+                                        n_permute = settings$ml_n_shufflings)
                          
                          res = list(res = ml_res, params = settings)
                        }
@@ -708,15 +740,15 @@ shiny::observe({
                    library(foreach)
                    ml_queue_res <- foreach::foreach(settings=ml_queue$jobs,
                                                     .options.snow = opts) %dopar% ml_run(settings, 
-                                                                                        mSet = small_mSet,
-                                                                                        input = input)
+                                                                                         mSet = small_mSet,
+                                                                                         input = input)
                    
                    
-                   
+                   print("Done!")
                    parallel::clusterEvalQ(ml_queue_cl, {
                      try({
                        parallel::stopCluster(job_cl)
-                     }, silent =T )
+                     }, silent = T)
                    })
                    
                    parallel::stopCluster(ml_queue_cl)
@@ -745,7 +777,6 @@ shiny::observe({
                      library(MetaboShiny)
                      library(MetaDBparse)
                    })
-                   MetaboShiny::setOption(lcl$paths$opt.loc, "cores", input$ncores)
                    
                    lcl$vectors$ml_train <- lcl$vectors$ml_train <<- NULL
                  })

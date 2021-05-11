@@ -14,6 +14,18 @@ shiny::observeEvent(input$show_which_ml,{
   }
 },ignoreNULL = T, ignoreInit = T)
 
+
+# meta = mSet$dataSet$covars
+# lbl_joined = paste0(meta$fcs, "_", meta$country)
+# split_80 = caret::createDataPartition(lbl_joined, p = 0.8)$Resample1
+# split_70 = caret::createDataPartition(lbl_joined, p = 0.7)$Resample1
+# split_60 = caret::createDataPartition(lbl_joined, p = 0.6)$Resample1
+# meta$eightysplit = meta$seventysplit = meta$sixtysplit = "min"
+# meta$eightysplit[split_80] = "maj"
+# meta$seventysplit[split_70] = "maj"
+# meta$sixtysplit[split_60] = "maj"
+#data.table::fwrite(meta, "/Users/ninte/Desktop/farms_may_21_meta.csv")
+
 shiny::observe({
   if(!is.null(input$ml_method)){
     mdl = caret::getModelInfo()[[input$ml_method]]

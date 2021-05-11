@@ -81,13 +81,13 @@ shiny::observe({
                           if(length(myplot$layers[[1]]$data) > 0){
                             myplot$data = myplot$layers[[1]]$data
                           }
-                          if(length(myplot$layers[[1]]$mapping) > 0){
-                            myplot$mapping = myplot$layers[[1]]$mapping
-                          }
                           
                           if(input$plot_mzlabels & (
                             any(grepl("mz|m/z", names(myplot$data)))
                             )){
+                            if(length(myplot$layers[[1]]$mapping) > 0){
+                              myplot$mapping = myplot$layers[[1]]$mapping
+                            }
                             myX = rlang::quo_get_expr(myplot$mapping[['x']])
                             myY = rlang::quo_get_expr(myplot$mapping[['y']])
                             myText = rlang::quo_get_expr(myplot$mapping[['text']])

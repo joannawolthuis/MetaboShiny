@@ -1050,9 +1050,10 @@ ggPlotMLMistakes <- function(predictions,
 ggPlotCurves = function(ml_performance, cf = rainbow){
   
   perf.long = ml_performance$coords
-  AUC = pracma::trapz(perf.long[`Test set` == "Test"]$x, 
-                      perf.long[`Test set` == "Test"]$y)
   
+  AUC = pracma::trapz(perf.long[`Test set` == "Test" & !shuffled]$x, 
+                      perf.long[`Test set` == "Test" & !shuffled]$y)
+
   class_type = "b"
   scaleFUN <- function(x) sprintf("%.5s", x)
   
@@ -1061,24 +1062,66 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
   names(colMap) = uniq
   colMap['Test'] = "black"
   
-  p <- ggplot2::ggplot() +
-    ggplot2::geom_path(data = perf.long[`Test set` == "Test"], 
-                       cex=2,
+  p = ggplot2::ggplot()
+  
+  shuffleAUCs = NULL
+  
+  # shuffled first
+  if(any(perf.long$shuffled)){
+    
+    shuffle_data = perf.long[(shuffled)]
+    
+    shuffleSplit = split(shuffle_data, shuffle_data$run)
+    shuffleAUCs = sapply(shuffleSplit, function(t){
+      pracma::trapz(t[`Test set` == "Test"]$x, 
+                    t[`Test set` == "Test"]$y)
+    })
+    
+    # chance of shuffled being better than AUC -> get p value from this
+    betterThan = sum(shuffleAUCs > AUC)
+    #print(betterThan)
+    #print(length(shuffleAUCs))
+    p_improv = betterThan/length(shuffleAUCs)
+
+    dens_dat = data.table::data.table(auc = shuffleAUCs)
+    dens = ggplot2::ggplot(data = dens_dat, mapping = ggplot2::aes(x = auc, y = ..scaled..)) + 
+      ggplot2::geom_density(color="gray",fill="gray") +
+      ggplot2::geom_segment(mapping = aes(y=0, yend=1, x = AUC, xend = AUC), color = "black", cex=2)+
+      ggplot2::geom_text(label = paste("p =",p_improv), aes(x = AUC, y = 1.02))
+    
+    p = p + 
+      ggplot2::geom_smooth(data = shuffle_data[`Test set` == "Test"],
+                               cex = 1,
+                               alpha = 0.2,
+                               linetype = 2,color="red",
+                               fill = "red",
+                               ggplot2::aes(x = x,
+                                            y = y
+                                            #,group = run
+                                            )) 
+  }
+  
+  p <- p + 
+    ggplot2::geom_smooth(data = perf.long[!(shuffled)], 
+                         cex = 1,
+                         alpha=0.2,
+                         color="blue",
+                         fill="blue",
+                         linetype=2,
+                         ggplot2::aes(x = x,
+                                      y = y#
+                                      #group = `Test set`,
+                                      #text = paste0(`Test set`, " - Cutoff:", cutoff)
+                                      #key = paste0(`Test set`, " - Cutoff:", cutoff))
+                         )) +
+    ggplot2::geom_step(data = perf.long[`Test set` == "Test" & !(shuffled)], 
+                       cex=3,
                        ggplot2::aes(x = x,
                                     y = y)) +
-    ggplot2::geom_path(data = perf.long, 
-                       cex = 0.5,
-                       #alpha=0.3,
-                       ggplot2::aes(x = x,
-                                    y = y,
-                                    color = `Test set`,
-                                    group = `Test set`,
-                                    text = paste0(`Test set`, " - Cutoff:", cutoff),
-                                    key = paste0(`Test set`, " - Cutoff:", cutoff))) +
     ggplot2::xlab(ml_performance$names$x) + 
-    ggplot2::ylab(ml_performance$names$y) +
-    ggplot2::scale_x_continuous(labels=scaleFUN) +
-    ggplot2::scale_y_continuous(labels=scaleFUN) +
+    ggplot2::ylab(ml_performance$names$y) + 
+    ggplot2::scale_x_continuous(labels=scaleFUN) + 
+    #ggplot2::scale_y_continuous(labels=scaleFUN) +
     ggplot2::scale_color_manual(values=colMap) +
     annotation_compass(if(!is.nan(AUC)){
       paste0("AUC: ",
@@ -1089,6 +1132,7 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
     }else{""},
     position = "SE",
     size=20)
+  #-----------------------
   p
 }
 
@@ -1895,6 +1939,7 @@ ggPlotVenn <- function(mSet,
                        top = 100,
                        cols,
                        filter_mode="top",
+                       plot_mode = "venn",
                        cf){
   
   flattened <- getTopHits(mSet,
@@ -1903,33 +1948,50 @@ ggPlotVenn <- function(mSet,
                           thresholds = if(filter_mode == "top") c("") else venn_yes$now$threshold,
                           filter_mode = filter_mode)
   
-  p = ggVennDiagram::ggVennDiagram(flattened,
-                                   label_alpha = 1, 
-                                   cf = cf,
-                                   show_intersect = T,
-                                   label = "count",
-                                   label_geom = ggplot2::geom_text)
-  
-  groups = p$layers[[2]]$data
-  translator = data.table::data.table(abcd = LETTERS[1:nrow(groups)], 
-                                      group = groups$label)
-  
-  abcd.combi = unique(p$layers[[1]]$data$group)
-  
-  for(lettergroup in abcd.combi){
-    spl.letters = stringr::str_split(lettergroup, "")[[1]]
-    new.group = paste(translator[abcd %in% spl.letters]$group, collapse="<br />")
-    p$layers[[1]]$data[p$layers[[1]]$data$group == lettergroup, "group"] = new.group 
-    p$plot_env$data[p$plot_env$data$group == lettergroup, "group"] = new.group 
-    p$layers[[3]]$data[p$layers[[3]]$data$group == lettergroup,"group"] = new.group
+  if(plot_mode == "upset"){
+    upset_data = data.table::rbindlist(pbapply::pblapply(1:length(flattened), function(i){
+      mz = flattened[[i]]
+      name = names(flattened)[i]
+      data.frame(mz = mz,
+                 Analysis = name)
+    }))
+    upset_data = upset_data[, Analyses:=list(list((Analysis))), by = mz]
+    
+    p = ggplot(data = upset_data[,2:3], aes(x=Analyses, key=Analyses)) +
+      geom_bar(aes(fill=after_stat(count)), color="black") +
+      geom_text(stat='count', aes(label=after_stat(count)), vjust=-1) +
+      ggupset::scale_x_upset(n_intersections = 20)
+  }else{
+      label_geom = "text"
+      percent_digit=2
+      label_alpha=1
+      venn <- ggVennDiagram:::Venn(flattened)
+      data <- ggVennDiagram::process_data(venn)
+      p <- ggplot() + geom_sf(aes_string(fill = "count"), data = data@region) + 
+        geom_sf(aes_string(color = "id"), size = 1, data = data@setEdge, 
+                show.legend = F) + geom_sf_text(aes_string(label = "name"), 
+                                                data = data@setLabel) + theme_void()
+      if (label != "none") {
+        region_label <- data@region %>% dplyr::filter(.data$component == 
+                                                        "region") %>% dplyr::mutate(percent = paste(round(.data$count * 
+                                                                                                            100/sum(.data$count), digits = percent_digit), "%", 
+                                                                                                    sep = "")) %>% dplyr::mutate(both = paste(.data$count, 
+                                                                                                                                              .data$percent, sep = "\n"))
+        region_label$name = gsub("\\.\\.", "<br />", region_label$name)
+        
+        if (label_geom == "label") {
+          p <- p + geom_sf_label(aes_string(label = label,
+                                            key = "name"), 
+                                 data = region_label, alpha = label_alpha, label.size = NA)
+        }
+        if (label_geom == "text") {
+          p <- p + geom_sf_text(aes_string(label = label,
+                                           key = "name"), 
+                                data = region_label, alpha = label_alpha)
+        }
+      }
   }
-  
-  p$plot_env$data$text = p$plot_env$data$group 
-  p$layers[[1]]$data$text = p$layers[[1]]$data$group
-  p$layers[[1]]$mapping[['key']] <- p$layers[[1]]$mapping[['text']]
-  p$layers[[1]]$mapping[['key']]
-  p$layers[[1]]$data$key = p$layers[[1]]$data$text
-  p = p + scale_fill_gradient(low = "white", high = "#6F6F6F")
+  p = p + scale_fill_gradient(low = "#6F6F6F", high = "white")
   
   list(plot = p, info = flattened)
 }

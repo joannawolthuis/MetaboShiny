@@ -123,30 +123,32 @@ shiny::observeEvent(input$intersect_venn, {
 
   # hypergeometric testing...
   if(nrow(lcl$tables$venn_overlap) > 0){
-    pval = switch(as.character(length(input$intersect_venn)),
-                  "2" = 1 - phyper(nrow(lcl$tables$venn_overlap),
-                                 length(lcl$vectors$venn_lists[[input$intersect_venn[1]]]),
-                                 ncol(mSet$dataSet$norm) - length(lcl$vectors$venn_lists[[1]]),
-                                 length(lcl$vectors$venn_lists[[input$intersect_venn[2]]])),
-                  "3" = venn_sample_3(nrepl = 100,
-                                    intersectn = nrow(lcl$tables$venn_overlap),
-                                    n = 1:ncol(mSet$dataSet$norm),
-                                    length(lcl$vectors$venn_lists[[input$intersect_venn[1]]]),
-                                    length(lcl$vectors$venn_lists[[input$intersect_venn[2]]]),
-                                    length(lcl$vectors$venn_lists[[input$intersect_venn[3]]])),
-                  "4" = venn_sample_4(nrepl = 100,
-                                    intersectn = nrow(lcl$tables$venn_overlap),
-                                    n = 1:ncol(mSet$dataSet$norm),
-                                    length(lcl$vectors$venn_lists[[input$intersect_venn[1]]]),
-                                    length(lcl$vectors$venn_lists[[input$intersect_venn[2]]]),
-                                    length(lcl$vectors$venn_lists[[input$intersect_venn[3]]]),
-                                    length(lcl$vectors$venn_lists[[input$intersect_venn[4]]])))
-    stars = p2stars(pval)
-    boxcolor = if(stars == "") "blue" else if(stars == "*") "green" else if(stars == "**") "yellow" else if(stars == "***") "orange" else if (stars == "****") "red"
-    output$venn_pval <- shiny::renderUI({
-      div(shiny::renderText({
-        paste0("significance: ", stars, " (p = ", pval, ")" )
-      }), style=paste0("background:", boxcolor))
+    try({
+      pval = switch(as.character(length(input$intersect_venn)),
+                    "2" = 1 - phyper(nrow(lcl$tables$venn_overlap),
+                                     length(lcl$vectors$venn_lists[[input$intersect_venn[1]]]),
+                                     ncol(mSet$dataSet$norm) - length(lcl$vectors$venn_lists[[1]]),
+                                     length(lcl$vectors$venn_lists[[input$intersect_venn[2]]])),
+                    "3" = venn_sample_3(nrepl = 100,
+                                        intersectn = nrow(lcl$tables$venn_overlap),
+                                        n = 1:ncol(mSet$dataSet$norm),
+                                        length(lcl$vectors$venn_lists[[input$intersect_venn[1]]]),
+                                        length(lcl$vectors$venn_lists[[input$intersect_venn[2]]]),
+                                        length(lcl$vectors$venn_lists[[input$intersect_venn[3]]])),
+                    "4" = venn_sample_4(nrepl = 100,
+                                        intersectn = nrow(lcl$tables$venn_overlap),
+                                        n = 1:ncol(mSet$dataSet$norm),
+                                        length(lcl$vectors$venn_lists[[input$intersect_venn[1]]]),
+                                        length(lcl$vectors$venn_lists[[input$intersect_venn[2]]]),
+                                        length(lcl$vectors$venn_lists[[input$intersect_venn[3]]]),
+                                        length(lcl$vectors$venn_lists[[input$intersect_venn[4]]])))
+      stars = p2stars(pval)
+      boxcolor = if(stars == "") "blue" else if(stars == "*") "green" else if(stars == "**") "yellow" else if(stars == "***") "orange" else if (stars == "****") "red"
+      output$venn_pval <- shiny::renderUI({
+        div(shiny::renderText({
+          paste0("significance: ", stars, " (p = ", pval, ")" )
+        }), style=paste0("background:", boxcolor))
+      })
     })
   }else{
     pval = NULL

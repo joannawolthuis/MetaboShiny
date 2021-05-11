@@ -148,7 +148,7 @@ observe({
         error = function(cond){
           metshiAlert("Corrupt save detected! Reverting to previous state...")
           fn_bu <- normalizePath(paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), 
-                                        "_BACKUP.metshi"),mustWork = F)
+                                        "_BACKUP.metshi"),mustWork = F)=
           fn <- normalizePath(paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), 
                                      ".metshi"))
           file.rename(fn_bu, fn)

@@ -504,13 +504,13 @@ metshiTable <- function(content, options=NULL, rownames= T){
 #' @importFrom stringr str_match
 #' @importFrom data.table as.data.table
 getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
-  
+
   experiments <- stringr::str_match(expnames, 
                                     pattern = "(all m\\/z)|\\(.*\\)")[,1]
   
   experiments <- unique(gsub(experiments, pattern = "\\(\\s*(.+)\\s*\\)", replacement="\\1"))
 
-  exp_table = data.frame(name = expnames, threshold = thresholds)
+  exp_table = data.frame(name = expnames, threshold = c(if(length(thresholds)>0) thresholds else 0))
   
   table_list <- lapply(experiments, function(experiment){
     if(experiment == "all m/z"){
@@ -527,7 +527,6 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
       
       categories = grep(unlist(expnames),
                         pattern = paste0("\\(",rgx_exp, "\\)"), value = T)
-      
       # go through the to include analyses
       
       tables <- lapply(categories, function(name){
@@ -550,22 +549,18 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                        ml = {
                          which.ml <- gsub(name, pattern = "^.*- ", replacement="")
                          
-                         data = analysis$ml[[base_name]][[which.ml]]$bar
+                         data = analysis$ml[[base_name]][[which.ml]]$res$importance
                          
-                         if(base_name == "glmnet"){
-                           colnames(data) = c("m/z", "importance.mean", "dummy")
-                           data.ordered <- data[order(data$importance, decreasing=T),1:2]
-                         }else{
-                           data.norep <- data[,-3]
-                           colnames(data.norep)[1] <- "m/z"
-                           data.ci = Rmisc::group.CI(importance ~ `m/z`, data.norep)
-                           data.ordered <- data.ci[order(data.ci$importance.mean, decreasing = T),]
-                         }
+                         data.dt = data.table::as.data.table(data, keep.rownames=T)
                          
-                         data.ordered$`m/z` <- gsub("`","",data.ordered$`m/z`)
+                         colnames(data.dt)[1:2] <- c("m/z","importance")
+                         
+                         data.ordered <- data.dt[order(importance, decreasing = T),]
+                         
+                         data.ordered$`m/z` <- gsub("^X","",data.ordered$`m/z`)
                          
                          res = list(data.frame(`m/z`=data.ordered$`m/z`,
-                                          value=data.ordered$"importance.mean"))
+                                          value=data.ordered$"importance"))
                          names(res) <- paste0(which.ml, " (", base_name, ")")
                          res
                        },
@@ -727,8 +722,8 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                     venn = {
                      # get user input for how many top values to use for venn
                      top = input$venn_tophits
-                     if(nrow(venn_yes$now) > 4 | nrow(venn_yes$now) <= 1){
-                       metshiAlert("Can only take more than 2 and less than five analyses!")
+                     if(nrow(venn_yes$now) > 7 | nrow(venn_yes$now) <= 1){
+                       metshiAlert("Can only take more than 2 and less than seven analyses!")
                        list()
                      }else{
                        p <- ggPlotVenn(mSet = mSet,
@@ -736,6 +731,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                        filter_mode = input$venn_filter_mode,
                                        top = input$venn_tophits,
                                        cols = lcl$aes$mycols,
+                                       plot_mode = ifelse(input$venn_plot_mode, "upset", "venn"),
                                        cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                        lcl$vectors$venn_lists <- p$info
                        list(venn_plot = p$plot)
@@ -1031,11 +1027,27 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                          data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
                          
                          # PLOT #
-                         ml_performance = getMLperformance(data$res, 
-                                                           pos.class = input$ml_plot_posclass,
-                                                           x.metric=input$ml_plot_x,
-                                                           y.metric=input$ml_plot_y)
-                         
+                         ml_performance_rows = if(!is.null(data$res$prediction)){
+                           ml_performance = getMLperformance(data$res, 
+                                                             pos.class = input$ml_plot_posclass,
+                                                             x.metric=input$ml_plot_x,
+                                                             y.metric=input$ml_plot_y)
+                           ml_performance$coords$shuffled = F
+                           ml_performance$coords$run = 1
+                           list(ml_performance)
+                         }else lapply(1:length(data$res), function(i){
+                           res = data$res[[i]]
+                           ml_performance = getMLperformance(res, 
+                                                             pos.class = input$ml_plot_posclass,
+                                                             x.metric=input$ml_plot_x,
+                                                             y.metric=input$ml_plot_y)
+                           ml_performance$coords$shuffled = c(res$shuffled)
+                           ml_performance$coords$run = i
+                           ml_performance
+                         })
+                         coords = data.table::rbindlist(lapply(ml_performance_rows, function(x) x$coords))
+                         ml_performance = list(coords = coords,
+                                               names = ml_performance_rows[[1]]$names)
                          ml_roc = ggPlotCurves(ml_performance,
                                                cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                          
@@ -1481,7 +1493,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                                           size=lcl$aes$font$title.size * 1.2),
                        text = ggplot2::element_text(family = lcl$aes$font$family))
       
-      if(grepl("venn", plotName)){
+      if(grepl("venn", plotName) & !input$venn_plot_mode){
         myplot <- myplot +
           ggplot2::theme_void() +
           ggplot2::theme(panel.grid = ggplot2::element_blank(),
