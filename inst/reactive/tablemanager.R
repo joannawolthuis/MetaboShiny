@@ -14,7 +14,7 @@ shiny::observe({
             toWrap <- switch(do,
                    vennrich = {
                      # - - - - -
-                     analyses = names(mSet$storage)
+                     analyses = names(mSet$storage) 
                      analyses_table = data.table::rbindlist(lapply(analyses, function(name){
                        analysis = mSet$storage[[name]]$analysis
                        analysis_names = names(analysis)
@@ -175,11 +175,19 @@ shiny::observe({
                      }
                    },
                    ml = {
+                     ###
+                     
                      if("ml" %in% names(mSet$analSet)){
                        data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
+                       if(!is.null(data$res$prediction)){
+                         data$res$shuffled = FALSE
+                         data$res = list(data$res)
+                       }
                        
-                       ml_performance = getMLperformance(data$res, 
-                                                         pos.class = colnames(data$res$prediction)[2],
+                       no_shuffle = data$res[[which(unlist(sapply(data$res, function(x) !x$shuffle)))]]
+                       
+                       ml_performance = getMLperformance(no_shuffle, 
+                                                         pos.class = input$ml_plot_posclass,
                                                          x.metric=input$ml_plot_x,
                                                          y.metric=input$ml_plot_y)
                        
@@ -197,7 +205,7 @@ shiny::observe({
                          params = data.table::data.table(unavailable = "No parameters saved for this model...")
                        }
                        
-                       res2 = data$res$importance
+                       res2 = no_shuffle$importance
                        rownames(res2) = gsub("^X", "", rownames(res2))
                        rownames(res2) = gsub("\\.$", "-", rownames(res2))
                        res2 = data.frame(importance=res2[,1], row.names=rownames(res2))

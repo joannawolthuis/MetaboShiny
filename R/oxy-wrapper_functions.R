@@ -1026,16 +1026,12 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                          
                          data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
                          
+                         if(!is.null(data$res$prediction)){
+                           data$res$shuffled = FALSE
+                           data$res = list(data$res)
+                         }
                          # PLOT #
-                         ml_performance_rows = if(!is.null(data$res$prediction)){
-                           ml_performance = getMLperformance(data$res, 
-                                                             pos.class = input$ml_plot_posclass,
-                                                             x.metric=input$ml_plot_x,
-                                                             y.metric=input$ml_plot_y)
-                           ml_performance$coords$shuffled = F
-                           ml_performance$coords$run = 1
-                           list(ml_performance)
-                         }else lapply(1:length(data$res), function(i){
+                         ml_performance_rows = lapply(1:length(data$res), function(i){
                            res = data$res[[i]]
                            ml_performance = getMLperformance(res, 
                                                              pos.class = input$ml_plot_posclass,
@@ -1051,7 +1047,8 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                          ml_roc = ggPlotCurves(ml_performance,
                                                cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                          
-                         barplot_data <- ggPlotBar(data = data$res$importance,
+                         no_shuffle_imp = data$res[[which(unlist(sapply(data$res, function(x) !x$shuffle)))]]$importance
+                         barplot_data <- ggPlotBar(data = no_shuffle_imp,
                                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
                                                    topn = input$ml_topn,
                                                    ml_name = data$params$ml_name,
@@ -1476,16 +1473,16 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
     }
     
     if(!is3D & !grepl("heatmap", plotName)){
-      myplot <- myplot + guides(fill = guide_legend(ncol = 2),
-                                shape = guide_legend(ncol = 2),
-                                color = guide_legend(ncol = 2))
+      myplot <- myplot + guides(fill = guide_legend(ncol = 1),
+                                shape = guide_legend(ncol = 1),
+                                color = guide_legend(ncol = 1))
    
       myplot <- myplot + 
         gbl$functions$plot.themes[[lcl$aes$theme]](base_size = 15) + 
         ggplot2::theme(legend.position = if(input$legend) "right" else "none",
                        legend.key.size = unit(.5,"line"),
-                       legend.title = element_text(size=13),
-                       legend.text = element_text(size=10),
+                       legend.title = element_text(size=15),
+                       legend.text = element_text(size=12),
                        axis.line = ggplot2::element_line(colour = 'black',
                                                          size = .5),
                        plot.title = ggplot2::element_text(hjust = 0.5,

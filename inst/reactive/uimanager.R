@@ -285,7 +285,11 @@ shiny::observe({
                        
                        ###
                        data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
-                       classes = colnames(data$res$prediction)
+                       classes = if(!is.null(data$res$prediction)){
+                         colnames(data$res$prediction)
+                       }else{
+                         colnames(data$res[[1]]$prediction)
+                       }
                        shiny::updateSelectInput(session, "ml_plot_posclass", choices = classes, selected = classes[2])
                        ###
                        

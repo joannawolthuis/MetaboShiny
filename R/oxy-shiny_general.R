@@ -144,6 +144,7 @@ p2stars = function(pval){
     else if(pval < 0.01 & pval > 0.001) stars <- "***"
     else stars <- "****"
   }
+  return(stars)
 }
 
 #' @title Are you currently online?

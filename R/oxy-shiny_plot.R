@@ -1061,11 +1061,16 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
   colMap = cf(length(uniq))
   names(colMap) = uniq
   colMap['Test'] = "black"
+  colMap['Shuffled'] = "red"
+  colMap['Training'] = "blue"
   
   p = ggplot2::ggplot()
   
   shuffleAUCs = NULL
   
+  needs.ci = list()
+
+  inset.df = data.table::data.table()
   # shuffled first
   if(any(perf.long$shuffled)){
     
@@ -1083,55 +1088,58 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
     #print(length(shuffleAUCs))
     p_improv = betterThan/length(shuffleAUCs)
 
+    stars = MetaboShiny::p2stars(AUC)
+    sigmeasure = paste0("(",stars,")")
+    
     dens_dat = data.table::data.table(auc = shuffleAUCs)
     dens = ggplot2::ggplot(data = dens_dat, mapping = ggplot2::aes(x = auc, y = ..scaled..)) + 
       ggplot2::geom_density(color="gray",fill="gray") +
-      ggplot2::geom_segment(mapping = aes(y=0, yend=1, x = AUC, xend = AUC), color = "black", cex=2)+
-      ggplot2::geom_text(label = paste("p =",p_improv), aes(x = AUC, y = 1.02))
+      ggplot2::geom_segment(mapping = aes(y=0, yend=1, x = AUC, xend = AUC), color = "black", cex=1)+
+      ggplot2::annotate("text", x = AUC, y = 1.16, label = paste("p =", p_improv, sigmeasure)) +
+      ggplot2::theme_void() + ggplot2::expand_limits(y=c(0,1.25))
+  
+    inset.df <- tibble::tibble(x = 0.99, y = 0.04,
+                 plot = list(dens))
     
-    p = p + 
-      ggplot2::geom_smooth(data = shuffle_data[`Test set` == "Test"],
-                               cex = 1,
-                               alpha = 0.2,
-                               linetype = 2,color="red",
-                               fill = "red",
-                               ggplot2::aes(x = x,
-                                            y = y
-                                            #,group = run
-                                            )) 
+    needs.ci$shuffled = shuffle_data[`Test set` == "Test"]
+    needs.ci$shuffled$`Performance` = 'Shuffled'
   }
   
+  needs.ci$training = perf.long[!(shuffled)]
+  needs.ci$training$`Performance` = "Training"
+  ci.table = data.table::rbindlist(needs.ci)
+  ci.table$Performance = as.factor(ci.table$Performance)
+  
   p <- p + 
-    ggplot2::geom_smooth(data = perf.long[!(shuffled)], 
+    ggplot2::geom_smooth(data = ci.table,
                          cex = 1,
-                         alpha=0.2,
-                         color="blue",
-                         fill="blue",
-                         linetype=2,
-                         ggplot2::aes(x = x,
-                                      y = y#
-                                      #group = `Test set`,
-                                      #text = paste0(`Test set`, " - Cutoff:", cutoff)
-                                      #key = paste0(`Test set`, " - Cutoff:", cutoff))
+                         alpha=0.2,  
+                         linetype=2,show.legend = F,
+                         mapping = ggplot2::aes(x = x,
+                                      y = y,
+                                      group = Performance,
+                                      color = Performance,
+                                      fill = Performance
                          )) +
     ggplot2::geom_step(data = perf.long[`Test set` == "Test" & !(shuffled)], 
                        cex=3,
                        ggplot2::aes(x = x,
-                                    y = y)) +
+                                    y = y,
+                                    group = `Test set`,
+                                    color = `Test set`,
+                                    text = paste0(`Test set`, " - Cutoff:", cutoff),
+                                    key = paste0(`Test set`, " - Cutoff:", cutoff))) +
     ggplot2::xlab(ml_performance$names$x) + 
     ggplot2::ylab(ml_performance$names$y) + 
-    ggplot2::scale_x_continuous(labels=scaleFUN) + 
-    #ggplot2::scale_y_continuous(labels=scaleFUN) +
+    ggplot2::scale_x_continuous(breaks = seq(0,1,0.25), expand = c(0, 0), limits = c(0,1),oob=scales::squish) + 
+    ggplot2::scale_y_continuous(breaks = seq(0,1,0.25), expand = c(0, 0), limits = c(-0.005,1.005),oob=scales::squish) +
     ggplot2::scale_color_manual(values=colMap) +
-    annotation_compass(if(!is.nan(AUC)){
-      paste0("AUC: ",
-             format(AUC,
-                    2,
-                    drop0trailing = TRUE,
-                    digits = 2))
-    }else{""},
-    position = "SE",
-    size=20)
+    ggplot2::annotate(geom = "text", label = if(!is.nan(AUC)) paste0("AUC: ",  sprintf("%.4s",AUC)) else "", x = 0.91, y = 0.02, size=7)
+  p = p +
+    expand_limits(x = 0, y = 0) +
+    geom_plot_npc(data = inset.df,
+                  vp.width = 1/7, vp.height = 1/8,
+                  aes(npcx = x, npcy = y, label = plot))
   #-----------------------
   p
 }
