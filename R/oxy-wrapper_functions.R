@@ -549,9 +549,12 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                        ml = {
                          which.ml <- gsub(name, pattern = "^.*- ", replacement="")
                          
-                         data = analysis$ml[[base_name]][[which.ml]]$res$importance
-                         
-                         data.dt = data.table::as.data.table(data, keep.rownames=T)
+                         data = analysis$ml[[base_name]][[which.ml]]
+                         if(!is.null(data$res$prediction)){
+                           data$res$shuffled = FALSE
+                           data$res = list(data$res)
+                         }
+                         data.dt = data.table::as.data.table(data$res[[which(unlist(sapply(data$res, function(x) !x$shuffled)))]]$importance, keep.rownames=T)
                          
                          colnames(data.dt)[1:2] <- c("m/z","importance")
                          
@@ -560,7 +563,7 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                          data.ordered$`m/z` <- gsub("^X","",data.ordered$`m/z`)
                          
                          res = list(data.frame(`m/z`=data.ordered$`m/z`,
-                                          value=data.ordered$"importance"))
+                                               value=data.ordered$"importance"))
                          names(res) <- paste0(which.ml, " (", base_name, ")")
                          res
                        },

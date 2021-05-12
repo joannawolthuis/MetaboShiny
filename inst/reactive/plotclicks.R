@@ -61,7 +61,7 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
           data$res$shuffled = FALSE
           data$res = list(data$res)
         }
-        xvals = data$res[[which(unlist(sapply(data$res, function(x) !x$shuffle)))]]
+        xvals = data$res[[which(unlist(sapply(data$res, function(x) !x$shuffled)))]]
         
         probsTest <- xvals$prediction
         lbl = xvals$labels
