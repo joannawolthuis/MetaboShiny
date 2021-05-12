@@ -49,27 +49,39 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                      "asca")){ 
     
     if(curr_tab == "ml" & input$ml_results == "roc"){
-      test_set = trimws(gsub("-.*$", "", d$key))
-      threshold = trimws(gsub(".*Cutoff:", "", d$key))
-      xvals <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
       
-      if(test_set == "Test"){
-        probsTest <- xvals$res$prediction
-        lbl = xvals$res$labels
-      }else{
-        subset = xvals$res$train.performance[xvals$res$train.performance$Resample == test_set,]
-        probsTest <- subset[,3:4]
-        lbl = subset$obs
+      if(!is.null(d$key)){
+        test_set = trimws(gsub("-.*$", "", d$key))
+        threshold = trimws(gsub(".*Cutoff:", "", d$key))
+        
+        # get test set
+        
+        data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
+        if(!is.null(data$res$prediction)){
+          data$res$shuffled = FALSE
+          data$res = list(data$res)
+        }
+        xvals = data$res[[which(unlist(sapply(data$res, function(x) !x$shuffle)))]]
+        
+        probsTest <- xvals$prediction
+        lbl = xvals$labels
+        
+        otherClass = setdiff(colnames(probsTest), input$ml_plot_posclass)
+        pred <- factor(ifelse(probsTest[, input$ml_plot_posclass] > threshold, 
+                              input$ml_plot_posclass, otherClass))
+        conf = caret::confusionMatrix(pred, lbl)
+        output$conf_matr_plot <- shiny::renderPlot({
+          fourfoldplot(conf$table, color = c("#3399FF",
+                                             "#FF6666"),
+                       conf.level = 0, margin = 1, main=d$key,
+                       ) +
+            text(-0.18,0.15, "TN", cex=1.3) + 
+            text(0.18, -0.15, "TP", cex=1.3) + 
+            text(0.18,0.15, "FN", cex=1.3) + 
+            text(-0.18, -0.15, "FP", cex=1.3)
+        })  
       }
-      otherClass = setdiff(colnames(probsTest), input$ml_plot_posclass)
-      pred <- factor(ifelse(probsTest[, input$ml_plot_posclass] > threshold, 
-                            input$ml_plot_posclass, otherClass))
-      conf = caret::confusionMatrix(pred, lbl)
-      output$conf_matr_plot <- shiny::renderPlot({
-        fourfoldplot(conf$table, color = c("#d8031c",
-                                           "#6497bf"),
-                     conf.level = 0, margin = 1, main=d$key)
-      })
+      
     }else{
       if(curr_tab %in% c("heatmap", "enrich","venn","network")){
         switch(curr_tab,
