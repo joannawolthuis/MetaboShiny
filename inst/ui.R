@@ -3,7 +3,6 @@ shiny::fluidPage(theme = "metaboshiny.css",
                  ECharts2Shiny::loadEChartsLibrary(),
                  shinyalert::useShinyalert(), 
                  shinyjs::useShinyjs(),
-                 #shinyjqui::includeJqueryUI(),
                  tags$head(tags$script(src="cursor.js")),
                  shiny::div(style = 'position: absolute;
                                      left: 79%;
@@ -249,6 +248,9 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                                             "Leave them alone" = "none"),
                                                                                                               selected = "rowmin"),
                                                                                            shiny::conditionalPanel("input.miss_type == 'rf'",
+                                                                                                                   shinyWidgets::switchInput("rf_norm_method", label = "Method:", 
+                                                                                                                                             value = TRUE, onLabel = "missRanger", 
+                                                                                                                                             offLabel="missForest",size = "small"),
                                                                                                                    shiny::sliderInput("rf_norm_ntree", label = "Trees built per variable", value = 10, min = 1, max = 50, step=1),
                                                                                                                    #numericInput("rf_norm_mtry", label = "Trees built per variable", value = 10, min = 1, max = 50)
                                                                                                                    shiny::radioButtons("rf_norm_parallel", label = "Parallelize?", choices = list("no",
@@ -1505,7 +1507,7 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                              ),
                                                                                            # this is the sidebar that shows in the analysis tab. contains a lot of settings on the current variable of interest, plot themes and colours, and venn diagrams.
                                                                                            sidebarPanel =
-                                                                                             #shinyjqui::jqui_resizable(
+                                                                                             shinyjqui::jqui_resizable(
                                                                                              sidebarPanel(align="center",width = 3,id="sidePanel",
                                                                                                           shiny::fluidRow(align="center",
                                                                                                                           shiny::tabsetPanel(id = "anal_sidebar", selected="start",
@@ -1833,8 +1835,8 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                outline = TRUE,
                                                                                                                                                                plain = TRUE,
                                                                                                                                                                value = FALSE,
-                                                                                                                                                               icon_on = icon("star",lib ="glyphicon"), 
-                                                                                                                                                               icon_off = icon("star-empty",lib ="glyphicon")
+                                                                                                                                                               icon_on = icon("star"), 
+                                                                                                                                                               icon_off = htmltools::browsable(tags$i(class = "far fa-star"))
                                                                                                                                                              ),
                                                                                                                                                              style = "border-top: 1px solid #DFDCDC; border-bottom: 1px solid #DFDCDC; margin-left: -15px; margin-right: -15px; background-color:white;"),
                                                                                                                                                              br(),
@@ -2041,7 +2043,7 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                              shiny::fileInput(inputId = "metadata_new", "Select metadata", buttonLabel="Browse"),
                                                                                                                                                              #shinyFiles::shinyFilesButton('metadata_new', 'upload', 'Select metadata', FALSE),
                                                                                                                                                              shinyWidgets::circleButton("metadata_new_add", icon = shiny::icon("arrow-right"))
-                                                                                                                                             ))))
+                                                                                                                                             )))))
                                                      ))),
                                      
                                      # # report tab

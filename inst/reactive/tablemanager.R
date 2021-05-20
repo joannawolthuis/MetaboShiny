@@ -289,9 +289,12 @@ shiny::observe({
             subbed = gsub("\\+", "", rownames(mytable))
             rns = rownames(mytable)
             if(subbed[1] %in% colnames(mSet$dataSet$norm)){ # check if a mz table
+              # starico = "★"
+              starico = '<i class=\"fa fa-star\" role=\"presentation\" aria-label=\"star icon\"></i>'
               stars = sapply(mSet$report$mzStarred[subbed]$star, 
-                             function(hasStar) if(hasStar) "★" else "")
-              starCol = data.table::data.table("★" = stars)
+                             function(hasStar) if(hasStar) starico else "")
+              starCol = data.table::data.table(starico = stars)
+              colnames(starCol) = starico
               mytable = cbind(starCol, mytable)
             }
             metshiTable(content = mytable, rownames = rns)

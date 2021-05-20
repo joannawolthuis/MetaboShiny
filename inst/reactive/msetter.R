@@ -133,7 +133,18 @@ shiny::observe({
             mSet$metshiParams$renorm <- TRUE
           }
           
-          already.normalized = any(matching.samps)
+          # === PAIR ===
+          
+          if(mSet$dataSet$ispaired){
+            print("Paired analysis a-c-t-i-v-a-t-e-d")
+            mSet$settings$ispaired <- TRUE
+            mSet <- pair.mSet(mSet)
+          }else{
+            mSet.settings$ispaired <- FALSE
+          }
+          
+          # ============
+          already.normalized = any(matching.samps) & oldSettings$ispaired == input$paired
           
           if(already.normalized){
             tables = c("orig", "norm", "proc", "prebatch", "covars")
@@ -159,12 +170,6 @@ shiny::observe({
           
           mSet$settings$cls.name <- new.name
           
-          if(mSet$dataSet$ispaired){
-            mSet$settings$ispaired <- TRUE
-            mSet <- pair.mSet(mSet)
-          }else{
-            mSet.settings$ispaired <- FALSE
-          }
           if(grepl(mSet$settings$exp.type, pattern = "^1f")){
             if(mSet$dataSet$cls.num == 2){
               mSet$settings$exp.type <- "1fb"

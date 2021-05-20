@@ -667,3 +667,120 @@ venn_sample_4 <- function(nrepl, intersectn, n, a, b, c, d){
   p
 }
 
+
+missRanger.joanna <- function (data, formula = . ~ ., pmm.k = 0L, maxiter = 10L, with.pb=T, ncl=0,
+                               seed = NULL, verbose = 1, returnOOB = FALSE, case.weights = NULL, 
+                               ...) 
+{
+  if (verbose) {
+    cat("\nMissing value imputation by random forests\n")
+  }
+  stopifnot(is.data.frame(data), dim(data) >= 1L, inherits(formula, 
+                                                           "formula"), length(formula <- as.character(formula)) == 
+              3L, is.numeric(pmm.k), length(pmm.k) == 1L, pmm.k >= 
+              0L, is.numeric(maxiter), length(maxiter) == 1L, maxiter >= 
+              1L, !(c("write.forest", "probability", "split.select.weights", 
+                      "dependent.variable.name", "classification") %in% names(list(...))))
+  if (!is.null(case.weights)) {
+    stopifnot(length(case.weights) == nrow(data), !anyNA(case.weights))
+  }
+  if (!is.null(seed)) {
+    set.seed(seed)
+  }
+  relevantVars <- lapply(formula[2:3], function(z) attr(terms.formula(reformulate(z), 
+                                                                      data = data[1, ]), "term.labels"))
+  toImpute <- relevantVars[[1]][vapply(data[, relevantVars[[1]], 
+                                            drop = FALSE], FUN.VALUE = TRUE, function(z) anyNA(z) && 
+                                         !all(is.na(z)))]
+  converted <- missRanger:::convert(data[, toImpute, drop = FALSE], check = TRUE)
+  data[, toImpute] <- converted$X
+  visitSeq <- setdiff(toImpute, converted$bad)
+  if (verbose) {
+    cat("\n  Variables to impute:\t\t")
+    cat(visitSeq, sep = ", ")
+  }
+  if (!length(visitSeq)) {
+    if (verbose) {
+      cat("\n")
+    }
+    return(data)
+  }
+  dataNA <- is.na(data[, visitSeq, drop = FALSE])
+  visitSeq <- names(sort(colSums(dataNA)))
+  imputeBy <- relevantVars[[2]][relevantVars[[2]] %in% visitSeq | 
+                                  !vapply(data[, relevantVars[[2]], drop = FALSE], anyNA, 
+                                          TRUE)]
+  completed <- setdiff(imputeBy, visitSeq)
+  if (verbose) {
+    cat("\n  Variables used to impute:\t")
+    cat(imputeBy, sep = ", ")
+  }
+  j <- 1L
+  crit <- TRUE
+  verboseDigits <- 4L
+  predError <- setNames(rep(1, length(visitSeq)), visitSeq)
+  if (verbose >= 2) {
+    cat("\n", abbreviate(visitSeq, minlength = verboseDigits + 
+                           2L), sep = "\t")
+  }
+  while (crit && j <= maxiter) {
+    #if (verbose) {
+    cat(paste0("current: iter ", j, sep = ""))
+    #}
+    dataLast <- data
+    predErrorLast <- predError
+    pb = pbapply::startpb(min = 0, max = length(visitSeq))
+    currv=0
+    for (v in visitSeq) {
+      currv = currv + 1
+      v.na <- dataNA[, v]
+      if (length(completed) == 0L) {
+        data[[v]] <- missRanger::imputeUnivariate(data[[v]])
+      }
+      else {
+        fit <- ranger::ranger(formula = reformulate(completed, 
+                                                    response = v), data = data[!v.na, union(v, 
+                                                                                            completed), drop = FALSE], 
+                              case.weights = case.weights[!v.na],
+                              ...)
+        pred <- predict(fit, data[v.na, completed, drop = FALSE])$predictions
+        data[v.na, v] <- if (pmm.k) 
+          pmm(xtrain = fit$predictions, xtest = pred, 
+              ytrain = data[[v]][!v.na], k = pmm.k)
+        else pred
+        predError[[v]] <- fit$prediction.error/(if (fit$treetype == 
+                                                    "Regression") 
+          var(data[[v]][!v.na])
+          else 1)
+        if (is.nan(predError[[v]])) {
+          predError[[v]] <- 0
+        }
+      }
+      if (j == 1L && (v %in% imputeBy)) {
+        completed <- union(completed, v)
+      }
+      if (verbose == 1) {
+        cat(".")
+      }
+      else if (verbose >= 2) {
+        cat(format(round(predError[[v]], verboseDigits), 
+                   nsmall = verboseDigits), "\t")
+      }
+      pbapply::setpb(pb, currv)
+    }
+    j <- j + 1L
+    crit <- mean(predError) < mean(predErrorLast)
+  }
+  #if (verbose) {
+    cat("\n")
+  #}
+  if (j == 2L || (j == maxiter && crit)) {
+    dataLast <- data
+    predErrorLast <- predError
+  }
+  if (returnOOB) {
+    attr(dataLast, "oob") <- predErrorLast
+  }
+  missRanger:::revert(converted, X = dataLast)
+}
+

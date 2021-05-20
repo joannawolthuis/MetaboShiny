@@ -179,6 +179,7 @@ shiny::observeEvent(input$initialize, {
         prematched = F,
         rf_norm_parallelize = input$rf_norm_parallel,
         rf_norm_ntree = input$rf_norm_ntree,
+        rf_norm_method = if(input$rf_norm_method) "ranger" else "rf",
         miss_perc = input$miss_perc_2,
         orig.count = length(grep("qc",tolower(rownames(mSet$dataSet$orig)),invert = T)),
         pca_corr = input$pca_corr,

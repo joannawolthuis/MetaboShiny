@@ -1,15 +1,7 @@
 # make miniplot for sidebar with current compound
 output$curr_plot <- plotly::renderPlotly({
   if(my_selection$mz != ""){
-    MetaboShiny::ggplotSummary(mSet, my_selection$mz, shape.fac = input$shape_var, 
-                               cols = lcl$aes$mycols, cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                               styles = input$ggplot_sum_style,
-                               add_stats = input$ggplot_sum_stats, 
-                               color.fac = input$col_var,
-                               text.fac = input$txt_var,
-                               fill.fac = input$fill_var,
-                               plot.theme = gbl$functions$plot.themes[[lcl$aes$theme]],
-                               font = lcl$aes$font)
+    plotmananager$make <- "summary"
   }
 })
 
@@ -18,9 +10,13 @@ observeEvent(input$reload_plots, {
     if(!is.null(input$statistics)){
       uimanager$refresh <- input$statistics
       if(input$statistics %in% names(mSet$analSet)){
-        plotmanager$make <- input$statistics
+        plot.me = input$statistics
+        if(my_selection$mz != ""){
+          plot.me = c(plot.me, "summary")
+        }
+        plotmanager$make <- plot.me
       }
-    }  
+    }
   }
 })
 

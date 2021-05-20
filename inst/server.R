@@ -612,7 +612,7 @@ beep = no')
     }
     shiny::showNotification("Starting new threads...")
     logfile <<- file.path(lcl$paths$work_dir, "metshiLog.txt")
-    if(file.exists(logfile)) file.remove(logfile)
+    #if(file.exists(logfile)) file.remove(logfile)
     session_cl <<- parallel::makeCluster(input$ncores,outfile=logfile)#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
     # send specific functions/packages to other threads
     parallel::clusterEvalQ(session_cl, {

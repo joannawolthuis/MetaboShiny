@@ -334,7 +334,8 @@ replRowMin <- function(mSet){
 #' @export 
 #' @importFrom doParallel registerDoParallel
 #' @importFrom missForest missForest
-replRF <- function(mSet, parallelMode, ntree, cl){
+replRF <- function(mSet, parallelMode, ntree, cl, rf.method){
+  print(rf.method)
   w.missing <- qs::qread("preproc.qs")
   samples <- rownames(w.missing)
   # convert all to as numeric
@@ -344,20 +345,30 @@ replRF <- function(mSet, parallelMode, ntree, cl){
   # register other threads as parallel threads
   doParallel::registerDoParallel(cl)
   
-  # set amount of tries (defined by missforest package)
-  auto.mtry <- floor(sqrt(ncol(w.missing)))
-  
-  mtry <- ifelse(auto.mtry > 100, 
-                 100, 
-                 auto.mtry)
-  
-  # impute missing values with random forest
-  imp <- missForest::missForest(w.missing,
-                                parallelize = parallelMode, # parallelize over variables, 'forests' is other option
-                                verbose = F,
-                                ntree = ntree,
-                                mtry = mtry)
-  imp$ximp
+  imp <- switch(rf.method,
+         ranger = {
+           print(w.missing[1:10,1:10])
+           w.missing <<- w.missing
+           w.missing.df <- as.data.frame(w.missing)
+           colnames(w.missing.df) <- paste0("mz", 1:ncol(w.missing.df))
+           imp = missRanger.joanna(data = w.missing.df ,formula =  . ~ ., verbose = 0, num.threads = length(cl))
+           colnames(imp) <- colnames(w.missing)
+         },
+         rf = {
+           auto.mtry <- floor(sqrt(ncol(w.missing)))
+         
+         mtry <- ifelse(auto.mtry > 100, 
+                        100, 
+                        auto.mtry)
+         
+         # impute missing values with random forest
+         imp <- missForest::missForest(w.missing,
+                                       parallelize = parallelMode, # parallelize over variables, 'forests' is other option
+                                       verbose = F,
+                                       ntree = ntree,
+                                       mtry = mtry)
+         imp$ximp})
+  return(imp)
 }
 
 #' @title Batch correction using QC samples
@@ -486,7 +497,8 @@ metshiTable <- function(content, options=NULL, rownames= T){
                 class = 'compact', height = "500px",
                 extensions = c("FixedColumns", "Scroller", "Buttons"), 
                 options = opts,
-                rownames = rownames
+                rownames = rownames,
+                escape = FALSE
   )
 }
 
@@ -631,8 +643,10 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                          res
                        },
                        combi = {
-                         res = list(analysis$combi$sig.mat$rn)
+                         res = list(data.frame("m/z"=analysis$combi$sig.mat$rn,
+                                          value=c(0)))
                          names(res) = base_name
+                         print(res)
                          res
                        },
                        plsda = {
@@ -1620,11 +1634,13 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
       imp <- mice::mice(base, printFlag = TRUE)
       
     }else if(req(mSet$metshiParams$miss_type ) == "rf"){ # random forest
-      mSet$dataSet$proc <- MetaboShiny::replRF(mSet, 
+      mSet$dataSet$proc <- replRF(mSet, 
                                                parallelMode = mSet$metshiParams$rf_norm_parallelize, 
                                                ntree = mSet$metshiParams$rf_norm_ntree,
-                                               cl = cl)
-      rownames(mSet$dataSet$proc) <- rownames(mSet$dataSet$preproc)
+                                               cl = cl,
+                                               rf.method = mSet$metshiParams$rf_norm_method)
+      w.missing <- qs::qread("preproc.qs")
+      rownames(mSet$dataSet$proc) <- rownames(w.missing)
       # - - - - - - - - - - - -
     }else{
       # use built in imputation methods, knn means etc.
@@ -1832,3 +1848,4 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
   mSet
   # TODO: WHERE IS THE REORDERING FAILING?
 }
+

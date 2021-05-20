@@ -459,9 +459,10 @@ shiny::observe({
                              if(!is.null(settings$ml_mzs)){
                                curr <- curr[,settings$ml_mzs, with=F]
                              }else{
-                               mzs = getTopHits(mSet, 
-                                                settings$ml_specific_mzs, 
-                                                settings$ml_mzs_topn)[[1]]
+                               mzs = getTopHits(mSet = mSet,
+                                                expnames = settings$ml_specific_mzs, 
+                                                top = settings$ml_mzs_topn, 
+                                                filter_mode = "top")[[1]]
                                mzs = gsub("^X", "", mzs)
                                mzs = gsub("\\.$", "-", mzs)
                                curr <- curr[, mzs]
@@ -796,14 +797,15 @@ shiny::observe({
                    mSet <- MetaboAnalystR::Ttests.Anal(mSet,
                                                        nonpar = input$tt_nonpar,
                                                        threshp = 0.1, # TODO: make the threshold user defined...
-                                                       paired = mSet$dataSet$paired,
+                                                       paired = mSet$dataSet$ispaired,
                                                        equal.var = input$tt_eqvar
                    )
                  })
                },
                fc = {
                  withProgress({
-                   if(mSet$dataSet$paired){
+                   mSet$dataSet$combined.method = T
+                   if(mSet$dataSet$ispaired){
                      mSet <- MetaboAnalystR::FC.Anal.paired(mSet,
                                                             as.numeric(input$fc_thresh),
                                                             1)  

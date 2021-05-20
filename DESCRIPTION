@@ -103,5 +103,6 @@ Imports:
   ggforce,
   akmedoids,
   pracma,
-  ggupset
+  ggupset,
+  missRanger
 RoxygenNote: 7.1.0
