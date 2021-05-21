@@ -133,7 +133,7 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                    shiny::uiOutput("outlist_pickers"),
                                                                                    shiny::div(shiny::imageOutput("proj_merge_check"), style="height:70px")),
                                                                      shiny::column(4,
-                                                                                   shiny::sliderInput("ppm", "STEP 3: What level accuracy does your mass spectrometer have?",min = 0.01,max = 50,value = 3,step = .01),
+                                                                                   shiny::numericInput("ppm", "STEP 3: What level accuracy does your mass spectrometer have?",min = 0.01,max = 50,value = 3),
                                                                                    shiny::helpText("Round m/z values based on ppm error?"),
                                                                                    shinyWidgets::switchInput(
                                                                                      inputId = "roundMz",

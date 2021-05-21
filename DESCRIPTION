@@ -101,8 +101,8 @@ Imports:
   svglite,
   beepr,
   ggforce,
-  akmedoids,
   pracma,
   ggupset,
-  missRanger
+  missRanger,
+  doSNOW
 RoxygenNote: 7.1.0

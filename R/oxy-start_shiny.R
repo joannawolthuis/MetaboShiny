@@ -17,7 +17,7 @@ start_metshi <- function(port=8080, inBrowser=F,
   ## make metaboshiny_storage dir in home first..
   # docker run -p 8080:8080 -v ~/MetaboShiny/:/userfiles/:cached --rm -it metaboshiny/master /bin/bash
   # NEWEST
-  # docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny:latest /bin/bash
+  # docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny:dev /bin/bash
   
   packages = installed.packages()
   if(!("MetaboAnalystR" %in% rownames(packages))){
