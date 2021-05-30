@@ -530,7 +530,7 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
       names(flattened) = c("all m/z")
       flattened
     }else{
-      analysis = mSet$storage[[experiment]]$analysis
+      analysis = mSet$storage[[experiment]]$analSet
       
       rgx_exp <- gsub(experiment, pattern = "\\(", replacement = "\\\\(")
       rgx_exp <- gsub(rgx_exp, pattern = "\\)", replacement = "\\\\)")
@@ -1042,7 +1042,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                        if(length(mSet$analSet$ml) > 0){
                          
                          data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
-                         
+
                          if(!is.null(data$res$prediction)){
                            data$res$shuffled = FALSE
                            data$res = list(data$res)
@@ -1056,8 +1056,12 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                                              y.metric=input$ml_plot_y)
                            ml_performance$coords$shuffled = c(res$shuffled)
                            ml_performance$coords$run = i
+                           # plot_coords = ml_performance$coords[`Test set`=="Test"]
+                           # plot(plot_coords$x,
+                           #      plot_coords$y)
                            ml_performance
                          })
+                         
                          coords = data.table::rbindlist(lapply(ml_performance_rows, function(x) x$coords))
                          ml_performance = list(coords = coords,
                                                names = ml_performance_rows[[1]]$names)
@@ -1715,6 +1719,7 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
   smps <- rownames(mSet$dataSet$norm)
   # get which rows are QC samples
   qc_rows <- which(grepl(pattern = "QC", x = smps))
+  print(qc_rows)
   # if at least one row has a QC in it, batch correct
   has.qc <- length(qc_rows) > 0
   

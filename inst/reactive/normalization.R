@@ -191,7 +191,6 @@ shiny::observeEvent(input$initialize, {
       mSet$dataSet$missing <- is.na(mSet$dataSet$orig)
       mSet$dataSet$start <- mSet$dataSet$orig
       
-      
       mSet <- metshiProcess(mSet, session=NULL, init=T, cl=session_cl)
       
       # save the used adducts to mSet

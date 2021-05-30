@@ -9,11 +9,14 @@ shiny::observe({
     if(!is.null(mSet)){
       
       try({
-        mSet <- store.mSet(mSet) # save analyses
+        mSet <- store.mSet(mSet, proj.folder = file.path(lcl$paths$work_dir,
+                                                         lcl$proj_name)) # save analyses
         success = F
         
-        if(mSetter$do == "load" & !is.null(mSet$storage[[input$storage_choice]]$data)){
-           mSet <- load.mSet(mSet, input$storage_choice)
+        if(mSetter$do == "load"){
+           # more mem friendly??
+           mSet <- load.mSet(mSet, input$storage_choice, proj.folder = file.path(lcl$paths$work_dir,
+                                                                                 lcl$proj_name))
         }else{
           
           oldSettings <- mSet$settings
@@ -63,7 +66,7 @@ shiny::observe({
                                                           mainisos = input$subset_mz_iso)
                            }
                            
-                           mSet2 <- subset_mSet_mz(mSet,
+                           mSet <- subset_mSet_mz(mSet,
                                                   keep.mzs = keep.mzs)
                            mSet$dataSet$ispaired <- mSet.settings$ispaired
                            mSet
@@ -121,7 +124,7 @@ shiny::observe({
           samps = mSet$dataSet$covars$sample
           # CHECK IF DATASET WITH SAME SAMPLES ALREADY THERE
           matching.samps = sapply(mSet$storage, function(saved){
-            samplist = saved$data$covars$sample
+            samplist = saved$samples
             if(length(samps) == length(samplist)){
               all(knowns == samplist)  
             }else{
@@ -150,10 +153,13 @@ shiny::observe({
             tables = c("orig", "norm", "proc", "prebatch", "covars")
             print("recycling from another meta-dataset!")
             use.dataset = names(which(matching.samps))[1]
+            recycle.mSet = qs::qread(file.path(lcl$paths$work_dir,
+                                               lcl$proj_name,
+                                               paste0(use.dataset, ".metshi")))
             for(tbl in tables){
-              mSet$dataSet[[tbl]] <- mSet$storage[[use.dataset]]$data[[tbl]]
+              mSet$dataSet[[tbl]] <- recycle.mSet$dataSet[[tbl]]
             }
-            mSet$report <- mSet$storage[[use.dataset]]$report
+            mSet$report <- recycle.mSet$report
           }else{
             if(mSet$metshiParams$renorm){
               mSet$dataSet$orig <- mSet$dataSet$start

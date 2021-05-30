@@ -19,9 +19,10 @@ getMLperformance = function(ml_res, pos.class, x.metric, y.metric){
     print("Cannot estimate ROC for LOOCV 'folds'.")
     coord.collection = list()
   }else{
-    spl.fold.performance = split(ml_res$train.performance, ml_res$train.performance$Resample)
+    spl.fold.performance = split(ml_res$train.performance,
+                                 ml_res$train.performance$Resample)
+    
     coord.collection = lapply(spl.fold.performance, function(l){
-      
       prediction = l[[pos.class]]
       labels = l[["obs"]]
       prediction = ROCR::prediction(prediction,
@@ -32,7 +33,6 @@ getMLperformance = function(ml_res, pos.class, x.metric, y.metric){
       coords
     })  
   }
-  
   
   prediction = ROCR::prediction(ml_res$prediction[,pos.class], 
                                 ml_res$labels)
@@ -91,14 +91,14 @@ runML <- function(curr,
                   maximize=T,
                   cl=0,
                   shuffle = F,
-                  n_permute = 10){
-  
+                  n_permute = 10,
+                  shuffle_mode = "train"){
   # get user training percentage
   if(unique(train_vec)[1] != "all"){ #ONLY TRAIN IS DEFINED
     train_idx <- which(curr[,train_vec[1], with=F][[1]] == train_vec[2])
     test_idx = setdiff(1:nrow(curr), train_idx) # use the other rows for testing
     inTrain <- train_idx
-    inTest = test_idx
+    inTest <- test_idx
   }else{ # ONLY TEST IS DEFINED
     test_idx = which(curr[,test_vec[1], with=F][[1]] == test_vec[2])
     train_idx = setdiff(1:nrow(curr), test_idx) # use the other rows for testing
@@ -111,15 +111,6 @@ runML <- function(curr,
   
   need.rm = unique(c(train_vec[1],test_vec[1],"split"))
   curr <- curr[,-..need.rm]
-  
-  # choose predictor "label" (some others are also included but cross validation will be done on this)
-  predictor = "label"
-  
-  # split training and testing data
-  trainY <- curr[inTrain,
-                 ..predictor][[1]]
-  testY <- curr[inTest,
-                ..predictor][[1]]
   
   training <- curr[inTrain,]
   testing <- curr[inTest,]
@@ -143,19 +134,24 @@ runML <- function(curr,
   
   # shuffle if shuffle
   trainOrders = list(1:nrow(training))
-  if(shuffle){
+  if(shuffle & shuffle_mode == "train"){
     for(i in 1:n_permute){
       trainOrders = append(trainOrders, list(sample(1:nrow(training))))
     }
   }
-  # ------------------
-  reps = pbapply::pblapply(trainOrders, function(ordr){
-    training[['label']] = training[['label']][ordr]
-    def_scoring = ifelse(ifelse(is.factor(training[["label"]]), "Accuracy", "RMSE") %in% c("RMSE", "logLoss", "MAE"), FALSE, TRUE)
+  
+  # get models
+  models = pbapply::pblapply(trainOrders, function(ordr){
+    reordered.training = training
+    reordered.training[['label']] <- reordered.training[['label']][ordr]
+    def_scoring = ifelse(ifelse(is.factor(reordered.training[["label"]]), 
+                                "Accuracy", "RMSE") %in% c("RMSE", "logLoss", "MAE"), 
+                         FALSE,
+                         TRUE)
     success=F
     fit <- caret::train(
       label ~ .,
-      data = training,
+      data = reordered.training,
       method = ml_method,
       ## Center and scale the predictors for the training
       ## set and all future samples.
@@ -165,18 +161,54 @@ runML <- function(curr,
       tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
       trControl = trainCtrl
     )
-    result.predicted.prob <- stats::predict(fit, 
-                                            testing,
-                                            type = if(hasProb) "prob" else "raw") # Prediction
-    list(type = ml_method,
-         train.performance = fit$pred,
-         importance = caret::varImp(fit)$importance,
-         prediction = result.predicted.prob,
-         labels = testing$label,
-         distr = list(train = trainSamps, test = testSamps),
-         shuffled = !all(ordr == 1:nrow(training)))
+        list(model = fit,
+             type = ml_method,
+             train.performance = fit$pred,
+             importance = caret::varImp(fit)$importance,
+             labels = testing$label,
+             distr = list(train = trainSamps,
+                          test = testSamps),
+             shuffled = !all(ordr == 1:nrow(training)))
   })
+  
+  testOrders = rep(list(1:nrow(testing)), length(models))
+  results = if(shuffle & shuffle_mode == "test" & length(models) == 1){
+    print("permuting test labels")
+    #http://mvpa.blogspot.com/2012/12/which-labels-to-permute.html
+    testOrders = list(1:nrow(testing))
+    for(i in 1:n_permute){
+      testOrders = append(testOrders, list(sample(1:nrow(testing))))
+    }
+    iterations = length(testOrders)
+    pbapply::pblapply(1:iterations, cl = cl, function(i, models){
+      l = models[[1]]
+      fit = l$model
+      ordr = testOrders[[i]]
+      testing.reordered = testing
+      testing.reordered$label = testing.reordered$label[ordr]
+      result.predicted.prob <- stats::predict(fit, 
+                                              testing.reordered,
+                                              type = if(hasProb) "prob" else "raw") # Prediction
+      l$prediction = result.predicted.prob
+      l$shuffled = !all(ordr == 1:nrow(testing))
+      l$model <- NULL
+      return(l)
+    }, models = models)
+  }else{
+    iterations = length(models)
+    pbapply::pblapply(1:iterations, cl = cl, function(i, models){
+      l = models[[i]]
+      fit = l$model
+      result.predicted.prob <- stats::predict(fit, 
+                                              testing,
+                                              type = if(hasProb) "prob" else "raw") # Prediction
+      l$prediction = result.predicted.prob
+      l$model <- NULL
+      return(l)
+    }, models = models)
+  }
+  
   # train and cross validate model
   # return list with mode, prediction on test data etc.s
-  reps
+  results
 }

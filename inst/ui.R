@@ -171,6 +171,7 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                            shiny::selectInput(inputId = "batch_method_a",
                                                                                                               label = "Batch correction method if machine batch and injection order are present:",
                                                                                                               choices = list("WaveICA - WaveICA" = "waveica",
+                                                                                                                             "BatchCorrMetabolomics - batchCorr" = "batchCorr", 
                                                                                                                              "limma - removeBatchEffect" = "limma",
                                                                                                                              "ComBat" = "combat",
                                                                                                                              "CovBat" = "covbat"),
@@ -1308,7 +1309,15 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                                                value = FALSE
                                                                                                                                                                                              ),
                                                                                                                                                                                              shiny::conditionalPanel("input.ml_label_shuffle == true",
-                                                                                                                                                                                                                     shiny::numericInput("ml_n_shufflings", "Number of randomized models:", value=1, min=1, max=NA)
+                                                                                                                                                                                                                     shiny::numericInput("ml_n_shufflings", "Number of randomized models:", value=1, min=1, max=NA),
+                                                                                                                                                                                                                     shiny::helpText("Shuffle train or testing labels?"),
+                                                                                                                                                                                                                     shinyWidgets::switchInput(
+                                                                                                                                                                                                                       inputId = "ml_shuffle_mode",
+                                                                                                                                                                                                                       value = TRUE,
+                                                                                                                                                                                                                       onLabel = "train",
+                                                                                                                                                                                                                       offLabel = "test",
+                                                                                                                                                                                                                       size = "small"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
+                                                                                                                                                                                                                     )
                                                                                                                                                                                                                      ),
                                                                                                                                                                                              shinyWidgets::actionBttn(
                                                                                                                                                                                                inputId = "queue_ml",
@@ -2286,14 +2295,14 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                      footer=
                                        shiny::div(class = "footer",
                                                   shiny::fluidRow(align="center",
-                                                                  tags$i(icon("map-marker"), shiny::textOutput("proj_name",inline = T), style="vertical-align: middle;"),
+                                                                  shiny::span(shiny::tags$i(icon("map-marker"), shiny::textOutput("proj_name",inline = T), style="vertical-align: middle;")),
                                                                   #shiny::actionButton("show_window", label="", icon = shiny::icon("map-marked")),
                                                                   shiny::actionButton("load_mset", label="load", icon = shiny::icon("folder-open")),
                                                                   shiny::actionButton("save_mset", label="save", icon = shiny::icon("save")),
                                                                   shiny::actionButton("debug_metshi", label="debug", icon = shiny::icon("bug")),
                                                                   shiny::actionButton("quit_metshi", label="quit", icon = shiny::icon("eraser")),
-                                                                  tags$i(icon("stopwatch"), shiny::textOutput("last_saved",inline = T), style="vertical-align: middle;"),
-                                                                  span(shiny::uiOutput("has_unsaved_changes",inline = T), style="margin-left: 10px;")
+                                                                  shiny::span(shiny::tags$i(icon("stopwatch"), shiny::textOutput("last_saved",inline = T), style="vertical-align: middle;")),
+                                                                  shiny::span(shiny::uiOutput("has_unsaved_changes",inline = T), style="margin-left: 10px;")
                                                   )
                                        )
                    ), style="margin-bottom:100px;")

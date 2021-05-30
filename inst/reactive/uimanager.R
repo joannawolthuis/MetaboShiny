@@ -269,6 +269,7 @@ shiny::observe({
                      ) 
                    },
                    ml = {
+                     print("reloading ml")
                      shiny::updateSelectInput(session, "ml_include_covars", 
                                               choices = c(colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "individual"))]))
                      
@@ -290,7 +291,9 @@ shiny::observe({
                        }else{
                          colnames(data$res[[1]]$prediction)
                        }
-                       shiny::updateSelectInput(session, "ml_plot_posclass", choices = classes, selected = classes[2])
+                       shiny::updateSelectInput(session, "ml_plot_posclass", 
+                                                choices = classes, 
+                                                selected = classes[length(classes)])
                        ###
                        
                        choices = c()

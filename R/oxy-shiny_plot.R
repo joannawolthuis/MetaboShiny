@@ -829,16 +829,16 @@ ggPlotCombi <- function(mSet,
     p <- ggplot2::ggplot() +
       ggplot2::geom_point(data=dt, ggplot2::aes(x=x,
                                                 y=y,
-                                                color=significant,#col,
+                                                color=significant, #col,
                                                 text=`m/z`,
                                                 key=`m/z`),cex=3) +
                           #,alpha = sapply(dt$sig, function(x) ifelse(x=="YES",1,0.2))) +
-      ggplot2::geom_segment(data=dt[significant=="YES"],aes(y = 0,
-                                        yend = y,
-                                        x = 0,
-                                        xend = x,
-                                        color = significant#col 
-      ),alpha=0.2,linetype=6) +
+      # ggplot2::geom_segment(data=dt[significant=="YES"],aes(y = 0, # dashed line, turn off for now looks weird
+      #                                   yend = y,
+      #                                   x = 0,
+      #                                   xend = x,
+      #                                   color = significant#col 
+      # ),alpha=0.2,linetype=6) +
       scale_color_manual(values=c("YES" = "red",
                                   "NO" = "darkgray")) +
       #ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE) +
@@ -1051,9 +1051,13 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
   
   perf.long = ml_performance$coords
   
-  AUC = pracma::trapz(perf.long[`Test set` == "Test" & !shuffled]$x, 
-                      perf.long[`Test set` == "Test" & !shuffled]$y)
+  AUC = pracma::trapz(perf.long[`Test set` == "Test" & !(shuffled)]$x, 
+                      perf.long[`Test set` == "Test" & !(shuffled)]$y)
 
+  cat("Test AUC:")
+  cat(AUC)
+  cat("\n")
+  
   class_type = "b"
   scaleFUN <- function(x) sprintf("%.5s", x)
   
@@ -1073,33 +1077,35 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
   inset.df = data.table::data.table()
   # shuffled first
   if(any(perf.long$shuffled)){
-    
+
     shuffle_data = perf.long[(shuffled)]
     
-    shuffleSplit = split(shuffle_data, shuffle_data$run)
-    shuffleAUCs = sapply(shuffleSplit, function(t){
-      pracma::trapz(t[`Test set` == "Test"]$x, 
-                    t[`Test set` == "Test"]$y)
+    try({
+      shuffleSplit = split(shuffle_data, shuffle_data$run)
+      shuffleAUCs = sapply(shuffleSplit, function(t){
+        pracma::trapz(t[`Test set` == "Test"]$x, 
+                      t[`Test set` == "Test"]$y)
+      })  
+      if(length(shuffleSplit) > 1){
+        # chance of shuffled being better than AUC -> get p value from this
+        betterThan = sum(shuffleAUCs > AUC)
+        p_improv = betterThan/length(shuffleAUCs)
+        stars = MetaboShiny::p2stars(p_improv)
+        sigmeasure = paste0("(",stars,")")
+        # lbl = paste("p =", p_improv, sigmeasure)
+        lbl = stars
+        
+        dens_dat = data.table::data.table(auc = shuffleAUCs)
+        dens = ggplot2::ggplot(data = dens_dat, mapping = ggplot2::aes(x = auc, y = ..scaled..)) + 
+          ggplot2::geom_density(color="gray",fill="gray") +
+          ggplot2::geom_segment(mapping = aes(y=0, yend=1, x = AUC, xend = AUC), color = "black", cex=1)+
+          ggplot2::annotate("text", x = AUC, y = 1.16, label = lbl) +
+          ggplot2::theme_void() + ggplot2::expand_limits(x=c(0.9),y=c(0,1.5))
+        
+        inset.df <- tibble::tibble(x = 0.9, y = 0.1,
+                                   plot = list(dens)) 
+      }
     })
-    
-    # chance of shuffled being better than AUC -> get p value from this
-    betterThan = sum(shuffleAUCs > AUC)
-    #print(betterThan)
-    #print(length(shuffleAUCs))
-    p_improv = betterThan/length(shuffleAUCs)
-
-    stars = MetaboShiny::p2stars(AUC)
-    sigmeasure = paste0("(",stars,")")
-    
-    dens_dat = data.table::data.table(auc = shuffleAUCs)
-    dens = ggplot2::ggplot(data = dens_dat, mapping = ggplot2::aes(x = auc, y = ..scaled..)) + 
-      ggplot2::geom_density(color="gray",fill="gray") +
-      ggplot2::geom_segment(mapping = aes(y=0, yend=1, x = AUC, xend = AUC), color = "black", cex=1)+
-      ggplot2::annotate("text", x = AUC, y = 1.16, label = paste("p =", p_improv, sigmeasure)) +
-      ggplot2::theme_void() + ggplot2::expand_limits(y=c(0,1.25))
-  
-    inset.df <- tibble::tibble(x = 0.99, y = 0.04,
-                 plot = list(dens))
     
     needs.ci$shuffled = shuffle_data[`Test set` == "Test"]
     needs.ci$shuffled$`Performance` = 'Shuffled'
@@ -1122,7 +1128,7 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
                                       fill = Performance
                          )) +
     ggplot2::geom_step(data = perf.long[`Test set` == "Test" & !(shuffled)], 
-                       cex=3,
+                       cex=2,
                        ggplot2::aes(x = x,
                                     y = y,
                                     group = `Test set`,
@@ -1131,15 +1137,21 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
                                     key = paste0(`Test set`, " - Cutoff:", cutoff))) +
     ggplot2::xlab(ml_performance$names$x) + 
     ggplot2::ylab(ml_performance$names$y) + 
-    ggplot2::scale_x_continuous(breaks = seq(0,1,0.25), expand = c(0, 0), limits = c(0,1),oob=scales::squish) + 
-    ggplot2::scale_y_continuous(breaks = seq(0,1,0.25), expand = c(0, 0), limits = c(-0.005,1.005),oob=scales::squish) +
-    ggplot2::scale_color_manual(values=colMap) +
-    ggplot2::annotate(geom = "text", label = if(!is.nan(AUC)) paste0("AUC: ",  sprintf("%.4s",AUC)) else "", x = 0.91, y = 0.02, size=7)
-  p = p +
-    expand_limits(x = 0, y = 0) +
-    geom_plot_npc(data = inset.df,
-                  vp.width = 1/7, vp.height = 1/8,
-                  aes(npcx = x, npcy = y, label = plot))
+    ggplot2::scale_x_continuous(breaks = seq(0,1,0.25), expand = c(0, 0), limits = c(0,1), oob=scales::squish) + 
+    ggplot2::scale_y_continuous(breaks = seq(0,1,0.25), expand = c(0, 0), limits = c(-0.005,1.005), oob=scales::squish) +
+    ggplot2::scale_color_manual(values = colMap) +
+    ggplot2::scale_fill_manual(values = colMap) +
+    ggplot2::annotate(geom = "text", label = if(!is.nan(AUC)) paste0("AUC: ",  sprintf("%.4s",AUC)) else "",
+                      x = 0.82, y = 0.04, size=7) +
+    ggplot2::expand_limits(x = 0, y = 0)
+  
+  if(nrow(inset.df)>0){
+    p = p +
+      ggpmisc::geom_plot_npc(data = inset.df,
+                             vp.width = 1/4, vp.height = 1/4,
+                             ggplot2::aes(npcx = x, npcy = y, label = plot))    
+  }
+
   #-----------------------
   p
 }

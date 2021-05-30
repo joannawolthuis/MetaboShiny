@@ -21,7 +21,7 @@ shiny::observe({
                    mSet$storage <- list()
                  }
                  # TODO: use this in venn diagram creation
-                 mSet <- MetaboShiny::store.mSet(mSet)
+                 mSet <- MetaboShiny::store.mSet(mSet, name = mSet$settings$cls.name, proj.folder = lcl$paths$work_dir)
                },
                corr = {
                  # pearson kendall spearman
@@ -411,6 +411,14 @@ shiny::observe({
                    #     
                    # }
                    # setup foeach with progressbar
+                   # ml_queue$jobs = ml_queue$jobs[1]
+                   # mzcount = 1:26
+                   # for(mz in mzcount){
+                   #   ml_queue$jobs[[mz]] = ml_queue$jobs[[1]]
+                   #   ml_queue$jobs[[mz]]$ml_mzs_topn = mz
+                   #   ml_queue$jobs[[mz]]$ml_name = paste0("mtry20 combi", mz, "mz shuffle10")
+                   #   ml_queue$jobs[[mz]]$ml_n_shufflings = 300
+                   # }
                    
                    pb <- pbapply::timerProgressBar(min=0, max = length(ml_queue$jobs))
                    progress <- function(n) pbapply::setpb(pb, n)
@@ -650,11 +658,6 @@ shiny::observe({
                          testing_data$config = testing_data$config[, ..keep.config]
                          training_data$config = training_data$config[, ..keep.config]
                          
-                         # shuffle
-                         if(settings$ml_label_shuffle){
-                           training_data$config$label <- sample(training_data$config$label)
-                         }
-                         
                          # merge back into one
                          merged.training = cbind(training_data$config,
                                                  training_data$curr)
@@ -664,10 +667,7 @@ shiny::observe({
                                       merged.testing)
                          
                          training_data <- testing_data <- merged.training <- merged.testing <- NULL
-                         
-                         print("Preview of data going into machine learning:")
-                         print(curr[1:10,1:10])
-                         
+                        
                          # CARET SETTINGS
                          caret.mdls <- caret::getModelInfo()
                          caret.methods <- names(caret.mdls)
@@ -730,7 +730,8 @@ shiny::observe({
                                         folds = folds,
                                         maximize = T,
                                         shuffle = settings$ml_label_shuffle,
-                                        n_permute = settings$ml_n_shufflings)
+                                        n_permute = settings$ml_n_shufflings,
+                                        shuffle_mode = if(settings$ml_shuffle_mode) "train" else "test")
                          
                          res = list(res = ml_res, params = settings)
                        }
@@ -746,13 +747,6 @@ shiny::observe({
                    
                    
                    print("Done!")
-                   parallel::clusterEvalQ(ml_queue_cl, {
-                     try({
-                       parallel::stopCluster(job_cl)
-                     }, silent = T)
-                   })
-                   
-                   parallel::stopCluster(ml_queue_cl)
                    
                    shiny::showNotification("Gathering results...")
                    
@@ -778,8 +772,8 @@ shiny::observe({
                      library(MetaboShiny)
                      library(MetaDBparse)
                    })
-                   
                    lcl$vectors$ml_train <- lcl$vectors$ml_train <<- NULL
+                   print("ML done and saved.")
                  })
                },
                heatmap = {

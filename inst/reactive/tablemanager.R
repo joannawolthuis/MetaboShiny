@@ -16,7 +16,7 @@ shiny::observe({
                      # - - - - -
                      analyses = names(mSet$storage) 
                      analyses_table = data.table::rbindlist(lapply(analyses, function(name){
-                       analysis = mSet$storage[[name]]$analysis
+                       analysis = mSet$storage[[name]]$analSet
                        analysis_names = names(analysis)
                        # - - -
                        exclude = c("tsne", "heatmap", "type", "enrich", "power", "network", "venn")
@@ -184,17 +184,42 @@ shiny::observe({
                          data$res = list(data$res)
                        }
                        
-                       no_shuffle = data$res[[which(unlist(sapply(data$res, function(x) !x$shuffle)))]]
+                       ml_performance_rows = lapply(1:length(data$res), function(i){
+                         res = data$res[[i]]
+                         ml_performance = getMLperformance(res, 
+                                                           pos.class = input$ml_plot_posclass,
+                                                           x.metric=input$ml_plot_x,
+                                                           y.metric=input$ml_plot_y)
+                         ml_performance$coords$shuffled = c(res$shuffled)
+                         ml_performance$coords$run = i
+                         ml_performance
+                       })
+                       coords = data.table::rbindlist(lapply(ml_performance_rows, function(x) x$coords))
+                       ml_performance = list(coords = coords,
+                                             names = ml_performance_rows[[1]]$names)
                        
-                       ml_performance = getMLperformance(no_shuffle, 
-                                                         pos.class = input$ml_plot_posclass,
-                                                         x.metric=input$ml_plot_x,
-                                                         y.metric=input$ml_plot_y)
+                       split_coords = split(coords, coords$run)
                        
-                       ml_tbl_rows = lapply(unique(ml_performance$coords$`Test set`), function(test_set){
-                         data.table::data.table(AUC = pracma::trapz(ml_performance$coords[`Test set` == test_set]$x, 
-                                                                    ml_performance$coords[`Test set` == test_set]$y),
-                                                "Test set" = test_set)
+                       ml_tbl_rows = lapply(split_coords, function(tbl){
+                         shuffled = unique(tbl$shuffled)
+                         training.rows = data.table::data.table()
+                         if(!shuffled){
+                           training = tbl[grep("Fold", `Test set`)]
+                           spl.folds = split(training, training$`Test set`)
+                           fold.rows = lapply(spl.folds, function(test_set){
+                             data.table::data.table(AUC = pracma::trapz(test_set$x, 
+                                                                        test_set$y),
+                                                    "Test set" = unique(test_set$`Test set`))
+                           })
+                           training.rows = data.table::rbindlist(fold.rows)
+                         }
+                         # testing
+                         test_name = if(shuffled) paste0("Shuffled test #", unique(tbl$run) - 1) else "Test"
+                         test_set = tbl[`Test set`=="Test"]
+                         testing.row = data.table::data.table(AUC = pracma::trapz(test_set$x, 
+                                                                                  test_set$y),
+                                                              "Test set" = test_name)
+                         rbind(training.rows, testing.row)
                        })
                        res = data.table::rbindlist(ml_tbl_rows)
                        lcl$tables$ml_roc_all <<- res
@@ -205,6 +230,7 @@ shiny::observe({
                          params = data.table::data.table(unavailable = "No parameters saved for this model...")
                        }
                        
+                       no_shuffle = data$res[[which(unlist(sapply(data$res, function(x) !x$shuffle)))]]
                        res2 = no_shuffle$importance
                        rownames(res2) = gsub("^X", "", rownames(res2))
                        rownames(res2) = gsub("\\.$", "-", rownames(res2))

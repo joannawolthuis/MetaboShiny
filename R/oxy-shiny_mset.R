@@ -277,13 +277,12 @@ reset.mSet <- function(mSet_new, fn) {
 #' @return mSet object
 #' @rdname load.mSet
 #' @export 
-load.mSet <- function(mSet, name = mSet$dataSet$cls.name) {
-  if(!is.null(mSet$storage[[name]]$data)){
-    mSet$dataSet <- mSet$storage[[name]]$data
-  }
-  mSet$analSet <- mSet$storage[[name]]$analysis
-  mSet$settings <- mSet$storage[[name]]$settings
-  mSet$report <- mSet$storage[[name]]$report
+load.mSet <- function(mSet, name = mSet$dataSet$cls.name, proj.folder) {
+  mSet.loaded = qs::qread(file.path(proj.folder, paste0(name, ".metshi")))
+  mSet$dataSet <- mSet.loaded$dataSet
+  mSet$analSet <- mSet.loaded$analSet
+  mSet$settings <- mSet.loaded$settings
+  mSet$report <- mSet.loaded$report
   return(mSet)
 }
 
@@ -293,15 +292,20 @@ load.mSet <- function(mSet, name = mSet$dataSet$cls.name) {
 #' @param name PARAM_DESCRIPTION, Default: mSet$dataSet$cls.name
 #' @return Name of current subexperiment
 #' @rdname store.mSet
-#' @export 
-store.mSet <- function(mSet, name = mSet$settings$cls.name) {
-  mSet$storage[[name]] <- list()
-  try({
-    mSet$storage[[name]]$data <- mSet$dataSet
-  })
-  mSet$storage[[name]]$analysis <- mSet$analSet
-  mSet$storage[[name]]$settings <- mSet$settings
-  mSet$storage[[name]]$report <- mSet$report
+#' @export
+store.mSet <- function(mSet, name = mSet$settings$cls.name, proj.folder) {
+  mSet$storage[[name]] <- list(samples = rownames(mSet$dataSet$norm),
+                               settings = mSet$settings,
+                               analSet = mSet$analSet)
+  # qs save
+  save.item = mSet
+  save.item$storage <- NULL
+  fn = file.path(proj.folder, paste0(name, ".metshi"))
+  ## MORE MEMORY FRIENDLY ##
+  qs::qsave(save.item, fn)
+  #try({
+    #mSet$storage[[name]]$data <- mSet$dataSet
+  #})
   return(mSet)
 }
 
@@ -488,6 +492,11 @@ subset_mSet <- function(mSet, subset_var, subset_group) {
         tbl = combi.tbl$tbl[i]
         cls = combi.tbl$cls[i]
         keep = which(rownames(mSet$dataSet[[tbl]]) %in% keep.samples)
+        
+        # if(!(tbl %in% c("start", "missing", "prebatch"))){
+        #  NULL 
+        # }
+        
         mSet$dataSet[[tbl]] <- mSet$dataSet[[tbl]][keep, ]
         # sampOrder = match(rownames(mSet$dataSet[[tbl]]),
         #                   mSet$dataSet$covars$sample)
@@ -701,30 +710,34 @@ batchCorr_mSet <- function(mSet, method, batch_var, cl=0){
                       check.names=F, row.names = rownames(reorderedCorr))
          }, 
          batchCorr = {
-           ## Perform batch alignment
-           # Extract peakinfo (i.e. m/z and rt of features)
-           peakIn <- batchCorr::peakInfo(PT = mSet$dataSet$proc,
-                                         sep = 'PLACEHOLDER',
-                                         start = 0) # These column names have 2 leading characters describing LC-MS mode -> start at 3
+           smps <- rownames(mSet$dataSet$norm)
+           # get which rows are QC samples
+           qc_rows <- which(grepl(pattern = "QC", x = smps))
+           # get batch for each sample
+           batch.idx = as.numeric(as.factor(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"batch"][[1]]))
+           if(length(batch.idx) == 0) return(mSet$dataSet$norm)
+           # get injection order for samples
+           seq.idx = as.numeric(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"injection"][[1]])
+           # go through all the metabolite columns
+           corr_cols <- pbapply::pblapply(1:ncol(mSet$dataSet$norm), function(i){
+             # fetch non-corrected values
+             vec = mSet$dataSet$norm[,i]
+             # correct values using QCs and injectiono rder
+             corr_vec = BatchCorrMetabolomics::doBC(Xvec = as.numeric(vec),
+                                                    ref.idx = as.numeric(qc_rows),
+                                                    batch.idx = batch.idx,
+                                                    seq.idx = seq.idx,
+                                                    result = "correctedX",
+                                                    minBsamp = 1) # at least one QC necessary
+             corr_vec
+           })
            
-           
-           spl.mzrt = stringr::str_split(colnames(mSet$dataSet$proc), "RT")
-           mzs = sapply(spl.mzrt, function(x) x[[1]])
-           rts = sapply(spl.mzrt, function(x) x[[2]])
-           peakIn = data.frame(mz = as.numeric(gsub("\\+|-","",mzs)),
-                               rt = as.numeric(rts))
-           
-           qc.or.samp = sapply(grepl(pattern = "QC|qc", rownames(mSet$dataSet$proc)), function(x) if(x) "qc" else "sample")
-           
-           alignBat <- batchCorr::alignBatches(peakInfo = peakIn,
-                                               PeakTabNoFill = mSet$dataSet$orig,
-                                               PeakTabFilled = mSet$dataSet$norm,
-                                               batches = as.numeric(as.factor(mSet$dataSet$covars$batch)),
-                                               sampleGroups = qc.or.samp,
-                                               selectGroup = 'qc')
-           
-           # Extract new peak table
-           PT=alignBat$PTalign
+           # cbind the corrected columns to re-make table
+           batch_normalized <- as.data.frame(do.call(cbind, corr_cols))
+           # fix rownames to old rownames
+           colnames(batch_normalized) <- colnames(mSet$dataSet$norm)
+           rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
+           as.data.frame(batch_normalized)
          },
          limma = {
            csv_edata <- combatCSV(mSet, tbl = "norm")
