@@ -117,10 +117,6 @@ runML <- function(curr,
   
   hasProb = !is.null(caret::getModelInfo(paste0("^",ml_method,"$"),regex = T)[[1]]$prob)
   
-  if(cl != 0){
-    doParallel::registerDoParallel(cl)
-  }
-  
   trainCtrl <- caret::trainControl(verboseIter = T,
                                    allowParallel = T,
                                    method = if(ml_folds == "LOOCV") "LOOCV" else as.character(ml_perf_metr),
@@ -140,8 +136,24 @@ runML <- function(curr,
     }
   }
   
+  # # split cluster item
+  # if(cl == 0){
+  #   cluster_teams = rep(0, length(trainOrders))
+  # }else{
+  #   cluster_idxs = c(1:length(cl))
+  #   cluster_teams = split(cluster_idxs, cut(seq_along(cluster_idxs), n, labels = FALSE)) 
+  # }
+  
+  # make nicer later
+  if(cl != 0){
+    doParallel::registerDoParallel(cl)
+  }
+  
   # get models
-  models = pbapply::pblapply(trainOrders, function(ordr){
+  models = pbapply::pblapply(trainOrders, 
+                             cl=cl,
+                             function(ordr){
+    
     reordered.training = training
     reordered.training[['label']] <- reordered.training[['label']][ordr]
     def_scoring = ifelse(ifelse(is.factor(reordered.training[["label"]]), 
