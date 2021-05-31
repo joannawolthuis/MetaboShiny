@@ -439,7 +439,7 @@ subset_mSet_mz <- function(mSet, keep.mzs) {
   if (length(keep.mzs) > 0) {
     tables = c("start", "orig", "norm", "proc","preproc","missing", "prebatch", "prenorm")
     combi.tbl = data.table::data.table(tbl = tables)
-    
+
     for (i in 1:nrow(combi.tbl)){
       try({
         tbl = combi.tbl$tbl[i]

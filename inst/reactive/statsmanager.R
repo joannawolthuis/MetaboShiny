@@ -363,16 +363,18 @@ shiny::observe({
                    assign("ml_queue", shiny::isolate(shiny::reactiveValuesToList(ml_queue)), envir = .GlobalEnv)
                    assign("input", shiny::isolate(shiny::reactiveValuesToList(input)), envir = .GlobalEnv)
                    
-                   parallel::clusterExport(ml_queue_cl, c("input", "ml_queue", "logfile", "manager_cl_n", "gbl"))
+                   parallel::clusterExport(ml_queue_cl, c("input", "ml_queue", "logfile", "manager_cl_n", "gbl", "lcl"))
                    
                    parallel::clusterEvalQ(ml_queue_cl, {
                      library(parallel)
                      library(data.table)
                      library(MetaboShiny)
+                     library(shiny)
+                     library(MetaDBparse)
                      cores_per_job = max(1, floor((input$ncores-manager_cl_n)/length(ml_queue$jobs)))
                      if(cores_per_job >  1){
                        job_cl <- makeCluster(cores_per_job, outfile=logfile)
-                       parallel::clusterExport(job_cl, c("input", "ml_queue", "logfile"))
+                       parallel::clusterExport(job_cl, c("input", "ml_queue", "logfile", "lcl"))
                        doParallel::registerDoParallel(job_cl)
                      }else{
                        job_cl = NULL
@@ -429,6 +431,10 @@ shiny::observe({
                      res = list()
                      try({
                        {
+                         tmpdir = file.path(tempdir(), settings$ml_name) # needed for 
+                         if(!dir.exists(tmpdir)) dir.create(tmpdir)
+                         setwd(tmpdir)
+                         
                          # PIPELINE
                          # pick source table
                          pickedTbl <- settings$ml_used_table
@@ -437,17 +443,74 @@ shiny::observe({
                            stop("Please run PCA first!")
                          }
                          
-                         curr = as.data.frame(switch(pickedTbl, 
-                                                     orig = mSet$dataSet$orig,
-                                                     norm = mSet$dataSet$norm,
-                                                     pca = mSet$analSet$pca$x))
-                         
                          # covars needed
                          keep.config = setdiff(c(settings$ml_include_covars, settings$ml_batch_covars,
                                                  settings$ml_train_subset[1], settings$ml_test_subset[1]),
                                                "label")
                          config = mSet$dataSet$covars[,..keep.config]
                          config$label = mSet$dataSet$cls
+                         
+                         curr = if(mSet$metshiParams$renorm & pickedTbl != "pca" & (!is.null(settings$ml_train_subset) | !is.null(settings$ml_test_subset))){
+                           test_idx = NULL
+                           train_idx = NULL
+                           if(!is.null(settings$ml_test_subset)){
+                             test_idx = which(config[[settings$ml_test_subset[1]]] == settings$ml_test_subset[2])
+                           }
+                           if(!is.null(settings$ml_train_subset)){
+                             train_idx = which(config[[settings$ml_train_subset[1]]] == settings$ml_train_subset[2])
+                           }
+                           if(is.null(train_idx)){
+                             train_idx = setdiff(1:nrow(mSet$dataSet$norm), test_idx)  
+                           }else if(is.null(test_idx)){
+                             test_idx = setdiff(1:nrow(mSet$dataSet$norm), train_idx)
+                           }
+                           samps_train = rownames(mSet$dataSet$norm)[train_idx]
+                           samps_test = rownames(mSet$dataSet$norm)[test_idx]
+                           mSet.settings = mSet$settings
+                           print(lcl$paths$proj_dir)
+                           # --- GET TRAIN ---
+                           mSet_train <- reset.mSet(mSet,
+                                                    fn = file.path(lcl$paths$proj_dir, 
+                                                                   paste0(lcl$proj_name,
+                                                                          "_ORIG.metshi")))
+                           mSet_train = subset_mSet(mSet_train, "sample", samps_train)
+                           mSet_train = change.mSet(mSet_train, 
+                                                    stats_var = mSet.settings$exp.var, 
+                                                    time_var =  mSet.settings$time.var,
+                                                    stats_type = mSet.settings$exp.type)
+                           mSet_train$dataSet$orig <- mSet_train$dataSet$start
+                           mSet_train$dataSet$start <- mSet_train$dataSet$preproc <- mSet_train$dataSet$proc <- mSet_train$dataSet$prenorm <- NULL
+                           mSet_train = metshiProcess(mSet_train, init = F)
+                           # --- GET TEST ---
+                           mSet_test <- reset.mSet(mSet,
+                                                    fn = file.path(lcl$paths$proj_dir, 
+                                                                   paste0(lcl$proj_name,
+                                                                          "_ORIG.metshi")))
+                           mSet_test = subset_mSet(mSet_test, "sample", samps_test)
+                           mSet_test = change.mSet(mSet_test, 
+                                                   stats_var = mSet.settings$exp.var, 
+                                                   time_var =  mSet.settings$time.var,
+                                                   stats_type = mSet.settings$exp.type)
+                           mSet_test$dataSet$orig <- mSet_test$dataSet$start
+                           mSet_test$dataSet$start <- mSet_test$dataSet$preproc <- mSet_test$dataSet$proc <- mSet_test$dataSet$prenorm <- NULL
+                           mSet_test = metshiProcess(mSet_test, init = F)
+                           # ------- rejoin and create curr -------
+                           config_train = mSet_train$dataSet$covars[,..keep.config]
+                           config_train$label = mSet_train$dataSet$cls
+                           config_test = mSet_test$dataSet$covars[,..keep.config]
+                           config_test$label = mSet_test$dataSet$cls
+                           config = rbind(config_train, 
+                                          config_test)
+                           mz.in.both = intersect(colnames(mSet_train$dataSet$norm),
+                                                  colnames(mSet_test$dataSet$norm))
+                           rbind(mSet_train$dataSet$norm[,mz.in.both],
+                                 mSet_test$dataSet$norm[,mz.in.both])
+                         }else{
+                           as.data.frame(switch(pickedTbl, 
+                                                orig = mSet$dataSet$orig,
+                                                norm = mSet$dataSet$norm,
+                                                pca = mSet$analSet$pca$x))
+                         }
                          
                          # PCA correct
                          if(settings$ml_pca_corr & pickedTbl != 'pca'){
