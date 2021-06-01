@@ -94,13 +94,15 @@ runML <- function(curr,
                   n_permute = 10,
                   shuffle_mode = "train"){
   # get user training percentage
+  train_vec = c("split", "train")
+  test_vec = c("split", "test")
   if(unique(train_vec)[1] != "all"){ #ONLY TRAIN IS DEFINED
-    train_idx <- which(curr[,train_vec[1], with=F][[1]] == train_vec[2])
+    train_idx <- which(curr[,train_vec[1], with=F][[1]] %in% train_vec[2])
     test_idx = setdiff(1:nrow(curr), train_idx) # use the other rows for testing
     inTrain <- train_idx
     inTest <- test_idx
   }else{ # ONLY TEST IS DEFINED
-    test_idx = which(curr[,test_vec[1], with=F][[1]] == test_vec[2])
+    test_idx = which(curr[,test_vec[1], with=F][[1]] %in% test_vec[2])
     train_idx = setdiff(1:nrow(curr), test_idx) # use the other rows for testing
     inTrain = train_idx
     inTest <- test_idx
@@ -109,7 +111,7 @@ runML <- function(curr,
   trainSamps = rownames(curr)[inTrain]
   testSamps = rownames(curr)[inTest]
   
-  need.rm = unique(c(train_vec[1],test_vec[1],"split"))
+  need.rm = unique(c(train_vec[[1]],test_vec[[1]],"split"))
   curr <- curr[,-..need.rm]
   
   training <- curr[inTrain,]
@@ -145,12 +147,11 @@ runML <- function(curr,
   # }
   
   # make nicer later
-  if(cl != 0){
-    doParallel::registerDoParallel(cl)
-  }
-  
+  # if(cl != 0){
+  #   doParallel::registerDoParallel(cl)
+  # }
   # get models
-  models = pbapply::pblapply(trainOrders, 
+  models = pbapply::pblapply(trainOrders,
                              cl=cl,
                              function(ordr){
     
@@ -173,14 +174,14 @@ runML <- function(curr,
       tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
       trControl = trainCtrl
     )
-        list(model = fit,
-             type = ml_method,
-             train.performance = fit$pred,
-             importance = caret::varImp(fit)$importance,
-             labels = testing$label,
-             distr = list(train = trainSamps,
-                          test = testSamps),
-             shuffled = !all(ordr == 1:nrow(training)))
+    list(model = fit,
+         type = ml_method,
+         train.performance = fit$pred,
+         importance = caret::varImp(fit)$importance,
+         labels = testing$label,
+         distr = list(train = trainSamps,
+                      test = testSamps),
+         shuffled = !all(ordr == 1:nrow(training)))
   })
   
   testOrders = rep(list(1:nrow(testing)), length(models))
@@ -192,7 +193,7 @@ runML <- function(curr,
       testOrders = append(testOrders, list(sample(1:nrow(testing))))
     }
     iterations = length(testOrders)
-    pbapply::pblapply(1:iterations, cl = cl, function(i, models){
+    pbapply::pblapply(1:iterations, cl = 0, function(i, models){
       l = models[[1]]
       fit = l$model
       ordr = testOrders[[i]]
@@ -208,7 +209,7 @@ runML <- function(curr,
     }, models = models)
   }else{
     iterations = length(models)
-    pbapply::pblapply(1:iterations, cl = cl, function(i, models){
+    pbapply::pblapply(1:iterations, cl = 0, function(i, models){
       l = models[[i]]
       fit = l$model
       result.predicted.prob <- stats::predict(fit, 

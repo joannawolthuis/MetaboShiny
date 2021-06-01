@@ -278,6 +278,7 @@ reset.mSet <- function(mSet_new, fn) {
 #' @rdname load.mSet
 #' @export 
 load.mSet <- function(mSet, name = mSet$dataSet$cls.name, proj.folder) {
+  name = gsub(pattern = "[^\\w]", replacement = "_", x = name, perl = T)
   mSet.loaded = qs::qread(file.path(proj.folder, paste0(name, ".metshi")))
   mSet$dataSet <- mSet.loaded$dataSet
   mSet$analSet <- mSet.loaded$analSet
@@ -285,6 +286,26 @@ load.mSet <- function(mSet, name = mSet$dataSet$cls.name, proj.folder) {
   mSet$report <- mSet.loaded$report
   return(mSet)
 }
+
+# setwd(proj.folder)
+# for(metshi in list.files(proj.folder)){
+#   ext = ".metshi"
+#   bn = basename(metshi)
+#   name = gsub("\\.metshi$", "", bn)
+#   name = gsub(pattern = "[^\\w]", replacement = "_", x = name, perl = T)
+#   fixed.name = paste0(name, ".metshi")
+#   print(bn)
+#   print(fixed.name)
+#   from.file = file.path(proj.folder, bn)
+#   to.file = file.path(proj.folder, fixed.name)
+#   print(from.file)
+#   print(to.file)
+#   if(bn != fixed.name){
+#     went.ok = file.rename(from = from.file,
+#                           to = to.file)
+#     print(went.ok)   
+#   }
+# }
 
 #' @title Store mSet analysis and settings in mSet internal storage
 #' @description MetShi mSets store previous dataset results and settings in the mSet storage. This saves the current mSet in there.
@@ -300,7 +321,9 @@ store.mSet <- function(mSet, name = mSet$settings$cls.name, proj.folder) {
   # qs save
   save.item = mSet
   save.item$storage <- NULL
+  name = gsub(pattern = "[^\\w]", replacement = "_", x = name, perl = T)
   fn = file.path(proj.folder, paste0(name, ".metshi"))
+  print(fn)
   ## MORE MEMORY FRIENDLY ##
   qs::qsave(save.item, fn)
   #try({
