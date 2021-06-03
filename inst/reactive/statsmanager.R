@@ -359,10 +359,10 @@ shiny::observe({
                    # # split over queue
                    # ml_queue_cl = parallel::makeCluster(manager_cl_n,
                    #                                     outfile=logfile)
-                   # 
-                   # assign("ml_queue", shiny::isolate(shiny::reactiveValuesToList(ml_queue)), envir = .GlobalEnv)
-                   # assign("input", shiny::isolate(shiny::reactiveValuesToList(input)), envir = .GlobalEnv)
-                   # 
+                   #
+                   {
+                   assign("ml_queue", shiny::isolate(shiny::reactiveValuesToList(ml_queue)), envir = .GlobalEnv)
+                   assign("input", shiny::isolate(shiny::reactiveValuesToList(input)), envir = .GlobalEnv)
                    parallel::clusterExport(session_cl, c("input", "ml_queue", "logfile", "gbl", "lcl"))
                    # 
                    # parallel::clusterEvalQ(ml_queue_cl, {
@@ -490,7 +490,7 @@ shiny::observe({
                            }
                            mSet_train$dataSet$orig <- mSet_train$dataSet$start
                            mSet_train$dataSet$start <- mSet_train$dataSet$preproc <- mSet_train$dataSet$proc <- mSet_train$dataSet$prenorm <- NULL
-                           mSet_train = metshiProcess(mSet_train, init = F, cl = cl)
+                           mSet_train = metshiProcess(mSet_train, init = F, cl = 0)
                            # --- GET TEST ---
                            mSet_test <- reset.mSet(mSet,
                                                     fn = file.path(lcl$paths$proj_dir, 
@@ -506,7 +506,7 @@ shiny::observe({
                                                    stats_type = mSet.settings$exp.type)
                            mSet_test$dataSet$orig <- mSet_test$dataSet$start
                            mSet_test$dataSet$start <- mSet_test$dataSet$preproc <- mSet_test$dataSet$proc <- mSet_test$dataSet$prenorm <- NULL
-                           mSet_test = metshiProcess(mSet_test, init = F, cl = cl)
+                           mSet_test = metshiProcess(mSet_test, init = F, cl = 0)
                            # ------- rejoin and create curr -------
                            config_train = mSet_train$dataSet$covars[,..keep.config]
                            config_train$label = mSet_train$dataSet$cls
@@ -522,12 +522,15 @@ shiny::observe({
                                           config_test)
                            
                            mSet_test <- mSet_train <- config_test <- config_train <- mz.in.both <- NULL
+                           gc()
                          }else{
                            curr = as.data.frame(switch(pickedTbl, 
                                                 orig = mSet$dataSet$orig,
                                                 norm = mSet$dataSet$norm,
                                                 pca = mSet$analSet$pca$x))
-                           curr <- curr[, mzs]
+                           if(length(mzs) > 0){
+                             curr <- curr[, mzs]
+                           }
                          }
                          
                          test_sampnames = rownames(curr)[test_idx]
@@ -684,14 +687,12 @@ shiny::observe({
                          training_data$config = training_data$config[, ..keep.config]
                          
                          # merge back into one
-                         merged.training = cbind(training_data$config,
-                                                 training_data$curr)
-                         merged.testing = cbind(testing_data$config[,colnames(training_data$config),with=F],
-                                                testing_data$curr)
-                         curr = rbind(merged.training,
-                                      merged.testing)
+                         training = cbind(training_data$config,
+                                          training_data$curr)
+                         testing = cbind(testing_data$config[,colnames(training_data$config),with=F],
+                                         testing_data$curr)
                          
-                         training_data <- testing_data <- merged.training <- merged.testing <- NULL
+                         training_data <- testing_data <- NULL
                         
                          # CARET SETTINGS
                          caret.mdls <- caret::getModelInfo()
@@ -732,21 +733,18 @@ shiny::observe({
                            })
                          
                          # make sure levels of predicted class aren't numeric
-                         levels(curr$label) <- paste0("class",  Hmisc::capitalize(levels(curr$label)))
-                         levels(curr$label) <- ordered(levels(curr$label))
+                         levels(training$label) <- paste0("class",  Hmisc::capitalize(levels(training$label)))
+                         levels(training$label) <- ordered(levels(training$label))
+                         levels(testing$label) <- paste0("class",  Hmisc::capitalize(levels(testing$label)))
+                         levels(testing$label) <- ordered(levels(testing$label))
                          
                          # correct mzs in case model cannot handle numeric column names
-                         colnames(curr) <- make.names(colnames(curr))
-                         
-                         if(is.null(settings$ml_train_subset) & is.null(settings$ml_train_subset)){
-                           settings$ml_train_subset = list("split","train")
-                           settings$ml_test_subset = list("split","test")
-                         }
+                         colnames(training) <- make.names(colnames(training))
+                         colnames(testing) <- make.names(colnames(testing))
                          
                          # run ML
-                         ml_res = runML(curr,
-                                        train_vec = settings$ml_train_subset,
-                                        test_vec = settings$ml_test_subset,
+                         ml_res = runML(training = training,
+                                        testing = testing,
                                         ml_method = settings$ml_method,
                                         ml_perf_metr = settings$ml_perf_metr,
                                         ml_folds = settings$ml_folds,
@@ -765,18 +763,33 @@ shiny::observe({
                      res
                    }
                    
-                   # set static train/test
+                   # # set static train/test
+                   # joint_lbl = paste0(small_mSet$dataSet$covars$country,"_",small_mSet$dataSet$covars$new_group)
+                   # train = caret::createDataPartition(joint_lbl, p = 0.8)[[1]]
+                   # train_samps = small_mSet$dataSet$covars$sample[train]
+                   # basejob = ml_queue$jobs[[1]]
+                   # ml_queue$jobs = lapply(1:26, function(i){
+                   #   job = basejob
+                   #   job$ml_mzs_topn = i
+                   #   job$ml_name = gsub("1$", i, job$ml_name)
+                   #   job$ml_train_subset = list("sample", train_samps)
+                   #   job
+                   # })
+                   # # set static train/test
                    joint_lbl = paste0(small_mSet$dataSet$covars$country,"_",small_mSet$dataSet$covars$new_group)
                    train = caret::createDataPartition(joint_lbl, p = 0.8)[[1]]
                    train_samps = small_mSet$dataSet$covars$sample[train]
                    basejob = ml_queue$jobs[[1]]
-                   ml_queue$jobs = lapply(1:26, function(i){
-                     job = basejob
-                     job$ml_mzs_topn = i
-                     job$ml_name = gsub("1$", i, job$ml_name)
-                     job$ml_train_subset = list("sample", train_samps)
-                     job
-                   })
+                   jobs = list()
+                   for( i in 1:26){
+                     for(j in 1:30){
+                       job = basejob
+                       job$ml_mzs_topn = i
+                       job$ml_name = gsub("1$", paste(i, paste0("#", j)), job$ml_name)
+                       jobs[[job$ml_name]] = job
+                     }
+                   }
+                   ml_queue$jobs = jobs
                    
                    ml_queue_res <- pbapply::pblapply(ml_queue$jobs, function(settings, ml_cl){
                      print(settings$ml_name)
@@ -789,7 +802,7 @@ shiny::observe({
                      })
                      res
                    }, ml_cl = session_cl)
-                   
+                   } # quickrun bracket cuz lazy
                    print("Done!")
                    
                    closeAllConnections()

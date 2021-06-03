@@ -78,7 +78,8 @@ getMLperformance = function(ml_res, pos.class, x.metric, y.metric){
 #' @export 
 #' @importFrom caret createDataPartition trainControl train varImp
 #' @importFrom stats predict
-runML <- function(curr,
+runML <- function(training,
+                  testing,
                   config,
                   train_vec,
                   test_vec,
@@ -93,29 +94,11 @@ runML <- function(curr,
                   shuffle = F,
                   n_permute = 10,
                   shuffle_mode = "train"){
+  
   # get user training percentage
-  train_vec = c("split", "train")
-  test_vec = c("split", "test")
-  if(unique(train_vec)[1] != "all"){ #ONLY TRAIN IS DEFINED
-    train_idx <- which(curr[,train_vec[1], with=F][[1]] %in% train_vec[2])
-    test_idx = setdiff(1:nrow(curr), train_idx) # use the other rows for testing
-    inTrain <- train_idx
-    inTest <- test_idx
-  }else{ # ONLY TEST IS DEFINED
-    test_idx = which(curr[,test_vec[1], with=F][[1]] %in% test_vec[2])
-    train_idx = setdiff(1:nrow(curr), test_idx) # use the other rows for testing
-    inTrain = train_idx
-    inTest <- test_idx
-  }
-  
-  trainSamps = rownames(curr)[inTrain]
-  testSamps = rownames(curr)[inTest]
-  
-  need.rm = unique(c(train_vec[[1]],test_vec[[1]],"split"))
-  curr <- curr[,-..need.rm]
-  
-  training <- curr[inTrain,]
-  testing <- curr[inTest,]
+  need.rm = c("split")
+  training <- training[,-..need.rm]
+  testing <- testing[,-..need.rm]
   
   hasProb = !is.null(caret::getModelInfo(paste0("^",ml_method,"$"),regex = T)[[1]]$prob)
   
@@ -123,7 +106,7 @@ runML <- function(curr,
                                    allowParallel = T,
                                    method = if(ml_folds == "LOOCV") "LOOCV" else as.character(ml_perf_metr),
                                    number = as.numeric(ml_folds),
-                                   repeats = 3,
+                                   #repeats = 3,
                                    trim = TRUE, 
                                    returnData = FALSE,
                                    classProbs = if(!hasProb) FALSE else TRUE,
@@ -150,11 +133,10 @@ runML <- function(curr,
   # if(cl != 0){
   #   doParallel::registerDoParallel(cl)
   # }
-  # get models
+  # get model
   models = pbapply::pblapply(trainOrders,
-                             cl=cl,
+                             cl = cl,
                              function(ordr){
-    
     reordered.training = training
     reordered.training[['label']] <- reordered.training[['label']][ordr]
     def_scoring = ifelse(ifelse(is.factor(reordered.training[["label"]]), 
@@ -174,16 +156,18 @@ runML <- function(curr,
       tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
       trControl = trainCtrl
     )
+    print("done")
     list(model = fit,
          type = ml_method,
          train.performance = fit$pred,
          importance = caret::varImp(fit)$importance,
          labels = testing$label,
-         distr = list(train = trainSamps,
-                      test = testSamps),
+         distr = list(train = rownames(training),
+                      test = rownames(testing)),
          shuffled = !all(ordr == 1:nrow(training)))
   })
   
+  print("!")
   testOrders = rep(list(1:nrow(testing)), length(models))
   results = if(shuffle & shuffle_mode == "test" & length(models) == 1){
     print("permuting test labels")
@@ -220,7 +204,7 @@ runML <- function(curr,
       return(l)
     }, models = models)
   }
-  
+  print("!!")
   # train and cross validate model
   # return list with mode, prediction on test data etc.s
   results
