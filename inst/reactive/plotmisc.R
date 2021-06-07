@@ -25,8 +25,8 @@ lapply(c("add", "iso", "db"), function(which_pie){
   output[[paste0("match_pie_", which_pie)]] <- plotly::renderPlotly({
     
     pievec = pieinfo[[which_pie]]
-    
-    if(nrow(pievec) > 0){
+    if(!is.null(pievec)){
+      if(nrow(pievec) > 0){
       
       m <- list(
         l = 0,
@@ -69,6 +69,17 @@ lapply(c("add", "iso", "db"), function(which_pie){
                          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))  
       }
       return(p)          
+      }else{
+        data = data.frame(text = "Please run \n a search!")
+        p = ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10) +
+          ggplot2::theme(text = ggplot2::element_text(family = lcl$aes$font$family)) + ggplot2::theme_bw()
+        plotly::ggplotly(p)
+    }
+    }else{
+      data = data.frame(text = "Please run \n a search!")
+      p = ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10) +
+        ggplot2::theme(text = ggplot2::element_text(family = lcl$aes$font$family)) + ggplot2::theme_bw()
+      plotly::ggplotly(p)
     }
   })
 })
