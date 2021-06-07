@@ -25,8 +25,6 @@ if("adduct_rules.csv" %in% list.files(file.path(home, "MetaboShiny", "saves", "a
   adduct_rules <- data.table::as.data.table(adduct_rules)
 }
 
-caret.mdls <- caret::getModelInfo()
-
 # === THE BELOW LIST CONTAINS ALL GLOBAL VARIABLES THAT METABOSHINY CALLS UPON LATER ===
 gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people importing their data through csv
                              ml.twoonly = c("adaboost","logicBag","bartMachine","binda",
@@ -39,12 +37,17 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                             "plsRglm","rotationForest","rotationForestCp",
                                             "svmRadialWeights","nodeHarvest"),
                              # get all caret models that can do classification and have some kind of importance metric
-                             ml.models = names(caret.mdls)[sapply(1:length(caret.mdls), function(i){
-                               curr.mdl = caret.mdls[[i]]
-                               can.classify = if("Classification" %in% curr.mdl$type) TRUE else FALSE
-                               has.importance = if("varImp" %in% names(curr.mdl)) TRUE else FALSE
-                               can.classify & has.importance
-                             })],
+                             ml.models = {
+                               caret.mdls <- caret::getModelInfo()
+                               fin = names(caret.mdls)[sapply(1:length(caret.mdls), function(i){
+                                 curr.mdl = caret.mdls[[i]]
+                                 can.classify = if("Classification" %in% curr.mdl$type) TRUE else FALSE
+                                 has.importance = if("varImp" %in% names(curr.mdl)) TRUE else FALSE
+                                 can.classify & has.importance
+                               })]
+                               caret.mdls <- NULL
+                               fin
+                               },
                              max.cols = 30,
                              images = list(list(name = 'load_icon', path = 'www/cute.png', dimensions = c(100, 100)),
                                            list(name = 'empty', path = 'www/empty.png', dimensions = c("100%", 1)),
@@ -287,7 +290,9 @@ functions = list(# default color functions at startup, will be re-loaded from op
                       "bw"=MetaboShiny::blackwhite.colors)
     
     # add into a single list for use in interface
-    append(base.opts, brew.opts)
+    fin = append(base.opts, brew.opts)
+    brew.cols <- brew.opts <- base.opts <- NULL
+    fin
   }),
 # set default paths
 paths = list(
