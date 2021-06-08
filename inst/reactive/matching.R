@@ -1,3 +1,35 @@
+shiny::observeEvent(input$match_search_query, {
+  if(input$match_search_query != ""){
+    if(nrow(shown_matches$forward_unique) > 0){
+      # remove existing highlights
+      shown_matches$forward_full$description <- gsub("(<.*?>)",
+                                                     "",
+                                                     shown_matches$forward_full$description)
+      
+      # allow lowercase but no fuzzy matching for now
+      hits = stringr::str_locate_all(string = tolower(shown_matches$forward_full$description),
+                                     pattern = paste0("(", input$match_search_query, ")"))
+      has.hits = which(sapply(hits, function(x) nrow(x) > 0))
+      
+      # adjust descriptions to highlight matches
+      template = '<span style="color:white; background-color:black;">$exact.word</span>'
+
+      for(i in has.hits){
+        exact.word <- stringr::str_extract(string = shown_matches$forward_full$description[i],
+                                           pattern = stringr::fixed(input$match_search_query,
+                                                                    ignore_case=TRUE))
+        shown_matches$forward_full$description[i] <- gsub(pattern = paste0("(", exact.word, ")"),
+                                                          replacement = gsubfn::fn$paste(template),
+                                                          x = shown_matches$forward_full$description[i])  
+      }
+      
+      name.hits = unique(shown_matches$forward_full$compoundname[has.hits])
+      shown_matches$forward_unique$`search hit` <- c('<i class=\"fa fa-times\" role=\"presentation\" aria-label=\"times icon\" style=\"color:red\")><div style="display: none;">1</div></i>')
+      shown_matches$forward_unique[compoundname %in% name.hits]$`search hit` <- c('<i class=\"fa fa-check\" role=\"presentation\" aria-label=\"times icon\" style=\"color:lime\")><div style="display: none;">0</div></i>')
+    }  
+  }
+})
+
 output$manual_search <- renderUI({
   if(search_button$on){
     tags$button(
@@ -460,7 +492,7 @@ shiny::observe({
           
           shiny::setProgress(0.2)
           
-          matches$compoundname[matches$source != "magicball"] <- tolower(matches$compoundname[matches$source != "magicball"])
+          #matches$compoundname[matches$source != "magicball"] <- tolower(matches$compoundname[matches$source != "magicball"])
           
           # =====
           
