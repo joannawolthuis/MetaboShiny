@@ -643,8 +643,22 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                          res
                        },
                        combi = {
-                         res = list(data.frame("m/z"=analysis$combi$sig.mat$rn,
-                                          value=c(0)))
+                         # special opt for volcano... TODO: somehow make this work for the others
+                         is.volc = all(colnames(analysis$combi$sig.mat) %in% c("rn",  "log2(FC)", "-log10(p)"))
+                         res = if(is.volc){
+                           print("special volcano plot mode")
+                           abs.fc = abs(analysis$combi$sig.mat$`log2(FC)`)
+                           comb.vals = abs.fc * analysis$combi$sig.mat$`-log10(p)`
+                           res = analysis$combi$sig.mat[order(comb.vals,
+                                                                 decreasing = T),]
+                           res[,2:3] <- NULL
+                           res$value <- c(0)
+                           res = list(res)
+                         }else{
+                           res = list(data.frame("m/z"=analysis$combi$sig.mat$rn,
+                                                 value=c(0)))
+                         }
+                         
                          names(res) = base_name
                          print(res)
                          res

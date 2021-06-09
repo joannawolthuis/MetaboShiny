@@ -347,49 +347,19 @@ shiny::observe({
                ml = {
                  try({
                    
-                   # parallel::stopCluster(session_cl)
-                   # 
-                   # # -------
-                   # 
-                   # logfile <<- file.path(lcl$paths$work_dir, "metshiLog.txt")
-                   # if(file.exists(logfile)) file.remove(logfile)
-                   # 
-                   # manager_cl_n <<- min(input$ncores,
-                   #                    length(ml_queue$jobs))
-                   # # split over queue
-                   # ml_queue_cl = parallel::makeCluster(manager_cl_n,
-                   #                                     outfile=logfile)
-                   #
                    {
                      assign("ml_queue", shiny::isolate(shiny::reactiveValuesToList(ml_queue)), envir = .GlobalEnv)
                      assign("input", shiny::isolate(shiny::reactiveValuesToList(input)), envir = .GlobalEnv)
-                     parallel::clusterExport(session_cl, c("input", "ml_queue", "logfile", "gbl", "lcl"))
-                     # 
-                     # parallel::clusterEvalQ(ml_queue_cl, {
-                     #   library(parallel)
-                     #   library(data.table)
-                     #   library(MetaboShiny)
-                     #   library(shiny)
-                     #   library(MetaDBparse)
-                     #   cores_per_job = max(1, floor((input$ncores-manager_cl_n)/length(ml_queue$jobs)))
-                     #   if(cores_per_job >  1){
-                     #     job_cl <- makeCluster(cores_per_job, outfile=logfile)
-                     #     parallel::clusterExport(job_cl, c("input", "ml_queue", "logfile", "lcl"))
-                     #     doParallel::registerDoParallel(job_cl)
-                     #   }else{
-                     #     job_cl = NULL
-                     #   }
-                     # })
+                    
+                     if(session_cl != 0){
+                       parallel::clusterExport(session_cl, c("input", "ml_queue", "logfile", "gbl", "lcl"))
+                     }
                      
                      # make subsetted mset for ML so it's not as huge in memory
                      small_mSet = mSet
                      small_mSet$dataSet = small_mSet$dataSet[c("cls", "orig.cls", "orig", "norm", "covars")]
  
-                     #pb <- pbapply::timerProgressBar(min=0, max = length(ml_queue$jobs))
-                     #progress <- function(n) pbapply::setpb(pb, n)
-                     #opts <- list(progress = progress)
-                     #doSNOW::registerDoSNOW(ml_queue_cl)
-                     
+                    
                      ml_run <- function(settings, mSet, input, cl){
                        res = list()
                        #({
@@ -518,7 +488,6 @@ shiny::observe({
                                           config_test)
                            
                            mSet_test <- mSet_train <- config_test <- config_train <- mz.in.both <- mSet$storage <- NULL
-                           gc()
                          }else{
                            curr = as.data.frame(switch(pickedTbl, 
                                                        orig = mSet$dataSet$orig,
@@ -528,10 +497,10 @@ shiny::observe({
                              curr <- curr[, mzs]
                            }
                          }
-                         
+
+                         mSet$storage <- NULL
                          mSet = NULL
-                         gc()
-                         
+
                          test_sampnames = rownames(curr)[test_idx]
                          
                          # PCA correct
@@ -552,8 +521,7 @@ shiny::observe({
                                              config = config[test_idx,])
                          
                          curr = NULL
-                         gc()
-                         
+
                          if(length(settings$ml_batch_covars) == 0){
                            settings$ml_batch_balance <- settings$ml_batch_sampling <- F
                          }
@@ -761,19 +729,7 @@ shiny::observe({
                        #})
                        res
                      }
-                     
-                     # # set static train/test
-                     # joint_lbl = paste0(small_mSet$dataSet$covars$country,"_",small_mSet$dataSet$covars$new_group)
-                     # train = caret::createDataPartition(joint_lbl, p = 0.8)[[1]]
-                     # train_samps = small_mSet$dataSet$covars$sample[train]
-                     # basejob = ml_queue$jobs[[1]]
-                     # ml_queue$jobs = lapply(1:26, function(i){
-                     #   job = basejob
-                     #   job$ml_mzs_topn = i
-                     #   job$ml_name = gsub("1$", i, job$ml_name)
-                     #   job$ml_train_subset = list("sample", train_samps)
-                     #   job
-                     # })
+                    
                      # # set static train/test
                      # joint_lbl = paste0(small_mSet$dataSet$covars$country,"_",small_mSet$dataSet$covars$new_group)
                      # train = caret::createDataPartition(joint_lbl, p = 0.8)[[1]]
@@ -789,6 +745,18 @@ shiny::observe({
                      #   }
                      # }
                      # ml_queue$jobs = jobs
+                     
+                     basejob = ml_queue$jobs[[1]]
+                     jobs = list()
+                     for( i in 1:46){
+                       for(j in 1:10){
+                         job = basejob
+                         job$ml_mzs_topn = i
+                         job$ml_name = gsub("1$", paste(i, paste0("#", j)), job$ml_name)
+                         jobs[[job$ml_name]] = job
+                       }
+                     }
+                     ml_queue$jobs = jobs
                      
                      ml_queue_res <- pbapply::pblapply(ml_queue$jobs, function(settings, ml_cl){
                        print(settings$ml_name)

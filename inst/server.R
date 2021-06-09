@@ -607,20 +607,28 @@ beep = no')
   
   shiny::observeEvent(input$ncores, {
     if(!is.null(session_cl)){
-      shiny::showNotification("Stopping threads...")
-      parallel::stopCluster(session_cl)
+      if(session_cl != 0){
+        shiny::showNotification("Stopping threads...")
+        parallel::stopCluster(session_cl)
+      }
     }
-    shiny::showNotification("Starting new threads...")
-    logfile <<- file.path(lcl$paths$work_dir, "metshiLog.txt")
-    #if(file.exists(logfile)) file.remove(logfile)
-    session_cl <<- parallel::makeCluster(input$ncores,outfile=logfile)#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
-    # send specific functions/packages to other threads
-    parallel::clusterEvalQ(session_cl, {
-      library(data.table)
-      library(iterators)
-      library(MetaboShiny)
-      library(MetaDBparse)
-      })
+    net_cores = input$ncores - 1
+    if(net_cores > 0){
+      shiny::showNotification("Starting new threads...")
+      logfile <<- file.path(lcl$paths$work_dir, "metshiLog.txt")
+      #if(file.exists(logfile)) file.remove(logfile)
+      session_cl <<- parallel::makeCluster(net_cores,outfile=logfile)#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
+      # send specific functions/packages to other threads
+      parallel::clusterEvalQ(session_cl, {
+        library(data.table)
+        library(iterators)
+        library(MetaboShiny)
+        library(MetaDBparse)
+      })  
+    }else{
+      session_cl <<- 0
+    }
+    
     MetaboShiny::setOption(lcl$paths$opt.loc, "cores", input$ncores)
   })
   

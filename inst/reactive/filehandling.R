@@ -200,7 +200,7 @@ observe({
         file.remove(fn_bu)
       }
     } 
-  }
+   }
   filemanager$do <- "nothing"
 })
 

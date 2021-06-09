@@ -150,7 +150,7 @@ runML <- function(training,
     result.predicted.prob <- stats::predict(fit, 
                                             test.set,
                                             type = if(hasProb) "prob" else "raw") # Prediction
-    prediction = result.predicted.prob
+    
     l <- list(#model = fit,
       type = ml_method,
       train.performance = fit$pred,
@@ -158,6 +158,7 @@ runML <- function(training,
       labels = testing$label,
       distr = list(train = rownames(train.set),
                    test = rownames(test.set)),
+      prediction = result.predicted.prob,
       shuffled = !all(train.order == 1:nrow(train.set)))
     return(l)
   }, train.set = training, test.set = testing)
