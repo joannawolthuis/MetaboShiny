@@ -352,14 +352,13 @@ shiny::observe({
                      assign("input", shiny::isolate(shiny::reactiveValuesToList(input)), envir = .GlobalEnv)
                     
                      if(session_cl != 0){
-                       parallel::clusterExport(session_cl, c("input", "ml_queue", "logfile", "gbl", "lcl"))
+                       parallel::clusterExport(session_cl, c("input", "ml_queue", "gbl", "lcl"))
                      }
                      
                      # make subsetted mset for ML so it's not as huge in memory
                      small_mSet = mSet
                      small_mSet$dataSet = small_mSet$dataSet[c("cls", "orig.cls", "orig", "norm", "covars")]
  
-                    
                      ml_run <- function(settings, mSet, input, cl){
                        res = list()
                        #({
@@ -402,14 +401,14 @@ shiny::observe({
                            }
                          }else{
                            # make joined label of label+batch and split that train/test
-                           split_label = if(length(settings$ml_batch_covars) == 1){
-                             print("splitting tr/te % per batch")
-                             paste0(config$label,
-                                    "AND",
-                                    config[,settings$ml_batch_covars,
-                                           with=F][[1]])
+                           split_label = if(length(settings$ml_batch_covars) > 0){
+                             #print("splitting tr/te % per batch")
+                             covars = c("label", settings$ml_batch_covars)
+                             apply(config[, ..covars],
+                                   MARGIN = 1, 
+                                   function(x) paste0(x, collapse="_"))
                            }else{
-                             print("unbiased split over pool")
+                             #print("unbiased split over pool")
                              config$label
                            }
                            train_idx = caret::createDataPartition(y = split_label, 
@@ -417,6 +416,7 @@ shiny::observe({
                                                                   list = FALSE)[,1] # partition data in a balanced way (uses labels)
                            
                            test_idx = setdiff(1:nrow(config), train_idx)
+                           #table(split_label[test_idx])
                          }
                          
                          # subset to specific m/z values used
@@ -424,10 +424,6 @@ shiny::observe({
                          if(pickedTbl != "pca"){
                            if(settings$ml_specific_mzs != "no"){
                              msg = "Using user-specified m/z set."
-                             try({
-                               print(msg)
-                               shiny::showNotification(msg)
-                             })
                              if(!is.null(settings$ml_mzs)){
                                curr <- curr[,settings$ml_mzs, with=F]
                              }else{
@@ -505,7 +501,7 @@ shiny::observe({
                          
                          # PCA correct
                          if(settings$ml_pca_corr & pickedTbl != 'pca'){
-                           print("Performing PCA and subtracting PCs...")
+                           #print("Performing PCA and subtracting PCs...")
                            curr <- pcaCorr(curr, 
                                            center = if(pickedTbl == "norm") F else T,
                                            scale = if(pickedTbl == "norm") F else T, 
@@ -638,11 +634,20 @@ shiny::observe({
                          folds <- if(length(settings$ml_batch_covars) > 0 &
                                      settings$ml_folds != "LOOCV" &
                                      (settings$ml_sampling %in% c("up","down","none") | settings$ml_batch_balance)){
-                           print("Creating CV folds based on batch factor.")
-                           batch.fac = training_data$config[, settings$ml_batch_covars, with=F][[1]]
-                           ml_folds = length(unique(batch.fac))
-                           caret::groupKFold(batch.fac, k = ml_folds)
+                           #print("Creating CV folds based on batch factor(s) and label.")
+                           covars = c("label", settings$ml_batch_covars)
+                           split_label = apply(training_data$config[, ..covars],
+                                               MARGIN = 1, 
+                                               function(x) paste0(x, collapse="_"))
+                           caret::groupKFold(split_label, k = min(as.numeric(settings$ml_folds), 
+                                                                  length(unique(split_label))))
                          }else NULL
+                         
+                         # for(fold in folds){
+                         #   print("---")
+                         #   print(table(training_data$config$country[fold]))
+                         #   print(table(training_data$config$label[fold]))
+                         # }
                          
                          # replace training data with the new stuff
                          training_data$config$split <- "train"
@@ -692,7 +697,7 @@ shiny::observe({
                              })
                              names(lst) = params$parameter
                              if(any(sapply(lst,function(x)all(is.na(x))))){
-                               cat("Missing param, auto-tuning...")
+                               #cat("Missing param, auto-tuning...")
                                lst <- list()
                              }
                              #lst <- lst[sapply(lst,function(x)all(!is.na(x)))]
@@ -748,7 +753,7 @@ shiny::observe({
                      
                      basejob = ml_queue$jobs[[1]]
                      jobs = list()
-                     for( i in 1:46){
+                     for(i in 1:110){
                        for(j in 1:10){
                          job = basejob
                          job$ml_mzs_topn = i
@@ -756,20 +761,23 @@ shiny::observe({
                          jobs[[job$ml_name]] = job
                        }
                      }
+                     
                      ml_queue$jobs = jobs
                      
-                     ml_queue_res <- pbapply::pblapply(ml_queue$jobs, function(settings, ml_cl){
-                       print(settings$ml_name)
+                     parallel::clusterExport(session_cl, c("ml_run", "small_mSet", "gbl"))
+                     
+                     ml_queue_res <- pbapply::pblapply(ml_queue$jobs, cl=session_cl, function(settings, ml_cl){
                        res = list()
                        try({
-                         res = ml_run(settings, 
+                         res = ml_run(settings = settings, 
                                       mSet = small_mSet,
                                       input = input,
                                       cl = ml_cl)  
                        })
                        res
                      }, ml_cl = session_cl)
-                   } # quickrun bracket cuz lazy
+                   }
+                   
                    print("Done!")
                    
                    closeAllConnections()
@@ -816,7 +824,7 @@ shiny::observe({
                  withProgress({
                    mSet <- MetaboAnalystR::Ttests.Anal(mSet,
                                                        nonpar = input$tt_nonpar,
-                                                       threshp = 0.1, # TODO: make the threshold user defined...
+                                                       threshp = input$tt_p_thresh,
                                                        paired = mSet$dataSet$ispaired,
                                                        equal.var = input$tt_eqvar
                    )

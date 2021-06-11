@@ -153,6 +153,7 @@ shiny::observe({
             tables = c("orig", "norm", "proc", "prebatch", "covars")
             print("recycling from another meta-dataset!")
             use.dataset = names(which(matching.samps))[1]
+            use.dataset = gsub(pattern = "[^\\w]", replacement = "_", x = use.dataset, perl = T)
             recycle.mSet = qs::qread(file.path(lcl$paths$work_dir,
                                                lcl$proj_name,
                                                paste0(use.dataset, ".metshi")))

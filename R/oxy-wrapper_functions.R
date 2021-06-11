@@ -646,7 +646,7 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                          # special opt for volcano... TODO: somehow make this work for the others
                          is.volc = all(colnames(analysis$combi$sig.mat) %in% c("rn",  "log2(FC)", "-log10(p)"))
                          res = if(is.volc){
-                           print("special volcano plot mode")
+                           #print("special volcano plot mode")
                            abs.fc = abs(analysis$combi$sig.mat$`log2(FC)`)
                            comb.vals = abs.fc * analysis$combi$sig.mat$`-log10(p)`
                            res = analysis$combi$sig.mat[order(comb.vals,
@@ -660,7 +660,7 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                          }
                          
                          names(res) = base_name
-                         print(res)
+                         #print(res)
                          res
                        },
                        plsda = {
@@ -1064,7 +1064,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                          # PLOT #
                          ml_performance_rows = lapply(1:length(data$res), function(i){
                            res = data$res[[i]]
-                           ml_performance = getMLperformance(res, 
+                           ml_performance = getMLperformance(ml_res = res, 
                                                              pos.class = input$ml_plot_posclass,
                                                              x.metric=input$ml_plot_x,
                                                              y.metric=input$ml_plot_y)
@@ -1733,7 +1733,7 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
   smps <- rownames(mSet$dataSet$norm)
   # get which rows are QC samples
   qc_rows <- which(grepl(pattern = "QC", x = smps))
-  print(qc_rows)
+  #print(qc_rows)
   # if at least one row has a QC in it, batch correct
   has.qc <- length(qc_rows) > 0
   
