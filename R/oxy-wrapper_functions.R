@@ -1066,23 +1066,25 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                            res = data$res[[i]]
                            ml_performance = getMLperformance(ml_res = res, 
                                                              pos.class = input$ml_plot_posclass,
-                                                             x.metric=input$ml_plot_x,
-                                                             y.metric=input$ml_plot_y)
+                                                             x.metric = input$ml_plot_x,
+                                                             y.metric = input$ml_plot_y)
                            ml_performance$coords$shuffled = c(res$shuffled)
                            ml_performance$coords$run = i
-                           # plot_coords = ml_performance$coords[`Test set`=="Test"]
-                           # plot(plot_coords$x,
-                           #      plot_coords$y)
+                           plot_coords = ml_performance$coords[`Test set`=="Test"]
                            ml_performance
                          })
                          
-                         coords = data.table::rbindlist(lapply(ml_performance_rows, function(x) x$coords))
+                         coords = data.table::rbindlist(lapply(ml_performance_rows,
+                                                               function(x) x$coords))
+                         
                          ml_performance = list(coords = coords,
                                                names = ml_performance_rows[[1]]$names)
+                         
                          ml_roc = ggPlotCurves(ml_performance,
                                                cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                          
                          no_shuffle_imp = data$res[[which(unlist(sapply(data$res, function(x) !x$shuffle)))]]$importance
+                         
                          barplot_data <- ggPlotBar(data = no_shuffle_imp,
                                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
                                                    topn = input$ml_topn,
@@ -1094,6 +1096,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                          
                          list(ml_roc = ml_roc, 
                               ml_bar = ml_barplot)
+                         
                        }} else list()
                    },
                    ml_mistake = {

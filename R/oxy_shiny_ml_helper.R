@@ -37,11 +37,7 @@ getMLperformance = function(ml_res, pos.class, x.metric, y.metric){
   coords = ROCR::performance(prediction,
                              x.measure = x.metric,
                              measure = y.metric) 
-  # print("Test")
-  # plot(coords)
-  auc = ROCR::performance(prediction,
-                          measure = "auc")
-  # print(auc@y.values[[1]])
+  
   coord.collection$Test = coords
   
   coords.dt = data.table::rbindlist(lapply(1:length(coord.collection), function(i){
@@ -94,23 +90,13 @@ runML <- function(training,
                   cl=0,
                   shuffle = F,
                   n_permute = 10,
-                  shuffle_mode = "train"){
+                  shuffle_mode = "train",
+                  silent = F){
   
   # get user training percentage
   need.rm = c("split")
   training[, (need.rm) := NULL]
   testing[, (need.rm) := NULL]
-  
-  trainCtrl <- caret::trainControl(verboseIter = T,
-                                   allowParallel = T,
-                                   method = if(ml_folds == "LOOCV") "LOOCV" else as.character(ml_perf_metr),
-                                   number = as.numeric(ml_folds),
-                                   #repeats = 3,
-                                   trim = TRUE, 
-                                   returnData = FALSE,
-                                   classProbs = if(is.null(caret::getModelInfo(paste0("^",ml_method,"$"),regex = T)[[1]]$prob)) FALSE else TRUE,
-                                   index = folds,
-                                   savePredictions = "final")
   
   # shuffle if shuffle
   trainOrders = list(1:nrow(training))
@@ -125,9 +111,9 @@ runML <- function(training,
   iterations = length(trainOrders)
   
   results = lapply(trainOrders,  function(train.order,
-                                                  train.set = train.set,
-                                                  test.set = test.set)
-                                                             {
+                                          train.set = train.set,
+                                          test.set = test.set)
+  {
     orig.lbl = train.set[['label']]
     train.set[['label']] <- train.set[['label']][train.order] 
     def_scoring = ifelse(ifelse(is.factor(train.set[["label"]]), 
@@ -136,7 +122,35 @@ runML <- function(training,
                          TRUE)
     success=F
     
-    msg = capture.output(
+    shuffled = !all(train.set$label == orig.lbl)
+    
+    trainCtrl <- caret::trainControl(verboseIter = T,
+                                     allowParallel = T,
+                                     method = if(ml_folds == "LOOCV") "LOOCV" else as.character(ml_perf_metr),
+                                     number = as.numeric(ml_folds),
+                                     #repeats = 3,
+                                     trim = TRUE, 
+                                     returnData = FALSE,
+                                     classProbs = if(is.null(caret::getModelInfo(paste0("^",ml_method,"$"),regex = T)[[1]]$prob)) FALSE else TRUE,
+                                     #index = if(!shuffled) folds else NULL,
+                                     savePredictions = "final")
+    
+    if(silent){
+      msg = capture.output(
+        fit <- caret::train(
+          label ~ .,
+          data = train.set,
+          method = ml_method,
+          ## Center and scale the predictors for the training
+          ## set and all future samples.
+          preProc = ml_preproc,
+          maximize = if(maximize) def_scoring else !def_scoring,
+          importance = if(ml_method %in% c("ranger")) 'permutation' else TRUE,
+          tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
+          trControl = trainCtrl
+        )
+      )  
+    }else{
       fit <- caret::train(
         label ~ .,
         data = train.set,
@@ -148,23 +162,23 @@ runML <- function(training,
         importance = if(ml_method %in% c("ranger")) 'permutation' else TRUE,
         tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
         trControl = trainCtrl
-      )
-    )
+      ) 
+    }
     
     result.predicted.prob <- stats::predict(fit, 
                                             test.set,
                                             type = if(hasProb) "prob" else "raw") # Prediction
     
     l <- list(#model = fit,
-              type = ml_method,
-              best.model = fit$bestTune,
-              train.performance = fit$pred,
-              importance = caret::varImp(fit)$importance,
-              labels = testing$label,
-              distr = list(train = rownames(train.set),
-                           test = rownames(test.set)),
-              prediction = result.predicted.prob,
-              shuffled = !all(train.set$label == orig.lbl))
+      type = ml_method,
+      best.model = fit$bestTune,
+      train.performance = fit$pred,
+      importance = caret::varImp(fit)$importance,
+      labels = testing$label,
+      distr = list(train = rownames(train.set),
+                   test = rownames(test.set)),
+      prediction = result.predicted.prob,
+      shuffled = shuffled)
     return(l)
   }, train.set = training, test.set = testing)
   

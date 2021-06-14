@@ -352,7 +352,7 @@ shiny::observe({
                      assign("input", shiny::isolate(shiny::reactiveValuesToList(input)), envir = .GlobalEnv)
                     
                      if(session_cl != 0){
-                       parallel::clusterExport(session_cl, c("input", "ml_queue", "gbl", "lcl"))
+                       parallel::clusterExport(session_cl, c("input", "gbl", "lcl"))
                      }
                      
                      # make subsetted mset for ML so it's not as huge in memory
@@ -508,7 +508,6 @@ shiny::observe({
                                            start_end_pcs = settings$ml_keep_pcs)
                          }
                          
-                         
                          #@ split
                          training_data = list(curr = curr[train_idx,],
                                               config = config[train_idx,])
@@ -643,12 +642,6 @@ shiny::observe({
                                                                   length(unique(split_label))))
                          }else NULL
                          
-                         # for(fold in folds){
-                         #   print("---")
-                         #   print(table(training_data$config$country[fold]))
-                         #   print(table(training_data$config$label[fold]))
-                         # }
-                         
                          # replace training data with the new stuff
                          training_data$config$split <- "train"
                          testing_data$config$split <- "test"
@@ -700,7 +693,6 @@ shiny::observe({
                                #cat("Missing param, auto-tuning...")
                                lst <- list()
                              }
-                             #lst <- lst[sapply(lst,function(x)all(!is.na(x)))]
                              lst
                            })
                          
@@ -751,22 +743,26 @@ shiny::observe({
                      # }
                      # ml_queue$jobs = jobs
                      
-                     basejob = ml_queue$jobs[[1]]
-                     jobs = list()
-                     for(i in 1:110){
-                       for(j in 1:10){
-                         job = basejob
-                         job$ml_mzs_topn = i
-                         job$ml_name = gsub("1$", paste(i, paste0("#", j)), job$ml_name)
-                         jobs[[job$ml_name]] = job
-                       }
+                     # basejob = ml_queue$jobs[[1]]
+                     # jobs = list()
+                     # for(i in 1:110){
+                     #   for(j in 1:10){
+                     #     job = basejob
+                     #     job$ml_mzs_topn = i
+                     #     job$ml_name = gsub("1$", paste(i, paste0("#", j)), job$ml_name)
+                     #     jobs[[job$ml_name]] = job
+                     #   }
+                     # }
+                     # 
+                     # ml_queue$jobs = jobs
+                     
+                     if(session_cl != 0){
+                       parallel::clusterExport(session_cl, c("ml_run", "small_mSet", "gbl"))
                      }
                      
-                     ml_queue$jobs = jobs
-                     
-                     parallel::clusterExport(session_cl, c("ml_run", "small_mSet", "gbl"))
-                     
-                     ml_queue_res <- pbapply::pblapply(ml_queue$jobs, cl=session_cl, function(settings, ml_cl){
+                     ml_queue_res <- pbapply::pblapply(ml_queue$jobs, 
+                                                       cl = session_cl, 
+                                                       function(settings, ml_cl){
                        res = list()
                        try({
                          res = ml_run(settings = settings, 
@@ -775,7 +771,7 @@ shiny::observe({
                                       cl = ml_cl)  
                        })
                        res
-                     }, ml_cl = session_cl)
+                     }, ml_cl = 0)
                    }
                    
                    print("Done!")
