@@ -70,14 +70,26 @@ shiny::observeEvent(input$enrich_tab_rows_selected,{
   curr_row <- input$enrich_tab_rows_selected
   if (is.null(curr_row)) return()
   # -----------------------------
+  
   curr_pw <- rownames(enrich$overview)[curr_row]
   pw_i <- which(mSet$analSet$enrich$path.nms == curr_pw)
   cpds = unlist(mSet$analSet$enrich$path.hits[[pw_i]])
   hit_tbl = data.table::as.data.table(mSet$analSet$enrich$mumResTable)
   myHits <- hit_tbl[Matched.Compound %in% unlist(cpds)]
+  myHits$Query.Mass %in% as.numeric(gsub("-", "", mSet$analSet$combi$sig.mat$rn))
   myHits$Mass.Diff <- as.numeric(myHits$Mass.Diff)/(as.numeric(myHits$Query.Mass)*1e-6)
   colnames(myHits) <- c("rn", "identifier", "adduct", "dppm")
+  
+  # --- PLOT PATHWAY ---
+  
+  #paths_dt = data.table::as.data.table(mSet$analSet$enrich$path.all)
+  #curr_pw_all = paths_dt[name == curr_pw]
+  #curr_pw_all$cpds
+  
+  # --------------------
+  
   enrich$current <- myHits
+  
 })
 
 # triggers on clicking a row in the match results table

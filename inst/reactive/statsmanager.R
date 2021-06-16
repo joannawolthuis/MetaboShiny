@@ -150,17 +150,15 @@ shiny::observe({
                  shiny::withProgress({
                    
                    #similarly to venn diagram
-                   flattened <- getTopHits(mSet, 
-                                           input$mummi_anal,
-                                           input$mummi_topn)
+                   flattened <- list(getAllHits(mSet,
+                                                input$mummi_anal))
                    
-                   hasP = grepl("tt|aov|asca",input$mummi_anal)
-                   
+                   hasP = grepl("tt|aov|asca|combi",input$mummi_anal)
                    setProgress(0.1)
                    
                    myFile <- tempfile(fileext = ".csv")
-                   tbl = data.table::data.table("m.z" = as.numeric(gsub(flattened[[1]], pattern="(\\+|\\-|RT).*$", replacement="")),
-                                                mode = sapply(flattened[[1]], function(mz){
+                   tbl = data.table::data.table("m.z" = as.numeric(gsub(flattened[[1]]$m.z, pattern="(\\+|\\-|RT).*$", replacement="")),
+                                                mode = sapply(flattened[[1]]$m.z, function(mz){
                                                   if(grepl(pattern="-",x=mz)) "negative" else "positive"
                                                 }))
                    tbl <- tbl[complete.cases(tbl)]
@@ -170,19 +168,15 @@ shiny::observe({
                    anal = gsub(" \\(.*$|", "", input$mummi_anal)
                    subset = gsub("\\(|\\)|.*\\(", "", input$mummi_anal)
                    
-                   tbl[, "p.value"] = if(hasP) mSet$storage[[subset]]$analysis[[anal]]$sig.mat[match(flattened[[1]], 
-                                                                                                     rownames(mSet$storage[[subset]]$analysis[[anal]]$sig.mat)),
-                                                                                               if(anal == "aov2") "Interaction(adj.p)" else "p.value"] else c(0)
-                   tbl[, "t.score"] = if(hasT) mSet$storage[[subset]]$analysis[[anal]]$sig.mat[match(flattened[[1]], 
-                                                                                                     rownames(mSet$storage[[subset]]$analysis[[anal]]$sig.mat)),
-                                                                                               "t.stat"] else c(0)
+                   tbl[, "p.value"] = if(hasP) flattened[[1]][,2] else c(NA)
+                   tbl[, "t.score"] = if(hasT) flattened[[1]][,3] else c(NA)
                    
                    if(hasP) if(all(is.na(tbl$p.value))) tbl$p.value <- c(0)
                    if(hasT) if(all(is.na(tbl$t.score))) tbl$t.score <- c(0)
                    
                    tmpfile <- tempfile()
                    
-                   fwrite(tbl, file=tmpfile)
+                   fwrite(if(hasT) tbl else tbl[,1:3], file=tmpfile)
                    
                    enr_mSet <- MetaboAnalystR::InitDataObjects("mass_all",
                                                                "mummichog",
@@ -205,7 +199,7 @@ shiny::observe({
                    
                    #===
                    
-                   enr_mSet<-MetaboAnalystR::SetPeakEnrichMethod(enr_mSet, if(input$mummi_enr_method | !hasT) "mum" else "gsea", "v2")
+                   enr_mSet<-MetaboAnalystR::SetPeakEnrichMethod(enr_mSet, "both")#if(input$mummi_enr_method | !hasT) "mum" else "gsea", "v2")
                    enr_mSet<-MetaboAnalystR::SetMummichogPval(enr_mSet, if(hasP) as.numeric(gsub(",",".",input$mummi_pval)) else 1)
                    
                    #===
@@ -305,6 +299,8 @@ shiny::observe({
                                                            libVersion = "current",
                                                            permNum = 100) 
                    
+                   list.files(".")
+                   
                    filenm <- if(input$mummi_enr_method | !hasT) "mummichog_matched_compound_all.csv" else "mummichog_fgsea_pathway_enrichment.csv"
                    enr_mSet$dataSet$mumResTable <- data.table::fread(filenm)
                    
@@ -340,7 +336,8 @@ shiny::observe({
                                                mummi.gsea.resmat = enr_mSet$mummi.gsea.resmat,
                                                mumResTable = enr_mSet$dataSet$mumResTable,
                                                path.nms = enr_mSet$path.nms,
-                                               path.hits = enr_mSet$path.hits)
+                                               path.hits = enr_mSet$path.hits,
+                                               path.all = enr_mSet$pathways)
                    enr_mSet <- NULL
                  })
                },
@@ -351,9 +348,9 @@ shiny::observe({
                      assign("ml_queue", shiny::isolate(shiny::reactiveValuesToList(ml_queue)), envir = .GlobalEnv)
                      assign("input", shiny::isolate(shiny::reactiveValuesToList(input)), envir = .GlobalEnv)
                     
-                     if(session_cl != 0){
+                     try({
                        parallel::clusterExport(session_cl, c("input", "gbl", "lcl"))
-                     }
+                     })
                      
                      # make subsetted mset for ML so it's not as huge in memory
                      small_mSet = mSet
@@ -743,22 +740,22 @@ shiny::observe({
                      # }
                      # ml_queue$jobs = jobs
                      
-                     # basejob = ml_queue$jobs[[1]]
-                     # jobs = list()
-                     # for(i in 1:110){
-                     #   for(j in 1:10){
-                     #     job = basejob
-                     #     job$ml_mzs_topn = i
-                     #     job$ml_name = gsub("1$", paste(i, paste0("#", j)), job$ml_name)
-                     #     jobs[[job$ml_name]] = job
-                     #   }
-                     # }
-                     # 
-                     # ml_queue$jobs = jobs
-                     
-                     if(session_cl != 0){
-                       parallel::clusterExport(session_cl, c("ml_run", "small_mSet", "gbl"))
+                     basejob = ml_queue$jobs[[1]]
+                     jobs = list()
+                     for(i in 1:110){
+                       for(j in 1:10){
+                         job = basejob
+                         job$ml_mzs_topn = i
+                         job$ml_name = gsub("1$", paste(i, paste0("#", j)), job$ml_name)
+                         jobs[[job$ml_name]] = job
+                       }
                      }
+
+                     ml_queue$jobs = jobs
+                     
+                    try({
+                      parallel::clusterExport(session_cl, c("ml_run", "small_mSet", "gbl"))
+                    })
                      
                      ml_queue_res <- pbapply::pblapply(ml_queue$jobs, 
                                                        cl = session_cl, 
@@ -918,20 +915,30 @@ shiny::observe({
                  #   })
                  # }
                  
-                 mzInBoth = intersect(rownames(anal1_res_table),rownames(anal2_res_table))
-                 if(length(mzInBoth) > 0){
-                   combined_anal = merge(
-                     anal1_res_table,
-                     anal2_res_table,
-                     by = "rn"
-                   )
-                   keep.cols = c(1, which(colnames(combined_anal) %in% c(anal1_col,anal2_col)))
-                   dt <- as.data.frame(combined_anal)[,keep.cols]
-                   mSet$analSet$combi <- list(sig.mat = dt, 
+                 if(anal1 != anal2){
+                   mzInBoth = intersect(rownames(anal1_res_table),rownames(anal2_res_table))
+                   if(length(mzInBoth) > 0){
+                     combined_anal = merge(
+                       anal1_res_table,
+                       anal2_res_table,
+                       by = "rn"
+                     )
+                     keep.cols = c(1, which(colnames(combined_anal) %in% c(anal1_col,anal2_col)))
+                     dt <- as.data.frame(combined_anal)[,keep.cols]
+                     mSet$analSet$combi <- list(sig.mat = dt, 
+                                                all.vals = list(x=anal1_all_res, y=anal2_all_res),
+                                                trans = list(x=anal1_trans, y=anal2_trans),
+                                                source = list(x=anal1, y=anal2))
+                   }  
+                 }else{
+                   mSet$analSet$combi <- list(sig.mat = anal1_res_table[, c("rn",
+                                                                            anal1_col,
+                                                                            anal2_col), with=F], 
                                               all.vals = list(x=anal1_all_res, y=anal2_all_res),
                                               trans = list(x=anal1_trans, y=anal2_trans),
                                               source = list(x=anal1, y=anal2))
                  }
+                 
                  
                },
                volcano = {

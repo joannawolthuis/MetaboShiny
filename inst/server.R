@@ -606,12 +606,10 @@ beep = no')
   })
   
   shiny::observeEvent(input$ncores, {
-    if(!is.null(session_cl)){
-      if(session_cl != 0){
-        shiny::showNotification("Stopping threads...")
-        parallel::stopCluster(session_cl)
-      }
-    }
+    try({
+      shiny::showNotification("Stopping threads...")
+      parallel::stopCluster(session_cl)
+    })
     net_cores = input$ncores - 1
     if(net_cores > 0){
       shiny::showNotification("Starting new threads...")

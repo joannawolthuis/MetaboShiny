@@ -731,6 +731,77 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
   return(flattened)
 }
 
+getAllHits <- function(mSet, expname){
+  
+  experiment <- stringr::str_match(expname, 
+                                    pattern = "(all m\\/z)|\\(.*\\)")[,1]
+  
+  experiment <- unique(gsub(experiment, pattern = "\\(\\s*(.+)\\s*\\)", replacement="\\1"))
+  
+  exp_table = data.frame(name = expname, threshold = c(0))
+  
+  if(experiment == "all m/z"){
+    flattened = list(colnames(mSet$dataSet$norm))
+    names(flattened) = c("all m/z")
+    flattened
+  }else{
+    analysis = mSet$storage[[experiment]]$analSet
+    
+    rgx_exp <- gsub(experiment, pattern = "\\(", replacement = "\\\\(")
+    rgx_exp <- gsub(rgx_exp, pattern = "\\)", replacement = "\\\\)")
+    rgx_exp <- gsub(rgx_exp, pattern = "\\-", replacement = "\\\\-")
+    rgx_exp <- gsub(rgx_exp, pattern = "\\+", replacement = "\\\\+")
+    
+    name_orig = grep(expname,
+                     pattern = paste0("\\(",rgx_exp, "\\)"), value = T)
+    # go through the to include analyses
+      
+    filter = exp_table[exp_table$name == name_orig, "threshold"]
+    sign = stringr::str_extract(filter,pattern = ">|<|=")
+    thresh = as.numeric(gsub(sign, "", filter))
+    
+    name = gsub(name_orig, pattern = " \\(\\s*(.+)\\s*\\)", replacement = "")
+    
+    base_name <- search_name <- gsub(name, pattern = " -.*$| ", replacement="")
+    
+    if(base_name %in% gbl$constants$ml.models){
+      search_name <- "ml"
+    }
+    
+    # fetch involved mz values
+    tbl <- switch(search_name,
+                   tt = {
+                     res = data.frame(`m/z` = names(mSet$analSet$tt$p.value),
+                                      value = mSet$analSet$tt$p.value,
+                                      statistic = mSet$analSet$tt$t.score
+                     )
+                     res
+                   },
+                   fc = {
+                     res = data.frame(`m/z` = names(mSet$analSet$fc$fc.all),
+                                      value = mSet$analSet$fc$fc.all)
+                     
+                     names(res) = base_name
+                     res
+                   },
+                   combi = {
+                     # --- only volc for now ---
+                     res = data.frame(`m/z` = names(mSet$analSet$combi$all.vals$x),
+                                      value = sapply(names(mSet$analSet$combi$all.vals$x), function(x) if(x %in% mSet$analSet$combi$sig.mat$rn) 0 else 1))
+                     # -------------------------
+                     res
+                   },
+                   {metshiAlert("Not currently supported...")
+                     return(NULL)})
+    print(head(tbl))
+    if(nrow(tbl)>0){
+      tbl
+    }else{
+      data.table::data.table()
+    }
+  }
+}
+
 getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                   toWrap <- switch(do,
                    general = {
