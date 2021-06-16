@@ -8,18 +8,20 @@ shiny::observe({
   if(dbmanager$build[1] != "none"){
     
     # send necessary functions and libraries to parallel threads
-    parallel::clusterExport(cl = session_cl, envir = .GlobalEnv, varlist = list(
-      "isotopes"
-    )) 
-    pkgs = c("data.table", "enviPat", 
-             "KEGGREST", "XML", 
-             "SPARQL", "RCurl", 
-             "MetaDBparse")
-    parallel::clusterCall(session_cl, function(pkgs) {
-      for (req in pkgs) {
-        library(req, character.only = TRUE)
-      }
-    }, pkgs = pkgs)
+    try({
+      parallel::clusterExport(cl = session_cl, envir = .GlobalEnv, varlist = list(
+        "isotopes"
+      ))  
+      pkgs = c("data.table", "enviPat", 
+               "KEGGREST", "XML", 
+               "SPARQL", "RCurl", 
+               "MetaDBparse")
+      parallel::clusterCall(session_cl, function(pkgs) {
+        for (req in pkgs) {
+          library(req, character.only = TRUE)
+        }
+      }, pkgs = pkgs)
+    })
     
     if(input$db_build_mode %in% c("base", "both")){
       pbapply::pblapply(dbmanager$build, cl=session_cl, function(db, input){

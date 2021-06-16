@@ -109,7 +109,8 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                            list(name = 'reactome_logo', path = 'www/reactome_logo.png', dimensions = c(250, 130)),
                                            list(name = 'knapsack_logo', path = 'www/knapsack_logo.gif', dimensions = c(200, 100)),
                                            list(name = 'laptop_icon', path = 'www/laptop.png', dimensions = c(150, 150)),
-                                           list(name = 'metabolomicsworkbench_logo', path = 'www/metworkbench_logo.png', dimensions = c(140, 140))
+                                           list(name = 'metabolomicsworkbench_logo', path = 'www/metworkbench_logo.png', dimensions = c(140, 140)),
+                                           list(name = 'npa_logo', path = 'www/npa_logo.png', dimensions = c(140, 140))
                                            
                                            
                              ),# all image paths, if you add an image you can add it here
@@ -217,8 +218,11 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                                description = "Reactome is a free, open-source, curated and peer-reviewed pathway database.",
                                                image_id = "reactome_logo"),
                                metabolomicsworkbench = list(title = "Metabolomics Workbench",
-                                            description = "The Metabolomics Workbench Metabolite Database contains structures and annotations of biologically relevant metabolites. As of August, 2020, the database contains about 136,000 entries, collected from public sources such as LIPID MAPS, ChEBI, HMDB, PubChem, NP Atlas , CHEMBL and KEGG. The Metabolite Database is integrated with the NMDR data repository, providing links to studies reporting each metabolite. ",
+                                            description = "The Metabolomics Workbench Metabolite Database contains structures and annotations of biologically relevant metabolites. As of August, 2020, the database contains about 136,000 entries, collected from public sources such as LIPID MAPS, ChEBI, HMDB, PubChem, NP Atlas , CHEMBL and KEGG. The Metabolite Database is integrated with the NMDR data repository, providing links to studies reporting each metabolite.",
                                             image_id = "metabolomicsworkbench_logo"),
+                               npa = list(title = "Natural Products Atlas",
+                                          description = "The Natural Products Atlas is designed to cover all microbially-derived natural products published in the peer-reviewed primary scientific literature. This encompasses bacterial, fungal and cyanobacterial compounds, but does not include compounds from plants, invertebrates or other higher organisms unless these compounds have also been explicitly identified from a microbial source. Compounds from lichens and mushrooms and other higher fungi are included. Compounds from marine macro algae and diatoms are excluded.",
+                                          image_id = "npa_logo"),
                                # - - leave magicball last - -
                                cmmmediator = list(title = "CEU Mass Mediator",
                                                   description = "(ONLINE ONLY) CEU Mass Mediator is a tool for searching metabolites in different databases (Kegg, HMDB, LipidMaps, Metlin, MINE and an in-house library).",
@@ -354,7 +358,7 @@ vectors = list(
                        verbose = c("hmdb", "chebi", "t3db", "metabolights", "ymdb", "ecmdb", "pamdb", "metabolomicsworkbench"),
                        livestock = c("lmdb", "bmdb", "metacyc", "mcdb"),
                        human = c("hmdb", "metacyc", "expoexplorer", "t3db", "bloodexposome", "pharmgkb"),
-                       microbial = c("ymdb", "ecmdb", "pamdb", "vmh", "mvoc"),
+                       microbial = c("ymdb", "ecmdb", "pamdb", "vmh", "mvoc", "npa"),
                        pathway = c("vmh", "smpdb", "kegg", "reactome"),
                        food = c("foodb", "phenolexplorer"),
                        plant = c("anpdb", "respect", "metacyc", "supernatural2", "knapsack"),
@@ -400,6 +404,7 @@ vectors = list(
     'reactome',
     'metabolomicsworkbench',
     'phenolexplorer',
+    'npa',
     "magicball",
     'cmmmediator',
     'pubchem',

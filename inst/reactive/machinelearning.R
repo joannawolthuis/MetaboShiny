@@ -14,7 +14,27 @@ shiny::observeEvent(input$show_which_ml,{
   }
 },ignoreNULL = T, ignoreInit = T)
 
-
+shiny::observeEvent(input$ml_batch_size_sampling, {
+  if(input$ml_batch_size_sampling){
+    shinyWidgets::updateRadioGroupButtons(session, 
+                                          "ml_sampling", 
+                                          choices = c(`<i class='fa fa-arrow-down'></i> downsample` = "down",
+                                                      `ROSE` = "rose",
+                                                      `don't` = "none", 
+                                                      #`SMOTE` = "smote",
+                                                      `upsample <i class='fa fa-arrow-up'></i>` = "up"))
+  }else{
+    shinyWidgets::updateRadioGroupButtons(session, 
+                                          "ml_sampling", 
+                                          choices = c(`<i class='fa fa-arrow-down'></i> downsample` = "down",
+                                                      `ROSE` = "rose",
+                                                      `SMOTE` = "smote",
+                                                      `ADASYN` = "adasyn",
+                                                      `don't` = "none", 
+                                                      `upsample <i class='fa fa-arrow-up'></i>` = "up"))
+    
+  }
+})
 # meta = mSet$dataSet$covars
 # lbl_joined = paste0(meta$fcs, "_", meta$country)
 # split_80 = caret::createDataPartition(lbl_joined, p = 0.8)$Resample1

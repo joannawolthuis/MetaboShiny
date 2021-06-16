@@ -98,6 +98,10 @@ runML <- function(training,
   training[, (need.rm) := NULL]
   testing[, (need.rm) := NULL]
   
+  if(length(cl) > 0){
+    doParallel::registerDoParallel(cl)  
+  }
+  
   # shuffle if shuffle
   trainOrders = list(1:nrow(training))
   if(shuffle & shuffle_mode == "train"){
@@ -185,4 +189,388 @@ runML <- function(training,
   # train and cross validate model
   # return list with mode, prediction on test data etc.s
   results
+}
+
+
+ml_run <- function(settings, mSet, input, cl){
+  res = list()
+  #({
+  {
+    olddir = getwd()
+    tmpdir = file.path(tempdir(), settings$ml_name) # needed for 
+    if(!dir.exists(tmpdir)) dir.create(tmpdir)
+    setwd(tmpdir)
+    
+    # PIPELINE
+    # pick source table
+    pickedTbl <- settings$ml_used_table
+    
+    if(pickedTbl == "pca" & !("pca" %in% names(mSet$analSet))){
+      stop("Please run PCA first!")
+    }
+    
+    # covars needed
+    keep.config = setdiff(c(settings$ml_include_covars, settings$ml_batch_covars,
+                            settings$ml_train_subset[[1]], settings$ml_test_subset[[1]]),
+                          "label")
+    config = mSet$dataSet$covars[,..keep.config]
+    config$label = mSet$dataSet$cls
+    
+    # train/test split
+    ## get indices
+    if(!is.null(settings$ml_train_subset) | !is.null(settings$ml_test_subset)){
+      # add clause for same train_test
+      test_idx = NULL
+      train_idx = NULL
+      if(!is.null(settings$ml_test_subset)){
+        test_idx = which(config[[settings$ml_test_subset[[1]]]] %in% settings$ml_test_subset[[2]])
+      }
+      if(!is.null(settings$ml_train_subset)){
+        train_idx = which(config[[settings$ml_train_subset[[1]]]] %in% settings$ml_train_subset[[2]])
+      }
+      if(is.null(train_idx)){
+        train_idx = setdiff(1:nrow(config), test_idx)  
+      }else if(is.null(test_idx)){
+        test_idx = setdiff(1:nrow(config), train_idx)
+      }
+    }else{
+      # make joined label of label+batch and split that train/test
+      split_label = if(length(settings$ml_batch_covars) > 0){
+        #print("splitting tr/te % per batch")
+        covars = c("label", settings$ml_batch_covars)
+        apply(config[, ..covars],
+              MARGIN = 1, 
+              function(x) paste0(x, collapse="_"))
+      }else{
+        #print("unbiased split over pool")
+        config$label
+      }
+      train_idx = caret::createDataPartition(y = split_label, 
+                                             p = settings$ml_train_perc/100,
+                                             list = FALSE)[,1] # partition data in a balanced way (uses labels)
+      
+      test_idx = setdiff(1:nrow(config), train_idx)
+      #table(split_label[test_idx])
+    }
+    
+    # subset to specific m/z values used
+    mzs = c()
+    if(pickedTbl != "pca"){
+      if(settings$ml_specific_mzs != "no"){
+        msg = "Using user-specified m/z set."
+        if(!is.null(settings$ml_mzs)){
+          curr <- curr[,settings$ml_mzs, with=F]
+        }else{
+          mzs = getTopHits(mSet = mSet,
+                           expnames = settings$ml_specific_mzs, 
+                           top = settings$ml_mzs_topn, 
+                           filter_mode = "top")[[1]]
+          mzs = gsub("^X", "", mzs)
+          mzs = gsub("\\.$", "-", mzs)
+        }
+      }   
+    }
+    
+    if(mSet$metshiParams$renorm & pickedTbl != "pca"){
+      samps_train = rownames(mSet$dataSet$norm)[train_idx]
+      samps_test = rownames(mSet$dataSet$norm)[test_idx]
+      mSet.settings = mSet$settings
+      reset_mSet <- reset.mSet(mSet,
+                               fn = file.path(lcl$paths$proj_dir, 
+                                              paste0(lcl$proj_name,
+                                                     "_ORIG.metshi")))
+      # --- GET TRAIN ---
+      mSet_train = subset_mSet(reset_mSet, "sample", samps_train)
+      mSet_train = change.mSet(mSet_train, 
+                               stats_var = mSet.settings$exp.var, 
+                               time_var =  mSet.settings$time.var,
+                               stats_type = mSet.settings$exp.type)
+      if(length(mzs) > 0){
+        mSet_train = subset_mSet_mz(mSet_train, mzs)
+      }
+      mSet_train$dataSet$orig <- mSet_train$dataSet$start
+      mSet_train$dataSet$start <- mSet_train$dataSet$preproc <- mSet_train$dataSet$proc <- mSet_train$dataSet$prenorm <- NULL
+      mSet_train = metshiProcess(mSet_train, init = F, cl = 0)
+      # --- GET TEST ---
+      mSet_test = subset_mSet(reset_mSet, "sample", samps_test)
+      if(length(mzs) > 0){
+        mSet_test = subset_mSet_mz(mSet_test, mzs)
+      }
+      mSet_test = change.mSet(mSet_test, 
+                              stats_var = mSet.settings$exp.var, 
+                              time_var =  mSet.settings$time.var,
+                              stats_type = mSet.settings$exp.type)
+      mSet_test$dataSet$orig <- mSet_test$dataSet$start
+      mSet_test$dataSet$start <- mSet_test$dataSet$preproc <- mSet_test$dataSet$proc <- mSet_test$dataSet$prenorm <- NULL
+      mSet_test = metshiProcess(mSet_test, init = F, cl = 0)
+      # ------- rejoin and create curr -------
+      config_train = mSet_train$dataSet$covars[,..keep.config]
+      config_train$label = mSet_train$dataSet$cls
+      config_test = mSet_test$dataSet$covars[,..keep.config]
+      config_test$label = mSet_test$dataSet$cls
+      
+      mz.in.both = intersect(colnames(mSet_train$dataSet$norm),
+                             colnames(mSet_test$dataSet$norm))
+      
+      curr = rbind(mSet_train$dataSet$norm[,mz.in.both],
+                   mSet_test$dataSet$norm[,mz.in.both])
+      config = rbind(config_train, 
+                     config_test)
+      
+      mSet_test <- mSet_train <- config_test <- config_train <- mz.in.both <- mSet$storage <- NULL
+    }else{
+      curr = as.data.frame(switch(pickedTbl, 
+                                  orig = mSet$dataSet$orig,
+                                  norm = mSet$dataSet$norm,
+                                  pca = mSet$analSet$pca$x))
+      if(length(mzs) > 0){
+        curr <- curr[, mzs]
+      }
+    }
+    
+    mSet$storage <- NULL
+    mSet = NULL
+    
+    test_sampnames = rownames(curr)[test_idx]
+    
+    # PCA correct
+    if(settings$ml_pca_corr & pickedTbl != 'pca'){
+      #print("Performing PCA and subtracting PCs...")
+      curr <- pcaCorr(curr, 
+                      center = if(pickedTbl == "norm") F else T,
+                      scale = if(pickedTbl == "norm") F else T, 
+                      start_end_pcs = settings$ml_keep_pcs)
+    }
+    
+    #@ split
+    training_data = list(curr = curr[train_idx,],
+                         config = config[train_idx,])
+    
+    testing_data = list(curr = curr[test_idx,],
+                        config = config[test_idx,])
+    
+    curr = NULL
+    
+    if(length(settings$ml_batch_covars) == 0){
+      settings$ml_batch_balance <- settings$ml_batch_sampling <- F
+    }
+    
+    # resampling
+    if(settings$ml_sampling != "none"){
+      
+      # split on factor (either batch or placeholder to create one result)
+      if(settings$ml_batch_balance){
+        split.fac = training_data$config[, settings$ml_batch_covars, with=F][[1]]
+      }else{
+        split.fac = rep(1, nrow(training_data$config))
+      }
+      split.fac = if(settings$ml_batch_balance){
+        training_data$config[, settings$ml_batch_covars, with=F][[1]]
+      }else{rep(1, nrow(training_data$config))
+      }
+      
+      spl.testing.idx = split(1:nrow(training_data$curr), split.fac)
+      balance.overview = sapply(spl.testing.idx, 
+                                function(idx) table(training_data$config[idx, settings$ml_batch_covars, with=F]))
+      biggest.group.overall = max(balance.overview)
+      smallest.group.overall = min(balance.overview)
+      
+      orig.samp.distr = table(training_data$config$label)
+      
+      training_data$config = training_data$config
+      testing_data$config = testing_data$config
+      
+      size.global = if(settings$ml_sampling != "down") biggest.group.overall else smallest.group.overall
+      size.preset = settings$ml_groupsize
+      
+      # resample
+      resampled.data.list = lapply(spl.testing.idx, function(idx){
+        
+        curr.subset = training_data$curr[idx,]
+        config.subset = training_data$config[idx,]
+        config.top.row = config.subset[1,]
+        
+        sampling = settings$ml_sampling
+        
+        size.local = if(sampling != "down") max(table(config.subset$label)) else min(table(config.subset$label))
+        
+        # all upsampling except "down"
+        group.size = 
+          if(settings$ml_batch_balance){
+            if(settings$ml_batch_size_sampling){ if(size.preset > 0) size.preset else size.global} else size.local
+          }else size.local
+        
+        curr.group.sizes = table(config.subset$label)
+
+        if(sum(curr.group.sizes > group.size) == 1){
+          majority.idxs = which(config.subset$label == names(which(curr.group.sizes > group.size)))
+          minority.idxs = setdiff(1:nrow(config.subset), majority.idxs)
+          keep.samps = c(minority.idxs, sample(majority.idxs, size = group.size))
+          config.subset = config.subset[keep.samps,]
+          curr.subset = curr.subset[keep.samps,]
+        }
+        
+        # total group size within this loop?
+        
+        # resample
+        ## K for the k-fold methods
+        K = min(min(table(config.subset$label))-1, 10)
+        mz.names = colnames(curr.subset)
+        colnames(curr.subset) <- paste0("mz",1:ncol(curr.subset))
+        
+        switch(sampling,
+               up = {
+                 nconfig = ncol(config.subset)
+                 new_data = upsample.adj(cbind(config.subset, curr.subset), 
+                                         as.factor(config.subset$label), 
+                                         maxClass = group.size) 
+                 config.subset = new_data[,1:nconfig]
+                 curr.subset = new_data[,!(colnames(new_data) %in% c("Class", colnames(config.subset)))]
+               },
+               adasyn = {
+                 resampled = smotefamily::ADAS(X = curr.subset, 
+                                               target = config.subset$label,
+                                               K = K)
+                 new_data = resampled$data
+                 curr.subset = new_data[, colnames(new_data) != "class"]
+                 config.subset = data.table(label = new_data$class)
+               },
+               smote = {
+                 resampled = smotefamily::SMOTE(X = curr.subset, 
+                                                target = config.subset$label,
+                                                K = K)
+                 new_data = resampled$data
+                 curr.subset = new_data[, colnames(new_data) != "class"]
+                 config.subset = data.table(label = new_data$class)
+               },
+               rose = {
+                 resampled = ROSE::ROSE(label ~ ., 
+                                        data = cbind(label = config.subset$label, curr.subset),
+                                        N = group.size * length(unique(config.subset$label)))
+                 new_data = resampled$data
+                 curr.subset = new_data[,2:(ncol(new_data))]
+                 config.subset = data.table(label = new_data[[1]])
+               },
+               down = {
+                 nconfig = ncol(config.subset)
+                 new_data = downsample.adj(cbind(config.subset, curr.subset), 
+                                           as.factor(config.subset$label), 
+                                           minClass = group.size) 
+                 config.subset = new_data[,1:nconfig]
+                 curr.subset = new_data[,!(colnames(new_data) %in% c("Class", colnames(config.subset)))]
+                 
+               }
+        )
+        colnames(curr.subset) <- mz.names
+        if(settings$ml_batch_balance & settings$ml_sampling %in% c("rose", "smote", "adasyn")){
+          config.subset[[settings$ml_batch_covars]] <- c(config.top.row[[settings$ml_batch_covars]])
+        }
+        
+        list(curr = curr.subset,
+             config = config.subset)
+      })
+      training_data = list(
+        curr = data.table::rbindlist(lapply(resampled.data.list, function(x) x$curr),use.names = T),
+        config = data.table::rbindlist(lapply(resampled.data.list, function(x) x$config), use.names = T)
+      )
+      resampled.data.list <- NULL
+    }
+    
+    # divvy folds for cross validation
+    folds <- if(length(settings$ml_batch_covars) > 0 &
+                settings$ml_folds != "LOOCV" &
+                (settings$ml_sampling %in% c("up","down","none") | settings$ml_batch_balance)){
+      #print("Creating CV folds based on batch factor(s) and label.")
+      covars = c("label", settings$ml_batch_covars)
+      split_label = apply(training_data$config[, ..covars],
+                          MARGIN = 1, 
+                          function(x) paste0(x, collapse="_"))
+      caret::groupKFold(split_label, k = min(as.numeric(settings$ml_folds), 
+                                             length(unique(split_label))))
+    }else NULL
+    
+    # replace training data with the new stuff
+    training_data$config$split <- "train"
+    testing_data$config$split <- "test"
+    
+    # remove columns that should not be in prediction
+    keep.config = unique(c("label", "split", settings$ml_include_covars))
+    testing_data$config = testing_data$config[, ..keep.config]
+    training_data$config = training_data$config[, ..keep.config]
+    
+    # merge back into one
+    training = cbind(training_data$config,
+                     training_data$curr)
+    testing = cbind(testing_data$config[,colnames(training_data$config),with=F],
+                    testing_data$curr)
+    
+    training_data <- testing_data <- NULL
+    
+    # CARET SETTINGS
+    caret.mdls <- caret::getModelInfo()
+    caret.methods <- names(caret.mdls)
+    tune.opts <- lapply(caret.methods, function(mdl) caret.mdls[[mdl]]$parameters)
+    names(tune.opts) <- caret.methods
+    
+    meth.info <- caret.mdls[[settings$ml_method]]
+    params = meth.info$parameters
+    
+    tuneGrid = expand.grid(
+      {
+        lst = lapply(1:nrow(params), function(i){
+          info = params[i,]
+          inp.val = settings[[paste0("ml_", info$parameter)]]
+          # - - check for ranges - -
+          if(grepl(inp.val, pattern=":")){
+            split = strsplit(inp.val,split = ":")[[1]]
+            inp.val <- seq(as.numeric(split[1]),
+                           as.numeric(split[2]),
+                           as.numeric(split[3]))
+          }else if(grepl(inp.val, pattern = ",")){
+            split = strsplit(inp.val,split = ",")[[1]]
+            inp.val <- split
+          }
+          # - - - - - - - - - - - - -
+          switch(as.character(info$class),
+                 numeric = as.numeric(inp.val),
+                 character = as.character(inp.val))
+        })
+        names(lst) = params$parameter
+        if(any(sapply(lst,function(x)all(is.na(x))))){
+          #cat("Missing param, auto-tuning...")
+          lst <- list()
+        }
+        lst
+      })
+    
+    # make sure levels of predicted class aren't numeric
+    levels(training$label) <- paste0("class",  Hmisc::capitalize(levels(training$label)))
+    levels(training$label) <- ordered(levels(training$label))
+    levels(testing$label) <- paste0("class",  Hmisc::capitalize(levels(testing$label)))
+    levels(testing$label) <- ordered(levels(testing$label))
+    
+    # correct mzs in case model cannot handle numeric column names
+    colnames(training) <- make.names(colnames(training))
+    colnames(testing) <- make.names(colnames(testing))
+    
+    # run ML
+    ml_res = runML(training = training,
+                   testing = testing,
+                   ml_method = settings$ml_method,
+                   ml_perf_metr = settings$ml_perf_metr,
+                   ml_folds = settings$ml_folds,
+                   ml_preproc = settings$ml_preproc,
+                   tuneGrid = tuneGrid,
+                   folds = folds,
+                   maximize = T,
+                   shuffle = settings$ml_label_shuffle,
+                   n_permute = settings$ml_n_shufflings,
+                   shuffle_mode = if(settings$ml_shuffle_mode) "train" else "test",
+                   cl = cl)
+    
+    res = list(res = ml_res, params = settings)
+  }
+  setwd(olddir)
+  #})
+  res
 }

@@ -500,7 +500,7 @@ downsample.adj = function (x, y, list = FALSE, yname = "Class", minClass=min(tab
   }
   x$.outcome <- y
   x <- plyr::ddply(x, .(y), function(dat, n) dat[sample(seq(along = dat$.outcome), 
-                                                  n), , drop = FALSE], n = minClass)
+                                                        n), , drop = FALSE], n = minClass)
   y <- x$.outcome
   x <- x[, !(colnames(x) %in% c("y", ".outcome")), drop = FALSE]
   if (list) {

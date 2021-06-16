@@ -610,7 +610,7 @@ beep = no')
       shiny::showNotification("Stopping threads...")
       parallel::stopCluster(session_cl)
     })
-    net_cores = input$ncores - 1
+    net_cores = input$ncores# - 1
     if(net_cores > 0){
       shiny::showNotification("Starting new threads...")
       logfile <<- file.path(lcl$paths$work_dir, "metshiLog.txt")
