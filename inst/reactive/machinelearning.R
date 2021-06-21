@@ -5,7 +5,7 @@ shiny::observeEvent(input$ml_top_x, {
 },ignoreInit = T, ignoreNULL = T)
 
 shiny::observeEvent(input$show_which_ml,{
-  if(!is.null(mSet)){
+  if(!is.null(mSet) & input$show_which_ml != ""){
     split.name = strsplit(input$show_which_ml, split = " - ")[[1]]
     mSet$analSet$ml$last$method <<- split.name[[1]]
     mSet$analSet$ml$last$name <<- split.name[[2]]

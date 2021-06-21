@@ -80,6 +80,25 @@ shiny::observeEvent(input$enrich_tab_rows_selected,{
   myHits$Mass.Diff <- as.numeric(myHits$Mass.Diff)/(as.numeric(myHits$Query.Mass)*1e-6)
   colnames(myHits) <- c("rn", "identifier", "adduct", "dppm")
   
+  # --- FIX ADDUCTS ---
+  myHits$rn <- sapply(as.character(myHits$rn), function(mz){
+    orig.mzs = gsub("-", "", colnames(mSet$dataSet$norm))
+    unalt.match = mz %in% orig.mzs
+    if(unalt.match){
+     return(mz) 
+    }else{
+      alt.match = paste0(mz, "0") %in% orig.mzs
+      if(alt.match){
+        paste0(mz, "0")
+      }else{
+        mz
+      }
+    }
+  })
+  
+  adduct.addition = ifelse(myHits$adduct %in% adducts[Ion_mode == "positive"]$Name, "", "-")
+  myHits$rn = paste0(myHits$rn, adduct.addition)
+  
   # --- PLOT PATHWAY ---
   
   #paths_dt = data.table::as.data.table(mSet$analSet$enrich$path.all)

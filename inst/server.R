@@ -182,6 +182,7 @@ taskbar_image = metshi_logo.png
 gtheme = classic
 gcols = #1C1400&#FFE552&#D49C1A&#EBC173&#8A00ED&#00E0C2&#95C200&#FF6BE4&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF
 gspec = RdBu
+gfont = 15
 mode = complete
 cores = 1
 apikey =  
@@ -453,7 +454,8 @@ beep = no')
                             ax.num.size = as.numeric(opts$size4),
                             ax.txt.size = as.numeric(opts$size3),
                             ann.size = as.numeric(opts$size4),
-                            title.size = as.numeric(opts$size2))
+                            title.size = as.numeric(opts$size2),
+                            plot.font.size = as.numeric(opts$gfont))
       
       # create color pickers based on amount of colours allowed in global
       output$colorPickers <- shiny::renderUI({
@@ -967,7 +969,7 @@ beep = no')
                  }  
                }else{
                  if(grepl("filter", pickerID)){
-                   if(!is.null(pieinfo)){
+                   if(!is.null(pieinfo) & my_selection$mz != ""){
                      result_filters$add$positive <- result_filters$add$negative <- character(0)
                      search$go <- T 
                    }  

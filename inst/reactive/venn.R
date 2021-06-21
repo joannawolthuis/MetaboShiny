@@ -64,21 +64,22 @@ shiny::observeEvent(input$venn_threshold_set, {
 
 # the 'non-selected' table
 output$venn_unselected <- DT::renderDataTable({
-  res = DT::datatable(data.table::data.table(), rownames=FALSE, colnames=c("result","threshold"), options = list(dom = 'tp'))
+  res = DT::datatable(data.table::data.table(), rownames=FALSE, colnames=c("result","threshold"))
   try({
     res = DT::datatable(venn_no$now, 
                         rownames = FALSE, 
                         colnames=c("result","threshold"), 
-                        selection = "multiple", options = list(dom = 'tp'))
+                        selection = "multiple")
   })
   res
 })
 
 # the 'selected' table
 output$venn_selected <- DT::renderDataTable({
-  res = DT::datatable(data.table::data.table(), rownames=FALSE, colnames=c("result","threshold"), options = list(dom = 'tp'))
+  res = DT::datatable(data.table::data.table(), rownames=FALSE, colnames=c("result","threshold"))
   try({
-    res = DT::datatable(venn_yes$now,rownames = FALSE, colnames=c("result","threshold"), selection = "multiple", options = list(dom = 'tp'))
+    res = DT::datatable(venn_yes$now,rownames = FALSE, colnames=c("result","threshold"), 
+                        selection = "multiple")
   })
   res
 })
@@ -113,9 +114,7 @@ shiny::observeEvent(input$intersect_venn, {
     lcl$tables$venn_overlap <<- setdiff(uniqies,intersecties)
 
   }else{
-    lcl$tables$venn_overlap <<- Reduce("intersect", lapply(input$intersect_venn, function(x){ # get the intersecting hits for the wanted tables
-      lcl$vectors$venn_lists[[x]]
-    }))
+    lcl$tables$venn_overlap <<- Reduce("intersect", lcl$vectors$venn_lists[input$intersect_venn])
   }
 
   lcl$tables$venn_overlap <<- data.frame(mz = lcl$tables$venn_overlap)

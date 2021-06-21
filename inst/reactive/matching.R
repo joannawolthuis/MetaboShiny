@@ -333,7 +333,7 @@ lapply(c("prematch","search_mz"), function(search_type){
       content = unique(data.table::rbindlist(lapply(matches, function(x) x$content),fill = T))
       
       if(nrow(mapper)>0){
-        
+        print("...")
         RSQLite::dbWriteTable(conn, 
                               "match_mapper", 
                               mapper, 
@@ -454,9 +454,11 @@ shiny::observeEvent(input$search_pubmed,{
 shiny::observe({
   # - - filters - -
   if(search$go){
+    print("searching")
     shiny::withProgress({
       if(input$tab_iden_2 == "mzmol"){
-        if(lcl$prev_mz != my_selection$mz & !identical(lcl$vectors$prev_dbs, lcl$vectors$db_search_list)){
+        if(lcl$prev_mz != my_selection$mz & !identical(lcl$vectors$prev_dbs, lcl$vectors$db_search_list) & my_selection$mz != ""){
+          print("!")
           matches = data.table::as.data.table(get_prematches(who = gsub(my_selection$mz, 
                                                                         pattern="/.*$|RT.*$", 
                                                                         replacement=""),

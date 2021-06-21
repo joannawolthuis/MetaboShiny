@@ -1066,7 +1066,7 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
   names(colMap) = uniq
   colMap['Test'] = "black"
   colMap['Shuffled'] = "red"
-  colMap['Training'] = "blue"
+  colMap['Training'] = "cyan"#"blue"
   
   p = ggplot2::ggplot()
   
@@ -1969,28 +1969,35 @@ ggPlotVenn <- function(mSet,
                           filter_mode = filter_mode)
   
   if(plot_mode == "upset"){
-    upset_data = data.table::rbindlist(pbapply::pblapply(1:length(flattened), function(i){
-      mz = flattened[[i]]
-      name = names(flattened)[i]
-      data.frame(mz = mz,
-                 Analysis = name)
-    }))
-    upset_data = upset_data[, Analyses:=list(list((Analysis))), by = mz]
     
-    p = ggplot(data = upset_data[,2:3], aes(x=Analyses, key=Analyses)) +
-      geom_bar(aes(fill=after_stat(count)), color="black") +
-      geom_text(stat='count', aes(label=after_stat(count)), vjust=-1) +
-      ggupset::scale_x_upset(n_intersections = 20)
+    all_mzs = unique(Reduce("c", flattened))
+    
+    upset_data = data.table::rbindlist(pbapply::pblapply(all_mzs, function(mz){
+      in_analysis = sapply(names(flattened), function(analysis){
+        mz %in% flattened[[analysis]]
+      })
+      Analyses = c(names(which(in_analysis)))
+      data.frame(mz = mz,
+                 Analyses = I(list(c(Analyses))))
+    }))
+    
+    p = ggplot(data = upset_data, aes(x=Analyses, key=Analyses)) +
+        geom_bar(aes(fill=after_stat(count)), color="black") +
+        geom_text(stat='count', aes(label=after_stat(count)), vjust=-1) +
+        ggupset::scale_x_upset(n_intersections = 20)
+    
   }else{
       label_geom = "text"
       percent_digit=2
       label_alpha=1
-      venn <- ggVennDiagram:::Venn(flattened)
-      data <- ggVennDiagram::process_data(venn)
-      p <- ggplot() + geom_sf(aes_string(fill = "count"), data = data@region) + 
-        geom_sf(aes_string(color = "id"), size = 1, data = data@setEdge, 
-                show.legend = F) + geom_sf_text(aes_string(label = "name"), 
-                                                data = data@setLabel) + theme_void()
+      venn <- ggVennDiagram::Venn(flattened)
+      data <- ggVennDiagram:::process_data(venn)
+      p <- ggplot2::ggplot() + ggplot2::geom_sf(ggplot2::aes_string(fill = "count"), 
+                                                data = data@region) + 
+        ggplot2::geom_sf(ggplot2::aes_string(color = "id"), size = 1, data = data@setEdge, 
+                show.legend = F) + ggplot2::geom_sf_text(ggplot2::aes_string(label = "name"), 
+                                                data = data@setLabel) + ggplot2::theme_void()
+      label = "count"
       if (label != "none") {
         region_label <- data@region %>% dplyr::filter(.data$component == 
                                                         "region") %>% dplyr::mutate(percent = paste(round(.data$count * 
@@ -2000,18 +2007,18 @@ ggPlotVenn <- function(mSet,
         region_label$name = gsub("\\.\\.", "<br />", region_label$name)
         
         if (label_geom == "label") {
-          p <- p + geom_sf_label(aes_string(label = label,
+          p <- p + ggplot2::geom_sf_label(ggplot2::aes_string(label = label,
                                             key = "name"), 
                                  data = region_label, alpha = label_alpha, label.size = NA)
         }
         if (label_geom == "text") {
-          p <- p + geom_sf_text(aes_string(label = label,
+          p <- p + ggplot2::geom_sf_text(ggplot2::aes_string(label = label,
                                            key = "name"), 
                                 data = region_label, alpha = label_alpha)
         }
       }
   }
-  p = p + scale_fill_gradient(low = "#6F6F6F", high = "white")
+  p = p + ggplot2::scale_fill_gradient(low = "#6F6F6F", high = "white")
   
   list(plot = p, info = flattened)
 }
@@ -2227,6 +2234,11 @@ ggPlotMummi <- function(mSet, cf){
                                                              color = `radi.vec`,
                                                              text = path.nms,
                                                              key = path.nms)) +
+    ggrepel::geom_label_repel(ggplot2::aes(x = x, 
+                                           y = y,
+                                           label = path.nms),
+                              max.overlaps = 5, 
+                              min.segment.length = 0) +
     # ggtitle("Enrichment Results") +
     ggplot2::ylab("-log10(p)") + 
     ggplot2::xlab("Significant/expected hits") +

@@ -62,7 +62,7 @@ shiny::observe({
                      #}
                      # ---
                      lapply(c("mummi_anal", "heattable", "network_table", "ml_specific_mzs"), function(inputID){
-                       shiny::updateSelectInput(session,
+                       shiny::updateSelectizeInput(session,
                                                 inputID, 
                                                 choices = {
                                                  ch = allChoices = as.character(lcl$vectors$analyses)
@@ -75,7 +75,7 @@ shiny::observe({
                                                    }
                                                    }
                                                  ch
-                                                })  
+                                                })#, server = T) 
                      })
                      # --- 
                      venn_no$start <- report_no$start <- analyses_table

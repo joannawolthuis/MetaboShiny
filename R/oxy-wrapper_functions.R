@@ -634,7 +634,7 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                          res
                        },
                        fc = {
-                         values = analysis$tt$sig.mat[order(analysis$fc$sig.mat[,2],
+                         values = analysis$fc$sig.mat[order(analysis$fc$sig.mat[,2],
                                                             decreasing = F),]
                          res = list(data.frame(`m/z` = rownames(values),
                                                value = values[,2])
@@ -1587,7 +1587,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                 color = guide_legend(ncol = 1))
    
       myplot <- myplot + 
-        gbl$functions$plot.themes[[lcl$aes$theme]](base_size = 15) + 
+        gbl$functions$plot.themes[[lcl$aes$theme]](base_size = lcl$aes$font$plot.font.size) + 
         ggplot2::theme(legend.position = if(input$legend) "right" else "none",
                        legend.key.size = unit(.5,"line"),
                        legend.title = element_text(size=15),
@@ -1596,12 +1596,12 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                                          size = .5),
                        plot.title = ggplot2::element_text(hjust = 0.5,
                                                           vjust = 0.1,
-                                                          size=lcl$aes$font$title.size * 1.2),
+                                                          size=lcl$aes$font$plot.font.size * 1.2),
                        text = ggplot2::element_text(family = lcl$aes$font$family))
       
       if(grepl("venn", plotName) & !input$venn_plot_mode){
         myplot <- myplot +
-          ggplot2::theme_void() +
+          ggplot2::theme_void(base_size = lcl$aes$font$plot.font.size) +
           ggplot2::theme(panel.grid = ggplot2::element_blank(),
                          legend.position="none",
                          text = ggplot2::element_text(family = lcl$aes$font$family))

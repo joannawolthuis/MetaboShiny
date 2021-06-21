@@ -49,6 +49,17 @@ getMLperformance = function(ml_res, pos.class, x.metric, y.metric){
                            `Test set` = c(which.test))
   }))
   
+  for(col in c("x", "y")){
+    if(Inf %in% coords.dt[[col]]){
+      print("WARNING: Inf changed to 1")
+      coords.dt[[col]][coords.dt[[col]] == Inf] <- 1
+    }
+    if(NaN %in% coords.dt[[col]]){
+      print("WARNING: NaN changed to 0")
+      coords.dt[[col]][is.nan(coords.dt[[col]])] <- 0
+    }
+  }
+  
   list(coords = coords.dt,
        names = list(x = coords@x.name,
                     y = coords@y.name,
@@ -358,6 +369,7 @@ ml_run <- function(settings, mSet, input, cl){
     # resampling
     if(settings$ml_sampling != "none"){
       
+      print(settings$ml_sampling)
       # split on factor (either batch or placeholder to create one result)
       if(settings$ml_batch_balance){
         split.fac = training_data$config[, settings$ml_batch_covars, with=F][[1]]
@@ -370,8 +382,7 @@ ml_run <- function(settings, mSet, input, cl){
       }
       
       spl.testing.idx = split(1:nrow(training_data$curr), split.fac)
-      balance.overview = sapply(spl.testing.idx, 
-                                function(idx) table(training_data$config[idx, settings$ml_batch_covars, with=F]))
+      balance.overview = table(split.fac)
       biggest.group.overall = max(balance.overview)
       smallest.group.overall = min(balance.overview)
       

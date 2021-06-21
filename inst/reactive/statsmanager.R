@@ -199,8 +199,8 @@ shiny::observe({
                    
                    #===
                    
-                   enr_mSet<-MetaboAnalystR::SetPeakEnrichMethod(enr_mSet, "both")#if(input$mummi_enr_method | !hasT) "mum" else "gsea", "v2")
-                   enr_mSet<-MetaboAnalystR::SetMummichogPval(enr_mSet, if(hasP) as.numeric(gsub(",",".",input$mummi_pval)) else 1)
+                   enr_mSet<-MetaboAnalystR::SetPeakEnrichMethod(enr_mSet, if(input$mummi_enr_method | !hasT) "mum" else "gsea", "v2")
+                   enr_mSet<-MetaboAnalystR::SetMummichogPval(enr_mSet, if(hasP) as.numeric(gsub(",",".",input$mummi_pval)) else 0.9)
                    
                    #===
                    
@@ -299,8 +299,6 @@ shiny::observe({
                                                            libVersion = "current",
                                                            permNum = 100) 
                    
-                   list.files(".")
-                   
                    filenm <- if(input$mummi_enr_method | !hasT) "mummichog_matched_compound_all.csv" else "mummichog_fgsea_pathway_enrichment.csv"
                    enr_mSet$dataSet$mumResTable <- data.table::fread(filenm)
                    
@@ -337,7 +335,8 @@ shiny::observe({
                                                mumResTable = enr_mSet$dataSet$mumResTable,
                                                path.nms = enr_mSet$path.nms,
                                                path.hits = enr_mSet$path.hits,
-                                               path.all = enr_mSet$pathways)
+                                               path.all = enr_mSet$pathways,
+                                               path.lib = enr_mSet$lib.organism)
                    enr_mSet <- NULL
                  })
                },
