@@ -402,6 +402,12 @@ beep = no')
       lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".db"))
       lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".csv"))
       
+      old.dir = getwd()
+      on.exit({
+        setwd(old.dir)
+      })
+      setwd(lcl$paths$work_dir)
+      
       lcl$texts <<- list(
         list(name='curr_exp_dir', 
              text=lcl$paths$work_dir),

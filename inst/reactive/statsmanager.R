@@ -252,7 +252,6 @@ shiny::observe({
                    use.rules <<- input$mummi_rules
                    
                    new_adduct_mzlist <- function (mSetObj = NA, mw){
-                     
                      mode <- mSetObj$dataSet$mode
                      ion.name <- mSetObj$add.map$Ion_Name
                      ion.mass <- mSetObj$add.map$Ion_Mass
@@ -294,10 +293,149 @@ shiny::observe({
                    shiny::setProgress(0.9)
                    enr_mSet$dataSet$N <- 20
                    
+                   # ==== BUILD CUSTOM DB HERE ====
+                   
+                   map_id = input$mummi_org
+                   
+                   print(map_id)
+                   
+                   lib_name <- paste0(map_id, "_kegg")
+                   file_name <- paste0(lib_name, ".qs")
+                   
+                   if(!file.exists(file_name)){
+                     
+                     print("Downloading pathway information...")
+                     
+                     map_info = KEGGREST::keggGet(map_id)
+                     
+                     print("Finding all compounds...")
+                     pw_compound_table = data.table::rbindlist(pbapply::pblapply(1:length(map_info[[1]]$REL_PATHWAY), function(i){
+                       name = map_info[[1]]$REL_PATHWAY[i]
+                       pw_info = KEGGREST::keggGet(names(name))[[1]]
+                       compounds = pw_info$COMPOUND
+                       data.table::data.table(pathway_name = name,
+                                              pathway_code = names(name),
+                                              compound_name = compounds,
+                                              compound_code = names(compounds))
+                     }), fill = T)
+                     
+                     # print("Finding all modules...")
+                     # pw_module_table = data.table::rbindlist(pbapply::pblapply(1:length(map_info[[1]]$REL_PATHWAY), function(i){
+                     #   name = map_info[[1]]$REL_PATHWAY[i]
+                     #   pw_info = KEGGREST::keggGet(names(name))[[1]]
+                     #   modules = pw_info$MODULE
+                     #   row = data.table::data.table(pathway_name = name, 
+                     #                          pathway_code = names(name),
+                     #                          module_name = modules, 
+                     #                          module_code = gsub(".*_", "", names(modules)))
+                     #   print(row)
+                     #   row
+                     # }), fill = T)
+                     
+                     # pw_module_table = pw_module_table[complete.cases(pw_module_table),] 
+                     # uniq_modules = unique(pw_module_table[,3:4])
+                     # 
+                     # print("Finding compounds related to modules...")
+                     # module_compound_table = data.table::rbindlist(pbapply::pblapply(1:nrow(uniq_modules), function(i){
+                     #   mod_name = uniq_modules$module_name[i]
+                     #   mod_code = uniq_modules$module_code[i]
+                     #   mod_info = KEGGREST::keggGet(mod_code)[[1]]
+                     #   data.table::data.table(module_name = mod_name,
+                     #                          module_code = mod_code,
+                     #                          compound_name = mod_info$COMPOUND,
+                     #                          compound_code = names(mod_info$COMPOUND))
+                     # }), fill = T)
+                     #uniq_compounds = unique(module_compound_table[,3:4])
+                     
+                     uniq_compounds = unique(pw_compound_table[,3:4])
+                     compounds = uniq_compounds$compound_code
+                     
+                     kegg_max = 10
+                     batches = split(compounds, ceiling(seq_along(compounds)/kegg_max))
+
+                     print("Finding compound information...")
+                     compound_info_rows = pbapply::pblapply(batches, function(batch){
+                       compound_info = KEGGREST::keggGet(batch)
+                       mws = sapply(compound_info, function(x) x$EXACT_MASS)
+                       has.no.mw = sapply(mws, is.null)
+                       data.table::data.table(compound_code = batch[!has.no.mw],
+                                              mw = as.numeric(mws[!has.no.mw]))
+                     })
+                     
+                     compound_info_table = data.table::rbindlist(compound_info_rows)
+                     # cpd_mod_merge = unique(merge(compound_info_table, module_compound_table, by = "compound_code"))
+                     # pw_cpd_mod_merge = merge(cpd_mod_merge, 
+                     #                          pw_module_table,
+                     #                          by = c("module_code",
+                     #                                 "module_name"),
+                     #                          allow.cartesian = T)
+                     # pathway_info_full_table = unique(pw_cpd_mod_merge[,c("pathway_name", "pathway_code",
+                     #                                                      "compound_code", "compound_name", "mw")])
+                     # colnames(pathway_info_full_table) <- c("pathway_name", "pathway_code", 
+                     #                                        "id", "name", "mw")
+                     
+                     pathway_info_full_table = merge(compound_info_table, pw_compound_table, by = "compound_code")
+                     
+                     all_pathways = unique(pathway_info_full_table$pathway_name)
+                     colnames(pathway_info_full_table) <- c("id","mw","pathway_name","pathway_code","name")
+
+                     cpd_only_table = unique(pathway_info_full_table[, c("id", "name", "mw"), with = F])
+                     
+                     pathways = list(cpds = lapply(all_pathways, function(pw) pathway_info_full_table[pathway_name == pw]$id),
+                                     name = all_pathways,
+                                     code = unique(pathway_info_full_table$pathway_code))
+                     
+                     cpd.lib = list(id = cpd_only_table$id,
+                                    name = cpd_only_table$name,
+                                    mw = cpd_only_table$mw,
+                                    adducts = data.frame())
+                     
+                     mummichog.lib <- list(pathways = pathways, #cpd.tree = cpd.tree, 
+                                           cpd.lib = cpd.lib)
+                     print(paste0(map_id, " mummichog library created!"))
+                     qs::qsave(mummichog.lib, file = file_name)
+                   }
+                   
+                   mummichog.lib = qs::qread(file_name)
+                   adducts <- new_adduct_mzlist(enr_mSet,
+                                                mw = mummichog.lib$cpd.lib$mw)
+                   adducts <- list(dpj_positive = adducts$pos,
+                                   positive = adducts$pos,
+                                   negative = adducts$neg)
+                   
+                   mummichog.lib$cpd.lib$adducts <- adducts
+                   cpd.tree <- list()
+                   ms_modes <- c("dpj_positive", "positive", "negative")
+                   
+                   for (ms_mode in ms_modes) {
+                     l2 <- list()
+                     l2[[49]] <- ""
+                     l2[[2001]] <- ""
+                     mz.mat <- mummichog.lib$cpd.lib$adducts[[ms_mode]]
+                     floor.mzs <- floor(mz.mat)
+                     for (i in 1:nrow(floor.mzs)) {
+                       neighbourhood <- floor.mzs[i, ]
+                       for (n in neighbourhood) {
+                         if ((n > 50) & (n < 2000)) {
+                           l2[[n]] <- append(l2[[n]], i)
+                         }
+                       }
+                     }
+                     cpd.tree[[ms_mode]] <- lapply(l2, unique)
+                   }
+                   
+                   org = map_id
+                   mummichog.lib$cpd.tree <- cpd.tree
+                   qs::qsave(mummichog.lib, file = file_name)
+                   
+                   print(paste0(org, " mummichog library updated with chosen adducts!"))
+                   
+                   # ==============================
+                   
                    enr_mSet <- MetaboAnalystR::PerformPSEA(mSetObj = enr_mSet, 
-                                                           lib = input$mummi_org,
+                                                           lib = lib_name,
                                                            libVersion = "current",
-                                                           permNum = 100) 
+                                                           permNum = 100)                      
                    
                    filenm <- if(input$mummi_enr_method | !hasT) "mummichog_matched_compound_all.csv" else "mummichog_fgsea_pathway_enrichment.csv"
                    enr_mSet$dataSet$mumResTable <- data.table::fread(filenm)
@@ -330,13 +468,16 @@ shiny::observe({
                      enr_mSet$dataSet$mumResTable <- mergy
                    }
                    
+                   flattened[[1]]$significant = flattened[[1]]$value < if(hasP) as.numeric(gsub(",",".",input$mummi_pval)) else 0.9
+                   
                    mSet$analSet$enrich <- list(mummi.resmat = enr_mSet$mummi.resmat,
                                                mummi.gsea.resmat = enr_mSet$mummi.gsea.resmat,
                                                mumResTable = enr_mSet$dataSet$mumResTable,
                                                path.nms = enr_mSet$path.nms,
                                                path.hits = enr_mSet$path.hits,
                                                path.all = enr_mSet$pathways,
-                                               path.lib = enr_mSet$lib.organism)
+                                               path.lib = enr_mSet$lib.organism,
+                                               value.tbl.with.sig = flattened[[1]])
                    enr_mSet <- NULL
                  })
                },
@@ -346,11 +487,11 @@ shiny::observe({
                    {
                      assign("ml_queue", shiny::isolate(shiny::reactiveValuesToList(ml_queue)), envir = .GlobalEnv)
                      assign("input", shiny::isolate(shiny::reactiveValuesToList(input)), envir = .GlobalEnv)
-                    
+                     
                      # make subsetted mset for ML so it's not as huge in memory
                      small_mSet = mSet
                      small_mSet$dataSet = small_mSet$dataSet[c("cls", "orig.cls", "orig", "norm", "covars")]
- 
+                     
                      try({
                        parallel::clusterExport(session_cl, c("input", "gbl", "lcl"))
                      })
@@ -384,22 +525,22 @@ shiny::observe({
                      # 
                      # ml_queue$jobs = jobs
                      
-                    try({
-                      parallel::clusterExport(session_cl, c("ml_run", "small_mSet", "gbl"))
-                    })
+                     try({
+                       parallel::clusterExport(session_cl, c("ml_run", "small_mSet", "gbl"))
+                     })
                      
                      ml_queue_res <- pbapply::pblapply(ml_queue$jobs, 
                                                        cl = if(length(ml_queue$jobs) > 1) session_cl else 0, 
                                                        function(settings, ml_cl, small_mSet){
-                       res = list()
-                       try({
-                         res = ml_run(settings = settings, 
-                                      mSet = small_mSet,
-                                      input = input,
-                                      cl = ml_cl)  
-                       })
-                       res
-                     }, small_mSet = small_mSet, ml_cl = if(length(ml_queue$jobs) > 1) 0 else session_cl)
+                                                         res = list()
+                                                         try({
+                                                           res = ml_run(settings = settings, 
+                                                                        mSet = small_mSet,
+                                                                        input = input,
+                                                                        cl = ml_cl)  
+                                                         })
+                                                         res
+                                                       }, small_mSet = small_mSet, ml_cl = if(length(ml_queue$jobs) > 1) 0 else session_cl)
                    }
                    
                    print("Done!")
@@ -422,7 +563,7 @@ shiny::observe({
                    }else{
                      shiny::showNotification("Failed...")
                    }
-
+                   
                    lcl$vectors$ml_train <- lcl$vectors$ml_train <<- NULL
                    print("ML done and saved.")
                  })

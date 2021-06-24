@@ -110,7 +110,8 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                            list(name = 'knapsack_logo', path = 'www/knapsack_logo.gif', dimensions = c(200, 100)),
                                            list(name = 'laptop_icon', path = 'www/laptop.png', dimensions = c(150, 150)),
                                            list(name = 'metabolomicsworkbench_logo', path = 'www/metworkbench_logo.png', dimensions = c(140, 140)),
-                                           list(name = 'npa_logo', path = 'www/npa_logo.png', dimensions = c(140, 140))
+                                           list(name = 'npa_logo', path = 'www/npa_logo.png', dimensions = c(140, 140)),
+                                           list(name = 'markerdb_logo', path = 'www/markerdb_logo.jpeg', dimensions = c(150,150))
                                            
                                            
                              ),# all image paths, if you add an image you can add it here
@@ -223,6 +224,9 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                npa = list(title = "Natural Products Atlas",
                                           description = "The Natural Products Atlas is designed to cover all microbially-derived natural products published in the peer-reviewed primary scientific literature. This encompasses bacterial, fungal and cyanobacterial compounds, but does not include compounds from plants, invertebrates or other higher organisms unless these compounds have also been explicitly identified from a microbial source. Compounds from lichens and mushrooms and other higher fungi are included. Compounds from marine macro algae and diatoms are excluded.",
                                           image_id = "npa_logo"),
+                               markerdb = list(title = "MarkerDB",
+                                               description = "MarkerDB is a freely available electronic database that attempts to consolidate information on all known clinical and a selected set of pre-clinical biomarkers into a single resource. The database includes five major types of biomarkers (condition-specific, protein, chemical, karyotypic and genetic) and four biomarker categories (diagnostic, predictive, prognostic and exposure).",
+                                               image_id = "markerdb_logo"),
                                # - - leave magicball last - -
                                cmmmediator = list(title = "CEU Mass Mediator",
                                                   description = "(ONLINE ONLY) CEU Mass Mediator is a tool for searching metabolites in different databases (Kegg, HMDB, LipidMaps, Metlin, MINE and an in-house library).",
@@ -355,9 +359,9 @@ vectors = list(
                   "custom",
                   "pubchem"),
   db_categories = list(versatile = c("wikidata", "dimedb", "metacyc", "chebi", "massbank", "cmmediator"),
-                       verbose = c("hmdb", "chebi", "t3db", "metabolights", "ymdb", "ecmdb", "pamdb", "metabolomicsworkbench"),
+                       verbose = c("hmdb", "chebi", "t3db", "metabolights", "ymdb", "ecmdb", "pamdb", "metabolomicsworkbench", "markerdb"),
                        livestock = c("lmdb", "bmdb", "metacyc", "mcdb"),
-                       human = c("hmdb", "metacyc", "expoexplorer", "t3db", "bloodexposome", "pharmgkb"),
+                       human = c("hmdb", "metacyc", "expoexplorer", "t3db", "bloodexposome", "pharmgkb", "markerdb"),
                        microbial = c("ymdb", "ecmdb", "pamdb", "vmh", "mvoc", "npa"),
                        pathway = c("vmh", "smpdb", "kegg", "reactome"),
                        food = c("foodb", "phenolexplorer"),
@@ -405,6 +409,7 @@ vectors = list(
     'metabolomicsworkbench',
     'phenolexplorer',
     'npa',
+    'markerdb',
     "magicball",
     'cmmmediator',
     'pubchem',
@@ -425,6 +430,7 @@ vectors = list(
 )
 )
 
+gbl$vectors$kegg_pathways <- KEGGREST::keggList("pathway")
 gbl$vectors$db_categories$all <- gbl$vectors$db_list
 gbl$vectors$example_sizes <- file.size(list.files(gbl$paths$volumes[["Examples"]],full.names = T))
 gbl$vectors$example_md5s <- tools::md5sum(list.files(gbl$paths$volumes[["Examples"]],full.names = T))

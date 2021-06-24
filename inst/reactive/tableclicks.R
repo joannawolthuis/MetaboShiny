@@ -99,6 +99,8 @@ shiny::observeEvent(input$enrich_tab_rows_selected,{
   adduct.addition = ifelse(myHits$adduct %in% adducts[Ion_mode == "positive"]$Name, "", "-")
   myHits$rn = paste0(myHits$rn, adduct.addition)
   
+  sig.hits = mSet$analSet$enrich$value.tbl.with.sig[mSet$analSet$enrich$value.tbl.with.sig$significant, "m.z"]
+  myHits$significant = ifelse(myHits$rn %in% sig.hits, "yes", "no")
   # --- PLOT PATHWAY ---
   
   #paths_dt = data.table::as.data.table(mSet$analSet$enrich$path.all)
