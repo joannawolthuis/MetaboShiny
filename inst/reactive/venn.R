@@ -56,10 +56,10 @@ output$venn_threshold_ui <- shiny::renderUI({
 })
 
 shiny::observeEvent(input$venn_threshold_set, {
-  row = input$venn_selected_row_last_clicked
+  rows = input$venn_selected_rows_selected
   sign = input$venn_threshold_sign
   value = input$venn_threshold_value
-  venn_yes$now[row,"threshold"] <- paste0(sign, value)
+  venn_yes$now[rows,"threshold"] <- paste0(sign, value)
 })
 
 # the 'non-selected' table
@@ -111,11 +111,16 @@ shiny::observeEvent(input$intersect_venn, {
     intersecties <- unique(unlist(out))
 
     uniqies = lcl$vectors$venn_lists[[input$intersect_venn]]
-    lcl$tables$venn_overlap <<- setdiff(uniqies,intersecties)
-
+    overlap <- setdiff(uniqies,intersecties)
+    overlap = gsub("\\.$", "-", overlap)
+    mSet$analSet$venn <<- list(mzs = overlap)
+    lcl$tables$venn_overlap <<- overlap
   }else{
-    lcl$tables$venn_overlap <<- Reduce("intersect", lcl$vectors$venn_lists[input$intersect_venn])
-  }
+    overlap <- Reduce("intersect", lcl$vectors$venn_lists[input$intersect_venn])
+    overlap = gsub("\\.$", "-", overlap)
+    mSet$analSet$venn <<- list(mzs = overlap)
+    lcl$tables$venn_overlap <<- overlap 
+    }
 
   lcl$tables$venn_overlap <<- data.frame(mz = lcl$tables$venn_overlap)
   rownames(lcl$tables$venn_overlap) <<- lcl$tables$venn_overlap$mz

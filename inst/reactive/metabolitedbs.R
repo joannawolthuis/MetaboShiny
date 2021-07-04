@@ -215,7 +215,9 @@ shiny::observe({
           shiny::fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
             if(db != "custom"){
               shiny::column(width=3,align="center", 
-                            shiny::imageOutput(gbl$constants$db.build.info[[db]]$image_id, inline=T),
+                            tags$div(class = 'dbimg',
+                                     shiny::imageOutput(gbl$constants$db.build.info[[db]]$image_id, inline=T)
+                                     ),
                             br(),br(),
                             shiny::div(shiny::tags$i(shiny::textOutput(paste0(db, "_version"))),style='font-size:70%; color: grey')
                             ,br()

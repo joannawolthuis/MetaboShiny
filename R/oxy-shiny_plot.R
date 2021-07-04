@@ -1971,7 +1971,31 @@ ggPlotVenn <- function(mSet,
   if(plot_mode == "upset"){
     
     all_mzs = unique(Reduce("c", flattened))
-    
+  
+    # check if same prefix
+    preflength = sapply(2:length(flattened), function(i){
+      Biostrings::lcprefix(names(flattened)[i], names(flattened)[i-1])
+    })
+    if(length(unique(preflength)) == 1){
+      if(preflength[1] > 0){
+        prefix = stringr::str_sub(names(flattened)[1], 0, preflength[1])
+        names(flattened) <- gsub(prefix, "", x = names(flattened))  
+      }
+    }
+    # check if same suffix
+    suflength = sapply(2:length(flattened), function(i){
+      Biostrings::lcsuffix(names(flattened)[i], names(flattened)[i-1])
+    })
+    if(length(unique(suflength)) == 1){
+      if(suflength[1] > 0){
+        names(flattened) <- sapply(names(flattened), function(name){
+          len = stringr::str_length(name)
+          suffix = stringr::str_sub(name, len - suflength[1] + 1, len)
+          gsub(suffix, "", x = name,fixed = T)
+        })  
+      }
+    }
+
     upset_data = data.table::rbindlist(pbapply::pblapply(all_mzs, function(mz){
       in_analysis = sapply(names(flattened), function(analysis){
         mz %in% flattened[[analysis]]
@@ -1980,11 +2004,15 @@ ggPlotVenn <- function(mSet,
       data.frame(mz = mz,
                  Analyses = I(list(c(Analyses))))
     }))
+     
+    intersections = 2^length(flattened)
     
     p = ggplot(data = upset_data, aes(x=Analyses, key=Analyses)) +
         geom_bar(aes(fill=after_stat(count)), color="black") +
-        geom_text(stat='count', aes(label=after_stat(count)), vjust=-1) +
-        ggupset::scale_x_upset(n_intersections = 20)
+        geom_text(stat='count', 
+                  aes(label=after_stat(count)), vjust=-1) +
+        ggupset::scale_x_upset(n_intersections = intersections,
+                               reverse = T)
     
   }else{
       label_geom = "text"
@@ -2193,8 +2221,8 @@ ggPlotPower <- function(mSet,
 #' @importFrom ggplot2 ylab xlab scale_colour_gradientn
 ggPlotMummi <- function(mSet, cf){
   
-  anal.type = if("mummi.resmat" %in% names(mSet$analSet$enrich)) "mummichog" else "gsea"
-  
+  anal.type = if(!is.null(mSet$analSet$enrich$mummi.resmat)) "mummichog" else "gsea"
+
   if (anal.type == "mummichog") {
     mummi.mat <- mSet$analSet$enrich$mummi.resmat
     y <- -log10(mummi.mat[, 5])
@@ -2204,14 +2232,14 @@ ggPlotMummi <- function(mSet, cf){
     gsea.mat <- mSet$analSet$enrich$mummi.gsea.resmat
     if(is.null(gsea.mat)) stop("No hits found.")
     y <- -log10(gsea.mat[, 3])
-    x <- gsea.mat[, 2]/gsea.mat[, 1]
+    x <- gsea.mat[,5]
     pathnames <- rownames(gsea.mat)
   }
   inx <- order(y, decreasing = T)
   y <- y[inx]
   x <- x[inx]
   path.nms <- pathnames[inx]
-  sqx <- sqrt(x)
+  sqx <- sqrt(abs(x))
   min.x <- min(sqx, na.rm = TRUE)
   max.x <- max(sqx, na.rm = TRUE)
   if (min.x == max.x) {
@@ -2241,7 +2269,7 @@ ggPlotMummi <- function(mSet, cf){
                               min.segment.length = 0) +
     # ggtitle("Enrichment Results") +
     ggplot2::ylab("-log10(p)") + 
-    ggplot2::xlab("Significant/expected hits") +
+    ggplot2::xlab(if(anal.type == 'mummichog') "Significant/expected hits" else "NES") +
     ggplot2::scale_colour_gradientn(colours = cf(20)) +
     ggplot2::scale_y_continuous(labels=scaleFUN)
   

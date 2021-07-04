@@ -272,10 +272,14 @@ ml_run <- function(settings, mSet, input, cl){
         if(!is.null(settings$ml_mzs)){
           curr <- curr[,settings$ml_mzs, with=F]
         }else{
-          mzs = getTopHits(mSet = mSet,
-                           expnames = settings$ml_specific_mzs, 
-                           top = settings$ml_mzs_topn, 
-                           filter_mode = "top")[[1]]
+          print("newver")
+          mzs = getAllHits(mSet = mSet,
+                           expname = settings$ml_specific_mzs)
+          mzs = mzs$m.z[1:settings$ml_mzs_topn]
+          # mzs = getTopHits(mSet = mSet,
+          #                  expnames = settings$ml_specific_mzs, 
+          #                  top = settings$ml_mzs_topn, 
+          #                  filter_mode = "top")[[1]]
           mzs = gsub("^X", "", mzs)
           mzs = gsub("\\.$", "-", mzs)
         }
@@ -299,6 +303,7 @@ ml_run <- function(settings, mSet, input, cl){
       if(length(mzs) > 0){
         mSet_train = subset_mSet_mz(mSet_train, mzs)
       }
+      
       mSet_train$dataSet$orig <- mSet_train$dataSet$start
       mSet_train$dataSet$start <- mSet_train$dataSet$preproc <- mSet_train$dataSet$proc <- mSet_train$dataSet$prenorm <- NULL
       mSet_train = metshiProcess(mSet_train, init = F, cl = 0)
@@ -338,6 +343,8 @@ ml_run <- function(settings, mSet, input, cl){
         curr <- curr[, mzs]
       }
     }
+    
+    print(dim(curr))
     
     mSet$storage <- NULL
     mSet = NULL

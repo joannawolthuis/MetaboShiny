@@ -19,7 +19,7 @@ shiny::observe({
                        analysis = mSet$storage[[name]]$analSet
                        analysis_names = names(analysis)
                        # - - -
-                       exclude = c("tsne", "heatmap", "type", "enrich", "power", "network", "venn")
+                       exclude = c("tsne", "heatmap", "type", "enrich", "power", "network")
                        analysis_names <- setdiff(analysis_names, exclude)
                        if(length(analysis_names) == 0){
                          return(data.table::data.table())
@@ -85,7 +85,7 @@ shiny::observe({
                      list()
                    },
                    enrich = {
-                     enrich$overview <<- if("mummi.resmat" %in% names(mSet$analSet$enrich)){
+                     enrich$overview <<- if(!is.null(mSet$analSet$enrich$"mummi.resmat")){
                        mSet$analSet$enrich$mummi.resmat 
                      }else{
                        mSet$analSet$enrich$mummi.gsea.resmat

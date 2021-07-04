@@ -21,7 +21,7 @@ shiny::observe({
                    mSet$storage <- list()
                  }
                  # TODO: use this in venn diagram creation
-                 mSet <- MetaboShiny::store.mSet(mSet, name = mSet$settings$cls.name, proj.folder = lcl$paths$work_dir)
+                 mSet <- MetaboShiny::store.mSet(mSet, name = mSet$settings$cls.name, proj.folder = lcl$paths$proj_dir)
                },
                corr = {
                  # pearson kendall spearman
@@ -153,7 +153,7 @@ shiny::observe({
                    flattened <- list(getAllHits(mSet,
                                                 input$mummi_anal))
                    
-                   hasP = grepl("tt|aov|asca|combi",input$mummi_anal)
+                   hasP = grepl("tt|aov|asca|combi|venn",input$mummi_anal)
                    setProgress(0.1)
                    
                    myFile <- tempfile(fileext = ".csv")
@@ -161,9 +161,9 @@ shiny::observe({
                                                 mode = sapply(flattened[[1]]$m.z, function(mz){
                                                   if(grepl(pattern="-",x=mz)) "negative" else "positive"
                                                 }))
-                   tbl <- tbl[complete.cases(tbl)]
+
                    
-                   hasT = grepl("tt", input$mummi_anal)
+                   hasT = ncol(flattened[[1]]) == 3
                    
                    anal = gsub(" \\(.*$|", "", input$mummi_anal)
                    subset = gsub("\\(|\\)|.*\\(", "", input$mummi_anal)
@@ -171,9 +171,12 @@ shiny::observe({
                    tbl[, "p.value"] = if(hasP) flattened[[1]][,2] else c(NA)
                    tbl[, "t.score"] = if(hasT) flattened[[1]][,3] else c(NA)
                    
+                   print("Preview of input table:")
+                   print(head(tbl))
+                   
                    if(hasP) if(all(is.na(tbl$p.value))) tbl$p.value <- c(0)
                    if(hasT) if(all(is.na(tbl$t.score))) tbl$t.score <- c(0)
-                   
+                  
                    tmpfile <- tempfile()
                    
                    fwrite(if(hasT) tbl else tbl[,1:3], file=tmpfile)
@@ -182,6 +185,7 @@ shiny::observe({
                                                                "mummichog",
                                                                FALSE)
                    MetaboAnalystR::SetPeakFormat("mpt")
+                   
                    enr_mSet <- MetaboAnalystR::UpdateInstrumentParameters(enr_mSet,
                                                                           mSet$ppm,
                                                                           "mixed",
@@ -197,12 +201,8 @@ shiny::observe({
                    
                    shiny::setProgress(0.3)
                    
-                   #===
-                   
-                   enr_mSet<-MetaboAnalystR::SetPeakEnrichMethod(enr_mSet, if(input$mummi_enr_method | !hasT) "mum" else "gsea", "v2")
-                   enr_mSet<-MetaboAnalystR::SetMummichogPval(enr_mSet, if(hasP) as.numeric(gsub(",",".",input$mummi_pval)) else 0.9)
-                   
-                   #===
+                   enr_mSet <- MetaboAnalystR::SetPeakEnrichMethod(enr_mSet, if(input$mummi_enr_method | !hasT) "mum" else "gsea", "v2")
+                   enr_mSet <- MetaboAnalystR::SetMummichogPval(enr_mSet, if(hasP) as.numeric(gsub(",",".",input$mummi_pval)) else 0.9)
                    
                    elecMass = 0.000548579909
                    mummi_adducts <- adducts[Name %in% input$mummi_adducts]
@@ -218,6 +218,7 @@ shiny::observe({
                      remMass <- enviPat::check_chemform(isotopes, remForm)$monoisotopic_mass
                      if(addMass < 0) addMass <- 0
                      if(remMass < 0) remMass <- 0
+                     row$Charge = as.numeric(row$Charge)
                      netChange = (addMass - remMass + (row$Charge * -elecMass)) / abs(row$Charge)
                      mzSpec <- if(row$xM > 1) paste0("(",row$xM,"*mw)") else if(abs(row$Charge)>1) paste0("mw/",abs(row$Charge)) else "mw"
                      addOn <- if(netChange < 0){
@@ -307,45 +308,39 @@ shiny::observe({
                      print("Downloading pathway information...")
                      
                      map_info = KEGGREST::keggGet(map_id)
+                     use_ko = grepl("map", map_id)
                      
                      print("Finding all compounds...")
                      pw_compound_table = data.table::rbindlist(pbapply::pblapply(1:length(map_info[[1]]$REL_PATHWAY), function(i){
-                       name = map_info[[1]]$REL_PATHWAY[i]
-                       pw_info = KEGGREST::keggGet(names(name))[[1]]
+                       pw_name = map_info[[1]]$REL_PATHWAY[i]
+                       pw_info = KEGGREST::keggGet(names(pw_name))[[1]]
+                       pw_code = if(use_ko) pw_info$KO_PATHWAY else names(pw_name)
+                       if(use_ko){
+                         pw_info = KEGGREST::keggGet(pw_code)[[1]]
+                       }
                        compounds = pw_info$COMPOUND
-                       data.table::data.table(pathway_name = name,
-                                              pathway_code = names(name),
-                                              compound_name = compounds,
-                                              compound_code = names(compounds))
+                       if(length(compounds) > 0){
+                         data.table::data.table(pathway_name = pw_name,
+                                                pathway_code = pw_code,
+                                                compound_name = compounds,
+                                                compound_code = names(compounds))  
+                       }else if(length(pw_info$MODULE) > 0){
+                         # module route
+                         data.table::rbindlist(lapply(1:length(pw_info$MODULE), function(j){
+                           mod_name = pw_info$MODULE[j]
+                           mod_info = KEGGREST::keggGet(names(mod_name))[[1]]
+                           compounds = mod_info$COMPOUND
+                           data.table::data.table(pathway_name = pw_name,
+                                                  pathway_code = names(pw_name),
+                                                  compound_name = compounds,
+                                                  compound_code = names(compounds))  
+                         }))
+                       }else{
+                         data.table::data.table()
+                       }
                      }), fill = T)
                      
-                     # print("Finding all modules...")
-                     # pw_module_table = data.table::rbindlist(pbapply::pblapply(1:length(map_info[[1]]$REL_PATHWAY), function(i){
-                     #   name = map_info[[1]]$REL_PATHWAY[i]
-                     #   pw_info = KEGGREST::keggGet(names(name))[[1]]
-                     #   modules = pw_info$MODULE
-                     #   row = data.table::data.table(pathway_name = name, 
-                     #                          pathway_code = names(name),
-                     #                          module_name = modules, 
-                     #                          module_code = gsub(".*_", "", names(modules)))
-                     #   print(row)
-                     #   row
-                     # }), fill = T)
-                     
-                     # pw_module_table = pw_module_table[complete.cases(pw_module_table),] 
-                     # uniq_modules = unique(pw_module_table[,3:4])
-                     # 
-                     # print("Finding compounds related to modules...")
-                     # module_compound_table = data.table::rbindlist(pbapply::pblapply(1:nrow(uniq_modules), function(i){
-                     #   mod_name = uniq_modules$module_name[i]
-                     #   mod_code = uniq_modules$module_code[i]
-                     #   mod_info = KEGGREST::keggGet(mod_code)[[1]]
-                     #   data.table::data.table(module_name = mod_name,
-                     #                          module_code = mod_code,
-                     #                          compound_name = mod_info$COMPOUND,
-                     #                          compound_code = names(mod_info$COMPOUND))
-                     # }), fill = T)
-                     #uniq_compounds = unique(module_compound_table[,3:4])
+                     pw_compound_table = unique(pw_compound_table)
                      
                      uniq_compounds = unique(pw_compound_table[,3:4])
                      compounds = uniq_compounds$compound_code
@@ -363,16 +358,6 @@ shiny::observe({
                      })
                      
                      compound_info_table = data.table::rbindlist(compound_info_rows)
-                     # cpd_mod_merge = unique(merge(compound_info_table, module_compound_table, by = "compound_code"))
-                     # pw_cpd_mod_merge = merge(cpd_mod_merge, 
-                     #                          pw_module_table,
-                     #                          by = c("module_code",
-                     #                                 "module_name"),
-                     #                          allow.cartesian = T)
-                     # pathway_info_full_table = unique(pw_cpd_mod_merge[,c("pathway_name", "pathway_code",
-                     #                                                      "compound_code", "compound_name", "mw")])
-                     # colnames(pathway_info_full_table) <- c("pathway_name", "pathway_code", 
-                     #                                        "id", "name", "mw")
                      
                      pathway_info_full_table = merge(compound_info_table, pw_compound_table, by = "compound_code")
                      
@@ -397,13 +382,15 @@ shiny::observe({
                    }
                    
                    mummichog.lib = qs::qread(file_name)
-                   adducts <- new_adduct_mzlist(enr_mSet,
-                                                mw = mummichog.lib$cpd.lib$mw)
-                   adducts <- list(dpj_positive = adducts$pos,
-                                   positive = adducts$pos,
-                                   negative = adducts$neg)
                    
-                   mummichog.lib$cpd.lib$adducts <- adducts
+                   mummi.adducts <- new_adduct_mzlist(enr_mSet,
+                                                      mw = mummichog.lib$cpd.lib$mw)
+                   
+                   mummi.adducts <- list(dpj_positive = mummi.adducts$pos,
+                                         positive = mummi.adducts$pos,
+                                         negative = mummi.adducts$neg)
+                   
+                   mummichog.lib$cpd.lib$adducts <- mummi.adducts
                    cpd.tree <- list()
                    ms_modes <- c("dpj_positive", "positive", "negative")
                    
@@ -437,47 +424,25 @@ shiny::observe({
                                                            libVersion = "current",
                                                            permNum = 100)                      
                    
-                   filenm <- if(input$mummi_enr_method | !hasT) "mummichog_matched_compound_all.csv" else "mummichog_fgsea_pathway_enrichment.csv"
+                   filenm <- "mummichog_matched_compound_all.csv"
                    enr_mSet$dataSet$mumResTable <- data.table::fread(filenm)
                    
-                   if(!input$mummi_enr_method){
-                     tbl.rows <- lapply(1:length(enr_mSet$path.hits), function(i){
-                       l = enr_mSet$path.hits[[i]]
-                       row = enr_mSet$dataSet$mumResTable[i,]
-                       row$Cpd.Hits <- paste0(l, collapse=";")
-                       row
-                     })
-                     tbl <- data.table::rbindlist(tbl.rows)
-                     tbl <- tidyr::separate_rows(tbl,
-                                                 "Cpd.Hits",
-                                                 sep = ";")
-                     tbl <- as.data.frame(tbl)
-                     tbl$Matched.Compound <- tbl$Cpd.Hits
-                     
-                     add.tbl = data.frame(Matched.Compound = names(unlist(enr_mSet$cpd_form_dict)),
-                                          adduct = unlist(enr_mSet$cpd_form_dict))
-                     mz.tbl = data.frame(Query.Mass = names(unlist(enr_mSet$mz2cpd_dict)),
-                                         Matched.Compound = unlist(enr_mSet$mz2cpd_dict))
-                     mzorig.tbl = data.frame(Matched.Compound = names(unlist(enr_mSet$cpd2mz_dict)),
-                                             Orig.Mass = unlist(enr_mSet$cpd2mz_dict))
-                     mergy = merge(tbl, add.tbl)
-                     mergy = merge(mergy, mz.tbl)
-                     mergy = merge(mergy, mzorig.tbl)
-                     mergy$Mass.Diff = abs(as.numeric(mergy$Query.Mass) - as.numeric(mergy$Orig.Mass))
-                     mergy = unique(mergy[,c("Query.Mass", "Matched.Compound","adduct","Mass.Diff")])
-                     enr_mSet$dataSet$mumResTable <- mergy
-                   }
-                   
                    flattened[[1]]$significant = flattened[[1]]$value < if(hasP) as.numeric(gsub(",",".",input$mummi_pval)) else 0.9
+                   
+                   # names to compounds
+                   cpd2name <- data.table::data.table(Matched.Compound = mummichog.lib$cpd.lib$id,
+                                                      Compound.Name = mummichog.lib$cpd.lib$name)
+                   enr_mSet$dataSet$mumResTable = merge(cpd2name, enr_mSet$dataSet$mumResTable)
                    
                    mSet$analSet$enrich <- list(mummi.resmat = enr_mSet$mummi.resmat,
                                                mummi.gsea.resmat = enr_mSet$mummi.gsea.resmat,
                                                mumResTable = enr_mSet$dataSet$mumResTable,
+                                               mummi.input = enr_mSet$dataSet$mummi.proc,
                                                path.nms = enr_mSet$path.nms,
                                                path.hits = enr_mSet$path.hits,
                                                path.all = enr_mSet$pathways,
                                                path.lib = enr_mSet$lib.organism,
-                                               value.tbl.with.sig = flattened[[1]])
+                                               cpd.value = enr_mSet$cpd_exp_dict)
                    enr_mSet <- NULL
                  })
                },
@@ -512,18 +477,18 @@ shiny::observe({
                      # }
                      # ml_queue$jobs = jobs
                      
-                     # basejob = ml_queue$jobs[[1]]
-                     # jobs = list()
-                     # for(i in 1:110){
-                     #   for(j in 1:10){
-                     #     job = basejob
-                     #     job$ml_mzs_topn = i
-                     #     job$ml_name = gsub("1$", paste(i, paste0("#", j)), job$ml_name)
-                     #     jobs[[job$ml_name]] = job
-                     #   }
-                     # }
-                     # 
-                     # ml_queue$jobs = jobs
+                     basejob = ml_queue$jobs[[1]]
+                     jobs = list()
+                     for(i in 1:500){
+                       for(j in 1:10){
+                         job = basejob
+                         job$ml_mzs_topn = i
+                         job$ml_name = gsub("1$", paste(i, paste0("#", j)), job$ml_name)
+                         jobs[[job$ml_name]] = job
+                       }
+                     }
+
+                     ml_queue$jobs = jobs
                      
                      try({
                        parallel::clusterExport(session_cl, c("ml_run", "small_mSet", "gbl"))

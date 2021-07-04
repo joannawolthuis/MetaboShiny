@@ -750,6 +750,7 @@ beep = no')
         uimanager$refresh <- input$statistics
         
         if(input$statistics %in% c("venn", "enrich", "heatmap", "network", "ml")){
+          print("vennrich")
           statsmanager$calculate <- "vennrich"
           tablemanager$make <- "vennrich"
           uimanager$refresh <- c(input$statistics, "vennrich")
@@ -761,9 +762,9 @@ beep = no')
         
         if(checkMe %in% names(mSet$analSet)){
           shinyjs::show(selector = paste0("div.panel[value=collapse_", input$statistics, "_tables]"))
-          tablemanager$make <- input$statistics
+          tablemanager$make <- c(tablemanager$make, input$statistics)
           shinyjs::show(selector = paste0("div.panel[value=collapse_", input$statistics, "_plots]"))
-          plotmanager$make <- input$statistics
+          plotmanager$make <- c(plotmanager$make, input$statistics)
           shinyBS::updateCollapse(session, paste0("collapse_",input$statistics),open = paste0("collapse_", 
                                                                                               input$statistics, 
                                                                                               c("_tables","_plots")))
@@ -788,12 +789,12 @@ beep = no')
   lapply(analyses, function(an){
     shiny::observeEvent(input[[paste0("do_", an)]], {
       try({
-        statsmanager$calculate <- an
+        statsmanager$calculate <- c(statsmanager$calculate, an)
         shinyjs::show(selector = paste0("div.panel[value=collapse_", an, "_tables]"))
-        tablemanager$make <- an
+        tablemanager$make <- c(tablemanager$make, an)
         shinyjs::show(selector = paste0("div.panel[value=collapse_", an, "_plots]"))
-        plotmanager$make <- an
-        uimanager$refresh <- an
+        plotmanager$make <- c(plotmanager$make, an)
+        uimanager$refresh <- c(uimanager$refresh, an)
       })
     })    
   })
@@ -957,7 +958,10 @@ beep = no')
                  if(length(sel_adducts) == 1){
                    sel_adducts = sel_adducts[[1]]
                  }else{
-                   sel_adducts = do.call("|", sel_adducts)
+                   sel_adducts = lapply(sel_adducts, as.list)
+                   sel_adduct_table = data.table::rbindlist(sel_adducts)
+                   sel_adduct_sums = colSums(sel_adduct_table)
+                   sel_adducts = sel_adduct_sums > 0
                  }
                  if(!grepl("filter", pickerID)){
                    shinyWidgets::updatePickerInput(session, id, selected = adducts$Name[sel_adducts])

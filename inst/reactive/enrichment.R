@@ -1,71 +1,81 @@
 shiny::observeEvent(input$enrich_plot_pathway, {
-  print("hello")
   curr_pathway = rownames(enrich$overview)[input$enrich_tab_rows_selected]
   pws_all = gbl$vectors$kegg_pathways
   kegg_pathway_match = which(curr_pathway == mSet$analSet$enrich$path.all$name)
   if(length(kegg_pathway_match) > 0 & nrow(enrich$current) > 0){
     pw.code = mSet$analSet$enrich$path.all$code[kegg_pathway_match]
-    #species = stringr::str_split(mSet$analSet$enrich$path.lib, "_")[[1]][1]
+
     dt = data.frame(id = enrich$current$identifier,
-                    mz = enrich$current$rn,
-                    mark = ifelse(enrich$current$significant == "yes", 1, 0))  
-    
-    # fc = sapply(dt$mz, function(mz){
-    #   mSet$analSet$fc$fc.log[names(mSet$analSet$fc$fc.log) == mz]
-    # })
-    # 
-    # dt$fc = fc
+                    mz = enrich$current$rn)  
     
     uniq_ids = unique(dt$id)
-    multi.state.rows <- lapply(uniq_ids, function(cpd_id){
-      all.dat = dt[dt$id == cpd_id,]
-      #cast = reshape2::dcast(all.dat, id ~ mz, value.var = "mark", fun.aggregate = c, fill = 0)
-      #colnames(cast) = paste0("add", 1:ncol(cast))
-      #as.data.frame(cast)
-      if(any(all.dat$mark == 1)){
-        cast = data.frame(id = cpd_id, add1 = 1)
-      }else{
-        cast = data.frame(id = cpd_id, add1 = 0)
-      }
-      cast
-    })
+    grey_nonsig = FALSE #any(enrich$current$significant == "yes")
     
-    multi.state.table = as.data.frame(data.table::rbindlist(multi.state.rows, fill = T))
-    rownames(multi.state.table) = uniq_ids
+    cpd2exp = mSet$analSet$enrich$cpd.value
+    multi.state.table <- data.table::rbindlist(lapply(1:length(cpd2exp), function(i){
+      cpd_id = names(cpd2exp)[i]
+      value = cpd2exp[[i]]
+      all.dat = data.table::data.table(id = cpd_id,
+                                       value = value)
+      reshape2::dcast(all.dat,formula = id ~ value)
+    }), fill = TRUE)
     
-    for.pathway = dt$mark
-    names(for.pathway) = dt$id
+    colnames(multi.state.table) = c("id", paste0("add", 1:(ncol(multi.state.table)-1)))
+    for(i in 1:nrow(multi.state.table)){
+      row = multi.state.table[i, 2:ncol(multi.state.table)]
+      new.order = c(1, order(row, na.last = T)+1)
+      multi.state.table[i,] <- multi.state.table[i, ..new.order]  
+    }
     
-    #old_dir = getwd()
-    #setwd(tempdir())
+    non.zero.cols = sapply(1:ncol(multi.state.table), function(i) any(!is.na(multi.state.table[[i]])))
+    multi.state.table = multi.state.table[, ..non.zero.cols]
+    multi.state.table <- as.data.frame(multi.state.table)
+    rownames(multi.state.table) = names(cpd2exp)
     
     species = substr(mSet$analSet$enrich$path.lib, 0, 3)
     pw.code = gsub("^[a-z]+", "", pw.code)
     
+    data(bods, package = "pathview")
+    
+    if(species == "map"){
+      species = "ko"
+    }
+    
+    is.multi = ncol(multi.state.table) > 2
+    if(!is.multi) colnames(multi.state.table)[2] <- "single"
+      
+    tmpdir = if(interactive()){
+      getwd()
+    }else{
+      tempdir()
+    }
+    
+    print(multi.state.table)
     pv.out <- pathview::pathview(cpd.data = multi.state.table, 
+                                 #na.col = "red",
                                  pathway.id = pw.code, 
-                                 # limit = c(min(for.pathway),
-                                 #           max(for.pathway)),
-                                 species = species, 
+                                 species = species,
                                  out.suffix = "metaboshiny", 
-                                 keys.align = "y", 
-                                 kegg.native = TRUE, 
-                                 match.data = FALSE,
-                                 multi.state = FALSE,#TRUE,
+                                 keys.align = "y",
+                                 match.data = TRUE,
+                                 multi.state = is.multi,
                                  same.layer = TRUE,
                                  low = list(gene = "green", cpd = "blue"), 
                                  mid = list(gene = "gray", cpd = "gray"), 
-                                 high = list(gene = "red", cpd = "red"))
+                                 high = list(gene = "red", cpd = "red"),
+                                 kegg.dir = tmpdir,
+                                 min.nnodes = 1)
     
-    #fn = paste0(species, pw.code, ".metaboshiny.multi.png")
-    fn = paste0(species, pw.code, ".metaboshiny.add1.png")
-    output$enrich_pathway <- shiny::renderPlot({
+    fn.add = ifelse(is.multi, "multi", "single")
+    fn = paste0(species, pw.code, ".metaboshiny.", fn.add, ".png")
+    
+    
+    output$enrich_pathway <- shiny::renderImage({
      filename <- normalizePath(file.path('.',
                                          fn))
       
-      img <- magick::image_read(fn)
-      plot(img)
-    })
+      list(src = filename)
+    },deleteFile = T)
     #setwd(old_dir)
   }
 })

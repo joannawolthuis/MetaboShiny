@@ -524,6 +524,8 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
 
   exp_table = data.frame(name = expnames, threshold = c(if(length(thresholds)>0) thresholds else 0))
   
+  print(exp_table)
+  
   table_list <- lapply(experiments, function(experiment){
     if(experiment == "all m/z"){
       flattened = list(colnames(mSet$dataSet$norm))
@@ -577,6 +579,12 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                          res = list(data.frame(`m/z`=data.ordered$`m/z`,
                                                value=data.ordered$"importance"))
                          names(res) <- paste0(which.ml, " (", base_name, ")")
+                         res
+                       },
+                       venn = {
+                         res = list(data.frame(`m/z`=analysis$venn$mzs,
+                                               value=c(0)))
+                         names(res) = base_name
                          res
                        },
                        corr = {
@@ -770,30 +778,47 @@ getAllHits <- function(mSet, expname){
     
     # fetch involved mz values
     tbl <- switch(search_name,
+                   venn = {
+                     venn.mzs = analysis$venn$mzs
+                     not.in.venn = setdiff(colnames(mSet$dataSet$norm), venn.mzs)
+                     res = data.frame(`m/z` = c(venn.mzs, not.in.venn),
+                                      value = c(rep(0, length(venn.mzs)),
+                                                rep(1, length(not.in.venn))),
+                                      significant = c(rep(TRUE, length(venn.mzs)),
+                                                rep(FALSE, length(not.in.venn))))
+                     
+                     # -------------------------
+                     res
+                   },
                    tt = {
-                     res = data.frame(`m/z` = names(mSet$analSet$tt$p.value),
-                                      value = mSet$analSet$tt$p.value,
-                                      statistic = mSet$analSet$tt$t.score
+                     res = data.frame(`m/z` = names(analysis$tt$p.value),
+                                      value = analysis$tt$p.value,
+                                      statistic = analysis$tt$t.score
                      )
+                     res$significant = sapply(res$m.z, function(mz) mz %in% rownames(analysis$tt$sig.mat))
                      res
                    },
                    fc = {
-                     res = data.frame(`m/z` = names(mSet$analSet$fc$fc.all),
-                                      value = mSet$analSet$fc$fc.all)
-                     
+                     res = data.frame(`m/z` = names(analysis$fc$fc.all),
+                                      value = analysis$fc$fc.all)
+                     res$significant = sapply(res$m.z, function(mz) mz %in% rownames(analysis$fc$sig.mat))
                      names(res) = base_name
                      res
                    },
                    combi = {
                      # --- only volc for now ---
-                     res = data.frame(`m/z` = names(mSet$analSet$combi$all.vals$x),
-                                      value = sapply(names(mSet$analSet$combi$all.vals$x), function(x) if(x %in% mSet$analSet$combi$sig.mat$rn) 0 else 1))
+                     res = data.frame(`m/z` = names(analysis$combi$all.vals$x),
+                                      value = sapply(names(analysis$combi$all.vals$x), function(x) if(x %in% analysis$combi$sig.mat$rn) 0 else 1),
+                                      stastistic = analysis$combi$all.vals$x * analysis$combi$all.vals$y)
+                     res$significant = sapply(res$m.z, function(mz) mz %in% analysis$combi$sig.mat$rn)
                      # -------------------------
                      res
                    },
                    {metshiAlert("Not currently supported...")
                      return(NULL)})
-    print(head(tbl))
+
+    tbl = tbl[order(tbl$significant, abs(tbl$stastistic),decreasing = T),]
+  
     if(nrow(tbl)>0){
       tbl
     }else{
