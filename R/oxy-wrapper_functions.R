@@ -654,7 +654,7 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                          # special opt for volcano... TODO: somehow make this work for the others
                          is.volc = all(colnames(analysis$combi$sig.mat) %in% c("rn",  "log2(FC)", "-log10(p)"))
                          res = if(is.volc){
-                           #print("special volcano plot mode")
+                           print("special volcano plot mode")
                            abs.fc = abs(analysis$combi$sig.mat$`log2(FC)`)
                            comb.vals = abs.fc * analysis$combi$sig.mat$`-log10(p)`
                            res = analysis$combi$sig.mat[order(comb.vals,
@@ -739,7 +739,7 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
   return(flattened)
 }
 
-getAllHits <- function(mSet, expname){
+getAllHits <- function(mSet, expname, reverse_order = F){
   
   experiment <- stringr::str_match(expname, 
                                     pattern = "(all m\\/z)|\\(.*\\)")[,1]
@@ -783,9 +783,9 @@ getAllHits <- function(mSet, expname){
                      not.in.venn = setdiff(colnames(mSet$dataSet$norm), venn.mzs)
                      res = data.frame(`m/z` = c(venn.mzs, not.in.venn),
                                       value = c(rep(0, length(venn.mzs)),
-                                                rep(1, length(not.in.venn))),
-                                      significant = c(rep(TRUE, length(venn.mzs)),
-                                                rep(FALSE, length(not.in.venn))))
+                                                rep(1, length(not.in.venn)))
+                                      #,statistic = c(0)
+                                      )
                      
                      # -------------------------
                      res
@@ -814,11 +814,23 @@ getAllHits <- function(mSet, expname){
                      # -------------------------
                      res
                    },
+                   ml = {
+                     ml_name = gsub(paste0(base_name, " - "), "", name)
+                     mdls = analysis$ml[[base_name]][[ml_name]]$res
+                     final_nonshuffle = mdls[[which(sapply(mdls, function(mdl) !mdl$shuffled))]]
+                     res = data.frame(`m/z` = gsub("\\.$", "-", gsub("^X", "", rownames(final_nonshuffle$importance))),
+                                      value =  c(1),
+                                      stastistic = final_nonshuffle$importance[,1])
+                     res
+                   },
                    {metshiAlert("Not currently supported...")
                      return(NULL)})
 
-    tbl = tbl[order(tbl$significant, abs(tbl$stastistic),decreasing = T),]
-  
+    try({
+      tbl = tbl[order(tbl$significant, 
+                      abs(tbl$stastistic),decreasing = if(reverse_order) F else T),]
+    }, silent = T)
+    
     if(nrow(tbl)>0){
       tbl
     }else{
@@ -866,7 +878,9 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                    },
                    enrich = {
                      p = ggPlotMummi(mSet, 
-                                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                     plot_mode = if(input$enrich_plot_mode) "volclike" else "gsea",
+                                     show_nonsig = T)
                      list(enrich_plot = p)
                    },
                    summary = {

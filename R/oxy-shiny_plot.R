@@ -787,7 +787,9 @@ ggPlotFC <- function(mSet, cf, n=20, topn=NULL){
 #' @importFrom ggplot2 ggplot geom_point aes scale_colour_gradientn
 ggPlotCombi <- function(mSet,
                         cf,
-                        n=20){
+                        n=20,
+                        color_all_vals = F,
+                        pointsize = 2){
   
     dt = data.table::as.data.table(mSet$analSet$combi$sig.mat)
     anal1_trans = mSet$analSet$combi$trans$x
@@ -826,25 +828,35 @@ ggPlotCombi <- function(mSet,
     anal1_col = if(anal1_trans != "none") paste0(anal1_trans,"(", anal1_col,")") else anal1_col
     anal2_col = if(anal2_trans != "none") paste0(anal2_trans,"(", anal2_col,")") else anal2_col
     
-    p <- ggplot2::ggplot() +
-      ggplot2::geom_point(data=dt, ggplot2::aes(x=x,
-                                                y=y,
-                                                color=significant, #col,
-                                                text=`m/z`,
-                                                key=`m/z`),cex=3) +
-                          #,alpha = sapply(dt$sig, function(x) ifelse(x=="YES",1,0.2))) +
-      # ggplot2::geom_segment(data=dt[significant=="YES"],aes(y = 0, # dashed line, turn off for now looks weird
-      #                                   yend = y,
-      #                                   x = 0,
-      #                                   xend = x,
-      #                                   color = significant#col 
-      # ),alpha=0.2,linetype=6) +
-      scale_color_manual(values=c("YES" = "red",
-                                  "NO" = "darkgray")) +
-      #ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE) +
-      ggplot2::scale_x_continuous(labels=scaleFUN) + 
-      ggplot2::xlab(paste0(anal1, ": ", anal1_col)) + 
-      ggplot2::ylab(paste0(anal2, ": ", anal2_col))
+    dt$V = dt$x * dt$y
+    
+    p <- if(color_all_vals){
+      ggplot2::ggplot() +
+        ggplot2::geom_point(data=dt, ggplot2::aes(x=x,
+                                                  y=y,
+                                                  fill=abs(V),
+                                                  text=`m/z`,
+                                                  key=`m/z`),
+                            linesize = 0.5,
+                            cex = pointsize,shape=21) +
+        ggplot2::scale_fill_gradientn(colours = cf(n)) +
+        ggplot2::scale_x_continuous(labels=scaleFUN) + 
+        ggplot2::xlab(paste0(anal1, ": ", anal1_col)) + 
+        ggplot2::ylab(paste0(anal2, ": ", anal2_col))
+    }else{
+      ggplot2::ggplot() +
+        ggplot2::geom_point(data=dt, ggplot2::aes(x=x,
+                                                  y=y,
+                                                  fill=significant, #col,
+                                                  text=`m/z`,
+                                                  key=`m/z`), cex=pointsize, shape=21) +
+        scale_fill_manual(values=c("YES" = "red",
+                                    "NO" = "darkgray")) +
+        #ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE) +
+        ggplot2::scale_x_continuous(labels=scaleFUN) + 
+        ggplot2::xlab(paste0(anal1, ": ", anal1_col)) + 
+        ggplot2::ylab(paste0(anal2, ": ", anal2_col)) 
+    }
     p
 }
 
@@ -1068,8 +1080,6 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
   colMap['Shuffled'] = "red"
   colMap['Training'] = "cyan"#"blue"
   
-  p = ggplot2::ggplot()
-  
   shuffleAUCs = NULL
   
   needs.ci = list()
@@ -1087,28 +1097,40 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
                       t[`Test set` == "Test"]$y)
       })  
       if(length(shuffleSplit) > 1){
-        # chance of shuffled being better than AUC -> get p value from this
-        betterThan = sum(shuffleAUCs > AUC)
-        p_improv = betterThan/length(shuffleAUCs)
-        stars = MetaboShiny::p2stars(p_improv)
-        sigmeasure = paste0("(",stars,")")
-        # lbl = paste("p =", p_improv, sigmeasure)
-        lbl = stars
+        # test normality
+        p = shapiro.test(shuffleAUCs)
+        if(p$p.value > 0.05){
+          # chance of shuffled being better than AUC -> get p value from this
+          tt_res = t.test(shuffleAUCs, mu = AUC, alternative = "less")
+          p = tt_res$p.value
+          stars = MetaboShiny::p2stars(p)
+          sigmeasure = paste0("(",stars,")")
+          #lbl = paste("p =", p, sigmeasure)
+          lbl = stars  
+          AUC_txt = paste0(stars, "\nAUC: ", sprintf("%.4s",AUC))
+        }else{
+          print("Shuffle AUC distribution isn't normally distributed, need more shuffled runs for p-value...")
+          lbl = "NA"
+        }
         
         dens_dat = data.table::data.table(auc = shuffleAUCs)
         dens = ggplot2::ggplot(data = dens_dat, mapping = ggplot2::aes(x = auc, y = ..scaled..)) + 
           ggplot2::geom_density(color="gray",fill="gray") +
-          ggplot2::geom_segment(mapping = aes(y=0, yend=1, x = AUC, xend = AUC), color = "black", cex=1)+
-          ggplot2::annotate("text", x = AUC, y = 1.16, label = lbl) +
+          ggplot2::geom_segment(mapping = aes(y=.3, yend=0, 
+                                              x = AUC, xend = AUC), color = "black", cex=0.5,
+                                arrow = ggplot2::arrow(type = "closed",length = unit(.1, "npc")))+
+          #ggplot2::annotate("text", x = AUC, y = 1.16, label = lbl) +
           ggplot2::theme_void() + ggplot2::expand_limits(x=c(0.9),y=c(0,1.5))
         
-        inset.df <- tibble::tibble(x = 0.9, y = 0.1,
+        inset.df <- tibble::tibble(x = 0.92, y = 0.1,
                                    plot = list(dens)) 
       }
     })
     
     needs.ci$shuffled = shuffle_data[`Test set` == "Test"]
     needs.ci$shuffled$`Performance` = 'Shuffled'
+  }else{
+    AUC_txt = paste0("AUC: ", sprintf("%.4s", AUC))
   }
   
   needs.ci$training = perf.long[!(shuffled)]
@@ -1116,7 +1138,7 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
   ci.table = data.table::rbindlist(needs.ci)
   ci.table$Performance = as.factor(ci.table$Performance)
   
-  p <- p + 
+  myplot <- ggplot2::ggplot() + 
     ggplot2::geom_smooth(data = ci.table,
                          cex = 1,
                          alpha=0.2,  
@@ -1141,19 +1163,19 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
     ggplot2::scale_y_continuous(breaks = seq(0,1,0.25), expand = c(0, 0), limits = c(-0.005,1.005), oob=scales::squish) +
     ggplot2::scale_color_manual(values = colMap) +
     ggplot2::scale_fill_manual(values = colMap) +
-    ggplot2::annotate(geom = "text", label = if(!is.nan(AUC)) paste0("AUC: ",  sprintf("%.4s",AUC)) else "",
-                      x = 0.82, y = 0.04, size=7) +
+    ggplot2::annotate(geom = "text", label = AUC_txt,
+                      x = 0.82, y = 0.05, size=7, lineheight = .5) +
     ggplot2::expand_limits(x = 0, y = 0)
   
   if(nrow(inset.df)>0){
-    p = p +
+    myplot = myplot +
       ggpmisc::geom_plot_npc(data = inset.df,
                              vp.width = 1/4, vp.height = 1/4,
                              ggplot2::aes(npcx = x, npcy = y, label = plot))    
   }
 
   #-----------------------
-  p
+  myplot
 }
 
 
@@ -2219,7 +2241,7 @@ ggPlotPower <- function(mSet,
 #' @rdname ggPlotMummi
 #' @export 
 #' @importFrom ggplot2 ylab xlab scale_colour_gradientn
-ggPlotMummi <- function(mSet, cf){
+ggPlotMummi <- function(mSet, cf, plot_mode = "volclike", show_nonsig=T){
   
   anal.type = if(!is.null(mSet$analSet$enrich$mummi.resmat)) "mummichog" else "gsea"
 
@@ -2227,14 +2249,17 @@ ggPlotMummi <- function(mSet, cf){
     mummi.mat <- mSet$analSet$enrich$mummi.resmat
     y <- -log10(mummi.mat[, 5])
     x <- mummi.mat[, 3]/mummi.mat[, 4]
+    pval = mummi.mat[,5]
     pathnames <- rownames(mummi.mat)
   } else {
     gsea.mat <- mSet$analSet$enrich$mummi.gsea.resmat
     if(is.null(gsea.mat)) stop("No hits found.")
     y <- -log10(gsea.mat[, 3])
     x <- gsea.mat[,5]
+    pval = mSet$analSet$enrich$mummi.gsea.resmat[,3]
     pathnames <- rownames(gsea.mat)
   }
+  
   inx <- order(y, decreasing = T)
   y <- y[inx]
   x <- x[inx]
@@ -2250,28 +2275,61 @@ ggPlotMummi <- function(mSet, cf){
   minR <- (max.x - min.x)/160
   radi.vec <- minR + (maxR - minR) * (sqx - min.x)/(max.x - 
                                                       min.x)
+  
   bg.vec <- heat.colors(length(y))
   
-  df <- data.frame(path.nms, x, y)
+  df <- data.frame(path.nms, x, y, pval, radi.vec)
   
   scaleFUN <- function(x) sprintf("%.2f", x)
   
-  p = ggplot2::ggplot(df) + ggplot2::geom_point(ggplot2::aes(y = y, 
-                                                             x = x, 
-                                                             size = `radi.vec`, 
-                                                             color = `radi.vec`,
-                                                             text = path.nms,
-                                                             key = path.nms)) +
-    ggrepel::geom_label_repel(ggplot2::aes(x = x, 
-                                           y = y,
-                                           label = path.nms),
-                              max.overlaps = 5, 
-                              min.segment.length = 0) +
-    # ggtitle("Enrichment Results") +
-    ggplot2::ylab("-log10(p)") + 
-    ggplot2::xlab(if(anal.type == 'mummichog') "Significant/expected hits" else "NES") +
-    ggplot2::scale_colour_gradientn(colours = cf(20)) +
-    ggplot2::scale_y_continuous(labels=scaleFUN)
+  df$multiplied = abs(df$x * df$y)
   
-  p
+  pthresh = 0.05
+  logpthresh = -log10(pthresh)
+  
+  if(!show_nonsig | plot_mode == "gsea"){
+    df = df[df$pval <= pthresh,]
+  }
+  
+  df <- if(plot_mode == "gsea"){
+    df[order(abs(df$x), decreasing = F),]
+  }else{
+    df[order(df$multiplied, decreasing = T),]
+  }
+  
+    p <- switch(plot_mode, 
+              gsea = ggplot2::ggplot(df) + ggplot2::geom_bar(ggplot2::aes(y = path.nms, 
+                                                                                 x = x, 
+                                                                                 fill = pval,
+                                                                                 text = path.nms,
+                                                                                 key = path.nms),
+                                                             stat = "identity",
+                                                             color = "black",cex=0.1) +
+                ggplot2::ylab("KEGG pathway") + 
+                ggplot2::xlab(if(anal.type == 'mummichog') "Significant/expected hits" else "NES") +
+                ggplot2::scale_fill_gradientn(colours = cf(20), name = 'p-value') + 
+                ggplot2::scale_y_discrete(limits = df$path.nms),
+              volclike = ggplot2::ggplot(df) + ggplot2::geom_point(ggplot2::aes(y = y, 
+                                                                                x = x, 
+                                                                                size = `radi.vec`, 
+                                                                                fill = `radi.vec`,
+                                                                                text = path.nms,
+                                                                                key = path.nms),
+                                                                   shape = 21,
+                                                                   color = "black") +
+                ggplot2::geom_hline(aes(yintercept = logpthresh), linetype=2, cex=0.3) +
+                ggrepel::geom_label_repel(data = df[pval < pthresh,],
+                                          mapping = ggplot2::aes(x = x, 
+                                                                 y = y,
+                                                                 label = path.nms),
+                                          size=4,
+                                          max.overlaps = 15,
+                                          force=10,
+                                          min.segment.length = 0) +
+                # ggtitle("Enrichment Results") +
+                ggplot2::ylab("-log10(p)") + 
+                ggplot2::xlab(if(anal.type == 'mummichog') "Significant/expected hits" else "NES") +
+                ggplot2::scale_fill_gradientn(colours = cf(20)) +
+                ggplot2::scale_y_continuous(labels=scaleFUN))
+    p
 }

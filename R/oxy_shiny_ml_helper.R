@@ -274,7 +274,8 @@ ml_run <- function(settings, mSet, input, cl){
         }else{
           print("newver")
           mzs = getAllHits(mSet = mSet,
-                           expname = settings$ml_specific_mzs)
+                           expname = settings$ml_specific_mzs,
+                           reverse_order = settings$ml_mzs_rev)
           mzs = mzs$m.z[1:settings$ml_mzs_topn]
           # mzs = getTopHits(mSet = mSet,
           #                  expnames = settings$ml_specific_mzs, 

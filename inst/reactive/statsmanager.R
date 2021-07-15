@@ -163,12 +163,12 @@ shiny::observe({
                                                 }))
 
                    
-                   hasT = ncol(flattened[[1]]) == 3
+                   hasT = ncol(flattened[[1]]) >= 3
                    
                    anal = gsub(" \\(.*$|", "", input$mummi_anal)
                    subset = gsub("\\(|\\)|.*\\(", "", input$mummi_anal)
                    
-                   tbl[, "p.value"] = if(hasP) flattened[[1]][,2] else c(NA)
+                   tbl[, "p.value"] = if(hasP) flattened[[1]][,2] else c(0)
                    tbl[, "t.score"] = if(hasT) flattened[[1]][,3] else c(NA)
                    
                    print("Preview of input table:")
@@ -304,80 +304,7 @@ shiny::observe({
                    file_name <- paste0(lib_name, ".qs")
                    
                    if(!file.exists(file_name)){
-                     
-                     print("Downloading pathway information...")
-                     
-                     map_info = KEGGREST::keggGet(map_id)
-                     use_ko = grepl("map", map_id)
-                     
-                     print("Finding all compounds...")
-                     pw_compound_table = data.table::rbindlist(pbapply::pblapply(1:length(map_info[[1]]$REL_PATHWAY), function(i){
-                       pw_name = map_info[[1]]$REL_PATHWAY[i]
-                       pw_info = KEGGREST::keggGet(names(pw_name))[[1]]
-                       pw_code = if(use_ko) pw_info$KO_PATHWAY else names(pw_name)
-                       if(use_ko){
-                         pw_info = KEGGREST::keggGet(pw_code)[[1]]
-                       }
-                       compounds = pw_info$COMPOUND
-                       if(length(compounds) > 0){
-                         data.table::data.table(pathway_name = pw_name,
-                                                pathway_code = pw_code,
-                                                compound_name = compounds,
-                                                compound_code = names(compounds))  
-                       }else if(length(pw_info$MODULE) > 0){
-                         # module route
-                         data.table::rbindlist(lapply(1:length(pw_info$MODULE), function(j){
-                           mod_name = pw_info$MODULE[j]
-                           mod_info = KEGGREST::keggGet(names(mod_name))[[1]]
-                           compounds = mod_info$COMPOUND
-                           data.table::data.table(pathway_name = pw_name,
-                                                  pathway_code = names(pw_name),
-                                                  compound_name = compounds,
-                                                  compound_code = names(compounds))  
-                         }))
-                       }else{
-                         data.table::data.table()
-                       }
-                     }), fill = T)
-                     
-                     pw_compound_table = unique(pw_compound_table)
-                     
-                     uniq_compounds = unique(pw_compound_table[,3:4])
-                     compounds = uniq_compounds$compound_code
-                     
-                     kegg_max = 10
-                     batches = split(compounds, ceiling(seq_along(compounds)/kegg_max))
-
-                     print("Finding compound information...")
-                     compound_info_rows = pbapply::pblapply(batches, function(batch){
-                       compound_info = KEGGREST::keggGet(batch)
-                       mws = sapply(compound_info, function(x) x$EXACT_MASS)
-                       has.no.mw = sapply(mws, is.null)
-                       data.table::data.table(compound_code = batch[!has.no.mw],
-                                              mw = as.numeric(mws[!has.no.mw]))
-                     })
-                     
-                     compound_info_table = data.table::rbindlist(compound_info_rows)
-                     
-                     pathway_info_full_table = merge(compound_info_table, pw_compound_table, by = "compound_code")
-                     
-                     all_pathways = unique(pathway_info_full_table$pathway_name)
-                     colnames(pathway_info_full_table) <- c("id","mw","pathway_name","pathway_code","name")
-
-                     cpd_only_table = unique(pathway_info_full_table[, c("id", "name", "mw"), with = F])
-                     
-                     pathways = list(cpds = lapply(all_pathways, function(pw) pathway_info_full_table[pathway_name == pw]$id),
-                                     name = all_pathways,
-                                     code = unique(pathway_info_full_table$pathway_code))
-                     
-                     cpd.lib = list(id = cpd_only_table$id,
-                                    name = cpd_only_table$name,
-                                    mw = cpd_only_table$mw,
-                                    adducts = data.frame())
-                     
-                     mummichog.lib <- list(pathways = pathways, #cpd.tree = cpd.tree, 
-                                           cpd.lib = cpd.lib)
-                     print(paste0(map_id, " mummichog library created!"))
+                     mummichog.lib <- build.enrich.KEGG(map_id)
                      qs::qsave(mummichog.lib, file = file_name)
                    }
                    
@@ -442,7 +369,9 @@ shiny::observe({
                                                path.hits = enr_mSet$path.hits,
                                                path.all = enr_mSet$pathways,
                                                path.lib = enr_mSet$lib.organism,
-                                               cpd.value = enr_mSet$cpd_exp_dict)
+                                               cpd.value = enr_mSet$cpd_exp_dict,
+                                               orig.input = flattened[[1]],
+                                               enr.method = if(input$mummi_enr_method | !hasT) "mum" else "gsea")
                    enr_mSet <- NULL
                  })
                },
@@ -477,18 +406,18 @@ shiny::observe({
                      # }
                      # ml_queue$jobs = jobs
                      
-                     basejob = ml_queue$jobs[[1]]
-                     jobs = list()
-                     for(i in 1:500){
-                       for(j in 1:10){
-                         job = basejob
-                         job$ml_mzs_topn = i
-                         job$ml_name = gsub("1$", paste(i, paste0("#", j)), job$ml_name)
-                         jobs[[job$ml_name]] = job
-                       }
-                     }
-
-                     ml_queue$jobs = jobs
+                     # basejob = ml_queue$jobs[[1]]
+                     # jobs = list()
+                     # for(i in 1:500){
+                     #   for(j in 1:10){
+                     #     job = basejob
+                     #     job$ml_mzs_topn = i
+                     #     job$ml_name = gsub("1$", paste(i, paste0("#", j)), job$ml_name)
+                     #     jobs[[job$ml_name]] = job
+                     #   }
+                     # }
+                     # 
+                     # ml_queue$jobs = jobs
                      
                      try({
                        parallel::clusterExport(session_cl, c("ml_run", "small_mSet", "gbl"))

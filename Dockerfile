@@ -75,7 +75,9 @@ RUN R -e 'pacman::p_load(BiocParallel, IRanges, plyr, preprocessCore, vsn,\
                          
 RUN R -e 'pacman::p_load(multtest, siggenes, KEGGgraph, SSPA, preprocessCore,\
                          Rgraphviz, GlobalAncova, globaltest, pcaMethods, impute)'
-                         
+                        
+RUN R -e 'pacman::p_load(pdftools, magick)'
+
 RUN R -e 'pacman::p_load(MSnbase)'
 RUN R -e 'pacman::p_load(fgsea)'
 RUN R -e 'BiocManager::install("RBGL")'

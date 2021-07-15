@@ -104,8 +104,13 @@ shiny::observeEvent(input$enrich_tab_rows_selected,{
     myHits$rn = paste0(myHits$rn, adduct.addition)
   }
   
-  sig.hits = mSet$analSet$enrich$value.tbl.with.sig[mSet$analSet$enrich$value.tbl.with.sig$significant, "m.z"]
-  myHits$significant = ifelse(myHits$rn %in% sig.hits, "yes", "no")
+  if(mSet$analSet$enrich$enr.method == "mum"){
+    sig.hits = mSet$analSet$enrich$orig.input[mSet$analSet$enrich$orig.input$significant, "m.z"]
+    myHits$significant = ifelse(myHits$rn %in% sig.hits, "yes", "no")  
+  }else{
+    myHits$significant = c("no")
+  }
+  
   enrich$current <- myHits
   
 })
