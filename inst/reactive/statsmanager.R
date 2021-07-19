@@ -406,18 +406,25 @@ shiny::observe({
                      # }
                      # ml_queue$jobs = jobs
                      
-                     # basejob = ml_queue$jobs[[1]]
-                     # jobs = list()
-                     # for(i in 1:500){
-                     #   for(j in 1:10){
-                     #     job = basejob
-                     #     job$ml_mzs_topn = i
-                     #     job$ml_name = gsub("1$", paste(i, paste0("#", j)), job$ml_name)
-                     #     jobs[[job$ml_name]] = job
-                     #   }
-                     # }
-                     # 
-                     # ml_queue$jobs = jobs
+                     basejob = ml_queue$jobs[[1]]
+                     basejob$ml_mzs_topn = 1
+                     basejob$ml_n_shufflings = 10
+                     basejob$ml_label_shuffle = T
+                     basejob$ml_name = "logit combi1"
+                     jobs = list()
+                     for(i in 1:250){
+                       for(j in 1:10){
+                         for(randomize in c(T, F)){
+                           job = basejob
+                           job$ml_mzs_topn = i
+                           job$ml_mzs_rand = randomize
+                           job$ml_name = paste0(gsub("1$", paste(i, paste0("#", j)), job$ml_name), " rand", randomize)
+                           jobs[[job$ml_name]] = job  
+                         }
+                       }
+                     }
+
+                     ml_queue$jobs = jobs
                      
                      try({
                        parallel::clusterExport(session_cl, c("ml_run", "small_mSet", "gbl"))
@@ -434,7 +441,8 @@ shiny::observe({
                                                                         cl = ml_cl)  
                                                          })
                                                          res
-                                                       }, small_mSet = small_mSet, ml_cl = if(length(ml_queue$jobs) > 1) 0 else session_cl)
+                                                       }, small_mSet = small_mSet,
+                                                       ml_cl = if(length(ml_queue$jobs) > 1) 0 else session_cl)
                    }
                    
                    print("Done!")

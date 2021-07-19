@@ -1111,6 +1111,7 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
         }else{
           print("Shuffle AUC distribution isn't normally distributed, need more shuffled runs for p-value...")
           lbl = "NA"
+          AUC_txt = "NA"
         }
         
         dens_dat = data.table::data.table(auc = shuffleAUCs)

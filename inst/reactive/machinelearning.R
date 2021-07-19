@@ -48,7 +48,11 @@ shiny::observeEvent(input$ml_batch_size_sampling, {
 
 shiny::observe({
   if(!is.null(input$ml_method)){
-    mdl = caret::getModelInfo()[[input$ml_method]]
+    sel_mdl = input$ml_method
+    
+    if(sel_mdl == "glm (logistic)") sel_mdl <- "glm"
+    
+    mdl = caret::getModelInfo()[[sel_mdl]]
     params <- mdl$parameters
     output$ml_params <- renderUI({
       list(

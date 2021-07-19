@@ -524,12 +524,14 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
 
   exp_table = data.frame(name = expnames, threshold = c(if(length(thresholds)>0) thresholds else 0))
   
-  print(exp_table)
-  
   table_list <- lapply(experiments, function(experiment){
     if(experiment == "all m/z"){
       flattened = list(colnames(mSet$dataSet$norm))
       names(flattened) = c("all m/z")
+      flattened
+    }else if(experiment == "random"){
+      flattened = list(sample(colnames(mSet$dataSet$norm)))
+      names(flattened) = c("random")
       flattened
     }else{
       analysis = mSet$storage[[experiment]]$analSet
@@ -739,7 +741,7 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
   return(flattened)
 }
 
-getAllHits <- function(mSet, expname, reverse_order = F){
+getAllHits <- function(mSet, expname, randomize = F){
   
   experiment <- stringr::str_match(expname, 
                                     pattern = "(all m\\/z)|\\(.*\\)")[,1]
@@ -828,11 +830,15 @@ getAllHits <- function(mSet, expname, reverse_order = F){
 
     try({
       tbl = tbl[order(tbl$significant, 
-                      abs(tbl$stastistic),decreasing = if(reverse_order) F else T),]
+                      abs(tbl$stastistic),decreasing = T),]
     }, silent = T)
     
     if(nrow(tbl)>0){
-      tbl
+      if(randomize){
+        tbl[sample(1:nrow(tbl)),]
+      }else{
+        tbl  
+      }
     }else{
       data.table::data.table()
     }

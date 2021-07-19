@@ -96,6 +96,7 @@ runML <- function(training,
                   ml_folds,
                   ml_preproc,
                   tuneGrid,
+                  fold_variable,
                   folds,
                   maximize=T,
                   cl=0,
@@ -112,13 +113,21 @@ runML <- function(training,
   if(length(cl) > 0){
     doParallel::registerDoParallel(cl)  
   }
-  
+
   # shuffle if shuffle
   trainOrders = list(1:nrow(training))
   if(shuffle & shuffle_mode == "train"){
     for(i in 1:n_permute){
-      trainOrders = append(trainOrders, list(sample(1:nrow(training))))
+      shuffled_order = sample(1:nrow(training))
+      trainOrders = append(trainOrders, list(shuffled_order))
     }
+  }
+  
+  if(ml_method == "glm (logistic)"){
+    ml_method = "glm"
+    is_logit = T
+  }else{
+    is_logit = F
   }
   
   hasProb = !is.null(caret::getModelInfo(paste0("^",ml_method,"$"),regex = T)[[1]]$prob)
@@ -130,7 +139,7 @@ runML <- function(training,
                                           test.set = test.set)
   {
     orig.lbl = train.set[['label']]
-    train.set[['label']] <- train.set[['label']][train.order] 
+    train.set[['label']] <- as.factor(train.set[['label']][train.order])
     def_scoring = ifelse(ifelse(is.factor(train.set[["label"]]), 
                                 "Accuracy", "RMSE") %in% c("RMSE", "logLoss", "MAE"), 
                          FALSE,
@@ -139,31 +148,37 @@ runML <- function(training,
     
     shuffled = !all(train.set$label == orig.lbl)
     
+    ## does not divide classes properly :(
+    # if(length(fold_variable) == 0){
+    #   fold_variable = train.set[['label']]
+    # }else{
+    #   fold_variable = paste0(train.set[['label']], fold_variable)
+    # }
+    # 
+    # folds <- if(ml_folds != "LOOCV") caret::groupKFold(fold_variable,
+    #                                                    k = min(as.numeric(ml_folds), 
+    #                                                            length(unique(fold_variable)))) else NULL
     trainCtrl <- caret::trainControl(verboseIter = T,
                                      allowParallel = T,
                                      method = if(ml_folds == "LOOCV") "LOOCV" else as.character(ml_perf_metr),
                                      number = as.numeric(ml_folds),
-                                     #repeats = 3,
                                      trim = TRUE, 
                                      returnData = FALSE,
                                      classProbs = if(is.null(caret::getModelInfo(paste0("^",ml_method,"$"),regex = T)[[1]]$prob)) FALSE else TRUE,
-                                     #index = if(!shuffled) folds else NULL,
+                                     #index = folds,
                                      savePredictions = "final")
-    
-    if(silent){
-      msg = capture.output(
-        fit <- caret::train(
-          label ~ .,
-          data = train.set,
-          method = ml_method,
-          ## Center and scale the predictors for the training
-          ## set and all future samples.
-          preProc = ml_preproc,
-          maximize = if(maximize) def_scoring else !def_scoring,
-          importance = if(ml_method %in% c("ranger")) 'permutation' else TRUE,
-          tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
-          trControl = trainCtrl
-        )
+    if(ml_method == "glm"){
+      fit <- caret::train(
+        label ~ .,
+        data = train.set,
+        method = ml_method,
+        ## Center and scale the predictors for the training
+        ## set and all future samples.
+        preProc = ml_preproc,
+        maximize = if(maximize) def_scoring else !def_scoring,
+        tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
+        #trControl = trainCtrl,
+        family = if(is_logit) "binomial" else NULL
       )  
     }else{
       fit <- caret::train(
@@ -174,10 +189,10 @@ runML <- function(training,
         ## set and all future samples.
         preProc = ml_preproc,
         maximize = if(maximize) def_scoring else !def_scoring,
-        importance = if(ml_method %in% c("ranger")) 'permutation' else TRUE,
+        importance = if(ml_method == c("ranger")) 'permutation' else TRUE,
         tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
         trControl = trainCtrl
-      ) 
+      )
     }
     
     result.predicted.prob <- stats::predict(fit, 
@@ -272,10 +287,9 @@ ml_run <- function(settings, mSet, input, cl){
         if(!is.null(settings$ml_mzs)){
           curr <- curr[,settings$ml_mzs, with=F]
         }else{
-          print("newver")
           mzs = getAllHits(mSet = mSet,
                            expname = settings$ml_specific_mzs,
-                           reverse_order = settings$ml_mzs_rev)
+                           randomize = settings$ml_mzs_rand)
           mzs = mzs$m.z[1:settings$ml_mzs_topn]
           # mzs = getTopHits(mSet = mSet,
           #                  expnames = settings$ml_specific_mzs, 
@@ -345,8 +359,6 @@ ml_run <- function(settings, mSet, input, cl){
       }
     }
     
-    print(dim(curr))
-    
     mSet$storage <- NULL
     mSet = NULL
     
@@ -375,9 +387,9 @@ ml_run <- function(settings, mSet, input, cl){
     }
     
     # resampling
+    
     if(settings$ml_sampling != "none"){
       
-      print(settings$ml_sampling)
       # split on factor (either batch or placeholder to create one result)
       if(settings$ml_batch_balance){
         split.fac = training_data$config[, settings$ml_batch_covars, with=F][[1]]
@@ -495,25 +507,21 @@ ml_run <- function(settings, mSet, input, cl){
       resampled.data.list <- NULL
     }
     
-    # divvy folds for cross validation
-    folds <- if(length(settings$ml_batch_covars) > 0 &
-                settings$ml_folds != "LOOCV" &
-                (settings$ml_sampling %in% c("up","down","none") | settings$ml_batch_balance)){
-      #print("Creating CV folds based on batch factor(s) and label.")
-      covars = c("label", settings$ml_batch_covars)
-      split_label = apply(training_data$config[, ..covars],
-                          MARGIN = 1, 
-                          function(x) paste0(x, collapse="_"))
-      caret::groupKFold(split_label, k = min(as.numeric(settings$ml_folds), 
-                                             length(unique(split_label))))
-    }else NULL
-    
     # replace training data with the new stuff
     training_data$config$split <- "train"
     testing_data$config$split <- "test"
     
     # remove columns that should not be in prediction
     keep.config = unique(c("label", "split", settings$ml_include_covars))
+    
+    fold_variable = if(length(settings$ml_batch_covars) > 0){
+      apply(training_data$config[, settings$ml_batch_covars,with=F],
+            MARGIN = 1, 
+            function(x) paste0(x, collapse="_"))
+    }else{
+      c()
+    }
+    
     testing_data$config = testing_data$config[, ..keep.config]
     training_data$config = training_data$config[, ..keep.config]
     
@@ -534,33 +542,38 @@ ml_run <- function(settings, mSet, input, cl){
     meth.info <- caret.mdls[[settings$ml_method]]
     params = meth.info$parameters
     
-    tuneGrid = expand.grid(
-      {
-        lst = lapply(1:nrow(params), function(i){
-          info = params[i,]
-          inp.val = settings[[paste0("ml_", info$parameter)]]
-          # - - check for ranges - -
-          if(grepl(inp.val, pattern=":")){
-            split = strsplit(inp.val,split = ":")[[1]]
-            inp.val <- seq(as.numeric(split[1]),
-                           as.numeric(split[2]),
-                           as.numeric(split[3]))
-          }else if(grepl(inp.val, pattern = ",")){
-            split = strsplit(inp.val,split = ",")[[1]]
-            inp.val <- split
+    tuneGrid = if(length(params) == 0){
+      data.frame()
+    }else{
+      expand.grid(
+        {
+          lst = lapply(1:nrow(params), function(i){
+            info = params[i,]
+            inp.val = settings[[paste0("ml_", info$parameter)]]
+            # - - check for ranges - -
+            if(grepl(inp.val, pattern=":")){
+              split = strsplit(inp.val,split = ":")[[1]]
+              inp.val <- seq(as.numeric(split[1]),
+                             as.numeric(split[2]),
+                             as.numeric(split[3]))
+            }else if(grepl(inp.val, pattern = ",")){
+              split = strsplit(inp.val,split = ",")[[1]]
+              inp.val <- split
+            }
+            # - - - - - - - - - - - - -
+            switch(as.character(info$class),
+                   numeric = as.numeric(inp.val),
+                   character = as.character(inp.val))
+          })
+          names(lst) = params$parameter
+          if(any(sapply(lst,function(x)all(is.na(x))))){
+            #cat("Missing param, auto-tuning...")
+            lst <- list()
           }
-          # - - - - - - - - - - - - -
-          switch(as.character(info$class),
-                 numeric = as.numeric(inp.val),
-                 character = as.character(inp.val))
-        })
-        names(lst) = params$parameter
-        if(any(sapply(lst,function(x)all(is.na(x))))){
-          #cat("Missing param, auto-tuning...")
-          lst <- list()
-        }
-        lst
-      })
+          lst
+        })  
+    }
+    
     
     # make sure levels of predicted class aren't numeric
     levels(training$label) <- paste0("class",  Hmisc::capitalize(levels(training$label)))
@@ -580,7 +593,7 @@ ml_run <- function(settings, mSet, input, cl){
                    ml_folds = settings$ml_folds,
                    ml_preproc = settings$ml_preproc,
                    tuneGrid = tuneGrid,
-                   folds = folds,
+                   fold_variable = fold_variable,
                    maximize = T,
                    shuffle = settings$ml_label_shuffle,
                    n_permute = settings$ml_n_shufflings,

@@ -45,6 +45,7 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                  has.importance = if("varImp" %in% names(curr.mdl)) TRUE else FALSE
                                  can.classify & has.importance
                                })]
+                               fin = c(fin, "glm (logistic)")
                                caret.mdls <- NULL
                                fin
                                },
