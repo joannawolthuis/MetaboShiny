@@ -136,6 +136,12 @@ shiny::observe({
                    tsne = {
                      NULL
                    },
+                   featsel = {
+                     decision = mSet$analSet$featsel[[1]]$finalDecision
+                     res = data.frame(decision = decision[decision != "Rejected"], 
+                                      row.names = names(decision[decision != "Rejected"]))
+                     list(featsel_tab = res) 
+                   },
                    pca = {
                      if("pca" %in% names(mSet$analSet)){
                        # render PCA variance per PC table for UI

@@ -7,7 +7,7 @@ pcaCorr <- function(curr, center, scale, start_end_pcs){
   as.data.frame(trunc)
 }
 
-getMLperformance = function(ml_res, pos.class, x.metric, y.metric){
+getMLperformance = function(ml_res, pos.class, x.metric, y.metric, silent = F){
   
   if(!("Resample" %in% names(ml_res$train.performance))){
     is.loocv = TRUE
@@ -16,7 +16,7 @@ getMLperformance = function(ml_res, pos.class, x.metric, y.metric){
   }
   
   if(is.loocv){
-    print("Cannot estimate ROC for LOOCV 'folds'.")
+    if(!silent) print("Cannot estimate train performance.")
     coord.collection = list()
   }else{
     spl.fold.performance = split(ml_res$train.performance,
@@ -51,11 +51,11 @@ getMLperformance = function(ml_res, pos.class, x.metric, y.metric){
   
   for(col in c("x", "y")){
     if(Inf %in% coords.dt[[col]]){
-      print("WARNING: Inf changed to 1")
+      if(!silent) print("WARNING: Inf changed to 1")
       coords.dt[[col]][coords.dt[[col]] == Inf] <- 1
     }
     if(NaN %in% coords.dt[[col]]){
-      print("WARNING: NaN changed to 0")
+      if(!silent) print("WARNING: NaN changed to 0")
       coords.dt[[col]][is.nan(coords.dt[[col]])] <- 0
     }
   }

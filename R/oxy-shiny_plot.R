@@ -2319,7 +2319,7 @@ ggPlotMummi <- function(mSet, cf, plot_mode = "volclike", show_nonsig=T){
                                                                    shape = 21,
                                                                    color = "black") +
                 ggplot2::geom_hline(aes(yintercept = logpthresh), linetype=2, cex=0.3) +
-                ggrepel::geom_label_repel(data = df[pval < pthresh,],
+                ggrepel::geom_label_repel(data = df[df$pval <= pthresh,],
                                           mapping = ggplot2::aes(x = x, 
                                                                  y = y,
                                                                  label = path.nms),

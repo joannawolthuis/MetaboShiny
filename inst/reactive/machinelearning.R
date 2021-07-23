@@ -18,19 +18,19 @@ shiny::observeEvent(input$ml_batch_size_sampling, {
   if(input$ml_batch_size_sampling){
     shinyWidgets::updateRadioGroupButtons(session, 
                                           "ml_sampling", 
-                                          choices = c(`<i class='fa fa-arrow-down'></i> downsample` = "down",
-                                                      `ROSE` = "rose",
-                                                      `don't` = "none", 
+                                          choices = c(`don't` = "none", 
+                                                      `<i class='fa fa-arrow-down'></i> downsample` = "down",
+                                                      `ROSE` = "rose", 
                                                       #`SMOTE` = "smote",
                                                       `upsample <i class='fa fa-arrow-up'></i>` = "up"))
   }else{
     shinyWidgets::updateRadioGroupButtons(session, 
                                           "ml_sampling", 
-                                          choices = c(`<i class='fa fa-arrow-down'></i> downsample` = "down",
+                                          choices = c(`don't` = "none",
+                                                      `<i class='fa fa-arrow-down'></i> downsample` = "down",
                                                       `ROSE` = "rose",
                                                       `SMOTE` = "smote",
                                                       `ADASYN` = "adasyn",
-                                                      `don't` = "none", 
                                                       `upsample <i class='fa fa-arrow-up'></i>` = "up"))
     
   }

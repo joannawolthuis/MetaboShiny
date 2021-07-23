@@ -538,7 +538,8 @@ beep = no')
       list("permz", "corr"),#15
       list("overview", "enrich"),#16
       list("dimred", "umap"),#17
-      list("dimred", "ica")#18
+      list("dimred", "ica"),#18
+      list("overview", "featsel")#19
     )
     # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
     # then show the relevent tabs
@@ -546,22 +547,22 @@ beep = no')
     if(is.null(interface$mode)){
       show.tabs <- hide.tabs[1]
     }else if(interface$mode == '1fb'){
-      show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14,15,16,17,18)]
+      show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14,15,16,17,18,19)]
       shiny::updateSelectInput(session, "ml_method",
                                selected = "rf",
                                choices = as.list(gbl$constants$ml.models))
     }else if(interface$mode == '1fm'){
-      show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,11,14,15,16,17,18)]
+      show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,11,14,15,16,17,18,19)]
       shiny::updateSelectInput(session, "ml_method",
                                selected = "rf",
                                choices = as.list(setdiff(gbl$constants$ml.models,
                                                          gbl$constants$ml.twoonly)))
     }else if(interface$mode == '2f'){
-      show.tabs <- hide.tabs[c(1,2,4,6,9,10,11,14,16,17,18)]
+      show.tabs <- hide.tabs[c(1,2,4,6,9,10,11,14,16,17,18,19)]
     }else if(interface$mode == 't1f'){
-      show.tabs = hide.tabs[c(1,2,4,5,6,9,10,11,14,16,17,18)]
+      show.tabs = hide.tabs[c(1,2,4,5,6,9,10,11,14,16,17,18,19)]
     }else if(interface$mode == 't'){
-      show.tabs = hide.tabs[c(1,2,5,6,7,9,10,11,14,15,16,17,18)]
+      show.tabs = hide.tabs[c(1,2,5,6,7,9,10,11,14,15,16,17,18,19)]
     }else{
       show.tabs <- hide.tabs[1]
     }
@@ -784,7 +785,7 @@ beep = no')
                 "fc", "volcano", "heatmap", 
                 "meba", "asca", "corr", 
                 "enrich", "network", "power",
-                "umap", "ica")
+                "umap", "ica", "featsel")
   
   lapply(analyses, function(an){
     shiny::observeEvent(input[[paste0("do_", an)]], {
@@ -793,7 +794,9 @@ beep = no')
         shinyjs::show(selector = paste0("div.panel[value=collapse_", an, "_tables]"))
         tablemanager$make <- c(tablemanager$make, an)
         shinyjs::show(selector = paste0("div.panel[value=collapse_", an, "_plots]"))
-        plotmanager$make <- c(plotmanager$make, an)
+        if(an != "featsel"){
+          plotmanager$make <- c(plotmanager$make, an)
+        }
         uimanager$refresh <- c(uimanager$refresh, an)
       })
     })    

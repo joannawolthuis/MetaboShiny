@@ -9,7 +9,7 @@ shiny::observeEvent(input$enrich_plot_pathway, {
                     mz = enrich$current$rn)  
     
     uniq_ids = unique(dt$id)
-    grey_nonsig = any(enrich$current$significant == "yes")
+    grey_nonsig = any(enrich$current$significant == "yes") & input$enrich_sig_only
     cpds = unique(dt$id)
     
     mzs_withvals = merge(enrich$current[,c("rn", "identifier")], 
@@ -23,6 +23,8 @@ shiny::observeEvent(input$enrich_plot_pathway, {
       mz_rows = mzs_withvals[identifier == cpd_id]
       if(grey_nonsig){
         mz_rows$stastistic <- ifelse(mz_rows$significant, mz_rows$statistic, 0)
+      }else{
+        mz_rows$stastistic <- ifelse(mz_rows$significant, 1, 0)
       }
       all.dat = data.table::data.table(id = cpd_id,
                                        value = mz_rows$stastistic)

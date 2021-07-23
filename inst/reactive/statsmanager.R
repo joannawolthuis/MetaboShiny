@@ -153,7 +153,7 @@ shiny::observe({
                    flattened <- list(getAllHits(mSet,
                                                 input$mummi_anal))
                    
-                   hasP = grepl("tt|aov|asca|combi|venn",input$mummi_anal)
+                   hasP = T#grepl("tt|aov|asca|combi|venn",input$mummi_anal)
                    setProgress(0.1)
                    
                    myFile <- tempfile(fileext = ".csv")
@@ -375,6 +375,14 @@ shiny::observe({
                    enr_mSet <- NULL
                  })
                },
+               featsel = {
+                 print("Feature selection start...")
+                 curr = cbind(label = mSet$dataSet$cls, 
+                              mSet$dataSet$norm)
+                 boruta_res = Boruta::Boruta(x = curr[,2:ncol(curr)],
+                                             y = as.factor(curr[[1]]))
+                 mSet$analSet$featsel <- list(boruta_res)
+               },
                ml = {
                  try({
                    
@@ -410,21 +418,22 @@ shiny::observe({
                      basejob$ml_mzs_topn = 1
                      basejob$ml_n_shufflings = 10
                      basejob$ml_label_shuffle = T
-                     basejob$ml_name = "logit combi1"
+                     basejob$ml_name = "shuffle10 featsel1"
                      jobs = list()
-                     for(i in 1:250){
+                     for(i in 1:91){
                        for(j in 1:10){
                          for(randomize in c(T, F)){
                            job = basejob
+                           job$ml_mtry = as.character(ceiling(sqrt(i)))
                            job$ml_mzs_topn = i
                            job$ml_mzs_rand = randomize
                            job$ml_name = paste0(gsub("1$", paste(i, paste0("#", j)), job$ml_name), " rand", randomize)
-                           jobs[[job$ml_name]] = job  
+                           jobs[[job$ml_name]] = job
                          }
                        }
                      }
 
-                     ml_queue$jobs = jobs
+                    ml_queue$jobs = jobs
                      
                      try({
                        parallel::clusterExport(session_cl, c("ml_run", "small_mSet", "gbl"))

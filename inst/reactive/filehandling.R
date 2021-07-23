@@ -160,8 +160,10 @@ observe({
     if(!is.null(mSet)){
       
       mSet$mSet <- NULL
+      
       fn_bu <- normalizePath(paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), 
                                     "_BACKUP.metshi"),mustWork = F)
+      
       fn <- normalizePath(paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), 
                                  ".metshi"))
       file.rename(fn, fn_bu)
@@ -178,7 +180,6 @@ observe({
       }else{
         save_info$prev_time <- Sys.time()
         save_info$has_changed <- FALSE
-        
         file.remove(fn_bu)
       }
     } 

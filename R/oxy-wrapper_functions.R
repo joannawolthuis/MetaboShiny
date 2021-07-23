@@ -694,8 +694,13 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                          # - - -
                          res
                        },
-                       {metshiAlert("Not currently supported...")
-                         return(NULL)})
+                       featsel = {
+                         decision = analysis$featsel[[1]]$finalDecision
+                         res = list(names(decision[decision != "Rejected"]))
+                         names(res) <- "featsel"
+                         res
+                       },
+                       return(NULL))
         
         if(is.null(tbls)) return(NULL)
         
@@ -811,11 +816,22 @@ getAllHits <- function(mSet, expname, randomize = F){
                      # --- only volc for now ---
                      res = data.frame(`m/z` = names(analysis$combi$all.vals$x),
                                       value = sapply(names(analysis$combi$all.vals$x), function(x) if(x %in% analysis$combi$sig.mat$rn) 0 else 1),
-                                      stastistic = analysis$combi$all.vals$x * analysis$combi$all.vals$y)
+                                      statistic = analysis$combi$all.vals$x * analysis$combi$all.vals$y)
                      res$significant = sapply(res$m.z, function(mz) mz %in% analysis$combi$sig.mat$rn)
                      # -------------------------
                      res
                    },
+                  featsel = {
+                    decision = analysis$featsel[[1]]$finalDecision
+                    res = data.frame(`m/z` = names(decision),
+                                     value = sapply(names(decision), function(x) ifelse(as.character(decision[x]) == "Rejected", 1, 0)),
+                                     statistic = sapply(names(decision), function(x) switch(as.character(decision[x]), 
+                                                                                            Rejected = 0, 
+                                                                                            Tentative = 1, 
+                                                                                            Confirmed = 2))
+                                     )
+                    res
+                  },
                    ml = {
                      ml_name = gsub(paste0(base_name, " - "), "", name)
                      mdls = analysis$ml[[base_name]][[ml_name]]$res
@@ -829,9 +845,8 @@ getAllHits <- function(mSet, expname, randomize = F){
                      return(NULL)})
 
     try({
-      tbl = tbl[order(tbl$significant, 
-                      abs(tbl$stastistic),decreasing = T),]
-    }, silent = T)
+      tbl = tbl[order(abs(tbl$statistic),decreasing = T),]
+    }, silent = F)
     
     if(nrow(tbl)>0){
       if(randomize){
