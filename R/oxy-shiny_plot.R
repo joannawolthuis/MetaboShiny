@@ -1125,6 +1125,10 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
         
         inset.df <- tibble::tibble(x = 0.92, y = 0.1,
                                    plot = list(dens)) 
+      }else{
+        print("Need more shuffled runs for p-value...")
+        lbl = "NA"
+        AUC_txt = "NA"
       }
     })
     
