@@ -107,6 +107,5 @@ Imports:
   doSNOW,
   ggpmisc,
   pdftools,
-  magick,
-  pathview
+  magick
 RoxygenNote: 7.1.0

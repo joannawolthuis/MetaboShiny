@@ -414,26 +414,26 @@ shiny::observe({
                      # }
                      # ml_queue$jobs = jobs
                      
-                     basejob = ml_queue$jobs[[1]]
-                     basejob$ml_mzs_topn = 1
-                     basejob$ml_n_shufflings = 1
-                     basejob$ml_label_shuffle = T
-                     basejob$ml_name = "shuffle1 combi1"
-                     jobs = list()
-                     for(i in 1:10){ #mzs
-                       for(j in 1:1){ #repeats
-                         for(randomize in c(T, F)){ #randomization
-                           job = basejob
-                           job$ml_mtry = as.character(ceiling(sqrt(i)))
-                           job$ml_mzs_topn = i
-                           job$ml_mzs_rand = randomize
-                           job$ml_name = paste0(gsub("1$", paste(i, paste0("#", j)), job$ml_name), " rand", randomize)
-                           jobs[[job$ml_name]] = job
-                         }
-                       }
-                     }
-
-                    ml_queue$jobs = jobs
+                    #  basejob = ml_queue$jobs[[1]]
+                    #  basejob$ml_mzs_topn = 1
+                    #  basejob$ml_n_shufflings = 1
+                    #  basejob$ml_label_shuffle = T
+                    #  basejob$ml_name = "shuffle1 combi1"
+                    #  jobs = list()
+                    #  for(i in 1:10){ #mzs
+                    #    for(j in 1:1){ #repeats
+                    #      for(randomize in c(T, F)){ #randomization
+                    #        job = basejob
+                    #        job$ml_mtry = as.character(ceiling(sqrt(i)))
+                    #        job$ml_mzs_topn = i
+                    #        job$ml_mzs_rand = randomize
+                    #        job$ml_name = paste0(gsub("1$", paste(i, paste0("#", j)), job$ml_name), " rand", randomize)
+                    #        jobs[[job$ml_name]] = job
+                    #      }
+                    #    }
+                    #  }
+                    # 
+                    # ml_queue$jobs = jobs
                      
                      try({
                        parallel::clusterExport(session_cl, c("ml_run", "small_mSet", "gbl"))
