@@ -2168,7 +2168,10 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                               selected = "...",
                                                                                                                               options=list(create = TRUE)), # let users add new names
                                                                                                         shiny::actionButton("set_proj_name", label="Apply"),
-                                                                                                        shiny::helpText("This name will be used in all save files.")
+                                                                                                        shiny::hr(),
+                                                                                                        shiny::helpText("Clone project (to skip file input w/ different normalization)"),
+                                                                                                        shiny::textInput(inputId = "proj_clone_name", label = "Cloned project name:"),
+                                                                                                        shiny::actionButton("clone_proj", label = "Clone")
                                                                                         )
                                                                         ),
                                                                         shiny::tabPanel("Search", icon = shiny::icon("paw"),

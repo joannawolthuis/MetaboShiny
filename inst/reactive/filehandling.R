@@ -232,3 +232,19 @@ output$has_unsaved_changes <- shiny::renderUI({
     ""
   }
 })
+
+shiny::observeEvent(input$clone_proj, {
+  if(input$proj_clone_name != ""){
+    proj_folder = lcl$paths$proj_dir
+    clone_folder = file.path(dirname(proj_folder), input$proj_clone_name)
+    if(!dir.exists(clone_folder)){
+      dir.create(clone_folder)
+      for(suffix in c("_params.csv", ".csv")){
+        orig_file = file.path(proj_folder, paste0(lcl$proj_name, suffix))
+        new_file = file.path(clone_folder, paste0(input$proj_clone_name, suffix))
+        file.copy(orig_file, new_file)
+      } 
+      shiny::showNotification("Cloned project! Please restart to load and continue from normalization.")
+    }
+  }
+})

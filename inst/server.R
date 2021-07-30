@@ -456,6 +456,11 @@ beep = no')
         output[[default$name]] = shiny::renderText(default$text)
       })
       
+      # fix for new font size in plots setting not being in options file yet
+      if(!("gfont" %in% names(opts))){
+        opts$gfont="15"
+      }
+      
       lcl$aes$font <<- list(family = opts$font4,
                             ax.num.size = as.numeric(opts$size4),
                             ax.txt.size = as.numeric(opts$size3),
@@ -463,14 +468,14 @@ beep = no')
                             title.size = as.numeric(opts$size2),
                             plot.font.size = as.numeric(opts$gfont))
       
-      # create color pickers based on amount of colours allowed in global
+      # create color pickers based on amount of colors allowed in global
       output$colorPickers <- shiny::renderUI({
         lapply(c(1:gbl$constants$max.cols), function(i) {
           colourpicker::colourInput(inputId = paste("col", i, sep="_"),
                                     label = paste("Choose colour", i),
                                     value = lcl$aes$mycols[i],
                                     allowTransparent = F)
-        })
+          })
       })
       
       # create color1, color2 etc variables to use in plotting functions
