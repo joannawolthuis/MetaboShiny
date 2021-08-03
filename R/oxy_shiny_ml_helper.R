@@ -236,8 +236,8 @@ ml_run <- function(settings, mSet, input, cl){
     }
     
     # covars needed
-    keep.config = setdiff(c(settings$ml_include_covars, settings$ml_batch_covars,
-                            settings$ml_train_subset[[1]], settings$ml_test_subset[[1]]),
+    keep.config = setdiff(unique(c(settings$ml_include_covars, settings$ml_batch_covars,
+                            settings$ml_train_subset[[1]], settings$ml_test_subset[[1]])),
                           "label")
     config = mSet$dataSet$covars[,..keep.config]
     config$label = mSet$dataSet$cls

@@ -12,6 +12,7 @@ function(input, output, session) {
   library(dplyr)
   
   options(shiny.maxRequestSize=50000*1024^2)
+  setTimeLimit(cpu = Inf)
   
   # EMPTY DEBUG
   debug_browse_content <- debug_result_filters <- debug_pieinfo <- debug_input <- debug_lcl <- debug_mSet <- debug_matches <- debug_enrich <- debug_selection <- debug_venn_yes <- debug_report_yes <- list()
