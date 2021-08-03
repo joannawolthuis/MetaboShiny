@@ -284,8 +284,12 @@ ml_run <- function(settings, mSet, input, cl){
     if(pickedTbl != "pca"){
       if(settings$ml_specific_mzs != "no"){
         msg = "Using user-specified m/z set."
-        if(!is.null(settings$ml_mzs)){
-          curr <- curr[,settings$ml_mzs, with=F]
+        if(!is.null(settings$ml_mzs) | settings$ml_specific_mzs == "none"){
+          if(settings$ml_specific_mzs != "none"){
+            curr <- curr[,settings$ml_mzs, with=F]
+          }else{
+            curr <- data.table::data.table() # only use configs
+          }
         }else{
           mzs = getAllHits(mSet = mSet,
                            expname = settings$ml_specific_mzs,
@@ -354,6 +358,10 @@ ml_run <- function(settings, mSet, input, cl){
                                   orig = mSet$dataSet$orig,
                                   norm = mSet$dataSet$norm,
                                   pca = mSet$analSet$pca$x))
+      
+      if(settings$ml_specific_mzs == "none"){
+        curr = data.frame()
+      }
       if(length(mzs) > 0){
         curr <- curr[, mzs]
       }
@@ -444,10 +452,14 @@ ml_run <- function(settings, mSet, input, cl){
         # total group size within this loop?
         
         # resample
+        print("b")
         ## K for the k-fold methods
         K = min(min(table(config.subset$label))-1, 10)
         mz.names = colnames(curr.subset)
-        colnames(curr.subset) <- paste0("mz",1:ncol(curr.subset))
+        
+        if(ncol(curr.subset) > 0){
+          colnames(curr.subset) <- paste0("mz",1:ncol(curr.subset))
+        }
         
         switch(sampling,
                up = {
@@ -475,8 +487,11 @@ ml_run <- function(settings, mSet, input, cl){
                  config.subset = data.table(label = new_data$class)
                },
                rose = {
+                 rose.dat = cbind(label = config.subset$label, curr.subset)
+                 print(head(rose.dat))
+                 
                  resampled = ROSE::ROSE(label ~ ., 
-                                        data = cbind(label = config.subset$label, curr.subset),
+                                        data = rose.dat,
                                         N = group.size * length(unique(config.subset$label)))
                  new_data = resampled$data
                  curr.subset = new_data[,2:(ncol(new_data))]
@@ -493,6 +508,7 @@ ml_run <- function(settings, mSet, input, cl){
                }
         )
         colnames(curr.subset) <- mz.names
+        
         if(settings$ml_batch_balance & settings$ml_sampling %in% c("rose", "smote", "adasyn")){
           config.subset[[settings$ml_batch_covars]] <- c(config.top.row[[settings$ml_batch_covars]])
         }

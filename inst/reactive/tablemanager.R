@@ -71,7 +71,7 @@ shiny::observe({
                                                    }else{
                                                    ch = allChoices
                                                    if(inputID == "ml_specific_mzs"){
-                                                     ch = c("no", "manual", ch)
+                                                     ch = c("no", "manual", "none", ch)
                                                    }
                                                    }
                                                  ch

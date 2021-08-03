@@ -192,7 +192,7 @@ omit_unknown = yes
 beep = no')
         writeLines(contents, lcl$paths$opt.loc)
       }
-      
+    
       opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
 
       # ==================
@@ -212,9 +212,16 @@ beep = no')
       # - - - 
       if(!dir.exists(userfolder)) dir.create(userfolder,recursive = T)
       if(!dir.exists(dbdir)) dir.create(dbdir,recursive = T)
+      
       lcl$paths$work_dir <<- userfolder
       lcl$paths$db_dir <<- dbdir
 
+      if(!dir.exists(lcl$paths$work_dir)){
+        print("Can't find directory - trying to do the docker > R autofix...")
+        for(path in names(lcl$paths)){
+          lcl$paths[[path]] <<- gsub("/root", "~", lcl$paths[[path]])
+        }  
+      }
       
       if("adducts.csv" %in% basename(list.files(lcl$paths$work_dir))){
         adducts <<- data.table::fread(file.path(lcl$paths$work_dir, "adducts.csv"))

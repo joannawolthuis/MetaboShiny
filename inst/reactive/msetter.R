@@ -15,8 +15,10 @@ shiny::observe({
         
         if(mSetter$do == "load"){
            # more mem friendly??
-           mSet <- load.mSet(mSet, input$storage_choice, proj.folder = file.path(lcl$paths$work_dir,
-                                                                                 lcl$proj_name))
+          mSet <- load.mSet(mSet, 
+                            input$storage_choice, 
+                            proj.folder = file.path(lcl$paths$work_dir,
+                                                    lcl$proj_name))
         }else{
           
           oldSettings <- mSet$settings
@@ -172,7 +174,9 @@ shiny::observe({
           new.name = if(mSetter$do == "load") input$storage_choice else name.mSet(mSet)
           
           if(new.name %in% names(mSet$storage)){
-            mSet <- load.mSet(mSet, new.name)
+            mSet <- load.mSet(mSet, 
+                              new.name, 
+                              proj.folder = lcl$paths$proj_dir)
           }
           
           mSet$settings$cls.name <- new.name
