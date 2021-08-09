@@ -436,13 +436,17 @@ shiny::observe({
                     # ml_queue$jobs = jobs
                      
                      try({
-                       parallel::clusterExport(session_cl, c("ml_run", "small_mSet", "gbl"))
+                       mSet_loc = tempfile()
+                       qs::qsave(small_mSet, mSet_loc)
+                       parallel::clusterExport(session_cl, c("ml_run", "gbl"))
                      })
+                     
                      
                      ml_queue_res <- pbapply::pblapply(ml_queue$jobs, 
                                                        cl = if(length(ml_queue$jobs) > 1) session_cl else 0, 
-                                                       function(settings, ml_cl, small_mSet){
+                                                       function(settings, ml_cl, mSet_loc){
                                                          res = list()
+                                                         small_mSet = qs::qread(mSet_loc)
                                                          try({
                                                            res = ml_run(settings = settings, 
                                                                         mSet = small_mSet,
@@ -450,13 +454,14 @@ shiny::observe({
                                                                         cl = ml_cl)  
                                                          })
                                                          res
-                                                       }, small_mSet = small_mSet,
+                                                       }, mSet_loc = mSet_loc,
                                                        ml_cl = if(length(ml_queue$jobs) > 1) 0 else session_cl)
                    }
                    
                    print("Done!")
                    
                    closeAllConnections()
+                   file.remove(mSet_loc)
                    
                    shiny::showNotification("Gathering results...")
                    
