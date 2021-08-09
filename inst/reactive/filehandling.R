@@ -248,3 +248,20 @@ shiny::observeEvent(input$clone_proj, {
     }
   }
 })
+
+shiny::observe({
+  # - - - -
+  if(is.null(input$queue_ml_load)) return() # if nothing is chosen, do nothing
+  q_path <- input$queue_ml_load$datapath
+  print("load")
+  print(q_path)
+  shiny::showNotification("Loading existing machine learning queue...")
+  ml_queue$jobs <<- qs::qread(q_path)
+})
+
+shiny::observeEvent(input$queue_ml_save, {
+  q_path = normalizePath(file.path(lcl$paths$work_dir, paste0(input$queue_ml_name, ".qs")))
+  print("save")
+  print(q_path)
+  qs::qwrite(ml_queue$jobs, q_path)
+})
