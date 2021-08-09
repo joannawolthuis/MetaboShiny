@@ -1995,6 +1995,7 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                  value = FALSE
                                                                                                                                                                ),
                                                                                                                                                                shiny::h2("M/z labels"),
+                                                                                                                                                               shiny::tags$i("only ggplot mode"),
                                                                                                                                                                shinyWidgets::switchInput("plot_mzlabels", value = T, onLabel = "show", offLabel="hide", size = "small"),
                                                                                                                                                                shiny::numericInput("ggplot_font_size",label = "Plot font base size:",value = 15),
                                                                                                                                                                plotly::plotlyOutput("ggplot_font_size_example"),

@@ -2084,8 +2084,6 @@ render.kegg.node.jw <- function (plot.data, cols.ts, img, same.layer = TRUE, typ
       
       plot.data <<- plot.data
       
-      print(nn)
-      
       pidx = lapply(1:nn, function(i) {
         ii = which((cidx - plot.data$x[i])^2 + (ridx - 
                                                   plot.data$y[i])^2 < (plot.data$width[i])^2)

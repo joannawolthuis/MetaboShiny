@@ -240,6 +240,7 @@ lapply(c("prematch","search_mz"), function(search_type){
                 results_full[is.na(source),]$compoundname <- results_full[is.na(source),]$baseformula
                 results_full[is.na(source),]$source <- c("magicball")
                 withSmi = which(results_full$structure != "")
+                
                 if(length(withSmi) > 0){
                   results_nosmi <- results_full[ -withSmi ]
                   results_nosmi$structure = paste0("[",results_nosmi$fullformula,"]0")
@@ -283,6 +284,7 @@ lapply(c("prematch","search_mz"), function(search_type){
                                    perl=T), gbl$vectors$db_no_build)
           if(length(dbs.local)>0){
             res.local = MetaDBparse::searchMZ(mzs = mzs,
+                                              addtable = adducts,
                                               ionmodes = ionmode,
                                               base.dbname = dbs.local,
                                               ppm = ppm,

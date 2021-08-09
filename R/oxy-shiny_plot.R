@@ -1573,8 +1573,6 @@ plotPCA.3d <- function(mSet,
   }else if(fill.fac == "label"){
     classes
   }else{
-    print("b")
-    
     as.factor(mSet$dataSet$covars[, ..fill.fac][[1]])
   }
   
@@ -1894,7 +1892,6 @@ plotPCA.2d <- function(mSet,
   }else if(fill.fac == "label"){
     dat_long$group
   }else{
-    print("a")
     as.factor(mSet$dataSet$covars[,..fill.fac][[1]])
   }
   
@@ -2007,34 +2004,33 @@ ggPlotVenn <- function(mSet,
                           thresholds = if(filter_mode == "top") c("") else venn_yes$now$threshold,
                           filter_mode = filter_mode)
   
+  # check if same prefix
+  preflength = sapply(2:length(flattened), function(i){
+    Biostrings::lcprefix(names(flattened)[i], names(flattened)[i-1])
+  })
+  if(length(unique(preflength)) == 1){
+    if(preflength[1] > 0){
+      prefix = stringr::str_sub(names(flattened)[1], 0, preflength[1])
+      names(flattened) <- gsub(prefix, "", x = names(flattened))  
+    }
+  }
+  # check if same suffix
+  suflength = sapply(2:length(flattened), function(i){
+    Biostrings::lcsuffix(names(flattened)[i], names(flattened)[i-1])
+  })
+  if(length(unique(suflength)) == 1){
+    if(suflength[1] > 0){
+      names(flattened) <- sapply(names(flattened), function(name){
+        len = stringr::str_length(name)
+        suffix = stringr::str_sub(name, len - suflength[1] + 1, len)
+        gsub(suffix, "", x = name,fixed = T)
+      })  
+    }
+  }
+  
   if(plot_mode == "upset"){
     
     all_mzs = unique(Reduce("c", flattened))
-  
-    # check if same prefix
-    preflength = sapply(2:length(flattened), function(i){
-      Biostrings::lcprefix(names(flattened)[i], names(flattened)[i-1])
-    })
-    if(length(unique(preflength)) == 1){
-      if(preflength[1] > 0){
-        prefix = stringr::str_sub(names(flattened)[1], 0, preflength[1])
-        names(flattened) <- gsub(prefix, "", x = names(flattened))  
-      }
-    }
-    # check if same suffix
-    suflength = sapply(2:length(flattened), function(i){
-      Biostrings::lcsuffix(names(flattened)[i], names(flattened)[i-1])
-    })
-    if(length(unique(suflength)) == 1){
-      if(suflength[1] > 0){
-        names(flattened) <- sapply(names(flattened), function(name){
-          len = stringr::str_length(name)
-          suffix = stringr::str_sub(name, len - suflength[1] + 1, len)
-          gsub(suffix, "", x = name,fixed = T)
-        })  
-      }
-    }
-
     upset_data = data.table::rbindlist(pbapply::pblapply(all_mzs, function(mz){
       in_analysis = sapply(names(flattened), function(analysis){
         mz %in% flattened[[analysis]]

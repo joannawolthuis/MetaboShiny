@@ -170,11 +170,6 @@ shiny::observe({
                     })
                   }
                 
-                print(plotName)
-                try({
-                  plot(myplot)
-                })
-                
                 output[[paste0("download_", plotName)]] <- downloadHandler(
                   filename = function() paste0(plotFn, if(input$plotsvg) ".svg" else ".png"),
                   content = function(file){
